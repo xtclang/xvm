@@ -352,7 +352,7 @@ public class PropertyClassTypeConstant
                 Annotation.NO_ANNOTATIONS, infoBase.getMixinAnnotations(), typeBase, null, null,
                 Collections.EMPTY_LIST, ListMap.EMPTY, ListMap.EMPTY,
                 mapProps, mapMethods, mapVirtProps, mapVirtMethods, mapChildren,
-                TypeInfo.Progress.Complete);
+                null, TypeInfo.Progress.Complete);
         }
 
 

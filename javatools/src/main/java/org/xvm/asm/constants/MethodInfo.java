@@ -496,13 +496,24 @@ public class MethodInfo
      */
     public MethodInfo asInto()
         {
-        // basically, if the method is a function or a "cap", it stays as-is (unless its a function
-        // on the Object class); otherwise, it needs to be "flattened" into a single implicit entry
-        // with the right signature
-        return (isFunction() || isConstructor() || isCapped()) &&
-                    !getIdentity().getNamespace().equals(pool().clzObject())
-                ? this
-                : new MethodInfo(new MethodBody(getIdentity(), getSignature(), Implementation.Implicit));
+        // if the method is a function, constructor or a "cap", it stays as-is (unless it's a function
+        // on the Object class); otherwise, it needs to be turned into a chain of implicit entries
+        if ((isFunction() || isConstructor() || isCapped()) &&
+                    !getIdentity().getNamespace().equals(pool().clzObject()))
+            {
+            return this;
+            }
+
+        MethodBody[] aBodyOld = m_aBody;
+        int          cBodies  = aBodyOld.length;
+        MethodBody[] aBodyNew = new MethodBody[cBodies];
+        for (int i = 0; i < cBodies; i++)
+            {
+            MethodBody body = aBodyOld[i];
+
+            aBodyNew[i] = new MethodBody(body.getIdentity(), body.getSignature(), Implementation.Implicit);
+            }
+        return new MethodInfo(aBodyNew);
         }
 
     /**

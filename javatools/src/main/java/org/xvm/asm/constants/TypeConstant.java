@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
@@ -524,7 +525,7 @@ public abstract class TypeConstant
         }
 
     /**
-     * A VirtualChildType may have its parent type being different frome its origin parent type.
+     * A VirtualChildType may have its parent type being different from its origin parent type.
      *
      * @return return the origin parent type for this virtual child type
      */
@@ -1481,7 +1482,7 @@ public abstract class TypeConstant
             return null;
             }
 
-        if (!isComplete(info) || !isUpToDate(info))
+        if (info == null || !isUpToDate(info))
             {
             setTypeInfo(getConstantPool().infoPlaceholder());
             info = buildTypeInfo(errs);
@@ -1489,10 +1490,11 @@ public abstract class TypeConstant
                 {
                 setTypeInfo(info);
                 }
-            if (!isComplete(info))
-                {
-                addDeferredTypeInfo(this);
-                }
+            }
+
+        if (!isComplete(info))
+            {
+            addDeferredTypeInfo(this);
             }
 
         return info;
@@ -1767,9 +1769,10 @@ public abstract class TypeConstant
         // 2) collect all of the type parameter data from the various contributions
         ListMap<IdentityConstant, Origin> listmapClassChain   = new ListMap<>();
         ListMap<IdentityConstant, Origin> listmapDefaultChain = new ListMap<>();
+        Set<TypeConstant>                 setDepends          = new HashSet<>();
 
         fComplete &= createCallChains(constId, struct, mapTypeParams,
-                listProcess, listmapClassChain, listmapDefaultChain, errs);
+                listProcess, setDepends, listmapClassChain, listmapDefaultChain, errs);
 
         // next, we need to process the list of contributions in order, asking each for its
         // properties and methods, and collecting all of them
@@ -1781,7 +1784,7 @@ public abstract class TypeConstant
         // note that the mapChildren keys may be '.' delim'd in the case of a "prop.class"
 
         fComplete &= collectMemberInfo(constId, struct, mapTypeParams,
-                listProcess, listmapClassChain, listmapDefaultChain,
+                listProcess, setDepends, listmapClassChain, listmapDefaultChain,
                 mapProps, mapMethods, mapVirtProps, mapVirtMethods, mapChildren, errs);
 
         // validate the type parameters against the properties
@@ -1796,6 +1799,7 @@ public abstract class TypeConstant
                 aAnnoClass, aAnnoMixin, typeExtends, typeRebase, typeInto,
                 listProcess, listmapClassChain, listmapDefaultChain,
                 mapProps, mapMethods, mapVirtProps, mapVirtMethods, mapChildren,
+                setDepends.isEmpty() ? null : setDepends,
                 fComplete ? Progress.Complete : Progress.Incomplete);
 
         if (fComplete)
@@ -2045,8 +2049,8 @@ public abstract class TypeConstant
                 false, infoPri.getTypeParams(), infoPri.getClassAnnotations(), infoPri.getMixinAnnotations(),
                 infoPri.getExtends(), infoPri.getRebases(), infoPri.getInto(),
                 infoPri.getContributionList(), infoPri.getClassChain(), infoPri.getDefaultChain(),
-                mapProps, mapMethods, mapVirtProps, Collections.EMPTY_MAP, ListMap.EMPTY,   // TODO mapChildren
-                fIncomplete ? Progress.Incomplete : Progress.Complete);
+                mapProps, mapMethods, mapVirtProps, Collections.EMPTY_MAP, ListMap.EMPTY,
+                null, fIncomplete ? Progress.Incomplete : Progress.Complete);
         }
 
     /**
@@ -2484,7 +2488,7 @@ public abstract class TypeConstant
                 }
 
             // has to be an explicit class identity
-            if (!typeMixin.isExplicitClassIdentity(compose == Composition.Incorporates))
+            if (!typeMixin.isExplicitClassIdentity(true))
                 {
                 log(errs, Severity.ERROR, VE_ANNOTATION_NOT_CLASS,
                         constId.getPathString(), typeMixin.getValueString());
@@ -2502,6 +2506,19 @@ public abstract class TypeConstant
             if (listCondContribs == null)
                 {
                 listCondContribs = new ArrayList<>();
+                }
+            else
+                {
+                // check if this mixin extends some of the already collected ones
+                for (Iterator<TypeConstant> iter = listCondContribs.iterator(); iter.hasNext();)
+                    {
+                    TypeConstant     typeOther = iter.next();
+                    IdentityConstant idOther   = typeOther.getSingleUnderlyingClass(true);
+                    if (typeMixin.extendsClass(idOther))
+                        {
+                        iter.remove();
+                        }
+                    }
                 }
             listCondContribs.add(typeMixin);
 
@@ -2569,21 +2586,21 @@ public abstract class TypeConstant
             return;
             }
 
-        TypeConstant typeRequire = typeContrib.getExplicitClassInto();
+        TypeConstant typeInto = typeContrib.getExplicitClassInto();
         // mixins into Class are "synthetic" (e.g. Abstract, Override); the only
         // exception is Enumeration, which needs to be processed naturally
-        if (!typeRequire.isIntoClassType() || typeRequire.isA(pool.typeEnumeration()))
+        if (!typeInto.isIntoClassType() || typeInto.isA(pool.typeEnumeration()))
             {
             // the mixin must be compatible with this type, as specified by its "into"
             // clause; note: not 100% correct because the presence of this mixin may affect
             // the answer, so this requires an eventual fix
-            if (typeRequire != null && !this.isA(typeRequire))
+            if (!this.isA(typeInto))
                 {
                 log(errs, Severity.ERROR, VE_INCORPORATES_INCOMPATIBLE,
                     constId.getPathString(),
                     typeContrib.getValueString(),
                     this.getValueString(),
-                    typeRequire.getValueString());
+                    typeInto.getValueString());
                 return;
                 }
 
@@ -2680,6 +2697,8 @@ public abstract class TypeConstant
      * @param mapTypeParams        the type parameters for the type, further added to by this method
      * @param listProcess          the list of contributions, in the order that they are intended to
      *                             be processed
+     * @param setDepends           the contribution types that don't have complete TypeInfo and
+     *                             prevent this type to complete its TypeInfo calculation
      * @param listmapClassChain    the potential call chain
      * @param listmapDefaultChain  the potential default call chain
      * @param errs                 the error list to log errors to
@@ -2689,6 +2708,7 @@ public abstract class TypeConstant
             ClassStructure                    struct,
             Map<Object, ParamInfo>            mapTypeParams,
             List<Contribution>                listProcess,
+            Set<TypeConstant>                 setDepends,
             ListMap<IdentityConstant, Origin> listmapClassChain,
             ListMap<IdentityConstant, Origin> listmapDefaultChain,
             ErrorListener                     errs)
@@ -2697,8 +2717,8 @@ public abstract class TypeConstant
 
         for (Contribution contrib : listProcess)
             {
-            Composition compContrib = contrib.getComposition();
-            switch (compContrib)
+            Composition composition = contrib.getComposition();
+            switch (composition)
                 {
                 case Equal: // i.e. "this" type
                     {
@@ -2730,14 +2750,21 @@ public abstract class TypeConstant
 
                     if (!isComplete(infoContrib))
                         {
-                        fIncomplete = true;
-                        errs        = ErrorListener.BLACKHOLE;
-                        break;
+                        fIncomplete = computeIncomplete(composition, typeContrib, infoContrib, setDepends);
+                        if (fIncomplete)
+                            {
+                            errs = ErrorListener.BLACKHOLE;
+                            if (infoContrib == null || composition == Composition.Into)
+                                {
+                                // see the comment at the similar block at "collectMemebrInfo"
+                                break;
+                                }
+                            }
                         }
 
-                    if (compContrib != Composition.Into)
+                    if (composition != Composition.Into)
                         {
-                        infoContrib.contributeChains(listmapClassChain, listmapDefaultChain, compContrib);
+                        infoContrib.contributeChains(listmapClassChain, listmapDefaultChain, composition);
                         }
 
                     layerOnTypeParams(mapTypeParams, typeContrib, infoContrib.getTypeParams(), errs);
@@ -2745,11 +2772,39 @@ public abstract class TypeConstant
                     }
 
                 default:
-                    throw new IllegalStateException("composition=" + compContrib);
+                    throw new IllegalStateException("composition=" + composition);
                 }
             }
 
         return !fIncomplete;
+        }
+
+    /**
+     * Given the incomplete TypeInfo for the specified contribution, check if this type could
+     * nevertheless complete its TypeInfo calculation.
+     *
+     * @return true iff the TypeInfo for this type cannot be completed
+     */
+    private boolean computeIncomplete(Composition composition, TypeConstant typeContrib,
+                                      TypeInfo infoContrib, Set<TypeConstant> setDepends)
+        {
+        if (composition == Composition.Into)
+            {
+            // this type represents a mixin; we cannot complete until the "into" class does
+            setDepends.add(typeContrib.removeAccess());
+            }
+        else if (infoContrib != null)
+            {
+            infoContrib.collectDependTypes(setDepends);
+            if (composition == Composition.Incorporates)
+                {
+                // this type represents a class that incorporates the specified mixin; if the only
+                // unresolved TypeInfo dependency that mixin has is this class itself, disregard it
+                setDepends.remove(this.removeAccess());
+                return !setDepends.isEmpty();
+                }
+            }
+        return true;
         }
 
     /**
@@ -2769,6 +2824,7 @@ public abstract class TypeConstant
      * @param struct               the class structure
      * @param mapTypeParams        the map of type parameters
      * @param listProcess          list of contributions in the order that they should be processed
+     * @param setDepends           the contribution types that prevent this type to complete its TypeInfo
      * @param listmapClassChain    potential call chain
      * @param listmapDefaultChain  potential default call chain
      * @param mapProps             properties of the class
@@ -2785,6 +2841,7 @@ public abstract class TypeConstant
             ClassStructure                      struct,
             Map<Object, ParamInfo>              mapTypeParams,
             List<Contribution>                  listProcess,
+            Set<TypeConstant>                   setDepends,
             ListMap<IdentityConstant, Origin>   listmapClassChain,
             ListMap<IdentityConstant, Origin>   listmapDefaultChain,
             Map<PropertyConstant, PropertyInfo> mapProps,
@@ -2868,9 +2925,19 @@ public abstract class TypeConstant
                 TypeInfo infoContrib = typeContrib.ensureTypeInfoInternal(errs);
                 if (!isComplete(infoContrib))
                     {
-                    fIncomplete = true;
-                    errs        = ErrorListener.BLACKHOLE;
-                    continue;
+                    fIncomplete = computeIncomplete(composition, typeContrib, infoContrib, setDepends);
+                    if (fIncomplete)
+                        {
+                        errs = ErrorListener.BLACKHOLE;
+                        if (infoContrib == null || composition == Composition.Into)
+                            {
+                            // even if the contribution has an incomplete info we can still proceed
+                            // collecting [non-complete] information, except when this type
+                            // represents a mixin, in which case we must discard the incomplete
+                            // "into" info and apply it only when the "left side" info is complete
+                            continue;
+                            }
+                        }
                     }
 
                 switch (composition)
@@ -3515,8 +3582,8 @@ public abstract class TypeConstant
                         }
                     else
                         {
-                        // In general constructors are not virtual, unless a class or mixin implement
-                        // an interface that declares a virtual constructor.
+                        // In general constructors are not virtual, unless a class or mixin
+                        // implements an interface that declares a virtual constructor.
                         // When a real constructor matches a virtual one, the "virtual origin"
                         // information is retained on the non-virtual (real) constructor.
                         // We keep constructors in the map of methods only for "self" and not
@@ -3762,7 +3829,7 @@ public abstract class TypeConstant
                     for (Object nid : listMatches)
                         {
                         MethodInfo methodMatch = mapVirtMethods.get(nid);
-                        if (methodMatch != null && !methodMatch.getIdentity().equals(methodContrib.getIdentity()))
+                        if (methodMatch != null && !methodMatch.containsBody(methodContrib.getIdentity()))
                             {
                             log(errs, Severity.ERROR, VE_METHOD_OVERRIDE_REQUIRED,
                                 removeAccess().getValueString(),
@@ -4868,7 +4935,7 @@ public abstract class TypeConstant
                     info.getContributionList(), info.getClassChain(), info.getDefaultChain(),
                     info.getProperties(), info.getMethods(),
                     info.getVirtProperties(), info.getVirtMethods(), info.getChildInfosByName(),
-                    Progress.Incomplete);
+                    null, Progress.Incomplete);
                 }
 
             info = mergeMixinTypeInfo(this, cInvalidations, idBase, infoBase.getClassStructure(),
@@ -4950,7 +5017,7 @@ public abstract class TypeConstant
                 infoSource.getExtends(), infoSource.getRebases(), infoSource.getInto(),
                 listProcess, infoSource.getClassChain(), infoSource.getDefaultChain(),
                 mapProps, mapMethods, mapVirtProps, mapVirtMethods, mapChildren,
-                Progress.Complete);
+                null, Progress.Complete);
         }
 
     /**

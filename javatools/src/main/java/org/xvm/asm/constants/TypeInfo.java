@@ -82,6 +82,7 @@ public class TypeInfo
             Map<Object, PropertyInfo>           mapVirtProps,
             Map<Object, MethodInfo>             mapVirtMethods,
             ListMap<String, ChildInfo>          mapChildren,
+            Set<TypeConstant>                   setDepends,
             Progress                            progress)
         {
         assert type                 != null;
@@ -92,6 +93,7 @@ public class TypeInfo
         assert mapMethods           != null;
         assert mapVirtProps         != null;
         assert mapVirtMethods       != null;
+        assert setDepends           == null || progress == Progress.Incomplete;
         assert progress             != null && progress != Progress.Absent;
 
         f_type                = type;
@@ -112,6 +114,7 @@ public class TypeInfo
         f_mapMethods          = mapMethods;
         f_mapVirtMethods      = mapVirtMethods;
         f_mapChildren         = mapChildren;
+        f_setDepends          = setDepends;
         f_progress            = progress;
 
         // pre-populate the method lookup caches
@@ -157,6 +160,7 @@ public class TypeInfo
         f_mapMethods          = infoConstraint.f_mapMethods;
         f_mapVirtMethods      = infoConstraint.f_mapVirtMethods;
         f_mapChildren         = infoConstraint.f_mapChildren;
+        f_setDepends          = null;
         f_progress            = Progress.Complete;
 
         f_cacheById  = infoConstraint.f_cacheById;
@@ -256,7 +260,8 @@ public class TypeInfo
                 f_mapTypeParams, f_aannoClass, f_aannoMixin,
                 typeExtends, typeRebases, typeInto,
                 f_listProcess, f_listmapClassChain, f_listmapDefaultChain,
-                mapProps, mapMethods, mapVirtProps, mapVirtMethods, mapChildren, f_progress);
+                mapProps, mapMethods, mapVirtProps, mapVirtMethods, mapChildren,
+                f_setDepends, f_progress);
         }
 
     /**
@@ -316,7 +321,8 @@ public class TypeInfo
                     f_mapTypeParams, f_aannoClass, f_aannoMixin,
                     f_typeExtends, f_typeRebases, f_typeInto,
                     f_listProcess, f_listmapClassChain, f_listmapDefaultChain,
-                    mapProps, mapMethods, mapVirtProps, mapVirtMethods, f_mapChildren, f_progress);
+                    mapProps, mapMethods, mapVirtProps, mapVirtMethods,
+                    f_mapChildren, f_setDepends, f_progress);
 
             if (f_progress == Progress.Complete)
                 {
@@ -373,7 +379,8 @@ public class TypeInfo
                     f_mapTypeParams, f_aannoClass, f_aannoMixin,
                     f_typeExtends, f_typeRebases, f_typeInto,
                     f_listProcess, f_listmapClassChain, f_listmapDefaultChain,
-                    mapProps, mapMethods, mapVirtProps, mapVirtMethods, f_mapChildren, f_progress);
+                    mapProps, mapMethods, mapVirtProps, mapVirtMethods,
+                    f_mapChildren, f_setDepends, f_progress);
 
             if (f_progress == Progress.Complete)
                 {
@@ -434,6 +441,19 @@ public class TypeInfo
         for (IdentityConstant constId : f_listmapDefaultChain.keySet())
             {
             listmapDefaultChain.putIfAbsent(constId, originTrue);
+            }
+        }
+
+    /**
+     * Add the types this TypeInfo depends on to the specified set.
+     *
+     * @param setDepends the set to add the types to
+     */
+    public void collectDependTypes(Set<TypeConstant> setDepends)
+        {
+        if (f_setDepends != null)
+            {
+            setDepends.addAll(f_setDepends);
             }
         }
 
@@ -2521,6 +2541,11 @@ public class TypeInfo
      * under properties, the name will be dot-delimited, such as "prop.name".
      */
     private final ListMap<String, ChildInfo> f_mapChildren;
+
+    /**
+     * The contribution types with non-completed TypeInfo that prevented this TypeInfo from completion.
+     */
+    private final Set<TypeConstant> f_setDepends;
 
     /**
      * The methods of the type, indexed by signature. This will not include nested methods, such

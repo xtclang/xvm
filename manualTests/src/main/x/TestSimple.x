@@ -2,27 +2,78 @@ module TestSimple.test.org
     {
     @Inject Console console;
 
-    void run( )
+    void run()
         {
-        Test<Byte> t = new Test(0);
-        test(t);
+        TestB t1 = new TestB();
+        t1.report();
+
+        TestD t2 = new TestD();
+        t2.report();
+
+        TestConditional<Byte> t3 = new TestConditional(1);
+        t3.report();
         }
 
-    class Test<Element extends Number>(Element element)
+    class TestB()
+            incorporates IncB
+        {}
+
+    class TestD()
+            extends TestB
+            incorporates IncD
+        {}
+
+    mixin IncB into TestB
         {
-        construct(Element e)
+        Int i = 0;
+
+        void report()
             {
-            assert Element.fixedLength();
-            element = e;
+            console.println($"reportB {i}");
             }
         }
 
-    <CompileType extends Test> void test(CompileType test)
+    mixin IncD
+            extends IncB
+            into    TestD
         {
-        assert CompileType.Element.fixedLength();
+        @Override Int i.get()
+            {
+            return super() + 1;
+            }
 
-        Type<Number> type1 = test.&element.actualType.as(Type<Number>);
+        @Override
+        void report()
+            {
+            console.println("reportD");
+            super();
+            }
+        }
 
-        assert type1.DataType.fixedLength();
+    class TestConditional<Element>(Element element)
+            incorporates conditional IncNumbers<Element extends Number>
+            incorporates conditional IncBytes  <Element extends Byte>
+        {
+        }
+
+    mixin IncNumbers<Element extends Number>
+            into TestConditional<Element>
+        {
+        void report()
+            {
+            console.println("reportNumbers");
+            }
+        }
+
+    mixin IncBytes<Element extends Byte>
+            extends IncNumbers<Element>
+            into TestConditional<Element>
+        {
+        @Override
+        void report()
+            {
+            console.println("reportBytes");
+            super();
+            }
         }
     }

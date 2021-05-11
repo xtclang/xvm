@@ -570,6 +570,7 @@ public abstract class RelationalTypeConstant
                             Collections.EMPTY_MAP,  // mapVirtProps
                             Collections.EMPTY_MAP,  // mapVirtMethods
                             mergeChildren(info1, info2, errs),
+                            null, // REVIEW: mergeDepends?
                             info1 == null || info2 == null
                                     ? TypeInfo.Progress.Incomplete
                                     : info1.getProgress().worstOf(info2.getProgress())

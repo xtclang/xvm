@@ -420,7 +420,7 @@ public class AnnotatedTypeConstant
                     infoBase.getProperties(), infoBase.getMethods(),
                     infoBase.getVirtProperties(), infoBase.getVirtMethods(),
                     infoBase.getChildInfosByName(),
-                    TypeInfo.Progress.Complete);
+                    null, TypeInfo.Progress.Complete);
             }
 
         TypeConstant typeTarget = pool.ensureAccessTypeConstant(this, Access.PRIVATE);

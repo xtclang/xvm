@@ -2372,7 +2372,7 @@ public class ConstantPool
                 Collections.EMPTY_LIST, new ListMap<>(), new ListMap<>(),
                 Collections.EMPTY_MAP, Collections.EMPTY_MAP,
                 Collections.EMPTY_MAP, Collections.EMPTY_MAP,
-                ListMap.EMPTY, Progress.Building)
+                ListMap.EMPTY, null, Progress.Building)
                     {
                     public String toString()
                         {
@@ -3812,7 +3812,7 @@ public class ConstantPool
                 Collections.EMPTY_MAP,  // mapVirtProps
                 mapVirtMethods,
                 ListMap.EMPTY,          // mapChildren
-                Progress.Complete
+                null, Progress.Complete
                 );
         }
 

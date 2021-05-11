@@ -499,26 +499,26 @@ public class PropertyInfo
      */
     public PropertyInfo asInto()
         {
-        // basically, if the property is a constant or formal type, it stays as-is; otherwise, it
-        // needs to be "flattened" into a single implicit entry with the right signature
+        // if the property is a constant or a formal type, it stays as-is; otherwise, it needs to be
+        // turned into a chain of implicit entries
         if (isConstant() || isFormalType())
             {
             return this;
             }
 
-        boolean fRO = false;
-        boolean fRW = false;
-        for (PropertyBody body : m_aBody)
+        PropertyBody[] aBodyOld = m_aBody;
+        int            cBodies  = aBodyOld.length;
+        PropertyBody[] aBodyNew = new PropertyBody[cBodies];
+        for (int i = 0; i < cBodies; i++)
             {
-            fRO |= body.isRO();
-            fRW |= body.isRW();
+            PropertyBody body = aBodyOld[i];
+
+            aBodyNew[i] = new PropertyBody(body.getStructure(), Implementation.Implicit, null,
+                body.getType(), body.isRO(), body.isRW(), body.hasCustomCode(), Effect.None, Effect.None,
+                body.hasField(), false, null, null);
             }
 
-        PropertyBody body = new PropertyBody(getHead().getStructure(), Implementation.Implicit, null,
-                getType(), fRO, fRW, getHead().hasCustomCode(), Effect.None, Effect.None, hasField(),
-                false, null, null);
-        return new PropertyInfo(new PropertyBody[] {body},
-                m_type, m_fRequireField, m_fSuppressVar, m_nRank);
+        return new PropertyInfo(aBodyNew, m_type, m_fRequireField, m_fSuppressVar, m_nRank);
         }
 
     /**
