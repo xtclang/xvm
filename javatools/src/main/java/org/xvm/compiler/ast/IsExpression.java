@@ -4,6 +4,7 @@ package org.xvm.compiler.ast;
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
@@ -111,6 +112,11 @@ public class IsExpression
                     ((NameExpression) exprTarget).left == null)
                 {
                 NameExpression exprName = (NameExpression) exprTarget;
+
+                if (typeTarget.isNestMateOf(ctx.getThisClass().getIdentityConstant()))
+                    {
+                    typeTarget = pool.ensureAccessTypeConstant(typeTarget, Access.PRIVATE);
+                    }
 
                 exprName.narrowType(ctx, Branch.WhenTrue,  typeTarget.combine(pool, typeTest));
                 exprName.narrowType(ctx, Branch.WhenFalse, typeTarget.andNot(pool, typeTest));

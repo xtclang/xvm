@@ -250,7 +250,7 @@ public abstract class RelationalTypeConstant
 
         return constResolved1 == constOriginal1 && constResolved2 == constOriginal2
                 ? this
-                : cloneRelational(getConstantPool(), constResolved1, constResolved2);
+                : simplifyOrClone(getConstantPool(), constResolved1, constResolved2);
         }
 
     @Override
@@ -263,7 +263,7 @@ public abstract class RelationalTypeConstant
 
         return constResolved1 == constOriginal1 && constResolved2 == constOriginal2
                 ? this
-                : cloneRelational(getConstantPool(), constResolved1, constResolved2);
+                : simplifyOrClone(getConstantPool(), constResolved1, constResolved2);
         }
 
     @Override

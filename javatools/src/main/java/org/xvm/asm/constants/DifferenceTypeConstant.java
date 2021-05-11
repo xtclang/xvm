@@ -186,8 +186,8 @@ public class DifferenceTypeConstant
      */
     private TypeConstant andNotInternal(ConstantPool pool, TypeConstant that)
         {
-        TypeConstant type1 = getUnderlyingType().resolveTypedefs();
-        TypeConstant type2 = getUnderlyingType2().resolveTypedefs();
+        TypeConstant type1 = m_constType1.resolveTypedefs();
+        TypeConstant type2 = m_constType2.resolveTypedefs();
 
         if (that.isA(type1))
             {
@@ -441,8 +441,20 @@ public class DifferenceTypeConstant
     @Override
     protected Relation calculateRelationToRight(TypeConstant typeRight)
         {
-        // this will be answered via duck-type check
-        return Relation.INCOMPATIBLE;
+        // if [typeRight] A is assignable to B, then A is assignable to [this] (B - C) unless B is
+        // an intersection of (X | C), in which case it should have been simplified by andNot();
+        // otherwise this will be answered via duck-type check
+        TypeConstant type1 = m_constType1;
+        if (type1 instanceof IntersectionTypeConstant)
+            {
+            TypeConstant typeR = simplifyOrClone(getConstantPool(), type1, m_constType2);
+            if (typeR != this)
+                {
+                return typeR.calculateRelationToRight(typeRight);
+                }
+            }
+
+        return type1.calculateRelationToRight(typeRight);
         }
 
     @Override
