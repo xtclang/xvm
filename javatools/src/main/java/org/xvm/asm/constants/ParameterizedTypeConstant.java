@@ -185,12 +185,12 @@ public class ParameterizedTypeConstant
         }
 
     @Override
-    protected int getParameterDepth()
+    protected int getTypeDepth()
         {
         int nDepth = 0;
         for (TypeConstant typeParam : m_atypeParams)
             {
-            nDepth = Math.max(nDepth, typeParam.getParameterDepth() + 1);
+            nDepth = Math.max(nDepth, typeParam.getTypeDepth() + 1);
             }
         return nDepth;
         }

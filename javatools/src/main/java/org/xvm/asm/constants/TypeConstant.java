@@ -350,15 +350,18 @@ public abstract class TypeConstant
         }
 
     /**
-     * The {@link ParameterizedTypeConstant} is the only TypeConstant that allows a recursion,
-     * e.g. {@code Array<Doc | Array<Doc>>}. This method measures the depth of the recursion.
+     * There are types, such as {@link ParameterizedTypeConstant} and {@link AnnotatedTypeConstant}
+     * that allows a recursion, e.g. {@code Array<Doc | Array<Doc>>} or nesting
+     * e.g. {@code @Unchecked (@Unchecked Element)}.
      *
-     * @return the depth of the {@link ParameterizedTypeConstant} recursion
+     * This method measures the overall depth of that recursion or nesting.
+     *
+     * @return the depth of the this type
      */
-    protected int getParameterDepth()
+    protected int getTypeDepth()
         {
         return isModifyingType()
-                ? getUnderlyingType().getParameterDepth()
+                ? 1 + getUnderlyingType().getTypeDepth()
                 : 0;
         }
 
@@ -5469,10 +5472,11 @@ public abstract class TypeConstant
             {
             // check if generic types could be resolved in the specified context without
             // producing self referring cycles, e.g. List<Element> -> List<List<Element>>
+            // or @Unchecked Element -> @Unchecked @Unchecked Element
             // (TODO need to make this algorithm more precise)
             TypeConstant typeBaseR = typeBase.resolveGenerics(ConstantPool.getCurrentPool(), typeCtx);
             if (typeBaseR != typeBase &&
-                        typeBaseR.getParameterDepth() == typeBase.getParameterDepth())
+                        typeBaseR.getTypeDepth() == typeBase.getTypeDepth())
                 {
                 return isCovariantReturn(typeBaseR, typeCtx);
                 }
@@ -5524,7 +5528,7 @@ public abstract class TypeConstant
             // producing self referring cycles (see above)
             TypeConstant typeBaseR = typeBase.resolveGenerics(ConstantPool.getCurrentPool(), typeCtx);
             if (typeBaseR != typeBase &&
-                    typeBaseR.getParameterDepth() == typeBase.getParameterDepth())
+                    typeBaseR.getTypeDepth() == typeBase.getTypeDepth())
                 {
                 return isContravariantParameter(typeBaseR, typeCtx);
                 }
