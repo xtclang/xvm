@@ -1306,6 +1306,10 @@ public class Compiler
      */
     public static final String METHOD_INACCESSIBLE                 = "COMPILER-177";
     /**
+     * Possible name collision: an attempt to use property {0} defined at {1} as a function.
+     */
+    public static final String SUSPICIOUS_PROPERTY_USE             = "COMPILER-178";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                     = "COMPILER-NI";

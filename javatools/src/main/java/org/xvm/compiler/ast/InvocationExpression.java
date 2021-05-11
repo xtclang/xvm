@@ -479,9 +479,22 @@ public class InvocationExpression
                 typeArg = argMethod.getType().resolveTypedefs();
                 }
 
-            return typeArg.isA(pool.typeFunction()) || typeArg.isA(pool.typeMethod())
-                    ? calculateReturnType(typeArg)
-                    : TypeConstant.NO_TYPES;
+            if (typeArg.isA(pool.typeFunction()) || typeArg.isA(pool.typeMethod()))
+                {
+                return calculateReturnType(typeArg);
+                }
+
+            // try to guess what went wrong
+            if (argMethod instanceof PropertyConstant)
+                {
+                if (typeLeft == null)
+                    {
+                    typeLeft = ctx.getThisType();
+                    }
+                log(errs, Severity.ERROR, Compiler.SUSPICIOUS_PROPERTY_USE,
+                        exprName.getName(), typeLeft.getValueString());
+                }
+            return TypeConstant.NO_TYPES;
             }
         else // not a NameExpression
             {
@@ -2744,8 +2757,11 @@ public class InvocationExpression
             ctx = ctx.enterInferring(typeParam);
             if (!exprArg.testFit(ctx, typeParam, errs).isFit())
                 {
-                log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
-                        typeParam.getValueString(), exprArg.getTypeString(ctx));
+                if (!errs.hasSeriousErrors())
+                    {
+                    log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
+                            typeParam.getValueString(), exprArg.getTypeString(ctx));
+                    }
                 fValid = false;
                 }
             ctx = ctx.exit();
