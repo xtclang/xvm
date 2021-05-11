@@ -316,6 +316,38 @@ public class AnnotatedTypeConstant
         }
 
     @Override
+    public TypeConstant andNot(ConstantPool pool, TypeConstant that)
+        {
+        TypeConstant typeAnno = getAnnotationType();
+        TypeConstant typeBase = getUnderlyingType().resolveTypedefs();
+
+        if (typeAnno.equals(that))
+            {
+            // (@A B) - A => B
+            return typeBase;
+            }
+
+        if (that.isA(typeBase))
+            {
+            // (@A B) - Sub(B) => B
+            return pool.typeObject();
+            }
+
+        // recurse to cover cases like this:
+        // (@A1 (@A2 B)) - A2 => @A1 B
+        if (typeBase.isAnnotated())
+            {
+            TypeConstant typeBaseR = typeBase.andNot(pool, that);
+            if (typeBaseR != typeBase && !(typeBaseR instanceof DifferenceTypeConstant))
+                {
+                return cloneSingle(pool, typeBaseR);
+                }
+            }
+
+        return super.andNot(pool, that);
+        }
+
+    @Override
     protected TypeConstant cloneSingle(ConstantPool pool, TypeConstant type)
         {
         return pool.ensureAnnotatedTypeConstant(m_annotation.getAnnotationClass(),

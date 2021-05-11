@@ -68,7 +68,15 @@ public class DifferenceTypeConstant
     @Override
     protected TypeConstant simplifyOrClone(ConstantPool pool, TypeConstant type1, TypeConstant type2)
         {
-        if (type1.isRelationalType())
+        if (type1 instanceof DifferenceTypeConstant)
+            {
+            TypeConstant typeR = ((DifferenceTypeConstant) type1).andNotInternal(pool, type2);
+            if (typeR != null)
+                {
+                return typeR;
+                }
+            }
+        else if (type1.isRelationalType() || type1.isAnnotated())
             {
             TypeConstant typeResult = type1.andNot(pool, type2);
 
@@ -162,6 +170,38 @@ public class DifferenceTypeConstant
         {
         // difference types are never nullable
         return false;
+        }
+
+    @Override
+    public TypeConstant andNot(ConstantPool pool, TypeConstant that)
+        {
+        TypeConstant typeR = andNotInternal(pool, that);
+        return typeR == null
+                ? super.andNot(pool, that)
+                : typeR;
+        }
+
+    /**
+     * @return a simplified type or null if it cannot bee simplified
+     */
+    private TypeConstant andNotInternal(ConstantPool pool, TypeConstant that)
+        {
+        TypeConstant type1 = getUnderlyingType().resolveTypedefs();
+        TypeConstant type2 = getUnderlyingType2().resolveTypedefs();
+
+        if (that.isA(type1))
+            {
+            // (A - B) - Sub(A) => Object
+            return pool.typeObject();
+            }
+
+        if (type2.isA(that))
+            {
+            // (A - B) - Super(B) => (A - B)
+            return this;
+            }
+
+        return null;
         }
 
     @Override
