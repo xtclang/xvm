@@ -418,23 +418,30 @@ public class DifferenceTypeConstant
     @Override
     protected Relation calculateRelationToLeft(TypeConstant typeLeft)
         {
-        if (m_constType1.isFormalType() && typeLeft.isFormalType())
+        if (m_constType1.isFormalType())
             {
-            // this (right) type is DR = (FR - X), where FR is a formal type with a constraint of CR;
-            // typeLeft is a formal type FL with a constraint of CL;
-            // the logic below implies that if (CR - X) is assignable to CL then
-            // (FR - X) is assignable to FL
-            //
+            // this (right) type is DR = (FR - X), where FR is a formal type with a constraint of CR
             // Note: we are treating this DifferenceType as a *formal type that is not constType2*
             //       (see the comment at TerminalTypeConstant.removeNullable)
-            TypeConstant typeCR = ((FormalConstant) m_constType1.getDefiningConstant()).getConstraintType();
-            TypeConstant typeCL = ((FormalConstant) typeLeft.getDefiningConstant()).getConstraintType();
-
+            TypeConstant typeCR   = ((FormalConstant) m_constType1.getDefiningConstant()).getConstraintType();
             TypeConstant typeSubR = typeCR.andNot(getConstantPool(), m_constType2);
-            return typeSubR.calculateRelation(typeCL);
+
+            if (typeLeft.isFormalType())
+                {
+                // typeLeft is a formal type FL with a constraint of CL;
+                // the logic below implies that if (CR - X) is assignable to CL then (FR - X) is
+                // assignable to FL
+                TypeConstant typeCL = ((FormalConstant) typeLeft.getDefiningConstant()).getConstraintType();
+                return typeSubR.calculateRelation(typeCL);
+                }
+            else
+                {
+                // if (CR - X) is assignable to L then (FR - X) is assignable to L
+                return typeSubR.calculateRelation(typeLeft);
+                }
             }
 
-        // this will be answered via duck-type check
+        // defer the answer to the duck-type check
         return Relation.INCOMPATIBLE;
         }
 
@@ -443,7 +450,7 @@ public class DifferenceTypeConstant
         {
         // if [typeRight] A is assignable to B, then A is assignable to [this] (B - C) unless B is
         // an intersection of (X | C), in which case it should have been simplified by andNot();
-        // otherwise this will be answered via duck-type check
+        // otherwise defer the answer to the duck-type check
         TypeConstant type1 = m_constType1;
         if (type1 instanceof IntersectionTypeConstant)
             {
@@ -460,7 +467,7 @@ public class DifferenceTypeConstant
     @Override
     protected Relation findIntersectionContribution(IntersectionTypeConstant typeLeft)
         {
-        // this will be answered via duck-type check
+        // defer the answer to the duck-type check
         return Relation.INCOMPATIBLE;
         }
 
