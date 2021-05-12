@@ -1990,7 +1990,8 @@ public class NameExpression
                         break;
 
                     case Typedef:
-                        log(errs, Severity.ERROR, Compiler.TYPEDEF_UNEXPECTED, sName);
+                        log(errs, Severity.ERROR, Compiler.TYPEDEF_UNEXPECTED,
+                                sName, typeLeft.getValueString());
                         break;
 
                     case Property:

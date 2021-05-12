@@ -707,7 +707,8 @@ public class NameResolver
                     // typedef is allowed in type mode, but not in formal type mode
                     if (m_typeMode == TypeMode.FORMAL_TYPE)
                         {
-                        m_node.log(m_errs, Severity.ERROR, Compiler.TYPEDEF_UNEXPECTED);
+                        m_node.log(m_errs, Severity.ERROR, Compiler.TYPEDEF_UNEXPECTED,
+                                m_sName, id.getParentConstant().getValueString());
                         m_stage = Stage.ERROR;
                         return ResolutionResult.ERROR;
                         }

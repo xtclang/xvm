@@ -717,11 +717,11 @@ public class Compiler
      */
     public static final String NOT_CLASS_TYPE                     = "COMPILER-32";
     /**
-     * Cannot nest a method.
+     * Method "{0}" cannot be nested under "{1}".
      */
     public static final String METHOD_UNEXPECTED                  = "COMPILER-33";
     /**
-     * Cannot nest a typedef.
+     * Typedef "{0}" cannot be nested under "{1}".
      */
     public static final String TYPEDEF_UNEXPECTED                 = "COMPILER-34";
     /**
