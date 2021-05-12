@@ -40,7 +40,7 @@ module TestInnerOuter
                 val   o1 = outer;
                 Outer o2 = this.Outer;
                 assert &o1 == &o2;
-                // assert &o2 == &outer; // TODO GG: ClassCastException
+                assert &o2 == &outer;
                 console.println($"this=\"{this}\"; outer=\"{o1}\", type=\"{&o1.Referent}\"");
                 }
             }

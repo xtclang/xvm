@@ -25,6 +25,8 @@ import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.TypedefStructure;
 
 import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.PropertyClassTypeConstant;
+import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.template.Child;
@@ -308,13 +310,19 @@ public class TemplateRegistry
             }
         }
 
-    // this call (template by name) can only come from the root module
+    /**
+     * Ensure a ClassTemplate for the specified name.
+     *
+     * Note: this call can only come from the root module.
+     */
     public ClassTemplate getTemplate(String sName)
         {
         return getTemplate(getIdentityConstant(sName));
         }
 
-    // obtain a ClassTemplate for the specified type
+    /**
+     * Ensure a ClassTemplate for the specified type.
+     */
     public ClassTemplate getTemplate(TypeConstant typeActual)
         {
         ClassTemplate template = f_mapTemplatesByType.get(typeActual);
@@ -338,6 +346,9 @@ public class TemplateRegistry
         return template;
         }
 
+    /**
+     * Ensure a ClassTemplate for the specified class identity.
+     */
     public ClassTemplate getTemplate(IdentityConstant constClass)
         {
         return f_mapTemplatesByType.computeIfAbsent(constClass.getType(), type ->
@@ -391,9 +402,18 @@ public class TemplateRegistry
             });
         }
 
-    // produce a TypeComposition based on the specified TypeConstant
+    /**
+     * Produce a TypeComposition based on the specified TypeConstant.
+     */
     public TypeComposition resolveClass(TypeConstant typeActual)
         {
+        if (typeActual instanceof PropertyClassTypeConstant)
+            {
+            PropertyClassTypeConstant typeProp = (PropertyClassTypeConstant) typeActual;
+            ClassComposition          clz      = (ClassComposition) resolveClass(
+                                                    typeProp.getParentType().removeAccess());
+            return clz.ensurePropertyComposition(typeProp.getPropertyInfo());
+            }
         return getTemplate(typeActual).ensureClass(typeActual.normalizeParameters());
         }
 
