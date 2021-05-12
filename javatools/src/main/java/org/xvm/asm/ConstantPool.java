@@ -1734,22 +1734,19 @@ public class ConstantPool
         assert !clzBase.containsUnresolvedContribution();
 
         TypeConstant typeParent;
-        TypeConstant typeTarget;
         if (clzBase.equals(clzParent) || clzBase.hasContribution(idParent, true))
             {
             // we've reached the "top"
-            typeParent = fFormal
-                            ? clzBase.getFormalType()
-                            : clzBase.getCanonicalType();
-            typeTarget = fAutoNarrow
-                            ? ensureThisVirtualChildTypeConstant(typeParent, sName)
-                            : ensureVirtualChildTypeConstant(typeParent, sName);
+            typeParent = fFormal ? clzBase.getFormalType() : clzBase.getCanonicalType();
             }
         else if (clzParent.isVirtualChild())
             {
             // as we recurse, always parameterize the parent, which is never auto-narrowing
             typeParent = ensureVirtualTypeConstant(clzBase, clzParent, fFormal, true, false);
-            typeTarget = ensureVirtualChildTypeConstant(typeParent, sName);
+            if (typeParent == null)
+                {
+                return null;
+                }
             }
         else
             {
@@ -1757,6 +1754,9 @@ public class ConstantPool
             return null;
             }
 
+        TypeConstant typeTarget = fAutoNarrow
+                        ? ensureThisVirtualChildTypeConstant(typeParent, sName)
+                        : ensureVirtualChildTypeConstant(typeParent, sName);
         if (fParameterize && clzChild.getTypeParamCount() > 0)
             {
             TypeConstant[] atypeParams = fFormal
