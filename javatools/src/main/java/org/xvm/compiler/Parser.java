@@ -4676,7 +4676,7 @@ public class Parser
      *
      * <p/><code><pre>
      * AnnotatedTypeExpression
-     *     Annotation TypeExpression
+     *     Annotation NonBiTypeExpression
      * </pre></code>
      *
      * @return
@@ -4684,7 +4684,7 @@ public class Parser
     AnnotatedTypeExpression parseAnnotatedTypeExpression()
         {
         AnnotationExpression annotation = parseAnnotation(true);
-        TypeExpression type = parseTypeExpression();
+        TypeExpression type = parseNonBiTypeExpression();
 
         return new AnnotatedTypeExpression(annotation, type);
         }

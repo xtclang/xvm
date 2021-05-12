@@ -1068,7 +1068,7 @@ NonBiTypeExpression
     "immutable" NonBiTypeExpression
 
 AnnotatedTypeExpression
-    Annotation TypeExpression
+    Annotation NonBiTypeExpression
 
 NamedTypeExpression
     NamedTypeExpressionPart
