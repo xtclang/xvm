@@ -941,16 +941,14 @@ public class NamedTypeExpression
             //    }
             //
 
-            boolean       fThisClass          = false;
-            boolean       fAllowFormalVirtual = false;
+            boolean       fImplicitFormal = false;
             ClassConstant idTarget;
             switch (constTarget.getFormat())
                 {
                 case ThisClass:
-                    fThisClass = true;
-                    // fall through
                 case ParentClass:
-                    fAllowFormalVirtual = true;
+                    // we can only generate an implicit formal type for "this" or "parent"
+                    fImplicitFormal = true;
                     // fall through
                 case ChildClass:
                     idTarget = (ClassConstant) ((PseudoConstant) constTarget).getDeclarationLevelClass();
@@ -1048,10 +1046,10 @@ public class NamedTypeExpression
                         // Note: keep the formal types when in a constructor
                         boolean fFormalParent = !(component instanceof MethodStructure &&
                                             ((MethodStructure) component).isFunction());
-                        boolean fFormalChild = fFormalParent && fAllowFormalVirtual && paramTypes == null;
+                        boolean fFormalChild = fFormalParent && fImplicitFormal && paramTypes == null;
 
                         typeTarget = pool.ensureVirtualTypeConstant(
-                                clzBase, clzTarget, fFormalParent, fFormalChild, fThisClass);
+                                clzBase, clzTarget, fFormalParent, fFormalChild, constTarget);
                         assert typeTarget != null;
                         }
                     else if (clzClass.isVirtualDescendant(idTarget))
@@ -1084,7 +1082,7 @@ public class NamedTypeExpression
                         return new UnresolvedTypeConstant(pool,
                                 new UnresolvedNameConstant(pool, clzTarget.getName()));
                         }
-                    typeTarget = pool.ensureVirtualTypeConstant(clzBase, clzTarget, false, false, false);
+                    typeTarget = pool.ensureVirtualTypeConstant(clzBase, clzTarget, false, false, idTarget);
                     }
 
                 boolean fValid;

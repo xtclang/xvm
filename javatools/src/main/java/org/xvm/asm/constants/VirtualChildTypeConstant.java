@@ -320,11 +320,7 @@ public class VirtualChildTypeConstant
                 typeTarget = typeTarget.getUnderlyingType();
                 }
 
-            if (typeTarget.isA(typeParentResolved))
-                {
-                typeParentResolved = typeTarget;
-                }
-            else if (m_fThisClass && typeTarget.isA(this))
+            if (m_fThisClass && typeTarget.isA(this))
                 {
                 return typeTarget;
                 }

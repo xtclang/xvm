@@ -2199,7 +2199,7 @@ public class NameExpression
                                 boolean        fFormal = !(component instanceof MethodStructure &&
                                                          ((MethodStructure) component).isFunction());
                                 type = pool.ensureVirtualTypeConstant(clzBase, clzTarget,
-                                    fFormal && fMate, /*fParameterize*/ false, /*fAutoNarrowing*/ false);
+                                    fFormal && fMate, /*fParameterize*/ false, idTarget);
                                 }
                             }
                         }

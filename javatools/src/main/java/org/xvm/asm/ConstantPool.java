@@ -1718,12 +1718,13 @@ public class ConstantPool
      * @param fFormal        if true, create formal types for the parent type constants,
      *                       otherwise canonical
      * @param fParameterize  if true, parameterize the newly created child
-     * @param fAutoNarrow    if true, the virtual child represents an auto-narrowing "this" class
+     * @param constTarget    the constant representing the target identity; could be a
+     *                       PseudoConstant reflecting the "auto-narrowing" aspect of the type
      *
      * @return the TypeConstant of the virtual child type
      */
     public TypeConstant ensureVirtualTypeConstant(ClassStructure clzBase, ClassStructure clzChild,
-                                                  boolean fFormal, boolean fParameterize, boolean fAutoNarrow)
+                                                  boolean fFormal, boolean fParameterize, Constant constTarget)
         {
         assert clzChild.isVirtualChild();
 
@@ -1733,16 +1734,37 @@ public class ConstantPool
 
         assert !clzBase.containsUnresolvedContribution();
 
+        boolean fAutoNarrow = false;
+        switch (constTarget.getFormat())
+            {
+            case ThisClass:
+                fAutoNarrow = true;
+                constTarget = ((ThisClassConstant) constTarget).getDeclarationLevelClass();
+                break;
+
+            case ParentClass:
+                constTarget = ((ParentClassConstant) constTarget).getChildClass();
+                break;
+
+            case ChildClass:
+                constTarget = ((ChildClassConstant) constTarget).getParent();
+                break;
+            }
+
         TypeConstant typeParent;
         if (clzBase.equals(clzParent) || clzBase.hasContribution(idParent, true))
             {
             // we've reached the "top"
             typeParent = fFormal ? clzBase.getFormalType() : clzBase.getCanonicalType();
+            if (constTarget instanceof ThisClassConstant)
+                {
+                typeParent = constTarget.getType().adoptParameters(this, typeParent);
+                }
             }
         else if (clzParent.isVirtualChild())
             {
             // as we recurse, always parameterize the parent, which is never auto-narrowing
-            typeParent = ensureVirtualTypeConstant(clzBase, clzParent, fFormal, true, false);
+            typeParent = ensureVirtualTypeConstant(clzBase, clzParent, fFormal, true, constTarget);
             if (typeParent == null)
                 {
                 return null;
