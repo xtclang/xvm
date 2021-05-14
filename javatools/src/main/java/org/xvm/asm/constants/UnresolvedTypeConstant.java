@@ -358,6 +358,12 @@ public class UnresolvedTypeConstant
         }
 
     @Override
+    public boolean containsFormalType(boolean fAllowParams)
+        {
+        return isTypeResolved() && getResolvedType().containsFormalType(fAllowParams);
+        }
+
+    @Override
     public boolean consumesFormalType(String sTypeName, Access access)
         {
         return isTypeResolved() && getResolvedType().consumesFormalType(sTypeName, access);
