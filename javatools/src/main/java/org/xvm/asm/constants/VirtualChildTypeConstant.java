@@ -192,6 +192,29 @@ public class VirtualChildTypeConstant
     // ----- TypeConstant methods ------------------------------------------------------------------
 
     @Override
+    public boolean isImmutabilitySpecified()
+        {
+        return getParentType().isImmutabilitySpecified();
+        }
+
+    @Override
+    public boolean isImmutable()
+        {
+        // a virtual child of an immutable parent must be immutable
+        return getParentType().isImmutable();
+        }
+
+    @Override
+    public TypeConstant removeImmutable()
+        {
+        TypeConstant typeParent = getParentType();
+
+        return typeParent.isImmutabilitySpecified()
+                ? cloneSingle(getConstantPool(), typeParent.removeImmutable())
+                : this;
+        }
+
+    @Override
     public int getMaxParamsCount()
         {
         return getChildStructure().getTypeParams().size();
