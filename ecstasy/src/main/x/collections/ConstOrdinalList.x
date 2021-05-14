@@ -19,12 +19,12 @@ const ConstOrdinalList
         {
         this.contents = contents;
 
-        (size, firstOffset) = contents.readPackedInt(0);
+        (size, firstOffset) = contents.unpackInt(0);
         if (size > 0)
             {
-            (defaultVal, firstOffset) = contents.readPackedInt(firstOffset);
-            (bitsPerVal, firstOffset) = contents.readPackedInt(firstOffset);
-            (firstIndex, firstOffset) = contents.readPackedInt(firstOffset);
+            (defaultVal, firstOffset) = contents.unpackInt(firstOffset);
+            (bitsPerVal, firstOffset) = contents.unpackInt(firstOffset);
+            (firstIndex, firstOffset) = contents.unpackInt(firstOffset);
             }
         }
 
@@ -130,10 +130,10 @@ const ConstOrdinalList
         Int offsetCurrent = firstOffset;
         while (True)
             {
-            (Int indexSkip, offsetCurrent) = contents.readPackedInt(offsetCurrent);
+            (Int indexSkip, offsetCurrent) = contents.unpackInt(offsetCurrent);
             if (indexSkip != 0)
                 {
-                (Int offsetSkip, offsetCurrent) = contents.readPackedInt(offsetCurrent);
+                (Int offsetSkip, offsetCurrent) = contents.unpackInt(offsetCurrent);
                 if (index >= indexCurrent + indexSkip)
                     {
                     indexCurrent  += indexSkip;
@@ -146,11 +146,11 @@ const ConstOrdinalList
             // 1) between the current point and the end of values present in this node
             // 2) after this node but before the next node (or there is no next node)
             // 3) somewhere after the start of the next node (i.e. only if there is a next node)
-            (Int indexNext, offsetCurrent) = contents.readPackedInt(offsetCurrent);
-            (Int nodeLen  , offsetCurrent) = contents.readPackedInt(offsetCurrent);
+            (Int indexNext, offsetCurrent) = contents.unpackInt(offsetCurrent);
+            (Int nodeLen  , offsetCurrent) = contents.unpackInt(offsetCurrent);
             if (nodeLen < 0)
                 {
-                (Int nodeVal, offsetCurrent) = contents.readPackedInt(offsetCurrent);
+                (Int nodeVal, offsetCurrent) = contents.unpackInt(offsetCurrent);
                 if (index < indexCurrent - nodeLen)
                     {
                     return nodeVal;
@@ -247,23 +247,23 @@ const ConstOrdinalList
                     curNodeIndex = nextNodeIndex;
 
                     // skip the jump-forward info
-                    (Int jumpIndex, nextNodeOffset) = contents.readPackedInt(nextNodeOffset);
+                    (Int jumpIndex, nextNodeOffset) = contents.unpackInt(nextNodeOffset);
                     if (jumpIndex != 0)
                         {
-                        (Int jumpOffset, nextNodeOffset) = contents.readPackedInt(nextNodeOffset);
+                        (Int jumpOffset, nextNodeOffset) = contents.unpackInt(nextNodeOffset);
                         }
 
                     // read the relative index of the next node
-                    (nextNodeIndex, nextNodeOffset) = contents.readPackedInt(nextNodeOffset);
+                    (nextNodeIndex, nextNodeOffset) = contents.unpackInt(nextNodeOffset);
                     nextNodeIndex += curNodeIndex; // adjust from relative to absolute
 
                     // read the number of values in the current node
-                    (curNodeSize, nextNodeOffset) = contents.readPackedInt(nextNodeOffset);
+                    (curNodeSize, nextNodeOffset) = contents.unpackInt(nextNodeOffset);
                     if (curNodeSize < 0)
                         {
                         runLenEnc   = True;
                         curNodeSize = -curNodeSize;
-                        (repeatingVal, nextNodeOffset) = contents.readPackedInt(nextNodeOffset);
+                        (repeatingVal, nextNodeOffset) = contents.unpackInt(nextNodeOffset);
                         }
                     else
                         {

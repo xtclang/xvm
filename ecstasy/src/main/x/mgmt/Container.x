@@ -421,7 +421,7 @@ service Container
         /**
          * Invoke a module method with a given name and arguments. The invocation will occur on the
          * [main service](mainService) within the container; as long as the invocation is actively
-         * executing on the main service, no other invocation will occur on the the main service.
+         * executing on the main service, no other invocation will occur on the main service.
          * If it is necessary to avoid monopolizing the main service, any method intended for
          * invocation on the main service from outside of the container should immediately delegate
          * to another service within the container.

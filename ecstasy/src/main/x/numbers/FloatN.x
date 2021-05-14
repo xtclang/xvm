@@ -51,7 +51,7 @@ const FloatN
     Signum sign.get()
         {
         Boolean negative = False;
-        eachBit: for (Bit bit : toBitArray())
+        eachBit: for (Bit bit : bits)
             {
             if (bit == 1)
                 {

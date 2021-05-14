@@ -38,6 +38,12 @@ const UInt8
         return 1;
         }
 
+    @Override
+    static conditional Range<UInt8> range()
+        {
+        return True, minvalue..maxvalue;
+        }
+
 
     // ----- constructors --------------------------------------------------------------------------
 
@@ -100,7 +106,7 @@ const UInt8
      */
     Nibble highNibble.get()
         {
-        TODO return bits[0..4).toNibble();
+        return bits[0..4).toNibble();
         }
 
     /**
@@ -108,7 +114,7 @@ const UInt8
      */
     Nibble lowNibble.get()
         {
-        TODO return bits[4..8).toNibble();
+        return bits[4..8).toNibble();
         }
 
 
@@ -284,19 +290,7 @@ const UInt8
     // ----- conversions ---------------------------------------------------------------------------
 
     @Override
-    immutable Bit[] toBitArray()
-        {
-        return bits.as(immutable Bit[]);
-        }
-
-    @Override
-    immutable Boolean[] toBooleanArray()
-        {
-        return new Array<Boolean>(bits.size, i -> bits[i].toBoolean()).freeze(True);
-        }
-
-    @Override
-    UInt8! toChecked()
+    (UInt8 - Unchecked) toChecked()
         {
         return this.is(Unchecked) ? new UInt8(bits) : this;
         }

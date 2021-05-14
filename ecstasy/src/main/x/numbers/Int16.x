@@ -35,6 +35,12 @@ const Int16
         return 1;
         }
 
+    @Override
+    static conditional Range<Int16> range()
+        {
+        return True, minvalue..maxvalue;
+        }
+
 
     // ----- constructors --------------------------------------------------------------------------
 
@@ -292,19 +298,7 @@ const Int16
     // ----- conversions ---------------------------------------------------------------------------
 
     @Override
-    immutable Bit[] toBitArray()
-        {
-        return bits.as(immutable Bit[]);
-        }
-
-    @Override
-    immutable Boolean[] toBooleanArray()
-        {
-        return new Array<Boolean>(bits.size, i -> bits[i].toBoolean()).freeze(True);
-        }
-
-    @Override
-    Int16! toChecked()
+    (Int16 - Unchecked) toChecked()
         {
         return this.is(Unchecked) ? new Int16(bits) : this;
         }

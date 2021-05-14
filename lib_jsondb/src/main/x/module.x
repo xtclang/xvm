@@ -132,7 +132,7 @@
  *     the example above)
  * * * The Tx also knows its original read TxId, which may be far behind the base TxId for
  *     committing; the read TxId is the TxId that was the latest committed TxId when the Tx started
- * * * * (note: potential optimization if the the committing base TxId equals the read TxId)
+ * * * * (note: potential optimization if the committing base TxId equals the read TxId)
  *
  * * TxM processing for the `commit()` request:
  * * * It has the read TxId, the base TxId for the commit, and the prepare TxId.

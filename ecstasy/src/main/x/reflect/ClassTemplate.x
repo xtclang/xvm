@@ -471,7 +471,7 @@ interface ClassTemplate
      * Determine the path that identifies this ClassTemplate within the main module of its
      * containing FileTemplate.
      *
-     * @return True iff the class template can be addressed within the the main module of its
+     * @return True iff the class template can be addressed within the main module of its
      *         enclosing FileTemplate
      * @return (optional) the qualified path to the class from the main module of the enclosing
      *         FileTemplate

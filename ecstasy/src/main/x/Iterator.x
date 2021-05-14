@@ -412,7 +412,7 @@ interface Iterator<Element>
         }
 
     /**
-     * Returns a iterator consisting of the the concatenation of all of the streams resulting from
+     * Returns a iterator consisting of the concatenation of all of the streams resulting from
      * applying the provided mapping function to each element of this iterator.
      *
      * This iterator must not be used after this operation.

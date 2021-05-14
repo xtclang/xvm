@@ -36,7 +36,7 @@
         {
         // TODO this is correct for the default 0 encoding, but not for all members of the 0 cohort
         Boolean negative = False;
-        eachBit: for (Bit bit : toBitArray())
+        eachBit: for (Bit bit : bits)
             {
             if (bit == 1)
                 {
@@ -59,7 +59,7 @@
     @Override
     Boolean finite.get()
         {
-        Bit[] bitsL2R = toBitArray();
+        Bit[] bitsL2R = bits;
         return bitsL2R[1] != 1          // G0
             || bitsL2R[2] != 1          // G1
             || bitsL2R[3] != 1          // G2
@@ -71,7 +71,7 @@
         {
         // from IEEE 754-2008:
         //   If G0 through G4 are 11110 then r and v = (−1) S × (+∞).
-        Bit[] bitsL2R = toBitArray();
+        Bit[] bitsL2R = bits;
         return bitsL2R[1] == 1          // G0
             && bitsL2R[2] == 1          // G1
             && bitsL2R[3] == 1          // G2
@@ -84,7 +84,7 @@
         {
         // from IEEE 754-2008:
         //   If G0 through G4 are 11111, then v is NaN regardless of S.
-        Bit[] bitsL2R = toBitArray();
+        Bit[] bitsL2R = bits;
         return bitsL2R[1] == 1          // G0
             && bitsL2R[2] == 1          // G1
             && bitsL2R[3] == 1          // G2

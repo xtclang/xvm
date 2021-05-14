@@ -33,7 +33,7 @@ service NtxCounterStore(Catalog catalog, DBObjectInfo info, Appender<String> err
             {
             File file = dataFile;
             return file.exists
-                    ? new IntLiteral(file.contents.utf8String()).toInt64() // TODO file corruption here will cause exception
+                    ? new IntLiteral(file.contents.unpackString()).toInt64() // TODO file corruption here will cause exception
                     : 0;
             };
         }

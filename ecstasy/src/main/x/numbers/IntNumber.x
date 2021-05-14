@@ -226,8 +226,12 @@
 
     /**
      * Obtain the number as an array of boolean values, each corresponding to one bit.
+     *
+     * @param mutability  the mutability of the resulting array
+     *
+     * @return the number as an array of booleans.
      */
-    immutable Boolean[] toBooleanArray()
+    Boolean[] toBooleanArray()
         {
         return toBitArray().toBooleanArray();
         }
@@ -235,7 +239,7 @@
     /**
      * Obtain the integer number as an integer that checks for overflow and underflow conditions.
      */
-    IntNumber! toChecked();
+    (IntNumber - Unchecked) toChecked();
 
     /**
      * Obtain the integer number as an integer that does not check for overflow or underflow.

@@ -276,31 +276,37 @@
     /**
      * Obtain the number as an array of bits, in left-to-right order.
      *
+     * @param mutability  the mutability of the resulting array
+     *
      * @return the number as an array of bits
      */
-    immutable Bit[] toBitArray()
+    Bit[] toBitArray(Array.Mutability mutability = Constant)
         {
-        return bits.as(immutable Bit[]);
+        return bits.toArray(mutability, True);
         }
 
     /**
      * Obtain the number as an array of nibbles, in left-to-right order.
      *
+     * @param mutability  the mutability of the resulting array
+     *
      * @return the number as an array of nibbles
      */
-    immutable Nibble[] toNibbleArray()
+    Nibble[] toNibbleArray(Array.Mutability mutability = Constant)
         {
-        return toBitArray().toNibbleArray();
+        return bits.toNibbleArray(mutability);
         }
 
     /**
      * Obtain the number as an array of bytes, in left-to-right order.
      *
+     * @param mutability  the mutability of the resulting array
+     *
      * @return the number as an array of bytes
      */
-    immutable Byte[] toByteArray()
+    Byte[] toByteArray(Array.Mutability mutability = Constant)
         {
-        return bits.toByteArray();
+        return bits.toByteArray(mutability);
         }
 
     /**
@@ -621,6 +627,34 @@
         static Number one();
 
         /**
+         * Determine the range of finite values.
+         *
+         * @return True iff the numeric type has a known range
+         * @return (conditional) the range from the lowest value (likely to be either zero or a
+         *         negative value) to the highest value
+         */
+        static conditional Range<Number> range();
+
+// REVIEW for FP?
+//        /**
+//         * Determine the range of positive values.
+//         *
+//         * @return True iff the numeric type has a known range that includes positive numbers
+//         * @return (conditional) the range from the smallest (least magnitude) to the largest
+//         *         (greatest magnitude) positive value
+//         */
+//        static conditional Range<Number> positiveRange();
+//
+//        /**
+//         * Determine if the numeric type is signed, and if so, the range of negative values.
+//         *
+//         * @return True iff the numeric type has a known range that includes negative numbers
+//         * @return (conditional) the range from the smallest (least magnitude) to the largest
+//         *         (greatest magnitude) negative value
+//         */
+//        static conditional Range<Number> negativeRange();
+
+        /**
          * Obtain a function that converts from this type to the specified numeric type.
          *
          * @param to  the type to convert to
@@ -668,49 +702,71 @@
         }
 
     @Override
+    static conditional Range<Number> range()
+        {
+        return False;
+        }
+
+    @Override
     static <To extends Number> function To (Number) converterTo(Type<To> to)
         {
         return switch (to)
             {
-            case @Unchecked Int8   : n -> n.toInt8()   .toUnchecked().as(to.DataType);
-            case @Unchecked Int16  : n -> n.toInt16()  .toUnchecked().as(to.DataType);
-            case @Unchecked Int32  : n -> n.toInt32()  .toUnchecked().as(to.DataType);
-            case @Unchecked Int64  : n -> n.toInt64()  .toUnchecked().as(to.DataType);
-            case @Unchecked Int128 : n -> n.toInt128() .toUnchecked().as(to.DataType);
-            case @Unchecked IntN   : n -> n.toIntN()   .toUnchecked().as(to.DataType);
+            case @Unchecked Int8    : n -> n.toInt8()   .toUnchecked().as(to.DataType);
+            case @Unchecked Int16   : n -> n.toInt16()  .toUnchecked().as(to.DataType);
+            case @Unchecked Int32   : n -> n.toInt32()  .toUnchecked().as(to.DataType);
+            case @Unchecked Int64   : n -> n.toInt64()  .toUnchecked().as(to.DataType);
+            case @Unchecked Int128  : n -> n.toInt128() .toUnchecked().as(to.DataType);
+            case @Unchecked IntN    : n -> n.toIntN()   .toUnchecked().as(to.DataType);
 
-            case Int8              : n -> n.toInt8()                 .as(to.DataType);
-            case Int16             : n -> n.toInt16()                .as(to.DataType);
-            case Int32             : n -> n.toInt32()                .as(to.DataType);
-            case Int64             : n -> n.toInt64()                .as(to.DataType);
-            case Int128            : n -> n.toInt128()               .as(to.DataType);
-            case IntN              : n -> n.toIntN()                 .as(to.DataType);
+// TODO GG
+//            case (Int8  -Unchecked) : n -> n.toInt8()   .toChecked()  .as(to.DataType);
+//            case (Int16 -Unchecked) : n -> n.toInt16()  .toChecked()  .as(to.DataType);
+//            case (Int32 -Unchecked) : n -> n.toInt32()  .toChecked()  .as(to.DataType);
+//            case (Int64 -Unchecked) : n -> n.toInt64()  .toChecked()  .as(to.DataType);
+//            case (Int128-Unchecked) : n -> n.toInt128() .toChecked()  .as(to.DataType);
+//            case (IntN  -Unchecked) : n -> n.toIntN()   .toChecked()  .as(to.DataType);
 
-            case @Unchecked UInt8  : n -> n.toUInt8()  .toUnchecked().as(to.DataType);
-            case @Unchecked UInt16 : n -> n.toUInt16() .toUnchecked().as(to.DataType);
-            case @Unchecked UInt32 : n -> n.toUInt32() .toUnchecked().as(to.DataType);
-            case @Unchecked UInt64 : n -> n.toUInt64() .toUnchecked().as(to.DataType);
-            case @Unchecked UInt128: n -> n.toUInt128().toUnchecked().as(to.DataType);
-            case @Unchecked UIntN  : n -> n.toUIntN()  .toUnchecked().as(to.DataType);
+            case Int8               : n -> n.toInt8()                 .as(to.DataType);
+            case Int16              : n -> n.toInt16()                .as(to.DataType);
+            case Int32              : n -> n.toInt32()                .as(to.DataType);
+            case Int64              : n -> n.toInt64()                .as(to.DataType);
+            case Int128             : n -> n.toInt128()               .as(to.DataType);
+            case IntN               : n -> n.toIntN()                 .as(to.DataType);
 
-            case UInt8             : n -> n.toUInt8()                .as(to.DataType);
-            case UInt16            : n -> n.toUInt16()               .as(to.DataType);
-            case UInt32            : n -> n.toUInt32()               .as(to.DataType);
-            case UInt64            : n -> n.toUInt64()               .as(to.DataType);
-            case UInt128           : n -> n.toUInt128()              .as(to.DataType);
-            case UIntN             : n -> n.toUIntN()                .as(to.DataType);
+            case @Unchecked UInt8   : n -> n.toUInt8()  .toUnchecked().as(to.DataType);
+            case @Unchecked UInt16  : n -> n.toUInt16() .toUnchecked().as(to.DataType);
+            case @Unchecked UInt32  : n -> n.toUInt32() .toUnchecked().as(to.DataType);
+            case @Unchecked UInt64  : n -> n.toUInt64() .toUnchecked().as(to.DataType);
+            case @Unchecked UInt128 : n -> n.toUInt128().toUnchecked().as(to.DataType);
+            case @Unchecked UIntN   : n -> n.toUIntN()  .toUnchecked().as(to.DataType);
 
-            case Dec32             : n -> n.toDec32()                .as(to.DataType);
-            case Dec64             : n -> n.toDec64()                .as(to.DataType);
-            case Dec128            : n -> n.toDec128()               .as(to.DataType);
-            case DecN              : n -> n.toDecN()                 .as(to.DataType);
+// TODO GG
+//            case (UInt8  -Unchecked): n -> n.toUInt8()  .toChecked()  .as(to.DataType);
+//            case (UInt16 -Unchecked): n -> n.toUInt16() .toChecked()  .as(to.DataType);
+//            case (UInt32 -Unchecked): n -> n.toUInt32() .toChecked()  .as(to.DataType);
+//            case (UInt64 -Unchecked): n -> n.toUInt64() .toChecked()  .as(to.DataType);
+//            case (UInt128-Unchecked): n -> n.toUInt128().toChecked()  .as(to.DataType);
+//            case (UIntN  -Unchecked): n -> n.toUIntN()  .toChecked()  .as(to.DataType);
 
-            case BFloat16          : n -> n.toBFloat16()             .as(to.DataType);
-            case Float16           : n -> n.toFloat16()              .as(to.DataType);
-            case Float32           : n -> n.toFloat32()              .as(to.DataType);
-            case Float64           : n -> n.toFloat64()              .as(to.DataType);
-            case Float128          : n -> n.toFloat128()             .as(to.DataType);
-            case FloatN            : n -> n.toFloatN()               .as(to.DataType);
+            case UInt8              : n -> n.toUInt8()                .as(to.DataType);
+            case UInt16             : n -> n.toUInt16()               .as(to.DataType);
+            case UInt32             : n -> n.toUInt32()               .as(to.DataType);
+            case UInt64             : n -> n.toUInt64()               .as(to.DataType);
+            case UInt128            : n -> n.toUInt128()              .as(to.DataType);
+            case UIntN              : n -> n.toUIntN()                .as(to.DataType);
+
+            case Dec32              : n -> n.toDec32()                .as(to.DataType);
+            case Dec64              : n -> n.toDec64()                .as(to.DataType);
+            case Dec128             : n -> n.toDec128()               .as(to.DataType);
+            case DecN               : n -> n.toDecN()                 .as(to.DataType);
+
+            case BFloat16           : n -> n.toBFloat16()             .as(to.DataType);
+            case Float16            : n -> n.toFloat16()              .as(to.DataType);
+            case Float32            : n -> n.toFloat32()              .as(to.DataType);
+            case Float64            : n -> n.toFloat64()              .as(to.DataType);
+            case Float128           : n -> n.toFloat128()             .as(to.DataType);
+            case FloatN             : n -> n.toFloatN()               .as(to.DataType);
 
             default: assert as $"unsupported convert-to type: {to}";
             };

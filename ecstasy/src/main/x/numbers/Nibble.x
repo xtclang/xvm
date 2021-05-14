@@ -200,11 +200,15 @@ const Nibble
     // ----- conversions ---------------------------------------------------------------------------
 
     /**
-     * @return an immutable array of four bits
+     * Obtain the nibble as an array of bits, in left-to-right order.
+     *
+     * @param mutability  the mutability of the resulting array
+     *
+     * @return the nibble as an array of bits
      */
-    immutable Bit[] toBitArray()
+    Bit[] toBitArray(Array.Mutability mutability = Constant)
         {
-        return bits.as(immutable Bit[]);
+        return bits.toArray(mutability, True);
         }
 
     /**

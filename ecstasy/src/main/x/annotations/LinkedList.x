@@ -715,7 +715,7 @@ mixin LinkedList<Element>
      * A LinkedListCursor is optimized for moving forwards (and possibly backwards) through a linked
      * list of nodes.
      *
-     * Note that the the LinkedListCursor is neither stable nor fail-fast in the presence of
+     * Note that the LinkedListCursor is neither stable nor fail-fast in the presence of
      * concurrent modification, since either would require state on the `LinkedList`.
      */
     protected class LinkedListCursor

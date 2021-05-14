@@ -267,19 +267,7 @@ const IntN
     // ----- conversions ---------------------------------------------------------------------------
 
     @Override
-    immutable Bit[] toBitArray()
-        {
-        return bits.as(immutable Bit[]);
-        }
-
-    @Override
-    immutable Boolean[] toBooleanArray()
-        {
-        return new Array<Boolean>(bits.size, i -> bits[i].toBoolean()).freeze(True);
-        }
-
-    @Override
-    IntN! toChecked()
+    (IntN - Unchecked) toChecked()
         {
         return this.is(Unchecked) ? new IntN(bits) : this;
         }

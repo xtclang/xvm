@@ -13,7 +13,7 @@ interface FileStore
     {
     /**
      * The root directory of the FileStore. This is conceptually analogous to "/" in UNIX, for
-     * example. However, a FileStore is an abstraction, so its root may not correspond to the the
+     * example. However, a FileStore is an abstraction, so its root may not correspond to the
      * local file system root, and it may not even correspond to the file system at all.
      */
     @RO Directory root;
