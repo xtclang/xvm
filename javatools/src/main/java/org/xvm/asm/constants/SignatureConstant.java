@@ -348,6 +348,17 @@ public class SignatureConstant
         }
 
     /**
+     * If any of the signature components are auto-narrowing (or have any references to
+     * auto-narrowing types), replace the any auto-narrowing portion with a declared class identity.
+     *
+     * @return the SignatureConstant with all auto-narrowing types resolved
+     */
+    public SignatureConstant removeAutoNarrowing()
+        {
+        return resolveAutoNarrowing(getConstantPool(), null);
+        }
+
+    /**
      * Check if a method with this signature could be called via the specified signature
      * (it also means that a method with this signature could "super" to the specified method).
      *

@@ -1088,7 +1088,7 @@ public abstract class TypeConstant
      * Helper method that replaces all auto-narrowing portions of the type with the corresponding
      * declaration type.
      *
-     * @return the TypeConstant with all auto-narrowing type resolved
+     * @return the TypeConstant with all auto-narrowing types resolved
      */
     public TypeConstant removeAutoNarrowing()
         {

@@ -2780,7 +2780,7 @@ public class ClassStructure
                         }
                     else
                         {
-                        sig = sig.resolveAutoNarrowing(pool, null);
+                        sig = sig.removeAutoNarrowing();
 
                         if (!listLeft.isEmpty())
                             {
@@ -2884,7 +2884,7 @@ public class ClassStructure
                             }
                         else
                             {
-                            sigMethod = sigMethod.resolveAutoNarrowing(pool, null)
+                            sigMethod = sigMethod.removeAutoNarrowing()
                                                  .resolveGenericTypes(pool, resolver);
                             if (sigMethod.isSubstitutableFor(signature, idClass.getType()))
                                 {
