@@ -510,7 +510,7 @@ public class AnnotatedTypeConstant
                         {
                         log(errs, Severity.WARNING, VE_UNEXPECTED_AUTO_NARROW,
                             typeMixin.getValueString(), this.getValueString());
-                        typeMixin = typeMixin.resolveAutoNarrowing(getConstantPool(), false, null);
+                        typeMixin = typeMixin.removeAutoNarrowing();
                         }
 
                     // check for duplicate annotation

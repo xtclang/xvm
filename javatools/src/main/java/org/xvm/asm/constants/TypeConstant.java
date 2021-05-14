@@ -1085,6 +1085,17 @@ public abstract class TypeConstant
         }
 
     /**
+     * Helper method that replaces all auto-narrowing portions of the type with the corresponding
+     * declaration type.
+     *
+     * @return the TypeConstant with all auto-narrowing type resolved
+     */
+    public TypeConstant removeAutoNarrowing()
+        {
+        return resolveAutoNarrowing(getConstantPool(), false, null);
+        }
+
+    /**
      * Create a new type by replacing the underlying type for this one according to the specified
      * function.
      *
@@ -1164,8 +1175,8 @@ public abstract class TypeConstant
 
         ConstantPool pool = getConstantPool();
 
-        TypeConstant typeThis = this.resolveAutoNarrowing(pool, false, null);
-        TypeConstant typeThat = that.resolveAutoNarrowing(that.getConstantPool(), false, null);
+        TypeConstant typeThis = this.removeAutoNarrowing();
+        TypeConstant typeThat = that.removeAutoNarrowing();
 
         if (typeThis.getParamsCount() != typeThat.getParamsCount())
             {
@@ -1235,8 +1246,8 @@ public abstract class TypeConstant
 
         ConstantPool pool = getConstantPool();
 
-        TypeConstant typeThis = this.resolveAutoNarrowing(pool, false, null);
-        TypeConstant typeThat = that.resolveAutoNarrowing(that.getConstantPool(), false, null);
+        TypeConstant typeThis = this.removeAutoNarrowing();
+        TypeConstant typeThat = that.removeAutoNarrowing();
 
         if (typeThis.equals(typeThat) || fThatIsConstant && typeThat.isA(typeThis))
             {
@@ -1341,9 +1352,7 @@ public abstract class TypeConstant
         // Additionally:
         // - resolve the auto-narrowing;
         // - normalize the type to make sure that all formal parameters are filled in
-        typeResolved = typeResolved.
-                            resolveAutoNarrowing(pool, false, null).
-                            normalizeParameters();
+        typeResolved = typeResolved.removeAutoNarrowing().normalizeParameters();
         if (typeResolved != this)
             {
             info = typeResolved.ensureTypeInfo(errs);
@@ -5413,8 +5422,8 @@ public abstract class TypeConstant
                         && idRight.isCongruentWith((PseudoConstant) constIdLeft))
                     {
                     // without any additional context, it should be assignable in some direction
-                    typeRight = typeRight.resolveAutoNarrowing(typeRight.getConstantPool(), false, null);
-                    typeLeft  = typeLeft.resolveAutoNarrowing(typeLeft.getConstantPool(), false, null);
+                    typeRight = typeRight.removeAutoNarrowing();
+                    typeLeft  = typeLeft .removeAutoNarrowing();
 
                     Relation relRightIsLeft = typeRight.calculateRelation(typeLeft);
                     return relRightIsLeft == Relation.INCOMPATIBLE

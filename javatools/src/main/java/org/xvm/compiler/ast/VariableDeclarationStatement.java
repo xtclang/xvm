@@ -174,9 +174,7 @@ public class VariableDeclarationStatement
 
         // create the register
         TypeConstant typeVar = exprNew.ensureTypeConstant(ctx).
-                resolveAutoNarrowing(pool, false, null).
-                normalizeParameters();
-
+                                    removeAutoNarrowing().normalizeParameters();
         m_reg = new Register(typeVar);
         ctx.registerVar(name, m_reg, errs);
 

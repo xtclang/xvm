@@ -2219,8 +2219,7 @@ public class ClassStructure
             case ParentClass:
             case ChildClass:
                 assert typeLeft.isAutoNarrowing(false);
-                return calculateRelationImpl(typeLeft.resolveAutoNarrowing(pool, false, null),
-                        typeRight, fAllowInto);
+                return calculateRelationImpl(typeLeft.removeAutoNarrowing(), typeRight, fAllowInto);
 
             case UnresolvedName:
                 return Relation.INCOMPATIBLE;

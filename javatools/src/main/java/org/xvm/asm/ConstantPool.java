@@ -3451,8 +3451,8 @@ public class ConstantPool
                 {
                 // to allow assignment of this:class(X) to this:class(Function),
                 // X should be a Function or an Object
-                typeRight = typeRight.resolveAutoNarrowing(typeRight.getConstantPool(), false, null);
-                typeLeft  = typeLeft .resolveAutoNarrowing(typeLeft.getConstantPool(), false, null);
+                typeRight = typeRight.removeAutoNarrowing();
+                typeLeft  = typeLeft .removeAutoNarrowing();
 
                 if (typeRight.equals(typeObject()))
                     {

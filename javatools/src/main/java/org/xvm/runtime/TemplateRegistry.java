@@ -331,7 +331,7 @@ public class TemplateRegistry
             if (typeActual.isSingleDefiningConstant())
                 {
                 TypeConstant typeResolved = typeActual.isAutoNarrowing(false)
-                        ? typeActual.resolveAutoNarrowing(typeActual.getConstantPool(), true, null)
+                        ? typeActual.resolveAutoNarrowingBase()
                         : typeActual;
                 IdentityConstant idClass = (IdentityConstant) typeResolved.getDefiningConstant();
                 template = getTemplate(idClass);
