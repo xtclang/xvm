@@ -53,8 +53,8 @@ import ecstasy.io;
  * manual effort, and without dynamicity) in a low level, statically compiled language.
  */
 class Array<Element>
-        implements List<Element>
         implements ArrayDelegate<Element>
+        implements List<Element>
         implements Cloneable
         implements Freezable
         implements Stringable

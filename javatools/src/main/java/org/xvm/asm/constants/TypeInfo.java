@@ -1281,6 +1281,7 @@ public class TypeInfo
 
         mapBySig = ensureMethodsBySignature();
 
+        MethodInfo methodBest   = null;
         MethodInfo methodCapped = null;
         for (Map.Entry<MethodConstant, MethodInfo> entry : f_mapMethods.entrySet())
             {
@@ -1304,26 +1305,30 @@ public class TypeInfo
                 SignatureConstant sigTest0 = body.getSignature();
                 if (sigTest0.equals(sig) || sigTest0.isSubstitutableFor(sig, typeThis))
                     {
-                    mapBySig.putIfAbsent(sig, methodTest);
                     if (methodTest.isCapped())
                         {
                         methodCapped = methodTest;
-                        break;
                         }
-                    return methodTest;
+                    else
+                        {
+                        methodBest = chooseBest(methodBest, methodTest);
+                        }
+                    break;
                     }
 
                 // test the resolved identity signature
                 SignatureConstant sigTest1 = resolveMethodConstant(body.getIdentity(), methodTest).getSignature();
                 if (sigTest1.equals(sig) || sigTest1.isSubstitutableFor(sig, typeThis))
                     {
-                    mapBySig.putIfAbsent(sig, methodTest);
                     if (methodTest.isCapped())
                         {
                         methodCapped = methodTest;
-                        break;
                         }
-                    return methodTest;
+                    else
+                        {
+                        methodBest = chooseBest(methodBest, methodTest);
+                        }
+                    break;
                     }
 
                 // test the canonical identity signature
@@ -1334,20 +1339,29 @@ public class TypeInfo
 
                     if (sigTest2.equals(sig) || sigTest2.isSubstitutableFor(sig, typeThis))
                         {
-                        mapBySig.putIfAbsent(sig, methodTest);
                         if (methodTest.isCapped())
                             {
                             methodCapped = methodTest;
-                            break;
                             }
-                        return methodTest;
+                        else
+                            {
+                            methodBest = chooseBest(methodBest, methodTest);
+                            }
+                        break;
                         }
                     }
                 }
             }
 
+        if (methodBest != null)
+            {
+            mapBySig.putIfAbsent(sig, methodBest);
+            return methodBest;
+            }
+
         if (methodCapped != null)
             {
+            mapBySig.putIfAbsent(sig, methodCapped);
             return methodCapped;
             }
 
@@ -1366,6 +1380,32 @@ public class TypeInfo
 
         // TODO: cache the miss
         return null;
+        }
+
+    private MethodInfo chooseBest(MethodInfo methodBest, MethodInfo methodTest)
+        {
+        if (methodBest == null)
+            {
+            return methodTest;
+            }
+
+        if (methodBest.containsBody(methodTest.getIdentity()))
+            {
+            return methodBest;
+            }
+
+        if (methodTest.containsBody(methodBest.getIdentity()))
+            {
+//            TODO GG: those methods should've been consolidated by the TypeInfo calculation logic
+//            System.err.println("replacing " + methodBest.getSignature() + " with " +
+//                methodTest.getSignature());
+            return methodTest;
+            }
+
+        // soft assert
+        System.err.println("conflicting " + methodBest.getSignature()
+            + " vs. " + methodTest.getSignature());
+        return methodBest;
         }
 
     /**

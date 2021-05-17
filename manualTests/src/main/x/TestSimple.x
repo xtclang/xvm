@@ -4,11 +4,31 @@ module TestSimple.test.org
 
     void run()
         {
+        Impl t = new Impl();
+        t.foo();
         }
 
-    // that used to assert during compilation
-    (@Unchecked Int32 - Unchecked) toChecked(Int32 n)
+    interface Iface1
         {
-        return Int32:0;
+        Iface1 foo()
+            {
+            TODO
+            }
+        }
+
+    interface Iface2
+        {
+        Iface2 foo();
+        }
+
+    class Impl
+            implements Iface1
+            implements Iface2
+        {
+        @Override
+        Impl foo()
+            {
+            return this;
+            }
         }
     }
