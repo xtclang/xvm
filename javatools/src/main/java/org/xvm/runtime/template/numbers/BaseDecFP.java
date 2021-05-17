@@ -20,7 +20,6 @@ import org.xvm.runtime.template.xOrdered;
 
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xBitArray;
-import org.xvm.runtime.template.collections.xByteArray;
 
 import org.xvm.runtime.template.text.xString;
 
@@ -53,21 +52,19 @@ abstract public class BaseDecFP
     @Override
     public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
         {
+        Decimal dec = ((DecimalHandle) hTarget).getValue();
+
         switch (sPropName)
             {
-            case "infinity":
-                {
-                Decimal dec = ((DecimalHandle) hTarget).getValue();
+            case "bits":
+                return frame.assignValue(iReturn,
+                    xBitArray.makeHandle(dec.toByteArray(), f_cBits, xArray.Mutability.Constant));
 
+            case "infinity":
                 return frame.assignValue(iReturn, xBoolean.makeHandle(!dec.isFinite()));
-                }
 
             case "NaN":
-                {
-                Decimal dec = ((DecimalHandle) hTarget).getValue();
-
                 return frame.assignValue(iReturn, xBoolean.makeHandle(dec.isNaN()));
-                }
             }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
@@ -142,20 +139,6 @@ abstract public class BaseDecFP
             {
             case "abs":
                 return frame.assignValue(iReturn, makeHandle(dec.abs()));
-
-            case "toBitArray":
-                {
-                byte[] abValue = dec.toByteArray();
-                return frame.assignValue(iReturn,
-                    xBitArray.makeHandle(abValue, f_cBits, xArray.Mutability.Constant));
-                }
-
-            case "toByteArray":
-                {
-                byte[] abValue = dec.toByteArray();
-                return frame.assignValue(iReturn,
-                    xByteArray.makeHandle(abValue, xArray.Mutability.Constant));
-                }
 
             case "toFloat64":
                 return dec.isFinite()

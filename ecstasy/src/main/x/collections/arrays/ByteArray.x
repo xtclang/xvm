@@ -976,6 +976,8 @@ mixin ByteArray<Element extends Byte>
     @Override
     Appender<Char> appendTo(Appender<Char> buf)
         {
-        return asNibbleArray().appendTo(buf);
+        // TODO GG - make NibbleArray work
+        // return asNibbleArray().appendTo(buf);
+        return super(buf);
         }
     }

@@ -2057,7 +2057,7 @@ public abstract class ClassTemplate
     /**
      * Mark the specified method as native.
      */
-    protected void markNativeMethod(String sName, String[] asParamType, String[] asRetType)
+    public void markNativeMethod(String sName, String[] asParamType, String[] asRetType)
         {
         TypeConstant[] atypeArg = getTypeConstants(this, asParamType);
         TypeConstant[] atypeRet = getTypeConstants(this, asRetType);

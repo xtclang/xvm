@@ -35,6 +35,7 @@ abstract public class BaseFP
     public void initNative()
         {
         // properties
+        markNativeProperty("bits");
         markNativeProperty("infinity");
         markNativeProperty("NaN");
 
@@ -79,8 +80,6 @@ abstract public class BaseFP
         markNativeMethod("nextDown"   , VOID, THIS);
 
         // conversions
-        markNativeMethod("toBitArray" , VOID, null);
-        markNativeMethod("toByteArray", VOID, null);
         markNativeMethod("toInt64"    , VOID, INT);
         markNativeMethod("toDec64"    , VOID, DEC64);
         markNativeMethod("toFloat64"  , VOID, FLOAT64);

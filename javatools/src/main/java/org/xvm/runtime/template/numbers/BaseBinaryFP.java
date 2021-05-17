@@ -16,7 +16,6 @@ import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xBitArray;
-import org.xvm.runtime.template.collections.xByteArray;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xEnum.EnumHandle;
@@ -39,21 +38,19 @@ abstract public class BaseBinaryFP
     @Override
     public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
         {
+        double d = ((FloatHandle) hTarget).getValue();
+
         switch (sPropName)
             {
-            case "infinity":
-                {
-                double d = ((FloatHandle) hTarget).getValue();
+            case "bits":
+                return frame.assignValue(iReturn,
+                    xBitArray.makeHandle(getBits(d), f_cBits, xArray.Mutability.Constant));
 
+            case "infinity":
                 return frame.assignValue(iReturn, xBoolean.makeHandle(Double.isInfinite(d)));
-                }
 
             case "NaN":
-                {
-                double d = ((FloatHandle) hTarget).getValue();
-
                 return frame.assignValue(iReturn, xBoolean.makeHandle(Double.isNaN(d)));
-                }
             }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
@@ -128,20 +125,6 @@ abstract public class BaseBinaryFP
             {
             case "abs":
                 return frame.assignValue(iReturn, makeHandle(Math.abs(d)));
-
-            case "toBitArray":
-                {
-                byte[] abValue = getBits(d);
-                return frame.assignValue(iReturn,
-                    xBitArray.makeHandle(abValue, f_cBits, xArray.Mutability.Constant));
-                }
-
-            case "toByteArray":
-                {
-                byte[] abValue = getBits(d);
-                return frame.assignValue(iReturn,
-                    xByteArray.makeHandle(abValue, xArray.Mutability.Constant));
-                }
 
             case "toInt64":
                 // TODO: overflow check

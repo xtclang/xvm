@@ -9,19 +9,21 @@ import org.xvm.asm.MethodStructure;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TemplateRegistry;
 
-import org.xvm.runtime.template.numbers.xBit;
+import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xException;
 
+import org.xvm.runtime.template.numbers.xBit;
 import org.xvm.runtime.template.numbers.xUInt8;
 
 
 /**
- * Native Array<Bit> implementation.
+ * Native BitArray<Bit> implementation.
  */
 public class xBitArray
         extends BitBasedArray
@@ -41,10 +43,10 @@ public class xBitArray
     @Override
     public void initNative()
         {
-        ClassStructure mixin = f_templates.getClassStructure("collections.Array.BitArray");
+        ClassTemplate mixin = f_templates.getTemplate("collections.arrays.BitArray");
 
-        mixin.findMethod("toUInt8", 0).markNative();
-        mixin.findMethod("toByteArray", 0).markNative();
+        mixin.markNativeMethod("toUInt8", VOID, null);
+        mixin.markNativeMethod("toByteArray", null, null);
 
         getCanonicalType().invalidateTypeInfo();
         }
@@ -54,6 +56,40 @@ public class xBitArray
         {
         ConstantPool pool = pool();
         return pool.ensureArrayType(pool.typeBit());
+        }
+
+    @Override
+    public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                             ObjectHandle hArg, int iReturn)
+        {
+        switch (method.getName())
+            {
+            case "toByteArray":
+                {
+                BitArrayHandle hBits = (BitArrayHandle) hTarget;
+                int cBits = hBits.m_cSize;
+                if (cBits % 8 != 0)
+                    {
+                    return frame.raiseException(
+                        xException.illegalArgument(frame, "Invalid array size: " + cBits));
+                    }
+
+                int    cBytes = cBits >>> 3;
+                byte[] aBytes = hBits.m_abValue;
+
+                Mutability mutability = hArg == ObjectHandle.DEFAULT
+                    ? Mutability.Constant
+                    : xArray.Mutability.values()[((xEnum.EnumHandle) hArg).getOrdinal()];
+
+                // TODO: do we always need a copy?
+                aBytes = Arrays.copyOfRange(aBytes, 0, cBytes);
+
+                return frame.assignValue(iReturn,
+                        xByteArray.makeHandle(aBytes, mutability));
+                }
+            }
+
+        return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
         }
 
     @Override
@@ -83,29 +119,6 @@ public class xBitArray
                         return frame.raiseException(xException.outOfBounds(
                                 frame, "Array is too big: " + cBits));
                     }
-                }
-
-            case "toByteArray":
-                {
-                BitArrayHandle hBits = (BitArrayHandle) hTarget;
-                int cBits = hBits.m_cSize;
-                if (cBits % 8 != 0)
-                    {
-                    return frame.raiseException(
-                        xException.illegalArgument(frame, "Invalid array size: " + cBits));
-                    }
-
-                int    cBytes = cBits >>> 3;
-                byte[] aBytes = hBits.m_abValue;
-
-                // TODO: a) if the source is persistent the copy is unnecessary;
-                //       b) add a "partial size" constructor
-                if (aBytes.length > cBytes && hBits.m_mutability == Mutability.Constant)
-                    {
-                    aBytes = Arrays.copyOfRange(aBytes, 0, cBytes);
-                    }
-                return frame.assignValue(iReturn,
-                        xByteArray.makeHandle(aBytes, Mutability.Constant));
                 }
             }
 

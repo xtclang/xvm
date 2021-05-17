@@ -9,6 +9,7 @@ import java.util.Map;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.Op;
@@ -98,29 +99,18 @@ public class xArray
 
             if (method.getParamCount() == 1)
                 {
-                if (typeParam0.equals(pool.typeInt()))
-                    {
-                    // 0) construct(Int capacity = 0)
-                    CONSTRUCTORS[0] = method.getIdentityConstant();
-                    }
-                else
-                    {
-                    // protected construct(ArrayDelegate<Element> delegate)
-                    // must not be called
-                    }
+                // 0) construct(Int capacity = 0)
+                CONSTRUCTORS[0] = method.getIdentityConstant();
                 }
-            else
+            else if (method.getAccess() == Constants.Access.PUBLIC)
                 {
+                // private construct(ArrayDelegate<Element> delegate, Mutability mutability)
+                // must not be called
                 // 1) construct(Int size, Element | function Element (Int) supply)
                 // 2) construct(Mutability mutability, Element... elements)
-                // 3) construct(Array<Element> array, Interval<Int> section)
                 if (typeParam0.equals(pool.typeInt()))
                     {
                     CONSTRUCTORS[1] = method.getIdentityConstant();
-                    }
-                else if (typeParam0.isA(pool.typeArray()))
-                    {
-                    CONSTRUCTORS[3] = method.getIdentityConstant();
                     }
                 else
                     {
@@ -152,10 +142,15 @@ public class xArray
         markNativeMethod("insert", new String[] {"numbers.Int64", "Element"}, ARRAY);
         markNativeMethod("insertAll", new String[] {"numbers.Int64", "Iterable<Element>"}, ARRAY);
         markNativeMethod("addAll", new String[] {"Iterable<Element>"}, ARRAY);
-        markNativeMethod("delete", new String[] {"numbers.Int64"}, null);
+        markNativeMethod("delete", INT, null);
         markNativeMethod("slice", new String[] {"Range<numbers.Int64>"}, ARRAY);
         markNativeMethod("freeze", BOOLEAN, null);
         markNativeMethod("clear", VOID, ARRAY);
+        markNativeMethod("reify", null, ARRAY);
+
+        ClassTemplate mixinNumber = f_templates.getTemplate("collections.arrays.NumberArray");
+        mixinNumber.markNativeMethod("asBitArray" , VOID, null);
+        mixinNumber.markNativeMethod("asByteArray", VOID, null);
 
         getCanonicalType().invalidateTypeInfo();
         }
@@ -306,7 +301,7 @@ public class xArray
         {
         IdentityConstant idConstruct = constructor.getIdentityConstant();
         int              nScenario;
-        for (nScenario = 0; nScenario < 4; nScenario++)
+        for (nScenario = 0; nScenario < 3; nScenario++)
             {
             if (CONSTRUCTORS[nScenario].equals(idConstruct))
                 {
@@ -397,26 +392,8 @@ public class xArray
                 return frame.call1(ITERABLE_TO_ARRAY, hSequence, ahVars, iReturn);
                 }
 
-            case 3: // construct(Array<Element> array, Interval<Int> section)
-                {
-                ArrayHandle   hArray    = (ArrayHandle) ahVar[0];
-                GenericHandle hInterval = (GenericHandle) ahVar[1];
-                JavaLong      hLower    = (JavaLong) hInterval.getField("lowerBound");
-                JavaLong      hUpper    = (JavaLong) hInterval.getField("upperBound");
-                boolean       fExLower  = ((BooleanHandle) hInterval.getField("lowerExclusive")).get();
-                boolean       fExUpper  = ((BooleanHandle) hInterval.getField("upperExclusive")).get();
-                boolean       fReverse  = ((BooleanHandle) hInterval.getField("descending")).get();
-
-                long lLower = hLower.getValue();
-                long lUpper = hUpper.getValue();
-
-                assert lLower <= lUpper;
-                return slice(frame, hArray, lLower, fExLower, lUpper, fExUpper, fReverse, iReturn);
-                }
-
             default:
-                throw new IllegalStateException("Unknown constructor: " +
-                    idConstruct.getValueString());
+                return frame.raiseException("Unknown constructor: " + idConstruct.getValueString());
             }
         }
 
@@ -568,21 +545,18 @@ public class xArray
                     }
                 return frame.assignValue(iReturn, hArray);
                 }
-// TODO
-//            case "ensurePersistent": // Array ensurePersistent(Boolean inPlace = False)
-//                {
-//                ArrayHandle hArray   = (ArrayHandle) hTarget;
-//                boolean     fInPlace = hArg != ObjectHandle.DEFAULT && ((BooleanHandle) hArg).get();
-//                if (fInPlace)
-//                    {
-//                    hArray.m_mutability = Mutability.Persistent;
-//                    }
-//                else
-//                    {
-//                    hArray = createCopy(hArray, Mutability.Persistent);
-//                    }
-//                return frame.assignValue(iReturn, hArray);
-//                }
+
+            case "reify": // Array reify(Mutability? mutability = Null)
+                {
+                // TODO: REVIEW
+                ArrayHandle hArray = (ArrayHandle) hTarget;
+                if (hArg != ObjectHandle.DEFAULT)
+                    {
+                    Mutability mutability = xArray.Mutability.values()[((EnumHandle) hArg).getOrdinal()];
+                    hArray = createCopy(hArray, mutability);
+                    }
+                return frame.assignValue(iReturn, hArray);
+                }
             }
 
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
@@ -599,18 +573,6 @@ public class xArray
 
             case "insertAll":
                 return insertElements(frame, hTarget, (JavaLong) ahArg[0], ahArg[1], iReturn);
-
-// TODO
-//            case "ensureMutable": // Array ensureMutable()
-//                {
-//                ArrayHandle hArray = (ArrayHandle) hTarget;
-//
-//                if (hArray.m_mutability != Mutability.Mutable)
-//                    {
-//                    hArray = createCopy(hArray, Mutability.Mutable);
-//                    }
-//                return frame.assignValue(iReturn, hArray);
-//                }
 
             case "setElement":
                 return assignArrayValue(frame, hTarget, ((JavaLong) ahArg[0]).getValue(), ahArg[1]);
@@ -919,6 +881,13 @@ public class xArray
         if (!fExUpper)
             {
             ++ixUpper;
+            }
+
+        if (ixUpper > hArray.m_cSize)
+            {
+            return frame.raiseException(
+                xException.outOfBounds(frame,
+                    fExUpper ? ixUpper : ixUpper-1, hArray.m_cSize));
             }
 
         ObjectHandle[] ahValue = hArray.m_ahValue;
@@ -1316,7 +1285,7 @@ public class xArray
     public enum Mutability {Constant, Persistent, Fixed, Mutable}
 
     // array of constructors
-    private static MethodConstant[] CONSTRUCTORS = new MethodConstant[4];
+    private static MethodConstant[] CONSTRUCTORS = new MethodConstant[3];
     private static MethodStructure  ITERABLE_TO_ARRAY;
 
     protected static final String[] ELEMENT_TYPE = new String[] {"Element"};

@@ -86,7 +86,7 @@ module TestArray
         list.setElement(0, "uno");
         console.println("list=" + list);
 
-        list = new Array<String>(list, 1..2);
+        list = list[1..3);
         console.println("list=" + list);
 
         list = new Array<String>(Fixed, list[0..1]);
