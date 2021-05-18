@@ -823,9 +823,9 @@ interface List<Element>
      * Replace existing values in the List with the provided values, starting at the specified
      * index.
      *
-     * @param index  the index at which to store the specified value, which must be between `0`
-     *               (inclusive) and `size` (exclusive)
-     * @param value  the value to store
+     * @param index   the index at which to store the specified value, which must be between `0`
+     *                (inclusive) and `size` (exclusive)
+     * @param values  the values to store
      *
      * @return the resultant list, which is the same as `this` for a mutable list
      *
