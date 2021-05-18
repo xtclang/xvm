@@ -492,7 +492,8 @@ public class ParameterizedTypeConstant
         }
 
     @Override
-    public TypeConstant resolveAutoNarrowing(ConstantPool pool, boolean fRetainParams, TypeConstant typeTarget)
+    public TypeConstant resolveAutoNarrowing(ConstantPool pool, boolean fRetainParams,
+                                             TypeConstant typeTarget, IdentityConstant idCtx)
         {
         // there are a number of scenarios to consider here;
         // let's assume there a class C<T>, which has a number of auto-narrowing methods:
@@ -524,7 +525,8 @@ public class ParameterizedTypeConstant
         // so here we only need to deal with 3, 4 and 5
 
         TypeConstant constOriginal = m_constType;
-        TypeConstant constResolved = constOriginal.resolveAutoNarrowing(pool, fRetainParams, typeTarget);
+        TypeConstant constResolved = constOriginal.
+                                        resolveAutoNarrowing(pool, fRetainParams, typeTarget, idCtx);
 
         if (fRetainParams)
             {
@@ -562,7 +564,8 @@ public class ParameterizedTypeConstant
             for (int i = 0, c = aconstOriginal.length; i < c; ++i)
                 {
                 TypeConstant constParamOriginal = aconstOriginal[i];
-                TypeConstant constParamResolved = constParamOriginal.resolveAutoNarrowing(pool, false, typeTarget);
+                TypeConstant constParamResolved = constParamOriginal.
+                            resolveAutoNarrowing(pool, false, typeTarget, idCtx);
                 if (constParamOriginal != constParamResolved)
                     {
                     if (aconstResolved == aconstOriginal)
@@ -583,28 +586,6 @@ public class ParameterizedTypeConstant
             if (constResolved.isParamsSpecified())
                 {
                 // scenario 3b
-//                boolean        fDiff          = false;
-//                TypeConstant[] aconstOriginal = constResolved.getParamTypesArray();
-//                TypeConstant[] aconstResolved = aconstOriginal;
-//                for (int i = 0, c = aconstOriginal.length; i < c; ++i)
-//                    {
-//                    TypeConstant constParamOriginal = aconstOriginal[i];
-//                    TypeConstant constParamResolved = constParamOriginal.resolveGenerics(pool, this);
-//                    if (constParamOriginal != constParamResolved)
-//                        {
-//                        if (aconstResolved == aconstOriginal)
-//                            {
-//                            aconstResolved = aconstOriginal.clone();
-//                            }
-//                        aconstResolved[i] = constParamResolved;
-//                        fDiff = true;
-//                        }
-//                    }
-//
-//                return fDiff
-//                        ? constResolved.adoptParameters(pool, aconstResolved)
-//                        : constResolved;
-                // TODO: explain
                 return constResolved;
                 }
             else
@@ -622,7 +603,8 @@ public class ParameterizedTypeConstant
                         for (int i = 0, c = aconstOriginal.length; i < c; ++i)
                             {
                             TypeConstant constParamOriginal = aconstOriginal[i];
-                            TypeConstant constParamResolved = constParamOriginal.resolveAutoNarrowing(pool, false, typeTarget);
+                            TypeConstant constParamResolved = constParamOriginal.
+                                    resolveAutoNarrowing(pool, false, typeTarget, idCtx);
                             if (constParamOriginal != constParamResolved)
                                 {
                                 if (aconstResolved == aconstOriginal)

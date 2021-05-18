@@ -325,14 +325,16 @@ public class VirtualChildTypeConstant
         }
 
     @Override
-    public TypeConstant resolveAutoNarrowing(ConstantPool pool, boolean fRetainParams, TypeConstant typeTarget)
+    public TypeConstant resolveAutoNarrowing(ConstantPool pool, boolean fRetainParams,
+                                             TypeConstant typeTarget, IdentityConstant idCtx)
         {
         TypeConstant typeParentOriginal = m_typeParent;
         TypeConstant typeParentResolved = typeParentOriginal;
 
         if (typeParentOriginal.isAutoNarrowing(false))
             {
-            typeParentResolved = typeParentOriginal.resolveAutoNarrowing(pool, fRetainParams, typeTarget);
+            typeParentResolved = typeParentOriginal.
+                                    resolveAutoNarrowing(pool, fRetainParams, typeTarget, idCtx);
             }
         else if (typeTarget != null && !typeTarget.equals(this))
             {

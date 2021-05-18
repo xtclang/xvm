@@ -16,6 +16,7 @@ import org.xvm.asm.Argument;
 
 import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.ConditionalConstant;
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.SignatureConstant;
@@ -371,13 +372,16 @@ public class RelOpExpression
             return fitVia;
             }
 
-        ConstantPool pool = pool();
+        ConstantPool     pool  = pool();
+        IdentityConstant idCtx = ctx.isMethod() && typeLeft.isA(ctx.getThisType())
+                ? ctx.getThisClass().getIdentityConstant()
+                : null;
         for (MethodInfo infoAuto : infoLeft.getAutoMethodInfos())
             {
             TypeConstant typeConv = infoAuto.getSignature().getRawReturns()[0];
             if (typeConv.isAutoNarrowing())
                 {
-                typeConv = typeConv.resolveAutoNarrowing(pool, false, typeLeft);
+                typeConv = typeConv.resolveAutoNarrowing(pool, false, typeLeft, idCtx);
                 }
 
             for (MethodConstant idMethod : typeConv.ensureTypeInfo().findOpMethods(sMethod, sOp, 1))

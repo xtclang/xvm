@@ -439,7 +439,7 @@ public class MethodConstant
                 {
                 typeTarget = ((ClassStructure) getClassIdentity().getComponent()).getFormalType();
                 }
-            sig = sig.resolveAutoNarrowing(pool, typeTarget);
+            sig = sig.resolveAutoNarrowing(pool, typeTarget, null);
             }
 
         MethodStructure method = (MethodStructure) getComponent();

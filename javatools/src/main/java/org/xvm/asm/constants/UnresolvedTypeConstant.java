@@ -318,10 +318,11 @@ public class UnresolvedTypeConstant
         }
 
     @Override
-    public TypeConstant resolveAutoNarrowing(ConstantPool pool, boolean fRetainParams, TypeConstant typeTarget)
+    public TypeConstant resolveAutoNarrowing(ConstantPool pool, boolean fRetainParams,
+                                             TypeConstant typeTarget, IdentityConstant idCtx)
         {
         return isTypeResolved()
-                ? getResolvedType().resolveAutoNarrowing(pool, fRetainParams, typeTarget)
+                ? getResolvedType().resolveAutoNarrowing(pool, fRetainParams, typeTarget, idCtx)
                 : this;
         }
 

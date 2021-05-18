@@ -437,8 +437,12 @@ public class InvocationExpression
                                 : m_targetinfo.getTargetType();
                         }
                     SignatureConstant sigMethod = idMethod.getSignature();
+                    IdentityConstant  idCtx     = typeLeft.isA(ctx.getThisType())
+                            ? ctx.getThisClass().getIdentityConstant()
+                            : null;
+
                     return resolveTypes(resolver,
-                            sigMethod.resolveAutoNarrowing(pool, typeLeft).getRawReturns());
+                            sigMethod.resolveAutoNarrowing(pool, typeLeft, idCtx).getRawReturns());
                     }
 
                 TypeConstant typeFn = m_fBindTarget
@@ -937,7 +941,10 @@ public class InvocationExpression
                         SignatureConstant sigMethod = idMethod.getSignature();
                         if (!method.isFunction() && !method.isConstructor())
                             {
-                            sigMethod = sigMethod.resolveAutoNarrowing(pool, typeLeft);
+                            IdentityConstant idCtx = typeLeft.isA(ctx.getThisType())
+                                    ? ctx.getThisClass().getIdentityConstant()
+                                    : null;
+                            sigMethod = sigMethod.resolveAutoNarrowing(pool, typeLeft, idCtx);
                             }
                         if (!mapTypeParams.isEmpty())
                             {

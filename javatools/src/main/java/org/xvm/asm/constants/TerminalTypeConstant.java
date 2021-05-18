@@ -527,7 +527,7 @@ public class TerminalTypeConstant
             {
             FormalConstant constFormal  = (FormalConstant) constId;
             TypeConstant   typeResolved = constFormal.resolve(resolver);
-            if (typeResolved != null && typeResolved != this)
+            if (typeResolved != null)
                 {
                 return typeResolved;
                 }
@@ -682,13 +682,15 @@ public class TerminalTypeConstant
         }
 
     @Override
-    public TypeConstant resolveAutoNarrowing(ConstantPool pool, boolean fRetainParams, TypeConstant typeTarget)
+    public TypeConstant resolveAutoNarrowing(ConstantPool pool, boolean fRetainParams,
+                                             TypeConstant typeTarget, IdentityConstant idCtx)
         {
         if (!isSingleDefiningConstant())
             {
             // this can only happen if this type is a Typedef referring to a relational type
             TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
-            return constId.getReferredToType().resolveAutoNarrowing(pool, fRetainParams, typeTarget);
+            return constId.getReferredToType().
+                    resolveAutoNarrowing(pool, fRetainParams, typeTarget, idCtx);
             }
 
         Constant constant = getDefiningConstant();
@@ -701,6 +703,11 @@ public class TerminalTypeConstant
                 if (typeTarget == null || !typeTarget.isA(typeDecl))
                     {
                     return typeDecl;
+                    }
+
+                if (idCtx != null && idCtx.getType().isA(typeDecl))
+                    {
+                    return getConstantPool().ensureThisTypeConstant(idCtx, null);
                     }
 
                 // strip the immutability and access modifiers

@@ -301,11 +301,13 @@ public class SignatureConstant
      *
      * @param pool        the ConstantPool to place a potentially created new constant into
      * @param typeTarget  the target type
+     * @param idCtx       TODO
      *
      * @return the SignatureConstant with explicit identities swapped in for any auto-narrowing
      *         identities
      */
-    public SignatureConstant resolveAutoNarrowing(ConstantPool pool, TypeConstant typeTarget)
+    public SignatureConstant resolveAutoNarrowing(ConstantPool pool, TypeConstant typeTarget,
+                                                  IdentityConstant idCtx)
         {
         TypeConstant[] aconstParamOriginal = m_aconstParams;
         TypeConstant[] aconstParamResolved = aconstParamOriginal;
@@ -313,7 +315,7 @@ public class SignatureConstant
         for (int i = 0, c = aconstParamOriginal.length; i < c; ++i)
             {
             TypeConstant constOriginal = aconstParamOriginal[i];
-            TypeConstant constResolved = constOriginal.resolveAutoNarrowing(pool, false, typeTarget);
+            TypeConstant constResolved = constOriginal.resolveAutoNarrowing(pool, false, typeTarget, idCtx);
             if (constOriginal != constResolved)
                 {
                 if (aconstParamResolved == aconstParamOriginal)
@@ -330,7 +332,7 @@ public class SignatureConstant
         for (int i = 0, c = aconstReturnOriginal.length; i < c; ++i)
             {
             TypeConstant constOriginal = aconstReturnOriginal[i];
-            TypeConstant constResolved = constOriginal.resolveAutoNarrowing(pool, false, typeTarget);
+            TypeConstant constResolved = constOriginal.resolveAutoNarrowing(pool, false, typeTarget, idCtx);
             if (constOriginal != constResolved)
                 {
                 if (aconstReturnResolved == aconstReturnOriginal)
@@ -355,7 +357,7 @@ public class SignatureConstant
      */
     public SignatureConstant removeAutoNarrowing()
         {
-        return resolveAutoNarrowing(getConstantPool(), null);
+        return resolveAutoNarrowing(getConstantPool(), null, null);
         }
 
     /**

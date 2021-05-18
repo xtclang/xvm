@@ -1057,15 +1057,18 @@ public abstract class TypeConstant
      *
      * @param pool           the ConstantPool to place a potentially created new constant into
      * @param fRetainParams  if true, don't attempt to resolve the type parameters
-     * @param typeTarget     the context target type
+     * @param typeTarget     the context-specific target type
+     * @param idCtx          TODO
      *
      * @return the TypeConstant with explicit identities swapped in for any auto-narrowing
      *         identities
      */
-    public TypeConstant resolveAutoNarrowing(ConstantPool pool, boolean fRetainParams, TypeConstant typeTarget)
+    public TypeConstant resolveAutoNarrowing(ConstantPool pool, boolean fRetainParams,
+                                             TypeConstant typeTarget, IdentityConstant idCtx)
         {
         TypeConstant constOriginal = getUnderlyingType();
-        TypeConstant constResolved = constOriginal.resolveAutoNarrowing(pool, fRetainParams, typeTarget);
+        TypeConstant constResolved = constOriginal.resolveAutoNarrowing(
+                                                    pool, fRetainParams, typeTarget, null);
 
         return constResolved == constOriginal
             ? this
@@ -1081,7 +1084,7 @@ public abstract class TypeConstant
      */
     public TypeConstant resolveAutoNarrowingBase()
         {
-        return resolveAutoNarrowing(getConstantPool(), true, null);
+        return resolveAutoNarrowing(getConstantPool(), true, null, null);
         }
 
     /**
@@ -1092,7 +1095,7 @@ public abstract class TypeConstant
      */
     public TypeConstant removeAutoNarrowing()
         {
-        return resolveAutoNarrowing(getConstantPool(), false, null);
+        return resolveAutoNarrowing(getConstantPool(), false, null, null);
         }
 
     /**
@@ -5472,8 +5475,8 @@ public abstract class TypeConstant
             {
             ConstantPool pool = ConstantPool.getCurrentPool();
 
-            TypeConstant typeThisR = this    .resolveAutoNarrowing(pool, false, typeCtx);
-            TypeConstant typeBaseR = typeBase.resolveAutoNarrowing(pool, false, typeCtx);
+            TypeConstant typeThisR = this    .resolveAutoNarrowing(pool, false, typeCtx, null);
+            TypeConstant typeBaseR = typeBase.resolveAutoNarrowing(pool, false, typeCtx, null);
             return typeThisR.isA(typeBaseR);
             }
 
@@ -5525,8 +5528,8 @@ public abstract class TypeConstant
             {
             ConstantPool pool = ConstantPool.getCurrentPool();
 
-            TypeConstant typeThisR = this    .resolveAutoNarrowing(pool, false, typeCtx);
-            TypeConstant typeBaseR = typeBase.resolveAutoNarrowing(pool, false, typeCtx);
+            TypeConstant typeThisR = this    .resolveAutoNarrowing(pool, false, typeCtx, null);
+            TypeConstant typeBaseR = typeBase.resolveAutoNarrowing(pool, false, typeCtx, null);
 
             return typeBaseR.isA(typeThisR) && typeThisR.isA(typeBaseR);
             }

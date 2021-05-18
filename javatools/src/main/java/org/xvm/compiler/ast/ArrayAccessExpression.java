@@ -540,7 +540,7 @@ public class ArrayAccessExpression
                 SignatureConstant sigGet = infoGet.getSignature();
                 aIndexTypes = sigGet.getRawParams();
                 m_idGet     = infoGet.getIdentity();
-                typeResult  = sigGet.getRawReturns()[0].resolveAutoNarrowing(pool, true, typeArray);
+                typeResult  = sigGet.getRawReturns()[0].resolveAutoNarrowing(pool, true, typeArray, null);
                 }
             }
 
@@ -778,10 +778,11 @@ public class ArrayAccessExpression
         boolean          fTuple     = typeTarget.isTuple();
         List<MethodInfo> listMatch  = new ArrayList<>();
 
+        ConstantPool        pool   = pool();
         Set<MethodConstant> setAll = findPotentialOps(infoTarget, cArgs);
         NextOp: for (MethodConstant idMethod : setAll)
             {
-            SignatureConstant sig = idMethod.getSignature().resolveAutoNarrowing(pool(), typeTarget);
+            SignatureConstant sig = idMethod.getSignature().resolveAutoNarrowing(pool, typeTarget, null);
             if (!fTuple && typeReturn != null && (sig.getRawReturns().length < 1
                     || !isAssignable(ctx, sig.getRawReturns()[0], typeReturn)))
                 {

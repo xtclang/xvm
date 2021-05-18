@@ -12,6 +12,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.JumpFalse;
@@ -142,7 +143,10 @@ public class ReturnStatement
             TypeConstant typeRet = aRetTypes[i];
             if (typeRet.isAutoNarrowing())
                 {
-                aRetTypes[i] = typeRet.resolveAutoNarrowing(pool, true, ctx.getThisType());
+                IdentityConstant idCtx = ctx.isMethod()
+                        ? ctx.getThisClass().getIdentityConstant()
+                        : null;
+                aRetTypes[i] = typeRet.resolveAutoNarrowing(pool, true, ctx.getThisType(), idCtx);
                 }
             }
 

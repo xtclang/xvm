@@ -1808,7 +1808,7 @@ public class TypeInfo
         {
         ConstantPool      pool        = pool();
         SignatureConstant sigOrig     = idMethod.getSignature();
-        SignatureConstant sigResolved = method.getSignature().resolveAutoNarrowing(pool, f_type);
+        SignatureConstant sigResolved = method.getSignature().resolveAutoNarrowing(pool, f_type, null);
 
         if (!sigResolved.equals(sigOrig))
             {
