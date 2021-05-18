@@ -222,7 +222,7 @@ class HashMap<Key, Value>
         Int          bucketCount = buckets.size;
         NextPut: for (Map<Key, Value>.Entry entry : that.entries)
             {
-            Key    key       = entry.key;
+            Key        key       = entry.key;
             Int        keyhash   = hasher.hashOf(key);
             Int        bucketId  = keyhash % bucketCount;
             HashEntry? currEntry = buckets[bucketId];
