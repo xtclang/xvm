@@ -69,13 +69,6 @@ public class TypeSequenceTypeConstant
         }
 
     @Override
-    public TypeConstant resolveAutoNarrowing(ConstantPool pool, boolean fRetainParams,
-                                             TypeConstant typeTarget, IdentityConstant idCtx)
-        {
-        return this;
-        }
-
-    @Override
     public ResolutionResult resolveContributedName(String sName, Access access, ResolutionCollector collector)
         {
         return ResolutionResult.UNKNOWN;
@@ -114,12 +107,6 @@ public class TypeSequenceTypeConstant
 
     @Override
     public boolean containsUnresolved()
-        {
-        return false;
-        }
-
-    @Override
-    public boolean isModifyingType()
         {
         return false;
         }

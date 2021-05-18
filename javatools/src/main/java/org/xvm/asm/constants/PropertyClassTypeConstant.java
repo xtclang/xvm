@@ -196,13 +196,6 @@ public class PropertyClassTypeConstant
         }
 
     @Override
-    public TypeConstant resolveAutoNarrowing(ConstantPool pool, boolean fRetainParams,
-                                             TypeConstant typeTarget, IdentityConstant idCtx)
-        {
-        return this;
-        }
-
-    @Override
     public boolean extendsClass(IdentityConstant constClass)
         {
         PropertyConstant idProp = (PropertyConstant) getDefiningConstant();

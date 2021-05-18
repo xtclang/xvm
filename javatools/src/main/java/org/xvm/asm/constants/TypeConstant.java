@@ -1066,13 +1066,17 @@ public abstract class TypeConstant
     public TypeConstant resolveAutoNarrowing(ConstantPool pool, boolean fRetainParams,
                                              TypeConstant typeTarget, IdentityConstant idCtx)
         {
+        if (!isModifyingType())
+            {
+            return this;
+            }
+
         TypeConstant constOriginal = getUnderlyingType();
         TypeConstant constResolved = constOriginal.resolveAutoNarrowing(
-                                                    pool, fRetainParams, typeTarget, null);
-
+                                                    pool, fRetainParams, typeTarget, idCtx);
         return constResolved == constOriginal
-            ? this
-            : cloneSingle(pool, constResolved);
+                ? this
+                : cloneSingle(pool, constResolved);
         }
 
     /**

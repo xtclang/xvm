@@ -64,13 +64,6 @@ public class PendingTypeConstant
         }
 
     @Override
-    public TypeConstant resolveAutoNarrowing(ConstantPool pool, boolean fRetainParams,
-                                             TypeConstant typeTarget, IdentityConstant idCtx)
-        {
-        return this;
-        }
-
-    @Override
     public TypeConstant resolveGenerics(ConstantPool pool, GenericTypeResolver resolver)
         {
         return this;

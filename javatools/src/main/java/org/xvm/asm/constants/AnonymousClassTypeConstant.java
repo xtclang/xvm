@@ -231,13 +231,6 @@ public class AnonymousClassTypeConstant
         }
 
     @Override
-    public TypeConstant resolveAutoNarrowing(ConstantPool pool, boolean fRetainParams,
-                                             TypeConstant typeTarget, IdentityConstant idCtx)
-        {
-        return this;
-        }
-
-    @Override
     public boolean extendsClass(IdentityConstant constClass)
         {
         return getChildStructure().extendsClass(constClass);
