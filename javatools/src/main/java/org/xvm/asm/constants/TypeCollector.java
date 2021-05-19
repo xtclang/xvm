@@ -494,7 +494,7 @@ public class TypeCollector
                     TypeConstant typeResult = inferFrom(aColType, f_pool);
                     if (typeResult == null)
                         {
-                        return null;
+                        return TypeConstant.NO_TYPES;
                         }
                     aResult[iCol] = typeResult;
                     }
