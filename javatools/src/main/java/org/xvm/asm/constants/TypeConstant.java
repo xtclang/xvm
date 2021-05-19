@@ -1058,7 +1058,8 @@ public abstract class TypeConstant
      * @param pool           the ConstantPool to place a potentially created new constant into
      * @param fRetainParams  if true, don't attempt to resolve the type parameters
      * @param typeTarget     the context-specific target type
-     * @param idCtx          TODO
+     * @param idCtx          if specified, the identity of the auto-narrowing "context" class that
+     *                       should replace any corresponding auto-narrowing identity
      *
      * @return the TypeConstant with explicit identities swapped in for any auto-narrowing
      *         identities
