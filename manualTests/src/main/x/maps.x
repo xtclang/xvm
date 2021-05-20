@@ -144,7 +144,7 @@ module TestMaps
 
     void testMapIteration()
         {
-        console.println("\n** testListMap()");
+        console.println("\n** testMapIteration()");
 
         Map<String, Int> map = new HashMap();
         map.put("hello", 1);
@@ -290,6 +290,8 @@ module TestMaps
 
     void testFreezable()
         {
+        console.println("\n** testFreezable()");
+
         Container c = new Container();
         Map<Int, String> map = c.mapL;
         try
