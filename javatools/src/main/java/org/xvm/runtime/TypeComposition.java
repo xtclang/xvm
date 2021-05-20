@@ -112,23 +112,13 @@ public interface TypeComposition
     ObjectHandle[] initializeStructure();
 
     /**
-     * Return the specified field's {@link ObjectHandle} from the structure.
+     * Return the specified field's position in the structure.
      *
-     * @param ahField  the field array representing the object structure
-     * @param nid      the field nid
+     * @param nid  the field nid
      *
-     * @return the {@link ObjectHandle}
+     * @return the field's position; -1 if not present
      */
-    ObjectHandle getFieldFromStructure(ObjectHandle[] ahField, Object nid);
-
-    /**
-     * Update the specified field's {@link ObjectHandle} value in the structure.
-     *
-     * @param ahField  the field array representing the object structure
-     * @param nid      the field nid
-     * @param hValue   the updated value
-     */
-    void setFieldInStructure(ObjectHandle[] ahField, Object nid, ObjectHandle hValue);
+    int getFieldPosition(Object nid);
 
     /**
      * Make all the fields of the specified structure immutable.
@@ -260,15 +250,6 @@ public interface TypeComposition
         {
         return getTemplate().setFieldValue(frame, hTarget, idProp, hValue);
         }
-
-    /**
-     * Return {@code true} iff objects of this type contain a field for the specified property.
-     *
-     * @param idProp the property
-     *
-     * @return {@code true} iff objects of this type contain a field for the specified property
-     */
-    boolean containsField(PropertyConstant idProp);
 
     /**
      * @return a list of field names (excluding potentially unassigned and lazy)

@@ -4,7 +4,6 @@ package org.xvm.runtime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -438,12 +437,6 @@ public class ClassComposition
         }
 
     @Override
-    public boolean containsField(PropertyConstant idProp)
-        {
-        return m_mapFields.containsKey(idProp.getNestedIdentity());
-        }
-
-    @Override
     public ObjectHandle[] initializeStructure()
         {
         Map<Object, FieldInfo> mapCached = m_mapFields;
@@ -469,15 +462,10 @@ public class ClassComposition
         }
 
     @Override
-    public ObjectHandle getFieldFromStructure(ObjectHandle[] ahField, Object nid)
+    public int getFieldPosition(Object nid)
         {
-        return ahField[m_mapFields.get(nid).getIndex()];
-        }
-
-    @Override
-    public void setFieldInStructure(ObjectHandle[] ahField, Object nid, ObjectHandle hValue)
-        {
-        ahField[m_mapFields.get(nid).getIndex()] = hValue;
+        FieldInfo info = m_mapFields.get(nid);
+        return info == null ? -1 : info.getIndex();
         }
 
     @Override

@@ -162,15 +162,9 @@ public class PropertyComposition
         }
 
     @Override
-    public ObjectHandle getFieldFromStructure(ObjectHandle[] ahField, Object nid)
+    public int getFieldPosition(Object nid)
         {
-        return f_clzRef.getFieldFromStructure(ahField, nid);
-        }
-
-    @Override
-    public void setFieldInStructure(ObjectHandle[] ahField, Object nid, ObjectHandle hValue)
-        {
-        f_clzRef.setFieldInStructure(ahField, nid, hValue);
+        return f_clzRef.getFieldPosition(nid);
         }
 
     @Override
@@ -183,12 +177,6 @@ public class PropertyComposition
     public Set<Object> getFieldNids()
         {
         return f_clzRef.getFieldNids();
-        }
-
-    @Override
-    public boolean containsField(PropertyConstant idProp)
-        {
-        return f_clzRef.containsField(idProp);
         }
 
     @Override

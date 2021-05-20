@@ -380,27 +380,37 @@ public abstract class ObjectHandle
 
         public boolean containsField(PropertyConstant idProp)
             {
-            return getComposition().containsField(idProp);
+            return getFieldPosition(idProp.getNestedIdentity()) >= 0;
             }
 
         public ObjectHandle getField(PropertyConstant idProp)
             {
-            return getComposition().getFieldFromStructure(m_aFields, idProp.getNestedIdentity());
+            return m_aFields[getFieldPosition(idProp.getNestedIdentity())];
             }
 
         public ObjectHandle getField(String sProp)
             {
-            return getComposition().getFieldFromStructure(m_aFields, sProp);
+            return m_aFields[getFieldPosition(sProp)];
             }
 
         public void setField(PropertyConstant idProp, ObjectHandle hValue)
             {
-            getComposition().setFieldInStructure(m_aFields, idProp.getNestedIdentity(), hValue);
+            m_aFields[getFieldPosition(idProp.getNestedIdentity())] = hValue;
             }
 
         public void setField(String sProp, ObjectHandle hValue)
             {
-            getComposition().setFieldInStructure(m_aFields, sProp, hValue);
+            m_aFields[getFieldPosition(sProp)] = hValue;
+            }
+
+        public int getFieldPosition(Object nid)
+            {
+            return getComposition().getFieldPosition(nid);
+            }
+
+        public ObjectHandle getFieldByPosition(int iPos)
+            {
+            return m_aFields[iPos];
             }
 
         public Container getOwner()
@@ -463,7 +473,7 @@ public abstract class ObjectHandle
                     {
                     if (clazz.isInflated(nid))
                         {
-                        RefHandle    hValue = (RefHandle) clazz.getFieldFromStructure(aFields, nid);
+                        RefHandle    hValue = (RefHandle) aFields[clazz.getFieldPosition(nid)];
                         ObjectHandle hOuter = hValue.getField(OUTER);
                         if (hOuter != null)
                             {
@@ -485,7 +495,7 @@ public abstract class ObjectHandle
                 TypeComposition clazz = getComposition();
                 for (Object idProp : clazz.getFieldNids())
                     {
-                    ObjectHandle hValue = clazz.getFieldFromStructure(aFields, idProp);
+                    ObjectHandle hValue = aFields[clazz.getFieldPosition(idProp)];
                     if (hValue == null)
                         {
                         if (!clazz.isAllowedUnassigned(idProp))
@@ -598,8 +608,8 @@ public abstract class ObjectHandle
 
             for (Object nid : nids1)
                 {
-                ObjectHandle hV1 = comp1.getFieldFromStructure(aField1, nid);
-                ObjectHandle hV2 = comp2.getFieldFromStructure(aField2, nid);
+                ObjectHandle hV1 = aField1[comp1.getFieldPosition(nid)];
+                ObjectHandle hV2 = aField2[comp2.getFieldPosition(nid)];
 
                 // TODO: need to prevent a potential infinite loop
                 ClassTemplate template = hV1.getTemplate();

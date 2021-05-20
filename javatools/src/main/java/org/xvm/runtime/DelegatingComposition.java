@@ -127,15 +127,9 @@ abstract public class DelegatingComposition
         }
 
     @Override
-    public ObjectHandle getFieldFromStructure(ObjectHandle[] ahField, Object nid)
+    public int getFieldPosition(Object nid)
         {
-        return f_clzOrigin.getFieldFromStructure(ahField, nid);
-        }
-
-    @Override
-    public void setFieldInStructure(ObjectHandle[] ahField, Object nid, ObjectHandle hValue)
-        {
-        f_clzOrigin.setFieldInStructure(ahField, nid, hValue);
+        return f_clzOrigin.getFieldPosition(nid);
         }
 
     @Override
@@ -148,12 +142,6 @@ abstract public class DelegatingComposition
     public Set<Object> getFieldNids()
         {
         return f_clzOrigin.getFieldNids();
-        }
-
-    @Override
-    public boolean containsField(PropertyConstant idProp)
-        {
-        return f_clzOrigin.containsField(idProp);
         }
 
     // ----- data fields ---------------------------------------------------------------------------
