@@ -272,73 +272,139 @@ public class PropertyClassTypeConstant
     @Override
     protected TypeInfo buildTypeInfo(ErrorListener errs)
         {
-        ConstantPool pool     = getConstantPool();
-        int          cInvals  = pool.getInvalidationCount();
-        PropertyInfo infoProp = getPropertyInfo();
-        TypeConstant typeRef  = infoProp.getBaseRefType().removeAutoNarrowing();
-        TypeConstant typeBase = pool.ensureAccessTypeConstant(typeRef, Access.PROTECTED);
-        TypeInfo     infoBase = typeBase.buildTypeInfo(errs);
+        ConstantPool   pool     = getConstantPool();
+        int            cInvals  = pool.getInvalidationCount();
+        PropertyInfo   infoProp = getPropertyInfo();
+        PropertyBody[] aBody    = infoProp.getPropertyBodies();
 
-        PropertyStructure prop = infoProp.getHead().getStructure();
-
-        Map<Object           , ParamInfo>    mapTypeParams      = new HashMap<>();
-        Map<PropertyConstant , PropertyInfo> mapContribProps    = new HashMap<>();
-        Map<MethodConstant   , MethodInfo  > mapContribMethods  = new HashMap<>();
-        ListMap<String       , ChildInfo   > mapContribChildren = new ListMap<>();
-        ArrayList<PropertyConstant>          listExplode        = new ArrayList<>();
-
-        IdentityConstant idBase = (IdentityConstant) infoBase.getType().getDefiningConstant();
-
-        collectChildInfo(idBase, false, prop, mapTypeParams,
-            mapContribProps, mapContribMethods, mapContribChildren, listExplode, 0, errs);
-
-        if (!listExplode.isEmpty())
-            {
-            // TODO: explode properties
-            }
-
-        if (mapContribProps.isEmpty() && mapContribMethods.isEmpty() && mapContribChildren.isEmpty())
-            {
-            // nothing has been added
-            return infoBase;
-            }
-
-        Map<PropertyConstant, PropertyInfo> mapProps       = infoBase.getProperties();
-        Map<MethodConstant  , MethodInfo  > mapMethods     = infoBase.getMethods();
-        Map<Object          , PropertyInfo> mapVirtProps   = infoBase.getVirtProperties();
-        Map<Object          , MethodInfo  > mapVirtMethods = infoBase.getVirtMethods();
+        Map<Object          , ParamInfo   > mapTypeParams  = new HashMap<>();
+        Map<PropertyConstant, PropertyInfo> mapProps       = new HashMap<>();
+        Map<MethodConstant  , MethodInfo  > mapMethods     = new HashMap<>();
+        Map<Object          , PropertyInfo> mapVirtProps   = new HashMap<>();
+        Map<Object          , MethodInfo  > mapVirtMethods = new ListMap<>();
         ListMap<String      , ChildInfo   > mapChildren    = new ListMap<>();
 
-        if (!mapContribProps.isEmpty())
+        TypeInfo         infoBase = null;
+        IdentityConstant idBase   = null;
+        TypeConstant     typeBase = null;
+        for (int i = aBody.length - 1; i >= 0; i--)
             {
-            // process properties by moving them to the base ref level
-            Map<PropertyConstant, PropertyInfo> mapContrib = new HashMap<>(mapContribProps.size());
-            for (Map.Entry<PropertyConstant, PropertyInfo> entry : mapContribProps.entrySet())
+            PropertyBody body = aBody[i];
+
+            if (i != 0 && body.getExistence() != MethodBody.Existence.Class)
                 {
-                PropertyConstant idContrib = entry.getKey();
-                PropertyConstant idReplace = pool.ensurePropertyConstant(idBase, idContrib.getName());
-                mapContrib.put(idReplace, entry.getValue());
+                continue;
                 }
 
-            layerOnProps(idBase, true, null, mapProps, mapVirtProps, this, mapContrib, errs);
-            }
-
-        if (!mapContribMethods.isEmpty())
-            {
-            // process methods by moving them to the base ref level
-            Map<MethodConstant, MethodInfo> mapContrib = new HashMap<>(mapContribMethods.size());
-            for (Map.Entry<MethodConstant, MethodInfo> entry : mapContribMethods.entrySet())
+            if (infoBase == null)
                 {
-                MethodConstant idContrib = entry.getKey();
-                MethodConstant idReplace = pool.ensureMethodConstant(idBase, idContrib.getSignature());
-                mapContrib.put(idReplace, entry.getValue());
-                }
-            layerOnMethods(idBase, true, false, null, mapMethods, mapVirtMethods, this, mapContrib, errs);
-            }
+                TypeConstant typeRef = infoProp.getBaseRefType().removeAutoNarrowing();
 
-        if (!mapContribChildren.isEmpty())
-            {
-            // TODO process children
+                typeBase = pool.ensureAccessTypeConstant(typeRef, Access.PROTECTED);
+                infoBase = typeBase.buildTypeInfo(errs);
+                if (!isComplete(infoBase))
+                    {
+                    return null;
+                    }
+                idBase = (IdentityConstant) typeRef.getDefiningConstant();
+
+                mapProps      .putAll(infoBase.getProperties());
+                mapMethods    .putAll(infoBase.getMethods());
+                mapVirtProps  .putAll(infoBase.getVirtProperties());
+                mapVirtMethods.putAll(infoBase.getVirtMethods());
+                }
+
+            TypeConstant                        typeContrib;
+            Map<PropertyConstant, PropertyInfo> mapContribProps;
+            Map<MethodConstant  , MethodInfo  > mapContribMethods;
+            ListMap<String      , ChildInfo   > mapContribChildren;
+
+            boolean fSelf = i == 0;
+            if (fSelf)
+                {
+                typeContrib        = this;
+                mapContribProps    = new HashMap<>();
+                mapContribMethods  = new HashMap<>();
+                mapContribChildren = new ListMap<>();
+
+                ArrayList<PropertyConstant> listExplode = new ArrayList<>();
+
+                PropertyStructure prop = infoProp.getHead().getStructure();
+                collectChildInfo(idBase, false, prop, mapTypeParams,
+                    mapContribProps, mapContribMethods, mapContribChildren, listExplode, 0, errs);
+
+                if (!listExplode.isEmpty())
+                    {
+                    // TODO: explode properties
+                    }
+
+                if (mapContribProps.isEmpty() && mapContribMethods.isEmpty() &&
+                        mapContribChildren.isEmpty())
+                    {
+                    // nothing has been added
+                    return infoBase;
+                    }
+
+                if (!mapContribProps.isEmpty())
+                    {
+                    // process properties by moving them to the base ref level
+                    Map<PropertyConstant, PropertyInfo> mapContrib = new HashMap<>(mapContribProps.size());
+                    for (Map.Entry<PropertyConstant, PropertyInfo> entry : mapContribProps.entrySet())
+                        {
+                        PropertyConstant idContrib = entry.getKey();
+                        PropertyConstant idReplace = pool.ensurePropertyConstant(idBase, idContrib.getName());
+                        mapContrib.put(idReplace, entry.getValue());
+                        }
+                    mapContribProps = mapContrib;
+                    }
+
+                if (!mapContribMethods.isEmpty())
+                    {
+                    // process methods by moving them to the base ref level
+                    Map<MethodConstant, MethodInfo> mapContrib = new HashMap<>(mapContribMethods.size());
+                    for (Map.Entry<MethodConstant, MethodInfo> entry : mapContribMethods.entrySet())
+                        {
+                        MethodConstant idContrib = entry.getKey();
+                        MethodConstant idReplace = pool.ensureMethodConstant(idBase, idContrib.getSignature());
+                        mapContrib.put(idReplace, entry.getValue());
+                        }
+                    mapContribMethods = mapContrib;
+                    }
+                }
+            else
+                {
+                typeContrib = body.getIdentity().getRefType(null);
+                if (!(typeContrib instanceof PropertyClassTypeConstant))
+                    {
+                    continue;
+                    }
+                TypeInfo infoContrib = typeContrib.ensureTypeInfoInternal(errs);
+                if (!isComplete(infoContrib))
+                    {
+                    return null;
+                    }
+
+                mapContribProps    = infoContrib.getProperties();
+                mapContribMethods  = infoContrib.getMethods();
+                mapContribChildren = infoContrib.getChildInfosByName();
+                }
+
+            if (!mapContribProps.isEmpty())
+                {
+                layerOnProps(idBase, fSelf, null, mapProps, mapVirtProps, typeContrib,
+                        mapContribProps, errs);
+                }
+
+            if (!mapContribMethods.isEmpty())
+                {
+                layerOnMethods(idBase, fSelf, false, null, mapMethods, mapVirtMethods, typeContrib,
+                        mapContribMethods, errs);
+                }
+
+            if (!mapContribChildren.isEmpty())
+                {
+                // TODO process children
+                }
             }
 
         return new TypeInfo(this, cInvals, infoBase.getClassStructure(),

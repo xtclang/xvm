@@ -1,34 +1,52 @@
-module TestSimple.test.org
+module Test
     {
     @Inject Console console;
+    Log log = new ecstasy.io.ConsoleLog(console);
 
     void run()
         {
-        Impl t = new Impl();
-        t.foo();
+        log.add("Simple property example!");
+
+        val o = new TestDerived();
+        for (Int i : 0..5)
+            {
+            val n = o.x;
+            }
+
+        o.&x.foo();
         }
 
-    interface Iface1
+    class TestClass
         {
-        Iface1 foo()
+        Int x
             {
-            TODO
+            @Override Int get()
+                {
+                ++count;
+                return super();
+                }
+
+            void foo()
+                {
+                log.add($"Someone accessed this property {count} times!");
+                }
+
+            private Int count;
             }
         }
 
-    interface Iface2
+    class TestDerived
+            extends TestClass
         {
-        Iface2 foo();
-        }
-
-    class Impl
-            implements Iface1
-            implements Iface2
-        {
-        @Override
-        Impl foo()
+        @Override Int x
             {
-            return this;
+            @Override void foo()
+                {
+                super();
+                log.add($"(And someone called foo() {++count} times!)");
+                }
+
+            private Int count;
             }
         }
     }
