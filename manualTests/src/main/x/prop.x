@@ -96,6 +96,12 @@ module TestProps
         Derived d = new Derived();
         d.report();
 
+        for (Int i : 0..5)
+            {
+            val x = d.p4;
+            }
+        d.&p4.report();
+
         class Base
             {
             private Int p1 = 1;
@@ -108,6 +114,23 @@ module TestProps
             private Int p3()
                 {
                 return 3;
+                }
+
+            Int p4
+                {
+                @Override
+                Int get()
+                    {
+                    ++count;
+                    return super();
+                    }
+
+                void report()
+                    {
+                    console.println($"Property p4 was called {count} times!");
+                    }
+
+                private Int count;
                 }
 
             void report()
@@ -129,6 +152,19 @@ module TestProps
             Int p3()
                 {
                 return 33;
+                }
+
+            @Override
+            Int p4
+                {
+                @Override
+                void report()
+                    {
+                    super();
+                    console.println($"Method foo() was called {++count1} times");
+                    }
+
+                private Int count1; // TODO GG: using the same name (count) asserts at RT
                 }
 
             @Override

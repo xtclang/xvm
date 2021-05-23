@@ -3457,9 +3457,15 @@ public abstract class TypeConstant
 
         // look for a property of the same name (using its nested identity); only virtually
         // composable properties are registered using their nested identities
-        PropertyInfo propBase = fVirtual
-                ? mapVirtProps.get(nidContrib)
-                : null;
+        PropertyInfo propBase = mapVirtProps.get(nidContrib);
+
+        if (propContrib.getRefAccess() == Access.PRIVATE && propBase != null)
+            {
+            constId.log(errs, Severity.ERROR, VE_PROPERTY_ACCESS_LESSENED,
+                    propBase.getIdentity().getParentConstant().getValueString(),
+                    propContrib.getName());
+            propBase = null;
+            }
 
         PropertyInfo propResult = propBase == null
                 ? propContrib

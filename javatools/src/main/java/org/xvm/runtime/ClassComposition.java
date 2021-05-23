@@ -19,6 +19,7 @@ import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.AccessTypeConstant;
 import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.MethodBody;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.NativeRebaseConstant;
 import org.xvm.asm.constants.PropertyClassTypeConstant;
@@ -339,12 +340,10 @@ public class ClassComposition
         return f_mapGetters.computeIfAbsent(idProp,
             id ->
                 {
-                TypeInfo     info = f_typeInception.ensureTypeInfo();
-                PropertyInfo prop = info.findProperty(id);
-
-                return prop == null
+                MethodBody[] chain = f_typeInception.ensureTypeInfo().getOptimizedGetChain(id);
+                return chain == null
                         ? null
-                        : new CallChain(info.getOptimizedGetChain(prop.getIdentity()));
+                        : new CallChain(chain);
                 });
         }
 
@@ -354,12 +353,10 @@ public class ClassComposition
         return f_mapSetters.computeIfAbsent(idProp,
             id ->
                 {
-                TypeInfo     info = f_typeInception.ensureTypeInfo();
-                PropertyInfo prop = info.findProperty(id);
-
-                return prop == null
+                MethodBody[] chain = f_typeInception.ensureTypeInfo().getOptimizedSetChain(id);
+                return chain == null
                         ? null
-                        : new CallChain(info.getOptimizedSetChain(prop.getIdentity()));
+                        : new CallChain(chain);
                 });
         }
 
@@ -593,11 +590,12 @@ public class ClassComposition
                 switch (idParent.getFormat())
                     {
                     case Property:
-                        if (!infoProp.getIdentity().getParentConstant().equals(idParent))
+                        if (!infoStruct.getClassChain().
+                                containsKey(infoProp.getIdentity().getClassIdentity()))
                             {
                             // the property is defined by the underlying type; currently those
                             // nested properties are stored in the corresponding Refs "box"
-                            // REVIEW: consider having this helper at the PropertyInfo
+                            // REVIEW: consider having this helper at the TypeInfo
                             continue;
                             }
                         break;

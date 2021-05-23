@@ -9,6 +9,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 
+import org.xvm.asm.constants.MethodBody;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyConstant;
@@ -234,14 +235,15 @@ public class PropertyComposition
                 {
                 // see if there's a nested property first; default to the base otherwise
                 PropertyConstant idBase   = f_infoProp.getIdentity();
-                PropertyConstant idNested = (PropertyConstant) idBase.appendNestedIdentity(
-                                                idBase.getConstantPool(), id.getNestedIdentity());
+                PropertyConstant idNested = id.getNestedDepth() > idBase.getNestedDepth()
+                        ? id
+                        : (PropertyConstant) idBase.appendNestedIdentity(
+                                idBase.getConstantPool(), id.getNestedIdentity());
 
-                TypeInfo     infoParent = getParentInfo();
-                PropertyInfo infoProp   = infoParent.findProperty(idNested);
-                return infoProp == null
-                    ? f_clzRef.getPropertyGetterChain(id)
-                    : new CallChain(infoProp.ensureOptimizedGetChain(infoParent, idNested));
+                MethodBody[] chain = getParentInfo().getOptimizedGetChain(idNested);
+                return chain == null
+                        ? f_clzRef.getPropertyGetterChain(id)
+                        : new CallChain(chain);
                 });
         }
 
@@ -252,14 +254,15 @@ public class PropertyComposition
             id ->
                 {
                 PropertyConstant idBase   = f_infoProp.getIdentity();
-                PropertyConstant idNested = (PropertyConstant) idBase.appendNestedIdentity(
-                                                idBase.getConstantPool(), id.getNestedIdentity());
+                PropertyConstant idNested = id.getNestedDepth() > idBase.getNestedDepth()
+                        ? id
+                        : (PropertyConstant) idBase.appendNestedIdentity(
+                                idBase.getConstantPool(), id.getNestedIdentity());
 
-                TypeInfo     infoParent = getParentInfo();
-                PropertyInfo infoProp   = infoParent.findProperty(idNested);
-                return infoProp == null
-                    ? f_clzRef.getPropertySetterChain(id)
-                    : new CallChain(infoProp.ensureOptimizedSetChain(infoParent, idNested));
+                MethodBody[] chain = getParentInfo().getOptimizedSetChain(idNested);
+                return chain == null
+                        ? f_clzRef.getPropertySetterChain(id)
+                        : new CallChain(chain);
                 });
         }
 

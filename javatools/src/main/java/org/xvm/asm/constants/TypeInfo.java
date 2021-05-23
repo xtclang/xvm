@@ -206,18 +206,16 @@ public class TypeInfo
             PropertyConstant id       = entry.getKey();
             PropertyInfo     prop     = entry.getValue();
             boolean          fVirtual = prop.isVirtual();
-            if (id.isTopLevel())
-                {
-                // now ask the Property itself to reduce its capabilities based on the new access level
-                prop = prop.limitAccess(access);
-                if (prop != null)
-                    {
-                    mapProps.put(id, prop);
 
-                    if (fVirtual)
-                        {
-                        mapVirtProps.put(id.resolveNestedIdentity(pool, null), prop);
-                        }
+            // now ask the Property itself to reduce its capabilities based on the new access level
+            prop = prop.limitAccess(access);
+            if (prop != null)
+                {
+                mapProps.put(id, prop);
+
+                if (fVirtual)
+                    {
+                    mapVirtProps.put(id.resolveNestedIdentity(pool, null), prop);
                     }
                 }
             }
@@ -1208,6 +1206,30 @@ public class TypeInfo
         }
 
     /**
+     * If the specified property is not visible directly by this TypeInfo due to the private access,
+     * obtain its origin's TypeInfo.
+     *
+     * @param idProp  the property id
+     *
+     * @return the TypeInfo for the origin's type or null if not found
+     */
+    public TypeInfo findPropertyOrigin(PropertyConstant idProp)
+        {
+        Origin origin = getClassChain().get(idProp.getClassIdentity());
+        if (origin != null)
+            {
+            TypeConstant typeOrigin = origin.getType();
+            TypeInfo     infoOrigin = pool().ensureAccessTypeConstant(typeOrigin, Access.PRIVATE).
+                                            ensureTypeInfo();
+            if (infoOrigin.findProperty(idProp) != null)
+                {
+                return infoOrigin;
+                }
+            }
+        return null;
+        }
+
+    /**
      * @return all of the non-scoped methods for this type
      */
     public Map<MethodConstant, MethodInfo> getMethods()
@@ -1518,6 +1540,14 @@ public class TypeInfo
     public MethodBody[] getOptimizedGetChain(PropertyConstant id)
         {
         PropertyInfo prop = findProperty(id);
+        if (prop == null)
+            {
+            TypeInfo infoOrigin = findPropertyOrigin(id);
+            if (infoOrigin != null && infoOrigin != this)
+                {
+                return infoOrigin.getOptimizedGetChain(id);
+                }
+            }
         return prop == null
                 ? null
                 : prop.ensureOptimizedGetChain(this, null);
@@ -1533,6 +1563,14 @@ public class TypeInfo
     public MethodBody[] getOptimizedSetChain(PropertyConstant id)
         {
         PropertyInfo prop = findProperty(id);
+        if (prop == null)
+            {
+            TypeInfo infoOrigin = findPropertyOrigin(id);
+            if (infoOrigin != null && infoOrigin != this)
+                {
+                return infoOrigin.getOptimizedSetChain(id);
+                }
+            }
         return prop == null
                 ? null
                 : prop.ensureOptimizedSetChain(this, null);

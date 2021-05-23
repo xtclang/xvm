@@ -188,19 +188,21 @@ class Router
         private HttpMethod httpMethod;
 
         /**
+         * Child routes of this route.
+         */
+        private List<DefaultUriRoute> nestedRoutes;
+
+        /**
          * The template to use to match this route to a URI.
          */
-        private UriMatchTemplate uriMatchTemplate;
+        @Override
+        UriMatchTemplate uriMatchTemplate;
 
         /**
          * The function that handles executing the route.
          */
-        private ExecutableFunction executable;
-
-        /**
-         * Child routes of this route.
-         */
-        private List<DefaultUriRoute> nestedRoutes;
+        @Override
+        ExecutableFunction executable;
 
         @Override
         public/private MediaType[] consumes;
