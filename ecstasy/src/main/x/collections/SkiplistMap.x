@@ -42,7 +42,12 @@ class SkiplistMap<Key extends Orderable, Value>
      */
     construct(SkiplistMap<Key, Value> that)
         {
-        TODO
+        construct SkiplistMap(that.size, that.compare);
+        }
+    finally
+        {
+        // this could be optimized
+        putAll(that);
         }
 
 
@@ -164,6 +169,8 @@ class SkiplistMap<Key extends Orderable, Value>
             Boolean    upgraded = False;
             if ((Int node, Int height) := findNode(key))
                 {
+                // note: do NOT increment modCount for a value replace, because there are no
+                //       structural changes to the skiplist
                 valueStore.replace(node, height, value);
                 }
             else
@@ -182,6 +189,7 @@ class SkiplistMap<Key extends Orderable, Value>
                     // add the node to the map
                     linkWorkTo(node, height);
                     ++size;
+                    ++modCount; // a new node signifies a structural change
                     }
                 else
                     {
@@ -193,7 +201,6 @@ class SkiplistMap<Key extends Orderable, Value>
             }
         while (upgraded);
 
-        ++modCount;
         return this;
         }
 
@@ -776,7 +783,7 @@ class SkiplistMap<Key extends Orderable, Value>
                     exists = False;
                     }
 
-                expectedCount = modCount; // REVIEW CP
+                expectedCount = modCount;
                 }
 
             return super();
@@ -808,8 +815,8 @@ class SkiplistMap<Key extends Orderable, Value>
                 else
                     {
                     this.SkiplistMap.put(key, value);
-                    exists = True;
-                    ++expectedCount;
+                    exists        = True;
+                    expectedCount = modCount;
                     }
                 }
             }
@@ -820,8 +827,8 @@ class SkiplistMap<Key extends Orderable, Value>
             if (exists)
                 {
                 this.SkiplistMap.remove(key);
-                exists = False;
-                ++expectedCount;
+                exists        = False;
+                expectedCount = modCount;
                 }
             }
 
@@ -1102,8 +1109,8 @@ class SkiplistMap<Key extends Orderable, Value>
             ElementStore<Value> valueStore;
             while (True)
                 {
-                keyStore   = createElementStore(indexType, initCapacity, Key);
-                valueStore = createElementStore(indexType, initCapacity, Value);
+                keyStore   = createElementStore(indexType, Key, initCapacity);
+                valueStore = createElementStore(indexType, Value, initCapacity);
 
                 // double check that the index type supports a large enough capacity
                 if (initCapacity <= 0 || IndexStore.estimateElements(indexType, initCapacity,
@@ -1142,8 +1149,8 @@ class SkiplistMap<Key extends Orderable, Value>
         // create the new storage
         Type<IntNumber>     newType   = IndexStore.nextBigger(oldNodes.Index);
         Int                 capacity  = size + (size >>> 2);                // 25% larger
-        ElementStore<Key>   newKeys   = createElementStore(newType, capacity, Key);
-        ElementStore<Value> newValues = createElementStore(newType, capacity, Value);
+        ElementStore<Key>   newKeys   = createElementStore(newType, Key, capacity);
+        ElementStore<Value> newValues = createElementStore(newType, Value, capacity);
         IndexStore          newNodes  = createIndexStore(newType, capacity, newKeys, newValues);
         Int                 newNil    = newNodes.nil;
 
@@ -1200,6 +1207,11 @@ class SkiplistMap<Key extends Orderable, Value>
         this.actualKeys    = newKeys;
         this.actualValues  = newValues;
         this.cacheModCount = -1;            // cache is obviously destroyed by a resize
+
+        // treat the changing-of-the-nodes as a modification; this allows anything that is caching
+        // structural information to realize that they need to look again at the underlying data
+        // structures
+        ++modCount;
         }
 
     /**
@@ -1245,27 +1257,83 @@ class SkiplistMap<Key extends Orderable, Value>
      *
      * @param indexType     the type of the index that will be used in the IndexStore (probably
      *                      not yet instantiated)
+     * @param elementType   the type of the element that will be stored in the ElementStore
      * @param initCapacity  the expected number of entries
-     * @param objectType    the type of the element that will be stored in the ElementStore
      *
      * @return the new storage for the specified element type
      */
-    protected <Element> ElementStore<Element> createElementStore(
-            Type<IntNumber> indexType,
-            Int             initCapacity,
-            Type<Element>   elementType,
+    protected <NewIndex extends IntNumber, Element> ElementStore<Element> createElementStore(
+            Type<NewIndex> indexType,
+            Type<Element>  elementType,
+            Int            initCapacity,
             )
         {
-        if (Element == Nullable)
+        if (Element.is(Type<Nullable>))
             {
             return NullStore.INSTANCE;
             }
 
-        // TODO 80x From<8/16/32/64>To<Unchecked><U><8/16/32/64/128>
-        // TODO Boolean Char enum
-        // TODO signed/unsigned checked/unchecked Int 8/16/32/64/128
+        switch (elementType)
+            {
+//            // the numeric types ...
+//            case Int8  , UInt8  , @Unchecked Int8  , @Unchecked UInt8  :
+//            case Int16 , UInt16 , @Unchecked Int16 , @Unchecked UInt16 :
+//            case Int32 , UInt32 , @Unchecked Int32 , @Unchecked UInt32 :
+//            case Int64 , UInt64 , @Unchecked Int64 , @Unchecked UInt64 :
+//            case Int128, UInt128, @Unchecked Int128, @Unchecked UInt128:
+//            case Dec32, Dec64, Dec128:
+//            case BFloat16, Float16, Float32, Float64, Float128:
+//            // and the nullable forms ... TODO CP "case" does not allow "T?"
+//            case Nullable|Int8  , Nullable|UInt8  , Nullable|@Unchecked Int8  , Nullable|@Unchecked UInt8  :
+//            case Nullable|Int16 , Nullable|UInt16 , Nullable|@Unchecked Int16 , Nullable|@Unchecked UInt16 :
+//            case Nullable|Int32 , Nullable|UInt32 , Nullable|@Unchecked Int32 , Nullable|@Unchecked UInt32 :
+//            case Nullable|Int64 , Nullable|UInt64 , Nullable|@Unchecked Int64 , Nullable|@Unchecked UInt64 :
+//            case Nullable|Int128, Nullable|UInt128, Nullable|@Unchecked Int128, Nullable|@Unchecked UInt128:
+//            case Nullable|Dec32, Nullable|Dec64, Nullable|Dec128:
+//            case Nullable|BFloat16, Nullable|Float16, Nullable|Float32, Nullable|Float64, Nullable|Float128:
+//                return new NumberStore<elementType.DataType, indexType.DataType>()                  /*TODO GG*/.as(ElementStore<Element>);
 
-        return new ExternalStore<Element>(initCapacity);
+            case Bit,     Nullable|Bit:
+            case Boolean, Nullable|Boolean:
+            case Nibble,  Nullable|Nibble:
+                return new SingleIndexStore<elementType.DataType, indexType.DataType>()             /*TODO GG*/.as(ElementStore<Element>);
+
+//            case Char, Nullable|Char:
+//                return new CharStore<elementType.DataType, indexType.DataType>()                    /*TODO GG*/.as(ElementStore<Element>);
+
+            default:
+//                // check if the type is an Enum type (or "Enum?" type)
+//                if (elementType.is(Type<Enum>))
+//                    {
+//                    return new EnumStore<elementType.DataType, indexType.DataType>()                /*TODO GG*/.as(ElementStore<Element>);
+//                    }
+//                if (Type notNullPart := isNullable(elementType), notNullPart.is(Type<Enum>))
+//                    {
+//                    return new EnumStore<elementType.DataType, indexType.DataType>()                /*TODO GG*/.as(ElementStore<Element>);
+//                    }
+
+                return new ExternalStore<elementType.DataType, indexType.DataType>(initCapacity)    /*TODO GG*/.as(ElementStore<Element>);
+            }
+        }
+
+    /**
+     * Using a fairly strict definition of a "Nullable" type, specifically the one used by the
+     * compiler when compiling "T?" for some type "T", determine if the passed type matches that
+     * form, and if it does, return the underlying "T".
+     *
+     * @param t  a type that may be Nullable by this function's strict definition
+     *
+     * @return True iff the type is Nullable by this function's strict definition
+     * @return (conditional) the underlying type
+     */
+    private static conditional Type isNullable(Type t)
+        {
+        if ((Type t1, Type t2) := t.relational(), t.form == Intersection && t1 == Nullable)
+            {
+            return True, t2;
+            }
+
+        return False;
         }
 
     /**
@@ -1308,8 +1376,6 @@ class SkiplistMap<Key extends Orderable, Value>
      *
      * Any fixed number of values (the [valueHeight]) can be is stored in each node, each as one
      * additional `Index` elements. They are accessed via [getValue] and [setValue].
-     *
-     * REVIEW evaluate which of the asserts should be replaced with assert:test
      */
     protected static class IndexStore<Index extends IntNumber>
         {
@@ -1328,8 +1394,10 @@ class SkiplistMap<Key extends Orderable, Value>
             {
             assert valueHeight >= 1;
 
+            // underlying storage is a growable array; reserve space for the header size and assume
+            // an average of 2 "skip" pointers per node (1 + 1/2 + 1/4 + 1/8 + ...)
             this.valueHeight = valueHeight;
-            this.elements    = new Array<Index>(capacity); // underlying storage is a growable array  // REVIEW CP
+            this.elements    = new Index[](3*(sizeOf(Index)-1) + (capacity+1)*(2+valueHeight));
             }
         finally
             {
@@ -1541,6 +1609,26 @@ class SkiplistMap<Key extends Orderable, Value>
             {
             assert node > 0 && height > 0 && i >= 0 && i < valueHeight;
             elements[node+height+i] = toIndex(value);
+            }
+
+        /**
+         * Get the specified index(es) from the specified node, as a byte array.
+         *
+         * @param node         the node index (its identity)
+         * @param height       the height of the node, which is the number of indexes it holds
+         * @param valueOffset  the index offset assigned to the ElementStore to hold the value
+         * @param valueHeight  the height of the ElementStore
+         *
+         * @return the specified value elements, as a read/write byte array
+         */
+        Byte[] valueAsBytes(Int node, Int height, Int valueOffset, Int valueHeight)
+            {
+            assert node > 0 && height > 0 && valueOffset >= 0 && valueHeight > 0
+                    && valueOffset+valueHeight <= this.valueHeight;
+
+            Int start = node+height+valueOffset;
+            Int end   = start+valueHeight;
+            return elements[start..end).asByteArray();
             }
 
         /**
@@ -1840,7 +1928,7 @@ class SkiplistMap<Key extends Orderable, Value>
     /**
      * Represents a means of storing elements associated with nodes.
      */
-    protected static interface ElementStore<Element>
+    protected static interface ElementStore<Element, Index extends IntNumber>
         {
         /**
          * The number of indexes used by the values stored by this ElementStore.
@@ -1903,6 +1991,9 @@ class SkiplistMap<Key extends Orderable, Value>
         void dump(Log log, String desc);
         }
 
+
+    // ----- ElementStore: Null value only ---------------------------------------------------------
+
     /**
      * An implementation that stores the value `Null` very efficiently.
      */
@@ -1921,15 +2012,530 @@ class SkiplistMap<Key extends Orderable, Value>
         @Override void dump(Log log, String desc) {log.add($"{desc}=NullStore");}
         }
 
+
+    // ----- AbstractStore -------------------------------------------------------------------------
+
+    /**
+     * Base class for a number of ElementStore implementation.
+     */
+    protected static class AbstractStore<Element, Index extends IntNumber>
+            implements ElementStore<Element, Index>
+        {
+        // ----- properties -------------------------------------------------------------------
+
+        /**
+         * This ExternalStore stores the index of each value in each node of the IndexStore.
+         */
+        protected IndexStore? nodes;
+
+        /**
+         * This ExternalStore stores the index of each value in each node of the IndexStore,
+         * and at this value-offset within the node.
+         */
+        protected Int valueOffset;
+
+
+        // ----- ElementStore interface -------------------------------------------------------
+
+        @Override
+        Int height.get()
+            {
+            return 1;
+            }
+
+        @Override
+        void configure(IndexStore nodes, Int valueOffset)
+            {
+            this.nodes       = nodes;
+            this.valueOffset = valueOffset;
+            }
+
+        @Override
+        Element load(Int node, Int height);
+
+        @Override
+        void add(Int node, Int height, Element e);
+
+        @Override
+        void replace(Int node, Int height, Element e);
+
+        @Override
+        void release(Int node, Int height);
+
+        @Override
+        void dump(Log log, String desc)
+            {
+            log.add($"{desc}={&this.actualClass.name}<{Element}> valueOffset={valueOffset}, height={height}");
+            }
+
+
+        // ----- internal ---------------------------------------------------------------------
+
+        /**
+         * Get the index into the contents array of the external storage for the value being held
+         * for the specified node. For a `Null` value, the index is `nil`.
+         *
+         * @param node    the node to get the value storage index out of
+         * @param height  the node height
+         *
+         * @return the index into the contents array of the external storage, or `nil`
+         */
+        protected Int getIndex(Int node, Int height)
+            {
+            return nodes?.getValue(node, height, valueOffset) : assert;
+            }
+
+        /**
+         * Update the index into the contents array of the external storage for the value being held
+         * for the specified node. For a `Null` value, the index will be `nil`.
+         *
+         * @param node    the node to put the value storage index into
+         * @param height  the node height
+         * @param index   the index into the contents array of the external storage, or `nil`
+         */
+        protected void setIndex(Int node, Int height, Int index)
+            {
+            nodes?.setValue(node, height, valueOffset, index) : assert;
+            }
+        }
+
+
+    // ----- SingleIndexStore: bits that squeeze inside an index -----------------------------------
+
+    /**
+     * Stores the small `Element` values tucked inside a single `Index` value.
+     */
+    protected static class SingleIndexStore<Element, Index extends IntNumber>
+            extends AbstractStore<Element, Index>
+        {
+        construct()
+            {
+            (toIndex, fromIndex) = switch (Element)
+                {
+                case Bit: (e -> e /*TODO GG*/.as(Bit) .toInt64(), i -> (i!=0).toBit() /*TODO GG*/.as(Element));
+                case Nullable|Bit: (e -> e /*TODO GG*/.as(Bit?)?.toInt64() : -1, i -> (i == -1 ? Null : (i!=0).toBit()) /*TODO GG*/.as(Element));
+
+                case Boolean: (e -> e /*TODO GG*/.as(Boolean) .toInt64(), i -> (i!=0) /*TODO GG*/.as(Element));
+                case Nullable|Boolean: (e -> e /*TODO GG*/.as(Boolean?)?.toInt64() : -1, i -> (i == -1 ? Null : i!=0) /*TODO GG*/.as(Element));
+
+                case Nibble: (e -> e /*TODO GG*/.as(Nibble) .toInt64(), i -> i.toNibble()  /*TODO GG*/.as(Element));
+                case Nullable|Nibble: (e -> e /*TODO GG*/.as(Nibble?)?.toInt64() : -1, i -> (i == -1 ? Null : i.toNibble())  /*TODO GG*/.as(Element));
+
+                default: assert as $"Unsupported type: {Element}";
+                };
+            }
+
+        // ----- properties -------------------------------------------------------------------
+
+        /**
+         * Function to turn an element into an index.
+         */
+        protected function Int(Element) toIndex;
+
+        /**
+         * Function to turn an index into an element.
+         */
+        protected function Element(Int) fromIndex;
+
+
+        // ----- ElementStore interface -------------------------------------------------------
+
+        @Override
+        Element load(Int node, Int height)
+            {
+            return fromIndex(getIndex(node, height));
+            }
+
+        @Override
+        void add(Int node, Int height, Element e)
+            {
+            setIndex(node, height, toIndex(e));
+            }
+
+        @Override
+        void replace(Int node, Int height, Element e)
+            {
+            setIndex(node, height, toIndex(e));
+            }
+
+        @Override
+        void release(Int node, Int height)
+            {
+            // it is not necessary to clean up the slot, but debugging will be ugly if we don't
+            setIndex(node, height, 0);
+            }
+        }
+
+
+    // ----- CharStore: a character stored as a numeric --------------------------------------------
+
+    /**
+     * Stores the `Element` values as `Index` values, using a NumberStore to do the heavy lifting.
+     */
+    protected static class CharStore<Element, Index extends IntNumber>  // TODO GG I had to add "extends IntNumber" to all of these, which seems redundant
+            implements ElementStore<Element, Index>
+        {
+        /**
+         * The ElementStore that holds the code-points for this CharStore.
+         */
+        private NumberStore<UInt32, Index> actualStore = new NumberStore();
+
+
+        // ----- ElementStore interface -------------------------------------------------------
+
+        @Override
+        Int height.get()
+            {
+            return actualStore.height;
+            }
+
+        @Override
+        void configure(IndexStore nodes, Int valueOffset)
+            {
+            return actualStore.configure(nodes, valueOffset);
+            }
+
+        @Override
+        Element load(Int node, Int height)
+            {
+            return fromCodepoint(actualStore.load(node, height));
+            }
+
+        @Override
+        void add(Int node, Int height, Element e)
+            {
+            actualStore.add(node, height, toCodepoint(e));
+            }
+
+        @Override
+        void replace(Int node, Int height, Element e)
+            {
+            actualStore.replace(node, height, toCodepoint(e));
+            }
+
+        @Override
+        void release(Int node, Int height)
+            {
+            actualStore.release(node, height);
+            }
+
+        @Override
+        void dump(Log log, String desc)
+            {
+            log.add($"{desc}={&this.actualClass.name}<{Element}>, actualStore:");
+            actualStore.dump(log, desc);
+            }
+
+
+        // ----- internal ---------------------------------------------------------------------
+
+        static UInt32 NullChar = 0x7FFEFFFF;
+
+        private Element fromCodepoint(UInt32 n)
+            {
+            return (n == NullChar ? Null : new Char(n)).as(Element);
+            }
+
+        private UInt32 toCodepoint(Element e)
+            {
+            return e.is(Char)
+                    ? e.codepoint
+                    : NullChar;
+            }
+        }
+
+
+    // ----- EnumStore: enumerated values ----------------------------------------------------------
+
+    /**
+     * Stores the enumerated `Element` values as `Index` values, using another store implementation
+     * to do the heavy lifting.
+     */
+    protected static class EnumStore<Element, Index extends IntNumber>
+            implements ElementStore<Element, Index>
+        {
+        construct()
+            {
+            // determine the size of the enumeration
+            Type enumType;
+             if (Element.is(Type<Enum>))
+                {
+                enumType = Element;
+                }
+            else
+                {
+                assert enumType := isNullable(Element), enumType.is(Type<Enum>);
+                }
+            assert Class clz := enumType.fromClass();
+            this.enumeration = clz.as(Enumeration);
+
+            (actualStore, toStorageForm) = enumeration.count > 0x7F
+                    ? (new NumberStore<Int16, Index>(), n -> n.toInt16())
+                    : (new NumberStore<Int8, Index>(), n -> n.toInt8());
+            }
+
+
+        // ----- properties -------------------------------------------------------------------
+
+        /**
+         * The enumeration class handled by this EnumStore.
+         */
+        private Enumeration enumeration;
+
+        /**
+         * The ElementStore that holds the enum ordinals for this EnumStore.
+         */
+        private ElementStore<IntNumber> actualStore;
+
+        /**
+         * A function that converts to whatever the
+         */
+        private function IntNumber(Int) toStorageForm;
+
+
+
+        // ----- ElementStore interface -------------------------------------------------------
+
+        @Override
+        Int height.get()
+            {
+            return actualStore.height;
+            }
+
+        @Override
+        void configure(IndexStore nodes, Int valueOffset)
+            {
+            return actualStore.configure(nodes, valueOffset);
+            }
+
+        @Override
+        Element load(Int node, Int height)
+            {
+            return fromOrdinal(actualStore.load(node, height));
+            }
+
+        @Override
+        void add(Int node, Int height, Element e)
+            {
+            actualStore.add(node, height, toOrdinal(e));
+            }
+
+        @Override
+        void replace(Int node, Int height, Element e)
+            {
+            actualStore.replace(node, height, toOrdinal(e));
+            }
+
+        @Override
+        void release(Int node, Int height)
+            {
+            actualStore.release(node, height);
+            }
+
+        @Override
+        void dump(Log log, String desc)
+            {
+            log.add($"{desc}={&this.actualClass.name}<{Element}>, enumeration={enumeration}, actualStore:");
+            actualStore.dump(log, desc);
+            }
+
+
+        // ----- internal ---------------------------------------------------------------------
+
+        static Int NullEnum = -1;
+
+        private Element fromOrdinal(IntNumber n)
+            {
+            return (n == NullEnum ? Null : enumeration.values[n.toInt64()]).as(Element);
+            }
+
+        private IntNumber toOrdinal(Element e)
+            {
+            // reminder: Null itself is an enum, so look for it explicitly
+            return toStorageForm(e?.as(Enum).ordinal : NullEnum);
+            }
+        }
+
+
+    // ----- NumberStore: built-in numeric types ---------------------------------------------------
+
+    /**
+     * Stores the `Element` values as `Index` values, spreading across multiple index values if the
+     * numeric type is too large to fit in one.
+     */
+    protected static class NumberStore<Element, Index extends IntNumber>
+            extends AbstractStore<Element, Index>
+        {
+        construct()
+            {
+            construct AbstractStore();
+
+            // determine the size of the numeric type
+            Type    numType;
+            Boolean nullable;
+            if (Element.is(Type<Number>))
+                {
+                numType  = Element;
+                nullable = False;
+                }
+            else
+                {
+                assert numType := isNullable(Element), numType.is(Type<Number>);
+                nullable = True;
+                }
+
+            assert bytesPerNum := numType.DataType.fixedByteLength(); // TODO GG why does it require ".DataType"?
+            Int bytesPerIndex = IndexStore.sizeOf(Index);
+            valueHeight = ((nullable ? bytesPerNum+1 : bytesPerNum) + bytesPerIndex-1) / bytesPerIndex;
+
+            fromBytes = switch (numType)
+                {
+                case @Unchecked Int8    : a -> a.toInt8()   .toUnchecked().as(Element);
+                case @Unchecked Int16   : a -> a.toInt16()  .toUnchecked().as(Element);
+                case @Unchecked Int32   : a -> a.toInt32()  .toUnchecked().as(Element);
+                case @Unchecked Int64   : a -> a.toInt64()  .toUnchecked().as(Element);
+                case @Unchecked Int128  : a -> a.toInt128() .toUnchecked().as(Element);
+
+                case Int8               : a -> a.toInt8()                 .as(Element);
+                case Int16              : a -> a.toInt16()                .as(Element);
+                case Int32              : a -> a.toInt32()                .as(Element);
+                case Int64              : a -> a.toInt64()                .as(Element);
+                case Int128             : a -> a.toInt128()               .as(Element);
+
+                case @Unchecked UInt8   : a -> a.toUInt8()  .toUnchecked().as(Element);
+                case @Unchecked UInt16  : a -> a.toUInt16() .toUnchecked().as(Element);
+                case @Unchecked UInt32  : a -> a.toUInt32() .toUnchecked().as(Element);
+                case @Unchecked UInt64  : a -> a.toUInt64() .toUnchecked().as(Element);
+                case @Unchecked UInt128 : a -> a.toUInt128().toUnchecked().as(Element);
+
+                case UInt8              : a -> a.toUInt8()                .as(Element);
+                case UInt16             : a -> a.toUInt16()               .as(Element);
+                case UInt32             : a -> a.toUInt32()               .as(Element);
+                case UInt64             : a -> a.toUInt64()               .as(Element);
+                case UInt128            : a -> a.toUInt128()              .as(Element);
+
+                case Dec32              : a -> a.toDec32()                .as(Element);
+                case Dec64              : a -> a.toDec64()                .as(Element);
+                case Dec128             : a -> a.toDec128()               .as(Element);
+
+                case BFloat16           : a -> a.toBFloat16()             .as(Element);
+                case Float16            : a -> a.toFloat16()              .as(Element);
+                case Float32            : a -> a.toFloat32()              .as(Element);
+                case Float64            : a -> a.toFloat64()              .as(Element);
+                case Float128           : a -> a.toFloat128()             .as(Element);
+
+                default: assert as $"unsupported numeric type: {Element}";
+                };
+            }
+
+
+        // ----- properties -------------------------------------------------------------------
+
+        /**
+         * The number of bytes required to hold a single Element value.
+         */
+        private Int bytesPerNum;
+
+        /**
+         * The byte index in the value section of the index node used to represent a Null value.
+         */
+        private Int nullByteIndex.get()
+            {
+            return bytesPerNum;
+            }
+
+        private static Byte nullByte = 0xFF;
+
+        /**
+         * TODO
+         */
+        protected Int valueHeight;
+
+        /**
+         * TODO
+         */
+        function Element(Byte[]) fromBytes;
+
+
+        // ----- ElementStore interface -------------------------------------------------------
+
+        @Override
+        Int height.get()
+            {
+            return valueHeight;
+            }
+
+        @Override
+        Element load(Int node, Int height)
+            {
+            Byte[] storage = getBytes(node, height);
+            if (nullByteIndex > 0 && storage[nullByteIndex] == nullByte)
+                {
+                return Null.as(Element);
+                }
+
+            return fromBytes(storage[0..bytesPerNum));
+            }
+
+        @Override
+        void add(Int node, Int height, Element e)
+            {
+            replace(node, height, e);
+            }
+
+        @Override
+        void replace(Int node, Int height, Element e)
+            {
+            Byte[] storage = getBytes(node, height);
+            if (e == Null)
+                {
+                storage.fill(0);
+                storage[nullByteIndex] = nullByte;
+                }
+            else
+                {
+                Byte[] newBytes = e.as(Number).toByteArray();
+                assert newBytes.size == bytesPerNum;
+
+                storage.replaceAll(0, newBytes);
+                if (nullByteIndex > 0)
+                    {
+                    storage[nullByteIndex] = 0;
+                    }
+                }
+            }
+
+        @Override
+        void release(Int node, Int height)
+            {
+            getBytes(node, height).fill(0);
+            }
+
+
+        // ----- internal ---------------------------------------------------------------------
+
+        /**
+         * TODO
+         */
+        Byte[] getBytes(Int node, Int height)
+            {
+            return nodes?.valueAsBytes(node, height, valueOffset, valueHeight) : assert;
+            }
+        }
+
+
+    // ----- ExternalStore: Any object -------------------------------------------------------------
+
     /**
      * Converts `Element` references to `Index` values that can be stored in an `IndexStore`,
      * storing the `Element` references external to the `IndexStore` in a separate array.
      */
-    protected static class ExternalStore<Element>
-            implements ElementStore<Element>
+    protected static class ExternalStore<Element, Index extends IntNumber>
+            extends AbstractStore<Element, Index>
         {
         construct(Int initCapacity)
             {
+            construct AbstractStore();
             contents = new Array<Element|Int>(initCapacity);
             }
 
@@ -1949,36 +2555,12 @@ class SkiplistMap<Key extends Orderable, Value>
         private Int firstFree = nil;
 
         /**
-         * This ExternalStore stores the index of each value in each node of the IndexStore.
-         */
-        private IndexStore? nodes;
-
-        /**
-         * This ExternalStore stores the index of each value in each node of the IndexStore,
-         * and at this value-offset within the node.
-         */
-        private Int valueOffset;
-
-        /**
          * A reserved marker that means "none".
          */
         static Int nil = -1;
 
 
         // ----- ElementStore interface -------------------------------------------------------
-
-        @Override
-        Int height.get()
-            {
-            return 1;
-            }
-
-        @Override
-        void configure(IndexStore nodes, Int valueOffset)
-            {
-            this.nodes       = nodes;
-            this.valueOffset = valueOffset;
-            }
 
         @Override
         Element load(Int node, Int height)
@@ -2060,36 +2642,6 @@ class SkiplistMap<Key extends Orderable, Value>
                 {
                 log.add($"[{Loop.count}] {e}");
                 }
-            }
-
-
-        // ----- internal ---------------------------------------------------------------------
-
-        /**
-         * Get the index into the contents array of the external storage for the value being held
-         * for the specified node. For a `Null` value, the index is `nil`.
-         *
-         * @param node    the node to get the value storage index out of
-         * @param height  the node height
-         *
-         * @return the index into the contents array of the external storage, or `nil`
-         */
-        Int getIndex(Int node, Int height)
-            {
-            return nodes?.getValue(node, height, valueOffset) : assert;
-            }
-
-        /**
-         * Update the index into the contents array of the external storage for the value being held
-         * for the specified node. For a `Null` value, the index will be `nil`.
-         *
-         * @param node    the node to put the value storage index into
-         * @param height  the node height
-         * @param index   the index into the contents array of the external storage, or `nil`
-         */
-        void setIndex(Int node, Int height, Int index)
-            {
-            nodes?.setValue(node, height, valueOffset, index) : assert;
             }
         }
     }
