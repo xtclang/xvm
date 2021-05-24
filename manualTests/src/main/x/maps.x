@@ -17,7 +17,11 @@ module TestMaps
         testMapIteration();
         testFreezable();
 
-//        for (UInt seed : 1..5)
+        testBasicOps(new ListMap());
+        testBasicOps(new HashMap());
+        testBasicOps(new SkiplistMap());
+
+//        for (UInt seed : 1..500)
 //            {
 //            log.add($"iteration #{seed}");
 //            testRandomOps(new SkiplistMap(), seed);
@@ -169,6 +173,69 @@ module TestMaps
             }
         }
 
+    void testFreezable()
+        {
+        console.println("\n** testFreezable()");
+
+        Container c = new Container();
+        Map<String, String> map = c.mapL;
+        try
+            {
+            map.put("2", "b");
+            assert;
+            }
+        catch (Exception e)
+            {
+            console.println($"Expected modify attempt: {e.text}");
+            }
+        console.println($"{c.mapL} {c.mapL.keys} {c.mapL.values}");
+        console.println($"{c.mapH} {c.mapH.keys} {c.mapH.values}");
+        console.println($"{c.mapS} {c.mapS.keys} {c.mapS.values}");
+
+        try
+            {
+            NotFreezable nf = c.nf;
+            }
+        catch (Exception e)
+            {
+            console.println($"Expected not freezable: {e.text}");
+            }
+
+        const Container()
+            {
+            @Lazy
+            Map<String, String> mapL.calc()
+                {
+                Map<String, String> map = new ListMap();
+                map.put("1", "L");
+                return map;
+                }
+
+            @Lazy
+            Map<String, String> mapH.calc()
+                {
+                Map<String, String> map = new HashMap();
+                map.put("1", "H");
+                return map;
+                }
+
+            @Lazy
+            Map<String, String> mapS.calc()
+                {
+                Map<String, String> map = new SkiplistMap();
+                map.put("1", "S");
+                return map;
+                }
+
+            @Lazy NotFreezable nf.calc()
+                {
+                return new NotFreezable(0);
+                }
+            }
+
+        class NotFreezable(Int x);
+        }
+
     static void testBasicOps(Map<String, String> map)
         {
         for (Int i : 0..14)
@@ -286,68 +353,5 @@ module TestMaps
 
             assert map == check;
             }
-        }
-
-    void testFreezable()
-        {
-        console.println("\n** testFreezable()");
-
-        Container c = new Container();
-        Map<Int, String> map = c.mapL;
-        try
-            {
-            map.put(2, "b");
-            assert;
-            }
-        catch (Exception e)
-            {
-            console.println($"Expected modify attempt: {e.text}");
-            }
-        console.println($"{c.mapL} {c.mapL.keys} {c.mapL.values}");
-        console.println($"{c.mapH} {c.mapH.keys} {c.mapH.values}");
-        console.println($"{c.mapS} {c.mapS.keys} {c.mapS.values}");
-
-        try
-            {
-            NotFreezable nf = c.nf;
-            }
-        catch (Exception e)
-            {
-            console.println($"Expected not freezable: {e.text}");
-            }
-
-        const Container()
-            {
-            @Lazy
-            Map<Int, String> mapL.calc()
-                {
-                Map<Int, String> map = new ListMap();
-                map.put(1, "L");
-                return map;
-                }
-
-            @Lazy
-            Map<Int, String> mapH.calc()
-                {
-                Map<Int, String> map = new HashMap();
-                map.put(1, "H");
-                return map;
-                }
-
-            @Lazy
-            Map<Int, String> mapS.calc()
-                {
-                Map<Int, String> map = new SkiplistMap();
-                map.put(1, "S");
-                return map;
-                }
-
-            @Lazy NotFreezable nf.calc()
-                {
-                return new NotFreezable(0);
-                }
-            }
-
-        class NotFreezable(Int x);
         }
     }
