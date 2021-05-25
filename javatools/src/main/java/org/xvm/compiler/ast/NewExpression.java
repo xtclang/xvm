@@ -702,7 +702,8 @@ public class NewExpression
                 MethodStructure constructor = (MethodStructure) idConstruct.getComponent();
                 if (constructor == null)
                     {
-                    constructor = infoTarget.getMethodById(idConstruct).getHead().getMethodStructure();
+                    constructor = infoTarget.getMethodById(idConstruct).
+                                    getTopmostMethodStructure(infoTarget);
                     assert constructor != null;
                     }
 
