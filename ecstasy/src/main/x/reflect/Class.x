@@ -232,7 +232,7 @@ const Class<PublicType, ProtectedType extends PublicType,
      * the original underlying class. Note that the original underlying class may appear in the
      * source code to be annotated, but the use of the annotation syntax in a class declaration is
      * used to incorporate mixins into the underling class definition itself, and are not considered
-     * to be annotations; fo example, "MyAnnotation" is incorporated into "MyClass", and is not an
+     * to be annotations; for example, "MyAnnotation" is incorporated into "MyClass", and is not an
      * annotation:
      *
      *     @MyAnnotation class MyClass {...}

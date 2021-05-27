@@ -290,7 +290,7 @@ public interface IndexSupport
     default ObjectHandle[] toArray(Frame frame, ObjectHandle hTarget)
             throws ExceptionHandle.WrapperException
         {
-        int cValues = (int) size(hTarget);
+        int            cValues = (int) size(hTarget);
         ObjectHandle[] ahValue = new ObjectHandle[cValues];
 
         for (int i = 0; i < cValues; i++)

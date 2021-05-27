@@ -10,6 +10,7 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
 import org.xvm.runtime.template.xBoolean;
 
@@ -89,7 +90,7 @@ public class IsNType
                 // should not happen
                 return frame.assignValue(m_nRetValue, xBoolean.FALSE);
                 }
-            catch (ObjectHandle.ExceptionHandle.WrapperException e)
+            catch (ExceptionHandle.WrapperException e)
                 {
                 return frame.raiseException(e);
                 }

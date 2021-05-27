@@ -15,7 +15,7 @@ import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.collections.xArray;
-import org.xvm.runtime.template.collections.xBitArray;
+import org.xvm.runtime.template.collections.xArray.Mutability;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xEnum.EnumHandle;
@@ -44,7 +44,7 @@ abstract public class BaseBinaryFP
             {
             case "bits":
                 return frame.assignValue(iReturn,
-                    xBitArray.makeHandle(getBits(d), f_cBits, xArray.Mutability.Constant));
+                    xArray.makeBitArrayHandle(getBits(d), f_cBits, Mutability.Constant));
 
             case "infinity":
                 return frame.assignValue(iReturn, xBoolean.makeHandle(Double.isInfinite(d)));

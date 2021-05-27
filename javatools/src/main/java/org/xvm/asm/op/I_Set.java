@@ -14,6 +14,7 @@ import org.xvm.runtime.CallChain;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.Utils;
 
@@ -99,7 +100,7 @@ public class I_Set
 
             return complete(frame, ahArg[0], ahArg[1], ahArg[2]);
             }
-        catch (ObjectHandle.ExceptionHandle.WrapperException e)
+        catch (ExceptionHandle.WrapperException e)
             {
             return frame.raiseException(e);
             }

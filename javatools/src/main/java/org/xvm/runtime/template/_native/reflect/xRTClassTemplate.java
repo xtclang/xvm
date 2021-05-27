@@ -20,7 +20,6 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHandle.ArrayHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
@@ -222,7 +221,7 @@ public class xRTClassTemplate
                 }
             }
 
-        ArrayHandle hArray = xArray.INSTANCE.createArrayHandle(
+        ObjectHandle hArray = xArray.createImmutableArray(
                 ensureClassTemplateArrayComposition(),
                 listTemplates.toArray(new ComponentTemplateHandle[0]));
         return frame.assignValue(iReturn, hArray);
@@ -286,7 +285,7 @@ public class xRTClassTemplate
                             i++;
                             }
                         haNames = xArray.makeStringArrayHandle(ahNames);
-                        haTypes = xArray.INSTANCE.createArrayHandle(
+                        haTypes = xArray.createImmutableArray(
                                     xRTType.ensureTypeArrayComposition(), ahTypes);
                         }
                     sAction = "Incorporates";
@@ -351,7 +350,7 @@ public class xRTClassTemplate
             }
 
         ComponentTemplateHandle[] ahProp = listProps.toArray(new ComponentTemplateHandle[0]);
-        ArrayHandle hArray = xArray.INSTANCE.createArrayHandle(
+        ObjectHandle hArray = xArray.createImmutableArray(
                 xRTPropertyTemplate.ensureArrayComposition(), ahProp);
         return frame.assignValue(iReturn, hArray);
         }
@@ -426,7 +425,7 @@ public class xRTClassTemplate
 
         ObjectHandle[] ahVar = new ObjectHandle[CREATE_TYPE_PARAMETERS_METHOD.getMaxVars()];
         ahVar[0] = xArray.makeStringArrayHandle(ahName);
-        ahVar[1] = xArray.INSTANCE.createArrayHandle(
+        ahVar[1] = xArray.createImmutableArray(
                     xRTTypeTemplate.ensureArrayClassComposition(), ahType);
 
         return frame.call1(CREATE_TYPE_PARAMETERS_METHOD, null, ahVar, iReturn);
@@ -515,7 +514,7 @@ public class xRTClassTemplate
     /**
      * @return the handle for an empty Array of TypeParameters
      */
-    public static ArrayHandle ensureEmptyTypeParameterArray()
+    public static ObjectHandle ensureEmptyTypeParameterArray()
         {
         if (TYPE_PARAMETER_ARRAY_EMPTY == null)
             {
@@ -524,7 +523,7 @@ public class xRTClassTemplate
                                                 pool.ensureEcstasyTypeConstant("reflect.TypeParameter"));
             TypeComposition clz = INSTANCE.f_templates.resolveClass(typeTypeParamArray);
 
-            TYPE_PARAMETER_ARRAY_EMPTY = xArray.INSTANCE.createArrayHandle(clz, Utils.OBJECTS_NONE);
+            TYPE_PARAMETER_ARRAY_EMPTY = xArray.createImmutableArray(clz, Utils.OBJECTS_NONE);
             }
         return TYPE_PARAMETER_ARRAY_EMPTY;
         }
@@ -537,7 +536,7 @@ public class xRTClassTemplate
     private static TypeComposition CONTRIBUTION_COMP;
     private static TypeComposition CONTRIBUTION_ARRAY_COMP;
 
-    private static ArrayHandle     TYPE_PARAMETER_ARRAY_EMPTY;
+    private static ObjectHandle    TYPE_PARAMETER_ARRAY_EMPTY;
 
     public static xEnum           ACTION;
     public static MethodStructure CREATE_CONTRIB_METHOD;

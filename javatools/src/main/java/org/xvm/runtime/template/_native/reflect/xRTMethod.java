@@ -21,7 +21,6 @@ import org.xvm.asm.constants.TypeInfo;
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHandle.ArrayHandle;
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
@@ -32,6 +31,7 @@ import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xOrdered;
 
 import org.xvm.runtime.template.collections.xArray;
+import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
 
 import org.xvm.runtime.template.numbers.xInt64;
@@ -464,7 +464,7 @@ public class xRTMethod
         {
         if (ARRAY_EMPTY == null)
             {
-            ARRAY_EMPTY = xArray.INSTANCE.createArrayHandle(
+            ARRAY_EMPTY = xArray.createImmutableArray(
                     ensureArrayComposition(), Utils.OBJECTS_NONE);
             }
         return ARRAY_EMPTY;

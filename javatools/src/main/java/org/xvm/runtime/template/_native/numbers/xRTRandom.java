@@ -22,9 +22,10 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xService;
 
-import org.xvm.runtime.template.collections.xArray;
-import org.xvm.runtime.template.collections.BitBasedArray.BitArrayHandle;
-import org.xvm.runtime.template.collections.xByteArray.ByteArrayHandle;
+import org.xvm.runtime.template.collections.xArray.ArrayHandle;
+import org.xvm.runtime.template.collections.xArray.Mutability;
+import org.xvm.runtime.template.collections.xBitArray;
+import org.xvm.runtime.template.collections.xByteArray;
 
 import org.xvm.runtime.template.numbers.xBit;
 import org.xvm.runtime.template.numbers.xDec64;
@@ -32,6 +33,9 @@ import org.xvm.runtime.template.numbers.xFloat64;
 import org.xvm.runtime.template.numbers.xInt64;
 import org.xvm.runtime.template.numbers.xUInt64;
 import org.xvm.runtime.template.numbers.xUInt8;
+
+import org.xvm.runtime.template._native.collections.arrays.BitBasedDelegate.BitArrayHandle;
+import org.xvm.runtime.template._native.collections.arrays.xRTByteDelegate.ByteArrayHandle;
 
 
 /**
@@ -76,9 +80,28 @@ public class xRTRandom
         switch (method.getName())
             {
             case "fill": // Bit[] or Byte[]
-                return hArg instanceof BitArrayHandle
-                        ? invokeFill(frame, hTarget, (BitArrayHandle) hArg)
-                        : invokeFill(frame, hTarget, (ByteArrayHandle) hArg);
+                {
+                ArrayHandle hArray = (ArrayHandle) hArg;
+                if (!hArray.isMutable() || hArray.getMutability().compareTo(Mutability.Fixed) < 0)
+                    {
+                    return frame.raiseException(xException.immutableObject(frame));
+                    }
+
+                if (hArray.getTemplate() instanceof xBitArray)
+                    {
+                    int    cSize = xBitArray.getSize(hArray);
+                    byte[] ab    = new byte[cSize];
+                    rnd(hTarget).nextBytes(ab);
+                    xBitArray.setBits(hArray, ab);
+                    }
+                else
+                    {
+                    int    cSize = xByteArray.getSize(hArray);
+                    byte[] ab    = new byte[cSize];
+                    rnd(hTarget).nextBytes(ab);
+                    xByteArray.setBytes(hArray, ab);
+                    }
+                }
 
             case "int":
                 return invokeInt(frame, hTarget, (JavaLong) hArg, iReturn);
@@ -116,23 +139,6 @@ public class xRTRandom
 
 
     // ----- methods -------------------------------------------------------------------------------
-
-    protected int invokeFill(Frame frame, ObjectHandle hTarget, BitArrayHandle hArray)
-        {
-        if (hArray.isMutable() && hArray.m_mutability.compareTo(xArray.Mutability.Fixed) >= 0)
-            {
-            // REVIEW GG this may set bits beyond "m_cSize" ... is that a problem?
-            rnd(hTarget).nextBytes(hArray.m_abValue);
-            return Op.R_NEXT;
-            }
-        return frame.raiseException(xException.immutableObject(frame));
-        }
-
-    protected int invokeFill(Frame frame, ObjectHandle hTarget, ByteArrayHandle hArray)
-        {
-        rnd(hTarget).nextBytes(hArray.m_abValue);
-        return Op.R_NEXT;
-        }
 
     protected int invokeBit(Frame frame, ObjectHandle hTarget, int iReturn)
         {

@@ -23,10 +23,10 @@ import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xService;
 
 import org.xvm.runtime.template.collections.xArray;
-import org.xvm.runtime.template.collections.xArray.GenericArrayHandle;
+import org.xvm.runtime.template.collections.xArray.Mutability;
 
-import org.xvm.runtime.template.numbers.LongLong;
 import org.xvm.runtime.template.numbers.BaseInt128.LongLongHandle;
+import org.xvm.runtime.template.numbers.LongLong;
 import org.xvm.runtime.template.numbers.xInt64;
 import org.xvm.runtime.template.numbers.xUInt128;
 
@@ -130,8 +130,8 @@ public class xLocalClock
             long lOffset = 0; // TODO
             hTimeZone.setField("picos", xInt64.makeHandle(lOffset));
             hTimeZone.setField("name", xNullable.NULL);
-            hTimeZone.setField("rules", new GenericArrayHandle(
-                    clzRuleArray, Utils.OBJECTS_NONE, xArray.Mutability.Mutable));
+            hTimeZone.setField("rules", xArray.makeArrayHandle(clzRuleArray, 0,
+                                            Utils.OBJECTS_NONE, Mutability.Mutable));
             hTimeZone.makeImmutable();
             }
 

@@ -16,21 +16,22 @@ import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHandle.ArrayHandle;
 import org.xvm.runtime.SimpleContainer;
 import org.xvm.runtime.TemplateRegistry;
+
+import org.xvm.runtime.template.xException;
+import org.xvm.runtime.template.xService;
+
+import org.xvm.runtime.template.collections.xArray.ArrayHandle;
+import org.xvm.runtime.template.collections.xByteArray;
+
+import org.xvm.runtime.template.text.xString;
+import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.runtime.template._native.reflect.xRTComponentTemplate.ComponentTemplateHandle;
 import org.xvm.runtime.template._native.reflect.xRTFileTemplate;
 import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
-import org.xvm.runtime.template.collections.xByteArray.ByteArrayHandle;
-
-import org.xvm.runtime.template.xException;
-import org.xvm.runtime.template.xService;
-
-import org.xvm.runtime.template.text.xString;
-import org.xvm.runtime.template.text.xString.StringHandle;
 
 
 /**
@@ -67,11 +68,10 @@ public class xContainerLinker
             {
             case "loadFileTemplate":
                 {
-                ByteArrayHandle hBytes = (ByteArrayHandle) hArg;
                 try
                     {
-                    byte[]        abFile  = hBytes.m_abValue;
-                    FileStructure struct  = new FileStructure(new ByteArrayInputStream(abFile));
+                    byte[]        abFile = xByteArray.getBytes((ArrayHandle) hTarget);
+                    FileStructure struct = new FileStructure(new ByteArrayInputStream(abFile));
 
                     return frame.assignValue(iReturn, xRTFileTemplate.makeHandle(struct));
                     }
@@ -84,10 +84,9 @@ public class xContainerLinker
 
             case "validate":
                 {
-                ByteArrayHandle hBytes = (ByteArrayHandle) hArg;
                 try
                     {
-                    byte[]        abFile  = hBytes.m_abValue;
+                    byte[]        abFile  = xByteArray.getBytes((ArrayHandle) hTarget);
                     FileStructure struct  = new FileStructure(new ByteArrayInputStream(abFile));
                     String        sModule = struct.getModuleName();
 
@@ -115,9 +114,9 @@ public class xContainerLinker
                 ObjectHandle            hModel      = ahArg[1]; // mgmt.Container.Model
                 ObjectHandle            hRepo       = ahArg[2]; // mgmt.ModuleRepository
                 ObjectHandle            hProvider   = ahArg[3]; // mgmt.ResourceProvider
-                ArrayHandle             hShared     = (ArrayHandle) ahArg[4];
-                ArrayHandle             hAdditional = (ArrayHandle) ahArg[5];
-                ArrayHandle             hConditions = (ArrayHandle) ahArg[6];
+                ObjectHandle            hShared     = ahArg[4];
+                ObjectHandle            hAdditional = ahArg[5];
+                ObjectHandle            hConditions = ahArg[6];
 
                 ModuleStructure moduleApp = (ModuleStructure) hTemplate.getComponent();
                 if (!moduleApp.getFileStructure().isLinked())

@@ -15,7 +15,6 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHandle.ArrayHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
@@ -159,7 +158,7 @@ public class xRTPropertyClassTemplate
                 }
             }
 
-        ArrayHandle hArray = xArray.INSTANCE.createArrayHandle(
+        ObjectHandle hArray = xArray.createImmutableArray(
                 xRTClassTemplate.ensureClassTemplateArrayComposition(),
                 listTemplates.toArray(new ComponentTemplateHandle[0]));
         return frame.assignValue(iReturn, hArray);
@@ -251,7 +250,7 @@ public class xRTPropertyClassTemplate
             }
 
         ComponentTemplateHandle[] ahProp = listProps.toArray(new ComponentTemplateHandle[0]);
-        ArrayHandle hArray = xArray.INSTANCE.createArrayHandle(
+        ObjectHandle hArray = xArray.createImmutableArray(
                 xRTPropertyTemplate.ensureArrayComposition(), ahProp);
         return frame.assignValue(iReturn, hArray);
         }

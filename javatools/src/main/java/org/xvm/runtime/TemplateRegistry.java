@@ -26,7 +26,6 @@ import org.xvm.asm.TypedefStructure;
 
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.PropertyClassTypeConstant;
-import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.template.Child;

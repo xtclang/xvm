@@ -23,6 +23,7 @@ import org.xvm.compiler.CompilerException;
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
@@ -30,7 +31,7 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xService;
 
-import org.xvm.runtime.template.collections.xArray.GenericArrayHandle;
+import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 
 import org.xvm.runtime.template.text.xString;
 
@@ -69,8 +70,16 @@ public class xRTCompiler
             {
             case "compile":
                 {
-                GenericArrayHandle haSources = (GenericArrayHandle) ahArg[0];
-                return invokeCompile(frame, hCompiler, haSources, aiReturn);
+                try
+                    {
+                    ArrayHandle    haSources = (ArrayHandle) ahArg[0];
+                    ObjectHandle[] ahSource  = haSources.getTemplate().toArray(frame, haSources);
+                    return invokeCompile(frame, hCompiler, ahSource, aiReturn);
+                    }
+                catch (ExceptionHandle.WrapperException e)
+                    {
+                    return frame.raiseException(e);
+                    }
                 }
             }
 
@@ -81,7 +90,7 @@ public class xRTCompiler
      * Implementation for: {@code (Boolean success, String errors) compile((File|Directory)[])}.
      */
     protected int invokeCompile(Frame frame, CompilerHandle hCompiler,
-                                GenericArrayHandle haSources, int[] aiReturn)
+                                ObjectHandle[] ahSources, int[] aiReturn)
         {
         CompilerAdapter compiler  = hCompiler.fAdapter;
         ObjectHandle    hLibRepo  = hCompiler.getField("libRepo");
@@ -93,9 +102,9 @@ public class xRTCompiler
             }
 
         List<File> listSources = new ArrayList<>();
-        for (int i = 0, c = haSources.m_cSize; i < c; i++)
+        for (int i = 0, c = ahSources.length; i < c; i++)
             {
-            NodeHandle hSource = (NodeHandle) haSources.getElement(i);
+            NodeHandle hSource = (NodeHandle) ahSources[i];
             listSources.add(hSource.getPath().toFile());
             }
         compiler.setSourceLocations(listSources);

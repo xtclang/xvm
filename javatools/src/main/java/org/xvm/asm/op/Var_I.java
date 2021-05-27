@@ -14,6 +14,7 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -113,7 +114,7 @@ public class Var_I
             frame.introduceVar(m_nVar, convertId(m_nType), 0, Frame.VAR_STANDARD, hArg);
             return iPC + 1;
             }
-        catch (ObjectHandle.ExceptionHandle.WrapperException e)
+        catch (ExceptionHandle.WrapperException e)
             {
             return frame.raiseException(e);
             }

@@ -2,6 +2,7 @@ package org.xvm.runtime.template.numbers;
 
 
 import java.math.RoundingMode;
+
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
 
@@ -12,10 +13,12 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 
-import org.xvm.runtime.template.collections.BitBasedArray.BitArrayHandle;
-import org.xvm.runtime.template.collections.xByteArray.ByteArrayHandle;
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xException;
+
+import org.xvm.runtime.template.collections.xArray.ArrayHandle;
+import org.xvm.runtime.template.collections.xBitArray;
+import org.xvm.runtime.template.collections.xByteArray;
 
 
 /**
@@ -105,9 +108,8 @@ abstract public class BaseFP
             if (sig.getRawParams()[0].getParamType(0).equals(pool().typeByte()))
                 {
                 // construct(Byte[] bytes)
-                ByteArrayHandle hBytes = (ByteArrayHandle) ahVar[0];
-                byte[]          abVal  = hBytes.m_abValue;
-                int             cBytes = hBytes.m_cSize;
+                byte[] abVal  = xByteArray.getBytes((ArrayHandle) ahVar[0]);
+                int    cBytes = abVal.length;
 
                 return cBytes == f_cBits / 8
                     ? frame.assignValue(iReturn, makeHandle(abVal, cBytes))
@@ -117,13 +119,12 @@ abstract public class BaseFP
 
             if (sig.getRawParams()[0].getParamType(0).equals(pool().typeBit()))
                 {
-                // construct(Bit[] bits)
-                BitArrayHandle hBits = (BitArrayHandle) ahVar[0];
-                byte[]         abVal = hBits.m_abValue;
-                int            cBits = hBits.m_cSize;
+                ArrayHandle hArray = (ArrayHandle) ahVar[0];
+                byte[]      abBits = xBitArray.getBits(hArray);
+                int         cBits  = xBitArray.getSize(hArray);
 
                 return cBits == f_cBits
-                    ? frame.assignValue(iReturn, makeHandle(abVal, cBits >>> 3))
+                    ? frame.assignValue(iReturn, makeHandle(abBits, cBits >>> 3))
                     : frame.raiseException(
                         xException.illegalArgument(frame, "Invalid bit count: " + cBits));
                 }

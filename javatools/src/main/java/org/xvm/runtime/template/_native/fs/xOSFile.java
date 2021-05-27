@@ -23,6 +23,7 @@ import org.xvm.asm.Op;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
@@ -30,7 +31,8 @@ import org.xvm.runtime.Utils;
 import org.xvm.runtime.template.xEnum.EnumHandle;
 
 import org.xvm.runtime.template.collections.xArray;
-import org.xvm.runtime.template.collections.xArray.GenericArrayHandle;
+import org.xvm.runtime.template.collections.xArray.ArrayHandle;
+import org.xvm.runtime.template.collections.xArray.Mutability;
 import org.xvm.runtime.template.collections.xByteArray;
 
 import org.xvm.util.Handy;
@@ -85,7 +87,8 @@ public class xOSFile
                 try
                     {
                     byte[] ab = Handy.readFileBytes(path.toFile());
-                    return frame.assignValue(iReturn, xByteArray.makeHandle(ab, xArray.Mutability.Constant));
+                    return frame.assignValue(iReturn,
+                        xArray.makeByteArrayHandle(ab, Mutability.Constant));
                     }
                 catch (IOException e)
                     {
@@ -109,7 +112,7 @@ public class xOSFile
                     {
                     Path             path = hNode.f_path;
                     FileOutputStream out  = new FileOutputStream(path.toFile());
-                    out.write(((xByteArray.ByteArrayHandle) hValue).m_abValue);
+                    out.write(xByteArray.getBytes((ArrayHandle) hValue));
                     }
                 catch (IOException e)
                     {
@@ -196,8 +199,17 @@ public class xOSFile
             }
         else
             {
-            GenericArrayHandle haWriteOpt = (GenericArrayHandle) hWriteOption;
-            int                cWriteOpts = haWriteOpt.m_cSize;
+            ArrayHandle    haWriteOpt = (ArrayHandle) hWriteOption;
+            ObjectHandle[] ahWriteOpt;
+            try
+                {
+                ahWriteOpt = haWriteOpt.getTemplate().toArray(frame, haWriteOpt);
+                }
+            catch (ExceptionHandle.WrapperException e)
+                {
+                return frame.raiseException(e);
+                }
+            int cWriteOpts = ahWriteOpt.length;
 
             if (cWriteOpts == 0)
                 {
@@ -236,7 +248,7 @@ public class xOSFile
 
                 for (int i = 0; i < cWriteOpts; i++)
                     {
-                    EnumHandle  hWrite   = (EnumHandle) haWriteOpt.getElement(i);
+                    EnumHandle  hWrite   = (EnumHandle) ahWriteOpt[i];
                     WriteOption optWrite = WriteOption.values()[hWrite.getOrdinal()];
                     switch (optWrite)
                         {

@@ -16,18 +16,18 @@ import org.xvm.asm.Op;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TemplateRegistry;
 
 import org.xvm.runtime.template.xService;
 
-import org.xvm.runtime.template.collections.xArray.GenericArrayHandle;
-import org.xvm.runtime.template.collections.xByteArray.ByteArrayHandle;
+import org.xvm.runtime.template.collections.xArray.ArrayHandle;
+import org.xvm.runtime.template.collections.xByteArray;
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
 
 import org.xvm.runtime.template.text.xString.StringHandle;
 
-import org.xvm.runtime.template._native.reflect.xRTFunction;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 import org.xvm.runtime.template._native.reflect.xRTFunction.NativeFunctionHandle;
 
@@ -96,48 +96,52 @@ public class xRTWebServerProxy
         public void handle(HttpExchange exchange) throws IOException
             {
             FunctionHandle hFunction = new NativeFunctionHandle((_frame, _ahArg, _iReturn) ->
+                {
+                try
                     {
-                    try
-                        {
-                        JavaLong           nStatus  = (JavaLong) _ahArg[0];
-                        ByteArrayHandle    abBody   = (ByteArrayHandle) _ahArg[1];
-                        GenericArrayHandle ahHeader = (GenericArrayHandle) _ahArg[2];
+                    JavaLong        nStatus   = (JavaLong) _ahArg[0];
+                    byte[]          abBody    = xByteArray.getBytes((ArrayHandle) _ahArg[1]);
+                    ArrayHandle     haHeaders = (ArrayHandle) _ahArg[2];
+                    ObjectHandle[]  ahHeader  = haHeaders.getTemplate().toArray(f_frame, haHeaders);
+                    Headers  responseHeaders  = exchange.getResponseHeaders();
 
-                        Headers responseHeaders = exchange.getResponseHeaders();
-                        for (int i = 0; i < ahHeader.m_cSize; i++)
-                            {
-                            TupleHandle        hTuple  = (TupleHandle) ahHeader.m_ahValue[i];
-                            StringHandle      hName   = (StringHandle) hTuple.m_ahValue[0];
-                            GenericArrayHandle hValues = (GenericArrayHandle) hTuple.m_ahValue[1];
-                            for (int j = 0; j < hValues.m_cSize; j++)
-                                {
-                                StringHandle hValue = (StringHandle) hValues.m_ahValue[j];
-                                responseHeaders.add(hName.getStringValue(), hValue.getStringValue());
-                                }
-                            }
-                        exchange.sendResponseHeaders((int) nStatus.getValue(), abBody.m_cSize);
-                        try (OutputStream out = exchange.getResponseBody())
-                            {
-                            if (abBody.m_cSize > 0)
-                                {
-                                out.write(abBody.m_abValue, 0, abBody.m_cSize);
-                                }
-                            }
-                        return Op.R_NEXT;
-                        }
-                    catch (IOException e)
+                    for (int i = 0, cHeaders = ahHeader.length; i < cHeaders; i++)
                         {
-                        e.printStackTrace();
-                        return Op.R_EXCEPTION;
+                        TupleHandle  hTuple   = (TupleHandle) ahHeader[i];
+                        StringHandle hName    = (StringHandle) hTuple.m_ahValue[0];
+                        ArrayHandle  haValues = (ArrayHandle) hTuple.m_ahValue[1];
+
+                        ObjectHandle[] ahValue = haValues.getTemplate().toArray(f_frame, haValues);
+                        for (int j = 0, cValues = ahValue.length; j < cValues; j++)
+                            {
+                            StringHandle hValue = (StringHandle) ahValue[j];
+                            responseHeaders.add(hName.getStringValue(), hValue.getStringValue());
+                            }
                         }
-                    });
+                    exchange.sendResponseHeaders((int) nStatus.getValue(), abBody.length);
+                    try (OutputStream out = exchange.getResponseBody())
+                        {
+                        out.write(abBody);
+                        }
+                    return Op.R_NEXT;
+                    }
+                catch (ExceptionHandle.WrapperException e)
+                    {
+                    return f_frame.raiseException(e);
+                    }
+                catch (IOException e)
+                    {
+                    e.printStackTrace();
+                    return f_frame.raiseException(e.getMessage());
+                    }
+                });
 
             ObjectHandle hRequest = xRTHttpRequestProxy.INSTANCE.createHandle(f_frame, exchange, 0);
             f_frame.f_context.callLater(f_hHandler, new ObjectHandle[]{hRequest, hFunction}, true);
             }
 
-        final private Frame f_frame;
-        final private ObjectHandle f_hObject;
-        final private xRTFunction.FunctionHandle f_hHandler;
+        final private Frame          f_frame; // TODO GG: this seems to be not necessary
+        final private ObjectHandle   f_hObject;
+        final private FunctionHandle f_hHandler;
         }
     }

@@ -22,7 +22,6 @@ import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
-import org.xvm.runtime.ObjectHandle.ArrayHandle;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
@@ -32,6 +31,7 @@ import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xOrdered;
 
 import org.xvm.runtime.template.collections.xArray;
+import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 
 import org.xvm.runtime.template.numbers.xInt64;
 
@@ -356,7 +356,7 @@ public class xClass
 
                 iResult = Utils.constructListMap(frame, xRTType.ensureListMapComposition(),
                         xArray.makeStringArrayHandle(ahNames),
-                        xArray.INSTANCE.createArrayHandle(xRTType.ensureTypeArrayComposition(), ahTypes),
+                        xArray.createImmutableArray(xRTType.ensureTypeArrayComposition(), ahTypes),
                         Op.A_STACK);
                 }
             switch (iResult)
@@ -542,8 +542,7 @@ public class xClass
         {
         if (ARRAY_EMPTY == null)
             {
-            ARRAY_EMPTY = xArray.INSTANCE.createArrayHandle(
-                ensureArrayComposition(), Utils.OBJECTS_NONE);
+            ARRAY_EMPTY = xArray.createImmutableArray(ensureArrayComposition(), Utils.OBJECTS_NONE);
             }
         return ARRAY_EMPTY;
         }

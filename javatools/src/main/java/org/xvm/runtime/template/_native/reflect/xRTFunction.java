@@ -16,7 +16,6 @@ import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHandle.ArrayHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.ServiceContext;
@@ -31,7 +30,8 @@ import org.xvm.runtime.template.xService;
 import org.xvm.runtime.template.xService.ServiceHandle;
 
 import org.xvm.runtime.template.collections.xArray;
-import org.xvm.runtime.template.collections.xIntArray.IntArrayHandle;
+import org.xvm.runtime.template.collections.xArray.ArrayHandle;
+import org.xvm.runtime.template.collections.xArray.Mutability;
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
 
 import org.xvm.runtime.template.numbers.xInt64;
@@ -197,14 +197,16 @@ public class xRTFunction
             {
             try
                 {
-                ArrayHandle    haValues   = (ArrayHandle) frameCaller.popStack();
-                IntArrayHandle haOrdinals = (IntArrayHandle) frameCaller.popStack();
-                FunctionHandle hFuncR     = hFunc;
+                ArrayHandle haValues   = (ArrayHandle) frameCaller.popStack();
+                ArrayHandle haOrdinals = (ArrayHandle) frameCaller.popStack();
+                FunctionHandle hFuncR  = hFunc;
+                int            ixPrev  = Integer.MAX_VALUE;
 
-                int ixPrev = Integer.MAX_VALUE;
-                for (int i = 0, c = haOrdinals.m_cSize; i < c; i++)
+                ObjectHandle[] ahOrdinal = haOrdinals.getTemplate().toArray(frame, haOrdinals);
+                ObjectHandle[] ahValue   = haValues.getTemplate().toArray(frame, haValues);
+                for (int i = 0, c = ahOrdinal.length; i < c; i++)
                     {
-                    int     ix      = (int) haOrdinals.m_alValue[i];
+                    int     ix      = (int) ((JavaLong) ahOrdinal[i]).getValue();
                     boolean fAdjust = ix > ixPrev;
 
                     ixPrev = ix;
@@ -212,7 +214,7 @@ public class xRTFunction
                         {
                         ix--;
                         }
-                    hFuncR = hFuncR.bind(frameCaller, ix, haValues.getElement(i));
+                    hFuncR = hFuncR.bind(frameCaller, ix, ahValue[i]);
                     }
                 return frameCaller.assignValue(iReturn, hFuncR);
                 }
@@ -225,8 +227,7 @@ public class xRTFunction
         ObjectHandle[] ahArg = new ObjectHandle[TO_ARRAY.getMaxVars()];
         ahArg[0] = hArg;
 
-        Frame frameNext = frame.createFrameN(TO_ARRAY, null, ahArg,
-            new int[] {Op.A_STACK, Op.A_STACK});
+        Frame frameNext = frame.createFrameN(TO_ARRAY, null, ahArg, new int[] {Op.A_STACK, Op.A_STACK});
         frameNext.addContinuation(stepBind);
         return frame.callInitialized(frameNext);
         }
@@ -333,11 +334,9 @@ public class xRTFunction
     private int constructListMap(Frame frame,
                                  ObjectHandle[] ahParam, ObjectHandle[] ahValue, int iReturn)
         {
-        ArrayHandle haParams = xArray.INSTANCE.createArrayHandle(
-                xRTSignature.ensureParamArray(), ahParam);
+        ObjectHandle haParams = xArray.createImmutableArray(xRTSignature.ensureParamArray(), ahParam);
 
-        ArrayHandle haValues = xArray.makeObjectArrayHandle(
-                ahValue, xArray.Mutability.Constant);
+        ObjectHandle haValues = xArray.makeObjectArrayHandle(ahValue, Mutability.Constant);
 
         return Utils.constructListMap(frame, ensureListMap(), haParams, haValues, iReturn);
         }
@@ -1411,8 +1410,7 @@ public class xRTFunction
         {
         if (ARRAY_EMPTY == null)
             {
-            ARRAY_EMPTY = xArray.INSTANCE.createArrayHandle(
-                ensureArrayComposition(), new ObjectHandle[0]);
+            ARRAY_EMPTY = xArray.createImmutableArray(ensureArrayComposition(), Utils.OBJECTS_NONE);
             }
         return ARRAY_EMPTY;
         }

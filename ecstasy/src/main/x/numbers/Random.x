@@ -6,7 +6,7 @@ interface Random
     Bit bit();
 
     /**
-     * @return the passed array with random bit values
+     * Fill the passed array with random bit values.
      */
     void fill(Bit[] bits)
         {
@@ -34,7 +34,7 @@ interface Random
         }
 
     /**
-     * @return the passed array with random byte values
+     * Fill the passed array with random byte values.
      */
     void fill(Byte[] bytes)
         {

@@ -172,7 +172,7 @@ public class xRTSignature
             {
             ahType[i] = hFunc.getParamType(i).ensureTypeHandle(frame.poolContext());
             }
-        return frame.assignValue(iReturn, xArray.INSTANCE.createArrayHandle(clzArray, ahType));
+        return frame.assignValue(iReturn, xArray.createImmutableArray(clzArray, ahType));
         }
 
     /**
@@ -187,7 +187,7 @@ public class xRTSignature
             {
             ahType[i] = hFunc.getReturnType(i).ensureTypeHandle(frame.poolContext());
             }
-        return frame.assignValue(iReturn, xArray.INSTANCE.createArrayHandle(clzArray, ahType));
+        return frame.assignValue(iReturn, xArray.createImmutableArray(clzArray, ahType));
         }
 
 
@@ -602,7 +602,7 @@ public class xRTSignature
                     }
                 }
 
-            ObjectHandle.ArrayHandle hArray = xArray.INSTANCE.createArrayHandle(
+            ObjectHandle hArray = xArray.createImmutableArray(
                     fRetVals ? ensureReturnArray() : ensureParamArray(), ahElement);
             return frameCaller.assignValue(iReturn, hArray);
             }

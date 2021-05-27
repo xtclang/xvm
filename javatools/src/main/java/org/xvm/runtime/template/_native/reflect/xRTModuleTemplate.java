@@ -12,7 +12,6 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHandle.ArrayHandle;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
@@ -106,8 +105,8 @@ public class xRTModuleTemplate
                 }
             }
 
-        ArrayHandle haPaths = xArray.makeStringArrayHandle(ahPaths);
-        ArrayHandle haNames = xArray.makeStringArrayHandle(ahNames);
+        ObjectHandle haPaths = xArray.makeStringArrayHandle(ahPaths);
+        ObjectHandle haNames = xArray.makeStringArrayHandle(ahNames);
 
         return Utils.constructListMap(frame, clzMap, haPaths, haNames, iReturn);
         }

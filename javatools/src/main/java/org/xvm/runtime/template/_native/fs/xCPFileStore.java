@@ -23,7 +23,7 @@ import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
 
 import org.xvm.runtime.template.collections.xArray;
-import org.xvm.runtime.template.collections.xByteArray;
+import org.xvm.runtime.template.collections.xArray.Mutability;
 
 import org.xvm.runtime.template.numbers.xInt64;
 
@@ -85,8 +85,8 @@ public class xCPFileStore
                 {
                 ConstantHandle hNode     = (ConstantHandle) hArg;
                 FSNodeConstant constNode = (FSNodeConstant) hNode.getConstant();
-                ObjectHandle   hBinary   = xByteArray.makeHandle(
-                        constNode.getFileBytes(), xArray.Mutability.Constant);
+                ObjectHandle   hBinary   = xArray.makeByteArrayHandle(
+                        constNode.getFileBytes(), Mutability.Constant);
                 return frame.assignValue(iReturn, hBinary);
                 }
             }
@@ -134,7 +134,7 @@ public class xCPFileStore
 
                 return frame.assignValues(aiReturn,
                         xArray.makeStringArrayHandle(ahNames),
-                        xArray.makeObjectArrayHandle(ahCookies, xArray.Mutability.Constant));
+                        xArray.makeObjectArrayHandle(ahCookies, Mutability.Constant));
                 }
             }
 

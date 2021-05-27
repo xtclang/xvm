@@ -1,10 +1,7 @@
 package org.xvm.runtime.template.collections;
 
 
-import java.util.Arrays;
-
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -12,14 +9,17 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TemplateRegistry;
 
 import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xException;
 
-import org.xvm.runtime.template.numbers.xBit;
 import org.xvm.runtime.template.numbers.xUInt8;
+
+import org.xvm.runtime.template._native.collections.arrays.BitBasedDelegate.BitArrayHandle;
+import org.xvm.runtime.template._native.collections.arrays.xRTBitDelegate;
+import org.xvm.runtime.template._native.collections.arrays.xRTDelegate.DelegateHandle;
+import org.xvm.runtime.template._native.collections.arrays.xRTSlicingDelegate.SliceHandle;
 
 
 /**
@@ -54,8 +54,7 @@ public class xBitArray
     @Override
     public TypeConstant getCanonicalType()
         {
-        ConstantPool pool = pool();
-        return pool.ensureArrayType(pool.typeBit());
+        return pool().typeBitArray();
         }
 
     @Override
@@ -66,26 +65,22 @@ public class xBitArray
             {
             case "toByteArray":
                 {
-                BitArrayHandle hBits = (BitArrayHandle) hTarget;
-                int cBits = hBits.m_cSize;
+                ArrayHandle hArray = (ArrayHandle) hTarget;
+                int         cBits = getSize(hArray);
+
                 if (cBits % 8 != 0)
                     {
                     return frame.raiseException(
                         xException.illegalArgument(frame, "Invalid array size: " + cBits));
                     }
 
-                int    cBytes = cBits >>> 3;
-                byte[] aBytes = hBits.m_abValue;
-
                 Mutability mutability = hArg == ObjectHandle.DEFAULT
-                    ? Mutability.Constant
-                    : xArray.Mutability.values()[((xEnum.EnumHandle) hArg).getOrdinal()];
+                        ? Mutability.Constant
+                        : Mutability.values()[((xEnum.EnumHandle) hArg).getOrdinal()];
 
-                // TODO: do we always need a copy?
-                aBytes = Arrays.copyOfRange(aBytes, 0, cBytes);
+                byte[] aBits = getBits(hArray);
 
-                return frame.assignValue(iReturn,
-                        xByteArray.makeHandle(aBytes, mutability));
+                return frame.assignValue(iReturn, xArray.makeByteArrayHandle(aBits, mutability));
                 }
             }
 
@@ -100,8 +95,10 @@ public class xBitArray
             {
             case "toUInt8":
                 {
-                BitArrayHandle hBits = (BitArrayHandle) hTarget;
-                int            cBits = hBits.m_cSize;
+                ArrayHandle hArray = (ArrayHandle) hTarget;
+                int         cBits  = getSize(hArray);
+                byte[]      abBits = getBits(hArray);
+
                 switch (cBits)
                     {
                     case 0:
@@ -109,11 +106,10 @@ public class xBitArray
 
                     case 1: case 2: case 3: case 4: case 5: case 6: case 7:
                         return frame.assignValue(iReturn, xUInt8.INSTANCE.makeJavaLong(
-                            (hBits.m_abValue[0] & 0xFF) >>> (8 - cBits)));
+                            (abBits[0] & 0xFF) >>> (8 - cBits)));
 
                     case 8:
-                        return frame.assignValue(iReturn, xUInt8.INSTANCE.makeJavaLong(
-                                hBits.m_abValue[0]));
+                        return frame.assignValue(iReturn, xUInt8.INSTANCE.makeJavaLong(abBits[0]));
 
                     default:
                         return frame.raiseException(xException.outOfBounds(
@@ -125,29 +121,46 @@ public class xBitArray
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
         }
 
-    @Override
-    protected boolean isSet(ObjectHandle hValue)
-        {
-        return ((JavaLong) hValue).getValue() != 0;
-        }
-
-    @Override
-    protected ObjectHandle makeBitHandle(boolean f)
-        {
-        return xBit.makeHandle(f);
-        }
-
     /**
-     * Create a bit array handle.
-     *
-     * @param abValue     the underlying bytes
-     * @param cBits       the array arity
-     * @param mutability  the mutability
-     *
-     * @return the array handle
+     * Extract a array of bits from the Array<Bit> handle.
      */
-    public static BitArrayHandle makeHandle(byte[] abValue, int cBits, Mutability mutability)
+    public static byte[] getBits(ArrayHandle hArray)
         {
-        return new BitArrayHandle(INSTANCE.getCanonicalClass(), abValue, cBits, mutability);
+        DelegateHandle hDelegate = hArray.m_hDelegate;
+        if (hDelegate instanceof SliceHandle)
+            {
+            SliceHandle    hSlice = (SliceHandle) hDelegate;
+            BitArrayHandle hBits  = (BitArrayHandle) hSlice.f_hSource;
+            return xRTBitDelegate.getBits(hBits,
+                    hSlice.f_ofStart, hSlice.m_cSize, hSlice.f_fReverse);
+            }
+
+        if (hDelegate instanceof BitArrayHandle)
+            {
+            BitArrayHandle hBits = (BitArrayHandle) hDelegate;
+            return xRTBitDelegate.getBits(hBits, 0, hBits.m_cSize, false);
+            }
+        throw new UnsupportedOperationException();
+        }
+
+    public static void setBits(ArrayHandle hArray, byte[] abVal)
+        {
+        DelegateHandle hDelegate = hArray.m_hDelegate;
+        if (hDelegate instanceof SliceHandle)
+            {
+            SliceHandle    hSlice = (SliceHandle) hDelegate;
+            BitArrayHandle hBits  = (BitArrayHandle) hSlice.f_hSource;
+
+            System.arraycopy(abVal, 0, hBits.m_abValue, hSlice.f_ofStart, abVal.length);
+            return;
+            }
+
+        if (hDelegate instanceof BitArrayHandle)
+            {
+            BitArrayHandle hBits = (BitArrayHandle) hDelegate;
+            System.arraycopy(abVal, 0, hBits.m_abValue, 0, abVal.length);
+            return;
+            }
+        throw new UnsupportedOperationException();
         }
     }

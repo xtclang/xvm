@@ -19,7 +19,7 @@ import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xOrdered;
 
 import org.xvm.runtime.template.collections.xArray;
-import org.xvm.runtime.template.collections.xBitArray;
+import org.xvm.runtime.template.collections.xArray.Mutability;
 
 import org.xvm.runtime.template.text.xString;
 
@@ -58,7 +58,7 @@ abstract public class BaseDecFP
             {
             case "bits":
                 return frame.assignValue(iReturn,
-                    xBitArray.makeHandle(dec.toByteArray(), f_cBits, xArray.Mutability.Constant));
+                    xArray.makeBitArrayHandle(dec.toByteArray(), f_cBits, Mutability.Constant));
 
             case "infinity":
                 return frame.assignValue(iReturn, xBoolean.makeHandle(!dec.isFinite()));

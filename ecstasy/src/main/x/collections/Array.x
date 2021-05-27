@@ -859,7 +859,7 @@ class Array<Element>
                 ? this
                 : new SlicingDelegate<Element>(delegate, indexes);
 
-        return new Array(slice, mutability == Mutable ? Fixed : mutability);
+        return new Array(slice, Fixed);
 
         static class SlicingDelegate<Element>(ArrayDelegate<Element> unsliced, Range<Int> indexes)
                 implements ArrayDelegate<Element>
@@ -905,23 +905,13 @@ class Array<Element>
             @Override
             Array<Element> insert(Int index, Element value)
                 {
-                if (unsliced.mutability == Fixed)
-                    {
-                    throw new ReadOnly();
-                    }
-
-                return reify().insert(index, value);
+                throw new ReadOnly();
                 }
 
             @Override
             Array<Element> delete(Int index)
                 {
-                if (unsliced.mutability == Fixed)
-                    {
-                    throw new ReadOnly();
-                    }
-
-                return reify().delete(index);
+                throw new ReadOnly();
                 }
 
             @Override
@@ -977,10 +967,10 @@ class Array<Element>
             }
         else
             {
-            capacity += 4 * size; // REVIEW GG why not Element.averageStringLength, a la the stats-per-class approach we've used previously
+            estimate += 4 * size; // REVIEW GG why not Element.averageStringLength, a la the stats-per-class approach we've used previously
             }
 
-        return capacity;
+        return estimate;
         }
 
     @Override

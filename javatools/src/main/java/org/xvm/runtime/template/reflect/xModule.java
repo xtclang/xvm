@@ -28,7 +28,6 @@ import org.xvm.compiler.ast.TypeExpression;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHandle.ArrayHandle;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
@@ -36,6 +35,7 @@ import org.xvm.runtime.Utils;
 import org.xvm.runtime.template.xBoolean;
 
 import org.xvm.runtime.template.collections.xArray;
+import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
@@ -196,22 +196,21 @@ public class xModule
                 }
             }
 
-        ArrayHandle hPaths = xArray.makeStringArrayHandle(ahPaths);
+        ObjectHandle hPaths = xArray.makeStringArrayHandle(ahPaths);
 
         TypeComposition clzArray = ensureArrayComposition();
-        xArray          template = (xArray) clzArray.getTemplate();
 
         if (fDeferred)
             {
             Frame.Continuation stepNext = frameCaller ->
                 {
-                ArrayHandle hModules = template.createArrayHandle(clzArray, ahModules);
+                ObjectHandle hModules = xArray.createImmutableArray(clzArray, ahModules);
                 return Utils.constructListMap(frame, clzMap, hPaths, hModules, iReturn);
                 };
             return new Utils.GetArguments(ahModules, stepNext).doNext(frame);
             }
 
-        ArrayHandle hModules = template.createArrayHandle(clzArray, ahModules);
+        ObjectHandle hModules = xArray.createImmutableArray(clzArray, ahModules);
         return Utils.constructListMap(frame, clzMap, hPaths, hModules, iReturn);
         }
 
@@ -364,9 +363,7 @@ public class xModule
         {
         if (ARRAY_EMPTY == null)
             {
-            TypeComposition clzArray = ensureArrayComposition();
-            xArray          template = (xArray) clzArray.getTemplate();
-            ARRAY_EMPTY = template.createArrayHandle(clzArray, Utils.OBJECTS_NONE);
+            ARRAY_EMPTY = xArray.createImmutableArray(ensureArrayComposition(), Utils.OBJECTS_NONE);
             }
         return ARRAY_EMPTY;
         }

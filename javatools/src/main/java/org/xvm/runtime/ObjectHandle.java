@@ -413,6 +413,11 @@ public abstract class ObjectHandle
             return m_aFields[iPos];
             }
 
+        public void setFieldByPosition(int iPos, ObjectHandle hValue)
+            {
+            m_aFields[iPos] = hValue;
+            }
+
         public Container getOwner()
             {
             return m_owner;
@@ -738,44 +743,6 @@ public abstract class ObjectHandle
         }
 
     /**
-     * Abstract array handle.
-     */
-    public abstract static class ArrayHandle
-            extends ObjectHandle
-        {
-        public xArray.Mutability m_mutability;
-        public int m_cSize;
-
-        protected ArrayHandle(TypeComposition clzArray, xArray.Mutability mutability)
-            {
-            super(clzArray);
-
-            m_fMutable   = mutability != xArray.Mutability.Constant;
-            m_mutability = mutability;
-            }
-
-        abstract public int getCapacity();
-        abstract public void setCapacity(int nCapacity);
-        abstract public ObjectHandle getElement(int ix);
-        abstract public void deleteElement(int ix);
-        abstract public void clear();
-
-        @Override
-        public void makeImmutable()
-            {
-            super.makeImmutable();
-
-            m_mutability = xArray.Mutability.Constant;
-            }
-
-        @Override
-        public String toString()
-            {
-            return super.toString() + m_mutability + ", size=" + m_cSize;
-            }
-        }
-
-    /**
      * Native handle that holds a reference to a Constant from the ConstantPool.
      */
     public static class ConstantHandle
@@ -1018,7 +985,7 @@ public abstract class ObjectHandle
         public int proceed(Frame frameCaller, Frame.Continuation continuation)
             {
             Frame.Continuation stepAssign = frame -> frame.pushStack(
-                ((xArray) f_clzArray.getTemplate()).createArrayHandle(f_clzArray, f_ahValue));
+                    xArray.createImmutableArray(f_clzArray, f_ahValue));
 
             switch (new Utils.GetArguments(f_ahValue, stepAssign).doNext(frameCaller))
                 {

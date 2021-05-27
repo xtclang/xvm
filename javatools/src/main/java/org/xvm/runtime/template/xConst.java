@@ -24,7 +24,7 @@ import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHandle.ArrayHandle;
+import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TypeComposition;
@@ -35,8 +35,8 @@ import org.xvm.runtime.template.xBoolean.BooleanHandle;
 import org.xvm.runtime.template.xEnum.EnumHandle;
 
 import org.xvm.runtime.template.collections.xArray;
-import org.xvm.runtime.template.collections.xArray.GenericArrayHandle;
-import org.xvm.runtime.template.collections.xBitArray;
+import org.xvm.runtime.template.collections.xArray.ArrayHandle;
+import org.xvm.runtime.template.collections.xArray.Mutability;
 
 import org.xvm.runtime.template.numbers.xInt64;
 
@@ -209,9 +209,10 @@ public class xConst
             byte[] abValue = new byte[] {(byte) (((UInt8Constant) constant).getValue().byteValue() << 4)};
 
             ObjectHandle[] ahArg = new ObjectHandle[NIBBLE_CONSTRUCT.getMaxVars()];
-            ahArg[0] = xBitArray.makeHandle(abValue, 4, xArray.Mutability.Constant);
+            ahArg[0] = xArray.makeBitArrayHandle(abValue, 4, Mutability.Constant);
 
-            return construct(frame, NIBBLE_CONSTRUCT, ensureClass(constant.getType()), null, ahArg, Op.A_STACK);
+            return construct(frame, NIBBLE_CONSTRUCT, ensureClass(constant.getType()),
+                    null, ahArg, Op.A_STACK);
             }
 
         return super.createConstHandle(frame, constant);
@@ -266,22 +267,32 @@ public class xConst
 
                     if (listFreezable != null)
                         {
-                        ObjectHandle[]     ahFreezable = listFreezable.toArray(Utils.OBJECTS_NONE);
-                        String[]           asName      = listName.toArray(Utils.NO_NAMES);
-                        GenericArrayHandle hValues     = (GenericArrayHandle)
-                            xArray.makeObjectArrayHandle(ahFreezable, xArray.Mutability.Fixed);
+                        ObjectHandle[] ahFreezable = listFreezable.toArray(Utils.OBJECTS_NONE);
+                        String[]       asName      = listName.toArray(Utils.NO_NAMES);
+                        ArrayHandle    haValues    =
+                            xArray.makeObjectArrayHandle(ahFreezable, Mutability.Fixed);
 
                         ObjectHandle[] ahVars = new ObjectHandle[FN_FREEZE.getMaxVars()];
-                        ahVars[0] = hValues;
+                        ahVars[0] = haValues;
 
                         Frame frameFreeze = frame.createFrame1(FN_FREEZE, null, ahVars, Op.A_IGNORE);
                         frameFreeze.addContinuation(frameCaller ->
                             {
+                            ObjectHandle[] ahValueNew;
+                            try
+                                {
+                                ahValueNew = haValues.getTemplate().toArray(frame, haValues);
+                                }
+                            catch (ExceptionHandle.WrapperException e)
+                                {
+                                return frame.raiseException(e);
+                                }
+
                             for (int i = 0, c = asName.length; i < c; i++)
                                 {
                                 // verify that "freeze" didn't widen the type
                                 String       sField  = asName[i];
-                                ObjectHandle hNew    = hValues.m_ahValue[i];
+                                ObjectHandle hNew    = ahValueNew[i];
                                 TypeConstant typeOld = hConst.getField(sField).getType();
                                 TypeConstant typeNew = hNew.getType();
                                 if (typeNew.isA(typeOld))
@@ -406,8 +417,8 @@ public class xConst
         ObjectHandle[] ahFields = clz.getFieldValueArray(hConst);
         if (ahNames.length > 0)
             {
-            ArrayHandle hNames  = xArray.makeStringArrayHandle(ahNames);
-            ArrayHandle hValues = xArray.makeObjectArrayHandle(ahFields, xArray.Mutability.Constant);
+            ObjectHandle hNames  = xArray.makeStringArrayHandle(ahNames);
+            ObjectHandle hValues = xArray.makeObjectArrayHandle(ahFields, Mutability.Constant);
 
             // estimateStringLength(String[] names, Object[] fields)
             ObjectHandle[] ahVars = new ObjectHandle[FN_ESTIMATE_LENGTH.getMaxVars()];
@@ -440,8 +451,8 @@ public class xConst
         StringHandle[] ahNames  = clz.getFieldNameArray();
         ObjectHandle[] ahFields = clz.getFieldValueArray(hConst);
 
-        ArrayHandle hNames  = xArray.makeStringArrayHandle(ahNames);
-        ArrayHandle hValues = xArray.makeObjectArrayHandle(ahFields, xArray.Mutability.Constant);
+        ObjectHandle hNames  = xArray.makeStringArrayHandle(ahNames);
+        ObjectHandle hValues = xArray.makeObjectArrayHandle(ahFields, Mutability.Constant);
 
         // appendTo(Appender<Char> appender, String[] names, Object[] fields)
         ObjectHandle[] ahVars = new ObjectHandle[FN_APPEND_TO.getMaxVars()];

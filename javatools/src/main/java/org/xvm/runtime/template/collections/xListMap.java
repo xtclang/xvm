@@ -105,12 +105,12 @@ public class xListMap
         TypeComposition clzMap      = ensureClass(
             pool.ensureParameterizedTypeConstant(getClassConstant().getType(), typeKey, typeVal));
 
-        ObjectHandle     haKeys = fDeferredKey
+        ObjectHandle haKeys = fDeferredKey
                 ? new DeferredArrayHandle(clzKeyArray, ahKey)
-                : ((xArray) clzKeyArray.getTemplate()).createArrayHandle(clzKeyArray, ahKey);
-        ObjectHandle     haVals = fDeferredVal
+                : xArray.createImmutableArray(clzKeyArray, ahKey);
+        ObjectHandle haVals = fDeferredVal
                 ? new DeferredArrayHandle(clzValArray, ahVal)
-                : ((xArray) clzValArray.getTemplate()).createArrayHandle(clzValArray, ahVal);
+                : xArray.createImmutableArray(clzValArray, ahVal);
 
         ObjectHandle[] ahArg = new ObjectHandle[CONSTRUCTOR.getMaxVars()];
         ahArg[0] = haKeys;

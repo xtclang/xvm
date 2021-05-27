@@ -26,7 +26,6 @@ import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.runtime.ObjectHandle.ArrayHandle;
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 
 import org.xvm.runtime.template.xBoolean;
@@ -39,7 +38,8 @@ import org.xvm.runtime.template.annotations.xFutureVar;
 import org.xvm.runtime.template.annotations.xFutureVar.FutureHandle;
 
 import org.xvm.runtime.template.collections.xArray;
-import org.xvm.runtime.template.collections.xArray.GenericArrayHandle;
+import org.xvm.runtime.template.collections.xArray.ArrayHandle;
+import org.xvm.runtime.template.collections.xArray.Mutability;
 
 import org.xvm.runtime.template.numbers.xInt64;
 
@@ -1526,7 +1526,7 @@ public abstract class Utils
             ANNOTATION_ARRAY_CLZ = REGISTRY.resolveClass(typeArray);
             }
 
-        return new GenericArrayHandle(ANNOTATION_ARRAY_CLZ, ahAnno, xArray.Mutability.Constant);
+        return xArray.makeArrayHandle(ANNOTATION_ARRAY_CLZ, ahAnno.length, ahAnno, Mutability.Constant);
         }
 
     /**
@@ -1541,7 +1541,7 @@ public abstract class Utils
             ARGUMENT_ARRAY_CLZ = REGISTRY.resolveClass(typeArray);
             }
 
-        return new GenericArrayHandle(ARGUMENT_ARRAY_CLZ, ahArg, xArray.Mutability.Constant);
+        return xArray.makeArrayHandle(ARGUMENT_ARRAY_CLZ, ahArg.length, ahArg, Mutability.Constant);
         }
 
     /**
@@ -1635,7 +1635,7 @@ public abstract class Utils
      * @return R_CALL or R_EXCEPTION
      */
     public static int constructListMap(Frame frame, TypeComposition clzMap,
-                                       ArrayHandle haKeys, ArrayHandle haValues, int iReturn)
+                                       ObjectHandle haKeys, ObjectHandle haValues, int iReturn)
         {
         MethodStructure constructor = LIST_MAP_CONSTRUCT;
         ObjectHandle[]  ahArg       = new ObjectHandle[constructor.getMaxVars()];
@@ -1703,7 +1703,7 @@ public abstract class Utils
     public static class FillArray
             implements Frame.Continuation
         {
-        private final ArrayHandle   hArray;
+        private final ObjectHandle  hArray;
         private final xArray        template;
         private final long          cSize;
         private final ValueSupplier supplier;
@@ -1711,11 +1711,11 @@ public abstract class Utils
 
         private int index = -1;
 
-        public FillArray(ArrayHandle hArray, ValueSupplier supplier, int iReturn)
+        public FillArray(ArrayHandle hArray, int cSize, ValueSupplier supplier, int iReturn)
             {
             this.hArray   = hArray;
-            this.template = (xArray) hArray.getTemplate();
-            this.cSize    = hArray.getCapacity();
+            this.template = hArray.getTemplate();
+            this.cSize    = cSize;
             this.supplier = supplier;
             this.iReturn  = iReturn;
             }

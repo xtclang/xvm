@@ -10,7 +10,6 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.Utils;
@@ -36,7 +35,7 @@ public abstract class OpIndex
         assert(!isAssignOp());
 
         m_argTarget = argTarget;
-        m_argIndex = argIndex;
+        m_argIndex  = argIndex;
         }
 
     /**
@@ -51,7 +50,7 @@ public abstract class OpIndex
         assert(isAssignOp());
 
         m_argTarget = argTarget;
-        m_argIndex = argIndex;
+        m_argIndex  = argIndex;
         m_argReturn = argReturn;
         }
 
@@ -65,7 +64,7 @@ public abstract class OpIndex
             throws IOException
         {
         m_nTarget = readPackedInt(in);
-        m_nIndex = readPackedInt(in);
+        m_nIndex  = readPackedInt(in);
         if (isAssignOp())
             {
             m_nRetValue = readPackedInt(in);
@@ -81,7 +80,7 @@ public abstract class OpIndex
         if (m_argTarget != null)
             {
             m_nTarget = encodeArgument(m_argTarget, registry);
-            m_nIndex = encodeArgument(m_argIndex, registry);
+            m_nIndex  = encodeArgument(m_argIndex, registry);
             if (isAssignOp())
                 {
                 m_nRetValue = encodeArgument(m_argReturn,  registry);

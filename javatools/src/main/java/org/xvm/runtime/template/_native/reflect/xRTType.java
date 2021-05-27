@@ -37,7 +37,6 @@ import org.xvm.asm.constants.TypeInfo;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHandle.ArrayHandle;
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.DeferredArrayHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
@@ -56,7 +55,7 @@ import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xOrdered;
 
 import org.xvm.runtime.template.collections.xArray;
-import org.xvm.runtime.template.collections.xArray.GenericArrayHandle;
+import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 import org.xvm.runtime.template.collections.xTuple;
 
 import org.xvm.runtime.template.numbers.xInt64;
@@ -692,7 +691,7 @@ public class xRTType
             ahFunctions = new FunctionHandle[0];
             }
 
-        ArrayHandle hArray = xArray.INSTANCE.createArrayHandle(
+        ObjectHandle hArray = xArray.createImmutableArray(
                 xRTFunction.ensureConstructorArray(typeTarget, typeParent), ahFunctions);
         return frame.assignValue(iReturn, hArray);
         }
@@ -851,7 +850,7 @@ public class xRTType
                 }
             }
         FunctionHandle[] ahFunctions = listHandles.toArray(new FunctionHandle[0]);
-        ArrayHandle      hArray      = xArray.INSTANCE.createArrayHandle(
+        ObjectHandle     hArray      = xArray.createImmutableArray(
                 xRTFunction.ensureArrayComposition(), ahFunctions);
         return frame.assignValue(iReturn, hArray);
         }
@@ -889,7 +888,7 @@ public class xRTType
             return hDeferred.proceed(frame,
                 frameCaller -> frameCaller.assignValue(iReturn, frameCaller.popStack()));
             }
-        return frame.assignValue(iReturn, xArray.INSTANCE.createArrayHandle(clzArray, ahMethods));
+        return frame.assignValue(iReturn, xArray.createImmutableArray(clzArray, ahMethods));
         }
 
     /**
@@ -988,7 +987,7 @@ public class xRTType
             ahTypes[i] = aUnderlying[i].ensureTypeHandle(frame.poolContext());
             }
 
-        ArrayHandle hArray = xArray.INSTANCE.createArrayHandle(ensureTypeArrayComposition(), ahTypes);
+        ObjectHandle hArray = xArray.createImmutableArray(ensureTypeArrayComposition(), ahTypes);
         return frame.assignValue(iReturn, hArray);
         }
 
@@ -1022,7 +1021,7 @@ public class xRTType
         ClassHandle   hClass   = (ClassHandle) hAnno.getField("mixinClass");
         ArrayHandle   hArgs    = (ArrayHandle) hAnno.getField("arguments");
 
-        if (hArgs.m_cSize > 0)
+        if (xArray.INSTANCE.size(hArgs) > 0)
             {
             // TODO args
             throw new UnsupportedOperationException();
@@ -1256,7 +1255,7 @@ public class xRTType
             ahTypes[i] = atypes[i].normalizeParameters().ensureTypeHandle(frame.poolContext());
             }
 
-        ArrayHandle hArray = xArray.INSTANCE.createArrayHandle(ensureTypeArrayComposition(), ahTypes);
+        ObjectHandle hArray = xArray.createImmutableArray(ensureTypeArrayComposition(), ahTypes);
         return frame.assignValues(aiReturn, xBoolean.TRUE, hArray);
         }
 
@@ -1273,11 +1272,19 @@ public class xRTType
 
         ObjectHandle[] ahFormalTypes;
         int            cFormalTypes;
-        if (hArg instanceof GenericArrayHandle)
+        if (hArg instanceof ArrayHandle)
             {
-            GenericArrayHandle hArray = (GenericArrayHandle) hArg;
-            ahFormalTypes = hArray.m_ahValue;
-            cFormalTypes  = hArray.m_cSize;
+            xArray template = (xArray) hArg.getTemplate();
+
+            try
+                {
+                ahFormalTypes = template.toArray(frame, hArg);
+                cFormalTypes  = (int) template.size(hArg);
+                }
+            catch (ExceptionHandle.WrapperException e)
+                {
+                return frame.raiseException(e);
+                }
             }
         else if (hArg == ObjectHandle.DEFAULT)
             {
@@ -1499,7 +1506,7 @@ public class xRTType
                 frameCaller -> frameCaller.assignValue(iReturn, frameCaller.popStack()));
             }
 
-        return frame.assignValue(iReturn, xArray.INSTANCE.createArrayHandle(clzArray, ahProps));
+        return frame.assignValue(iReturn, xArray.createImmutableArray(clzArray, ahProps));
         }
 
     private ObjectHandle makeArgumentHandle(Frame frame, Constant constArg)
@@ -1613,7 +1620,7 @@ public class xRTType
         {
         if (TYPE_ARRAY_EMPTY == null)
             {
-            TYPE_ARRAY_EMPTY = xArray.INSTANCE.createArrayHandle(
+            TYPE_ARRAY_EMPTY = xArray.createImmutableArray(
                 ensureTypeArrayComposition(), Utils.OBJECTS_NONE);
             }
         return TYPE_ARRAY_EMPTY;
@@ -1626,7 +1633,7 @@ public class xRTType
         {
         if (ARGUMENT_ARRAY_EMPTY == null)
             {
-            ARGUMENT_ARRAY_EMPTY = xArray.INSTANCE.createArrayHandle(
+            ARGUMENT_ARRAY_EMPTY = xArray.createImmutableArray(
                 ensureArgumentArrayComposition(), Utils.OBJECTS_NONE);
             }
         return ARGUMENT_ARRAY_EMPTY;

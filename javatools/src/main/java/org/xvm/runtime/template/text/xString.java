@@ -14,7 +14,6 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHandle.ArrayHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
@@ -27,8 +26,9 @@ import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xOrdered;
 
 import org.xvm.runtime.template.collections.xArray;
+import org.xvm.runtime.template.collections.xArray.ArrayHandle;
+import org.xvm.runtime.template.collections.xArray.Mutability;
 import org.xvm.runtime.template.collections.xCharArray;
-import org.xvm.runtime.template.collections.xCharArray.CharArrayHandle;
 
 import org.xvm.runtime.template.numbers.xInt64;
 
@@ -99,15 +99,8 @@ public class xString
     public int construct(Frame frame, MethodStructure constructor, TypeComposition clazz,
                          ObjectHandle hParent, ObjectHandle[] ahVar, int iReturn)
         {
-        CharArrayHandle hCharArray = (CharArrayHandle) ahVar[0];
-        char[]          achValue   = hCharArray.m_achValue;
-
-        if (hCharArray.isMutable())
-            {
-            achValue = Arrays.copyOf(achValue, hCharArray.m_cSize);
-            }
-
-        return frame.assignValue(iReturn, makeHandle(achValue));
+        return frame.assignValue(iReturn,
+                makeHandle(xCharArray.getChars((ArrayHandle) ahVar[0])));
         }
 
     @Override
@@ -145,7 +138,7 @@ public class xString
 
             case "chars":
                 return frame.assignValue(iReturn,
-                        xCharArray.makeHandle(hThis.m_achValue, xArray.Mutability.Constant));
+                        xArray.makeCharArrayHandle(hThis.m_achValue, Mutability.Constant));
             }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
@@ -530,31 +523,15 @@ public class xString
     // ----- Composition and handle caching --------------------------------------------------------
 
     /**
-     * @return the TypeComposition for an Array of String
-     */
-    public static TypeComposition ensureArrayComposition()
-        {
-        TypeComposition clz = ARRAY_CLZCOMP;
-        if (clz == null)
-            {
-            ConstantPool pool = INSTANCE.pool();
-            TypeConstant typeStringArray = pool.ensureArrayType(pool.typeString());
-            ARRAY_CLZCOMP = clz = INSTANCE.f_templates.resolveClass(typeStringArray);
-            assert clz != null;
-            }
-        return clz;
-        }
-
-    /**
      * @return the handle for an empty Array of String
      */
     public static ArrayHandle ensureEmptyArray()
         {
-        if (ARRAY_EMPTY == null)
+        if (EMPTY_STRING_ARRAY == null)
             {
-            ARRAY_EMPTY = xArray.makeStringArrayHandle(Utils.STRINGS_NONE);
+            EMPTY_STRING_ARRAY = xArray.makeStringArrayHandle(Utils.STRINGS_NONE);
             }
-        return ARRAY_EMPTY;
+        return EMPTY_STRING_ARRAY;
         }
 
 
@@ -565,8 +542,7 @@ public class xString
     public static StringHandle ZERO;
     public static StringHandle ONE;
 
-    private static TypeComposition ARRAY_CLZCOMP;
-    private static ArrayHandle     ARRAY_EMPTY;
+    private static ArrayHandle EMPTY_STRING_ARRAY;
 
     protected static MethodStructure METHOD_APPEND_TO;
     }

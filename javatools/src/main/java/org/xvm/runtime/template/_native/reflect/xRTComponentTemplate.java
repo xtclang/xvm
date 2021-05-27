@@ -242,8 +242,7 @@ public class xRTComponentTemplate
         assert i == cChildren;
 
         // turn the Java array into an Ecstasy array
-        ObjectHandle.ArrayHandle hArray = xArray.INSTANCE.createArrayHandle(
-                ensureComponentArrayType(), ahChildren);
+        ObjectHandle hArray = xArray.createImmutableArray(ensureComponentArrayType(), ahChildren);
 
         // create and return an iterator of the Ecstasy array
         // TODO GG return frame.assignValue(iReturn, hIter);

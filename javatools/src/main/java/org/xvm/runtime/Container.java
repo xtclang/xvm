@@ -35,6 +35,7 @@ import org.xvm.runtime.template.xService;
 import org.xvm.runtime.template.xService.ServiceHandle;
 
 import org.xvm.runtime.template.collections.xArray;
+import org.xvm.runtime.template.collections.xArray.Mutability;
 import org.xvm.runtime.template.collections.xBooleanArray;
 
 import org.xvm.runtime.template.reflect.xModule;
@@ -269,8 +270,8 @@ public abstract class Container
             MethodStructure  constructor = templateTS.getStructure().findMethod("construct", 2);
             ObjectHandle[]   ahArg       = new ObjectHandle[constructor.getMaxVars()];
 
-            ahArg[1] = xBooleanArray.INSTANCE.createArrayHandle(
-                    xBooleanArray.INSTANCE.getCanonicalClass(), ahShared);
+            ahArg[1] = xArray.makeArrayHandle(xBooleanArray.INSTANCE.getCanonicalClass(),
+                            ahShared.length, ahShared, Mutability.Constant);
 
             TypeComposition clzArray = xModule.ensureArrayComposition();
             xArray          template = (xArray) clzArray.getTemplate();
@@ -278,14 +279,14 @@ public abstract class Container
                 {
                 Frame.Continuation stepNext = frameCaller ->
                     {
-                    ahArg[0] = template.createArrayHandle(clzArray, ahModules);
+                    ahArg[0] = xArray.createImmutableArray(clzArray, ahModules);
                     return templateTS.construct(frame, constructor, clzTS, null, ahArg, iReturn);
                     };
 
                 return new Utils.GetArguments(ahModules, stepNext).doNext(frame);
                 }
 
-            ahArg[0] = template.createArrayHandle(clzArray, ahModules);
+            ahArg[0] = xArray.createImmutableArray(clzArray, ahModules);
             return templateTS.construct(frame, constructor, clzTS, null, ahArg, iReturn);
             }
         return frame.assignValue(iReturn, hTS);

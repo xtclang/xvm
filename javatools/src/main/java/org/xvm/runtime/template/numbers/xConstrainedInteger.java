@@ -23,10 +23,11 @@ import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xOrdered;
 
-import org.xvm.runtime.template.collections.BitBasedArray.BitArrayHandle;
-import org.xvm.runtime.template.collections.xBitArray;
 import org.xvm.runtime.template.collections.xArray;
-import org.xvm.runtime.template.collections.xByteArray.ByteArrayHandle;
+import org.xvm.runtime.template.collections.xArray.ArrayHandle;
+import org.xvm.runtime.template.collections.xArray.Mutability;
+import org.xvm.runtime.template.collections.xBitArray;
+import org.xvm.runtime.template.collections.xByteArray;
 
 import org.xvm.runtime.template.text.xChar;
 
@@ -169,10 +170,9 @@ public abstract class xConstrainedInteger
             if (sig.getRawParams()[0].getParamType(0).equals(pool().typeByte()))
                 {
                 // construct(Byte[] bytes)
-                ByteArrayHandle hBytes = (ByteArrayHandle) ahVar[0];
-                byte[]          abVal  = hBytes.m_abValue;
+                byte[] abVal = xByteArray.getBytes((ArrayHandle) ahVar[0]);
+                int   cBytes = abVal.length;
 
-                int cBytes = hBytes.m_cSize;
                 return cBytes == f_cNumBits / 8
                     ? convertLong(frame, fromByteArray(abVal, cBytes, f_fSigned), iReturn, f_fChecked)
                     : frame.raiseException(
@@ -182,12 +182,12 @@ public abstract class xConstrainedInteger
             if (sig.getRawParams()[0].getParamType(0).equals(pool().typeBit()))
                 {
                 // construct(Bit[] bits)
-                BitArrayHandle hBits = (BitArrayHandle) ahVar[0];
-                byte[]         abVal = hBits.m_abValue;
+                ArrayHandle hArray = (ArrayHandle) ahVar[0];
+                byte[] abBits = xBitArray.getBits(hArray);
+                int    cBits  = xBitArray.getSize(hArray);
 
-                int cBits = hBits.m_cSize;
                 return cBits == f_cNumBits
-                    ? convertLong(frame, fromByteArray(abVal, cBits >>> 3, f_fSigned), iReturn, f_fChecked)
+                    ? convertLong(frame, fromByteArray(abBits, cBits >>> 3, f_fSigned), iReturn, f_fChecked)
                     : frame.raiseException(
                         xException.illegalArgument(frame, "Invalid bit count: " + cBits));
                 }
@@ -240,8 +240,8 @@ public abstract class xConstrainedInteger
                 {
                 long l = ((JavaLong) hTarget).getValue();
 
-                return frame.assignValue(iReturn, new BitArrayHandle(xBitArray.INSTANCE.getCanonicalClass(),
-                    toByteArray(l, f_cNumBits >>> 3), f_cNumBits, xArray.Mutability.Constant));
+                return frame.assignValue(iReturn, xArray.makeBitArrayHandle(
+                    toByteArray(l, f_cNumBits >>> 3), f_cNumBits, Mutability.Constant));
                 }
 
             case "bitCount":

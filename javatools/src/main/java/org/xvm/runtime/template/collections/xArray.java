@@ -1,9 +1,7 @@
 package org.xvm.runtime.template.collections;
 
 
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.IdentityHashMap;
 import java.util.Map;
 
 import org.xvm.asm.ClassStructure;
@@ -17,11 +15,14 @@ import org.xvm.asm.Op;
 import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.UInt8ArrayConstant;
 
+import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHandle.ArrayHandle;
+import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TypeComposition;
@@ -30,7 +31,6 @@ import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.IndexSupport;
-import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
 import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xEnum.EnumHandle;
@@ -38,7 +38,16 @@ import org.xvm.runtime.template.xException;
 
 import org.xvm.runtime.template.numbers.xInt64;
 
+import org.xvm.runtime.template.reflect.xRef;
+import org.xvm.runtime.template.reflect.xRef.RefHandle;
+
 import org.xvm.runtime.template.text.xString.StringHandle;
+
+import org.xvm.runtime.template._native.collections.arrays.xRTBitDelegate;
+import org.xvm.runtime.template._native.collections.arrays.xRTByteDelegate;
+import org.xvm.runtime.template._native.collections.arrays.xRTCharDelegate;
+import org.xvm.runtime.template._native.collections.arrays.xRTDelegate;
+import org.xvm.runtime.template._native.collections.arrays.xRTDelegate.DelegateHandle;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 
@@ -117,6 +126,11 @@ public class xArray
                     CONSTRUCTORS[2] = method.getIdentityConstant();
                     }
                 }
+            else
+                {
+                // private construct(ArrayDelegate<Element> delegate, Mutability mutability)
+                CONSTRUCTORS[3] = method.getIdentityConstant();
+                }
             }
 
         // cache "Iterable.toArray()" method
@@ -129,24 +143,20 @@ public class xArray
         ClassStructure clzHelper = f_templates.getClassStructure("_native.ConstHelper");
         CREATE_LIST_SET = clzHelper.findMethod("createListSet", 2);
 
+        OBJECT_ARRAY_CLZ = f_templates.resolveClass(pool.ensureArrayType(pool.typeObject()));
+        STRING_ARRAY_CLZ = f_templates.resolveClass(pool.ensureArrayType(pool.typeString()));
+        BIT_ARRAY_CLZ    = f_templates.resolveClass(pool.typeBitArray());
+        BYTE_ARRAY_CLZ   = f_templates.resolveClass(pool.typeByteArray());
+        CHAR_ARRAY_CLZ   = f_templates.resolveClass(pool.ensureArrayType(pool.typeChar()));
+
         // mark native properties and methods
-        markNativeProperty("capacity");
+        markNativeProperty("delegate");
         markNativeProperty("mutability");
-        markNativeProperty("size");
 
         markNativeMethod("getElement", INT, ELEMENT_TYPE);
-        markNativeMethod("setElement", new String[] {"numbers.Int64", "Element"}, VOID);
-        markNativeMethod("elementAt", INT, new String[] {"reflect.Var<Element>"});
-        markNativeMethod("add", ELEMENT_TYPE, ARRAY);
-        markNativeMethod("addAll", new String[] {"Iterable<Element>"}, ARRAY);
-        markNativeMethod("insert", new String[] {"numbers.Int64", "Element"}, ARRAY);
-        markNativeMethod("insertAll", new String[] {"numbers.Int64", "Iterable<Element>"}, ARRAY);
-        markNativeMethod("addAll", new String[] {"Iterable<Element>"}, ARRAY);
-        markNativeMethod("delete", INT, null);
-        markNativeMethod("slice", new String[] {"Range<numbers.Int64>"}, ARRAY);
-        markNativeMethod("freeze", BOOLEAN, null);
-        markNativeMethod("clear", VOID, ARRAY);
-        markNativeMethod("reify", null, ARRAY);
+        markNativeMethod("setElement", null, VOID);
+        markNativeMethod("elementAt", INT, null);
+        markNativeMethod("slice", null, THIS);
 
         ClassTemplate mixinNumber = f_templates.getTemplate("collections.arrays.NumberArray");
         mixinNumber.markNativeMethod("asBitArray" , VOID, null);
@@ -168,21 +178,17 @@ public class xArray
 
         xArray template = ARRAY_TEMPLATES.get(atypeParams[0]);
 
-        if (template != null)
-            {
-            return template.getCanonicalClass();
-            }
-
-        return super.ensureParameterizedClass(pool, atypeParams);
+        return template == null
+                ? super.ensureParameterizedClass(pool, atypeParams)
+                : template.getCanonicalClass();
         }
 
     @Override
     public ClassTemplate getTemplate(TypeConstant type)
         {
-        TypeConstant[] atypeParams = type.getParamTypesArray();
-        return atypeParams.length > 0
-                ? getArrayTemplate(atypeParams[0])
-                : this;
+        xArray template = ARRAY_TEMPLATES.get(type.getParamType(0));
+
+        return template == null ? this : template;
         }
 
     @Override
@@ -227,7 +233,6 @@ public class xArray
             typeArray = typeArray.resolveGenerics(frame.poolContext(), frame.getGenericsResolver());
             }
 
-        TypeComposition clzArray = f_templates.resolveClass(typeArray);
         if (fSet)
             {
             TypeConstant typeEl = typeArray.getParamType(0);
@@ -243,15 +248,15 @@ public class xArray
             }
         else
             {
+            TypeComposition clzArray = f_templates.resolveClass(typeArray);
             if (fDeferred)
                 {
-                Frame.Continuation stepNext = frameCaller -> frameCaller.pushStack(
-                        ((xArray) clzArray.getTemplate()).createArrayHandle(clzArray, ahValue));
+                Frame.Continuation stepNext = frameCaller ->
+                        frameCaller.pushStack(createImmutableArray(clzArray, ahValue));
                 return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
                 }
 
-            return frame.pushStack(
-                    ((xArray) clzArray.getTemplate()).createArrayHandle(clzArray, ahValue));
+            return frame.pushStack(createImmutableArray(clzArray, ahValue));
             }
         }
 
@@ -263,36 +268,9 @@ public class xArray
 
         ObjectHandle[] ahVar = new ObjectHandle[CREATE_LIST_SET.getMaxVars()];
         ahVar[0] = typeEl.ensureTypeHandle(pool);
-        ahVar[1] = ((xArray) clzArray.getTemplate()).createArrayHandle(clzArray, ahValue);
+        ahVar[1] = createImmutableArray(clzArray, ahValue);
 
         return frame.call1(CREATE_LIST_SET, null, ahVar, Op.A_STACK);
-        }
-
-    /**
-     * Create a one dimensional immutable array for a specified class and content.
-     *
-     * @param clzArray  the class of the array
-     * @param ahArg     the array elements
-     *
-     * @return the array handle
-     */
-    public ArrayHandle createArrayHandle(TypeComposition clzArray, ObjectHandle[] ahArg)
-        {
-        return new GenericArrayHandle(clzArray, ahArg, Mutability.Constant);
-        }
-
-    /**
-     * Create an empty one dimensional array for a specified type and arity.
-     *
-     * @param clzArray    the class of the array
-     * @param cCapacity   the array size
-     * @param mutability  the mutability constraint
-     *
-     * @return the array handle
-     */
-    public ArrayHandle createEmptyArrayHandle(TypeComposition clzArray, int cCapacity, Mutability mutability)
-        {
-        return new GenericArrayHandle(clzArray, cCapacity, mutability);
         }
 
     @Override
@@ -323,8 +301,7 @@ public class xArray
                         xException.illegalArgument(frame, "Invalid array size: " + cCapacity));
                     }
 
-                xArray      template = (xArray) clzArray.getTemplate();
-                ArrayHandle hArray   = template.createEmptyArrayHandle(clzArray, (int) cCapacity, Mutability.Mutable);
+                ObjectHandle hArray = createEmptyArray(clzArray, (int) cCapacity, Mutability.Mutable);
                 return frame.assignValue(iReturn, hArray);
                 }
 
@@ -339,43 +316,56 @@ public class xArray
                         xException.illegalArgument(frame, "Invalid array size: " + cCapacity));
                     }
 
-                xArray      template = (xArray) clzArray.getTemplate();
-                ArrayHandle hArray   = template.createEmptyArrayHandle(clzArray, (int) cCapacity, Mutability.Fixed);
-
+                ArrayHandle hArray = createEmptyArray(clzArray, (int) cCapacity, Mutability.Fixed);
                 int cSize = (int) cCapacity;
                 if (cSize > 0)
                     {
-                    ObjectHandle hSupplier = ahVar[1];
+                    hArray.m_hDelegate.m_cSize = cSize;
+
+                    ObjectHandle hValue = ahVar[1];
                     // we could get here either naturally (e.g. new Array<String>(7, "");)
                     // or via the ArrayExpression (e.g. new Int[7])
                     TypeConstant typeEl = clzArray.getType().getParamType(0);
-                    if (hSupplier == ObjectHandle.DEFAULT)
+                    if (hValue == ObjectHandle.DEFAULT)
                         {
-                        ObjectHandle hValue = frame.getConstHandle(typeEl.getDefaultValue());
+                        hValue = frame.getConstHandle(typeEl.getDefaultValue());
                         if (Op.isDeferred(hValue))
                             {
                             hValue.proceed(frame, frameCaller ->
-                                {
-                                fill(hArray, cSize, frameCaller.popStack());
-                                return frameCaller.assignValue(iReturn, hArray);
-                                });
+                                fill(frameCaller, hArray, cSize, frameCaller.popStack(), iReturn));
                             }
-                        fill(hArray, cSize, hValue);
-                        }
-                    else if (hSupplier.getType().isA(typeEl))
-                        {
-                        fill(hArray, cSize, hSupplier);
+                        return fill(frame, hArray, cSize, hValue, iReturn);
                         }
                     else
                         {
-                        FunctionHandle      hfnSupplier = (FunctionHandle) hSupplier;
-                        ObjectHandle[]      ahArg       = new ObjectHandle[hfnSupplier.getVarCount()];
-                        Utils.ValueSupplier supplier    = (frameCaller, index) ->
+                        ConstantPool pool      = frame.poolContext();
+                        TypeConstant typeValue = hValue.getType();
+
+                        IsFunction:
+                        if (typeValue.isA(pool.typeFunction()))
                             {
-                            ahArg[0] = xInt64.makeHandle(index);
-                            return hfnSupplier.call1(frameCaller, null, ahArg, Op.A_STACK);
-                            };
-                        return new Utils.FillArray(hArray, supplier, iReturn).doNext(frame);
+                            TypeConstant[] atypeParam = pool.extractFunctionParams(typeValue);
+                            if (atypeParam.length != 1 || !atypeParam[0].equals(pool.typeInt()))
+                                {
+                                break IsFunction;
+                                }
+                            TypeConstant[] atypeRet = pool.extractFunctionReturns(typeValue);
+                            if (atypeRet.length != 1 || !atypeRet[0].isA(typeEl))
+                                {
+                                break IsFunction;
+                                }
+
+                            FunctionHandle      hfnSupplier = (FunctionHandle) hValue;
+                            int                 cArgs       = hfnSupplier.getVarCount();
+                            ObjectHandle[]      ahArg       = new ObjectHandle[cArgs];
+                            Utils.ValueSupplier supplier    = (frameCaller, index) ->
+                                {
+                                ahArg[0] = xInt64.makeHandle(index);
+                                return hfnSupplier.call1(frameCaller, null, ahArg, Op.A_STACK);
+                                };
+                            return new Utils.FillArray(hArray, cSize, supplier, iReturn).doNext(frame);
+                            }
+                        return fill(frame, hArray, cSize, hValue, iReturn);
                         }
                     }
                 return frame.assignValue(iReturn, hArray);
@@ -392,49 +382,24 @@ public class xArray
                 return frame.call1(ITERABLE_TO_ARRAY, hSequence, ahVars, iReturn);
                 }
 
+            case 3: // private construct(ArrayDelegate<Element> delegate, Mutability mutability)
+                {
+                // Note: at the moment this constructor is never used
+                DelegateHandle hDelegate   = (DelegateHandle) ahVar[0];
+                ObjectHandle   hMutability = ahVar[1];
+                ArrayHandle    hArray      = new ArrayHandle(
+                    clzArray, hDelegate, Mutability.values()[((EnumHandle) hMutability).getOrdinal()]);
+
+                if (hArray.m_mutability == Mutability.Constant)
+                    {
+                    hArray.makeImmutable();
+                    }
+                return frame.assignValue(iReturn, hArray);
+                }
+
             default:
                 return frame.raiseException("Unknown constructor: " + idConstruct.getValueString());
             }
-        }
-
-    /**
-     * Create a copy of the specified array for the specified mutability
-     *
-     * @param hArray      the array
-     * @param mutability  the mutability
-     *
-     * @return a new array
-     */
-    protected ArrayHandle createCopy(ArrayHandle hArray, Mutability mutability)
-        {
-        GenericArrayHandle hSrc = (GenericArrayHandle) hArray;
-
-        return new GenericArrayHandle(hSrc.getComposition(),
-            Arrays.copyOfRange(hSrc.m_ahValue, 0, hSrc.m_cSize), mutability);
-        }
-
-    /**
-     * Fill the array content with the specified value.
-     *
-     * @param hArray  the array
-     * @param cSize   the number of elements to fill
-     * @param hValue  the value
-     */
-    protected void fill(ArrayHandle hArray, int cSize, ObjectHandle hValue)
-        {
-        GenericArrayHandle ha = (GenericArrayHandle) hArray;
-
-        Arrays.fill(ha.m_ahValue, 0, cSize, hValue);
-        ha.m_cSize = cSize;
-        }
-
-    @Override
-    public int invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
-        {
-        // hArg is either Iterable<Element> or Element
-        return hArg.getType().isA(hTarget.getType().getParamType(0))
-                ? addElement(frame, hTarget, hArg, iReturn)
-                : addElements(frame, hTarget, hArg, iReturn);
         }
 
     @Override
@@ -444,15 +409,12 @@ public class xArray
 
         switch (sPropName)
             {
-            case "capacity":
-                return frame.assignValue(iReturn, xInt64.makeHandle(hArray.getCapacity()));
+            case "delegate":
+                return frame.assignValue(iReturn, hArray.m_hDelegate);
 
             case "mutability":
                 return Utils.assignInitializedEnum(frame,
                     MUTABILITY.getEnumByOrdinal(hArray.m_mutability.ordinal()), iReturn);
-
-            case "size":
-                return frame.assignValue(iReturn, xInt64.makeHandle(hArray.m_cSize));
             }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
@@ -465,29 +427,17 @@ public class xArray
 
         switch (sPropName)
             {
-            case "capacity":
+            case "mutability":
                 {
-                int nCapacityOld = hArray.getCapacity();
-                int nCapacityNew = (int) ((JavaLong) hValue).getValue();
-                int nSize        = hArray.m_cSize;
-
-                if (nCapacityNew < nSize)
+                Mutability mutability = Mutability.values()[((EnumHandle) hValue).getOrdinal()];
+                if (mutability.compareTo(hArray.m_mutability) > 0)
                     {
                     return frame.raiseException(
-                        xException.illegalArgument(frame, "Capacity cannot be less then size "));
+                        xException.illegalState(frame, hArray.m_mutability.toString()));
                     }
-
-                // for now, no trimming
-                if (nCapacityNew > nCapacityOld)
-                    {
-                    hArray.setCapacity(nCapacityNew);
-                    }
+                hArray.setMutability(mutability);
                 return Op.R_NEXT;
                 }
-
-            case "mutability":
-                hArray.m_mutability = Mutability.values()[((EnumHandle) hValue).getOrdinal()];
-                return Op.R_NEXT;
             }
         return super.invokeNativeSet(frame, hTarget, sPropName, hValue);
         }
@@ -498,15 +448,6 @@ public class xArray
         {
         switch (method.getName())
             {
-            case "add":
-                return addElement(frame, hTarget, hArg, iReturn);
-
-            case "addAll":
-                return addElements(frame, hTarget, hArg, iReturn);
-
-            case "delete":
-                return deleteElement(frame, hTarget, hArg, iReturn);
-
             case "elementAt":
                 return makeRef(frame, hTarget, ((JavaLong) hArg).getValue(), false, iReturn);
 
@@ -516,46 +457,14 @@ public class xArray
             case "slice":
                 {
                 GenericHandle hInterval = (GenericHandle) hArg;
+
                 long    ixFrom   = ((JavaLong) hInterval.getField("lowerBound")).getValue();
                 long    ixTo     = ((JavaLong) hInterval.getField("upperBound")).getValue();
                 boolean fExLower = ((BooleanHandle) hInterval.getField("lowerExclusive")).get();
                 boolean fExUpper = ((BooleanHandle) hInterval.getField("upperExclusive")).get();
                 boolean fReverse = ((BooleanHandle) hInterval.getField("descending")).get();
 
-                return slice(frame, hTarget, ixFrom, fExLower, ixTo, fExUpper, fReverse, iReturn);
-                }
-
-            case "freeze": // immutable Array freeze(Boolean inPlace = False)
-                {
-                ArrayHandle hArray  = (ArrayHandle) hTarget;
-                boolean    fInPlace = hArg != ObjectHandle.DEFAULT && ((BooleanHandle) hArg).get();
-
-                // TODO GG ensure all elements are immutable, and if not, they must be Freezable
-
-                if (fInPlace)
-                    {
-                    // TODO call freeze(False) on each element that is not already immutable
-                    hArray.makeImmutable();
-                    }
-                else
-                    {
-                    // TODO call freeze(False) on each element that is not already immutable as part
-                    //      of the creation of the array copy
-                    hArray = createCopy(hArray, Mutability.Constant);
-                    }
-                return frame.assignValue(iReturn, hArray);
-                }
-
-            case "reify": // Array reify(Mutability? mutability = Null)
-                {
-                // TODO: REVIEW
-                ArrayHandle hArray = (ArrayHandle) hTarget;
-                if (hArg != ObjectHandle.DEFAULT)
-                    {
-                    Mutability mutability = xArray.Mutability.values()[((EnumHandle) hArg).getOrdinal()];
-                    hArray = createCopy(hArray, mutability);
-                    }
-                return frame.assignValue(iReturn, hArray);
+                return invokeSlice(frame, hTarget, ixFrom, fExLower, ixTo, fExUpper, fReverse, iReturn);
                 }
             }
 
@@ -568,390 +477,52 @@ public class xArray
         {
         switch (method.getName())
             {
-            case "insert":
-                return insertElement(frame, hTarget, (JavaLong) ahArg[0], ahArg[1], iReturn);
-
-            case "insertAll":
-                return insertElements(frame, hTarget, (JavaLong) ahArg[0], ahArg[1], iReturn);
+            case "asBitArray":
+            case "asByteArray":
+                throw new UnsupportedOperationException("TODO GG");
 
             case "setElement":
                 return assignArrayValue(frame, hTarget, ((JavaLong) ahArg[0]).getValue(), ahArg[1]);
-
-            case "clear":
-                return invokeClear(frame, hTarget, iReturn);
             }
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
         }
 
     @Override
-    public int callEquals(Frame frame, TypeComposition clazz,
-                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+    public int createPropertyRef(Frame frame, ObjectHandle hTarget,
+                                 PropertyConstant idProp, boolean fRO, int iReturn)
         {
-        GenericArrayHandle hArray1 = (GenericArrayHandle) hValue1;
-        GenericArrayHandle hArray2 = (GenericArrayHandle) hValue2;
-
-        ObjectHandle[] ah1 = hArray1.m_ahValue;
-        ObjectHandle[] ah2 = hArray2.m_ahValue;
-
-        // compare the array dimensions
-        int cElements = ah1.length;
-        if (cElements != ah2.length)
+        if (idProp.getName().equals("delegate"))
             {
-            return frame.assignValue(iReturn, xBoolean.FALSE);
+            ArrayHandle    hArray     = (ArrayHandle) hTarget;
+            DelegateHandle hDelegate  = hArray.m_hDelegate;
+
+            ConstantPool   pool       = frame.poolContext();
+            TypeConstant   typeRef    = pool.ensureParameterizedTypeConstant(
+                                        pool.typeVar(), hDelegate.getType());
+
+            ClassComposition clzRef   = pool.ensureClassComposition(typeRef, xRef.INSTANCE);
+            RefHandle        hRef     = new RefHandle(clzRef, "delegate", hDelegate);
+
+            return frame.assignValue(iReturn, hRef);
             }
 
-        // use the compile-time element type
-        // and compare arrays elements one-by-one
-        TypeConstant typeEl = clazz.getType().getParamType(0);
-
-        int[] holder = new int[] {0}; // the index holder
-        return new Equals(ah1, ah2, typeEl, cElements, holder, iReturn).doNext(frame);
+        return super.createPropertyRef(frame, hTarget, idProp, fRO, iReturn);
         }
 
     @Override
     public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2)
         {
-        GenericArrayHandle hArray1 = (GenericArrayHandle) hValue1;
-        GenericArrayHandle hArray2 = (GenericArrayHandle) hValue2;
+        ArrayHandle hArray1 = (ArrayHandle) hValue1;
+        ArrayHandle hArray2 = (ArrayHandle) hValue2;
 
-        if (hArray1.isMutable() || hArray2.isMutable() || hArray1.m_cSize != hArray2.m_cSize)
+        if (hArray1.isMutable() || hArray2.isMutable() ||
+                (hArray1.m_hDelegate.getTemplate()  != hArray2.m_hDelegate.getTemplate()))
             {
             return false;
             }
 
-        ObjectHandle[] ah1 = hArray1.m_ahValue;
-        ObjectHandle[] ah2 = hArray2.m_ahValue;
-
-        if (ah1 == ah2)
-            {
-            return true;
-            }
-
-        for (int i = 0, c = hArray1.m_cSize; i < c; i++)
-            {
-            ObjectHandle hV1 = ah1[i];
-            ObjectHandle hV2 = ah2[i];
-
-            ClassTemplate template = hV1.getTemplate();
-            if (template != hV2.getTemplate() || !template.compareIdentity(hV1, hV2))
-                {
-                return false;
-                }
-            }
-        return true;
-        }
-
-    /**
-     * add(Element) implementation.
-     */
-    protected int addElement(Frame frame, ObjectHandle hTarget, ObjectHandle hValue, int iReturn)
-        {
-        ArrayHandle hArray     = (ArrayHandle) hTarget;
-        Mutability mutability = null;
-
-        switch (hArray.m_mutability)
-            {
-            case Fixed:
-                return frame.raiseException(xException.readOnly(frame));
-
-            case Constant:
-            case Persistent:
-                mutability = hArray.m_mutability;
-                hArray     = createCopy(hArray, Mutability.Mutable);
-                break;
-            }
-
-        try
-            {
-            insertElement(hArray, hValue, -1);
-            }
-        catch (ClassCastException e)
-            {
-            return frame.raiseException(
-                xException.illegalCast(frame, hValue.getType().getValueString()));
-            }
-
-        if (mutability != null)
-            {
-            hArray.m_mutability = mutability;
-            }
-
-        return frame.assignValue(iReturn, hArray);
-        }
-
-    /**
-     * addAll(Iterable<Element> values) implementation.
-     */
-    protected int addElements(Frame frame, ObjectHandle hTarget, ObjectHandle hValue, int iReturn)
-        {
-        ArrayHandle hArray     = (ArrayHandle) hTarget;
-        Mutability  mutability = null;
-
-        switch (hArray.m_mutability)
-            {
-            case Fixed:
-                return frame.raiseException(xException.readOnly(frame));
-
-            case Constant:
-            case Persistent:
-                mutability = hArray.m_mutability;
-                hArray     = createCopy(hArray, Mutability.Mutable);
-                break;
-            }
-
-        try
-            {
-            addElements(hArray, hValue);
-            }
-        catch (ClassCastException e)
-            {
-            return frame.raiseException(
-                xException.illegalCast(frame, hValue.getType().getValueString()));
-            }
-
-        if (mutability != null)
-            {
-            hArray.m_mutability = mutability;
-            }
-
-        return frame.assignValue(iReturn, hArray);
-        }
-
-    /**
-     * insert(Int, Element) implementation.
-     */
-    protected int insertElement(Frame frame, ObjectHandle hTarget,
-                                JavaLong hIndex, ObjectHandle hValue, int iReturn)
-        {
-        ArrayHandle hArray    = (ArrayHandle) hTarget;
-        Mutability mutability = null;
-
-        switch (hArray.m_mutability)
-            {
-            case Fixed:
-                return frame.raiseException(xException.readOnly(frame));
-
-            case Constant:
-            case Persistent:
-                mutability = hArray.m_mutability;
-                hArray     = createCopy(hArray, Mutability.Mutable);
-                break;
-            }
-
-        try
-            {
-            insertElement(hArray, hValue, (int) hIndex.getValue());
-            }
-        catch (ClassCastException e)
-            {
-            return frame.raiseException(
-                xException.illegalCast(frame, hValue.getType().getValueString()));
-            }
-
-        if (mutability != null)
-            {
-            hArray.m_mutability = mutability;
-            }
-
-        return frame.assignValue(iReturn, hArray);
-        }
-
-    /**
-     * insertAll(Int, Iterable<Element>) implementation.
-     */
-    protected int insertElements(Frame frame, ObjectHandle hTarget,
-                                 JavaLong hIndex, ObjectHandle hValue, int iReturn)
-        {
-        throw new UnsupportedOperationException("TODO");
-        }
-
-    /**
-     * Add or insert an element to the array (must be overridden by specialized classes).
-     *
-     * @param hTarget   the array
-     * @param hElement  the element to add
-     * @param nIndex    the index (-1 for add)
-     */
-    protected void insertElement(ArrayHandle hTarget, ObjectHandle hElement, int nIndex)
-        {
-        GenericArrayHandle hArray  = (GenericArrayHandle) hTarget;
-        int                cSize   = hArray.m_cSize;
-        ObjectHandle[]     ahValue = hArray.m_ahValue;
-
-        if (cSize == ahValue.length)
-            {
-            ahValue = hArray.m_ahValue = grow(ahValue, cSize + 1);
-            }
-        hArray.m_cSize++;
-
-        if (nIndex == -1 || nIndex == cSize)
-            {
-            // append
-            ahValue[cSize] = hElement;
-            }
-        else
-            {
-            // insert
-            System.arraycopy(ahValue, nIndex, ahValue, nIndex+1, cSize-nIndex);
-            ahValue[nIndex] = hElement;
-            }
-        }
-
-    /**
-     * Add an array of elements to the array (must be overridden by specialized classes).
-     *
-     * @param hTarget    the array
-     * @param hElements  the array of values to add
-     *
-     * @return the resulting array handle
-     */
-    protected void addElements(ArrayHandle hTarget, ObjectHandle hElements)
-        {
-        GenericArrayHandle hArray    = (GenericArrayHandle) hTarget;
-        GenericArrayHandle hArrayAdd = (GenericArrayHandle) hElements;
-
-        int cThat = hArrayAdd.m_cSize;
-        if (cThat > 0)
-            {
-            ObjectHandle[] ahThis = hArray.m_ahValue;
-            int            cThis  = hArray.m_cSize;
-
-            if (cThis + cThat > ahThis.length)
-                {
-                ahThis = hArray.m_ahValue = grow(ahThis, cThis + cThat);
-                }
-            hArray.m_cSize += cThat;
-            System.arraycopy(hArrayAdd.m_ahValue, 0, ahThis, cThis, cThat);
-            }
-        }
-
-    /**
-     * delete(index) implementation.
-     */
-    protected int deleteElement(Frame frame, ObjectHandle hTarget, ObjectHandle hValue, int iReturn)
-        {
-        ArrayHandle hArray = (ArrayHandle) hTarget;
-        long        lIndex = ((JavaLong) hValue).getValue();
-        if (lIndex < 0 || lIndex >= hArray.m_cSize)
-            {
-            return frame.raiseException(xException.outOfBounds(frame, lIndex, hArray.m_cSize));
-            }
-
-        Mutability mutability = null;
-        switch (hArray.m_mutability)
-            {
-            case Fixed:
-                return frame.raiseException(xException.readOnly(frame));
-
-            case Constant:
-            case Persistent:
-                mutability = hArray.m_mutability;
-                hArray     = createCopy(hArray, Mutability.Mutable);
-                break;
-            }
-
-        hArray.deleteElement((int) lIndex);
-
-        if (mutability != null)
-            {
-            hArray.m_mutability = mutability;
-            }
-
-        return frame.assignValue(iReturn, hArray);
-        }
-
-    /**
-     * slice(Interval<Int>) implementation.
-     */
-    protected int slice(Frame frame, ObjectHandle hTarget,
-                        long ixLower, boolean fExLower,
-                        long ixUpper, boolean fExUpper,
-                        boolean fReverse,
-                        int     iReturn)
-        {
-        GenericArrayHandle hArray = (GenericArrayHandle) hTarget;
-
-        // calculate inclusive lower
-        if (fExLower)
-            {
-            ++ixLower;
-            }
-
-        // calculate exclusive upper
-        if (!fExUpper)
-            {
-            ++ixUpper;
-            }
-
-        if (ixUpper > hArray.m_cSize)
-            {
-            return frame.raiseException(
-                xException.outOfBounds(frame,
-                    fExUpper ? ixUpper : ixUpper-1, hArray.m_cSize));
-            }
-
-        ObjectHandle[] ahValue = hArray.m_ahValue;
-        try
-            {
-            ObjectHandle[] ahNew;
-            if (ixLower >= ixUpper)
-                {
-                ahNew = Utils.OBJECTS_NONE;
-                }
-            else if (fReverse)
-                {
-                int cNew = (int) (ixUpper - ixLower);
-                ahNew = new ObjectHandle[cNew];
-                for (int i = 0; i < cNew; i++)
-                    {
-                    ahNew[i] = ahValue[(int) ixUpper - i - 1];
-                    }
-                }
-            else
-                {
-                ahNew = Arrays.copyOfRange(ahValue, (int) ixLower, (int) ixUpper);
-                }
-
-            ArrayHandle hArrayNew = new GenericArrayHandle(
-                hArray.getComposition(), ahNew, hArray.m_mutability);
-
-            return frame.assignValue(iReturn, hArrayNew);
-            }
-        catch (ArrayIndexOutOfBoundsException e)
-            {
-            long c = ahValue.length;
-            return frame.raiseException(
-                xException.outOfBounds(frame, ixLower < 0 || ixLower >= c ? ixLower : ixUpper, c));
-            }
-        }
-
-    /**
-     * clear() implementation.
-     */
-    protected int invokeClear(Frame frame, ObjectHandle hTarget, int iReturn)
-        {
-        ArrayHandle hArray = (ArrayHandle) hTarget;
-
-        if (hArray.m_cSize > 0)
-            {
-            Mutability mutability = hArray.m_mutability;
-            switch (mutability)
-                {
-                case Fixed:
-                    return frame.raiseException(xException.readOnly(frame));
-
-                case Constant:
-                case Persistent:
-                    hArray = createEmptyArrayHandle(hArray.getComposition(), 0, mutability);
-                    break;
-
-                case Mutable:
-                    hArray.clear();
-                    break;
-                }
-            }
-
-        return frame.assignValue(iReturn, hArray);
+        return hArray1.m_hDelegate.getTemplate().
+            compareIdentity(hArray1.m_hDelegate, hArray2.m_hDelegate);
         }
 
 
@@ -960,54 +531,21 @@ public class xArray
     @Override
     public int extractArrayValue(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
         {
-        GenericArrayHandle hArray = (GenericArrayHandle) hTarget;
+        ArrayHandle    hArray    = (ArrayHandle) hTarget;
+        DelegateHandle hDelegate = hArray.m_hDelegate;
 
-        if (lIndex < 0 || lIndex >= hArray.m_cSize)
-            {
-            return frame.raiseException(xException.outOfBounds(frame, lIndex, hArray.m_cSize));
-            }
-
-        return frame.assignValue(iReturn, hArray.m_ahValue[(int) lIndex]);
+        return ((xRTDelegate) hDelegate.getTemplate()).
+                extractArrayValue(frame, hDelegate, lIndex, iReturn);
         }
 
     @Override
     public int assignArrayValue(Frame frame, ObjectHandle hTarget, long lIndex, ObjectHandle hValue)
         {
-        GenericArrayHandle hArray = (GenericArrayHandle) hTarget;
-        int                cSize  = hArray.m_cSize;
+        ArrayHandle    hArray    = (ArrayHandle) hTarget;
+        DelegateHandle hDelegate = hArray.m_hDelegate;
 
-        if (lIndex < 0 || lIndex > cSize)
-            {
-            return frame.raiseException(xException.outOfBounds(frame, lIndex, cSize));
-            }
-
-        switch (hArray.m_mutability)
-            {
-            case Constant:
-                return frame.raiseException(xException.immutableObject(frame));
-
-            case Persistent:
-                return frame.raiseException(xException.readOnly(frame));
-            }
-
-        ObjectHandle[] ahValue = hArray.m_ahValue;
-        if (lIndex == cSize)
-            {
-            // an array can only grow without any "holes"
-            if (cSize == ahValue.length)
-                {
-                if (hArray.m_mutability == Mutability.Fixed)
-                    {
-                    return frame.raiseException(xException.readOnly(frame));
-                    }
-
-                ahValue = hArray.m_ahValue = grow(ahValue, cSize + 1);
-                }
-            hArray.m_cSize++;
-            }
-
-        ahValue[(int) lIndex] = hValue;
-        return Op.R_NEXT;
+        return ((xRTDelegate) hDelegate.getTemplate()).
+                assignArrayValue(frame, hDelegate, lIndex, hValue);
         }
 
     @Override
@@ -1021,11 +559,98 @@ public class xArray
         {
         ArrayHandle hArray = (ArrayHandle) hTarget;
 
-        return hArray.m_cSize;
+        return hArray.m_hDelegate.m_cSize;
         }
+
+    @Override
+    public int invokePreInc(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
+        {
+        ArrayHandle    hArray    = (ArrayHandle) hTarget;
+        DelegateHandle hDelegate = hArray.m_hDelegate;
+
+        return ((xRTDelegate) hDelegate.getTemplate()).
+                invokePreInc(frame, hDelegate, lIndex, iReturn);
+        }
+
+    @Override
+    public ObjectHandle[] toArray(Frame frame, ObjectHandle hTarget)
+            throws ExceptionHandle.WrapperException
+        {
+        ArrayHandle    hArray    = (ArrayHandle) hTarget;
+        DelegateHandle hDelegate = hArray.m_hDelegate;
+
+        return ((xRTDelegate) hDelegate.getTemplate()).toArray(frame, hDelegate);
+        }
+
 
     // ----- helper methods ------------------------------------------------------------------------
 
+    /**
+     * slice(Interval<Int>) implementation.
+     */
+    protected int invokeSlice(Frame frame, ObjectHandle hTarget, long ixLower, boolean fExLower,
+                              long ixUpper, boolean fExUpper, boolean fReverse, int iReturn)
+        {
+        ArrayHandle    hArray    = (ArrayHandle) hTarget;
+        DelegateHandle hDelegate = hArray.m_hDelegate;
+        ClassTemplate  template  = hDelegate.getTemplate();
+
+        if (fExLower)
+            {
+            // exclusive lower
+            ++ixLower;
+            }
+
+        if (fExUpper)
+            {
+            // exclusive upper
+            --ixUpper;
+            }
+
+        int cSize = hDelegate.m_cSize;
+        if (ixUpper >= cSize)
+            {
+            return frame.raiseException(xException.outOfBounds(frame, ixUpper, cSize));
+            }
+
+        try
+            {
+            DelegateHandle hSlice = ((xRTDelegate) template).
+                slice(hDelegate, ixLower, ixUpper - ixLower + 1, fReverse);
+            if (hSlice != hDelegate)
+                {
+                Mutability mutability = hArray.m_mutability;
+                if (mutability == Mutability.Mutable)
+                    {
+                    mutability = Mutability.Fixed;
+                    }
+                hArray = new ArrayHandle(hArray.getComposition(), hSlice, mutability);
+                }
+            return frame.assignValue(iReturn, hArray);
+            }
+        catch (ArrayIndexOutOfBoundsException e)
+            {
+            return frame.raiseException(xException.outOfBounds(frame,
+                ixLower < 0 || ixLower >= cSize ? ixLower : ixUpper, cSize));
+            }
+        }
+
+    /**
+     * Fill the array content with the specified value.
+     *
+     * @param hTarget  the array
+     * @param cSize    the number of elements to fill
+     * @param hValue   the value
+     */
+    protected int fill(Frame frame, ObjectHandle hTarget, int cSize, ObjectHandle hValue, int iReturn)
+        {
+        ArrayHandle    hArray    = (ArrayHandle) hTarget;
+        DelegateHandle hDelegate = hArray.m_hDelegate;
+        ClassTemplate  template  = hDelegate.getTemplate();
+
+        ((xRTDelegate) template).fill(hDelegate, cSize, hValue);
+        return frame.assignValue(iReturn, hArray);
+        }
 
     /**
      * Create an immutable one dimensional array for a specified type and size filled based the
@@ -1035,18 +660,18 @@ public class xArray
                                     Utils.ValueSupplier supplier, int iReturn)
         {
         // make it "Fixed" first; freeze after filling up
-        ArrayHandle hArray = INSTANCE.createEmptyArrayHandle(clzArray, cSize, xArray.Mutability.Fixed);
+        ArrayHandle hArray = createEmptyArray(clzArray, cSize, Mutability.Fixed);
 
-        switch (new Utils.FillArray(hArray, supplier, iReturn).doNext(frame))
+        switch (new Utils.FillArray(hArray, cSize, supplier, iReturn).doNext(frame))
             {
             case Op.R_NEXT:
-                hArray.m_mutability = xArray.Mutability.Constant;
+                hArray.setMutability(Mutability.Constant);
                 return Op.R_NEXT;
 
             case Op.R_CALL:
                 frame.m_frameNext.addContinuation(frameCaller ->
                     {
-                    hArray.m_mutability = xArray.Mutability.Constant;
+                    hArray.setMutability(Mutability.Constant);
                     return Op.R_NEXT;
                     });
                 return Op.R_CALL;
@@ -1059,117 +684,78 @@ public class xArray
             }
         }
 
-    private xArray getArrayTemplate(TypeConstant typeParam)
-        {
-        xArray template = ARRAY_TEMPLATES.get(typeParam);
-        return template == null ? this : template;
-        }
-
-    private ObjectHandle[] grow(ObjectHandle[] ahValue, int cSize)
-        {
-        int cCapacity = calculateCapacity(ahValue.length, cSize);
-
-        ObjectHandle[] ahNew = new ObjectHandle[cCapacity];
-        System.arraycopy(ahValue, 0, ahNew, 0, ahValue.length);
-        return ahNew;
-        }
-
     /**
-     * Calculate a new capacity based on the current and desired size of an array.
-     *
-     * @return a new capacity
+     * Return the size of the underlying array.
      */
-    protected int calculateCapacity(int cOld, int cDesired)
+    public static int getSize(ArrayHandle hArray)
         {
-        assert cDesired > cOld;
-
-        // resize (TODO: we should be much smarter here)
-        return cDesired + Math.max(cDesired >> 2, 16);
-        }
-
-    // ----- helper classes ------------------------------------------------------------------------
-
-    /**
-     * Helper class for equals() implementation.
-     */
-    protected static class Equals
-            implements Frame.Continuation
-        {
-        final private ObjectHandle[] ah1;
-        final private ObjectHandle[] ah2;
-        final private TypeConstant typeEl;
-        final private int cElements;
-        final private int[] holder;
-        final private int iReturn;
-
-        public Equals(ObjectHandle[] ah1, ObjectHandle[] ah2, TypeConstant typeEl,
-                      int cElements, int[] holder, int iReturn)
-            {
-            this.ah1 = ah1;
-            this.ah2 = ah2;
-            this.typeEl = typeEl;
-            this.cElements = cElements;
-            this.holder = holder;
-            this.iReturn = iReturn;
-            }
-
-        @Override
-        public int proceed(Frame frameCaller)
-            {
-            ObjectHandle hResult = frameCaller.popStack();
-            if (hResult == xBoolean.FALSE)
-                {
-                return frameCaller.assignValue(iReturn, hResult);
-                }
-            return doNext(frameCaller);
-            }
-
-        public int doNext(Frame frameCaller)
-            {
-            int iEl;
-            while ((iEl = holder[0]++) < cElements)
-                {
-                switch (typeEl.callEquals(frameCaller, ah1[iEl], ah2[iEl], Op.A_STACK))
-                    {
-                    case Op.R_NEXT:
-                        ObjectHandle hResult = frameCaller.popStack();
-                        if (hResult == xBoolean.FALSE)
-                            {
-                            return frameCaller.assignValue(iReturn, hResult);
-                            }
-                        break;
-
-                    case Op.R_CALL:
-                        frameCaller.m_frameNext.addContinuation(this);
-                        return Op.R_CALL;
-
-                    case Op.R_EXCEPTION:
-                        return Op.R_EXCEPTION;
-
-                    default:
-                        throw new IllegalStateException();
-                    }
-                }
-            return frameCaller.assignValue(iReturn, xBoolean.TRUE);
-            }
+        return hArray.m_hDelegate.m_cSize;
         }
 
 
     // ----- ObjectHandle helpers ------------------------------------------------------------------
 
     /**
+     * Create a one dimensional immutable array for a specified class and content.
+     *
+     * @param clzArray  the class of the array
+     * @param ahArg     the array elements
+     *
+     * @return the array handle
+     */
+    public static ArrayHandle createImmutableArray(TypeComposition clzArray, ObjectHandle[] ahArg)
+        {
+        return makeArrayHandle(clzArray, ahArg.length, ahArg, Mutability.Constant);
+        }
+
+    /**
+     * Create an empty one dimensional array for a specified type and arity.
+     *
+     * @param clzArray    the class of the array
+     * @param cCapacity   the array capacity
+     * @param mutability  the mutability constraint
+     *
+     * @return the array handle
+     */
+    public static ArrayHandle createEmptyArray(TypeComposition clzArray, int cCapacity,
+                                               Mutability mutability)
+        {
+        return makeArrayHandle(clzArray, cCapacity, Utils.OBJECTS_NONE, mutability);
+        }
+
+    /**
      * @return an immutable String array handle
      */
     public static ArrayHandle makeStringArrayHandle(StringHandle[] ahValue)
         {
-        if (s_clzStringArray == null)
-            {
-            ConstantPool pool = INSTANCE.pool();
-            TypeConstant typeArray = pool.ensureArrayType(pool.typeString());
-            s_clzStringArray = INSTANCE.f_templates.resolveClass(typeArray);
-            }
+        return makeArrayHandle(STRING_ARRAY_CLZ, ahValue.length, ahValue, Mutability.Constant);
+        }
 
-        return new GenericArrayHandle(s_clzStringArray, ahValue, Mutability.Constant);
+    /**
+     * @return a Bit array handle
+     */
+    public static ArrayHandle makeBitArrayHandle(byte[] abValue, int cBits, Mutability mutability)
+        {
+        DelegateHandle hDelegate = xRTBitDelegate.INSTANCE.makeHandle(abValue, cBits, mutability);
+        return new ArrayHandle(BIT_ARRAY_CLZ, hDelegate, mutability);
+        }
+
+    /**
+     * @return a Byte array handle
+     */
+    public static ArrayHandle makeByteArrayHandle(byte[] abValue, Mutability mutability)
+        {
+        DelegateHandle hDelegate = xRTByteDelegate.INSTANCE.makeHandle(abValue, abValue.length, mutability);
+        return new ArrayHandle(BYTE_ARRAY_CLZ, hDelegate, mutability);
+        }
+
+    /**
+     * @return a Char array handle
+     */
+    public static ArrayHandle makeCharArrayHandle(char[] achValue, Mutability mutability)
+        {
+        DelegateHandle hDelegate = xRTCharDelegate.INSTANCE.makeHandle(achValue, mutability);
+        return new ArrayHandle(CHAR_ARRAY_CLZ, hDelegate, mutability);
         }
 
     /**
@@ -1177,122 +763,82 @@ public class xArray
      */
     public static ArrayHandle makeObjectArrayHandle(ObjectHandle[] ahValue, Mutability mutability)
         {
-        if (s_clzObjectArray == null)
-            {
-            ConstantPool pool = INSTANCE.pool();
-            TypeConstant typeArray = pool.ensureArrayType(pool.typeObject());
-            s_clzObjectArray = INSTANCE.f_templates.resolveClass(typeArray);
-            }
-
-        return new GenericArrayHandle(s_clzObjectArray, ahValue, mutability);
+        return makeArrayHandle(OBJECT_ARRAY_CLZ, ahValue.length, ahValue, mutability);
         }
 
-    // generic array handle
-    public static class GenericArrayHandle
-            extends ArrayHandle
+    public static ArrayHandle makeArrayHandle(TypeComposition clzArray, int cCapacity,
+                                               ObjectHandle[] ahValue, Mutability mutability)
         {
-        public ObjectHandle[] m_ahValue;
+        TypeConstant typeElement      = clzArray.getType().getParamType(0);
+        xRTDelegate  templateDelegate = xRTDelegate.getArrayTemplate(typeElement);
 
-        /**
-         * Construct an array with specified content and mutability.
-         */
-        public GenericArrayHandle(TypeComposition clzArray, ObjectHandle[] ahValue, Mutability mutability)
+        DelegateHandle hDelegate = templateDelegate.createDelegate(
+                                    typeElement, cCapacity, ahValue, mutability);
+        return new ArrayHandle(clzArray, hDelegate, mutability);
+        }
+
+    public static class ArrayHandle
+            extends ObjectHandle
+        {
+        protected Mutability     m_mutability;
+        public    DelegateHandle m_hDelegate;
+
+        protected ArrayHandle(TypeComposition clzArray, DelegateHandle hDelegate,
+                              Mutability mutability)
             {
-            this(clzArray, ahValue, ahValue.length, mutability);
+            super(clzArray);
+
+            m_hDelegate  = hDelegate;
+            m_fMutable   = mutability != Mutability.Constant;
+            m_mutability = mutability;
             }
 
-        /**
-         * Construct an array with specified content, capacity and mutability.
-         */
-        public GenericArrayHandle(TypeComposition clzArray, ObjectHandle[] ahValue,
-                                  int cSize, Mutability mutability)
+        public Mutability getMutability()
             {
-            super(clzArray, mutability);
-
-            m_ahValue = ahValue;
-            m_cSize   = cSize;
+            return m_mutability;
             }
 
-        /**
-         * Construct an empty array with specified capacity and mutability.
-         */
-        public GenericArrayHandle(TypeComposition clzArray, long cCapacity, Mutability mutability)
+        public void setMutability(Mutability mutability)
             {
-            super(clzArray, mutability);
-
-            m_ahValue = new ObjectHandle[(int) cCapacity];
-            }
-
-        @Override
-        public int getCapacity()
-            {
-            return m_ahValue.length;
-            }
-
-        @Override
-        public void setCapacity(int nCapacity)
-            {
-            ObjectHandle[] ahOld = m_ahValue;
-            ObjectHandle[] ahNew = new ObjectHandle[nCapacity];
-            System.arraycopy(ahOld, 0, ahNew, 0, ahOld.length);
-            m_ahValue = ahNew;
+            assert mutability.compareTo(m_mutability) <= 0;
+            m_mutability = mutability;
+            m_hDelegate.setMutability(mutability);
             }
 
         @Override
-        public ObjectHandle getElement(int ix)
+        public xArray getTemplate()
             {
-            return m_ahValue[ix];
+            return (xArray) super.getTemplate();
             }
 
         @Override
-        public void deleteElement(int ix)
+        public void makeImmutable()
             {
-            if (ix < m_cSize - 1)
-                {
-                System.arraycopy(m_ahValue, ix+1, m_ahValue, ix, m_cSize-ix-1);
-                }
-            m_ahValue[--m_cSize] = null;
+            super.makeImmutable();
+
+            setMutability(Mutability.Constant);
             }
 
         @Override
-        public void clear()
+        public String toString()
             {
-            m_ahValue = Utils.OBJECTS_NONE;
-            m_cSize   = 0;
-            }
-
-        @Override
-        protected boolean isShared(ConstantPool poolThat, Map<ObjectHandle, Boolean> mapVisited)
-            {
-            // despite the shared array type, the individual elements could be narrower
-            // and need to be checked
-            if (mapVisited == null)
-                {
-                mapVisited = new IdentityHashMap<>();
-                }
-
-            return mapVisited.put(this, Boolean.TRUE) != null ||
-                   areShared(m_ahValue, poolThat, mapVisited);
-            }
-
-        @Override
-        public boolean isNativeEqual()
-            {
-            return false;
+            return super.toString() + m_mutability + " " + m_hDelegate.toString();
             }
         }
 
     public enum Mutability {Constant, Persistent, Fixed, Mutable}
 
     // array of constructors
-    private static MethodConstant[] CONSTRUCTORS = new MethodConstant[3];
+    private static MethodConstant[] CONSTRUCTORS = new MethodConstant[4];
     private static MethodStructure  ITERABLE_TO_ARRAY;
 
     protected static final String[] ELEMENT_TYPE = new String[] {"Element"};
-    protected static final String[] ARRAY        = new String[] {"collections.Array!<Element>"};
 
-    private static TypeComposition s_clzStringArray;
-    private static TypeComposition s_clzObjectArray;
+    private static TypeComposition OBJECT_ARRAY_CLZ;
+    private static TypeComposition STRING_ARRAY_CLZ;
+    private static TypeComposition BIT_ARRAY_CLZ;
+    private static TypeComposition BYTE_ARRAY_CLZ;
+    private static TypeComposition CHAR_ARRAY_CLZ;
     private static Map<TypeConstant, xArray> ARRAY_TEMPLATES;
 
     private static MethodStructure CREATE_LIST_SET;

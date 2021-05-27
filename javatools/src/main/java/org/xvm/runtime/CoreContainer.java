@@ -18,7 +18,6 @@ import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.runtime.ObjectHandle.ArrayHandle;
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 
@@ -485,8 +484,8 @@ public class CoreContainer
                         }
                     }
                 }
-            ArrayHandle haKeys   = xArray.makeStringArrayHandle(listKeys.toArray(Utils.STRINGS_NONE));
-            ArrayHandle haValues = xArray.makeStringArrayHandle(listVals.toArray(Utils.STRINGS_NONE));
+            ObjectHandle haKeys   = xArray.makeStringArrayHandle(listKeys.toArray(Utils.STRINGS_NONE));
+            ObjectHandle haValues = xArray.makeStringArrayHandle(listVals.toArray(Utils.STRINGS_NONE));
 
             ConstantPool pool    = frame.poolContext();
             TypeConstant typeMap = pool.ensureParameterizedTypeConstant(

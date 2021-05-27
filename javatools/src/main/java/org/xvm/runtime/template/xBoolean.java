@@ -4,7 +4,6 @@ package org.xvm.runtime.template;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component.Format;
 
-import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;

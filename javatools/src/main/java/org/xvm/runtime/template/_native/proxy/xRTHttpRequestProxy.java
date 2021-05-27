@@ -30,7 +30,7 @@ import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
 
 import org.xvm.runtime.template.collections.xArray;
-import org.xvm.runtime.template.collections.xByteArray;
+import org.xvm.runtime.template.collections.xArray.Mutability;
 
 import org.xvm.runtime.template.text.xString;
 
@@ -90,7 +90,7 @@ public class xRTHttpRequestProxy
                 try
                     {
                     byte[]       ab    = body.readAllBytes();
-                    ObjectHandle hBody = xByteArray.makeHandle(ab, xArray.Mutability.Constant);
+                    ObjectHandle hBody = xArray.makeByteArrayHandle(ab, Mutability.Constant);
                     return frame.assignValue(iReturn, hBody);
                     }
                 catch (IOException e)

@@ -21,7 +21,6 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHandle.ArrayHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
@@ -159,13 +158,13 @@ public class xPackage
         StringHandle[] ahNames   = listNames  .toArray(Utils.STRINGS_NONE);
         ObjectHandle[] ahClasses = listClasses.toArray(Utils.OBJECTS_NONE);
 
-        ArrayHandle hNames = xArray.makeStringArrayHandle(ahNames);
+        ObjectHandle hNames = xArray.makeStringArrayHandle(ahNames);
 
         if (fDeferred)
             {
             Frame.Continuation stepNext = frameCaller ->
                 {
-                ArrayHandle hClasses = xArray.INSTANCE.createArrayHandle(
+                ObjectHandle hClasses = xArray.createImmutableArray(
                     xClass.ensureArrayComposition(), ahClasses);
                 return Utils.constructListMap(frame, clzMap, hNames, hClasses, iReturn);
                 };
@@ -173,7 +172,7 @@ public class xPackage
             return new Utils.GetArguments(ahClasses, stepNext).doNext(frame);
             }
 
-        ArrayHandle hClasses = xArray.INSTANCE.createArrayHandle(
+        ObjectHandle hClasses = xArray.createImmutableArray(
             xClass.ensureArrayComposition(), ahClasses);
         return Utils.constructListMap(frame, clzMap, hNames, hClasses, iReturn);
         }
