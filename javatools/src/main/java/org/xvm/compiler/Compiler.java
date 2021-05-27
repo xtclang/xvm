@@ -1109,9 +1109,9 @@ public class Compiler
      */
     public static final String ILLEGAL_WHILE_CONDITION            = "COMPILER-128";
     /**
-     * The target type {0} must be parameterized to call method {1}.
+     * The name {0} is not a function.
      */
-    public static final String ILLEGAL_NAKED_TYPE_INVOCATION      = "COMPILER-129";
+    public static final String ILLEGAL_INVOCATION                 = "COMPILER-129";
     /**
      * The short-circuited expression is always "Null".
      */

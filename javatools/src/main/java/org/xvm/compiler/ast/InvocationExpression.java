@@ -2264,7 +2264,9 @@ public class InvocationExpression
                 // an import name can specify a static PropertyConstant
                 return testStaticProperty(ctx, (PropertyConstant) arg, atypeReturn, errs);
                 }
-            throw new IllegalStateException("unsupported argument: " + arg);
+
+            log(errs, Severity.ERROR, Compiler.ILLEGAL_INVOCATION, tokName.getValueText());
+            return null;
             }
 
         // there is a "left" expression for the name
