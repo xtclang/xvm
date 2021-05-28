@@ -155,10 +155,13 @@ public class xRTSlicingDelegate
 
     // ----- handle --------------------------------------------------------------------------------
 
-    public static SliceHandle makeHandle(DelegateHandle hSource,
+    public SliceHandle makeHandle(DelegateHandle hSource,
                                          long ofStart, long cSize, boolean fReverse)
         {
-        return new SliceHandle(INSTANCE.getCanonicalClass(),
+        TypeConstant typeElement = hSource.getType().getParamType(0);
+        TypeConstant typeSlice   = typeElement.getConstantPool().
+                ensureParameterizedTypeConstant(getClassConstant().getType(), typeElement);
+        return new SliceHandle(ensureClass(typeSlice),
                 hSource, Mutability.Fixed, (int) ofStart, (int) cSize, fReverse);
         }
 

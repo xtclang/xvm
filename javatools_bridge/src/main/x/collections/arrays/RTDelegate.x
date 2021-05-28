@@ -30,5 +30,5 @@ class RTDelegate<Element>
     RTDelegate delete(Int index);
 
     @Override
-    RTDelegate reify(Mutability? mutability = Null);
+    RTDelegate! reify(Mutability? mutability = Null);
     }

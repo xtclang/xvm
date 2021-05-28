@@ -87,9 +87,9 @@ public class xRTDelegate
         markNativeMethod("getElement", INT, ELEMENT_TYPE);
         markNativeMethod("setElement", new String[] {"numbers.Int64", "Element"}, VOID);
         markNativeMethod("elementAt", INT, new String[] {"reflect.Var<Element>"});
-        markNativeMethod("insert", new String[] {"numbers.Int64", "Element"}, THIS);
+        markNativeMethod("insert", null, THIS);
         markNativeMethod("delete", INT, THIS);
-        markNativeMethod("reify", null, THIS);
+        markNativeMethod("reify", null, null);
 
         ClassTemplate mixinNumber = f_templates.getTemplate("collections.arrays.NumberArray");
         mixinNumber.markNativeMethod("asBitArray" , VOID, null);
@@ -216,13 +216,11 @@ public class xRTDelegate
 
             case "reify": // Array reify(Mutability? mutability = Null)
                 {
-                DelegateHandle hDelegate = (DelegateHandle) hTarget;
-                if (hArg != ObjectHandle.DEFAULT)
-                    {
-                    Mutability mutability = Mutability.values()[((EnumHandle) hArg).getOrdinal()];
-                    hDelegate = createCopy(hDelegate, mutability);
-                    }
-                return frame.assignValue(iReturn, hDelegate);
+                DelegateHandle hDelegate  = (DelegateHandle) hTarget;
+                Mutability     mutability = hArg == ObjectHandle.DEFAULT
+                        ? hDelegate.getMutability()
+                        : Mutability.values()[((EnumHandle) hArg).getOrdinal()];
+                return frame.assignValue(iReturn, createCopy(hDelegate, mutability));
                 }
             }
 
@@ -568,7 +566,7 @@ public class xRTDelegate
         {
         return ofStart == 0 && cSize == hTarget.m_cSize && !fReverse
                 ? hTarget
-                : xRTSlicingDelegate.makeHandle(hTarget, ofStart, cSize, fReverse);
+                : xRTSlicingDelegate.INSTANCE.makeHandle(hTarget, ofStart, cSize, fReverse);
         }
 
     /**
@@ -585,7 +583,7 @@ public class xRTDelegate
         }
 
     /**
-     * Create a copy of the specified array for the specified mutability
+     * Create a copy of the specified array delegate for the specified mutability.
      *
      * @param hTarget     the delegate handle
      * @param mutability  the mutability
@@ -599,6 +597,14 @@ public class xRTDelegate
                                             int ofStart, int cSize, boolean fReverse)
         {
         GenericArrayDelegate hDelegate = (GenericArrayDelegate) hTarget;
+
+        if (ofStart == 0 && cSize == hDelegate.m_cSize && cSize == hDelegate.m_ahValue.length
+                && mutability == hDelegate.getMutability() && mutability == Mutability.Constant
+                && !fReverse)
+            {
+            // there is absolutely no reason to create a copy
+            return hDelegate;
+            }
 
         ObjectHandle[] ahValue = Arrays.copyOfRange(hDelegate.m_ahValue, ofStart, cSize);
         if (fReverse)

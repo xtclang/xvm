@@ -1,52 +1,26 @@
-module Test
+module TestSimple.test.org
     {
     @Inject Console console;
-    Log log = new ecstasy.io.ConsoleLog(console);
 
-    void run()
+    void run(  )
         {
-        log.add("Simple property example!");
+        Int[] ints = [1, 2];
+        assert ints.mutability == Constant;
+        ints = ints.reversed(True);
+        assert ints.mutability == Constant;
+        ints = ints.reify(Mutable);
+        assert ints.mutability == Mutable;
+        ints = ints.reversed();
+        assert ints.mutability == Mutable;
+        ints = ints.reify(Fixed);
+        assert ints.mutability == Fixed;
+        ints = ints.reversed();
+        assert ints.mutability == Fixed;
+        ints = ints.reify(Constant);
+        assert ints.mutability == Constant;
 
-        val o = new TestDerived();
-        for (Int i : 0..5)
-            {
-            val n = o.x;
-            }
 
-        o.&x.foo();
-        }
-
-    class TestClass
-        {
-        Int x
-            {
-            @Override Int get()
-                {
-                ++count;
-                return super();
-                }
-
-            void foo()
-                {
-                log.add($"Someone accessed this property {count} times!");
-                }
-
-            private Int count;
-            }
-        }
-
-    class TestDerived
-            extends TestClass
-        {
-        @Override Int x
-            {
-            @Override void foo()
-                {
-                super();
-                log.add($"(And someone called foo() {++count} times!)");
-                }
-
-            private Int count;
-            }
+//        Byte[] bytes = ints.asByteArray();
+//        console.println(bytes);
         }
     }

@@ -649,7 +649,7 @@ class Array<Element>
     @Override
     Array reify(Mutability? mutability = Null)
         {
-        ArrayDelegate<Element> reifiedDelegate = delegate.reify();
+        ArrayDelegate<Element> reifiedDelegate = delegate.reify(mutability);
         return &delegate == &reifiedDelegate
                 ? this
                 : new Array<Element>(reifiedDelegate, mutability ?: this.mutability);
@@ -668,7 +668,10 @@ class Array<Element>
     @Override
     Array reversed(Boolean inPlace = False)
         {
-        return super(inPlace).as(Array);
+        Array result = super(inPlace).as(Array);
+        return result.mutability == this.mutability
+                ? result
+                : result.toArray(this.mutability, inPlace = True);
         }
 
     @Override
