@@ -2,7 +2,7 @@ module TestSimple.test.org
     {
     @Inject Console console;
 
-    void run(  )
+    void run()
         {
         Int[] ints = [1, 2];
         assert ints.mutability == Constant;

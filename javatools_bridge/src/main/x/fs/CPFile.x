@@ -46,4 +46,10 @@ const CPFile(Object cookie, CPFileStore? fileStore, Path path, DateTime created,
         {
         TODO
         }
+
+    @Override
+    void append(Byte[] contents)
+        {
+        throw new AccessDenied();
+        }
     }

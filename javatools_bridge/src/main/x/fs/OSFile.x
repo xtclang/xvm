@@ -36,6 +36,8 @@ const OSFile
     @Override
     FileChannel open(ReadOption read=Read, WriteOption[] write = [Write]);
 
+    @Override
+    void append(Byte[] contents);
 
     // ----- native --------------------------------------------------------------------------------
 

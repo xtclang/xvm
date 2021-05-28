@@ -32,6 +32,13 @@ interface File
     File truncate(Int newSize = 0);
 
     /**
+     * Append the specified bytes to the end of the file.
+     *
+     * @param contents  the bytes to append
+     */
+    void append(Byte[] contents);
+
+    /**
      * Determine if this file is an _archive_, which is a directory structure encoded into a file,
      * and which may contain any number of directories and files nested within it. If the file is
      * an archive **and** the archive format is known and supported by the containing [FileStore],

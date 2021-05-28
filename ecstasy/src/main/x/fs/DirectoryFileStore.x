@@ -455,6 +455,13 @@ const DirectoryFileStore(Directory origDir, Boolean readOnly = False)
                 }
             return origFile.open(read, write);
             }
+
+        @Override
+        void append(Byte[] contents)
+            {
+            checkWritable();
+            return origFile.append(contents);
+            }
         }
 
     /**

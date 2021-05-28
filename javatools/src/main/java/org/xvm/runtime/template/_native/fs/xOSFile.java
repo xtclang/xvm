@@ -64,6 +64,7 @@ public class xOSFile
         markNativeProperty("contents");
 
         markNativeMethod("open", null, null);
+        markNativeMethod("append", null, VOID);
 
         getCanonicalType().invalidateTypeInfo();
 
@@ -77,12 +78,12 @@ public class xOSFile
     @Override
     public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
         {
-        NodeHandle hNode = (NodeHandle) hTarget;
+        NodeHandle hFile = (NodeHandle) hTarget;
         switch (sPropName)
             {
             case "contents":
                 {
-                Path path = hNode.f_path;
+                Path path = hFile.f_path;
 
                 try
                     {
@@ -92,7 +93,7 @@ public class xOSFile
                     }
                 catch (IOException e)
                     {
-                    return raisePathException(frame, e, hNode.f_path);
+                    return raisePathException(frame, e, hFile.f_path);
                     }
                 }
             }
@@ -101,22 +102,23 @@ public class xOSFile
         }
 
     @Override
-    public int invokeNativeSet(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hValue)
+    public int invokeNativeSet(Frame frame, ObjectHandle hTarget, String sPropName,
+                               ObjectHandle hValue)
         {
-        NodeHandle hNode = (NodeHandle) hTarget;
+        NodeHandle hFile = (NodeHandle) hTarget;
 
         switch (sPropName)
             {
             case "contents":
                 try
                     {
-                    Path             path = hNode.f_path;
+                    Path             path = hFile.f_path;
                     FileOutputStream out  = new FileOutputStream(path.toFile());
                     out.write(xByteArray.getBytes((ArrayHandle) hValue));
                     }
                 catch (IOException e)
                     {
-                    return raisePathException(frame, e, hNode.f_path);
+                    return raisePathException(frame, e, hFile.f_path);
                     }
                 return Op.R_NEXT;
             }
@@ -124,16 +126,43 @@ public class xOSFile
         }
 
     @Override
+    public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                             ObjectHandle hArg, int iReturn)
+        {
+        NodeHandle hFile = (NodeHandle) hTarget;
+
+        switch (method.getName())
+            {
+            case "append": // void append(Byte[] contents)
+                {
+                Path path = hFile.f_path;
+                try
+                    {
+                    FileOutputStream out  = new FileOutputStream(path.toFile(), /*append*/ true);
+                    out.write(xByteArray.getBytes((ArrayHandle) hArg));
+                    }
+                catch (IOException e)
+                    {
+                    return raisePathException(frame, e, path);
+                    }
+
+                return Op.R_NEXT;
+                }
+            }
+        return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
+        }
+
+    @Override
     public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle[] ahArg, int iReturn)
         {
-        NodeHandle hNode = (NodeHandle) hTarget;
+        NodeHandle hFile = (NodeHandle) hTarget;
 
         switch (method.getName())
             {
             case "open":
                 {
-                return invokeOpen(frame, hNode, ahArg, iReturn);
+                return invokeOpen(frame, hFile, ahArg, iReturn);
                 }
             }
 
@@ -153,7 +182,7 @@ public class xOSFile
     public int createHandle(Frame frame, ObjectHandle hOSStore, Path path, int iReturn)
         {
         TypeComposition clzStruct   = s_clzOSFileStruct;
-        MethodStructure  constructor = s_constructorFile;
+        MethodStructure constructor = s_constructorFile;
 
         NodeHandle     hStruct = new NodeHandle(clzStruct, path.toAbsolutePath(), hOSStore);
         ObjectHandle[] ahVar   = Utils.ensureSize(Utils.OBJECTS_NONE, constructor.getMaxVars());
