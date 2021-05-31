@@ -434,6 +434,14 @@ const DirectoryFileStore(Directory origDir, Boolean readOnly = False)
             }
 
         @Override
+        File append(Byte[] contents)
+            {
+            checkWritable();
+            origFile.append(contents);
+            return this;
+            }
+
+        @Override
         conditional FileStore openArchive()
             {
             if (FileStore result := origFile.openArchive())
@@ -454,13 +462,6 @@ const DirectoryFileStore(Directory origDir, Boolean readOnly = False)
                 checkWritable();
                 }
             return origFile.open(read, write);
-            }
-
-        @Override
-        void append(Byte[] contents)
-            {
-            checkWritable();
-            return origFile.append(contents);
             }
         }
 

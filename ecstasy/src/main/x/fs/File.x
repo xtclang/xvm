@@ -35,8 +35,13 @@ interface File
      * Append the specified bytes to the end of the file.
      *
      * @param contents  the bytes to append
+     *
+     * @return this File
+     *
+     * @throws FileNotFound  if the file does not exist
+     * @throws AccessDenied  if permission to modify the file has not been granted
      */
-    void append(Byte[] contents);
+    File append(Byte[] contents);
 
     /**
      * Determine if this file is an _archive_, which is a directory structure encoded into a file,

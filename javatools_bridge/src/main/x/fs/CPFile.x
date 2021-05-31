@@ -35,6 +35,12 @@ const CPFile(Object cookie, CPFileStore? fileStore, Path path, DateTime created,
         }
 
     @Override
+    File append(Byte[] contents)
+        {
+        throw new AccessDenied();
+        }
+
+    @Override
     conditional FileStore openArchive()
         {
         // TODO eventually
@@ -45,11 +51,5 @@ const CPFile(Object cookie, CPFileStore? fileStore, Path path, DateTime created,
     FileChannel open(ReadOption read=Read, WriteOption[] write=[Write])
         {
         TODO
-        }
-
-    @Override
-    void append(Byte[] contents)
-        {
-        throw new AccessDenied();
         }
     }

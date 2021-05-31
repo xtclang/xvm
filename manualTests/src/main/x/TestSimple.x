@@ -4,23 +4,21 @@ module TestSimple.test.org
 
     void run()
         {
-        Int[] ints = [1, 2];
-        assert ints.mutability == Constant;
-        ints = ints.reversed(True);
-        assert ints.mutability == Constant;
-        ints = ints.reify(Mutable);
-        assert ints.mutability == Mutable;
-        ints = ints.reversed();
-        assert ints.mutability == Mutable;
-        ints = ints.reify(Fixed);
-        assert ints.mutability == Fixed;
-        ints = ints.reversed();
-        assert ints.mutability == Fixed;
-        ints = ints.reify(Constant);
-        assert ints.mutability == Constant;
+        import ecstasy.fs.File;
+        import ecstasy.fs.FileStore;
 
+        @Inject FileStore storage;
 
-//        Byte[] bytes = ints.asByteArray();
-//        console.println(bytes);
+        File file = storage.fileFor(Path:/Users/cameron/Development/xvm/test.txt);
+        file.contents = #12345678;
+        assert file.size == 4 && file.contents == #12345678;
+        file.append(#CAFE);
+        assert file.size == 6 && file.contents == #12345678CAFE;
+        file.truncate(3);
+        assert file.size == 3 && file.contents == #123456;
+        file.append(#DEADBEEF);
+        assert file.size == 7 && file.contents == #123456DEADBEEF;
+        file.truncate();
+        assert file.size == 0 && file.contents.size == 0;
         }
     }

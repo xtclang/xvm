@@ -3,6 +3,7 @@ package org.xvm.runtime.template._native.fs;
 
 import com.sun.nio.file.ExtendedOpenOption;
 
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
@@ -29,6 +30,7 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xEnum.EnumHandle;
+import org.xvm.runtime.template.xException;
 
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.ArrayHandle;
@@ -64,7 +66,8 @@ public class xOSFile
         markNativeProperty("contents");
 
         markNativeMethod("open", null, null);
-        markNativeMethod("append", null, VOID);
+        markNativeMethod("appendImpl", null, VOID);
+        markNativeMethod("truncateImpl", null, VOID);
 
         getCanonicalType().invalidateTypeInfo();
 
@@ -133,12 +136,12 @@ public class xOSFile
 
         switch (method.getName())
             {
-            case "append": // void append(Byte[] contents)
+            case "appendImpl": // void appendImpl(Byte[] contents)
                 {
                 Path path = hFile.f_path;
                 try
                     {
-                    FileOutputStream out  = new FileOutputStream(path.toFile(), /*append*/ true);
+                    FileOutputStream out = new FileOutputStream(path.toFile(), /*append*/ true);
                     out.write(xByteArray.getBytes((ArrayHandle) hArg));
                     }
                 catch (IOException e)
@@ -148,7 +151,36 @@ public class xOSFile
 
                 return Op.R_NEXT;
                 }
+
+            case "truncateImpl": // void truncateImpl(Int newSize)
+                {
+                Path path   = hFile.f_path;
+                File file   = path.toFile();
+                long cOld   = file.length();
+                long cNew   = ((ObjectHandle.JavaLong) hArg).getValue();
+                if (cNew > cOld || cNew < 0)
+                    {
+                    return frame.raiseException(xException.outOfBounds(frame, cNew, cOld));
+                    }
+
+                try (FileChannel channel = cNew == 0
+                        ? FileChannel.open(path, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING)
+                        : FileChannel.open(path, StandardOpenOption.WRITE))
+                    {
+                    if (cNew > 0)
+                        {
+                        channel.truncate(cNew);
+                        }
+                    }
+                catch (IOException e)
+                    {
+                    return raisePathException(frame, e, path);
+                    }
+
+                return Op.R_NEXT;
+                }
             }
+
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
         }
 

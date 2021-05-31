@@ -1,3 +1,4 @@
+import ecstasy.fs.AccessDenied;
 import ecstasy.fs.Directory;
 import ecstasy.fs.File;
 import ecstasy.fs.FileChannel;
@@ -14,7 +15,40 @@ const OSFile
         implements File
     {
     @Override
-    File truncate(Int newSize = 0);
+    File truncate(Int newSize = 0)
+        {
+        if (!exists)
+            {
+            throw new FileNotFound(path);
+            }
+
+        if (!writable)
+            {
+            throw new AccessDenied(path);
+            }
+
+        truncateImpl(newSize);
+
+        return this;
+        }
+
+    @Override
+    File append(Byte[] contents)
+        {
+        if (!exists)
+            {
+            throw new FileNotFound(path);
+            }
+
+        if (!writable)
+            {
+            throw new AccessDenied(path);
+            }
+
+        appendImpl(contents);
+
+        return this;
+        }
 
     @Override
     conditional FileStore openArchive()
@@ -36,10 +70,11 @@ const OSFile
     @Override
     FileChannel open(ReadOption read=Read, WriteOption[] write = [Write]);
 
-    @Override
-    void append(Byte[] contents);
 
     // ----- native --------------------------------------------------------------------------------
+
+    void truncateImpl(Int newSize);
+    void appendImpl(Byte[] contents);
 
     @Override immutable Byte[] contents.get() { TODO("native"); }
     @Override Int size.get()                  { TODO("native"); }
