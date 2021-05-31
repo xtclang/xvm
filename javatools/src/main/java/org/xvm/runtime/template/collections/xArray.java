@@ -383,8 +383,13 @@ public class xArray
 
             case 3: // private construct(ArrayDelegate<Element> delegate, Mutability mutability)
                 {
-                // Note: at the moment this constructor is never used
-                DelegateHandle hDelegate   = (DelegateHandle) ahVar[0];
+                ObjectHandle hTarget = ahVar[0];
+                if (!(hTarget instanceof DelegateHandle))
+                    {
+                    return frame.raiseException(xException.unsupportedOperation(frame));
+                    }
+
+                DelegateHandle hDelegate   = (DelegateHandle) hTarget;
                 ObjectHandle   hMutability = ahVar[1];
                 ArrayHandle    hArray      = new ArrayHandle(
                     clzArray, hDelegate, Mutability.values()[((EnumHandle) hMutability).getOrdinal()]);

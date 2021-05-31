@@ -14,14 +14,14 @@ import org.xvm.runtime.template.collections.xArray.Mutability;
 
 
 /**
- * The native RTViewFromBit base implementation.
+ * The native RTViewFromByte base implementation.
  */
-public class xRTViewFromBit
+public class xRTViewFromByte
         extends xRTView
     {
-    public static xRTViewFromBit INSTANCE;
+    public static xRTViewFromByte INSTANCE;
 
-    public xRTViewFromBit(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xRTViewFromByte(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
         super(templates, structure);
 
@@ -36,7 +36,7 @@ public class xRTViewFromBit
         {
         if (this == INSTANCE)
             {
-            registerNativeTemplate(new xRTViewFromBitToByte(f_templates, f_struct, true));
+            registerNativeTemplate(new xRTViewFromByteToInt64(f_templates, f_struct, true));
             }
         }
 
@@ -44,28 +44,28 @@ public class xRTViewFromBit
     public void initNative()
         {
         // register native views
-        Map<TypeConstant, xRTViewFromBit> mapViews = new HashMap<>();
+        Map<TypeConstant, xRTViewFromByte> mapViews = new HashMap<>();
 
-        mapViews.put(pool().typeByte(), xRTViewFromBitToByte.INSTANCE);
+        mapViews.put(pool().typeInt(), xRTViewFromByteToInt64.INSTANCE);
 
         VIEWS = mapViews;
         }
 
     /**
-     * Create an ArrayDelegate<NumType> view into the specified ArrayDelegate<Bit> source.
+     * Create an ArrayDelegate<NumType> view into the specified ArrayDelegate<Byte> source.
      *
-     * @param hSource      the source (of bit type) delegate
+     * @param hSource      the source (of byte type) delegate
      * @param typeElement  the numeric type to create the view for
      * @param mutability   the desired mutability
      */
-    public DelegateHandle createBitViewDelegate(DelegateHandle hSource, TypeConstant typeElement,
-                                                Mutability mutability)
+    public DelegateHandle createByteViewDelegate(DelegateHandle hSource, TypeConstant typeElement,
+                                                 Mutability mutability)
         {
-        xRTViewFromBit template = VIEWS.get(typeElement);
+        xRTViewFromByte template = VIEWS.get(typeElement);
 
         if (template != null)
             {
-            return template.createBitViewDelegate(hSource, typeElement, mutability);
+            return template.createByteViewDelegate(hSource, typeElement, mutability);
             }
         throw new UnsupportedOperationException();
         }
@@ -73,5 +73,5 @@ public class xRTViewFromBit
 
     // ----- constants -----------------------------------------------------------------------------
 
-    private static Map<TypeConstant, xRTViewFromBit> VIEWS;
+    private static Map<TypeConstant, xRTViewFromByte> VIEWS;
     }

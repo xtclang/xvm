@@ -29,6 +29,11 @@ module TestSimple.test.org
 
         console.println($"\n*** ints as bytes");
         console.println(ints.asByteArray());
+
+        console.println($"\n*** bytes to ints");
+        Int[] ints2 = ints.asByteArray().asInt64Array();
+        console.println(ints2);
+        assert ints == ints2;
         }
 
     void reportBits(String test, Bit[] bits)

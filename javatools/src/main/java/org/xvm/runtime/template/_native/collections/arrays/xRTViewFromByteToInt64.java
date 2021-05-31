@@ -16,21 +16,21 @@ import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.collections.xArray.Mutability;
 
-import org.xvm.runtime.template.numbers.xUInt8;
+import org.xvm.runtime.template.numbers.xInt64;
 
 import org.xvm.runtime.template._native.collections.arrays.xRTSlicingDelegate.SliceHandle;
 
+import org.xvm.util.Handy;
 
 /**
- * The native RTViewFromBit<Byte> implementation.
+ * The native RTViewFromByte<Int64> implementation.
  */
-public class xRTViewFromBitToByte
-        extends xRTViewFromBit
-        implements ByteView
+public class xRTViewFromByteToInt64
+        extends xRTViewFromByte
     {
-    public static xRTViewFromBitToByte INSTANCE;
+    public static xRTViewFromByteToInt64 INSTANCE;
 
-    public xRTViewFromBitToByte(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xRTViewFromByteToInt64(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
         super(templates, structure, false);
 
@@ -50,16 +50,16 @@ public class xRTViewFromBitToByte
         {
         ConstantPool pool = pool();
         return pool.ensureParameterizedTypeConstant(
-                getInceptionClassConstant().getType(), pool.typeByte());
+                getInceptionClassConstant().getType(), pool.typeInt());
         }
 
     @Override
-    public DelegateHandle createBitViewDelegate(DelegateHandle hSource, TypeConstant typeElement,
+    public DelegateHandle createByteViewDelegate(DelegateHandle hSource, TypeConstant typeElement,
                                                 Mutability mutability)
         {
         if (hSource instanceof SliceHandle)
             {
-            // bits.slice().asByteArray() -> bits.asByteArray().slice()
+            // bytes.slice().asInt64Array() -> bytes.asInt64Array().slice()
             SliceHandle hSlice = (SliceHandle) hSource;
             ViewHandle  hView  = new ViewHandle(getCanonicalClass(), hSlice.f_hSource, mutability);
 
@@ -79,11 +79,19 @@ public class xRTViewFromBitToByte
         DelegateHandle hSource = hView.f_hSource;
         ClassTemplate  tSource = hSource.getTemplate();
 
-        if (tSource instanceof BitView)
+        if (tSource instanceof ByteView)
             {
-            byte[] abBits = ((BitView) tSource).getBits(hSource, ofStart, cSize, fReverse);
+            ByteView tView = (ByteView) tSource;
 
-            return xRTByteDelegate.INSTANCE.makeHandle(abBits, cSize, mutability);
+            long[] alValue = new long[(int) cSize];
+            for (int i = 0; i < cSize; i++)
+                {
+                byte[] ab = tView.getBytes(hSource, ofStart + i*8, 8, fReverse);
+
+                alValue[i] = Handy.byteArrayToLong(ab, 0);
+                }
+
+            return xRTIntDelegate.INSTANCE.makeHandle(alValue, mutability);
             }
 
         throw new UnsupportedOperationException();
@@ -98,11 +106,11 @@ public class xRTViewFromBitToByte
 
         if (tSource instanceof ByteView)
             {
-            // the underlying delegate is a bit view, which is a ByteView
             ByteView tView = (ByteView) tSource;
 
-            return frame.assignValue(iReturn,
-                xUInt8.INSTANCE.makeJavaLong(tView.extractByte(hSource, lIndex)));
+            byte[] ab = tView.getBytes(hSource, lIndex*8, 8, false);
+
+            return frame.assignValue(iReturn, xInt64.makeHandle(Handy.byteArrayToLong(ab, 0)));
             }
 
         throw new UnsupportedOperationException();
@@ -118,60 +126,20 @@ public class xRTViewFromBitToByte
 
         if (tSource instanceof ByteView)
             {
-            // the underlying delegate is a bit view, which is a ByteView
             ByteView tView = (ByteView) tSource;
 
-            tView.assignByte(hSource, lIndex, (byte) ((JavaLong) hValue).getValue());
+            long lValue = ((JavaLong) hValue).getValue();
+
+            tView.assignByte(hSource, (lIndex++)*8, (byte) ((lValue >>> 56) & 0xFF));
+            tView.assignByte(hSource, (lIndex++)*8, (byte) ((lValue >>> 48) & 0xFF));
+            tView.assignByte(hSource, (lIndex++)*8, (byte) ((lValue >>> 40) & 0xFF));
+            tView.assignByte(hSource, (lIndex++)*8, (byte) ((lValue >>> 32) & 0xFF));
+            tView.assignByte(hSource, (lIndex++)*8, (byte) ((lValue >>> 24) & 0xFF));
+            tView.assignByte(hSource, (lIndex++)*8, (byte) ((lValue >>> 16) & 0xFF));
+            tView.assignByte(hSource, (lIndex++)*8, (byte) ((lValue >>>  8) & 0xFF));
+            tView.assignByte(hSource, (lIndex  )*8, (byte) ((lValue       ) & 0xFF));
+
             return Op.R_NEXT;
-            }
-
-        throw new UnsupportedOperationException();
-        }
-
-
-    // ----- ByteView implementation ---------------------------------------------------------------
-
-    @Override
-    public byte[] getBytes(DelegateHandle hDelegate, long ofStart, long cBytes, boolean fReverse)
-        {
-        ViewHandle     hView   = (ViewHandle) hDelegate;
-        DelegateHandle hSource = hView.f_hSource;
-        ClassTemplate  tSource = hSource.getTemplate();
-
-        if (tSource instanceof ByteView)
-            {
-            return ((ByteView) tSource).getBytes(hSource, ofStart, cBytes, fReverse);
-            }
-
-        throw new UnsupportedOperationException();
-        }
-
-    @Override
-    public byte extractByte(DelegateHandle hDelegate, long of)
-        {
-        ViewHandle     hView   = (ViewHandle) hDelegate;
-        DelegateHandle hSource = hView.f_hSource;
-        ClassTemplate  tSource = hSource.getTemplate();
-
-        if (tSource instanceof ByteView)
-            {
-            return ((ByteView) tSource).extractByte(hSource, of);
-            }
-
-        throw new UnsupportedOperationException();
-        }
-
-    @Override
-    public void assignByte(DelegateHandle hDelegate, long of, byte bValue)
-        {
-        ViewHandle     hView   = (ViewHandle) hDelegate;
-        DelegateHandle hSource = hView.f_hSource;
-        ClassTemplate  tSource = hSource.getTemplate();
-
-        if (tSource instanceof ByteView)
-            {
-            ((ByteView) tSource).assignByte(hSource, of, bValue);
-            return;
             }
 
         throw new UnsupportedOperationException();
@@ -181,7 +149,7 @@ public class xRTViewFromBitToByte
     // ----- handle --------------------------------------------------------------------------------
 
     /**
-     * DelegateArray<Byte> view delegate.
+     * DelegateArray<Int> view delegate.
      */
     protected static class ViewHandle
             extends DelegateHandle

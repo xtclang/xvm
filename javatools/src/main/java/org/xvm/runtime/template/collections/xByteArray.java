@@ -22,6 +22,7 @@ import org.xvm.runtime.template._native.collections.arrays.BitView;
 import org.xvm.runtime.template._native.collections.arrays.ByteView;
 import org.xvm.runtime.template._native.collections.arrays.xRTDelegate.DelegateHandle;
 import org.xvm.runtime.template._native.collections.arrays.xRTSlicingDelegate.SliceHandle;
+import org.xvm.runtime.template._native.collections.arrays.xRTViewFromByte;
 
 import org.xvm.util.Handy;
 
@@ -49,6 +50,7 @@ public class xByteArray
         {
         ClassTemplate mixin = f_templates.getTemplate("collections.arrays.ByteArray");
 
+        mixin.markNativeMethod("asInt64Array", VOID, null);
         mixin.markNativeMethod("toBitArray", null, null);
         mixin.markNativeMethod("toInt64", VOID, null);
 
@@ -109,6 +111,25 @@ public class xByteArray
         {
         switch (method.getName())
             {
+            case "asInt64Array":
+                {
+                ArrayHandle hArray = (ArrayHandle) hTarget;
+
+                if (hArray.m_hDelegate.m_cSize % 8 != 0)
+                    {
+                    return frame.raiseException(
+                            xException.illegalArgument(frame,
+                                "Invalid array size: " + hArray.m_hDelegate.m_cSize));
+                    }
+
+                Mutability     mutability = hArray.m_mutability;
+                DelegateHandle hView      = xRTViewFromByte.INSTANCE.createByteViewDelegate(
+                        hArray.m_hDelegate, frame.poolContext().typeInt(), mutability);
+
+                return frame.assignValue(iReturn,
+                        new ArrayHandle(xIntArray.INSTANCE.getCanonicalClass(), hView, mutability));
+                }
+
             case "toInt64":
                 {
                 byte[] ab = getBytes((ArrayHandle) hTarget);

@@ -272,6 +272,14 @@ public class xRTIntDelegate
         return alNew;
         }
 
+
+    // ----- handle --------------------------------------------------------------------------------
+
+    public IntArrayHandle makeHandle(long[] alValue, Mutability mutability)
+        {
+        return new IntArrayHandle(getCanonicalClass(), alValue, alValue.length, mutability);
+        }
+
     public static class IntArrayHandle
             extends DelegateHandle
         {
