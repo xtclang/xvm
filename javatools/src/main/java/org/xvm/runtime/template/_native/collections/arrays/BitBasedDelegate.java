@@ -26,6 +26,7 @@ import org.xvm.runtime.template.numbers.xInt64;
  */
 public abstract class BitBasedDelegate
         extends xRTDelegate
+        implements BitView
     {
     public static BitBasedDelegate INSTANCE;
 
@@ -87,18 +88,8 @@ public abstract class BitBasedDelegate
         hDelegate.m_cSize = cSize;
         }
 
-    @Override
-    protected DelegateHandle createCopyImpl(DelegateHandle hTarget, Mutability mutability,
-                                            int ofStart, int cSize, boolean fReverse)
-        {
-        BitArrayHandle hDelegate = (BitArrayHandle) hTarget;
 
-        byte[] abBits = getBits(hDelegate, ofStart, cSize, fReverse);
-        return new BitArrayHandle(hDelegate.getComposition(), abBits, cSize, mutability);
-        }
-
-
-    // ----- delegate API --------------------------------------------------------------------------
+    // ----- RTDelegate API ------------------------------------------------------------------------
 
     @Override
     public int getPropertyCapacity(Frame frame, ObjectHandle hTarget, int iReturn)
@@ -114,9 +105,9 @@ public abstract class BitBasedDelegate
         BitArrayHandle hDelegate = (BitArrayHandle) hTarget;
 
         byte[] abOld = hDelegate.m_abValue;
-        int    nSize = hDelegate.m_cSize;
+        long   cSize = hDelegate.m_cSize;
 
-        if (nCapacity < nSize)
+        if (nCapacity < cSize)
             {
             return frame.raiseException(
                 xException.illegalArgument(frame, "Capacity cannot be less then size"));
@@ -131,60 +122,6 @@ public abstract class BitBasedDelegate
             System.arraycopy(abOld, 0, abNew, 0, abOld.length);
             hDelegate.m_abValue = abNew;
             }
-        return Op.R_NEXT;
-        }
-
-    @Override
-    public int extractArrayValue(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
-        {
-        BitArrayHandle hDelegate = (BitArrayHandle) hTarget;
-
-        if (lIndex < 0 || lIndex >= hDelegate.m_cSize)
-            {
-            return frame.raiseException(xException.outOfBounds(frame, lIndex, hDelegate.m_cSize));
-            }
-        return frame.assignValue(iReturn, makeBitHandle(getBit(hDelegate.m_abValue, (int) lIndex)));
-        }
-
-    @Override
-    public int assignArrayValue(Frame frame, ObjectHandle hTarget, long lIndex, ObjectHandle hValue)
-        {
-        BitArrayHandle hDelegate = (BitArrayHandle) hTarget;
-
-        int cSize = hDelegate.m_cSize;
-
-        if (lIndex < 0 || lIndex > cSize)
-            {
-            return frame.raiseException(xException.outOfBounds(frame, lIndex, cSize));
-            }
-
-        switch (hDelegate.getMutability())
-            {
-            case Constant:
-                return frame.raiseException(xException.immutableObject(frame));
-
-            case Persistent:
-                return frame.raiseException(xException.unsupportedOperation(frame));
-            }
-
-        byte[] abValue = hDelegate.m_abValue;
-        if (lIndex == cSize)
-            {
-            // an array can only grow without any "holes"
-            if (index(cSize) > abValue.length)
-                {
-                if (hDelegate.getMutability() == Mutability.Fixed)
-                    {
-                    return frame.raiseException(xException.readOnly(frame));
-                    }
-
-                abValue = hDelegate.m_abValue = grow(abValue, storage(cSize) + 1);
-                }
-
-            hDelegate.m_cSize++;
-            }
-
-        setBit(abValue, (int) lIndex, isSet(hValue));
         return Op.R_NEXT;
         }
 
@@ -216,19 +153,60 @@ public abstract class BitBasedDelegate
         }
 
     @Override
-    protected void insertElementImpl(DelegateHandle hTarget, ObjectHandle hElement, int nIndex)
+    protected DelegateHandle createCopyImpl(DelegateHandle hTarget, Mutability mutability,
+                                            long ofStart, long cSize, boolean fReverse)
         {
         BitArrayHandle hDelegate = (BitArrayHandle) hTarget;
-        int            cSize   = hDelegate.m_cSize;
-        byte[]         abValue = hDelegate.m_abValue;
+
+        byte[] abBits = getBits(hDelegate, ofStart, cSize, fReverse);
+        return new BitArrayHandle(hDelegate.getComposition(), abBits, cSize, mutability);
+        }
+
+    @Override
+    protected int extractArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex, int iReturn)
+        {
+        BitArrayHandle hDelegate = (BitArrayHandle) hTarget;
+
+        return frame.assignValue(iReturn, makeBitHandle(getBit(hDelegate.m_abValue, (int) lIndex)));
+        }
+
+    @Override
+    protected int assignArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex,
+                                       ObjectHandle hValue)
+        {
+        BitArrayHandle hDelegate = (BitArrayHandle) hTarget;
+
+        long   cSize   = hDelegate.m_cSize;
+        byte[] abValue = hDelegate.m_abValue;
+
+        if (lIndex == cSize)
+            {
+            if (index(cSize) == abValue.length)
+                {
+                abValue = hDelegate.m_abValue = grow(abValue, storage(cSize) + 1);
+                }
+
+            hDelegate.m_cSize++;
+            }
+
+        setBit(abValue, (int) lIndex, isSet(hValue));
+        return Op.R_NEXT;
+        }
+
+    @Override
+    protected void insertElementImpl(DelegateHandle hTarget, ObjectHandle hElement, long lIndex)
+        {
+        BitArrayHandle hDelegate = (BitArrayHandle) hTarget;
+        long           cSize     = hDelegate.m_cSize;
+        byte[]         abValue   = hDelegate.m_abValue;
 
         if (cSize == abValue.length)
             {
-            abValue = hDelegate.m_abValue = grow(hDelegate.m_abValue, cSize + 1);
+            abValue = hDelegate.m_abValue = grow(hDelegate.m_abValue, storage(cSize) + 1);
             }
         hDelegate.m_cSize++;
 
-        if (nIndex == -1 || nIndex == cSize)
+        if (lIndex == cSize)
             {
             setBit(abValue, cSize, isSet(hElement));
             }
@@ -239,16 +217,16 @@ public abstract class BitBasedDelegate
         }
 
     @Override
-    protected void deleteElementImpl(DelegateHandle hTarget, int nIndex)
+    protected void deleteElementImpl(DelegateHandle hTarget, long lIndex)
         {
         BitArrayHandle hDelegate = (BitArrayHandle) hTarget;
-        int            cSize     = hDelegate.m_cSize;
+        long           cSize     = hDelegate.m_cSize;
         byte[]         abValue   = hDelegate.m_abValue;
 
-        if (nIndex < cSize - 1)
+        if (lIndex < cSize - 1)
             {
             // TODO: improve naive implementation below by changing a byte at the time
-            for (int i = nIndex + 1; i < cSize; i++)
+            for (long i = lIndex + 1; i < cSize; i++)
                 {
                 setBit(abValue, i - 1, getBit(abValue, i));
                 }
@@ -268,20 +246,22 @@ public abstract class BitBasedDelegate
     protected abstract ObjectHandle makeBitHandle(boolean f);
 
 
-    // ----- helper methods ------------------------------------------------------------------------
+    // ----- BitView implementation ----------------------------------------------------------------
 
-    public static byte[] getBits(BitArrayHandle hBits, int ofStart, int cSize, boolean fReverse)
+    @Override
+    public byte[] getBits(DelegateHandle hDelegate, long ofStart, long cBits, boolean fReverse)
         {
-        int    cBits = hBits.m_cSize;
+        BitArrayHandle hBits = (BitArrayHandle) hDelegate;
+
         byte[] abSrc = hBits.m_abValue;
 
         if (hBits.getMutability() == Mutability.Constant &&
-                ofStart == 0 && cBits == cSize && !fReverse)
+                ofStart == 0 && cBits == hBits.m_cSize && !fReverse)
             {
             return abSrc;
             }
 
-        int    cBytes = storage(cSize);
+        int    cBytes = storage(cBits);
         byte[] abDst;
         if (ofStart == 0)
             {
@@ -290,34 +270,84 @@ public abstract class BitBasedDelegate
         else
             {
             abDst = new byte[cBytes];
-            for (int i = 0; i < cSize; i++)
+            for (int i = 0; i < cBits; i++)
                 {
-                if (getBit(abSrc, i + ofStart))
+                if (getBit(abSrc, i + (int) ofStart))
                     {
                     setBit(abDst, i, true);
                     }
                 }
             }
 
-        return fReverse ? reverse(abDst, cSize) : abDst;
+        return fReverse ? reverseBits(abDst, cBits) : abDst;
         }
 
-    private static byte[] reverse(byte[] abValue, int cSize)
+    @Override
+    public boolean extractBit(DelegateHandle hDelegate, long of)
         {
-        byte[] abValueR = new byte[abValue.length];
-        for (int i = 0; i < cSize; i++)
+        BitArrayHandle hBits = (BitArrayHandle) hDelegate;
+
+        return getBit(hBits.m_abValue, (int) of);
+        }
+
+    @Override
+    public void assignBit(DelegateHandle hDelegate, long of, boolean fBit)
+        {
+        BitArrayHandle hBits = (BitArrayHandle) hDelegate;
+
+        setBit(hBits.m_abValue, (int) of, fBit);
+        }
+
+
+    // ----- ByteView implementation ---------------------------------------------------------------
+
+    @Override
+    public byte[] getBytes(DelegateHandle hDelegate, long ofStart, long cBytes, boolean fReverse)
+        {
+        return getBits(hDelegate, ofStart*8, cBytes*8, fReverse);
+        }
+
+    @Override
+    public byte extractByte(DelegateHandle hDelegate, long of)
+        {
+        BitArrayHandle hBits = (BitArrayHandle) hDelegate;
+
+        return hBits.m_abValue[(int) of];
+        }
+
+    @Override
+    public void assignByte(DelegateHandle hDelegate, long of, byte bValue)
+        {
+        BitArrayHandle hBits = (BitArrayHandle) hDelegate;
+
+        hBits.m_abValue[(int) of] = bValue;
+        }
+
+
+    // ----- helper methods ------------------------------------------------------------------------
+
+    /**
+     * Reverse the array of bits represented by the specified array.
+     *
+     * @param abBits the bit array
+     * @param cBits  the actual number of bits held by the array
+     */
+    public static byte[] reverseBits(byte[] abBits, long cBits)
+        {
+        byte[] abValueR = new byte[abBits.length];
+        for (int i = 0; i < cBits; i++)
             {
-            if (getBit(abValue, i))
+            if (getBit(abBits, i))
                 {
-                setBit(abValueR, cSize - 1 - i, true);
+                setBit(abValueR, cBits - 1 - i, true);
                 }
             }
         return abValueR;
         }
 
-    private static byte[] grow(byte[] abValue, int cSize)
+    private static byte[] grow(byte[] abValue, int cBytes)
         {
-        int cCapacity = calculateCapacity(abValue.length, cSize);
+        int cCapacity = calculateCapacity(abValue.length, cBytes);
 
         byte[] abNew = new byte[cCapacity];
         System.arraycopy(abValue, 0, abNew, 0, abValue.length);
@@ -331,9 +361,9 @@ public abstract class BitBasedDelegate
      *
      * @return the byte array size
      */
-    public static int storage(int cBits)
+    public static int storage(long cBits)
         {
-        return (cBits - 1) / 8 + 1;
+        return (int) ((cBits - 1) / 8 + 1);
         }
 
     /**
@@ -344,7 +374,7 @@ public abstract class BitBasedDelegate
      *
      * @return true iff the bit is set
      */
-    public static boolean getBit(byte[] abValue, int iIndex)
+    private static boolean getBit(byte[] abValue, long iIndex)
         {
         return (abValue[index(iIndex)] & bitMask(iIndex)) != 0;
         }
@@ -356,7 +386,7 @@ public abstract class BitBasedDelegate
      * @param iIndex   the bit index
      * @param fSet     true if the bit is to be set; false for clear
      */
-    public static void setBit(byte[] abValue, int iIndex, boolean fSet)
+    private static void setBit(byte[] abValue, long iIndex, boolean fSet)
         {
         if (fSet)
             {
@@ -375,9 +405,9 @@ public abstract class BitBasedDelegate
      *
      * @return the byte index
      */
-    public static int index(int iBit)
+    private static int index(long iBit)
         {
-        return iBit / 8;
+        return (int) (iBit / 8);
         }
 
     /**
@@ -387,7 +417,7 @@ public abstract class BitBasedDelegate
      *
      * @return the mask
      */
-    public static int bitMask(int iBit)
+    private static int bitMask(long iBit)
         {
         return 0x80 >>> (iBit & 0x7);
         }
@@ -399,7 +429,7 @@ public abstract class BitBasedDelegate
      *
      * @return the tail mask (all zeros pass the bit's position)
      */
-    public static byte tailMask(int iBit)
+    public static byte tailMask(long iBit)
         {
         return (byte) (0x80 >> (iBit & 0x7));
         }
@@ -415,7 +445,7 @@ public abstract class BitBasedDelegate
         {
         public byte[] m_abValue;
 
-        public BitArrayHandle(TypeComposition clazz, byte[] abValue, int cBits, Mutability mutability)
+        public BitArrayHandle(TypeComposition clazz, byte[] abValue, long cBits, Mutability mutability)
             {
             super(clazz, mutability);
 
@@ -451,13 +481,13 @@ public abstract class BitBasedDelegate
         public int compareTo(ObjectHandle that)
             {
             byte[] abThis = m_abValue;
-            int    cThis  = m_cSize;
+            long   cThis  = m_cSize;
             byte[] abThat = ((BitArrayHandle) that).m_abValue;
-            int    cThat  = ((BitArrayHandle) that).m_cSize;
+            long   cThat  = ((BitArrayHandle) that).m_cSize;
 
             if (cThis != cThat)
                 {
-                return cThis - cThat;
+                return (int) (cThis - cThat);
                 }
 
             for (int i = 0, c = storage(cThis); i < c; i++)

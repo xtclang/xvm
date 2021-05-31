@@ -34,9 +34,6 @@ import org.xvm.runtime.template.numbers.xInt64;
 import org.xvm.runtime.template.numbers.xUInt64;
 import org.xvm.runtime.template.numbers.xUInt8;
 
-import org.xvm.runtime.template._native.collections.arrays.BitBasedDelegate.BitArrayHandle;
-import org.xvm.runtime.template._native.collections.arrays.xRTByteDelegate.ByteArrayHandle;
-
 
 /**
  * An injectable "Random" number generator.
@@ -87,20 +84,20 @@ public class xRTRandom
                     return frame.raiseException(xException.immutableObject(frame));
                     }
 
+                long cSize = hArray.m_hDelegate.m_cSize;
                 if (hArray.getTemplate() instanceof xBitArray)
                     {
-                    int    cSize = xBitArray.getSize(hArray);
-                    byte[] ab    = new byte[cSize];
+                    byte[] ab = new byte[(int) (cSize / 8)];
                     rnd(hTarget).nextBytes(ab);
                     xBitArray.setBits(hArray, ab);
                     }
                 else
                     {
-                    int    cSize = xByteArray.getSize(hArray);
-                    byte[] ab    = new byte[cSize];
+                    byte[] ab = new byte[(int) cSize];
                     rnd(hTarget).nextBytes(ab);
                     xByteArray.setBytes(hArray, ab);
                     }
+                return Op.R_NEXT;
                 }
 
             case "int":

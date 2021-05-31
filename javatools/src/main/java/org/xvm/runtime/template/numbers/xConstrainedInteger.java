@@ -183,8 +183,8 @@ public abstract class xConstrainedInteger
                 {
                 // construct(Bit[] bits)
                 ArrayHandle hArray = (ArrayHandle) ahVar[0];
-                byte[] abBits = xBitArray.getBits(hArray);
-                int    cBits  = xBitArray.getSize(hArray);
+                byte[]      abBits = xBitArray.getBits(hArray);
+                int         cBits  = (int) hArray.m_hDelegate.m_cSize;
 
                 return cBits == f_cNumBits
                     ? convertLong(frame, fromByteArray(abBits, cBits >>> 3, f_fSigned), iReturn, f_fChecked)

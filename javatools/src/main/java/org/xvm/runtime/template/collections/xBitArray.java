@@ -16,10 +16,10 @@ import org.xvm.runtime.template.xException;
 
 import org.xvm.runtime.template.numbers.xUInt8;
 
-import org.xvm.runtime.template._native.collections.arrays.BitBasedDelegate.BitArrayHandle;
-import org.xvm.runtime.template._native.collections.arrays.xRTBitDelegate;
+import org.xvm.runtime.template._native.collections.arrays.BitView;
 import org.xvm.runtime.template._native.collections.arrays.xRTDelegate.DelegateHandle;
 import org.xvm.runtime.template._native.collections.arrays.xRTSlicingDelegate.SliceHandle;
+import org.xvm.runtime.template._native.collections.arrays.xRTViewFromBit;
 
 
 /**
@@ -45,6 +45,7 @@ public class xBitArray
         {
         ClassTemplate mixin = f_templates.getTemplate("collections.arrays.BitArray");
 
+        mixin.markNativeMethod("asByteArray", VOID, null);
         mixin.markNativeMethod("toUInt8", VOID, null);
         mixin.markNativeMethod("toByteArray", null, null);
 
@@ -66,7 +67,7 @@ public class xBitArray
             case "toByteArray":
                 {
                 ArrayHandle hArray = (ArrayHandle) hTarget;
-                int         cBits = getSize(hArray);
+                long        cBits  = hArray.m_hDelegate.m_cSize;
 
                 if (cBits % 8 != 0)
                     {
@@ -93,13 +94,31 @@ public class xBitArray
         {
         switch (method.getName())
             {
+            case "asByteArray":
+                {
+                ArrayHandle hArray = (ArrayHandle) hTarget;
+                long        cBits  = hArray.m_hDelegate.m_cSize;
+                if (cBits % 8 != 0)
+                    {
+                    return frame.raiseException(xException.outOfBounds(
+                            frame, "Invalid array size: " + cBits));
+                    }
+
+                Mutability     mutability = hArray.m_mutability;
+                DelegateHandle hDelegate  = xRTViewFromBit.INSTANCE.createBitViewDelegate(
+                        hArray.m_hDelegate, frame.poolContext().typeByte(), mutability);
+
+                return frame.assignValue(iReturn, new ArrayHandle(
+                        xByteArray.INSTANCE.getCanonicalClass(), hDelegate, mutability));
+                }
+
             case "toUInt8":
                 {
                 ArrayHandle hArray = (ArrayHandle) hTarget;
-                int         cBits  = getSize(hArray);
                 byte[]      abBits = getBits(hArray);
+                long        cBits  = hArray.m_hDelegate.m_cSize;
 
-                switch (cBits)
+                switch ((int) cBits)
                     {
                     case 0:
                         return frame.assignValue(iReturn, xUInt8.INSTANCE.makeJavaLong(0));
@@ -122,44 +141,57 @@ public class xBitArray
         }
 
     /**
-     * Extract a array of bits from the Array<Bit> handle.
+     * Extract a array of bits from the ArrayDelegate<Bit> handle.
      */
     public static byte[] getBits(ArrayHandle hArray)
         {
         DelegateHandle hDelegate = hArray.m_hDelegate;
+
+        long    cSize    = hDelegate.m_cSize;
+        long    ofStart  = 0;
+        boolean fReverse = false;
+
         if (hDelegate instanceof SliceHandle)
             {
-            SliceHandle    hSlice = (SliceHandle) hDelegate;
-            BitArrayHandle hBits  = (BitArrayHandle) hSlice.f_hSource;
-            return xRTBitDelegate.getBits(hBits,
-                    hSlice.f_ofStart, hSlice.m_cSize, hSlice.f_fReverse);
+            SliceHandle hSlice = (SliceHandle) hDelegate;
+            hDelegate = hSlice.f_hSource;
+            ofStart   = hSlice.f_ofStart;
+            fReverse  = hSlice.f_fReverse;
             }
 
-        if (hDelegate instanceof BitArrayHandle)
+        ClassTemplate tDelegate = hDelegate.getTemplate();
+        if (tDelegate instanceof BitView)
             {
-            BitArrayHandle hBits = (BitArrayHandle) hDelegate;
-            return xRTBitDelegate.getBits(hBits, 0, hBits.m_cSize, false);
+            return ((BitView) tDelegate).getBits(hDelegate, ofStart, cSize, fReverse);
             }
         throw new UnsupportedOperationException();
         }
 
+    /**
+     * Copy bytes from the specified array.
+     */
     public static void setBits(ArrayHandle hArray, byte[] abVal)
         {
         DelegateHandle hDelegate = hArray.m_hDelegate;
+
+        long ofStart = 0;
+
         if (hDelegate instanceof SliceHandle)
             {
-            SliceHandle    hSlice = (SliceHandle) hDelegate;
-            BitArrayHandle hBits  = (BitArrayHandle) hSlice.f_hSource;
-
-            System.arraycopy(abVal, 0, hBits.m_abValue, hSlice.f_ofStart, abVal.length);
-            return;
+            SliceHandle hSlice = (SliceHandle) hDelegate;
+            hDelegate = hSlice.f_hSource;
+            ofStart   = hSlice.f_ofStart;
             }
 
-        if (hDelegate instanceof BitArrayHandle)
+        ClassTemplate tDelegate = hDelegate.getTemplate();
+        if (tDelegate instanceof BitView)
             {
-            BitArrayHandle hBits = (BitArrayHandle) hDelegate;
-            System.arraycopy(abVal, 0, hBits.m_abValue, 0, abVal.length);
-            return;
+            BitView tView = (BitView) tDelegate;
+
+            for (int i = 0, c = abVal.length; i < c; i++)
+                {
+                tView.assignByte(hDelegate, (ofStart/8) + i, abVal[i]);
+                }
             }
         throw new UnsupportedOperationException();
         }

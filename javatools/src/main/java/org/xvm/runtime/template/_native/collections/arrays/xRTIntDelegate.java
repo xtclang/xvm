@@ -56,141 +56,6 @@ public class xRTIntDelegate
         }
 
     @Override
-    public DelegateHandle createDelegate(TypeConstant typeElement, int cCapacity,
-                                         ObjectHandle[] ahContent, Mutability mutability)
-        {
-        int    cSize = ahContent.length;
-        long[] al    = new long[cCapacity];
-        for (int i = 0; i < cSize; i++)
-            {
-            al[i] = ((JavaLong) ahContent[i]).getValue();
-            }
-        return new IntArrayHandle(getCanonicalClass(), al, cSize, mutability);
-        }
-
-    @Override
-    public void fill(DelegateHandle hTarget, int cSize, ObjectHandle hValue)
-        {
-        IntArrayHandle hDelegate = (IntArrayHandle) hTarget;
-
-        Arrays.fill(hDelegate.m_alValue, 0, cSize, ((JavaLong) hValue).getValue());
-        hDelegate.m_cSize = cSize;
-        }
-
-    @Override
-    protected DelegateHandle createCopyImpl(DelegateHandle hTarget, Mutability mutability,
-                                            int ofStart, int cSize, boolean fReverse)
-        {
-        IntArrayHandle hDelegate = (IntArrayHandle) hTarget;
-
-        long[] alValue = Arrays.copyOfRange(hDelegate.m_alValue, ofStart, ofStart + cSize);
-        if (fReverse)
-            {
-            alValue = reverse(alValue, cSize);
-            }
-
-        return new IntArrayHandle(hDelegate.getComposition(), alValue, cSize, mutability);
-        }
-
-
-    // ----- delegate API --------------------------------------------------------------------------
-
-    @Override
-    public int getPropertyCapacity(Frame frame, ObjectHandle hTarget, int iReturn)
-        {
-        IntArrayHandle hDelegate = (IntArrayHandle) hTarget;
-
-        return frame.assignValue(iReturn, xInt64.makeHandle(hDelegate.m_alValue.length));
-        }
-
-    @Override
-    public int setPropertyCapacity(Frame frame, ObjectHandle hTarget, long nCapacity)
-        {
-        IntArrayHandle hDelegate = (IntArrayHandle) hTarget;
-
-        long[] alOld = hDelegate.m_alValue;
-        int    nSize = hDelegate.m_cSize;
-
-        if (nCapacity < nSize)
-            {
-            return frame.raiseException(
-                xException.illegalArgument(frame, "Capacity cannot be less then size"));
-            }
-
-        // for now, no trimming
-        int nCapacityOld = alOld.length;
-        if (nCapacity > nCapacityOld)
-            {
-            long[] alNew = new long[(int) nCapacity];
-            System.arraycopy(alOld, 0, alNew, 0, alOld.length);
-            hDelegate.m_alValue = alNew;
-            }
-        return Op.R_NEXT;
-        }
-
-    @Override
-    public int extractArrayValue(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
-        {
-        IntArrayHandle hDelegate = (IntArrayHandle) hTarget;
-
-        if (lIndex < 0 || lIndex >= hDelegate.m_cSize)
-            {
-            return frame.raiseException(xException.outOfBounds(frame, lIndex, hDelegate.m_cSize));
-            }
-        return frame.assignValue(iReturn, xInt64.makeHandle(hDelegate.m_alValue[(int) lIndex]));
-        }
-
-    @Override
-    public int assignArrayValue(Frame frame, ObjectHandle hTarget, long lIndex, ObjectHandle hValue)
-        {
-        IntArrayHandle hDelegate = (IntArrayHandle) hTarget;
-
-        int cSize = hDelegate.m_cSize;
-
-        if (lIndex < 0 || lIndex > cSize)
-            {
-            return frame.raiseException(xException.outOfBounds(frame, lIndex, cSize));
-            }
-
-        switch (hDelegate.getMutability())
-            {
-            case Constant:
-                return frame.raiseException(xException.immutableObject(frame));
-
-            case Persistent:
-                return frame.raiseException(xException.unsupportedOperation(frame));
-            }
-
-        long[] alValue = hDelegate.m_alValue;
-        if (lIndex == cSize)
-            {
-            // an array can only grow without any "holes"
-            if (cSize == alValue.length)
-                {
-                if (hDelegate.getMutability() == Mutability.Fixed)
-                    {
-                    return frame.raiseException(xException.readOnly(frame));
-                    }
-
-                alValue = hDelegate.m_alValue = grow(alValue, cSize + 1);
-                }
-
-            hDelegate.m_cSize++;
-            }
-
-        try
-            {
-            alValue[(int) lIndex] = ((JavaLong) hValue).getValue();
-            return Op.R_NEXT;
-            }
-        catch (ClassCastException e)
-            {
-            return frame.raiseException(
-                xException.illegalCast(frame, hValue.getType().getValueString()));
-            }
-        }
-
-    @Override
     public int invokePreInc(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
         {
         IntArrayHandle hDelegate = (IntArrayHandle) hTarget;
@@ -232,10 +97,123 @@ public class xRTIntDelegate
         }
 
     @Override
-    protected void insertElementImpl(DelegateHandle hTarget, ObjectHandle hElement, int nIndex)
+    public DelegateHandle createDelegate(TypeConstant typeElement, int cCapacity,
+                                         ObjectHandle[] ahContent, Mutability mutability)
+        {
+        int    cSize = ahContent.length;
+        long[] al    = new long[cCapacity];
+        for (int i = 0; i < cSize; i++)
+            {
+            al[i] = ((JavaLong) ahContent[i]).getValue();
+            }
+        return new IntArrayHandle(getCanonicalClass(), al, cSize, mutability);
+        }
+
+
+    // ----- RTDelegate API ------------------------------------------------------------------------
+
+    @Override
+    public void fill(DelegateHandle hTarget, int cSize, ObjectHandle hValue)
         {
         IntArrayHandle hDelegate = (IntArrayHandle) hTarget;
-        int            cSize     = hDelegate.m_cSize;
+
+        Arrays.fill(hDelegate.m_alValue, 0, cSize, ((JavaLong) hValue).getValue());
+        hDelegate.m_cSize = cSize;
+        }
+
+    @Override
+    public int getPropertyCapacity(Frame frame, ObjectHandle hTarget, int iReturn)
+        {
+        IntArrayHandle hDelegate = (IntArrayHandle) hTarget;
+
+        return frame.assignValue(iReturn, xInt64.makeHandle(hDelegate.m_alValue.length));
+        }
+
+    @Override
+    public int setPropertyCapacity(Frame frame, ObjectHandle hTarget, long nCapacity)
+        {
+        IntArrayHandle hDelegate = (IntArrayHandle) hTarget;
+
+        long[] alOld = hDelegate.m_alValue;
+        int    cSize = (int) hDelegate.m_cSize;
+
+        if (nCapacity < cSize)
+            {
+            return frame.raiseException(
+                xException.illegalArgument(frame, "Capacity cannot be less then size"));
+            }
+
+        // for now, no trimming
+        int nCapacityOld = alOld.length;
+        if (nCapacity > nCapacityOld)
+            {
+            long[] alNew = new long[(int) nCapacity];
+            System.arraycopy(alOld, 0, alNew, 0, alOld.length);
+            hDelegate.m_alValue = alNew;
+            }
+        return Op.R_NEXT;
+        }
+
+    @Override
+    protected DelegateHandle createCopyImpl(DelegateHandle hTarget, Mutability mutability,
+                                            long ofStart, long cSize, boolean fReverse)
+        {
+        IntArrayHandle hDelegate = (IntArrayHandle) hTarget;
+
+        long[] alValue = Arrays.copyOfRange(hDelegate.m_alValue, (int) ofStart, (int) (ofStart + cSize));
+
+        if (fReverse)
+            {
+            alValue = reverse(alValue, (int) cSize);
+            }
+
+        return new IntArrayHandle(hDelegate.getComposition(), alValue, (int) cSize, mutability);
+        }
+
+    @Override
+    protected int extractArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex, int iReturn)
+        {
+        IntArrayHandle hDelegate = (IntArrayHandle) hTarget;
+
+        return frame.assignValue(iReturn, xInt64.makeHandle(hDelegate.m_alValue[(int) lIndex]));
+        }
+
+    @Override
+    protected int assignArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex,
+                                       ObjectHandle hValue)
+        {
+        IntArrayHandle hDelegate = (IntArrayHandle) hTarget;
+
+        int    cSize   = (int) hDelegate.m_cSize;
+        long[] alValue = hDelegate.m_alValue;
+
+        if (lIndex == cSize)
+            {
+            if (cSize == alValue.length)
+                {
+                alValue = hDelegate.m_alValue = grow(alValue, cSize + 1);
+                }
+
+            hDelegate.m_cSize++;
+            }
+
+        try
+            {
+            alValue[(int) lIndex] = ((JavaLong) hValue).getValue();
+            return Op.R_NEXT;
+            }
+        catch (ClassCastException e)
+            {
+            return frame.raiseException(
+                xException.illegalCast(frame, hValue.getType().getValueString()));
+            }
+        }
+
+    @Override
+    protected void insertElementImpl(DelegateHandle hTarget, ObjectHandle hElement, long lIndex)
+        {
+        IntArrayHandle hDelegate = (IntArrayHandle) hTarget;
+        int            cSize     = (int) hDelegate.m_cSize;
         long[]         alValue   = hDelegate.m_alValue;
 
         if (cSize == alValue.length)
@@ -244,36 +222,38 @@ public class xRTIntDelegate
             }
         hDelegate.m_cSize++;
 
-        if (nIndex == -1 || nIndex == cSize)
+        if (lIndex == cSize)
             {
             alValue[cSize] = ((JavaLong) hElement).getValue();
             }
         else
             {
             // insert
-            System.arraycopy(alValue, nIndex, alValue, nIndex+1, cSize-nIndex);
+            int nIndex = (int) lIndex;
+            System.arraycopy(alValue, nIndex, alValue, nIndex + 1, cSize - nIndex);
             alValue[nIndex] = ((JavaLong) hElement).getValue();
             }
         }
 
     @Override
-    protected void deleteElementImpl(DelegateHandle hTarget, int nIndex)
+    protected void deleteElementImpl(DelegateHandle hTarget, long lIndex)
         {
         IntArrayHandle hDelegate = (IntArrayHandle) hTarget;
-        int            cSize     = hDelegate.m_cSize;
+        int            cSize     = (int) hDelegate.m_cSize;
         long[]         alValue   = hDelegate.m_alValue;
 
-        if (nIndex < cSize - 1)
+        if (lIndex < cSize - 1)
             {
-            System.arraycopy(alValue, nIndex +1, alValue, nIndex, cSize- nIndex -1);
+            int nIndex = (int) lIndex;
+            System.arraycopy(alValue, nIndex + 1, alValue, nIndex, cSize - nIndex -1);
             }
-        alValue[--hDelegate.m_cSize] = 0;
+        alValue[(int) --hDelegate.m_cSize] = 0;
         }
 
 
     // ----- helper methods ------------------------------------------------------------------------
 
-    private static long[] reverse(long[] alValue, int cSize)
+    public static long[] reverse(long[] alValue, int cSize)
         {
         long[] alValueR = new long[cSize];
         for (int i = 0; i < cSize; i++)
@@ -316,9 +296,9 @@ public class xRTIntDelegate
         public int compareTo(ObjectHandle that)
             {
             long[] alThis = m_alValue;
-            int    cThis  = m_cSize;
+            int    cThis  = (int) m_cSize;
             long[] alThat = ((IntArrayHandle) that).m_alValue;
-            int    cThat  = ((IntArrayHandle) that).m_cSize;
+            int    cThat  = (int) ((IntArrayHandle) that).m_cSize;
 
             if (cThis != cThat)
                 {

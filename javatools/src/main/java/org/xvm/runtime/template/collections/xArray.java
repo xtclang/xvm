@@ -17,7 +17,6 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
-import org.xvm.asm.constants.UInt8ArrayConstant;
 
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
@@ -48,6 +47,7 @@ import org.xvm.runtime.template._native.collections.arrays.xRTByteDelegate;
 import org.xvm.runtime.template._native.collections.arrays.xRTCharDelegate;
 import org.xvm.runtime.template._native.collections.arrays.xRTDelegate;
 import org.xvm.runtime.template._native.collections.arrays.xRTDelegate.DelegateHandle;
+import org.xvm.runtime.template._native.collections.arrays.xRTViewToBit;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 
@@ -160,7 +160,6 @@ public class xArray
 
         ClassTemplate mixinNumber = f_templates.getTemplate("collections.arrays.NumberArray");
         mixinNumber.markNativeMethod("asBitArray" , VOID, null);
-        mixinNumber.markNativeMethod("asByteArray", VOID, null);
 
         getCanonicalType().invalidateTypeInfo();
         }
@@ -478,8 +477,21 @@ public class xArray
         switch (method.getName())
             {
             case "asBitArray":
-            case "asByteArray":
-                throw new UnsupportedOperationException("TODO GG");
+                {
+                ArrayHandle hArray = (ArrayHandle) hTarget;
+
+                // a bit view cannot naturally grow or shrink
+                Mutability mutability = hArray.m_mutability == Mutability.Constant ||
+                                        hArray.m_mutability == Mutability.Persistent
+                        ? Mutability.Constant
+                        : Mutability.Fixed;
+
+                DelegateHandle hView  =
+                        xRTViewToBit.INSTANCE.createBitViewDelegate(hArray.m_hDelegate, mutability);
+
+                return frame.assignValue(iReturn,
+                        new ArrayHandle(xBitArray.INSTANCE.getCanonicalClass(), hView, mutability));
+                }
 
             case "setElement":
                 return assignArrayValue(frame, hTarget, ((JavaLong) ahArg[0]).getValue(), ahArg[1]);
@@ -607,7 +619,7 @@ public class xArray
             --ixUpper;
             }
 
-        int cSize = hDelegate.m_cSize;
+        int cSize = (int) hDelegate.m_cSize;
         if (ixUpper >= cSize)
             {
             return frame.raiseException(xException.outOfBounds(frame, ixUpper, cSize));
@@ -682,14 +694,6 @@ public class xArray
             default:
                 throw new IllegalStateException();
             }
-        }
-
-    /**
-     * Return the size of the underlying array.
-     */
-    public static int getSize(ArrayHandle hArray)
-        {
-        return hArray.m_hDelegate.m_cSize;
         }
 
 
@@ -822,7 +826,7 @@ public class xArray
         @Override
         public String toString()
             {
-            return super.toString() + m_mutability + " " + m_hDelegate.toString();
+            return super.toString() + m_mutability + " -> " + m_hDelegate.toString();
             }
         }
 

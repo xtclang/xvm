@@ -4,21 +4,44 @@ module TestSimple.test.org
 
     void run()
         {
-        import ecstasy.fs.File;
-        import ecstasy.fs.FileStore;
+        Int[] ints  = [1, 2, 3];
+        reportBits("const", ints.asBitArray());
 
-        @Inject FileStore storage;
+        ints = ints.reify(Mutable);
+        Bit[] bits = ints.asBitArray();
+        reportBits("mutable", bits);
 
-        File file = storage.fileFor(Path:/Users/cameron/Development/xvm/test.txt);
-        file.contents = #12345678;
-        assert file.size == 4 && file.contents == #12345678;
-        file.append(#CAFE);
-        assert file.size == 6 && file.contents == #12345678CAFE;
-        file.truncate(3);
-        assert file.size == 3 && file.contents == #123456;
-        file.append(#DEADBEEF);
-        assert file.size == 7 && file.contents == #123456DEADBEEF;
-        file.truncate();
-        assert file.size == 0 && file.contents.size == 0;
+        reportBits("reified", bits.reify(Fixed)); // TODO GG: reify() is not working
+
+        bits[61] = 1;
+        console.println($"ints: {ints}");
+
+        bits = ints[1..2].asBitArray();
+        reportBits("slice", bits);
+
+        reportBits("reified slice", bits.reify(Persistent));
+
+        console.println($"\n*** bits as bytes");
+        console.println(bits.reify(Persistent).asByteArray());
+
+        console.println($"\n*** slice bits as bytes");
+        console.println(bits.reify(Persistent)[0..63].asByteArray());
+
+        console.println($"\n*** ints as bytes");
+        console.println(ints.asByteArray());
+        }
+
+    void reportBits(String test, Bit[] bits)
+        {
+        console.println($"\n*** {test}");
+        console.println($"bits: {bits.mutability} size={bits.size}");
+        for (Int i : [0..bits.size))
+            {
+            if (bits[i] == 1)
+                {
+                console.print($"[{i}]=1, ");
+                }
+            }
+        console.println();
         }
     }

@@ -63,13 +63,13 @@ public class xRTBitDelegate
      * Create a bit array handle.
      *
      * @param abValue     the underlying bytes
-     * @param cSize       the array arity
+     * @param cBits       the bit array arity
      * @param mutability  the mutability
      *
      * @return the array handle
      */
-    public BitArrayHandle makeHandle(byte[] abValue, int cSize, Mutability mutability)
+    public BitArrayHandle makeHandle(byte[] abValue, long cBits, Mutability mutability)
         {
-        return new BitArrayHandle(getCanonicalClass(), abValue, cSize, mutability);
+        return new BitArrayHandle(getCanonicalClass(), abValue, cBits, mutability);
         }
     }

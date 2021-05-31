@@ -18,10 +18,12 @@ import org.xvm.runtime.template.xException;
 
 import org.xvm.runtime.template.numbers.xInt64;
 
-import org.xvm.runtime.template._native.collections.arrays.xRTByteDelegate.ByteArrayHandle;
-import org.xvm.runtime.template._native.collections.arrays.xRTByteDelegate;
+import org.xvm.runtime.template._native.collections.arrays.BitView;
+import org.xvm.runtime.template._native.collections.arrays.ByteView;
 import org.xvm.runtime.template._native.collections.arrays.xRTDelegate.DelegateHandle;
 import org.xvm.runtime.template._native.collections.arrays.xRTSlicingDelegate.SliceHandle;
+
+import org.xvm.util.Handy;
 
 
 /**
@@ -114,24 +116,16 @@ public class xByteArray
                 if (ab.length != 8)
                     {
                     return frame.raiseException(
-                        xException.illegalArgument(frame, "Invalid array size: " + ab.length));
+                            xException.illegalArgument(frame, "Invalid array size: " + ab.length));
                     }
 
-                long l =   ((long) (ab[0])        << 56)
-                         + ((long) (ab[1] & 0xFF) << 48)
-                         + ((long) (ab[2] & 0xFF) << 40)
-                         + ((long) (ab[3] & 0xFF) << 32)
-                         + ((long) (ab[4] & 0xFF) << 24)
-                         + (       (ab[5] & 0xFF) << 16)
-                         + (       (ab[6] & 0xFF) << 8 )
-                         + (        ab[7] & 0xFF       );
-                return frame.assignValue(iReturn, xInt64.makeHandle(l));
+                return frame.assignValue(iReturn,
+                        xInt64.makeHandle(Handy.byteArrayToLong(ab, 0)));
                 }
             }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
         }
-
 
     /**
      * Extract a array of bytes from the Array<Byte> handle.
@@ -139,39 +133,51 @@ public class xByteArray
     public static byte[] getBytes(ArrayHandle hArray)
         {
         DelegateHandle hDelegate = hArray.m_hDelegate;
+        long           cSize     = hDelegate.m_cSize;
+        long           ofStart   = 0;
+        boolean        fReverse  = false;
+
         if (hDelegate instanceof SliceHandle)
             {
-            SliceHandle     hSlice = (SliceHandle) hDelegate;
-            ByteArrayHandle hBytes = (ByteArrayHandle) hSlice.f_hSource;
-            return xRTByteDelegate.getBytes(hBytes,
-                    hSlice.f_ofStart, hSlice.m_cSize, hSlice.f_fReverse);
+            SliceHandle hSlice = (SliceHandle) hDelegate;
+            hDelegate = hSlice.f_hSource;
+            ofStart   = hSlice.f_ofStart;
+            fReverse  = hSlice.f_fReverse;
             }
 
-        if (hDelegate instanceof ByteArrayHandle)
+        ClassTemplate tDelegate = hDelegate.getTemplate();
+        if (tDelegate instanceof ByteView)
             {
-            ByteArrayHandle hBytes = (ByteArrayHandle) hDelegate;
-            return xRTByteDelegate.getBytes(hBytes, 0, hBytes.m_cSize, false);
+            return ((ByteView) tDelegate).getBytes(hDelegate, ofStart, cSize, fReverse);
             }
         throw new UnsupportedOperationException();
         }
 
+    /**
+     * Copy bytes from the specified array.
+     */
     public static void setBytes(ArrayHandle hArray, byte[] abVal)
         {
         DelegateHandle hDelegate = hArray.m_hDelegate;
+
+        long ofStart = 0;
+
         if (hDelegate instanceof SliceHandle)
             {
-            SliceHandle     hSlice = (SliceHandle) hDelegate;
-            ByteArrayHandle hBytes = (ByteArrayHandle) hSlice.f_hSource;
-
-            System.arraycopy(abVal, 0, hBytes.m_abValue, hSlice.f_ofStart, abVal.length);
-            return;
+            SliceHandle hSlice = (SliceHandle) hDelegate;
+            hDelegate = hSlice.f_hSource;
+            ofStart   = hSlice.f_ofStart;
             }
 
-        if (hDelegate instanceof ByteArrayHandle)
+        ClassTemplate tDelegate = hDelegate.getTemplate();
+        if (tDelegate instanceof BitView)
             {
-            ByteArrayHandle hBytes = (ByteArrayHandle) hDelegate;
-            System.arraycopy(abVal, 0, hBytes.m_abValue, 0, abVal.length);
-            return;
+            ByteView tView = (ByteView) tDelegate;
+
+            for (int i = 0, c = abVal.length; i < c; i++)
+                {
+                tView.assignByte(hDelegate, ofStart + i, abVal[i]);
+                }
             }
         throw new UnsupportedOperationException();
         }

@@ -121,7 +121,7 @@ abstract public class BaseFP
                 {
                 ArrayHandle hArray = (ArrayHandle) ahVar[0];
                 byte[]      abBits = xBitArray.getBits(hArray);
-                int         cBits  = xBitArray.getSize(hArray);
+                int         cBits  = (int) hArray.m_hDelegate.m_cSize;
 
                 return cBits == f_cBits
                     ? frame.assignValue(iReturn, makeHandle(abBits, cBits >>> 3))

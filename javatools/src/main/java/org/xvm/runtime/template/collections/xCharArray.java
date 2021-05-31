@@ -55,13 +55,13 @@ public class xCharArray
             SliceHandle     hSlice = (SliceHandle) hDelegate;
             CharArrayHandle hChars = (CharArrayHandle) hSlice.f_hSource;
             return xRTCharDelegate.getChars(hChars,
-                    hSlice.f_ofStart, hSlice.m_cSize, hSlice.f_fReverse);
+                    (int) hSlice.f_ofStart, (int) hSlice.m_cSize, hSlice.f_fReverse);
             }
 
         if (hDelegate instanceof CharArrayHandle)
             {
             CharArrayHandle hChars = (CharArrayHandle) hDelegate;
-            return xRTCharDelegate.getChars(hChars, 0, hChars.m_cSize, false);
+            return xRTCharDelegate.getChars(hChars, 0, (int) hChars.m_cSize, false);
             }
         throw new UnsupportedOperationException();
         }

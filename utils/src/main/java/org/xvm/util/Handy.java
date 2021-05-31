@@ -262,6 +262,69 @@ public class Handy
         }
 
     /**
+     * Convert an array of bytes to a long value.
+     *
+     * @param ab  the array of bytes
+     * @param of  the starting index
+     *
+     * @return the long value
+     */
+    public static long byteArrayToLong(byte[] ab, int of)
+        {
+        return   ((long) (ab[of++])        << 56)
+               + ((long) (ab[of++] & 0xFF) << 48)
+               + ((long) (ab[of++] & 0xFF) << 40)
+               + ((long) (ab[of++] & 0xFF) << 32)
+               + ((long) (ab[of++] & 0xFF) << 24)
+               + (       (ab[of++] & 0xFF) << 16)
+               + (       (ab[of++] & 0xFF) << 8 )
+               + (        ab[of  ] & 0xFF       );
+        }
+
+    /**
+     * Produce an array of bytes for the specified long value.
+     *
+     * @param l  the long value
+     *
+     * @return the byte array
+     */
+    static public byte[] toByteArray(long l)
+        {
+        return new byte[]
+            {
+            (byte) (l >> 56),
+            (byte) (l >> 48),
+            (byte) (l >> 40),
+            (byte) (l >> 32),
+            (byte) (l >> 24),
+            (byte) (l >> 16),
+            (byte) (l >> 8 ),
+            (byte) l,
+            };
+        }
+
+    /**
+     * Render the bytes of the specified long value into an array of bytes at the specified location.
+     *
+     * @param l   the long value
+     * @param ab  the byte array to copy into
+     * @param ab  the byte array offset to write the long value at
+     *
+     * @return the byte array
+     */
+    static public void toByteArray(long l, byte[] ab, int of)
+        {
+        ab[of++] = (byte) (l >> 56);
+        ab[of++] = (byte) (l >> 48);
+        ab[of++] = (byte) (l >> 40);
+        ab[of++] = (byte) (l >> 32);
+        ab[of++] = (byte) (l >> 24);
+        ab[of++] = (byte) (l >> 16);
+        ab[of++] = (byte) (l >> 8 );
+        ab[of  ] = (byte) l;
+        }
+
+    /**
      * Determine how many hex digits it will take to render the passed
      * <tt>int</tt> value as an <b>unsigned</b> hex value.
      *

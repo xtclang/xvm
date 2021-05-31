@@ -91,10 +91,6 @@ public class xRTDelegate
         markNativeMethod("delete", INT, THIS);
         markNativeMethod("reify", null, null);
 
-        ClassTemplate mixinNumber = f_templates.getTemplate("collections.arrays.NumberArray");
-        mixinNumber.markNativeMethod("asBitArray" , VOID, null);
-        mixinNumber.markNativeMethod("asByteArray", VOID, null);
-
         getCanonicalType().invalidateTypeInfo();
         }
 
@@ -112,8 +108,8 @@ public class xRTDelegate
         xRTDelegate template = DELEGATES.get(atypeParams[0]);
 
         return template == null
-            ? super.ensureParameterizedClass(pool, atypeParams)
-            : template.getCanonicalClass();
+                ? super.ensureParameterizedClass(pool, atypeParams)
+                : template.getCanonicalClass();
         }
 
     @Override
@@ -292,7 +288,7 @@ public class xRTDelegate
             return true;
             }
 
-        for (int i = 0, c = h1.m_cSize; i < c; i++)
+        for (int i = 0, c = (int) h1.m_cSize; i < c; i++)
             {
             ObjectHandle hV1 = ah1[i];
             ObjectHandle hV2 = ah2[i];
@@ -306,9 +302,9 @@ public class xRTDelegate
         return true;
         }
 
-
-    // ----- delegate API --------------------------------------------------------------------------
-
+    /**
+     * "capacity.get()" implementation.
+     */
     protected int getPropertyCapacity(Frame frame, ObjectHandle hTarget, int iReturn)
         {
         GenericArrayDelegate hDelegate = (GenericArrayDelegate) hTarget;
@@ -316,12 +312,15 @@ public class xRTDelegate
         return frame.assignValue(iReturn, xInt64.makeHandle(hDelegate.m_ahValue.length));
         }
 
+    /**
+     * "capacity.set()" implementation.
+     */
     protected int setPropertyCapacity(Frame frame, ObjectHandle hTarget, long nCapacity)
         {
         GenericArrayDelegate hDelegate = (GenericArrayDelegate) hTarget;
 
         ObjectHandle[] ahOld = hDelegate.m_ahValue;
-        int            nSize = hDelegate.m_cSize;
+        int            nSize = (int) hDelegate.m_cSize;
 
         if (nCapacity < nSize)
             {
@@ -340,6 +339,9 @@ public class xRTDelegate
         return Op.R_NEXT;
         }
 
+    /**
+     * "size.get()" implementation.
+     */
     protected int getPropertySize(Frame frame, ObjectHandle hTarget, int iReturn)
         {
         DelegateHandle hDelegate = (DelegateHandle) hTarget;
@@ -348,7 +350,7 @@ public class xRTDelegate
         }
 
     /**
-     * insert(Int, Element) implementation.
+     * "insert(Int, Element)" implementation.
      */
     protected int invokeInsertElement(Frame frame, ObjectHandle hTarget,
                                       JavaLong hIndex, ObjectHandle hValue, int iReturn)
@@ -387,39 +389,7 @@ public class xRTDelegate
         }
 
     /**
-     * Add or insert an element to the array (must be overridden by specialized classes).
-     *
-     * @param hTarget   the array
-     * @param hElement  the element to add
-     * @param nIndex    the index (-1 for add)
-     */
-    protected void insertElementImpl(DelegateHandle hTarget, ObjectHandle hElement, int nIndex)
-        {
-        GenericArrayDelegate hDelegate = (GenericArrayDelegate) hTarget;
-        int                  cSize     = hDelegate.m_cSize;
-        ObjectHandle[]       ahValue   = hDelegate.m_ahValue;
-
-        if (cSize == ahValue.length)
-            {
-            ahValue = hDelegate.m_ahValue = grow(ahValue, cSize + 1);
-            }
-        hDelegate.m_cSize++;
-
-        if (nIndex == -1 || nIndex == cSize)
-            {
-            // append
-            ahValue[cSize] = hElement;
-            }
-        else
-            {
-            // insert
-            System.arraycopy(ahValue, nIndex, ahValue, nIndex+1, cSize-nIndex);
-            ahValue[nIndex] = hElement;
-            }
-        }
-
-    /**
-     * "ArrayDelegate delete(Int index)" implementation.
+     * "delete(Int index)" implementation.
      */
     protected int invokeDeleteElement(Frame frame, ObjectHandle hTarget, ObjectHandle hValue, int iReturn)
         {
@@ -444,7 +414,7 @@ public class xRTDelegate
                 break;
             }
 
-        deleteElementImpl(hDelegate, (int) lIndex);
+        deleteElementImpl(hDelegate, lIndex);
 
         if (mutability != null)
             {
@@ -454,95 +424,18 @@ public class xRTDelegate
         return frame.assignValue(iReturn, hDelegate);
         }
 
+
+    // ----- RTDelegate API ------------------------------------------------------------------------
+
     /**
-     * Delete an element of the array (must be overridden by specialized classes).
-     *
-     * @param hTarget   the array
-     * @param nIndex    the index
+     * Slice the content by creating a slicing delegate.
      */
-    protected void  deleteElementImpl(DelegateHandle hTarget, int nIndex)
+    public DelegateHandle slice(DelegateHandle hTarget, long ofStart, long cSize, boolean fReverse)
         {
-        GenericArrayDelegate hDelegate = (GenericArrayDelegate) hTarget;
-        int                  cSize     = hDelegate.m_cSize;
-        ObjectHandle[]       ahValue   = hDelegate.m_ahValue;
-
-        if (nIndex < cSize - 1)
-            {
-            System.arraycopy(ahValue, nIndex + 1, ahValue, nIndex, cSize - nIndex - 1);
-            }
-        ahValue[--hDelegate.m_cSize] = null;
+        return ofStart == 0 && cSize == hTarget.m_cSize && !fReverse
+            ? hTarget
+            : xRTSlicingDelegate.INSTANCE.makeHandle(hTarget, ofStart, cSize, fReverse);
         }
-
-
-    // ----- IndexSupport methods ------------------------------------------------------------------
-
-    @Override
-    public int extractArrayValue(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
-        {
-        GenericArrayDelegate hDelegate = (GenericArrayDelegate) hTarget;
-
-        if (lIndex < 0 || lIndex >= hDelegate.m_cSize)
-            {
-            return frame.raiseException(xException.outOfBounds(frame, lIndex, hDelegate.m_cSize));
-            }
-
-        return frame.assignValue(iReturn, hDelegate.m_ahValue[(int) lIndex]);
-        }
-
-    @Override
-    public int assignArrayValue(Frame frame, ObjectHandle hTarget, long lIndex, ObjectHandle hValue)
-        {
-        GenericArrayDelegate hDelegate = (GenericArrayDelegate) hTarget;
-        int                  cSize     = hDelegate.m_cSize;
-
-        if (lIndex < 0 || lIndex > cSize)
-            {
-            return frame.raiseException(xException.outOfBounds(frame, lIndex, cSize));
-            }
-
-        switch (hDelegate.getMutability())
-            {
-            case Constant:
-                return frame.raiseException(xException.immutableObject(frame));
-
-            case Persistent:
-                return frame.raiseException(xException.readOnly(frame));
-            }
-
-        ObjectHandle[] ahValue = hDelegate.m_ahValue;
-        if (lIndex == cSize)
-            {
-            // an array can only grow without any "holes"
-            if (cSize == ahValue.length)
-                {
-                if (hDelegate.getMutability() == Mutability.Fixed)
-                    {
-                    return frame.raiseException(xException.readOnly(frame));
-                    }
-
-                ahValue = hDelegate.m_ahValue = grow(ahValue, cSize + 1);
-                }
-            hDelegate.m_cSize++;
-            }
-
-        ahValue[(int) lIndex] = hValue;
-        return Op.R_NEXT;
-        }
-
-    @Override
-    public TypeConstant getElementType(Frame frame, ObjectHandle hTarget, long lIndex)
-        {
-        return hTarget.getType().resolveGenericType("Element");
-        }
-
-    @Override
-    public long size(ObjectHandle hTarget)
-        {
-        return ((DelegateHandle) hTarget).m_cSize;
-        }
-
-
-    // ----- helper methods ------------------------------------------------------------------------
 
     /**
      * Fill the array content with the specified value.
@@ -560,16 +453,6 @@ public class xRTDelegate
         }
 
     /**
-     * Slice the content by creating a slicing delegate.
-     */
-    public DelegateHandle slice(DelegateHandle hTarget, long ofStart, long cSize, boolean fReverse)
-        {
-        return ofStart == 0 && cSize == hTarget.m_cSize && !fReverse
-                ? hTarget
-                : xRTSlicingDelegate.INSTANCE.makeHandle(hTarget, ofStart, cSize, fReverse);
-        }
-
-    /**
      * Create a copy of the specified array for the specified mutability
      *
      * @param hTarget     the delegate handle
@@ -582,6 +465,63 @@ public class xRTDelegate
         return createCopyImpl(hTarget, mutability, 0, hTarget.m_cSize, false);
         }
 
+
+    // ----- IndexSupport methods ------------------------------------------------------------------
+
+    @Override
+    public int extractArrayValue(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
+        {
+        DelegateHandle hDelegate = (DelegateHandle) hTarget;
+
+        return lIndex < 0 || lIndex >= hDelegate.m_cSize
+                ? frame.raiseException(xException.outOfBounds(frame, lIndex, hDelegate.m_cSize))
+                : extractArrayValueImpl(frame, hDelegate, lIndex, iReturn);
+        }
+
+    public int assignArrayValue(Frame frame, ObjectHandle hTarget, long lIndex, ObjectHandle hValue)
+        {
+        DelegateHandle hDelegate = (DelegateHandle) hTarget;
+        long           cSize     = hDelegate.m_cSize;
+
+        if (lIndex < 0 || lIndex > cSize)
+            {
+            // an array can only grow without any "holes"
+            return frame.raiseException(xException.outOfBounds(frame, lIndex, cSize));
+            }
+
+        switch (hDelegate.getMutability())
+            {
+            case Constant:
+                return frame.raiseException(xException.immutableObject(frame));
+
+            case Fixed:
+                if (lIndex < cSize)
+                    {
+                    break;
+                    }
+                // break through
+            case Persistent:
+                return frame.raiseException(xException.readOnly(frame));
+            }
+
+        return assignArrayValueImpl(frame, hDelegate, lIndex, hValue);
+        }
+
+    @Override
+    public TypeConstant getElementType(Frame frame, ObjectHandle hTarget, long lIndex)
+        {
+        return hTarget.getType().getParamType(0);
+        }
+
+    @Override
+    public long size(ObjectHandle hTarget)
+        {
+        return ((DelegateHandle) hTarget).m_cSize;
+        }
+
+
+    // ----- RTDelegate subclassing support --------------------------------------------------------
+
     /**
      * Create a copy of the specified array delegate for the specified mutability.
      *
@@ -589,12 +529,12 @@ public class xRTDelegate
      * @param mutability  the mutability
      * @param ofStart     the starting index
      * @param cSize       the count
-     * @param fReverse    if true, reverse the resulting array
+     * @param fReverse    if true, reverseBits the resulting array
      *
      * @return a new array delegate
      */
     protected DelegateHandle createCopyImpl(DelegateHandle hTarget, Mutability mutability,
-                                            int ofStart, int cSize, boolean fReverse)
+                                            long ofStart, long cSize, boolean fReverse)
         {
         GenericArrayDelegate hDelegate = (GenericArrayDelegate) hTarget;
 
@@ -606,12 +546,89 @@ public class xRTDelegate
             return hDelegate;
             }
 
-        ObjectHandle[] ahValue = Arrays.copyOfRange(hDelegate.m_ahValue, ofStart, cSize);
+        ObjectHandle[] ahValue = Arrays.copyOfRange(hDelegate.m_ahValue, (int) ofStart, (int) cSize);
         if (fReverse)
             {
-            ahValue = reverse(ahValue, cSize);
+            ahValue = reverse(ahValue, (int) cSize);
             }
         return new GenericArrayDelegate(hDelegate.getComposition(), ahValue, mutability);
+        }
+
+    /**
+     * Storage-specific implementation of {@link #extractArrayValue}.
+     */
+    protected int extractArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex, int iReturn)
+        {
+        return frame.assignValue(iReturn, ((GenericArrayDelegate) hTarget).m_ahValue[(int) lIndex]);
+        }
+
+    /**
+     * Storage-specific implementation of {@link #assignArrayValue}.
+     */
+    protected int assignArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex,
+                                       ObjectHandle hValue)
+        {
+        GenericArrayDelegate hDelegate = (GenericArrayDelegate) hTarget;
+        ObjectHandle[]       ahValue   = hDelegate.m_ahValue;
+        int                  cSize     = (int) hDelegate.m_cSize;
+
+        if (lIndex == cSize)
+            {
+            if (cSize == ahValue.length)
+                {
+                ahValue = hDelegate.m_ahValue = grow(ahValue, cSize + 1);
+                }
+            hDelegate.m_cSize++;
+            }
+
+        ahValue[(int) lIndex] = hValue;
+        return Op.R_NEXT;
+        }
+
+    /**
+     * Storage-specific implementation of {@link #invokeInsertElement}.
+     */
+    protected void insertElementImpl(DelegateHandle hTarget, ObjectHandle hElement, long lIndex)
+        {
+        GenericArrayDelegate hDelegate = (GenericArrayDelegate) hTarget;
+        int                  cSize     = (int) hDelegate.m_cSize;
+        ObjectHandle[]       ahValue   = hDelegate.m_ahValue;
+        int                  nIndex    = (int) lIndex;
+
+        if (cSize == ahValue.length)
+            {
+            ahValue = hDelegate.m_ahValue = grow(ahValue, (int) cSize + 1);
+            }
+        hDelegate.m_cSize++;
+
+        if (lIndex == cSize)
+            {
+            // append
+            ahValue[cSize] = hElement;
+            }
+        else
+            {
+            // insert
+            System.arraycopy(ahValue, nIndex, ahValue, nIndex +1, cSize - nIndex);
+            ahValue[nIndex] = hElement;
+            }
+        }
+
+    /**
+     * Storage-specific implementation of {@link #invokeDeleteElement}.
+     */
+    protected void deleteElementImpl(DelegateHandle hTarget, long lIndex)
+        {
+        GenericArrayDelegate hDelegate = (GenericArrayDelegate) hTarget;
+        int                  cSize     = (int) hDelegate.m_cSize;
+        ObjectHandle[]       ahValue   = hDelegate.m_ahValue;
+        int                  nIndex    = (int) lIndex;
+
+        if (nIndex < cSize - 1)
+            {
+            System.arraycopy(ahValue, nIndex + 1, ahValue, nIndex, cSize - nIndex - 1);
+            }
+        ahValue[(int) --hDelegate.m_cSize] = null;
         }
 
 
@@ -781,7 +798,7 @@ public class xRTDelegate
     public abstract static class DelegateHandle
             extends ObjectHandle
         {
-        public  int        m_cSize;
+        public  long       m_cSize;
         private Mutability m_mutability;
 
         protected DelegateHandle(TypeComposition clazz, Mutability mutability)
@@ -814,7 +831,7 @@ public class xRTDelegate
         @Override
         public String toString()
             {
-            return "size=" + m_cSize;
+            return getClass().getSimpleName() + " " + m_mutability + ", size=" + m_cSize;
             }
         }
 

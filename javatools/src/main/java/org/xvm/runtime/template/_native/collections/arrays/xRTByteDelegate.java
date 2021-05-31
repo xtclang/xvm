@@ -29,6 +29,7 @@ import org.xvm.runtime.template.numbers.xUInt8;
  */
 public class xRTByteDelegate
         extends xRTDelegate
+        implements ByteView
     {
     public static xRTByteDelegate INSTANCE;
 
@@ -70,7 +71,7 @@ public class xRTByteDelegate
         }
 
 
-    // ----- delegate API --------------------------------------------------------------------------
+    // ----- RTDelegate API ------------------------------------------------------------------------
 
     @Override
     public int getPropertyCapacity(Frame frame, ObjectHandle hTarget, int iReturn)
@@ -86,7 +87,7 @@ public class xRTByteDelegate
         ByteArrayHandle hDelegate = (ByteArrayHandle) hTarget;
 
         byte[] abOld = hDelegate.m_abValue;
-        int    nSize = hDelegate.m_cSize;
+        int    nSize = (int) hDelegate.m_cSize;
 
         if (nCapacity < nSize)
             {
@@ -102,62 +103,6 @@ public class xRTByteDelegate
             System.arraycopy(abOld, 0, abNew, 0, abOld.length);
             hDelegate.m_abValue = abNew;
             }
-        return Op.R_NEXT;
-        }
-
-    @Override
-    public int extractArrayValue(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
-        {
-        ByteArrayHandle hDelegate = (ByteArrayHandle) hTarget;
-
-        if (lIndex < 0 || lIndex >= hDelegate.m_cSize)
-            {
-            return frame.raiseException(xException.outOfBounds(frame, lIndex, hDelegate.m_cSize));
-            }
-
-        byte b = hDelegate.m_abValue[(int) lIndex];
-        return frame.assignValue(iReturn, xUInt8.makeHandle(((long) b) & 0xFF));
-        }
-
-    @Override
-    public int assignArrayValue(Frame frame, ObjectHandle hTarget, long lIndex, ObjectHandle hValue)
-        {
-        ByteArrayHandle hDelegate = (ByteArrayHandle) hTarget;
-
-        int cSize = hDelegate.m_cSize;
-
-        if (lIndex < 0 || lIndex > cSize)
-            {
-            return frame.raiseException(xException.outOfBounds(frame, lIndex, cSize));
-            }
-
-        switch (hDelegate.getMutability())
-            {
-            case Constant:
-                return frame.raiseException(xException.immutableObject(frame));
-
-            case Persistent:
-                return frame.raiseException(xException.unsupportedOperation(frame));
-            }
-
-        byte[] abValue = hDelegate.m_abValue;
-        if (lIndex == cSize)
-            {
-            // an array can only grow without any "holes"
-            if (cSize == abValue.length)
-                {
-                if (hDelegate.getMutability() == Mutability.Fixed)
-                    {
-                    return frame.raiseException(xException.readOnly(frame));
-                    }
-
-                abValue = hDelegate.m_abValue = grow(abValue, cSize + 1);
-                }
-
-            hDelegate.m_cSize++;
-            }
-
-        abValue[(int) lIndex] = (byte) ((JavaLong) hValue).getValue();
         return Op.R_NEXT;
         }
 
@@ -202,10 +147,57 @@ public class xRTByteDelegate
         }
 
     @Override
-    protected void insertElementImpl(DelegateHandle hTarget, ObjectHandle hElement, int nIndex)
+    protected DelegateHandle createCopyImpl(DelegateHandle hTarget, Mutability mutability,
+                                            long ofStart, long cSize, boolean fReverse)
         {
         ByteArrayHandle hDelegate = (ByteArrayHandle) hTarget;
-        int             cSize     = hDelegate.m_cSize;
+
+        byte[] abValue = Arrays.copyOfRange(hDelegate.m_abValue, (int) ofStart, (int) (ofStart + cSize));
+        if (fReverse)
+            {
+            abValue = reverse(abValue, (int) cSize);
+            }
+
+        return new ByteArrayHandle(hDelegate.getComposition(), abValue, cSize, mutability);
+        }
+
+    @Override
+    protected int extractArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex, int iReturn)
+        {
+        ByteArrayHandle hDelegate = (ByteArrayHandle) hTarget;
+
+        byte b = hDelegate.m_abValue[(int) lIndex];
+        return frame.assignValue(iReturn, xUInt8.makeHandle(((long) b) & 0xFF));
+        }
+
+    @Override
+    protected int assignArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex,
+                                       ObjectHandle hValue)
+        {
+        ByteArrayHandle hDelegate = (ByteArrayHandle) hTarget;
+
+        int    cSize   = (int) hDelegate.m_cSize;
+        byte[] abValue = hDelegate.m_abValue;
+
+        if (lIndex == cSize)
+            {
+            if (cSize == abValue.length)
+                {
+                abValue = hDelegate.m_abValue = grow(abValue, cSize + 1);
+                }
+
+            hDelegate.m_cSize++;
+            }
+
+        abValue[(int) lIndex] = (byte) ((JavaLong) hValue).getValue();
+        return Op.R_NEXT;
+        }
+
+    @Override
+    protected void insertElementImpl(DelegateHandle hTarget, ObjectHandle hElement, long lIndex)
+        {
+        ByteArrayHandle hDelegate = (ByteArrayHandle) hTarget;
+        int             cSize     = (int) hDelegate.m_cSize;
         byte[]          abValue   = hDelegate.m_abValue;
 
         if (cSize == abValue.length)
@@ -214,7 +206,7 @@ public class xRTByteDelegate
             }
         hDelegate.m_cSize++;
 
-        if (nIndex == -1 || nIndex == cSize)
+        if (lIndex == cSize)
             {
             // add
             abValue[cSize] = (byte) ((JavaLong) hElement).getValue();
@@ -222,23 +214,25 @@ public class xRTByteDelegate
         else
             {
             // insert
-            System.arraycopy(abValue, nIndex, abValue, nIndex+1, cSize-nIndex);
-            abValue[nIndex] = (byte) ((JavaLong) hElement).getValue();
+            int nIndex = (int) lIndex;
+            System.arraycopy(abValue, nIndex, abValue, nIndex + 1, cSize - nIndex);
+            abValue[(int) lIndex] = (byte) ((JavaLong) hElement).getValue();
             }
         }
 
     @Override
-    protected void deleteElementImpl(DelegateHandle hTarget, int nIndex)
+    protected void deleteElementImpl(DelegateHandle hTarget, long lIndex)
         {
         ByteArrayHandle hDelegate = (ByteArrayHandle) hTarget;
-        int             cSize     = hDelegate.m_cSize;
+        int             cSize     = (int) hDelegate.m_cSize;
         byte[]          abValue   = hDelegate.m_abValue;
 
-        if (nIndex < cSize - 1)
+        if (lIndex < cSize - 1)
             {
-            System.arraycopy(abValue, nIndex +1, abValue, nIndex, cSize- nIndex -1);
+            int nIndex = (int) lIndex;
+            System.arraycopy(abValue, nIndex + 1, abValue, nIndex, cSize - nIndex -1);
             }
-        abValue[--hDelegate.m_cSize] = 0;
+        abValue[(int) --hDelegate.m_cSize] = 0;
         }
 
     @Override
@@ -250,40 +244,46 @@ public class xRTByteDelegate
         hDelegate.m_cSize = cSize;
         }
 
-    @Override
-    protected DelegateHandle createCopyImpl(DelegateHandle hTarget, Mutability mutability,
-                                            int ofStart, int cSize, boolean fReverse)
-        {
-        ByteArrayHandle hDelegate = (ByteArrayHandle) hTarget;
 
-        byte[] abValue = Arrays.copyOfRange(hDelegate.m_abValue, ofStart, ofStart + cSize);
-        if (fReverse)
+    // ----- ByteView implementation ---------------------------------------------------------------
+
+    @Override
+    public byte[] getBytes(DelegateHandle hDelegate, long ofStart, long cBytes, boolean fReverse)
+        {
+        ByteArrayHandle hBytes = (ByteArrayHandle) hDelegate;
+
+        byte[] ab = hBytes.m_abValue;
+
+        if (hBytes.getMutability() == Mutability.Constant &&
+                ofStart == 0 && cBytes == hBytes.m_cSize && !fReverse)
             {
-            abValue = reverse(abValue, cSize);
+            return ab;
             }
 
-        return new ByteArrayHandle(hDelegate.getComposition(), abValue, cSize, mutability);
+        ab = Arrays.copyOfRange(ab, (int) ofStart, (int) (ofStart + cBytes));
+        return fReverse ? reverse(ab, (int) cBytes) : ab;
+        }
+
+    @Override
+    public byte extractByte(DelegateHandle hDelegate, long of)
+        {
+        ByteArrayHandle hBytes = (ByteArrayHandle) hDelegate;
+
+        return hBytes.m_abValue[(int) of];
+        }
+
+    @Override
+    public void assignByte(DelegateHandle hDelegate, long of, byte bValue)
+        {
+        ByteArrayHandle hBytes = (ByteArrayHandle) hDelegate;
+
+        hBytes.m_abValue[(int) of] = bValue;
         }
 
 
     // ----- helper methods ------------------------------------------------------------------------
 
-    public static byte[] getBytes(ByteArrayHandle hBytes, int ofStart, int cSize, boolean fReverse)
-        {
-        int    cBytes = hBytes.m_cSize;
-        byte[] ab     = hBytes.m_abValue;
-
-        if (hBytes.getMutability() == Mutability.Constant &&
-                ofStart == 0 && cBytes == cSize && !fReverse)
-            {
-            return ab;
-            }
-
-        ab = Arrays.copyOfRange(ab, ofStart, ofStart + cSize);
-        return fReverse ? reverse(ab, cSize) : ab;
-        }
-
-    private static byte[] reverse(byte[] abValue, int cSize)
+    public static byte[] reverse(byte[] abValue, int cSize)
         {
         byte[] abValueR = new byte[cSize];
         for (int i = 0; i < cSize; i++)
@@ -305,7 +305,7 @@ public class xRTByteDelegate
 
     // ----- ObjectHandle --------------------------------------------------------------------------
 
-    public ByteArrayHandle makeHandle(byte[] ab, int cSize, Mutability mutability)
+    public ByteArrayHandle makeHandle(byte[] ab, long cSize, Mutability mutability)
         {
         return new ByteArrayHandle(getCanonicalClass(), ab, cSize, mutability);
         }
@@ -316,7 +316,7 @@ public class xRTByteDelegate
         public byte[] m_abValue;
 
         protected ByteArrayHandle(TypeComposition clazz, byte[] abValue,
-                                  int cSize, Mutability mutability)
+                                  long cSize, Mutability mutability)
             {
             super(clazz, mutability);
 
@@ -331,7 +331,7 @@ public class xRTByteDelegate
                 {
                 // purge the unused space
                 byte[] ab = m_abValue;
-                int    c  = m_cSize;
+                int    c  = (int) m_cSize;
                 if (ab.length != c)
                     {
                     byte[] abNew = new byte[c];
@@ -352,9 +352,9 @@ public class xRTByteDelegate
         public int compareTo(ObjectHandle that)
             {
             byte[] abThis = m_abValue;
-            int    cThis  = m_cSize;
+            int    cThis  = (int) m_cSize;
             byte[] abThat = ((ByteArrayHandle) that).m_abValue;
-            int    cThat  = ((ByteArrayHandle) that).m_cSize;
+            int    cThat  = (int) ((ByteArrayHandle) that).m_cSize;
 
             if (cThis != cThat)
                 {
