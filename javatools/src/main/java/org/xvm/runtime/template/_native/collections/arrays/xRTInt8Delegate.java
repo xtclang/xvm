@@ -13,7 +13,7 @@ import org.xvm.runtime.template.numbers.xInt8;
 
 
 /**
- * Native RTDelegate<Byte> implementation.
+ * Native RTDelegate<Int8> implementation.
  */
 public class xRTInt8Delegate
         extends ByteBasedDelegate
