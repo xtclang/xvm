@@ -77,11 +77,8 @@ public class xArray
         {
         if (this == INSTANCE)
             {
-            registerNativeTemplate(new xIntArray    (f_templates, f_struct, true));
-            registerNativeTemplate(new xCharArray   (f_templates, f_struct, true));
-            registerNativeTemplate(new xBooleanArray(f_templates, f_struct, true));
-            registerNativeTemplate(new xBitArray    (f_templates, f_struct, true));
-            registerNativeTemplate(new xByteArray   (f_templates, f_struct, true));
+            registerNativeTemplate(new xBitArray (f_templates, f_struct, true));
+            registerNativeTemplate(new xByteArray(f_templates, f_struct, true));
             }
         }
 
@@ -92,11 +89,8 @@ public class xArray
         ConstantPool              pool         = pool();
         Map<TypeConstant, xArray> mapTemplates = new HashMap<>();
 
-        mapTemplates.put(pool.typeInt(),     xIntArray.INSTANCE);
-        mapTemplates.put(pool.typeChar(),    xCharArray.INSTANCE);
-        mapTemplates.put(pool.typeBoolean(), xBooleanArray.INSTANCE);
-        mapTemplates.put(pool.typeBit(),     xBitArray.INSTANCE);
-        mapTemplates.put(pool.typeByte(),    xByteArray.INSTANCE);
+        mapTemplates.put(pool.typeBit(),  xBitArray.INSTANCE);
+        mapTemplates.put(pool.typeByte(), xByteArray.INSTANCE);
 
         ARRAY_TEMPLATES = mapTemplates;
 
@@ -143,11 +137,12 @@ public class xArray
         ClassStructure clzHelper = f_templates.getClassStructure("_native.ConstHelper");
         CREATE_LIST_SET = clzHelper.findMethod("createListSet", 2);
 
-        OBJECT_ARRAY_CLZ = f_templates.resolveClass(pool.ensureArrayType(pool.typeObject()));
-        STRING_ARRAY_CLZ = f_templates.resolveClass(pool.ensureArrayType(pool.typeString()));
-        BIT_ARRAY_CLZ    = f_templates.resolveClass(pool.typeBitArray());
-        BYTE_ARRAY_CLZ   = f_templates.resolveClass(pool.typeByteArray());
-        CHAR_ARRAY_CLZ   = f_templates.resolveClass(pool.ensureArrayType(pool.typeChar()));
+        OBJECT_ARRAY_CLZ  = f_templates.resolveClass(pool.ensureArrayType(pool.typeObject()));
+        STRING_ARRAY_CLZ  = f_templates.resolveClass(pool.ensureArrayType(pool.typeString()));
+        BOOLEAN_ARRAY_CLZ = f_templates.resolveClass(pool.ensureArrayType(pool.typeBoolean()));
+        CHAR_ARRAY_CLZ    = f_templates.resolveClass(pool.ensureArrayType(pool.typeChar()));
+        BIT_ARRAY_CLZ     = f_templates.resolveClass(pool.typeBitArray());
+        BYTE_ARRAY_CLZ    = f_templates.resolveClass(pool.typeByteArray());
 
         // mark native properties and methods
         markNativeProperty("delegate");
@@ -702,6 +697,17 @@ public class xArray
         }
 
 
+    // ----- TypeComposition helpers ---------------------------------------------------------------
+
+    /**
+     * @return the TypeComposition for Array<Boolean>.
+     */
+    public static TypeComposition getBooleanArrayComposition()
+        {
+        return BOOLEAN_ARRAY_CLZ;
+        }
+
+
     // ----- ObjectHandle helpers ------------------------------------------------------------------
 
     /**
@@ -775,6 +781,10 @@ public class xArray
         return makeArrayHandle(OBJECT_ARRAY_CLZ, ahValue.length, ahValue, mutability);
         }
 
+    /**
+     * Create an ArrayHandle for the specified TypeComposition and fill it with objects from the
+     * specified array
+     */
     public static ArrayHandle makeArrayHandle(TypeComposition clzArray, int cCapacity,
                                                ObjectHandle[] ahValue, Mutability mutability)
         {
@@ -846,6 +856,7 @@ public class xArray
     private static TypeComposition OBJECT_ARRAY_CLZ;
     private static TypeComposition STRING_ARRAY_CLZ;
     private static TypeComposition BIT_ARRAY_CLZ;
+    private static TypeComposition BOOLEAN_ARRAY_CLZ;
     private static TypeComposition BYTE_ARRAY_CLZ;
     private static TypeComposition CHAR_ARRAY_CLZ;
     private static Map<TypeConstant, xArray> ARRAY_TEMPLATES;

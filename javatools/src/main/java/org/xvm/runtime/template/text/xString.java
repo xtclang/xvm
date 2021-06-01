@@ -28,7 +28,11 @@ import org.xvm.runtime.template.xOrdered;
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 import org.xvm.runtime.template.collections.xArray.Mutability;
-import org.xvm.runtime.template.collections.xCharArray;
+
+import org.xvm.runtime.template._native.collections.arrays.xRTCharDelegate;
+import org.xvm.runtime.template._native.collections.arrays.xRTCharDelegate.CharArrayHandle;
+import org.xvm.runtime.template._native.collections.arrays.xRTDelegate.DelegateHandle;
+import org.xvm.runtime.template._native.collections.arrays.xRTSlicingDelegate.SliceHandle;
 
 import org.xvm.runtime.template.numbers.xInt64;
 
@@ -100,7 +104,7 @@ public class xString
                          ObjectHandle hParent, ObjectHandle[] ahVar, int iReturn)
         {
         return frame.assignValue(iReturn,
-                makeHandle(xCharArray.getChars((ArrayHandle) ahVar[0])));
+                makeHandle(getChars((ArrayHandle) ahVar[0])));
         }
 
     @Override
@@ -295,7 +299,29 @@ public class xString
 
     // ----- helpers -------------------------------------------------------------------------------
 
-    protected StringHandle concat(StringHandle h1, StringHandle h2)
+    /**
+     * Extract a array of chars from the Array<Char> handle.
+     */
+    private static char[] getChars(ArrayHandle hArray)
+        {
+        DelegateHandle hDelegate = hArray.m_hDelegate;
+        if (hDelegate instanceof SliceHandle)
+            {
+            SliceHandle     hSlice = (SliceHandle) hDelegate;
+            CharArrayHandle hChars = (CharArrayHandle) hSlice.f_hSource;
+            return xRTCharDelegate.getChars(hChars,
+                    (int) hSlice.f_ofStart, (int) hSlice.m_cSize, hSlice.f_fReverse);
+            }
+
+        if (hDelegate instanceof CharArrayHandle)
+            {
+            CharArrayHandle hChars = (CharArrayHandle) hDelegate;
+            return xRTCharDelegate.getChars(hChars, 0, (int) hChars.m_cSize, false);
+            }
+        throw new UnsupportedOperationException();
+        }
+
+    private static StringHandle concat(StringHandle h1, StringHandle h2)
         {
         char[] ach1 = h1.m_achValue;
         char[] ach2 = h2.m_achValue;
@@ -318,7 +344,7 @@ public class xString
         return makeHandle(ach);
         }
 
-    protected int indexOf(char[] achSource, char chTarget, int ofStart)
+    private static int indexOf(char[] achSource, char chTarget, int ofStart)
         {
         int cchSource = achSource.length;
 
@@ -349,7 +375,7 @@ public class xString
             }
         }
 
-    protected int indexOf(char[] achSource, char[] achTarget, int ofStart)
+    private static int indexOf(char[] achSource, char[] achTarget, int ofStart)
         {
         int cchSource = achSource.length;
         int cchTarget = achTarget.length;
@@ -407,7 +433,7 @@ public class xString
         return -1;
         }
 
-    protected int compare(StringHandle h1, StringHandle h2)
+    private static int compare(StringHandle h1, StringHandle h2)
         {
         char[] ach1 = h1.m_achValue;
         char[] ash2 = h2.m_achValue;

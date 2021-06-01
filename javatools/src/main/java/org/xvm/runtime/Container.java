@@ -36,7 +36,6 @@ import org.xvm.runtime.template.xService.ServiceHandle;
 
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.Mutability;
-import org.xvm.runtime.template.collections.xBooleanArray;
 
 import org.xvm.runtime.template.reflect.xModule;
 
@@ -270,11 +269,10 @@ public abstract class Container
             MethodStructure  constructor = templateTS.getStructure().findMethod("construct", 2);
             ObjectHandle[]   ahArg       = new ObjectHandle[constructor.getMaxVars()];
 
-            ahArg[1] = xArray.makeArrayHandle(xBooleanArray.INSTANCE.getCanonicalClass(),
-                            ahShared.length, ahShared, Mutability.Constant);
+            ahArg[1] = xArray.makeArrayHandle(xArray.getBooleanArrayComposition(),
+                        ahShared.length, ahShared, Mutability.Constant);
 
             TypeComposition clzArray = xModule.ensureArrayComposition();
-            xArray          template = (xArray) clzArray.getTemplate();
             if (fDeferred)
                 {
                 Frame.Continuation stepNext = frameCaller ->
