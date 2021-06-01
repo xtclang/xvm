@@ -19,7 +19,7 @@ import org.xvm.runtime.template.numbers.xUInt8;
 import org.xvm.runtime.template._native.collections.arrays.BitView;
 import org.xvm.runtime.template._native.collections.arrays.xRTDelegate.DelegateHandle;
 import org.xvm.runtime.template._native.collections.arrays.xRTSlicingDelegate.SliceHandle;
-import org.xvm.runtime.template._native.collections.arrays.xRTViewFromBit;
+import org.xvm.runtime.template._native.collections.arrays.xRTViewFromBitToByte;
 
 
 /**
@@ -105,7 +105,7 @@ public class xBitArray
                     }
 
                 Mutability     mutability = hArray.m_mutability;
-                DelegateHandle hDelegate  = xRTViewFromBit.INSTANCE.createBitViewDelegate(
+                DelegateHandle hDelegate  = xRTViewFromBitToByte.INSTANCE.createBitViewDelegate(
                         hArray.m_hDelegate, frame.poolContext().typeByte(), mutability);
 
                 return frame.assignValue(iReturn, new ArrayHandle(

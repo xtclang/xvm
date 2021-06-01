@@ -322,6 +322,30 @@ module TestNumbers
         console.println($"int={n}, float64={f}");
         function Float64(Int) convert2 = Number.converterFor(Int, Float64);
         console.println($"using converter: int={n}, float64={convert2(n)}");
+
+        Int[]  ints  = [1, 2, 3];
+        Bit[]  bits  = ints.asBitArray();
+        Byte[] bytes = ints.asByteArray();
+
+        assert bits.toByteArray().toInt64Array() == ints;
+        assert bits.reify(Mutable).toByteArray().toInt64Array() == ints;
+        assert bytes.toInt64Array() == ints;
+        assert bytes.reify(Fixed).toInt64Array() == ints;
+
+        Int[] slice = ints[1..2];
+        assert slice.asByteArray().asInt64Array() == slice;
+        assert slice.asByteArray().reify(Fixed).asInt64Array() == slice; // TODO GG: reify() is not working
+
+        ints = ints.reify(Mutable);
+        bits = ints.asBitArray();
+        bits[63] = 0;
+        assert ints[0] == 0;
+        bytes = ints.asByteArray();
+        bytes[7] = 1;
+        assert ints[0] == 1;
+
+        bytes[0] = 255;
+        assert bytes.asInt8Array()[0] == -1;
         }
 
     package agg import aggregate.xtclang.org;

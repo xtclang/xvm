@@ -26,12 +26,12 @@ import org.xvm.runtime.template.numbers.xInt64;
 /**
  * Native RTDelegate<Int> implementation.
  */
-public class xRTIntDelegate
+public class xRTInt64Delegate
         extends xRTDelegate
     {
-    public static xRTIntDelegate INSTANCE;
+    public static xRTInt64Delegate INSTANCE;
 
-    public xRTIntDelegate(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xRTInt64Delegate(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
         super(templates, structure, false);
 

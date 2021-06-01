@@ -12,15 +12,13 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TemplateRegistry;
-import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.collections.xArray.Mutability;
 
 import org.xvm.runtime.template.numbers.xInt64;
 
-import org.xvm.runtime.template._native.collections.arrays.xRTSlicingDelegate.SliceHandle;
-
 import org.xvm.util.Handy;
+
 
 /**
  * The native RTViewFromByte<Int64> implementation.
@@ -53,21 +51,6 @@ public class xRTViewFromByteToInt64
                 getInceptionClassConstant().getType(), pool.typeInt());
         }
 
-    @Override
-    public DelegateHandle createByteViewDelegate(DelegateHandle hSource, TypeConstant typeElement,
-                                                Mutability mutability)
-        {
-        if (hSource instanceof SliceHandle)
-            {
-            // bytes.slice().asInt64Array() -> bytes.asInt64Array().slice()
-            SliceHandle hSlice = (SliceHandle) hSource;
-            ViewHandle  hView  = new ViewHandle(getCanonicalClass(), hSlice.f_hSource, mutability);
-
-            return slice(hView, hSlice.f_ofStart/8, hSlice.m_cSize/8, hSlice.f_fReverse);
-            }
-        return new ViewHandle(getCanonicalClass(), hSource, mutability);
-        }
-
 
     // ----- RTDelegate API ------------------------------------------------------------------------
 
@@ -91,7 +74,7 @@ public class xRTViewFromByteToInt64
                 alValue[i] = Handy.byteArrayToLong(ab, 0);
                 }
 
-            return xRTIntDelegate.INSTANCE.makeHandle(alValue, mutability);
+            return xRTInt64Delegate.INSTANCE.makeHandle(alValue, mutability);
             }
 
         throw new UnsupportedOperationException();
@@ -144,26 +127,4 @@ public class xRTViewFromByteToInt64
 
         throw new UnsupportedOperationException();
         }
-
-
-    // ----- handle --------------------------------------------------------------------------------
-
-    /**
-     * DelegateArray<Int> view delegate.
-     */
-    protected static class ViewHandle
-            extends DelegateHandle
-        {
-        public final DelegateHandle f_hSource;
-
-        protected ViewHandle(TypeComposition clazz, DelegateHandle hSource, Mutability mutability)
-            {
-            super(clazz, mutability);
-
-            f_hSource = hSource;
-            m_cSize   = hSource.m_cSize / 8;
-            }
-        }
-
-    // ----- constants -----------------------------------------------------------------------------
     }

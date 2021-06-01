@@ -12,6 +12,7 @@ import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xException;
@@ -22,13 +23,14 @@ import org.xvm.runtime.template._native.collections.arrays.BitView;
 import org.xvm.runtime.template._native.collections.arrays.ByteView;
 import org.xvm.runtime.template._native.collections.arrays.xRTDelegate.DelegateHandle;
 import org.xvm.runtime.template._native.collections.arrays.xRTSlicingDelegate.SliceHandle;
-import org.xvm.runtime.template._native.collections.arrays.xRTViewFromByte;
+import org.xvm.runtime.template._native.collections.arrays.xRTViewFromByteToInt64;
+import org.xvm.runtime.template._native.collections.arrays.xRTViewFromByteToInt8;
 
 import org.xvm.util.Handy;
 
 
 /**
- * Native ByteArray<Byte> implementation.
+ * Native ByteArray implementation.
  */
 public class xByteArray
         extends xArray
@@ -50,6 +52,7 @@ public class xByteArray
         {
         ClassTemplate mixin = f_templates.getTemplate("collections.arrays.ByteArray");
 
+        mixin.markNativeMethod("asInt8Array", VOID, null);
         mixin.markNativeMethod("asInt64Array", VOID, null);
         mixin.markNativeMethod("toBitArray", null, null);
         mixin.markNativeMethod("toInt64", VOID, null);
@@ -111,23 +114,32 @@ public class xByteArray
         {
         switch (method.getName())
             {
+            case "asInt8Array":
+                {
+                ArrayHandle hArray = (ArrayHandle) hTarget;
+
+                Mutability      mutability = hArray.m_mutability;
+                DelegateHandle  hView      = xRTViewFromByteToInt8.INSTANCE.createByteView(
+                                                    hArray.m_hDelegate, mutability, 1);
+                return frame.assignValue(iReturn,
+                        new ArrayHandle(getInt8ArrayComposition(), hView, mutability));
+                }
+
             case "asInt64Array":
                 {
                 ArrayHandle hArray = (ArrayHandle) hTarget;
 
                 if (hArray.m_hDelegate.m_cSize % 8 != 0)
                     {
-                    return frame.raiseException(
-                            xException.illegalArgument(frame,
+                    return frame.raiseException(xException.illegalArgument(frame,
                                 "Invalid array size: " + hArray.m_hDelegate.m_cSize));
                     }
 
                 Mutability     mutability = hArray.m_mutability;
-                DelegateHandle hView      = xRTViewFromByte.INSTANCE.createByteViewDelegate(
-                        hArray.m_hDelegate, frame.poolContext().typeInt(), mutability);
-
+                DelegateHandle hView      = xRTViewFromByteToInt64.INSTANCE.createByteView(
+                                                    hArray.m_hDelegate, mutability, 8);
                 return frame.assignValue(iReturn,
-                        new ArrayHandle(xIntArray.INSTANCE.getCanonicalClass(), hView, mutability));
+                        new ArrayHandle(getInt64ArrayComposition(), hView, mutability));
                 }
 
             case "toInt64":
@@ -202,4 +214,29 @@ public class xByteArray
             }
         throw new UnsupportedOperationException();
         }
+
+    private TypeComposition getInt8ArrayComposition()
+        {
+        TypeComposition clz = INT8_ARRAY_CLZ;
+        if (clz == null)
+            {
+            TypeConstant typeInt8 = pool().ensureEcstasyTypeConstant("numbers.Int8");
+
+            INT8_ARRAY_CLZ = clz = f_templates.resolveClass(pool().ensureArrayType(typeInt8));
+            }
+        return clz;
+        }
+
+    private TypeComposition getInt64ArrayComposition()
+        {
+        TypeComposition clz = INT64_ARRAY_CLZ;
+        if (clz == null)
+            {
+            INT64_ARRAY_CLZ = clz = f_templates.resolveClass(pool().ensureArrayType(pool().typeInt()));
+            }
+        return clz;
+        }
+
+    private static TypeComposition INT8_ARRAY_CLZ;
+    private static TypeComposition INT64_ARRAY_CLZ;
     }

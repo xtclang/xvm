@@ -4,7 +4,6 @@ package org.xvm.runtime.template._native.collections.arrays;
 import java.util.Arrays;
 
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -21,40 +20,25 @@ import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.collections.xArray.Mutability;
 
 import org.xvm.runtime.template.numbers.xInt64;
-import org.xvm.runtime.template.numbers.xUInt8;
 
 
 /**
- * Native RTDelegate<Byte> implementation.
+ * A base class for native ArrayDelegate implementations based on byte arrays.
  */
-public class xRTByteDelegate
+public abstract class ByteBasedDelegate
         extends xRTDelegate
         implements ByteView
     {
-    public static xRTByteDelegate INSTANCE;
+    public static ByteBasedDelegate INSTANCE;
 
-    public xRTByteDelegate(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public ByteBasedDelegate(TemplateRegistry templates, ClassStructure structure)
         {
         super(templates, structure, false);
-
-        if (fInstance)
-            {
-            INSTANCE = this;
-            }
         }
 
     @Override
     public void initNative()
         {
-        }
-
-    @Override
-    public TypeConstant getCanonicalType()
-        {
-        ConstantPool pool = pool();
-        return pool.ensureParameterizedTypeConstant(
-                getInceptionClassConstant().getType(),
-                pool.typeByte());
         }
 
     @Override
@@ -115,8 +99,9 @@ public class xRTByteDelegate
             return frame.raiseException(xException.outOfBounds(frame, lIndex, hDelegate.m_cSize));
             }
 
+        // TODO GG: range check is missing!
         return frame.assignValue(iReturn,
-                xUInt8.makeHandle(++hDelegate.m_abValue[(int) lIndex]));
+                makeElementHandle(++hDelegate.m_abValue[(int) lIndex]));
         }
 
     @Override
@@ -167,7 +152,7 @@ public class xRTByteDelegate
         ByteArrayHandle hDelegate = (ByteArrayHandle) hTarget;
 
         byte b = hDelegate.m_abValue[(int) lIndex];
-        return frame.assignValue(iReturn, xUInt8.makeHandle(((long) b) & 0xFF));
+        return frame.assignValue(iReturn, makeElementHandle(b));
         }
 
     @Override
@@ -199,6 +184,7 @@ public class xRTByteDelegate
         ByteArrayHandle hDelegate = (ByteArrayHandle) hTarget;
         int             cSize     = (int) hDelegate.m_cSize;
         byte[]          abValue   = hDelegate.m_abValue;
+        byte            bValue    = (byte) ((JavaLong) hElement).getValue();
 
         if (cSize == abValue.length)
             {
@@ -209,14 +195,14 @@ public class xRTByteDelegate
         if (lIndex == cSize)
             {
             // add
-            abValue[cSize] = (byte) ((JavaLong) hElement).getValue();
+            abValue[cSize] = bValue;
             }
         else
             {
             // insert
             int nIndex = (int) lIndex;
             System.arraycopy(abValue, nIndex, abValue, nIndex + 1, cSize - nIndex);
-            abValue[(int) lIndex] = (byte) ((JavaLong) hElement).getValue();
+            abValue[(int) lIndex] = bValue;
             }
         }
 
@@ -301,6 +287,11 @@ public class xRTByteDelegate
         System.arraycopy(abValue, 0, abNew, 0, abValue.length);
         return abNew;
         }
+
+    /**
+     * Make an element handle for the specified value.
+     */
+    abstract protected ObjectHandle makeElementHandle(long lValue);
 
 
     // ----- ObjectHandle --------------------------------------------------------------------------

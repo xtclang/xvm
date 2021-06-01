@@ -43,7 +43,7 @@ import org.xvm.runtime.template.reflect.xRef.RefHandle;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.runtime.template._native.collections.arrays.xRTBitDelegate;
-import org.xvm.runtime.template._native.collections.arrays.xRTByteDelegate;
+import org.xvm.runtime.template._native.collections.arrays.xRTUInt8Delegate;
 import org.xvm.runtime.template._native.collections.arrays.xRTCharDelegate;
 import org.xvm.runtime.template._native.collections.arrays.xRTDelegate;
 import org.xvm.runtime.template._native.collections.arrays.xRTDelegate.DelegateHandle;
@@ -754,7 +754,7 @@ public class xArray
      */
     public static ArrayHandle makeByteArrayHandle(byte[] abValue, Mutability mutability)
         {
-        DelegateHandle hDelegate = xRTByteDelegate.INSTANCE.makeHandle(abValue, abValue.length, mutability);
+        DelegateHandle hDelegate = xRTUInt8Delegate.INSTANCE.makeHandle(abValue, abValue.length, mutability);
         return new ArrayHandle(BYTE_ARRAY_CLZ, hDelegate, mutability);
         }
 

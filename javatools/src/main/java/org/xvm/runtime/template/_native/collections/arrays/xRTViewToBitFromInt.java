@@ -17,7 +17,7 @@ import org.xvm.runtime.template.collections.xArray.Mutability;
 
 import org.xvm.runtime.template.numbers.xBit;
 
-import org.xvm.runtime.template._native.collections.arrays.xRTIntDelegate.IntArrayHandle;
+import org.xvm.runtime.template._native.collections.arrays.xRTInt64Delegate.IntArrayHandle;
 import org.xvm.runtime.template._native.collections.arrays.xRTSlicingDelegate.SliceHandle;
 
 import org.xvm.util.Handy;
@@ -64,7 +64,7 @@ public class xRTViewToBitFromInt
             SliceHandle hSlice = (SliceHandle) hSource;
             ViewHandle  hView  = new ViewHandle(getCanonicalClass(),
                                     (IntArrayHandle) hSlice.f_hSource, mutability);
-            return slice(hView, 0, hView.m_cSize, false);
+            return slice(hView, hSlice.f_ofStart*64, hSlice.m_cSize*64, false);
             }
         return new ViewHandle(getCanonicalClass(), (IntArrayHandle) hSource, mutability);
         }
@@ -281,6 +281,4 @@ public class xRTViewToBitFromInt
             m_cSize   = hSource.m_cSize*64;
             }
         }
-
-    // ----- constants -----------------------------------------------------------------------------
     }

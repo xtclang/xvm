@@ -1,16 +1,14 @@
 package org.xvm.runtime.template._native.collections.arrays;
 
 
-import java.util.HashMap;
-import java.util.Map;
-
 import org.xvm.asm.ClassStructure;
 
-import org.xvm.asm.constants.TypeConstant;
-
 import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.collections.xArray.Mutability;
+
+import org.xvm.runtime.template._native.collections.arrays.xRTSlicingDelegate.SliceHandle;
 
 
 /**
@@ -36,6 +34,7 @@ public class xRTViewFromByte
         {
         if (this == INSTANCE)
             {
+            registerNativeTemplate(new xRTViewFromByteToInt8(f_templates, f_struct, true));
             registerNativeTemplate(new xRTViewFromByteToInt64(f_templates, f_struct, true));
             }
         }
@@ -43,35 +42,48 @@ public class xRTViewFromByte
     @Override
     public void initNative()
         {
-        // register native views
-        Map<TypeConstant, xRTViewFromByte> mapViews = new HashMap<>();
-
-        mapViews.put(pool().typeInt(), xRTViewFromByteToInt64.INSTANCE);
-
-        VIEWS = mapViews;
         }
 
     /**
      * Create an ArrayDelegate<NumType> view into the specified ArrayDelegate<Byte> source.
      *
-     * @param hSource      the source (of byte type) delegate
-     * @param typeElement  the numeric type to create the view for
-     * @param mutability   the desired mutability
+     * @param hSource     the source (of byte type) delegate
+     * @param mutability  the desired mutability
+     * @param nBytes      the number of bytes for the numeric type of this byte-based view
      */
-    public DelegateHandle createByteViewDelegate(DelegateHandle hSource, TypeConstant typeElement,
-                                                 Mutability mutability)
+    public DelegateHandle createByteView(DelegateHandle hSource, Mutability mutability,
+                                         int nBytes)
         {
-        xRTViewFromByte template = VIEWS.get(typeElement);
-
-        if (template != null)
+        if (hSource instanceof SliceHandle)
             {
-            return template.createByteViewDelegate(hSource, typeElement, mutability);
+            // e.g.: bytes.slice().asInt64Array() -> bytes.asInt64Array().slice()
+            SliceHandle hSlice = (SliceHandle) hSource;
+            ViewHandle  hView  = new ViewHandle(getCanonicalClass(), hSlice.f_hSource,
+                                    hSlice.f_hSource.m_cSize/nBytes, mutability);
+
+            return slice(hView, hSlice.f_ofStart/nBytes, hSlice.m_cSize/nBytes, hSlice.f_fReverse);
             }
-        throw new UnsupportedOperationException();
+        return new ViewHandle(getCanonicalClass(), hSource, hSource.m_cSize/nBytes, mutability);
         }
 
 
-    // ----- constants -----------------------------------------------------------------------------
+    // ----- handle --------------------------------------------------------------------------------
 
-    private static Map<TypeConstant, xRTViewFromByte> VIEWS;
+    /**
+     * DelegateArray<NumType> view delegate.
+     */
+    protected static class ViewHandle
+            extends DelegateHandle
+        {
+        public final DelegateHandle f_hSource;
+
+        protected ViewHandle(TypeComposition clazz, DelegateHandle hSource,
+                             long cSize, Mutability mutability)
+            {
+            super(clazz, mutability);
+
+            f_hSource = hSource;
+            m_cSize   = cSize;
+            }
+        }
     }

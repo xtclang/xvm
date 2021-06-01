@@ -15,20 +15,19 @@ import org.xvm.runtime.TemplateRegistry;
 
 import org.xvm.runtime.template.collections.xArray.Mutability;
 
-import org.xvm.runtime.template.numbers.xUInt8;
 
-import org.xvm.runtime.template._native.collections.arrays.xRTSlicingDelegate.SliceHandle;
+import org.xvm.runtime.template.numbers.xInt8;
 
 
 /**
- * The native RTViewFromBit<Byte> implementation.
+ * The native RTViewFromByte<Int8> implementation.
  */
-public class xRTViewFromBitToByte
-        extends xRTViewFromBit
+public class xRTViewFromByteToInt8
+        extends xRTViewFromByte
     {
-    public static xRTViewFromBitToByte INSTANCE;
+    public static xRTViewFromByteToInt8 INSTANCE;
 
-    public xRTViewFromBitToByte(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xRTViewFromByteToInt8(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
         super(templates, structure, false);
 
@@ -48,23 +47,8 @@ public class xRTViewFromBitToByte
         {
         ConstantPool pool = pool();
         return pool.ensureParameterizedTypeConstant(
-                getInceptionClassConstant().getType(), pool.typeByte());
-        }
-
-    @Override
-    public DelegateHandle createBitViewDelegate(DelegateHandle hSource, TypeConstant typeElement,
-                                                Mutability mutability)
-        {
-        if (hSource instanceof SliceHandle)
-            {
-            // bits.slice().asByteArray() -> bits.asByteArray().slice()
-            SliceHandle hSlice = (SliceHandle) hSource;
-            ViewHandle  hView  = new ViewHandle(getCanonicalClass(),
-                    hSlice.f_hSource, hSlice.f_hSource.m_cSize/8, mutability);
-
-            return slice(hView, hSlice.f_ofStart/8, hSlice.m_cSize/8, hSlice.f_fReverse);
-            }
-        return new ViewHandle(getCanonicalClass(), hSource, hSource.m_cSize/8, mutability);
+                getInceptionClassConstant().getType(),
+                pool.ensureEcstasyTypeConstant("numbers.Int8"));
         }
 
 
@@ -78,11 +62,13 @@ public class xRTViewFromBitToByte
         DelegateHandle hSource = hView.f_hSource;
         ClassTemplate  tSource = hSource.getTemplate();
 
-        if (tSource instanceof BitView)
+        if (tSource instanceof ByteView)
             {
-            byte[] abBits = ((BitView) tSource).getBytes(hSource, ofStart, cSize, fReverse);
+            ByteView tView = (ByteView) tSource;
 
-            return xRTUInt8Delegate.INSTANCE.makeHandle(abBits, cSize, mutability);
+            byte[] abValue = tView.getBytes(hSource, ofStart, cSize, fReverse);
+
+            return xRTInt8Delegate.INSTANCE.makeHandle(abValue, cSize, mutability);
             }
 
         throw new UnsupportedOperationException();
@@ -97,11 +83,11 @@ public class xRTViewFromBitToByte
 
         if (tSource instanceof ByteView)
             {
-            // the underlying delegate is a bit view, which is a ByteView
             ByteView tView = (ByteView) tSource;
 
-            return frame.assignValue(iReturn,
-                    xUInt8.INSTANCE.makeJavaLong(tView.extractByte(hSource, lIndex)));
+            byte bValue = tView.extractByte(hSource, lIndex);
+
+            return frame.assignValue(iReturn, xInt8.INSTANCE.makeJavaLong(bValue));
             }
 
         throw new UnsupportedOperationException();
@@ -117,10 +103,9 @@ public class xRTViewFromBitToByte
 
         if (tSource instanceof ByteView)
             {
-            // the underlying delegate is a bit view, which is a ByteView
             ByteView tView = (ByteView) tSource;
 
-            tView.assignByte(hSource, lIndex, (byte) ((JavaLong) hValue).getValue());
+            tView.assignByte(hSource, lIndex, (byte) (((JavaLong) hValue).getValue() & 0xFF));
             return Op.R_NEXT;
             }
 

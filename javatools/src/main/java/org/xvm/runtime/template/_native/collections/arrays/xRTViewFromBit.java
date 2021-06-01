@@ -1,14 +1,13 @@
 package org.xvm.runtime.template._native.collections.arrays;
 
 
-import java.util.HashMap;
-import java.util.Map;
-
 import org.xvm.asm.ClassStructure;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.collections.xArray.Mutability;
 
@@ -18,6 +17,7 @@ import org.xvm.runtime.template.collections.xArray.Mutability;
  */
 public class xRTViewFromBit
         extends xRTView
+        implements ByteView
     {
     public static xRTViewFromBit INSTANCE;
 
@@ -43,12 +43,6 @@ public class xRTViewFromBit
     @Override
     public void initNative()
         {
-        // register native views
-        Map<TypeConstant, xRTViewFromBit> mapViews = new HashMap<>();
-
-        mapViews.put(pool().typeByte(), xRTViewFromBitToByte.INSTANCE);
-
-        VIEWS = mapViews;
         }
 
     /**
@@ -61,17 +55,75 @@ public class xRTViewFromBit
     public DelegateHandle createBitViewDelegate(DelegateHandle hSource, TypeConstant typeElement,
                                                 Mutability mutability)
         {
-        xRTViewFromBit template = VIEWS.get(typeElement);
-
-        if (template != null)
-            {
-            return template.createBitViewDelegate(hSource, typeElement, mutability);
-            }
         throw new UnsupportedOperationException();
         }
 
 
-    // ----- constants -----------------------------------------------------------------------------
+    // ----- ByteView implementation ---------------------------------------------------------------
 
-    private static Map<TypeConstant, xRTViewFromBit> VIEWS;
+    @Override
+    public byte[] getBytes(DelegateHandle hDelegate, long ofStart, long cBytes, boolean fReverse)
+        {
+        ViewHandle     hView   = (ViewHandle) hDelegate;
+        DelegateHandle hSource = hView.f_hSource;
+        ClassTemplate  tSource = hSource.getTemplate();
+
+        if (tSource instanceof ByteView)
+            {
+            return ((ByteView) tSource).getBytes(hSource, ofStart, cBytes, fReverse);
+            }
+
+        throw new UnsupportedOperationException();
+        }
+
+    @Override
+    public byte extractByte(DelegateHandle hDelegate, long of)
+        {
+        ViewHandle     hView   = (ViewHandle) hDelegate;
+        DelegateHandle hSource = hView.f_hSource;
+        ClassTemplate  tSource = hSource.getTemplate();
+
+        if (tSource instanceof ByteView)
+            {
+            return ((ByteView) tSource).extractByte(hSource, of);
+            }
+
+        throw new UnsupportedOperationException();
+        }
+
+    @Override
+    public void assignByte(DelegateHandle hDelegate, long of, byte bValue)
+        {
+        ViewHandle     hView   = (ViewHandle) hDelegate;
+        DelegateHandle hSource = hView.f_hSource;
+        ClassTemplate  tSource = hSource.getTemplate();
+
+        if (tSource instanceof ByteView)
+            {
+            ((ByteView) tSource).assignByte(hSource, of, bValue);
+            return;
+            }
+
+        throw new UnsupportedOperationException();
+        }
+
+    // ----- handle --------------------------------------------------------------------------------
+
+    /**
+     * DelegateArray<NumType> view delegate.
+     */
+    protected static class ViewHandle
+            extends DelegateHandle
+        {
+        public final DelegateHandle f_hSource;
+
+        protected ViewHandle(TypeComposition clazz, DelegateHandle hSource,
+                             long cSlze, Mutability mutability)
+            {
+            super(clazz, mutability);
+
+            f_hSource = hSource;
+            m_cSize   = cSlze;
+            }
+        }
     }

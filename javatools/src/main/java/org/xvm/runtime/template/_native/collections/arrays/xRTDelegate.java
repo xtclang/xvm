@@ -56,11 +56,12 @@ public class xRTDelegate
         {
         if (this == INSTANCE)
             {
-            registerNativeTemplate(new xRTIntDelegate(f_templates, f_struct, true));
-            registerNativeTemplate(new xRTCharDelegate(f_templates, f_struct, true));
+            registerNativeTemplate(new xRTInt8Delegate   (f_templates, f_struct, true));
+            registerNativeTemplate(new xRTInt64Delegate  (f_templates, f_struct, true));
+            registerNativeTemplate(new xRTCharDelegate   (f_templates, f_struct, true));
             registerNativeTemplate(new xRTBooleanDelegate(f_templates, f_struct, true));
-            registerNativeTemplate(new xRTBitDelegate(f_templates, f_struct, true));
-            registerNativeTemplate(new xRTByteDelegate(f_templates, f_struct, true));
+            registerNativeTemplate(new xRTBitDelegate    (f_templates, f_struct, true));
+            registerNativeTemplate(new xRTUInt8Delegate(f_templates, f_struct, true));
             }
         }
 
@@ -71,11 +72,14 @@ public class xRTDelegate
         ConstantPool                   pool         = pool();
         Map<TypeConstant, xRTDelegate> mapDelegates = new HashMap<>();
 
-        mapDelegates.put(pool.typeInt(),     xRTIntDelegate.INSTANCE);
-        mapDelegates.put(pool.typeChar(),    xRTCharDelegate.INSTANCE);
+        TypeConstant typeInt8 = pool.ensureEcstasyTypeConstant("numbers.Int8");
+
+        mapDelegates.put(pool.typeBit(),     xRTBitDelegate    .INSTANCE);
         mapDelegates.put(pool.typeBoolean(), xRTBooleanDelegate.INSTANCE);
-        mapDelegates.put(pool.typeBit(),     xRTBitDelegate.INSTANCE);
-        mapDelegates.put(pool.typeByte(),    xRTByteDelegate.INSTANCE);
+        mapDelegates.put(pool.typeByte(),    xRTUInt8Delegate.INSTANCE);
+        mapDelegates.put(pool.typeChar(),    xRTCharDelegate   .INSTANCE);
+        mapDelegates.put(typeInt8,           xRTInt8Delegate   .INSTANCE);
+        mapDelegates.put(pool.typeInt(),     xRTInt64Delegate  .INSTANCE);
 
         DELEGATES = mapDelegates;
 
