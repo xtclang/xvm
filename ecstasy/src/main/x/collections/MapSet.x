@@ -88,8 +88,7 @@ class MapSet<Element>
         }
 
     @Override
-    @Op("&")
-    MapSet retainAll(Iterable<Element> values)
+    @Op("&") MapSet retainAll(Iterable<Element> values)
         {
         contents.keys.retainAll(values);
         return this;

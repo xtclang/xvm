@@ -673,8 +673,7 @@ interface Collection<Element>
      *
      * @throws ReadOnly  if the collection does not support element removal
      */
-    @Op("-")
-    Collection remove(Element value)
+    @Op("-") Collection remove(Element value)
         {
         throw new ReadOnly();
         }
@@ -691,8 +690,7 @@ interface Collection<Element>
      *
      * @throws ReadOnly  if the collection does not support element removal
      */
-    @Op("-")
-    Collection removeAll(Iterable<Element> values)
+    @Op("-") Collection removeAll(Iterable<Element> values)
         {
         // this naive implementation is likely to be overridden in cases where optimizations can be
         // made with knowledge of either this collection and/or the passed in values, for example
