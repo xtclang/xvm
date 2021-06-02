@@ -23,8 +23,9 @@ import org.xvm.runtime.template._native.collections.arrays.BitView;
 import org.xvm.runtime.template._native.collections.arrays.ByteView;
 import org.xvm.runtime.template._native.collections.arrays.xRTDelegate.DelegateHandle;
 import org.xvm.runtime.template._native.collections.arrays.xRTSlicingDelegate.SliceHandle;
-import org.xvm.runtime.template._native.collections.arrays.xRTViewFromByteToInt64;
 import org.xvm.runtime.template._native.collections.arrays.xRTViewFromByteToInt8;
+import org.xvm.runtime.template._native.collections.arrays.xRTViewFromByteToInt16;
+import org.xvm.runtime.template._native.collections.arrays.xRTViewFromByteToInt64;
 
 import org.xvm.util.Handy;
 
@@ -53,6 +54,7 @@ public class xByteArray
         ClassTemplate mixin = f_templates.getTemplate("collections.arrays.ByteArray");
 
         mixin.markNativeMethod("asInt8Array", VOID, null);
+        mixin.markNativeMethod("asInt16Array", VOID, null);
         mixin.markNativeMethod("asInt64Array", VOID, null);
         mixin.markNativeMethod("toBitArray", null, null);
         mixin.markNativeMethod("toInt64", VOID, null);
@@ -123,6 +125,23 @@ public class xByteArray
                                                     hArray.m_hDelegate, mutability, 1);
                 return frame.assignValue(iReturn,
                         new ArrayHandle(getInt8ArrayComposition(), hView, mutability));
+                }
+
+            case "asInt16Array":
+                {
+                ArrayHandle hArray = (ArrayHandle) hTarget;
+
+                if (hArray.m_hDelegate.m_cSize % 2 != 0)
+                    {
+                    return frame.raiseException(xException.illegalArgument(frame,
+                                "Invalid array size: " + hArray.m_hDelegate.m_cSize));
+                    }
+
+                Mutability     mutability = hArray.m_mutability;
+                DelegateHandle hView      = xRTViewFromByteToInt16.INSTANCE.createByteView(
+                                                    hArray.m_hDelegate, mutability, 2);
+                return frame.assignValue(iReturn,
+                        new ArrayHandle(getInt16ArrayComposition(), hView, mutability));
                 }
 
             case "asInt64Array":
@@ -227,6 +246,17 @@ public class xByteArray
         return clz;
         }
 
+    private TypeComposition getInt16ArrayComposition()
+        {
+        TypeComposition clz = INT16_ARRAY_CLZ;
+        if (clz == null)
+            {
+            TypeConstant typeInt16 = pool().ensureEcstasyTypeConstant("numbers.Int16");
+            INT16_ARRAY_CLZ = clz = f_templates.resolveClass(pool().ensureArrayType(typeInt16));
+            }
+        return clz;
+        }
+
     private TypeComposition getInt64ArrayComposition()
         {
         TypeComposition clz = INT64_ARRAY_CLZ;
@@ -238,5 +268,6 @@ public class xByteArray
         }
 
     private static TypeComposition INT8_ARRAY_CLZ;
+    private static TypeComposition INT16_ARRAY_CLZ;
     private static TypeComposition INT64_ARRAY_CLZ;
     }

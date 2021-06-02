@@ -374,7 +374,7 @@ public abstract class BitBasedDelegate
      *
      * @return true iff the bit is set
      */
-    private static boolean getBit(byte[] abValue, long iIndex)
+    public static boolean getBit(byte[] abValue, long iIndex)
         {
         return (abValue[index(iIndex)] & bitMask(iIndex)) != 0;
         }
@@ -386,7 +386,7 @@ public abstract class BitBasedDelegate
      * @param iIndex   the bit index
      * @param fSet     true if the bit is to be set; false for clear
      */
-    private static void setBit(byte[] abValue, long iIndex, boolean fSet)
+    public static void setBit(byte[] abValue, long iIndex, boolean fSet)
         {
         if (fSet)
             {

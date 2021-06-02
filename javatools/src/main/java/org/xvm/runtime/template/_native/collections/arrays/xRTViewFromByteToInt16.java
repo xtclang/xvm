@@ -15,18 +15,18 @@ import org.xvm.runtime.TemplateRegistry;
 
 import org.xvm.runtime.template.collections.xArray.Mutability;
 
-import org.xvm.runtime.template.numbers.xInt8;
+import org.xvm.runtime.template.numbers.xInt16;
 
 
 /**
- * The native RTViewFromByte<Int8> implementation.
+ * The native RTViewFromByte<Int16> implementation.
  */
-public class xRTViewFromByteToInt8
+public class xRTViewFromByteToInt16
         extends xRTViewFromByte
     {
-    public static xRTViewFromByteToInt8 INSTANCE;
+    public static xRTViewFromByteToInt16 INSTANCE;
 
-    public xRTViewFromByteToInt8(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xRTViewFromByteToInt16(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
         super(templates, structure, false);
 
@@ -47,7 +47,7 @@ public class xRTViewFromByteToInt8
         ConstantPool pool = pool();
         return pool.ensureParameterizedTypeConstant(
                 getInceptionClassConstant().getType(),
-                pool.ensureEcstasyTypeConstant("numbers.Int8"));
+                pool.ensureEcstasyTypeConstant("numbers.Int16"));
         }
 
 
@@ -65,9 +65,17 @@ public class xRTViewFromByteToInt8
             {
             ByteView tView = (ByteView) tSource;
 
-            byte[] abValue = tView.getBytes(hSource, ofStart, cSize, fReverse);
+            int     nSize   = (int) cSize;
+            short[] anValue = new short[nSize];
+            for (int i = 0; i < nSize; i++)
+                {
+                byte bValue0 = tView.extractByte(hSource, ofStart + i*2    );
+                byte bValue1 = tView.extractByte(hSource, ofStart + i*2 + 1);
 
-            return xRTInt8Delegate.INSTANCE.makeHandle(abValue, cSize, mutability);
+                anValue[i] = (short) (((short) bValue0) << 8 | (bValue1 & 0xFF));
+                }
+
+            return xRTInt16Delegate.INSTANCE.packHandle(anValue, mutability);
             }
 
         throw new UnsupportedOperationException();
@@ -84,9 +92,12 @@ public class xRTViewFromByteToInt8
             {
             ByteView tView = (ByteView) tSource;
 
-            byte bValue = tView.extractByte(hSource, lIndex);
+            byte bValue0 = tView.extractByte(hSource, lIndex*2    );
+            byte bValue1 = tView.extractByte(hSource, lIndex*2 + 1);
 
-            return frame.assignValue(iReturn, xInt8.INSTANCE.makeJavaLong(bValue));
+            // using a "short" intermediary takes care of the sign handling
+            short nValue = (short) (((short) bValue0) << 8 | (bValue1 & 0xFF));
+            return frame.assignValue(iReturn, xInt16.INSTANCE.makeJavaLong(nValue));
             }
 
         throw new UnsupportedOperationException();
@@ -104,7 +115,11 @@ public class xRTViewFromByteToInt8
             {
             ByteView tView = (ByteView) tSource;
 
-            tView.assignByte(hSource, lIndex, (byte) ((JavaLong) hValue).getValue());
+            long lValue = ((JavaLong) hValue).getValue();
+
+            tView.assignByte(hSource, lIndex*2 + 1, (byte) ((lValue >>>  8) & 0xFF));
+            tView.assignByte(hSource, lIndex*2    , (byte) ((lValue       ) & 0xFF));
+
             return Op.R_NEXT;
             }
 

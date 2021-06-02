@@ -56,12 +56,13 @@ public class xRTDelegate
         {
         if (this == INSTANCE)
             {
-            registerNativeTemplate(new xRTInt8Delegate   (f_templates, f_struct, true));
-            registerNativeTemplate(new xRTInt64Delegate  (f_templates, f_struct, true));
-            registerNativeTemplate(new xRTCharDelegate   (f_templates, f_struct, true));
-            registerNativeTemplate(new xRTBooleanDelegate(f_templates, f_struct, true));
-            registerNativeTemplate(new xRTBitDelegate    (f_templates, f_struct, true));
-            registerNativeTemplate(new xRTUInt8Delegate  (f_templates, f_struct, true));
+            registerNativeTemplate(new xRTInt8Delegate    (f_templates, f_struct, true));
+            registerNativeTemplate(new xRTInt16Delegate   (f_templates, f_struct, true));
+            registerNativeTemplate(new xRTInt64Delegate   (f_templates, f_struct, true));
+            registerNativeTemplate(new xRTCharDelegate    (f_templates, f_struct, true));
+            registerNativeTemplate(new xRTBooleanDelegate (f_templates, f_struct, true));
+            registerNativeTemplate(new xRTBitDelegate     (f_templates, f_struct, true));
+            registerNativeTemplate(new xRTUInt8Delegate   (f_templates, f_struct, true));
             }
         }
 
@@ -72,14 +73,17 @@ public class xRTDelegate
         ConstantPool                   pool         = pool();
         Map<TypeConstant, xRTDelegate> mapDelegates = new HashMap<>();
 
-        TypeConstant typeInt8 = pool.ensureEcstasyTypeConstant("numbers.Int8");
+        TypeConstant typeInt8   = pool.ensureEcstasyTypeConstant("numbers.Int8");
+        TypeConstant typeInt16  = pool.ensureEcstasyTypeConstant("numbers.Int16");
+        TypeConstant typeUInt16 = pool.ensureEcstasyTypeConstant("numbers.UInt16");
 
         mapDelegates.put(pool.typeBit(),     xRTBitDelegate    .INSTANCE);
         mapDelegates.put(pool.typeBoolean(), xRTBooleanDelegate.INSTANCE);
         mapDelegates.put(pool.typeByte(),    xRTUInt8Delegate  .INSTANCE);
         mapDelegates.put(pool.typeChar(),    xRTCharDelegate   .INSTANCE);
-        mapDelegates.put(typeInt8,           xRTInt8Delegate   .INSTANCE);
         mapDelegates.put(pool.typeInt(),     xRTInt64Delegate  .INSTANCE);
+        mapDelegates.put(typeInt8,           xRTInt8Delegate   .INSTANCE);
+        mapDelegates.put(typeInt16,          xRTInt16Delegate  .INSTANCE);
 
         DELEGATES = mapDelegates;
 
@@ -747,7 +751,7 @@ public class xRTDelegate
     // ----- ObjectHandle helpers ------------------------------------------------------------------
 
     /**
-     * Generic array delegate.
+     * Generic array delegate based on an ObjectHandle array.
      */
     public static class GenericArrayDelegate
             extends DelegateHandle

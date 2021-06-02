@@ -304,7 +304,7 @@ public abstract class ByteBasedDelegate
     public static class ByteArrayHandle
             extends DelegateHandle
         {
-        public byte[] m_abValue;
+        protected byte[] m_abValue;
 
         protected ByteArrayHandle(TypeComposition clazz, byte[] abValue,
                                   long cSize, Mutability mutability)

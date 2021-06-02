@@ -39,16 +39,21 @@ public class xRTViewToBit
         {
         if (this == INSTANCE)
             {
-            registerNativeTemplate(new xRTViewToBitFromInt(f_templates, f_struct, true));
+            registerNativeTemplate(new xRTViewToBitFromInt16(f_templates, f_struct, true));
+            registerNativeTemplate(new xRTViewToBitFromInt64(f_templates, f_struct, true));
             }
         }
     @Override
     public void initNative()
         {
         // register native views
+        ConstantPool                    pool     = pool();
         Map<TypeConstant, xRTViewToBit> mapViews = new HashMap<>();
 
-        mapViews.put(pool().typeInt(), xRTViewToBitFromInt.INSTANCE);
+        TypeConstant typeInt16 = pool.ensureEcstasyTypeConstant("numbers.Int16");
+
+        mapViews.put(pool.typeInt(), xRTViewToBitFromInt64.INSTANCE);
+        mapViews.put(typeInt16     , xRTViewToBitFromInt16.INSTANCE);
 
         VIEWS = mapViews;
         }
@@ -79,7 +84,7 @@ public class xRTViewToBit
             {
             return template.createBitViewDelegate(hSource, mutability);
             }
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("RTViewToBitFrom" + typeElement.getValueString());
         }
 
 
