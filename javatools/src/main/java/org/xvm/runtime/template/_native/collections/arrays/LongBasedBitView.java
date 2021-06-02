@@ -2,8 +2,8 @@ package org.xvm.runtime.template._native.collections.arrays;
 
 
 import org.xvm.asm.ClassStructure;
-
 import org.xvm.asm.Op;
+
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
@@ -52,7 +52,7 @@ public abstract class LongBasedBitView
                                             hLong, hLong.m_cSize*f_nBitsPerValue, mutability);
             return slice(hView, hSlice.f_ofStart*f_nBitsPerValue, hSlice.m_cSize*f_nBitsPerValue, false);
             }
-        return new xRTViewToBitFromInt16.ViewHandle(getCanonicalClass(),
+        return new ViewHandle(getCanonicalClass(),
                 (LongArrayHandle) hSource, hSource.m_cSize*f_nBitsPerValue, mutability);
         }
 
@@ -73,21 +73,19 @@ public abstract class LongBasedBitView
     @Override
     protected int extractArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex, int iReturn)
         {
-        ViewHandle      hView   = (ViewHandle) hTarget;
-        LongArrayHandle hSource = hView.f_hSource;
+        ViewHandle hView = (ViewHandle) hTarget;
 
         return frame.assignValue(iReturn, xBit.makeHandle(
-                LongBasedDelegate.getBit(hSource.m_alValue, (int) lIndex)));
+                LongBasedDelegate.getBit(hView.f_hSource.m_alValue, lIndex)));
         }
 
     @Override
     public int assignArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex,
                                     ObjectHandle hValue)
         {
-        ViewHandle      hView   = (ViewHandle) hTarget;
-        LongArrayHandle hSource = hView.f_hSource;
+        ViewHandle hView = (ViewHandle) hTarget;
 
-        LongBasedDelegate.setBit(hSource.m_alValue, (int) lIndex, ((JavaLong) hValue).getValue() != 0);
+        LongBasedDelegate.setBit(hView.f_hSource.m_alValue, lIndex, ((JavaLong) hValue).getValue() != 0);
         return Op.R_NEXT;
         }
 
@@ -99,7 +97,12 @@ public abstract class LongBasedBitView
         {
         ViewHandle hView = (ViewHandle) hDelegate;
 
-        return ((LongBasedDelegate) hView.getTemplate()).getBits(hView, ofStart, cBits, fReverse);
+        byte[] abBits = LongBasedDelegate.extractBits(hView.f_hSource.m_alValue, ofStart, cBits);
+        if (fReverse)
+            {
+            abBits = BitBasedDelegate.reverseBits(abBits, cBits);
+            }
+        return abBits;
         }
 
     @Override
