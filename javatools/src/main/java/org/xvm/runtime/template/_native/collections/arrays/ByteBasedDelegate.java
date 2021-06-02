@@ -58,6 +58,15 @@ public abstract class ByteBasedDelegate
     // ----- RTDelegate API ------------------------------------------------------------------------
 
     @Override
+    public void fill(DelegateHandle hTarget, int cSize, ObjectHandle hValue)
+        {
+        ByteArrayHandle hDelegate = (ByteArrayHandle) hTarget;
+
+        Arrays.fill(hDelegate.m_abValue, 0, cSize, (byte) ((JavaLong) hValue).getValue());
+        hDelegate.m_cSize = cSize;
+        }
+
+    @Override
     public int getPropertyCapacity(Frame frame, ObjectHandle hTarget, int iReturn)
         {
         ByteArrayHandle hDelegate = (ByteArrayHandle) hTarget;
@@ -90,47 +99,6 @@ public abstract class ByteBasedDelegate
         return Op.R_NEXT;
         }
 
-    public int invokePreInc(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
-        {
-        ByteArrayHandle hDelegate = (ByteArrayHandle) hTarget;
-
-        if (lIndex < 0 || lIndex >= hDelegate.m_cSize)
-            {
-            return frame.raiseException(xException.outOfBounds(frame, lIndex, hDelegate.m_cSize));
-            }
-
-        // TODO GG: range check is missing!
-        return frame.assignValue(iReturn,
-                makeElementHandle(++hDelegate.m_abValue[(int) lIndex]));
-        }
-
-    @Override
-    public int callEquals(Frame frame, TypeComposition clazz,
-                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
-        {
-        ByteArrayHandle h1 = (ByteArrayHandle) hValue1;
-        ByteArrayHandle h2 = (ByteArrayHandle) hValue2;
-
-        return frame.assignValue(iReturn,
-                xBoolean.makeHandle(Arrays.equals(h1.m_abValue, h2.m_abValue)));
-        }
-
-    @Override
-    public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2)
-        {
-        ByteArrayHandle h1 = (ByteArrayHandle) hValue1;
-        ByteArrayHandle h2 = (ByteArrayHandle) hValue2;
-
-        if (h1 == h2)
-            {
-            return true;
-            }
-
-        return h1.getMutability() == h2.getMutability()
-            && h1.m_cSize == h2.m_cSize
-            && Arrays.equals(h1.m_abValue, h2.m_abValue);
-        }
-
     @Override
     protected DelegateHandle createCopyImpl(DelegateHandle hTarget, Mutability mutability,
                                             long ofStart, long cSize, boolean fReverse)
@@ -140,7 +108,7 @@ public abstract class ByteBasedDelegate
         byte[] abValue = Arrays.copyOfRange(hDelegate.m_abValue, (int) ofStart, (int) (ofStart + cSize));
         if (fReverse)
             {
-            abValue = reverse(abValue, (int) cSize);
+            abValue = reverseBytes(abValue, (int) cSize);
             }
 
         return new ByteArrayHandle(hDelegate.getComposition(), abValue, cSize, mutability);
@@ -192,18 +160,12 @@ public abstract class ByteBasedDelegate
             }
         hDelegate.m_cSize++;
 
-        if (lIndex == cSize)
+        int nIndex = (int) lIndex;
+        if (nIndex < cSize)
             {
-            // add
-            abValue[cSize] = bValue;
-            }
-        else
-            {
-            // insert
-            int nIndex = (int) lIndex;
             System.arraycopy(abValue, nIndex, abValue, nIndex + 1, cSize - nIndex);
-            abValue[(int) lIndex] = bValue;
             }
+        abValue[nIndex] = bValue;
         }
 
     @Override
@@ -219,15 +181,6 @@ public abstract class ByteBasedDelegate
             System.arraycopy(abValue, nIndex + 1, abValue, nIndex, cSize - nIndex -1);
             }
         abValue[(int) --hDelegate.m_cSize] = 0;
-        }
-
-    @Override
-    public void fill(DelegateHandle hTarget, int cSize, ObjectHandle hValue)
-        {
-        ByteArrayHandle hDelegate = (ByteArrayHandle) hTarget;
-
-        Arrays.fill(hDelegate.m_abValue, 0, cSize, (byte) ((JavaLong) hValue).getValue());
-        hDelegate.m_cSize = cSize;
         }
 
 
@@ -247,7 +200,7 @@ public abstract class ByteBasedDelegate
             }
 
         ab = Arrays.copyOfRange(ab, (int) ofStart, (int) (ofStart + cBytes));
-        return fReverse ? reverse(ab, (int) cBytes) : ab;
+        return fReverse ? reverseBytes(ab, (int) cBytes) : ab;
         }
 
     @Override
@@ -267,9 +220,59 @@ public abstract class ByteBasedDelegate
         }
 
 
+    // ----- ClassTemplate API ---------------------------------------------------------------------
+
+    public int invokePreInc(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
+        {
+        ByteArrayHandle hDelegate = (ByteArrayHandle) hTarget;
+
+        if (lIndex < 0 || lIndex >= hDelegate.m_cSize)
+            {
+            return frame.raiseException(xException.outOfBounds(frame, lIndex, hDelegate.m_cSize));
+            }
+
+        // TODO GG: range check is missing!
+        return frame.assignValue(iReturn,
+                makeElementHandle(++hDelegate.m_abValue[(int) lIndex]));
+        }
+
+    @Override
+    public int callEquals(Frame frame, TypeComposition clazz,
+                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        ByteArrayHandle h1 = (ByteArrayHandle) hValue1;
+        ByteArrayHandle h2 = (ByteArrayHandle) hValue2;
+
+        return frame.assignValue(iReturn,
+                xBoolean.makeHandle(Arrays.equals(h1.m_abValue, h2.m_abValue)));
+        }
+
+    @Override
+    public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2)
+        {
+        ByteArrayHandle h1 = (ByteArrayHandle) hValue1;
+        ByteArrayHandle h2 = (ByteArrayHandle) hValue2;
+
+        if (h1 == h2)
+            {
+            return true;
+            }
+
+        return h1.getMutability() == h2.getMutability()
+            && h1.m_cSize == h2.m_cSize
+            && Arrays.equals(h1.m_abValue, h2.m_abValue);
+        }
+
+
     // ----- helper methods ------------------------------------------------------------------------
 
-    public static byte[] reverse(byte[] abValue, int cSize)
+    /**
+     * Reverse the array of bites represented by the specified array.
+     *
+     * @param abValue the byte array
+     * @param cSize   the actual number of bytes held by the array
+     */
+    public static byte[] reverseBytes(byte[] abValue, int cSize)
         {
         byte[] abValueR = new byte[cSize];
         for (int i = 0; i < cSize; i++)
@@ -279,7 +282,7 @@ public abstract class ByteBasedDelegate
         return abValueR;
         }
 
-    private static byte[] grow(byte[] abValue, int cSize)
+    protected static byte[] grow(byte[] abValue, int cSize)
         {
         int cCapacity = calculateCapacity(abValue.length, cSize);
 
@@ -288,14 +291,17 @@ public abstract class ByteBasedDelegate
         return abNew;
         }
 
+
+    // ----- ObjectHandle --------------------------------------------------------------------------
+
     /**
      * Make an element handle for the specified value.
      */
     abstract protected ObjectHandle makeElementHandle(long lValue);
 
-
-    // ----- ObjectHandle --------------------------------------------------------------------------
-
+    /**
+     * Make a cannoncal array handle.
+     */
     public ByteArrayHandle makeHandle(byte[] ab, long cSize, Mutability mutability)
         {
         return new ByteArrayHandle(getCanonicalClass(), ab, cSize, mutability);

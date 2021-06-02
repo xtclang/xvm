@@ -13,9 +13,6 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 
-import org.xvm.runtime.template.xBoolean;
-import org.xvm.runtime.template.xException;
-
 import org.xvm.runtime.template.collections.xArray.Mutability;
 
 import org.xvm.runtime.template.numbers.xInt64;
@@ -25,14 +22,14 @@ import org.xvm.runtime.template.numbers.xInt64;
  * A base class for native ArrayDelegate implementations based on bit arrays.
  */
 public abstract class BitBasedDelegate
-        extends xRTDelegate
+        extends ByteBasedDelegate
         implements BitView
     {
     public static BitBasedDelegate INSTANCE;
 
     protected BitBasedDelegate(TemplateRegistry templates, ClassStructure structure)
         {
-        super(templates, structure, false);
+        super(templates, structure);
         }
 
     @Override
@@ -56,6 +53,9 @@ public abstract class BitBasedDelegate
 
         return new BitArrayHandle(getCanonicalClass(), ab, cSize, mutability);
         }
+
+
+    // ----- RTDelegate API ------------------------------------------------------------------------
 
     @Override
     public void fill(DelegateHandle hTarget, int cSize, ObjectHandle hValue)
@@ -88,9 +88,6 @@ public abstract class BitBasedDelegate
         hDelegate.m_cSize = cSize;
         }
 
-
-    // ----- RTDelegate API ------------------------------------------------------------------------
-
     @Override
     public int getPropertyCapacity(Frame frame, ObjectHandle hTarget, int iReturn)
         {
@@ -102,54 +99,7 @@ public abstract class BitBasedDelegate
     @Override
     public int setPropertyCapacity(Frame frame, ObjectHandle hTarget, long nCapacity)
         {
-        BitArrayHandle hDelegate = (BitArrayHandle) hTarget;
-
-        byte[] abOld = hDelegate.m_abValue;
-        long   cSize = hDelegate.m_cSize;
-
-        if (nCapacity < cSize)
-            {
-            return frame.raiseException(
-                xException.illegalArgument(frame, "Capacity cannot be less then size"));
-            }
-
-        // for now, no trimming
-        int nNew = storage((int) nCapacity);
-        int nOld = storage(abOld.length);
-        if (nNew > nOld)
-            {
-            byte[] abNew = new byte[nNew];
-            System.arraycopy(abOld, 0, abNew, 0, abOld.length);
-            hDelegate.m_abValue = abNew;
-            }
-        return Op.R_NEXT;
-        }
-
-    @Override
-    public int callEquals(Frame frame, TypeComposition clazz,
-                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
-        {
-        BitArrayHandle h1 = (BitArrayHandle) hValue1;
-        BitArrayHandle h2 = (BitArrayHandle) hValue2;
-
-        return frame.assignValue(iReturn,
-                xBoolean.makeHandle(Arrays.equals(h1.m_abValue, h2.m_abValue)));
-        }
-
-    @Override
-    public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2)
-        {
-        BitArrayHandle h1 = (BitArrayHandle) hValue1;
-        BitArrayHandle h2 = (BitArrayHandle) hValue2;
-
-        if (h1 == h2)
-            {
-            return true;
-            }
-
-        return h1.getMutability() == h2.getMutability()
-            && h1.m_cSize == h2.m_cSize
-            && Arrays.equals(h1.m_abValue, h2.m_abValue);
+        return super.setPropertyCapacity(frame, hTarget, storage(nCapacity));
         }
 
     @Override
@@ -159,6 +109,7 @@ public abstract class BitBasedDelegate
         BitArrayHandle hDelegate = (BitArrayHandle) hTarget;
 
         byte[] abBits = getBits(hDelegate, ofStart, cSize, fReverse);
+
         return new BitArrayHandle(hDelegate.getComposition(), abBits, cSize, mutability);
         }
 
@@ -206,14 +157,14 @@ public abstract class BitBasedDelegate
             }
         hDelegate.m_cSize++;
 
-        if (lIndex == cSize)
+        if (lIndex < cSize)
             {
-            setBit(abValue, cSize, isSet(hElement));
+            for (long i = lIndex + 1; i < cSize; i++)
+                {
+                setBit(abValue, i, getBit(abValue, i-1));
+                }
             }
-        else
-            {
-            throw new UnsupportedOperationException("TODO"); // move the bits
-            }
+        setBit(abValue, lIndex, isSet(hElement));
         }
 
     @Override
@@ -234,16 +185,6 @@ public abstract class BitBasedDelegate
 
         setBit(abValue, --hDelegate.m_cSize, false);
         }
-
-    /**
-     * @return true iff the specified value represents a "set" bit
-     */
-    protected abstract boolean isSet(ObjectHandle hValue);
-
-    /**
-     * @return an ObjectHandle representing the bit value
-     */
-    protected abstract ObjectHandle makeBitHandle(boolean f);
 
 
     // ----- BitView implementation ----------------------------------------------------------------
@@ -299,31 +240,6 @@ public abstract class BitBasedDelegate
         }
 
 
-    // ----- ByteView implementation ---------------------------------------------------------------
-
-    @Override
-    public byte[] getBytes(DelegateHandle hDelegate, long ofStart, long cBytes, boolean fReverse)
-        {
-        return getBits(hDelegate, ofStart*8, cBytes*8, fReverse);
-        }
-
-    @Override
-    public byte extractByte(DelegateHandle hDelegate, long of)
-        {
-        BitArrayHandle hBits = (BitArrayHandle) hDelegate;
-
-        return hBits.m_abValue[(int) of];
-        }
-
-    @Override
-    public void assignByte(DelegateHandle hDelegate, long of, byte bValue)
-        {
-        BitArrayHandle hBits = (BitArrayHandle) hDelegate;
-
-        hBits.m_abValue[(int) of] = bValue;
-        }
-
-
     // ----- helper methods ------------------------------------------------------------------------
 
     /**
@@ -343,15 +259,6 @@ public abstract class BitBasedDelegate
                 }
             }
         return abValueR;
-        }
-
-    private static byte[] grow(byte[] abValue, int cBytes)
-        {
-        int cCapacity = calculateCapacity(abValue.length, cBytes);
-
-        byte[] abNew = new byte[cCapacity];
-        System.arraycopy(abValue, 0, abNew, 0, abValue.length);
-        return abNew;
         }
 
     /**
@@ -435,22 +342,34 @@ public abstract class BitBasedDelegate
         }
 
 
-    // ----- handle --------------------------------------------------------------------------------
+    // ----- ObjectHandle --------------------------------------------------------------------------
+
+    @Override
+    protected ObjectHandle makeElementHandle(long lValue)
+        {
+        throw new IllegalStateException();
+        }
+
+    /**
+     * @return true iff the specified value represents a "set" bit
+     */
+    protected abstract boolean isSet(ObjectHandle hValue);
+
+    /**
+     * @return an ObjectHandle representing the bit value
+     */
+    protected abstract ObjectHandle makeBitHandle(boolean f);
 
     /**
      * The handle for Bit/Boolean array delegate.
      */
     public static class BitArrayHandle
-            extends DelegateHandle
+            extends ByteArrayHandle
         {
-        public byte[] m_abValue;
-
-        public BitArrayHandle(TypeComposition clazz, byte[] abValue, long cBits, Mutability mutability)
+        public BitArrayHandle(TypeComposition clazz, byte[] abValue,
+                              long cSize, Mutability mutability)
             {
-            super(clazz, mutability);
-
-            m_abValue = abValue;
-            m_cSize   = cBits;
+            super(clazz, abValue, cSize, mutability);
             }
 
         @Override
@@ -469,12 +388,6 @@ public abstract class BitBasedDelegate
                     }
                 super.makeImmutable();
                 }
-            }
-
-        @Override
-        public boolean isNativeEqual()
-            {
-            return true;
             }
 
         @Override
@@ -499,19 +412,6 @@ public abstract class BitBasedDelegate
                     }
                 }
             return 0;
-            }
-
-        @Override
-        public int hashCode()
-            {
-            return Arrays.hashCode(m_abValue);
-            }
-
-        @Override
-        public boolean equals(Object obj)
-            {
-            return obj instanceof BitArrayHandle
-                && Arrays.equals(m_abValue, ((BitArrayHandle) obj).m_abValue);
             }
         }
     }
