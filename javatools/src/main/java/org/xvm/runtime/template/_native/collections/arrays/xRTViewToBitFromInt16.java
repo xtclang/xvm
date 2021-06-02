@@ -14,7 +14,6 @@ import org.xvm.runtime.TemplateRegistry;
  */
 public class xRTViewToBitFromInt16
         extends LongBasedBitView
-        implements BitView
     {
     public static xRTViewToBitFromInt16 INSTANCE;
 

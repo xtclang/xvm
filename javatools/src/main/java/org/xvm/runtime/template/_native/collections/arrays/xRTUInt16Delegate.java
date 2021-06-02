@@ -8,20 +8,22 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TemplateRegistry;
-import org.xvm.runtime.template.numbers.xInt64;
+
+import org.xvm.runtime.template.numbers.xUInt16;
 
 
 /**
- * Native RTDelegate<Int> implementation.
+ * Native RTDelegate<UInt16> implementation.
  */
-public class xRTInt64Delegate
-        extends LongDelegate
+public class xRTUInt16Delegate
+        extends LongBasedDelegate
+        implements ByteView
     {
-    public static xRTInt64Delegate INSTANCE;
+    public static xRTUInt16Delegate INSTANCE;
 
-    public xRTInt64Delegate(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xRTUInt16Delegate(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, true);
+        super(templates, structure, 16, false);
 
         if (fInstance)
             {
@@ -40,12 +42,12 @@ public class xRTInt64Delegate
         ConstantPool pool = pool();
         return pool.ensureParameterizedTypeConstant(
                 getInceptionClassConstant().getType(),
-                pool.typeInt());
+                pool.ensureEcstasyTypeConstant("numbers.UInt16"));
         }
 
     @Override
     protected ObjectHandle makeElementHandle(long lValue)
         {
-        return xInt64.INSTANCE.makeJavaLong(lValue);
+        return xUInt16.INSTANCE.makeJavaLong(lValue);
         }
-   }
+    }

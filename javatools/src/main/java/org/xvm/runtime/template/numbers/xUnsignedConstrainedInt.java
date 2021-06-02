@@ -56,6 +56,18 @@ public abstract class xUnsignedConstrainedInt
         }
 
     @Override
+    public int invokeDivRem(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int[] aiReturn)
+        {
+        long l1 = ((JavaLong) hTarget).getValue();
+        long l2 = ((JavaLong) hArg).getValue();
+
+        long lQuo = divUnassigned(l1, l2);
+        long lRem = modUnassigned(l1, l2);
+
+        return frame.assignValues(aiReturn, makeJavaLong(lQuo), makeJavaLong(lRem));
+        }
+
+    @Override
     public int callCompare(Frame frame, TypeComposition clazz,
                            ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {

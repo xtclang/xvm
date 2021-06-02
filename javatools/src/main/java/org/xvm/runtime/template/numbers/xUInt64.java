@@ -9,6 +9,7 @@ import org.xvm.asm.constants.IntConstant;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TemplateRegistry;
 
 import org.xvm.util.PackedInteger;
@@ -76,8 +77,8 @@ public class xUInt64
     @Override
     public int invokeMul(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        long l1 = ((ObjectHandle.JavaLong) hTarget).getValue();
-        long l2 = ((ObjectHandle.JavaLong) hArg).getValue();
+        long l1 = ((JavaLong) hTarget).getValue();
+        long l2 = ((JavaLong) hArg).getValue();
 
         return frame.assignValue(iReturn, makeJavaLong(mulUnassigned(frame, l1, l2)));
         }
@@ -85,8 +86,8 @@ public class xUInt64
     @Override
     public int invokeDiv(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        long l1 = ((ObjectHandle.JavaLong) hTarget).getValue();
-        long l2 = ((ObjectHandle.JavaLong) hArg).getValue();
+        long l1 = ((JavaLong) hTarget).getValue();
+        long l2 = ((JavaLong) hArg).getValue();
 
         if (l2 == 0)
             {
@@ -99,8 +100,8 @@ public class xUInt64
     @Override
     public int invokeMod(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        long l1 = ((ObjectHandle.JavaLong) hTarget).getValue();
-        long l2 = ((ObjectHandle.JavaLong) hArg).getValue();
+        long l1 = ((JavaLong) hTarget).getValue();
+        long l2 = ((JavaLong) hArg).getValue();
 
         if (l2 == 0)
             {
@@ -108,18 +109,6 @@ public class xUInt64
             }
 
         return frame.assignValue(iReturn, makeJavaLong(modUnassigned(l1, l2)));
-        }
-
-    @Override
-    public int invokeDivRem(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int[] aiReturn)
-        {
-        long l1 = ((ObjectHandle.JavaLong) hTarget).getValue();
-        long l2 = ((ObjectHandle.JavaLong) hArg).getValue();
-
-        long lQuo = divUnassigned(l1, l2);
-        long lRem = modUnassigned(l1, l2);
-
-        return frame.assignValues(aiReturn, makeJavaLong(lQuo), makeJavaLong(lRem));
         }
 
     @Override

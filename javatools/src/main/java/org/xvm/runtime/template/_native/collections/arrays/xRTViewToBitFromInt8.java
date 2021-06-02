@@ -6,22 +6,20 @@ import org.xvm.asm.ConstantPool;
 
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TemplateRegistry;
-import org.xvm.runtime.template.numbers.xInt64;
 
 
 /**
- * Native RTDelegate<Int> implementation.
+ * The native RTViewToBit<Int8> implementation.
  */
-public class xRTInt64Delegate
-        extends LongDelegate
+public class xRTViewToBitFromInt8
+        extends ByteBasedBitView
     {
-    public static xRTInt64Delegate INSTANCE;
+    public static xRTViewToBitFromInt8 INSTANCE;
 
-    public xRTInt64Delegate(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xRTViewToBitFromInt8(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, true);
+        super(templates, structure);
 
         if (fInstance)
             {
@@ -40,12 +38,6 @@ public class xRTInt64Delegate
         ConstantPool pool = pool();
         return pool.ensureParameterizedTypeConstant(
                 getInceptionClassConstant().getType(),
-                pool.typeInt());
+                pool.ensureEcstasyTypeConstant("numbers.Int8"));
         }
-
-    @Override
-    protected ObjectHandle makeElementHandle(long lValue)
-        {
-        return xInt64.INSTANCE.makeJavaLong(lValue);
-        }
-   }
+    }

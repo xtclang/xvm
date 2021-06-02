@@ -8,20 +8,21 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TemplateRegistry;
-import org.xvm.runtime.template.numbers.xInt64;
+
+import org.xvm.runtime.template.numbers.xUInt64;
 
 
 /**
- * Native RTDelegate<Int> implementation.
+ * Native RTDelegate<UInt64> implementation.
  */
-public class xRTInt64Delegate
+public class xRTUInt64Delegate
         extends LongDelegate
     {
-    public static xRTInt64Delegate INSTANCE;
+    public static xRTUInt64Delegate INSTANCE;
 
-    public xRTInt64Delegate(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xRTUInt64Delegate(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, true);
+        super(templates, structure, false);
 
         if (fInstance)
             {
@@ -40,12 +41,12 @@ public class xRTInt64Delegate
         ConstantPool pool = pool();
         return pool.ensureParameterizedTypeConstant(
                 getInceptionClassConstant().getType(),
-                pool.typeInt());
+                pool.ensureEcstasyTypeConstant("numbers.UInt64"));
         }
 
     @Override
     protected ObjectHandle makeElementHandle(long lValue)
         {
-        return xInt64.INSTANCE.makeJavaLong(lValue);
+        return xUInt64.INSTANCE.makeJavaLong(lValue);
         }
    }

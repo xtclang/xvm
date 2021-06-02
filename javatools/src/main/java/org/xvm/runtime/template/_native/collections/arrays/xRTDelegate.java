@@ -56,13 +56,19 @@ public class xRTDelegate
         {
         if (this == INSTANCE)
             {
-            registerNativeTemplate(new xRTInt8Delegate    (f_templates, f_struct, true));
-            registerNativeTemplate(new xRTInt16Delegate   (f_templates, f_struct, true));
-            registerNativeTemplate(new xRTInt64Delegate   (f_templates, f_struct, true));
-            registerNativeTemplate(new xRTCharDelegate    (f_templates, f_struct, true));
             registerNativeTemplate(new xRTBooleanDelegate (f_templates, f_struct, true));
             registerNativeTemplate(new xRTBitDelegate     (f_templates, f_struct, true));
+            registerNativeTemplate(new xRTCharDelegate    (f_templates, f_struct, true));
+
+            registerNativeTemplate(new xRTInt8Delegate    (f_templates, f_struct, true));
+            registerNativeTemplate(new xRTInt16Delegate   (f_templates, f_struct, true));
+            registerNativeTemplate(new xRTInt32Delegate   (f_templates, f_struct, true));
+            registerNativeTemplate(new xRTInt64Delegate   (f_templates, f_struct, true));
+
             registerNativeTemplate(new xRTUInt8Delegate   (f_templates, f_struct, true));
+            registerNativeTemplate(new xRTUInt16Delegate  (f_templates, f_struct, true));
+            registerNativeTemplate(new xRTUInt32Delegate  (f_templates, f_struct, true));
+            registerNativeTemplate(new xRTUInt64Delegate  (f_templates, f_struct, true));
             }
         }
 
@@ -75,15 +81,25 @@ public class xRTDelegate
 
         TypeConstant typeInt8   = pool.ensureEcstasyTypeConstant("numbers.Int8");
         TypeConstant typeInt16  = pool.ensureEcstasyTypeConstant("numbers.Int16");
-        TypeConstant typeUInt16 = pool.ensureEcstasyTypeConstant("numbers.UInt16");
+        TypeConstant typeInt32  = pool.ensureEcstasyTypeConstant("numbers.Int32");
 
-        mapDelegates.put(pool.typeBit(),     xRTBitDelegate    .INSTANCE);
+        TypeConstant typeUInt16 = pool.ensureEcstasyTypeConstant("numbers.UInt16");
+        TypeConstant typeUInt32 = pool.ensureEcstasyTypeConstant("numbers.UInt32");
+        TypeConstant typeUInt64 = pool.ensureEcstasyTypeConstant("numbers.UInt64");
+
         mapDelegates.put(pool.typeBoolean(), xRTBooleanDelegate.INSTANCE);
-        mapDelegates.put(pool.typeByte(),    xRTUInt8Delegate  .INSTANCE);
+        mapDelegates.put(pool.typeBit(),     xRTBitDelegate    .INSTANCE);
         mapDelegates.put(pool.typeChar(),    xRTCharDelegate   .INSTANCE);
-        mapDelegates.put(pool.typeInt(),     xRTInt64Delegate  .INSTANCE);
+
         mapDelegates.put(typeInt8,           xRTInt8Delegate   .INSTANCE);
         mapDelegates.put(typeInt16,          xRTInt16Delegate  .INSTANCE);
+        mapDelegates.put(typeInt32,          xRTInt32Delegate  .INSTANCE);
+        mapDelegates.put(pool.typeInt(),     xRTInt64Delegate  .INSTANCE);
+
+        mapDelegates.put(pool.typeByte(),    xRTUInt8Delegate  .INSTANCE);
+        mapDelegates.put(typeUInt16,         xRTUInt16Delegate .INSTANCE);
+        mapDelegates.put(typeUInt32,         xRTUInt32Delegate .INSTANCE);
+        mapDelegates.put(typeUInt64,         xRTUInt64Delegate .INSTANCE);
 
         DELEGATES = mapDelegates;
 

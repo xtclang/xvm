@@ -10,16 +10,16 @@ import org.xvm.runtime.TemplateRegistry;
 
 
 /**
- * The native RTViewToBit<Int64> implementation.
+ * The native RTViewToBit<Byte> implementation.
  */
-public class xRTViewToBitFromInt64
-        extends LongBasedBitView
+public class xRTViewToBitFromUInt8
+        extends ByteBasedBitView
     {
-    public static xRTViewToBitFromInt64 INSTANCE;
+    public static xRTViewToBitFromUInt8 INSTANCE;
 
-    public xRTViewToBitFromInt64(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xRTViewToBitFromUInt8(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, 64);
+        super(templates, structure);
 
         if (fInstance)
             {
@@ -37,6 +37,6 @@ public class xRTViewToBitFromInt64
         {
         ConstantPool pool = pool();
         return pool.ensureParameterizedTypeConstant(
-                getInceptionClassConstant().getType(), pool.typeInt());
+                getInceptionClassConstant().getType(), pool.typeByte());
         }
     }

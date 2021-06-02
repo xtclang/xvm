@@ -4,49 +4,22 @@ module TestSimple.test.org
 
     void run()
         {
-        Int[] ints  = [1, 2, 3];
-        reportBits("const", ints.asBitArray());
+        Int16[] ints16 = [-1, 1];
+        console.println($"{ints16} {ints16.asByteArray().toInt16Array()}");
 
-        ints = ints.reify(Mutable);
-        Bit[] bits = ints.asBitArray();
-        reportBits("mutable", bits);
+        UInt16[] uints16 = [65535, 1];
+        console.println($"{uints16} {uints16.asByteArray().toInt16Array()}");
 
-        reportBits("reified", bits.reify(Fixed)); // TODO GG: reify() is not working
+        Byte[] bytes = [1, 1, 0, 255];
+        console.println($"{bytes} {bytes.asBitArray()} {bytes.asInt16Array()}");
 
-        bits[61] = 1;
-        console.println($"ints: {ints}");
+        Int[] ints64 = [1, -1];
+        console.println($"{ints64} {ints64.asByteArray().toInt64Array()}");
 
-        bits = ints[1..2].asBitArray();
-        reportBits("slice", bits);
+        UInt[] uints64 = [0x8000_0000_0000_0000];
+        console.println($"{uints64} {uints64.asByteArray().toInt64Array()}");
 
-        reportBits("reified slice", bits.reify(Persistent));
-
-        console.println($"\n*** bits as bytes");
-        console.println(bits.reify(Persistent).asByteArray());
-
-        console.println($"\n*** slice bits as bytes");
-        console.println(bits.reify(Persistent)[0..63].asByteArray());
-
-        console.println($"\n*** ints as bytes");
-        console.println(ints.asByteArray());
-
-        console.println($"\n*** bytes to ints");
-        Int[] ints2 = ints.asByteArray().asInt64Array();
-        console.println(ints2);
-        assert ints == ints2;
-        }
-
-    void reportBits(String test, Bit[] bits)
-        {
-        console.println($"\n*** {test}");
-        console.println($"bits: {bits.mutability} size={bits.size}");
-        for (Int i : [0..bits.size))
-            {
-            if (bits[i] == 1)
-                {
-                console.print($"[{i}]=1, ");
-                }
-            }
-        console.println();
+        Int8[] ints8 = [1, 1, 0, -1];
+        console.println($"{ints8} {ints8.asByteArray().toInt16Array()}");
         }
     }

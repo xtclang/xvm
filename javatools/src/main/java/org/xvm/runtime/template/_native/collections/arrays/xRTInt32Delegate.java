@@ -11,21 +11,21 @@ import org.xvm.runtime.TemplateRegistry;
 
 import org.xvm.runtime.template.collections.xArray.Mutability;
 
-import org.xvm.runtime.template.numbers.xInt16;
+import org.xvm.runtime.template.numbers.xInt32;
 
 
 /**
- * Native RTDelegate<Int16> implementation.
+ * Native RTDelegate<Int32> implementation.
  */
-public class xRTInt16Delegate
+public class xRTInt32Delegate
         extends LongBasedDelegate
         implements ByteView
     {
-    public static xRTInt16Delegate INSTANCE;
+    public static xRTInt32Delegate INSTANCE;
 
-    public xRTInt16Delegate(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xRTInt32Delegate(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, 16, true);
+        super(templates, structure, 32, true);
 
         if (fInstance)
             {
@@ -44,19 +44,19 @@ public class xRTInt16Delegate
         ConstantPool pool = pool();
         return pool.ensureParameterizedTypeConstant(
                 getInceptionClassConstant().getType(),
-                pool.ensureEcstasyTypeConstant("numbers.Int16"));
+                pool.ensureEcstasyTypeConstant("numbers.Int32"));
         }
 
     @Override
     protected ObjectHandle makeElementHandle(long lValue)
         {
-        return xInt16.INSTANCE.makeJavaLong(lValue);
+        return xInt32.INSTANCE.makeJavaLong(lValue);
         }
 
     /**
      * Pack an array of short values into a long array and create a DelegateHandle.
      */
-    public DelegateHandle packHandle(short[] anValue, Mutability mutability)
+    public DelegateHandle packHandle(int[] anValue, Mutability mutability)
         {
         int    cValues  = anValue.length;
         long[] alPacked = new long[storage(cValues)];

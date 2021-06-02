@@ -14,25 +14,20 @@ import org.xvm.runtime.template.collections.xArray.Mutability;
 
 import org.xvm.runtime.template.numbers.xBit;
 
-import org.xvm.runtime.template._native.collections.arrays.LongBasedDelegate.LongArrayHandle;
+import org.xvm.runtime.template._native.collections.arrays.ByteBasedDelegate.ByteArrayHandle;
 import org.xvm.runtime.template._native.collections.arrays.xRTSlicingDelegate.SliceHandle;
 
 
 /**
- * A base class for native ArrayDelegate<Bit> views that point to delegates holding long arrays.
+ * A base class for native ArrayDelegate<Bit> views that point to delegates holding byte arrays.
  */
-public abstract class LongBasedBitView
+public abstract class ByteBasedBitView
         extends xRTViewToBit
         implements BitView
     {
-    public static LongBasedBitView INSTANCE;
-
-    public LongBasedBitView(TemplateRegistry templates, ClassStructure structure,
-                            int nBitsPerValue)
+    public ByteBasedBitView(TemplateRegistry templates, ClassStructure structure)
         {
         super(templates, structure, false);
-
-        f_nBitsPerValue = nBitsPerValue;
         }
 
     @Override
@@ -40,15 +35,15 @@ public abstract class LongBasedBitView
         {
         if (hSource instanceof SliceHandle)
             {
-            // ints.slice().asBitArray() -> ints.asBitArray().slice()
+            // bytes.slice().asBitArray() -> bytes.asBitArray().slice()
             SliceHandle     hSlice = (SliceHandle) hSource;
-            LongArrayHandle hLong  = (LongArrayHandle) hSlice.f_hSource;
+            ByteArrayHandle hBytes = (ByteArrayHandle) hSlice.f_hSource;
             ViewHandle      hView  = new ViewHandle(getCanonicalClass(),
-                                            hLong, hLong.m_cSize*f_nBitsPerValue, mutability);
-            return slice(hView, hSlice.f_ofStart*f_nBitsPerValue, hSlice.m_cSize*f_nBitsPerValue, false);
+                                        hBytes, hBytes.m_cSize*8, mutability);
+            return slice(hView, hSlice.f_ofStart*8, hSlice.m_cSize*8, false);
             }
         return new ViewHandle(getCanonicalClass(),
-                (LongArrayHandle) hSource, hSource.m_cSize*f_nBitsPerValue, mutability);
+                (ByteArrayHandle) hSource, hSource.m_cSize*8, mutability);
         }
 
 
@@ -71,7 +66,7 @@ public abstract class LongBasedBitView
         ViewHandle hView = (ViewHandle) hTarget;
 
         return frame.assignValue(iReturn, xBit.makeHandle(
-                LongBasedDelegate.getBit(hView.f_hSource.m_alValue, lIndex)));
+                BitBasedDelegate.getBit(hView.f_hSource.m_abValue, lIndex)));
         }
 
     @Override
@@ -80,7 +75,7 @@ public abstract class LongBasedBitView
         {
         ViewHandle hView = (ViewHandle) hTarget;
 
-        LongBasedDelegate.setBit(hView.f_hSource.m_alValue, lIndex, ((JavaLong) hValue).getValue() != 0);
+        BitBasedDelegate.setBit(hView.f_hSource.m_abValue, lIndex, ((JavaLong) hValue).getValue() != 0);
         return Op.R_NEXT;
         }
 
@@ -92,7 +87,7 @@ public abstract class LongBasedBitView
         {
         ViewHandle hView = (ViewHandle) hDelegate;
 
-        byte[] abBits = LongBasedDelegate.extractBits(hView.f_hSource.m_alValue, ofStart, cBits);
+        byte[] abBits = hView.f_hSource.m_abValue;
         if (fReverse)
             {
             abBits = BitBasedDelegate.reverseBits(abBits, cBits);
@@ -105,7 +100,7 @@ public abstract class LongBasedBitView
         {
         ViewHandle hView = (ViewHandle) hDelegate;
 
-        return LongBasedDelegate.getBit(hView.f_hSource.m_alValue, of);
+        return BitBasedDelegate.getBit(hView.f_hSource.m_abValue, of);
         }
 
     @Override
@@ -113,7 +108,7 @@ public abstract class LongBasedBitView
         {
         ViewHandle hView = (ViewHandle) hDelegate;
 
-        LongBasedDelegate.setBit(hView.f_hSource.m_alValue, of, fBit);
+        BitBasedDelegate.setBit(hView.f_hSource.m_abValue, of, fBit);
         }
 
 
@@ -130,7 +125,7 @@ public abstract class LongBasedBitView
         {
         ViewHandle hView = (ViewHandle) hDelegate;
 
-        return LongBasedDelegate.getByte(hView.f_hSource.m_alValue, of);
+        return hView.f_hSource.m_abValue[(int) of];
         }
 
     @Override
@@ -138,7 +133,7 @@ public abstract class LongBasedBitView
         {
         ViewHandle hView = (ViewHandle) hDelegate;
 
-        LongBasedDelegate.setByte(hView.f_hSource.m_alValue, of, bValue);
+        hView.f_hSource.m_abValue[(int) of] = bValue;
         }
 
 
@@ -150,9 +145,9 @@ public abstract class LongBasedBitView
     protected static class ViewHandle
             extends DelegateHandle
         {
-        protected final LongArrayHandle f_hSource;
+        protected final ByteArrayHandle f_hSource;
 
-        protected ViewHandle(TypeComposition clazz, LongArrayHandle hSource, long cSize,
+        protected ViewHandle(TypeComposition clazz, ByteArrayHandle hSource, long cSize,
                              Mutability mutability)
             {
             super(clazz, mutability);
@@ -164,6 +159,4 @@ public abstract class LongBasedBitView
 
 
     // ----- constants -----------------------------------------------------------------------------
-
-    final int f_nBitsPerValue;
     }

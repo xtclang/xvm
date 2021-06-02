@@ -10,6 +10,7 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 
@@ -454,7 +455,7 @@ public abstract class xUnconstrainedInteger
     @Override
     public int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn)
         {
-        long l = ((ObjectHandle.JavaLong) hTarget).getValue();
+        long l = ((JavaLong) hTarget).getValue();
 
         return frame.assignValue(iReturn, xInt64.makeHandle(l));
         }

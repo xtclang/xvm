@@ -33,11 +33,6 @@ public abstract class BitBasedDelegate
         }
 
     @Override
-    public void initNative()
-        {
-        }
-
-    @Override
     public DelegateHandle createDelegate(TypeConstant typeElement, int cCapacity,
                                          ObjectHandle[] ahContent, Mutability mutability)
         {
