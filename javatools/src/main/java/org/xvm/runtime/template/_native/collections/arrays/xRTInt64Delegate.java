@@ -171,7 +171,7 @@ public class xRTInt64Delegate
             System.arraycopy(alValue, nIndex + 1, alValue, nIndex, cSize - nIndex -1);
             }
 
-        --hDelegate.m_cSize;
+        alValue[(int) --hDelegate.m_cSize] = 0;
         }
 
     @Override

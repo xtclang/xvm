@@ -208,7 +208,7 @@ public abstract class LongBasedDelegate
                 }
             }
 
-        --hDelegate.m_cSize;
+        alValue[(int) --hDelegate.m_cSize] = 0;
         }
 
     /**
