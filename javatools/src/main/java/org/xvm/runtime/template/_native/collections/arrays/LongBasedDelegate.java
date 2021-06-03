@@ -38,6 +38,8 @@ public abstract class LongBasedDelegate
 
         f_nBitsPerValue  = nBitsPerValue;
         f_nValuesPerLong = 64 / nBitsPerValue;
+        f_nIndexShift    = f_nValuesPerLong >> 1;
+        f_nIndexMask     = (1 << f_nIndexShift) - 1;
         f_lValueMask     = -1L >>> (64 - f_nBitsPerValue);
         f_lSignBit       = 1L << (f_nBitsPerValue - 1);
         f_fSigned        = fSigned;
@@ -83,7 +85,8 @@ public abstract class LongBasedDelegate
         {
         LongArrayHandle hDelegate = (LongArrayHandle) hTarget;
 
-        return frame.assignValue(iReturn, xInt64.makeHandle(hDelegate.m_alValue.length));
+        return frame.assignValue(iReturn,
+                xInt64.makeHandle((long) hDelegate.m_alValue.length * f_nValuesPerLong));
         }
 
     @Override
@@ -369,7 +372,7 @@ public abstract class LongBasedDelegate
         int  cShift = shiftCount(lIndex);
         long lMask  = f_lValueMask << cShift;
 
-        alValue[nIndex] = alValue[nIndex] & ~lMask | (lValue << cShift);
+        alValue[nIndex] = alValue[nIndex] & ~lMask | ((lValue & f_lValueMask) << cShift);
         }
 
     /**
@@ -381,7 +384,7 @@ public abstract class LongBasedDelegate
      */
     private int valueIndex(long lIndex)
         {
-        return (int) (lIndex / f_nValuesPerLong);
+        return (int) (lIndex >>> f_nIndexShift);
         }
 
     /**
@@ -393,7 +396,7 @@ public abstract class LongBasedDelegate
      */
     private int shiftCount(long lIndex)
         {
-        return (f_nValuesPerLong - 1 - (int) (lIndex % f_nValuesPerLong)) * f_nBitsPerValue;
+        return 64 - f_nBitsPerValue * ((((int) lIndex) & f_nIndexMask) + 1);
         }
 
     /**
@@ -616,6 +619,8 @@ public abstract class LongBasedDelegate
 
     protected final int     f_nBitsPerValue;  // for Int16: 16
     protected final int     f_nValuesPerLong; // for Int16: 4
+    protected final int     f_nIndexShift;    // for Int16: 2
+    protected final int     f_nIndexMask;     // for Int16: 3
     protected final long    f_lValueMask;     // for Int16: 0x0000_0000_0000_FFFF
     protected final long    f_lSignBit;       // for Int16: 0x0000_0000_0000_8000
     protected final boolean f_fSigned;        // for Int16: true

@@ -1376,6 +1376,14 @@ class SkiplistMap<Key extends Orderable, Value>
      *
      * Any fixed number of values (the [valueHeight]) can be is stored in each node, each as one
      * additional `Index` elements. They are accessed via [getValue] and [setValue].
+     *
+     * The underlying array of Index is composed of a header, followed by variable length nodes,
+     * concatenated after the header. The header is composed of a work list, a head node, and a free
+     * list (each of maxHeight Index elements). Then each "node" is composed of 1-maxHeight elements
+     * to store the "next node" pointers, and 1+ elements to hold the key, and 0+ elements to hold
+     * the value. The node "height" is the number of "next node" indexes that it has; this can be
+     * determined by looking at the elements of the node in sequence; the first negative value is
+     * the last "next node" index, and hence implies the height of the node.
      */
     protected static class IndexStore<Index extends IntNumber>
         {
@@ -1405,7 +1413,8 @@ class SkiplistMap<Key extends Orderable, Value>
             elements.fill(toIndex(nil), [0..3*maxHeight));
 
             // the last index of a node must be negative, and the headnode is treated as a node
-            // (except that it has no "values")
+            // (except that it has no "values"); the head node is located at
+            // elements[maxHeight..2*maxHeight), i.e. it is the second chunk of the "header"
             elements[2*maxHeight-1] = toIndex(-nil);
             }
 
@@ -1817,12 +1826,14 @@ class SkiplistMap<Key extends Orderable, Value>
         /**
          * Display a textual dump of the contents of the IndexStore.
          *
-         * @param log  the log to dump to
+         * @param log   the log to dump to
+         * @param desc  the short description of the ElementStore
          */
-        void dump(Log log)
+        void dump(Log log, String? desc = Null)
             {
             log.add(
-                    $|IndexStore maxHeight={maxHeight}, headNode={headNode}, freeList={freeList},\
+                    $|{(desc ?: "IndexStore")}
+                     | maxHeight={maxHeight}, headNode={headNode}, freeList={freeList},\
                      | valueHeight={valueHeight}, nil={nil}, elements.size={elements.size}
                     );
 
