@@ -841,7 +841,7 @@ public class xArray
         @Override
         public String toString()
             {
-            return super.toString() + m_mutability + " -> " + m_hDelegate.toString();
+            return super.toString() + m_mutability + " " + m_hDelegate.toString();
             }
         }
 

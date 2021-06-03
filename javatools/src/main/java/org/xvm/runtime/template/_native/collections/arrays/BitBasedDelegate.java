@@ -113,7 +113,7 @@ public abstract class BitBasedDelegate
         {
         BitArrayHandle hDelegate = (BitArrayHandle) hTarget;
 
-        return frame.assignValue(iReturn, makeBitHandle(getBit(hDelegate.m_abValue, (int) lIndex)));
+        return frame.assignValue(iReturn, makeBitHandle(getBit(hDelegate.m_abValue, lIndex)));
         }
 
     @Override

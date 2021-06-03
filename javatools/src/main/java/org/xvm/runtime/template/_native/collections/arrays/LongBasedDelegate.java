@@ -131,8 +131,7 @@ public abstract class LongBasedDelegate
         {
         LongArrayHandle hDelegate = (LongArrayHandle) hTarget;
 
-        return frame.assignValue(iReturn,
-                makeElementHandle(getValue(hDelegate.m_alValue, (int) lIndex)));
+        return frame.assignValue(iReturn, makeElementHandle(getValue(hDelegate.m_alValue, lIndex)));
         }
 
     @Override
