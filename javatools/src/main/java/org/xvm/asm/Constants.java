@@ -546,7 +546,10 @@ public interface Constants
      * {0} is not an instantiable type because it doesn't implement a virtual constructor {1}.
      */
     public static final String VE_NEW_VIRTUAL_CONSTRUCT               = "VERIFY-86";
-
+    /**
+     * The access for the {1} method on {0} is defined more restrictively than its base.
+     */
+    public static final String VE_METHOD_ACCESS_LESSENED              = "VERIFY-87";
 
     // ----- miscellaneous -------------------------------------------------------------------------
 

@@ -1,25 +1,70 @@
 module TestSimple.test.org
     {
+    import ecstasy.Duplicable;
+
     @Inject Console console;
 
-    void run()
+    void run( )
         {
-        Int16[] ints16 = [-1, 1];
-        console.println($"{ints16} {ints16.asByteArray().toInt16Array()}");
+        }
 
-        UInt16[] uints16 = [65535, 1];
-        console.println($"{uints16} {uints16.asByteArray().toInt16Array()}");
+    class Base
+        {
+        construct()
+            {
+            }
+        finally
+            {
+            }
 
-        Byte[] bytes = [1, 1, 0, 255];
-        console.println($"{bytes} {bytes.asBitArray()} {bytes.asInt16Array()}");
+        assert()
+            {
+            }
 
-        Int[] ints64 = [1, -1];
-        console.println($"{ints64} {ints64.asByteArray().toInt64Array()}");
+        void foo()
+            {
+            }
 
-        UInt[] uints64 = [0x8000_0000_0000_0000];
-        console.println($"{uints64} {uints64.asByteArray().toInt64Array()}");
+        void bar()
+            {
+            }
 
-        Int8[] ints8 = [1, 1, 0, -1];
-        console.println($"{ints8} {ints8.asByteArray().toInt16Array()}");
+        private void zoo()
+            {
+            }
+        }
+
+    class Test
+            extends Base
+            implements Duplicable
+        {
+        private construct()
+            {
+            }
+        finally
+            {
+            }
+
+        assert()
+            {
+            }
+
+        construct(Test that)
+            {
+            }
+
+        @Override
+        private void foo()
+            {
+            }
+
+        @Override
+        protected void bar()
+            {
+            }
+
+        private void zoo()
+            {
+            }
         }
     }

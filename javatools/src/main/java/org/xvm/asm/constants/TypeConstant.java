@@ -3581,7 +3581,6 @@ public abstract class TypeConstant
             // however, the processing for property accessors is the same as for virtual methods
             if (!methodContrib.isVirtual() && !methodContrib.isPotentialPropertyOverlay())
                 {
-                // TODO check for collision, because a function could theoretically replace a virtual method
                 // TODO (e.g. 2 modules, 1 introduces a virtual method in a new version that collides with a function in the other)
                 // TODO we'll also have to check similar conditions below
 
@@ -3652,11 +3651,24 @@ public abstract class TypeConstant
                     }
                 else if (idContrib.isTopLevel())
                     {
-                    List<MethodConstant> listMatches =
-                            collectCoveredFunctions(sigContrib, mapMethods);
-                    for (MethodConstant idMethod : listMatches)
+                    List<MethodConstant> listMatches = collectCoveredMethods(sigContrib, mapMethods);
+                    if (listMatches != null)
                         {
-                        methodContrib = methodContrib.subsumeFunction(mapMethods.remove(idMethod));
+                        for (MethodConstant idMethod : listMatches)
+                            {
+                            MethodInfo method = mapMethods.get(idMethod);
+                            if (method.isFunction())
+                                {
+                                methodContrib = methodContrib.
+                                    subsumeFunction(mapMethods.remove(idMethod));
+                                }
+                            else
+                                {
+                                constId.log(errs, Severity.ERROR, VE_METHOD_ACCESS_LESSENED,
+                                        constId.getValueString(),
+                                        method.getIdentity().getValueString());
+                                }
+                            }
                         }
                     }
                 else
@@ -3857,11 +3869,12 @@ public abstract class TypeConstant
                         MethodInfo methodMatch = mapVirtMethods.get(nid);
                         if (methodMatch != null && !methodMatch.containsBody(methodContrib.getIdentity()))
                             {
-                            log(errs, Severity.ERROR, VE_METHOD_OVERRIDE_REQUIRED,
-                                removeAccess().getValueString(),
-                                methodMatch.getSignature().getValueString(),
-                                methodMatch.getIdentity().getNamespace().getValueString()
-                                );
+                            MethodConstant idMethod = methodMatch.getIdentity();
+                            idMethod.log(errs, Severity.ERROR, VE_METHOD_OVERRIDE_REQUIRED,
+                                    removeAccess().getValueString(),
+                                    idMethod.getSignature().getValueString(),
+                                    idMethod.getNamespace().getValueString()
+                                    );
                             }
                         }
                     }
@@ -3941,7 +3954,17 @@ public abstract class TypeConstant
                     Object     nidNarrowing  = setNarrowing.iterator().next();
                     MethodInfo infoNarrowing = mapVirtMods.get(nidNarrowing);
                     MethodInfo infoNarrowed  = mapVirtMethods.get(nidNarrowed);
-                    mapVirtMods.put(nidNarrowed, infoNarrowed.capWith(this, infoNarrowing));
+
+                    if (infoNarrowing.getAccess().isAsAccessibleAs(infoNarrowed.getAccess()))
+                        {
+                        mapVirtMods.put(nidNarrowed, infoNarrowed.capWith(this, infoNarrowing));
+                        }
+                    else
+                        {
+                        log(errs, Severity.ERROR, VE_METHOD_ACCESS_LESSENED,
+                                typeContrib.getValueString(),
+                                infoNarrowing.getIdentity().getValueString());
+                        }
                     }
                 else
                     {
@@ -3987,14 +4010,15 @@ public abstract class TypeConstant
         }
 
     /**
-     * Collect all functions from the base that would be "hidden" by the specified function.
+     * Collect all methods from the base that would be "hidden" by the specified method, which is
+     * either a function or a private method.
      *
-     * @param sigSub   the signature of the function that can "hide" base functions
+     * @param sigSub   the signature of the method that can "hide" base methods
      * @param mapBase  the map of all base methods to select from
      *
-     * @return a list of all matching function identities
+     * @return a list of all matching method identities or null if none found
      */
-    protected List<MethodConstant> collectCoveredFunctions(
+    protected List<MethodConstant> collectCoveredMethods(
             SignatureConstant               sigSub,
             Map<MethodConstant, MethodInfo> mapBase)
 
@@ -4005,13 +4029,15 @@ public abstract class TypeConstant
             MethodConstant id   = entry.getKey();
             MethodInfo     info = entry.getValue();
 
-            if (info.isFunction()
-                    && id.getName().equals(sigSub.getName()) && id.isTopLevel())
+            if (id.getName().equals(sigSub.getName()) && id.isTopLevel()
+                    && !info.getHead().isVisibilityReductionAllowed()
+                    && sigSub.isSubstitutableFor(id.getSignature(), this))
                 {
-                if (sigSub.isSubstitutableFor(id.getSignature(), this))
+                if (listMatch == null)
                     {
-                    listMatch.add(id);
+                    listMatch = new ArrayList<>();
                     }
+                listMatch.add(id);
                 }
             }
         return listMatch;

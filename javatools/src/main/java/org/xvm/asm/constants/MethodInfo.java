@@ -145,6 +145,15 @@ public class MethodInfo
                         id.getSignature().getValueString(),
                         id.getNamespace().getValueString());
                 }
+
+            if (!that.getAccess().isAsAccessibleAs(this.getAccess()))
+                {
+                IdentityConstant idThat = that.getIdentity();
+                idThat.log(errs, Severity.ERROR, VE_METHOD_ACCESS_LESSENED,
+                        idThat.getNamespace().getValueString(),
+                        idThat.getValueString());
+                return that;
+                }
             }
 
         ArrayList<MethodBody> listMerge = null;
