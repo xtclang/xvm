@@ -2382,8 +2382,7 @@ class SkiplistMap<Key extends Orderable, Value>
             construct AbstractStore();
 
             // determine the size of the numeric type
-            Type    numType;
-            Boolean nullable;
+            Type numType;
             if (Element.is(Type<Number>))
                 {
                 numType  = Element;
@@ -2394,9 +2393,10 @@ class SkiplistMap<Key extends Orderable, Value>
                 assert numType := isNullable(Element), numType.is(Type<Number>);
                 nullable = True;
                 }
+            this.numType = numType;
 
             assert bytesPerNum := numType.DataType.fixedByteLength(); // TODO GG why does it require ".DataType"?
-            Int bytesPerIndex = IndexStore.sizeOf(Index);
+            Int bytesPerIndex = IndexStore.sizeOf(Index) / 8;
             valueHeight = ((nullable ? bytesPerNum+1 : bytesPerNum) + bytesPerIndex-1) / bytesPerIndex;
 
             fromBytes = switch (numType)
@@ -2443,6 +2443,16 @@ class SkiplistMap<Key extends Orderable, Value>
         // ----- properties -------------------------------------------------------------------
 
         /**
+         * The numeric type stored by the ElementStore.
+         */
+        Type numType;
+
+        /**
+         * True iff `Null` values are supported.
+         */
+        Boolean nullable;
+
+        /**
          * The number of bytes required to hold a single Element value.
          */
         private Int bytesPerNum;
@@ -2452,7 +2462,7 @@ class SkiplistMap<Key extends Orderable, Value>
          */
         private Int nullByteIndex.get()
             {
-            return bytesPerNum;
+            return nullable ? bytesPerNum : -1;
             }
 
         private static Byte nullByte = 0xFF;
@@ -2509,7 +2519,7 @@ class SkiplistMap<Key extends Orderable, Value>
                 assert newBytes.size == bytesPerNum;
 
                 storage.replaceAll(0, newBytes);
-                if (nullByteIndex > 0)
+                if (nullable)
                     {
                     storage[nullByteIndex] = 0;
                     }
