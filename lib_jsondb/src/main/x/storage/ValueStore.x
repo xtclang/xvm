@@ -118,7 +118,7 @@ service ValueStore<Value extends immutable Const>
         }
 
     @Override
-    void forgetOlderThan(Int tx, Boolean force = False)
+    void retainTx(Set<Int> inUseTxIds, Boolean force = False)
         {
         TODO
         }

@@ -7,16 +7,29 @@ import oodb.Transaction;
 
 
 /**
- * Metadata for the catalog for a specific database. This interface is implemented by the `jsonDB`
- * auto-generated code for a database module. The information is necessary to bootstrap the layout
- * and storage of the database into existence, and to provide the various application-specific
- * type mapping for the JSON data in the database.
+ * This mixin provides metadata about the catalog of a specific database to the `jsonDB` database
+ * engine. The various methods and properties of the mixin are almost always implemented by a code
+ * generation process that the `jsonDB` database engine uses, when it prepares a database module
+ * (any Ecstasy module that incorporates [oodb.Database] and contains a schema) for hosting.
  *
- * The basis for a custom CatalogMetadata is the database definition (aka "DDL") provided as an
+ * The information provided by this mixin allows the `jsonDB` database engine to bootstrap the
+ * database from nothing (i.e. creating the database in persistent storage), and to open an existing
+ * database that was previous created.
+ *
+ * The basis for the information provided by a generated CatalogMetadata is a database definition (aka "DDL"), which is often
+ * loosely referred to as a database _schema_. The `oodb` library, of which `jsonDB` is an
+ * implementation, uses an Ecstasy module as the representation of a database definition.
+
+   which is provided as an
  * Ecstasy module, and which follows a set of rules defined by the `oodb` library. The `jsonDB`
  * library contains tooling that produces source code for a module that binds the DDL to the
  * `jsonDB` database implementation. Specifically, the resulting module provides an implementation
  * of both `Connection` and `DBTransaction`
+
+  the layout
+  * and storage of the database into existence, and to provide the various application-specific
+  * type mapping for the JSON data in the database.
+
  */
 mixin CatalogMetadata<Schema extends RootSchema>
         into Module

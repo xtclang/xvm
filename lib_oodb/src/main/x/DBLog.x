@@ -5,7 +5,7 @@
  * A `DBLog` may be extra-transactional, which means that elements appended to a `DBLog` may persist
  * even if the transaction that logged those elements does not commit.
  */
-interface DBLog<Element>
+interface DBLog<Element extends immutable Const>
         extends Appender<Element>
         extends DBObject
     {

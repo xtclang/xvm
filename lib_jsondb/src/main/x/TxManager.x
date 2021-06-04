@@ -56,6 +56,12 @@ service TxManager(Catalog catalog)
     protected/private Map<Int, TxRecord> inFlight = new HashMap();
 
     /**
+     * The transactions that have begun, but have not yet committed or rolled back. The key is the
+     * write transaction id.
+     */
+    protected/private Map<Int, TxRecord> byWriteId = new HashMap();
+
+    /**
      * The cached read TxId that is the oldest read TxId that has been handed out but not yet
      * committed or rolled back. This could also be determined by scanning through [inFlight].
      */
@@ -102,7 +108,9 @@ service TxManager(Catalog catalog)
         Int readId  = lastCompletedTx;
         Int writeId = -1 - ++registrationCounter;
 
-        inFlight.put(clientId, new TxRecord(tx, readId, writeId));
+        TxRecord record = new TxRecord(tx, readId, writeId);
+        inFlight.put(clientId, record);
+        byWriteId.put(writeId, record);
         return readId, writeId;
         }
 

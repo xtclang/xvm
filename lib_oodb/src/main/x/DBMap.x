@@ -4,7 +4,7 @@
  *
  * A `DBMap` is always transactional.
  */
-interface DBMap<Key, Value>
+interface DBMap<Key extends immutable Const, Value extends immutable Const>
         extends Map<Key, Value>
         extends DBObject
     {

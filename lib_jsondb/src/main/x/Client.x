@@ -776,7 +776,8 @@ TODO
      *
      * TODO how to make the client responsible for ser/deser work? yet how to make the same cacheable?
      */
-    class DBMapImpl<Key, Value>(DBObjectInfo info_, MapStore<Key, Value> store_)
+    class DBMapImpl<Key extends immutable Orderable, Value extends immutable Object>
+            (DBObjectInfo info_, MapStore<Key, Value> store_)
             extends DBObjectImpl(info_)
             implements DBMap<Key, Value>
             incorporates KeySetBasedMap<Key, Value>

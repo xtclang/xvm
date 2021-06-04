@@ -2,26 +2,30 @@ import Catalog.Status;
 import model.DBObjectInfo;
 import oodb.DBObject.DBCategory as Category;
 
+
 /**
  * This is an abstract base class for storage services that manage information as JSON formatted
  * data on disk. The abstraction is also designed to allow support for caching optimizations to be
  * layered on top of a persistent storage implementation -- probably more to avoid expensive
  * serialization and deserialization, than to avoid raw I/O operations (which are expected to be
- * low-cost in NVMe-flash an SAN environments). as anything.   Each DBObject has a coryresponding
- * ObjectStore that manages its
+ * low-cost in NVMe-flash and SAN environments).
  *
-  ObjectStorage represents the mapping
- * between binary storage on disk using files and directories, and the fundamental set of operations
- * that a particular DBObject interface (such as [DBMap] or [DBList]) requires and uses to provide
- * its high-level functionality.
+ * ObjectStore represents the mapping between binary storage on disk using files and directories,
+ * and the fundamental set of operations that a particular DBObject interface (such as [DBMap] or
+ * [DBList]) requires and uses to provide its high-level functionality.
  *
- * When an ObjectStore is constructed, it is an inert mode; it does not interact at all with the
+ * Each DBObject in the database has a corresponding ObjectStore that manages its persistent data on
+ * disk.
+ *
+ * When an ObjectStore is constructed, it is in an inert mode; it does not interact at all with the
  * disk storage until it is explicitly instructed to do so. Normally, the ObjectStore assumes that
  * the storage is intact, and it takes a fast-path to initialize its information about the disk
- * contents; this is called [quickScan]. Recovery of the storage uses a [deepScan], and may be
- * destructive.
+ * contents; this is called [quickScan]. If recovery of the storage is indicated or instructed, then
+ * the ObjectStore uses a [deepScan], which is assumed to be far more intensive both in terms of IO
+ * activity and computational time, and may even be "destructive" in the sense that it must return
+ * the persistent image to a working state, and that may force it to discard information that cannot
+ * be recovered.
  *
- * TODO hierarchical deletion (recursive)
  * TODO background maintenance
  */
 service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
@@ -33,6 +37,14 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
      * The Catalog that this ObjectStore belongs to.
      */
     public/protected Catalog catalog;
+
+    /**
+     * The Catalog that this ObjectStore belongs to.
+     */
+    protected @Lazy TxManager txManager.calc()
+        {
+        return catalog.txManager;
+        }
 
     /**
      * The DBObjectInfo that identifies the configuration of this ObjectStore.
@@ -134,9 +146,9 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
     enum StorageModel {Empty, Small, Medium, Large}
 
     /**
-     * TODO
+     * A special value, used only inside the ObjectStore that indicates missing data.
      */
-    enum Indicator {Missing}
+    protected enum Indicator {Missing}
 
     /**
      * Statistics: The current storage model for this ObjectStore.
@@ -163,12 +175,12 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
     /**
      * The most recent transaction identifier for which this ObjectStore processed data changes.
      */
-    Int? newestTx = Null;
+    public/protected Int? newestTx = Null;
 
     /**
      * Count of the number of operations since the ObjectStore was created.
      */
-    Int opCount = 0;
+    public/protected Int opCount = 0;
 
     /**
      * Determine if this ObjectStore for a DBObject is allowed to write to disk. True iff the
@@ -245,8 +257,10 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
                 break;
 
             case Configuring:
+                assert as $"Illegal attempt to close {info.name.quoted()} storage while Configuring";
+
             default:
-                assert;
+                assert as $"Illegal status: {status}";
             }
 
         status    = Closed;
@@ -258,33 +272,60 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
      */
     void delete()
         {
-        @Inject Clock clock;
-
-        model        = Empty;
-        filesUsed    = 0;
-        bytesUsed    = 0;
-        lastAccessed = Null;
-        lastModified = Null;
-
-        Directory dir = dataDir;
-        if (dir.exists)
+        switch (status)
             {
-            // if it's a directory, delete all .json contents, and if it's empty, delete the dir
-            // REVIEW
-            for (File file : findFiles())
-                {
-                file.delete();
-                }
+            case Recovering:
+            case Configuring:
+            case Closed:
+                model        = Empty;
+                filesUsed    = 0;
+                bytesUsed    = 0;
+                lastAccessed = Null;
+                lastModified = Null;
 
-            if (!dir.filesRecursively().next())
-                {
-                dir.deleteRecursively();
-                }
+                Directory dir = dataDir;
+                if (dir.exists)
+                    {
+                    dir.deleteRecursively();
+                    }
+                break;
+
+            case Running:
+                // there is nothing for the generic ObjectStore to do
+                assert as $"Illegal attempt to delete {info.name.quoted()} storage while running";
+
+            default:
+                assert as $"Illegal status: {status}";
             }
+
         }
 
 
     // ----- transaction handling ------------------------------------------------------------------
+
+    /**
+     * Determine if the specified txId indicates a read ID, versus a write ID.
+     *
+     * @param txId  a transaction identity
+     *
+     * @return True iff the txId is in the range reserved for read transaction IDs
+     */
+    Boolean isReadTx(Int txId)
+        {
+        return txId > 0;
+        }
+
+    /**
+     * Determine if the specified txId indicates a write ID, versus a read ID.
+     *
+     * @param txId  a transaction identity
+     *
+     * @return True iff the txId is in the range reserved for write transaction IDs
+     */
+    Boolean isWriteTx(Int txId)
+        {
+        return txId < 0;
+        }
 
     /**
      * Prepare a transaction by evaluating the changes specified by the `writeId`, ensuring that no
@@ -352,15 +393,16 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
         }
 
     /**
-     * Clean up the persistent storage, releasing any data older than the specified transaction.
-     * This operation can be asynchronous; it simply indicates that the storage is allowed to forget
-     * older data.
+     * Inform the ObjectStore of all of the read-transaction-ids that are still being relied upon
+     * by in-flight transactions; any other historical transaction information can be discarded by
+     * the ObjectStore, both in-memory and in the persistent storage. For asynchronous purposes, any
+     * transaction newer than the most recent transaction in the passed set must be retained.
      *
-     * @param tx     the oldest transaction whose information needs to be retained
-     * @param force  (optional) specify True to force the ObjectStore to immediately clean out all
-     *               older transactions in order to synchronously compress the storage
+     * @param inUseTxIds  an ordered set of transaction whose information needs to be retained
+     * @param force       (optional) specify True to force the ObjectStore to immediately clean out
+     *                    all older transactions in order to synchronously compress the storage
      */
-    void forgetOlderThan(Int tx, Boolean force = False)
+    void retainTx(Set<Int> inUseTxIds, Boolean force = False)
         {
         TODO
         }
@@ -410,7 +452,8 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
      * Initialize the state of the ObjectStore by scanning the persistent image of the ObjectStore's
      * data.
      *
-     * @return True if the scan is clean; false if fixes are required
+     * @return True if no issues were detected (which does not guarantee that no issues exist);
+     *         False indicates that fixes are required
      */
     Boolean quickScan()
         {
@@ -435,7 +478,8 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
                 }
 
             // knowledge of model categorization is owned by the ObjectStore sub-classes; this is
-            // just an initial guess at this level
+            // just an initial guess at this level; sub-classes should override this if there is a
+            // more correct calculation
             model = switch (filesUsed)
                 {
                 case 0: Empty;
@@ -459,7 +503,7 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
      */
     Boolean deepScan(Boolean fix = True)
         {
-        // knowledge of how to perform a deep scan is owned by the ObjectStore sub-classes
+        // knowledge of how to perform a deep scan is handled by specific ObjectStore sub-classes
         return quickScan();
         }
 

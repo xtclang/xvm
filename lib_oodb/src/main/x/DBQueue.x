@@ -4,7 +4,7 @@
  *
  * A `DBQueue` is always transactional.
  */
-interface DBQueue<Element>
+interface DBQueue<Element extends immutable Const>
         extends Queue<Element>
         extends DBObject
     {

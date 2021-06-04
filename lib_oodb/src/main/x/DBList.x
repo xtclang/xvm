@@ -4,7 +4,7 @@
  *
  * A `DBList` is always transactional.
  */
-interface DBList<Element>
+interface DBList<Element extends immutable Const>
         extends List<Element>
         extends DBObject
     {
