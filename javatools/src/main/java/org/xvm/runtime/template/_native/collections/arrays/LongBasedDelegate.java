@@ -442,17 +442,18 @@ public abstract class LongBasedDelegate
      */
     protected static byte[] extractBits(long[] alValue, long ofStart, long cBits)
         {
-        int    cBytes  = BitBasedDelegate.storage(cBits);
-        byte[] abBits  = new byte[cBytes];
+        int    cBytes = BitBasedDelegate.storage(cBits);
+        byte[] abBits = new byte[cBytes];
+        int    ofDest = 0;
 
         if (ofStart % 64 == 0)
             {
             int ixSource = (int) (ofStart / 64);
             int cVals    = (int) (cBits / 64);
 
-            for (int i = 0, of = 0; i < cVals; i++, of += 8)
+            for (int i = 0; i < cVals; i++, ofDest += 8)
                 {
-                Handy.toByteArray(alValue[ixSource + i], abBits, of);
+                Handy.toByteArray(alValue[ixSource + i], abBits, ofDest);
                 }
             if (cBits % 64 == 0)
                 {
@@ -461,12 +462,12 @@ public abstract class LongBasedDelegate
 
             // fill the tail
             ofStart = ofStart + cVals*64L;
-            cBits = cBits % 64;
+            cBits   = cBits % 64;
             }
 
-        for (long i = ofStart; i < ofStart + cBits; i++)
+        for (long i = 0; i < cBits; i++)
             {
-            BitBasedDelegate.setBit(abBits, i, getBit(alValue, ofStart + i));
+            BitBasedDelegate.setBit(abBits, ofDest + i, getBit(alValue, ofStart + i));
             }
         return abBits;
         }
