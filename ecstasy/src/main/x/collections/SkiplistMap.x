@@ -1275,42 +1275,42 @@ class SkiplistMap<Key extends Orderable, Value>
 
         switch (elementType)
             {
-//            // the numeric types ...
-//            case Int8  , UInt8  , @Unchecked Int8  , @Unchecked UInt8  :
-//            case Int16 , UInt16 , @Unchecked Int16 , @Unchecked UInt16 :
-//            case Int32 , UInt32 , @Unchecked Int32 , @Unchecked UInt32 :
-//            case Int64 , UInt64 , @Unchecked Int64 , @Unchecked UInt64 :
-//            case Int128, UInt128, @Unchecked Int128, @Unchecked UInt128:
-//            case Dec32, Dec64, Dec128:
-//            case BFloat16, Float16, Float32, Float64, Float128:
-//            // and the nullable forms ... TODO CP "case" does not allow "T?"
-//            case Nullable|Int8  , Nullable|UInt8  , Nullable|@Unchecked Int8  , Nullable|@Unchecked UInt8  :
-//            case Nullable|Int16 , Nullable|UInt16 , Nullable|@Unchecked Int16 , Nullable|@Unchecked UInt16 :
-//            case Nullable|Int32 , Nullable|UInt32 , Nullable|@Unchecked Int32 , Nullable|@Unchecked UInt32 :
-//            case Nullable|Int64 , Nullable|UInt64 , Nullable|@Unchecked Int64 , Nullable|@Unchecked UInt64 :
-//            case Nullable|Int128, Nullable|UInt128, Nullable|@Unchecked Int128, Nullable|@Unchecked UInt128:
-//            case Nullable|Dec32, Nullable|Dec64, Nullable|Dec128:
-//            case Nullable|BFloat16, Nullable|Float16, Nullable|Float32, Nullable|Float64, Nullable|Float128:
-//                return new NumberStore<elementType.DataType, indexType.DataType>()                  /*TODO GG*/.as(ElementStore<Element>);
+            // the numeric types ...
+            case Int8  , UInt8  , @Unchecked Int8  , @Unchecked UInt8  :
+            case Int16 , UInt16 , @Unchecked Int16 , @Unchecked UInt16 :
+            case Int32 , UInt32 , @Unchecked Int32 , @Unchecked UInt32 :
+            case Int64 , UInt64 , @Unchecked Int64 , @Unchecked UInt64 :
+            case Int128, UInt128, @Unchecked Int128, @Unchecked UInt128:
+            case Dec32, Dec64, Dec128:
+            case BFloat16, Float16, Float32, Float64, Float128:
+            // and the nullable forms ... TODO CP "case" does not allow "T?"
+            case Nullable|Int8  , Nullable|UInt8  , Nullable|@Unchecked Int8  , Nullable|@Unchecked UInt8  :
+            case Nullable|Int16 , Nullable|UInt16 , Nullable|@Unchecked Int16 , Nullable|@Unchecked UInt16 :
+            case Nullable|Int32 , Nullable|UInt32 , Nullable|@Unchecked Int32 , Nullable|@Unchecked UInt32 :
+            case Nullable|Int64 , Nullable|UInt64 , Nullable|@Unchecked Int64 , Nullable|@Unchecked UInt64 :
+            case Nullable|Int128, Nullable|UInt128, Nullable|@Unchecked Int128, Nullable|@Unchecked UInt128:
+            case Nullable|Dec32, Nullable|Dec64, Nullable|Dec128:
+            case Nullable|BFloat16, Nullable|Float16, Nullable|Float32, Nullable|Float64, Nullable|Float128:
+                return new NumberStore<elementType.DataType, indexType.DataType>()                  /*TODO GG*/.as(ElementStore<Element>);
 
             case Bit,     Nullable|Bit:
             case Boolean, Nullable|Boolean:
             case Nibble,  Nullable|Nibble:
                 return new SingleIndexStore<elementType.DataType, indexType.DataType>()             /*TODO GG*/.as(ElementStore<Element>);
 
-//            case Char, Nullable|Char:
-//                return new CharStore<elementType.DataType, indexType.DataType>()                    /*TODO GG*/.as(ElementStore<Element>);
+            case Char, Nullable|Char:
+                return new CharStore<elementType.DataType, indexType.DataType>()                    /*TODO GG*/.as(ElementStore<Element>);
 
             default:
-//                // check if the type is an Enum type (or "Enum?" type)
-//                if (elementType.is(Type<Enum>))
-//                    {
-//                    return new EnumStore<elementType.DataType, indexType.DataType>()                /*TODO GG*/.as(ElementStore<Element>);
-//                    }
-//                if (Type notNullPart := isNullable(elementType), notNullPart.is(Type<Enum>))
-//                    {
-//                    return new EnumStore<elementType.DataType, indexType.DataType>()                /*TODO GG*/.as(ElementStore<Element>);
-//                    }
+                // check if the type is an Enum type (or "Enum?" type)
+                if (elementType.is(Type<Enum>))
+                    {
+                    return new EnumStore<elementType.DataType, indexType.DataType>()                /*TODO GG*/.as(ElementStore<Element>);
+                    }
+                if (Type notNullPart := isNullable(elementType), notNullPart.is(Type<Enum>))
+                    {
+                    return new EnumStore<elementType.DataType, indexType.DataType>()                /*TODO GG*/.as(ElementStore<Element>);
+                    }
 
                 return new ExternalStore<elementType.DataType, indexType.DataType>(initCapacity)    /*TODO GG*/.as(ElementStore<Element>);
             }
@@ -2458,12 +2458,12 @@ class SkiplistMap<Key extends Orderable, Value>
         private static Byte nullByte = 0xFF;
 
         /**
-         * TODO
+         * The number of index elements used to store the value.
          */
         protected Int valueHeight;
 
         /**
-         * TODO
+         * The function that converts a sequence of bytes to the value.
          */
         function Element(Byte[]) fromBytes;
 
@@ -2526,7 +2526,7 @@ class SkiplistMap<Key extends Orderable, Value>
         // ----- internal ---------------------------------------------------------------------
 
         /**
-         * TODO
+         * A helper to obtain the byte array (slice) that holds the value for a particular node.
          */
         Byte[] getBytes(Int node, Int height)
             {

@@ -6,6 +6,7 @@ val ecstasy       = project(":ecstasy")
 val javatools     = project(":javatools")
 val bridge        = project(":javatools_bridge")
 val aggregate     = project(":lib_aggregate");
+val collections   = project(":lib_collections");
 val json          = project(":lib_json");
 val oodb          = project(":lib_oodb");
 val imdb          = project(":lib_imdb");
@@ -13,16 +14,17 @@ val jsondb        = project(":lib_jsondb");
 val host          = project(":lib_host");
 val web           = project(":lib_web");
 
-val ecstasyMain   = "${ecstasy.projectDir}/src/main"
-val bridgeMain    = "${bridge.projectDir}/src/main"
-val javatoolsJar  = "${javatools.buildDir}/libs/javatools.jar"
-val aggregateMain = "${aggregate.projectDir}/src/main";
-val jsonMain      = "${json.projectDir}/src/main";
-val oodbMain      = "${oodb.projectDir}/src/main";
-val imdbMain      = "${imdb.projectDir}/src/main";
-val jsondbMain    = "${jsondb.projectDir}/src/main";
-val hostMain      = "${host.projectDir}/src/main";
-val webMain       = "${web.projectDir}/src/main";
+val ecstasyMain     = "${ecstasy.projectDir}/src/main"
+val bridgeMain      = "${bridge.projectDir}/src/main"
+val javatoolsJar    = "${javatools.buildDir}/libs/javatools.jar"
+val aggregateMain   = "${aggregate.projectDir}/src/main";
+val collectionsMain = "${collections.projectDir}/src/main";
+val jsonMain        = "${json.projectDir}/src/main";
+val oodbMain        = "${oodb.projectDir}/src/main";
+val imdbMain        = "${imdb.projectDir}/src/main";
+val jsondbMain      = "${jsondb.projectDir}/src/main";
+val hostMain        = "${host.projectDir}/src/main";
+val webMain         = "${web.projectDir}/src/main";
 
 val libDir        = "$buildDir/xdk/lib"
 val coreLib       = "$libDir/ecstasy.xtc"
@@ -94,6 +96,22 @@ val compileAggregate = tasks.register<JavaExec>("compileAggregate") {
             "-L", "$coreLib",
             "-L", "$bridgeLib",
             "$aggregateMain/x/module.x")
+    main = "org.xvm.tool.Compiler"
+}
+
+val compileCollections = tasks.register<JavaExec>("compileCollections") {
+    group       = "Build"
+    description = "Build collections.xtc module"
+
+    shouldRunAfter(compileEcstasy)
+
+    classpath(javatoolsJar)
+    args("-verbose",
+            "-o", "$libDir",
+            "-version", "$version",
+            "-L", "$coreLib",
+            "-L", "$bridgeLib",
+            "$collectionsMain/x/module.x")
     main = "org.xvm.tool.Compiler"
 }
 
@@ -229,6 +247,15 @@ tasks.register("build") {
 
     if (aggregateSrc > aggregateDest) {
         dependsOn(compileAggregate)
+        }
+
+    // compile collections.xtclang.org
+    val collectionsSrc = fileTree(collectionsMain).getFiles().stream().
+            mapToLong({f -> f.lastModified()}).max().orElse(0)
+    val collectionsDest = file("$libDir/collections.xtc").lastModified()
+
+    if (collectionsSrc > collectionsDest) {
+        dependsOn(compileCollections)
         }
 
     // compile JSON

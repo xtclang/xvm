@@ -1,70 +1,22 @@
 module TestSimple.test.org
     {
-    import ecstasy.Duplicable;
+    package collections import collections.xtclang.org;
 
     @Inject Console console;
 
-    void run( )
+    void run()
         {
-        }
+        import collections.SparseIntSet;
 
-    class Base
-        {
-        construct()
-            {
-            }
-        finally
-            {
-            }
+        Set<Int> set = new SparseIntSet();
 
-        assert()
-            {
-            }
+        set.add(5);
+        console.println($"set(5)={set} (size={set.size})");
 
-        void foo()
-            {
-            }
+        set.add(7);
+        console.println($"set(5,7)={set} (size={set.size})");
 
-        void bar()
-            {
-            }
-
-        private void zoo()
-            {
-            }
-        }
-
-    class Test
-            extends Base
-            implements Duplicable
-        {
-        private construct()
-            {
-            }
-        finally
-            {
-            }
-
-        assert()
-            {
-            }
-
-        construct(Test that)
-            {
-            }
-
-        @Override
-        private void foo()
-            {
-            }
-
-        @Override
-        protected void bar()
-            {
-            }
-
-        private void zoo()
-            {
-            }
+        set.add(127);
+        console.println($"set(5,7,127)={set} (size={set.size})");
         }
     }

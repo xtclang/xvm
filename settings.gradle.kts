@@ -7,6 +7,7 @@ include(":javatools_bridge")    // produces *only* a source zip file (no .xtc), 
 include(":javatools")           // produces javatools.jar
 include(":javatools_launcher")  // produces native (Win, Mac, Linux) executables, only on request
 include(":lib_aggregate")       // produces aggregate.xtc
+include(":lib_collections")       // produces aggregate.xtc
 include(":lib_json")            // produces json.xtc
 include(":lib_oodb")            // produces oodb.xtc
 include(":lib_imdb")            // produces imdb.xtc
