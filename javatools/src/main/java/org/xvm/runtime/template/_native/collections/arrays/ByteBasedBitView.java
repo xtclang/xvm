@@ -87,7 +87,8 @@ public abstract class ByteBasedBitView
         {
         ViewHandle hView = (ViewHandle) hDelegate;
 
-        byte[] abBits = hView.f_hSource.m_abValue;
+        byte[] abBits = BitBasedDelegate.extractBits(hView.f_hSource.m_abValue, ofStart, cBits);
+
         if (fReverse)
             {
             abBits = BitBasedDelegate.reverseBits(abBits, cBits);

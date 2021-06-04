@@ -189,33 +189,15 @@ public abstract class BitBasedDelegate
         {
         BitArrayHandle hBits = (BitArrayHandle) hDelegate;
 
-        byte[] abSrc = hBits.m_abValue;
-
         if (hBits.getMutability() == Mutability.Constant &&
                 ofStart == 0 && cBits == hBits.m_cSize && !fReverse)
             {
-            return abSrc;
+            return hBits.m_abValue;
             }
 
-        int    cBytes = storage(cBits);
-        byte[] abDst;
-        if (ofStart == 0)
-            {
-            abDst = Arrays.copyOfRange(abSrc, 0, cBytes);
-            }
-        else
-            {
-            abDst = new byte[cBytes];
-            for (int i = 0; i < cBits; i++)
-                {
-                if (getBit(abSrc, i + (int) ofStart))
-                    {
-                    setBit(abDst, i, true);
-                    }
-                }
-            }
+        byte[] abBits = extractBits(hBits.m_abValue, ofStart, cBits);
 
-        return fReverse ? reverseBits(abDst, cBits) : abDst;
+        return fReverse ? reverseBits(abBits, cBits) : abBits;
         }
 
     @Override
@@ -298,6 +280,37 @@ public abstract class BitBasedDelegate
             {
             abValue[index(iIndex)] &= ~bitMask(iIndex);
             }
+        }
+
+    /**
+     * Extract an array of bits from the specified array of bits.
+     *
+     * @param abSrc    the byte array of bits to extract from
+     * @param ofStart  the starting bit index
+     * @param cBits    the number of bits to extract
+     *
+     * @return the byte array for the bits
+     */
+    protected static byte[] extractBits(byte[] abSrc, long ofStart, long cBits)
+        {
+        int    cBytes = storage(cBits);
+        byte[] abDst;
+        if (ofStart == 0)
+            {
+            abDst = Arrays.copyOfRange(abSrc, 0, cBytes);
+            }
+        else
+            {
+            abDst = new byte[cBytes];
+            for (int i = 0; i < cBits; i++)
+                {
+                if (getBit(abSrc, i + (int) ofStart))
+                    {
+                    setBit(abDst, i, true);
+                    }
+                }
+            }
+        return abDst;
         }
 
     /**
