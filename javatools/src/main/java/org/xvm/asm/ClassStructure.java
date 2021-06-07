@@ -34,6 +34,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeConstant.Relation;
 import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.TypeParameterConstant;
+import org.xvm.asm.constants.TypedefConstant;
 import org.xvm.asm.constants.UnionTypeConstant;
 import org.xvm.asm.constants.UnresolvedNameConstant;
 import org.xvm.asm.constants.UnresolvedTypeConstant;
@@ -650,7 +651,7 @@ public class ClassStructure
      */
     public int getTypeParamCount()
         {
-        Map mapThis = m_mapParams;
+        Map<StringConstant, TypeConstant> mapThis = m_mapParams;
         return mapThis == null
                 ? 0
                 : mapThis.size();
@@ -720,6 +721,30 @@ public class ClassStructure
         prop.markAsGenericTypeParameter();
         markModified();
         return prop;
+        }
+
+    /**
+     * Update (narrow) the constraint type for the specified generic type.
+     *
+     * @param sName           the generic type name
+     * @param typeConstraint  the new constraint type
+     */
+    public void updateConstraint(String sName, TypeConstant typeConstraint)
+        {
+        ListMap<StringConstant, TypeConstant> map = m_mapParams;
+        assert map != null;
+
+        ConstantPool pool = getConstantPool();
+
+        TypeConstant typeConstraintType = pool.ensureClassTypeConstant(
+            pool.clzType(), null, typeConstraint);
+
+        map.put(pool.ensureStringConstant(sName), typeConstraint);
+
+        PropertyStructure prop = (PropertyStructure) getChild(sName);
+        prop.setType(typeConstraintType);
+
+        markModified();
         }
 
     /**
@@ -1869,7 +1894,7 @@ public class ClassStructure
                 //    List<Object> <-- List
                 // However, the following is not allowed:
                 //    Logger<Object> <-- Logger
-                typeRight    = fTuple ? pool.typeObject() : listRightNormalized.get(i);;
+                typeRight    = fTuple ? pool.typeObject() : listRightNormalized.get(i);
                 fProduces    = fTuple || producesFormalType(pool, sName, accessLeft, listLeft);
                 fLeftIsRight = false;
                 }
@@ -2221,6 +2246,10 @@ public class ClassStructure
                 assert typeLeft.isAutoNarrowing(false);
                 return calculateRelationImpl(typeLeft.removeAutoNarrowing(), typeRight, fAllowInto);
 
+            case Typedef:
+                return calculateRelationImpl(
+                        ((TypedefConstant) constIdLeft).getReferredToType(), typeRight, fAllowInto);
+
             case UnresolvedName:
                 return Relation.INCOMPATIBLE;
 
@@ -2234,7 +2263,7 @@ public class ClassStructure
             ClassStructure clzRebase = (ClassStructure)
                 typeRebase.getSingleUnderlyingClass(true).getComponent();
 
-            // rebase types are never parameterized and therefor cannot be "weak"
+            // rebase types are never parameterized and therefore cannot be "weak"
             if (clzRebase.calculateRelationImpl(typeLeft,
                     clzRebase.getCanonicalType(), fAllowInto) == Relation.IS_A)
                 {

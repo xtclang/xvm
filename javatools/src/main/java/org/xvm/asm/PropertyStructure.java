@@ -147,10 +147,12 @@ public class PropertyStructure
      *
      * @param type  the type constant that indicates the property's type
      */
-    protected void setType(TypeConstant type)
+    public void setType(TypeConstant type)
         {
         assert type != null;
         m_type = type;
+
+        getIdentityConstant().invalidateCache();
         }
 
     /**

@@ -244,6 +244,17 @@ public class PropertyConstant
         return getParentConstant().isClass();
         }
 
+    /**
+     * Invalidate any cached information for this PropertyConstant. This method should be called
+     * when there are any structural changes to the property that this constant identifies.
+     */
+    public void invalidateCache()
+        {
+        m_type           = null;
+        m_constSig       = null;
+        m_typeConstraint = null;
+        }
+
 
     // ----- IdentityConstant methods --------------------------------------------------------------
 
@@ -347,8 +358,7 @@ public class PropertyConstant
     @Override
     protected void registerConstants(ConstantPool pool)
         {
-        m_type     = null;
-        m_constSig = null;
+        invalidateCache();
 
         super.registerConstants(pool);
         }

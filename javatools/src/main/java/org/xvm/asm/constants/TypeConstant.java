@@ -5462,6 +5462,10 @@ public abstract class TypeConstant
                 return clzRight.calculateRelation(typeLeft, typeRight);
                 }
 
+            case Typedef:
+                return ((TypedefConstant) constIdRight).
+                        getReferredToType().calculateRelation(typeLeft);
+
             case UnresolvedName:
                 return Relation.INCOMPATIBLE;
 
@@ -5616,6 +5620,10 @@ public abstract class TypeConstant
                         idRight.getDeclarationLevelClass().getComponent();
                 return clzRight.findIntersectionContribution(typeLeft, typeRight.getParamTypes());
                 }
+
+            case Typedef:
+                return ((TypedefConstant) constIdRight).
+                        getReferredToType().findIntersectionContribution(typeLeft);
 
             default:
                 throw new IllegalStateException("unexpected constant: " + constIdRight);

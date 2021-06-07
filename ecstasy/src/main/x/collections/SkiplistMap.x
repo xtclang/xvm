@@ -2029,7 +2029,7 @@ class SkiplistMap<Key extends Orderable, Value>
     /**
      * Base class for a number of ElementStore implementation.
      */
-    protected static class AbstractStore<Element, Index extends IntNumber>
+    protected static class AbstractStore<Element, Index>
             implements ElementStore<Element, Index>
         {
         // ----- properties -------------------------------------------------------------------
@@ -2116,7 +2116,7 @@ class SkiplistMap<Key extends Orderable, Value>
     /**
      * Stores the small `Element` values tucked inside a single `Index` value.
      */
-    protected static class SingleIndexStore<Element, Index extends IntNumber>
+    protected static class SingleIndexStore<Element, Index>
             extends AbstractStore<Element, Index>
         {
         construct()
@@ -2183,7 +2183,7 @@ class SkiplistMap<Key extends Orderable, Value>
     /**
      * Stores the `Element` values as `Index` values, using a NumberStore to do the heavy lifting.
      */
-    protected static class CharStore<Element, Index extends IntNumber>  // TODO GG I had to add "extends IntNumber" to all of these, which seems redundant
+    protected static class CharStore<Element, Index>
             implements ElementStore<Element, Index>
         {
         /**
@@ -2262,7 +2262,7 @@ class SkiplistMap<Key extends Orderable, Value>
      * Stores the enumerated `Element` values as `Index` values, using another store implementation
      * to do the heavy lifting.
      */
-    protected static class EnumStore<Element, Index extends IntNumber>
+    protected static class EnumStore<Element, Index>
             implements ElementStore<Element, Index>
         {
         construct()
@@ -2374,7 +2374,7 @@ class SkiplistMap<Key extends Orderable, Value>
      * Stores the `Element` values as `Index` values, spreading across multiple index values if the
      * numeric type is too large to fit in one.
      */
-    protected static class NumberStore<Element, Index extends IntNumber>
+    protected static class NumberStore<Element, Index>
             extends AbstractStore<Element, Index>
         {
         construct()
@@ -2551,7 +2551,7 @@ class SkiplistMap<Key extends Orderable, Value>
      * Converts `Element` references to `Index` values that can be stored in an `IndexStore`,
      * storing the `Element` references external to the `IndexStore` in a separate array.
      */
-    protected static class ExternalStore<Element, Index extends IntNumber>
+    protected static class ExternalStore<Element, Index>
             extends AbstractStore<Element, Index>
         {
         construct(Int initCapacity)

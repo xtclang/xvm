@@ -40,6 +40,7 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
+import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.TypeInfo.MethodKind;
@@ -2040,7 +2041,7 @@ public class TypeCompositionStatement
                     }
                 else if (!typeOld.equals(typeConstraint))
                     {
-                    // {0} type parameter {1} must be of type {2}, but has been specified as {3} by {4}.
+                    // {0} type parameter {1} must be of type {2}, but has been specified as {3} by {4}
                     log(errs, Severity.ERROR, Constants.VE_TYPE_PARAM_INCOMPATIBLE_TYPE,
                         name.getValueText(), sName, typeOld.getValueString(),
                         typeConstraint.getValueString(), contrib.getTypeConstant().getValueString());
@@ -2063,43 +2064,129 @@ public class TypeCompositionStatement
         }
 
     /**
-     * Check whether all parameterizable contributions are indeed parameterized.
+     * Check whether all parameterizable contributions are indeed parameterized and infer the
+     * constraints if possible.
      */
     private void checkImplicitTypeParameters(ClassStructure component, ErrorListener errs)
         {
-        if (component.isParameterized())
+        if (!component.isParameterized())
             {
-            for (Contribution contrib : component.getContributionsAsList())
+            return;
+            }
+
+        List<String> listUnconstrained = null;
+        for (Map.Entry<StringConstant, TypeConstant> entry : component.getTypeParams().entrySet())
+            {
+            String       sName          = entry.getKey().getValue();
+            TypeConstant typeConstraint = entry.getValue();
+
+            if (typeConstraint.equals(pool().typeObject()))
                 {
-                switch (contrib.getComposition())
+                if (listUnconstrained == null)
                     {
-                    case Extends:
-                    case Implements:
-                    case Incorporates:
-                    case Into:
-                        break;
-
-                    default:
-                        // disregard any other contribution
-                        continue;
+                    listUnconstrained = new ArrayList<>();
                     }
-
-                TypeConstant typeContrib = contrib.getTypeConstant();
-                if (typeContrib.isParameterizedDeep() ||
-                        !typeContrib.isExplicitClassIdentity(true))
-                    {
-                    continue;
-                    }
-
-                ClassStructure clzContrib = (ClassStructure) typeContrib.
-                        getSingleUnderlyingClass(true).getComponent();
-                if (clzContrib.isParameterizedDeep())
-                    {
-                    log(errs, Severity.ERROR, Compiler.MISSING_TYPE_PARAMETERS,
-                        typeContrib.getValueString());
-                    }
+                listUnconstrained.add(sName);
                 }
             }
+
+        if (listUnconstrained == null)
+            {
+            return;
+            }
+
+        // this class is parameterized, but some generic types don't have any constraints;
+        // check if any contributions do, and infer the constraint type from those contributions
+        Map<String, TypeConstant> mapConstraints = null;
+        for (String sName : listUnconstrained)
+            {
+            mapConstraints = findImplicitConstraint(component, sName, mapConstraints, errs);
+            }
+
+        if (mapConstraints != null)
+            {
+            for (Map.Entry<String, TypeConstant> entry : mapConstraints.entrySet())
+                {
+                component.updateConstraint(entry.getKey(), entry.getValue());
+                }
+            }
+        }
+
+    /**
+     * Check if any contribution of the specified class has a non-trivial constraint for the
+     * generic type of the specified name.
+     */
+    private Map<String, TypeConstant> findImplicitConstraint(ClassStructure clz, String sName,
+                Map<String, TypeConstant> mapConstraints, ErrorListener errs)
+        {
+        ConstantPool pool = pool();
+
+        for (Contribution contrib : clz.getContributionsAsList())
+            {
+            switch (contrib.getComposition())
+                {
+                case Extends:
+                case Implements:
+                case Incorporates:
+                case Into:
+                    break;
+
+                default:
+                    // disregard any other contribution
+                    continue;
+                }
+
+            TypeConstant typeContrib = contrib.getTypeConstant();
+
+            if (!typeContrib.isExplicitClassIdentity(true) ||
+                    contrib.getTypeParams() != null)
+                {
+                // ignore any relational constraints or conditional incorporates
+                continue;
+                }
+
+            ClassStructure clzContrib = (ClassStructure) typeContrib.
+                    getSingleUnderlyingClass(true).getComponent();
+            if (typeContrib.isParameterizedDeep())
+                {
+                TypeConstant typeConstraint = clzContrib.getTypeParams().
+                        get(pool.ensureStringConstant(sName));
+                if (typeConstraint != null)
+                    {
+                    if (typeConstraint.equals(pool.typeObject()))
+                        {
+                        // report errors only at the "top" level
+                        mapConstraints = findImplicitConstraint(clzContrib, sName, mapConstraints,
+                                            ErrorListener.BLACKHOLE);
+                        }
+                    else
+                        {
+                        if (mapConstraints == null)
+                            {
+                            mapConstraints = new ListMap<>();
+                            }
+                        else
+                            {
+                            TypeConstant typePrev = mapConstraints.get(sName);
+                            if (typePrev != null)
+                                {
+                                typeConstraint = typePrev.combine(pool, typeConstraint);
+                                }
+                            }
+
+                        mapConstraints.put(sName, typeConstraint);
+                        return mapConstraints;
+                        }
+                    }
+                }
+            else if (clzContrib.isParameterizedDeep())
+                {
+                // the class has generic type parameters, but the contribution doesn't specify any
+                log(errs, Severity.ERROR, Compiler.MISSING_TYPE_PARAMETERS,
+                        typeContrib.getValueString());
+                }
+            }
+        return mapConstraints;
         }
 
     @Override
