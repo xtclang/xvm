@@ -2525,6 +2525,31 @@ public class InvocationExpression
                 return arg;
                 }
             }
+        else if (typeLeft.isTypeOfType())
+            {
+            // almost tidentical to the above case, allow calling a function on a class represented
+            // by the DataType; this for example allows writing (assuming "Type<Number> numType")
+            //      "numType.fixedByteLength()"
+            // instead of more explicit
+            //      "numType.DataType.fixedByteLength()"
+            TypeConstant typeDataType = typeLeft.getParamType(0);
+            TypeInfo     infoDataType = typeDataType.ensureTypeInfo(ErrorListener.BLACKHOLE);
+
+            ErrorListener errsAlt = errs.branch();
+
+            arg = findMethod(ctx, typeDataType, infoDataType, sName, args, MethodKind.Function,
+                        !fNoCall, false, atypeReturn, errsAlt);
+            if (arg != null)
+                {
+                m_argMethod   = arg;
+                m_method      = getMethod(infoDataType, arg);
+                m_fBindTarget = false;
+                m_idFormal    = (PropertyConstant) pool.clzType().getComponent().
+                                    getChild("DataType").getIdentityConstant();
+                errsAlt.merge();
+                return arg;
+                }
+            }
         else if (typeLeft.isSingleUnderlyingClass(true) && !isSuppressCall() && !isAnyArgUnbound())
             {
             // allow for a function on the "left type" to be called (Bjarne'd):

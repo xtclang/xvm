@@ -2395,7 +2395,7 @@ class SkiplistMap<Key extends Orderable, Value>
                 }
             this.numType = numType;
 
-            assert bytesPerNum := numType.DataType.fixedByteLength(); // TODO GG why does it require ".DataType"?
+            assert bytesPerNum := numType.fixedByteLength();
             Int bytesPerIndex = IndexStore.sizeOf(Index) / 8;
             valueHeight = ((nullable ? bytesPerNum+1 : bytesPerNum) + bytesPerIndex-1) / bytesPerIndex;
 
