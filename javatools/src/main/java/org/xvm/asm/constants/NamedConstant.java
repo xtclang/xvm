@@ -77,20 +77,6 @@ public abstract class NamedConstant
         }
 
 
-    // ----- type-specific functionality -----------------------------------------------------------
-
-    /**
-     * Replace the parent constant with an equivalent resolved constant.
-     */
-    protected void replaceParent(IdentityConstant constParent)
-        {
-        assert !constParent.containsUnresolved();
-        assert m_constParent.equals(constParent) && constParent.equals(m_constParent);
-
-        m_constParent = constParent;
-        }
-
-
     // ----- IdentityConstant methods --------------------------------------------------------------
 
     @Override

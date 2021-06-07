@@ -504,19 +504,9 @@ public class MethodConstant
             return this;
             }
 
-        ConstantPool   pool  = getConstantPool();
-        MethodConstant idNew = (MethodConstant) pool.register(
-                                    new MethodConstant(pool, idNewParent, sigNew, m_iLambda));
-        if (sigNew != null && !sigNew.containsUnresolved())
-            {
-            // it's the responsibility of the MethodConstant to bind all the TypeParameters
-            // (see TypeParameterConstant.resolveTypedefs())
-            for (TypeConstant typeParam : sigNew.getRawParams())
-                {
-                typeParam.bindTypeParameters(idNew);
-                }
-            }
-        return idNew;
+        ConstantPool pool = getConstantPool();
+        return (MethodConstant) pool.register(
+                new MethodConstant(pool, idNewParent, sigNew, m_iLambda));
         }
 
     @Override

@@ -124,12 +124,6 @@ public abstract class AbstractDependantTypeConstant
         }
 
     @Override
-    public void bindTypeParameters(MethodConstant idMethod)
-        {
-        // not applicable
-        }
-
-    @Override
     public TypeConstant resolveConstraints()
         {
         TypeConstant constOriginal = getParentType();

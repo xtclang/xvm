@@ -876,20 +876,6 @@ public abstract class TypeConstant
         }
 
     /**
-     * Bind any {@link TypeParameterConstant} that happens to be referred by this TypeConstant
-     * to the specified {@link MethodConstant}.
-     *
-     * This method is used to resolve a circular dependency between the MethodConstant and
-     * TypeParameterConstant.
-     *
-     * @see {@link TypeParameterConstant#resolveTypedefs}
-     */
-    public void bindTypeParameters(MethodConstant idMethod)
-        {
-        getUnderlyingType().bindTypeParameters(idMethod);
-        }
-
-    /**
      * Create a semantically equivalent type that resolves the formal type parameters
      * based on the specified resolver.
      *

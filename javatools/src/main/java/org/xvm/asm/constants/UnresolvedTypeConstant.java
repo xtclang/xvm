@@ -289,15 +289,6 @@ public class UnresolvedTypeConstant
         }
 
     @Override
-    public void bindTypeParameters(MethodConstant idMethod)
-        {
-        if (isTypeResolved())
-            {
-            getResolvedType().bindTypeParameters(idMethod);
-            }
-        }
-
-    @Override
     public boolean containsGenericParam(String sName)
         {
         return isTypeResolved() && getResolvedType().containsGenericParam(sName);

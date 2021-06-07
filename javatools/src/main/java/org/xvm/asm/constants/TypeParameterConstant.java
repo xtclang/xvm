@@ -81,14 +81,6 @@ public class TypeParameterConstant
         }
 
     /**
-     * Bind this {@link TypeParameterConstant} to the specified MethodConstant
-     */
-    public void bindMethod(MethodConstant method)
-        {
-        replaceParent(method);
-        }
-
-    /**
      * @return the register number (zero based)
      */
     public int getRegister()

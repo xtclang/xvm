@@ -503,16 +503,6 @@ public class TerminalTypeConstant
         }
 
     @Override
-    public void bindTypeParameters(MethodConstant idMethod)
-        {
-        Constant constId = ensureResolvedConstant();
-        if (constId instanceof TypeParameterConstant)
-            {
-            ((TypeParameterConstant) constId).bindMethod(idMethod);
-            }
-        }
-
-    @Override
     public TypeConstant resolveGenerics(ConstantPool pool, GenericTypeResolver resolver)
         {
         if (!isSingleDefiningConstant())

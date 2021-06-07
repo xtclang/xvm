@@ -221,13 +221,6 @@ public abstract class RelationalTypeConstant
         }
 
     @Override
-    public void bindTypeParameters(MethodConstant idMethod)
-        {
-        m_constType1.bindTypeParameters(idMethod);
-        m_constType2.bindTypeParameters(idMethod);
-        }
-
-    @Override
     public TypeConstant resolveGenerics(ConstantPool pool, GenericTypeResolver resolver)
         {
         TypeConstant constOriginal1 = m_constType1;
