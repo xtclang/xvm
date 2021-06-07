@@ -2,6 +2,7 @@
  * A database transaction, as viewed from within the database.
  */
 interface DBTransaction<Schema extends RootSchema>
+        extends immutable Const
     {
     /**
      * The root database schema. The difference between `DBObject`s obtained from this `Schema` and

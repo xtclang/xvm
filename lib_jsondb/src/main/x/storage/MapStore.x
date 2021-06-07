@@ -9,7 +9,7 @@ import model.DBObjectInfo;
  * TODO select i.e. query support
  * TODO bulk operations (including deletes, stores, and "in place processing")
  */
-service MapStore<Key extends immutable Orderable, Value extends immutable Object>
+service MapStore<Key extends immutable Const, Value extends immutable Const>
         (Catalog catalog, DBObjectInfo info, Appender<String> errs)
         extends ObjectStore(catalog, info, errs)
     {
