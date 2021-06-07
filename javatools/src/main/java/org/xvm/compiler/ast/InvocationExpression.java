@@ -2527,7 +2527,7 @@ public class InvocationExpression
             }
         else if (typeLeft.isTypeOfType())
             {
-            // almost tidentical to the above case, allow calling a function on a class represented
+            // almost identical to the above case, allow calling a function on a class represented
             // by the DataType; this for example allows writing (assuming "Type<Number> numType")
             //      "numType.fixedByteLength()"
             // instead of more explicit
