@@ -22,19 +22,19 @@ const RTType<DataType, OuterType>
     @Override @RO TypeSystem           typeSystem                         .get() { TODO("native"); }
     @Override @RO Type[]               underlyingTypes                    .get() { TODO("native"); }
 
-    @Override conditional Access       accessSpecified()                         { TODO("native"); }
-    @Override             Type         annotate(Annotation annotation)           { TODO("native"); }
-    @Override conditional Annotation   annotated()                               { TODO("native"); }
-    @Override conditional Type         contained()                               { TODO("native"); }
-    @Override conditional Class        fromClass()                               { TODO("native"); }
-    @Override conditional Property     fromProperty()                            { TODO("native"); }
-    @Override conditional (Type, Type) relational()                              { TODO("native"); }
-    @Override conditional Type         modifying()                               { TODO("native"); }
-    @Override conditional String       named()                                   { TODO("native"); }
-    @Override             Type         parameterize(Type[] paramTypes=[])        { TODO("native"); }
-    @Override conditional Type[]       parameterized()                           { TODO("native"); }
-    @Override             Type         purify()                                  { TODO("native"); }
-    @Override conditional Type         resolveFormalType(String typeName)        { TODO("native"); }
+    @Override conditional Access          accessSpecified()                      { TODO("native"); }
+    @Override             Type            annotate(Annotation annotation)        { TODO("native"); }
+    @Override conditional Annotation      annotated()                            { TODO("native"); }
+    @Override conditional Type            contained()                            { TODO("native"); }
+    @Override conditional Class<DataType> fromClass()                            { TODO("native"); }
+    @Override conditional Property        fromProperty()                         { TODO("native"); }
+    @Override conditional (Type, Type)    relational()                           { TODO("native"); }
+    @Override conditional Type            modifying()                            { TODO("native"); }
+    @Override conditional String          named()                                { TODO("native"); }
+    @Override             Type            parameterize(Type[] paramTypes=[])     { TODO("native"); }
+    @Override conditional Type[]          parameterized()                        { TODO("native"); }
+    @Override             Type            purify()                               { TODO("native"); }
+    @Override conditional Type            resolveFormalType(String typeName)     { TODO("native"); }
 
     @Override @Op("+") Type add(Type that)                                       { TODO("native"); }
     @Override @Op("+") Type add(Method[] methods=[])                             { TODO("native"); }

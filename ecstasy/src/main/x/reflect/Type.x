@@ -180,7 +180,7 @@ interface Type<DataType, OuterType>
      * @return True iff this type represents a class
      * @return (conditional) the class
      */
-    conditional Class fromClass();
+    conditional Class<DataType> fromClass();
 
     /**
      * Determine if the type non-ambiguously represents a property. The property can be ambiguous,

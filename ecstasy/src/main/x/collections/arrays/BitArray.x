@@ -6,10 +6,7 @@ mixin BitArray<Element extends Bit>
     {
     construct()
         {
-        // TODO GG assert Class<Element> clz := Element.fromClass();
-        // TODO GG assert Class<Element> clz := Type<Element>.fromClass();
-        // TODO GG assert Class<Element> clz := Element.DataType.fromClass();
-        assert val clz := Element.DataType.fromClass(), val dft := clz.defaultValue(), dft.is(Element);
+        assert Class<Element> clz := Element.fromClass(), Element dft := clz.defaultValue();
         Zero = dft;
         One  = ~Zero;
         }
