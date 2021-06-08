@@ -1594,7 +1594,17 @@ public class TerminalTypeConstant
             TypeConstant   typeConstraint = constRight.getConstraintType();
             if (isDynamicType())
                 {
-                Register regRight = ((DynamicFormalConstant) constRight).getRegister();
+                DynamicFormalConstant constDynamic = (DynamicFormalConstant) constRight;
+                FormalConstant        constFormal  = constDynamic.getFormalConstant();
+
+                // check the formal type constraint first
+                Relation relation = constFormal.getConstraintType().calculateRelation(typeLeft);
+                if (relation != Relation.INCOMPATIBLE)
+                    {
+                    return relation;
+                    }
+
+                Register regRight = constDynamic.getRegister();
                 if (regRight != null)
                     {
                     if (typeLeft.containsDynamicType(regRight))

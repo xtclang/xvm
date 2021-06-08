@@ -724,6 +724,18 @@ public class ClassStructure
         }
 
     /**
+     * Obtain the constraint type for the specified generic type.
+     *
+     * @param sName  the generic type name
+     *
+     * @return the constraint type
+     */
+    public TypeConstant getConstraint(String sName)
+        {
+        return m_mapParams.get(getConstantPool().ensureStringConstant(sName));
+        }
+
+    /**
      * Update (narrow) the constraint type for the specified generic type.
      *
      * @param sName           the generic type name

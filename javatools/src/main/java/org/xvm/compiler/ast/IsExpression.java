@@ -2,6 +2,7 @@ package org.xvm.compiler.ast;
 
 
 import org.xvm.asm.Argument;
+import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
@@ -118,12 +119,67 @@ public class IsExpression
                     typeTarget = pool.ensureAccessTypeConstant(typeTarget, Access.PRIVATE);
                     }
 
-                exprName.narrowType(ctx, Branch.WhenTrue,  typeTarget.combine(pool, typeTest));
+                TypeConstant typeInferred =
+                        typeTest.isExplicitClassIdentity(true) &&
+                        typeTarget.isExplicitClassIdentity(true)
+                            ? computeInferredType(typeTarget, typeTest)
+                            : typeTest;
+
+                exprName.narrowType(ctx, Branch.WhenTrue,  typeTarget.combine(pool, typeInferred));
                 exprName.narrowType(ctx, Branch.WhenFalse, typeTarget.andNot(pool, typeTest));
                 }
             }
 
         return finishValidation(ctx, typeRequired, pool.typeBoolean(), fit, constVal, errs);
+        }
+
+    /**
+     * @return an inferred narrowing type based on the original type and "is" type
+     */
+    private TypeConstant computeInferredType(TypeConstant typeOriginal, TypeConstant typeNarrowing)
+        {
+        ClassStructure clzOriginal = (ClassStructure) typeOriginal.
+                getSingleUnderlyingClass(true).getComponent();
+
+        ClassStructure clzNarrowing = (ClassStructure) typeNarrowing.
+                getSingleUnderlyingClass(true).getComponent();
+
+        if (clzOriginal.isParameterized() && clzNarrowing.isParameterized() &&
+                clzNarrowing.getCanonicalType().isA(clzOriginal.getCanonicalType()))
+            {
+            ConstantPool pool = pool();
+
+            TypeConstant typeInferred = clzNarrowing.getFormalType().resolveGenerics(pool,
+                sFormalName ->
+                    {
+                    TypeConstant typeParam = clzNarrowing.getConstraint(sFormalName);
+                    int          ixParam   = clzNarrowing.indexOfGenericParameter(sFormalName);
+
+                    // TODO GG: we assume that formal type indexes stay invariant across classes,
+                    //          which is not correct in a general case
+                    if (typeNarrowing.getParamsCount() > ixParam)
+                        {
+                        typeParam = typeNarrowing.getParamType(ixParam).combine(pool, typeParam);
+                        }
+                    else if (typeOriginal.getParamsCount() > ixParam)
+                        {
+                        typeParam = typeOriginal.getParamType(ixParam).combine(pool, typeParam);
+                        }
+                    return typeParam;
+                    });
+
+            typeInferred = typeNarrowing.adoptParameters(pool, typeInferred.getParamTypesArray());
+            if (typeOriginal.isAccessSpecified() && !typeInferred.isAccessSpecified())
+                {
+                typeInferred = pool.ensureAccessTypeConstant(typeInferred, typeOriginal.getAccess());
+                }
+            if (typeOriginal.isImmutabilitySpecified() && !typeInferred.isImmutable())
+                {
+                typeInferred = pool.ensureImmutableTypeConstant(typeInferred);
+                }
+            return typeInferred;
+            }
+        return typeNarrowing;
         }
 
     @Override
