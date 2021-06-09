@@ -341,7 +341,7 @@ class Array<Element>
                 {
                 if (requiresFreeze(element))
                     {
-                    this[loop.count] = element.as(Freezable).freeze() /*TODO GG should not need:*/ .as(Element);
+                    this[loop.count] = element.as(Freezable).freeze();
                     }
                 }
             }

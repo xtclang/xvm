@@ -730,6 +730,12 @@ public abstract class TypeConstant
      * Produce a minimal representation of a type that is known to be assignable to both this
      * and the specified type. The resulting type is guaranteed to be the same or narrower than
      * this type.
+     * <p/>
+     * Note: while this operation is most of the time commutative, e.g.
+     *  (t1.combine(t2) === t2.combine(t1)
+     * there are some dynamic type scenarios where both t1.isA(t2)==true and t2.isA(t1)==true,
+     * but still one time is more descriptive that another and the way combine() is called may be
+     * significant.
      *
      * @return a reduction for the union of two types
      */
@@ -747,22 +753,6 @@ public abstract class TypeConstant
             return this;
             }
         if (that.isA(this))
-            {
-            return that;
-            }
-
-        // since Enum values cannot be extended, an Enum value type cannot be combined with any
-        // other type; this obviously applies to Nullable
-        if (this.isExplicitClassIdentity(false) &&
-            this.getExplicitClassFormat() == Component.Format.ENUMVALUE
-            || this.isOnlyNullable())
-            {
-            return this;
-            }
-
-        if (that.isExplicitClassIdentity(false) &&
-            that.getExplicitClassFormat() == Component.Format.ENUMVALUE
-            || that.isOnlyNullable())
             {
             return that;
             }

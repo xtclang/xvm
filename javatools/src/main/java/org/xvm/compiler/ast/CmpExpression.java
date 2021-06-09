@@ -11,6 +11,7 @@ import org.xvm.asm.Op;
 import org.xvm.asm.OpCondJump;
 import org.xvm.asm.OpTest;
 
+import org.xvm.asm.constants.CastTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.Cmp;
@@ -320,6 +321,15 @@ public class CmpExpression
             type2 != null && type2.containsUnresolved())
             {
             return null;
+            }
+
+        if (type1 instanceof CastTypeConstant)
+            {
+            type1 = type1.getUnderlyingType2();
+            }
+        if (type2 instanceof CastTypeConstant)
+            {
+            type2 = type2.getUnderlyingType2();
             }
 
         TypeConstant typeCommon = Op.selectCommonType(type1, type2, ErrorListener.BLACKHOLE);

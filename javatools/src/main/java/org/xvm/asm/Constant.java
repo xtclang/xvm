@@ -868,6 +868,7 @@ public abstract class Constant
         AnonymousClassType,
         PropertyClassType,
         UnionType,
+        CastType,
         IntersectionType,
         DifferenceType,
         RecursiveType,

@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.xvm.asm.Annotation;
+import org.xvm.asm.Component;
 import org.xvm.asm.Component.ResolutionCollector;
 import org.xvm.asm.Component.ResolutionResult;
 import org.xvm.asm.ConstantPool;
@@ -97,7 +98,10 @@ public class UnionTypeConstant
     @Override
     public boolean isNullable()
         {
-        return m_constType1.isNullable() && m_constType2.isNullable();
+        // (Element + Stringable?) is Nullable (assuming trivial Element's constraint)
+        return m_constType1.isNullable()   && m_constType2.isNullable() ||
+               m_constType1.isFormalType() && m_constType2.isNullable() ||
+               m_constType1.isNullable()   && m_constType2.isFormalType();
         }
 
     @Override
@@ -456,7 +460,7 @@ public class UnionTypeConstant
             SignatureConstant sig     = entry.getKey();
             MethodInfo        method1 = entry.getValue();
 
-            if (method1.isConstructor())
+            if (method1.isConstructor() && !method1.containsVirtualConstructor())
                 {
                 continue;
                 }
@@ -481,7 +485,7 @@ public class UnionTypeConstant
             SignatureConstant sig     = entry.getKey();
             MethodInfo        method2 = entry.getValue();
 
-            if (method2.isConstructor())
+            if (method2.isConstructor() && !method2.containsVirtualConstructor())
                 {
                 continue;
                 }
@@ -594,6 +598,26 @@ public class UnionTypeConstant
 
         Relation rel1 = typeRight.calculateRelation(thisLeft1);
         Relation rel2 = typeRight.calculateRelation(thisLeft2);
+
+        // since Enum values cannot be extended, an Enum value type cannot be combined with any
+        // other type and a union with a formal type doesn't actually narrow that Enum value type;
+        // this obviously applies to Nullable
+        if (typeRight.isExplicitClassIdentity(false) &&
+            typeRight.getExplicitClassFormat() == Component.Format.ENUMVALUE
+                || typeRight.isOnlyNullable())
+            {
+            if (thisLeft2.isFormalType())
+                {
+                // Nullable + Element <= Nullable (if Element's constraint is trivial)
+                return rel1.worseOf(typeRight.calculateRelation(thisLeft2.resolveConstraints()));
+                }
+            if (thisLeft1.isFormalType())
+                {
+                // Element + Lesser <= Lesser (if Element's constraint is trivial)
+                return rel2.worseOf(typeRight.calculateRelation(thisLeft1.resolveConstraints()));
+                }
+            }
+
         return rel1.worseOf(rel2);
         }
 

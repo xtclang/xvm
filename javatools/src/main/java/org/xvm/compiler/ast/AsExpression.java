@@ -6,6 +6,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
+import org.xvm.asm.constants.CastTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.Move;
@@ -87,6 +88,7 @@ public class AsExpression
         else
             {
             expr1 = exprTarget;
+            type  = new CastTypeConstant(pool(), exprTarget.getType(), type);
             }
 
         if (fValid)
@@ -107,7 +109,7 @@ public class AsExpression
             Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
         Argument     argBefore = expr1.generateArgument(ctx, code, true, true, errs);
-        TypeConstant type      = getType();
+        TypeConstant type      = getType().getUnderlyingType2();
 
         if (m_fCastRequired || !argBefore.getType().equals(type))
             {
@@ -130,7 +132,8 @@ public class AsExpression
             Argument argTarget = expr1.generateArgument(ctx, code, true, true, errs);
             if (m_fCastRequired)
                 {
-                code.add(new MoveCast(argTarget, LVal.getLocalArgument(), getType()));
+                code.add(new MoveCast(argTarget, LVal.getLocalArgument(),
+                        getType().getUnderlyingType2()));
                 }
             else
                 {
