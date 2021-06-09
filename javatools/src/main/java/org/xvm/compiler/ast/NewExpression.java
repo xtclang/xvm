@@ -377,6 +377,13 @@ public class NewExpression
 
                 if (fVirt)
                     {
+                    if (typeLeft.isFormalTypeType())
+                        {
+                        // the Type type doesn't have virtual constructors, so the only allowed
+                        // scenario is a virtual constructor on a formal type, e.g.:
+                        //      NumType num = NumType.new(bytes);
+                        typeLeft = typeLeft.getParamType(0);
+                        }
                     typeResult = typeTarget = typeLeft;
                     }
                 else

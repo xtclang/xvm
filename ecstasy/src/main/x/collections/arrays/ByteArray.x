@@ -286,8 +286,7 @@ mixin ByteArray<Element extends Byte>
                         {
                         assert:bounds index < size;
                         val offset = index * bytesPerNum;
-                        // TODO GG: return NumType.new(bytes[offset..offset+bytesPerNum));
-                        return NumType.zero().as(NumType).new(bytes[offset..offset+bytesPerNum));
+                        return NumType.new(bytes[offset..offset+bytesPerNum));
                         }
 
                     @Override
