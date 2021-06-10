@@ -581,11 +581,12 @@ public class CaseManager<CookieType>
      *
      * @return the nested context
      */
-    protected Context enterBlock(Context ctx, boolean fValid)
+    protected Context enterBlock(Context ctx, int cCases, boolean fValid)
         {
         ctx = ctx.enter();
 
-        if (fValid && m_lTypeExpr != 0L)
+        // for now, we only infer a type from a single-case blocks
+        if (fValid && m_lTypeExpr != 0L && cCases == 1)
             {
             Constant constCase = m_listsetCase.last();
             if (m_cCondVals == 1)
@@ -604,7 +605,7 @@ public class CaseManager<CookieType>
                 Constant[] aConstCase = ((ArrayConstant) constCase).getValue();
                 for (int i = 0, c = 64 - Long.numberOfLeadingZeros(m_lTypeExpr); i < c; i++)
                     {
-                    if ((m_lTypeExpr & (1 << i)) != 0)
+                    if ((m_lTypeExpr & (1L << i)) != 0)
                         {
                         NameExpression exprType = (NameExpression) m_listCond.get(i);
                         TypeConstant   typeCase = (TypeConstant) aConstCase[i];

@@ -176,7 +176,14 @@ public class SwitchStatement
                     fInCase = false;
 
                     assert ctxBlock == null;
-                    ctxBlock = m_casemgr.enterBlock(ctx, fValid);
+
+                    int cCases = 0;
+                    for (int iCase = group.iFirstCase; iCase < group.iFirstStmt; iCase++)
+                        {
+                        cCases += ((CaseStatement) listStmts.get(iCase)).getExpressionCount();
+                        }
+
+                    ctxBlock = m_casemgr.enterBlock(ctx, cCases, fValid);
 
                     // associate any previous "fall through" with this pseudo statement block
                     if (m_labelContinue != null)

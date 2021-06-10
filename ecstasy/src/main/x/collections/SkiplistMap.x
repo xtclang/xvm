@@ -1291,28 +1291,28 @@ class SkiplistMap<Key extends Orderable, Value>
             case Nullable|Int128, Nullable|UInt128, Nullable|@Unchecked Int128, Nullable|@Unchecked UInt128:
             case Nullable|Dec32, Nullable|Dec64, Nullable|Dec128:
             case Nullable|BFloat16, Nullable|Float16, Nullable|Float32, Nullable|Float64, Nullable|Float128:
-                return new NumberStore<elementType.DataType, indexType.DataType>()                  /*TODO GG*/.as(ElementStore<Element>);
+                return new NumberStore<elementType.DataType, indexType.DataType>();
 
             case Bit,     Nullable|Bit:
             case Boolean, Nullable|Boolean:
             case Nibble,  Nullable|Nibble:
-                return new SingleIndexStore<elementType.DataType, indexType.DataType>()             /*TODO GG*/.as(ElementStore<Element>);
+                return new SingleIndexStore<elementType.DataType, indexType.DataType>();
 
             case Char, Nullable|Char:
-                return new CharStore<elementType.DataType, indexType.DataType>()                    /*TODO GG*/.as(ElementStore<Element>);
+                return new CharStore<elementType.DataType, indexType.DataType>();
 
             default:
                 // check if the type is an Enum type (or "Enum?" type)
                 if (elementType.is(Type<Enum>))
                     {
-                    return new EnumStore<elementType.DataType, indexType.DataType>()                /*TODO GG*/.as(ElementStore<Element>);
+                    return new EnumStore<elementType.DataType, indexType.DataType>();
                     }
                 if (Type notNullPart := isNullable(elementType), notNullPart.is(Type<Enum>))
                     {
-                    return new EnumStore<elementType.DataType, indexType.DataType>()                /*TODO GG*/.as(ElementStore<Element>);
+                    return new EnumStore<elementType.DataType, indexType.DataType>();
                     }
 
-                return new ExternalStore<elementType.DataType, indexType.DataType>(initCapacity)    /*TODO GG*/.as(ElementStore<Element>);
+                return new ExternalStore<elementType.DataType, indexType.DataType>(initCapacity);
             }
         }
 

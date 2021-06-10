@@ -49,6 +49,14 @@ public class CaseStatement
         }
 
     /**
+     * @return the number of expressions
+     */
+    public int getExpressionCount()
+        {
+        return exprs == null ? 0 : exprs.size();
+        }
+
+    /**
      * @return the label assigned to this case statement, or null if none has been assigned
      */
     public Label getLabel()
