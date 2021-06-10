@@ -46,6 +46,7 @@ public class DynamicFormalConstant
         assert reg.getType().removeAccess().isA(constFormal.getNamespace().getType());
 
         m_reg         = reg;
+        m_typeReg     = reg.getType();
         m_constFormal = constFormal;
         m_nReg        = reg.isUnknown() ? Register.UNKNOWN : reg.getIndex();
         }
@@ -64,6 +65,7 @@ public class DynamicFormalConstant
         super(pool, format, in);
 
         m_nReg    = in.readUnsignedShort();
+        m_iType   = readMagnitude(in);
         m_iFormal = readMagnitude(in);
         }
 
@@ -72,7 +74,10 @@ public class DynamicFormalConstant
         {
         super.resolveConstants();
 
-        m_constFormal = (FormalConstant) getConstantPool().getConstant(m_iFormal);
+        ConstantPool pool = getConstantPool();
+
+        m_typeReg     = (TypeConstant)   pool.getConstant(m_iType);
+        m_constFormal = (FormalConstant) pool.getConstant(m_iFormal);
         }
 
 
@@ -113,16 +118,10 @@ public class DynamicFormalConstant
     @Override
     public TypeConstant getConstraintType()
         {
-        Register reg = m_reg;
-        if (reg != null)
-            {
-            TypeConstant typeConstraint = reg.getType().resolveFormalType(m_constFormal);
-            if (typeConstraint != null)
-                {
-                return typeConstraint;
-                }
-            }
-        return m_constFormal.getConstraintType().resolveConstraints();
+        TypeConstant typeConstraint = m_typeReg.resolveFormalType(m_constFormal);
+        return typeConstraint == null
+                ? m_constFormal.getConstraintType().resolveConstraints()
+                : typeConstraint;
         }
 
     @Override
@@ -170,6 +169,7 @@ public class DynamicFormalConstant
     public boolean containsUnresolved()
         {
         return super.containsUnresolved() ||
+               m_typeReg.containsUnresolved() ||
                m_constFormal.containsUnresolved();
         }
 
@@ -189,6 +189,12 @@ public class DynamicFormalConstant
             }
 
         n = this.m_constFormal.compareDetails(that.m_constFormal);
+        if (n != 0)
+            {
+            return n;
+            }
+
+        n = this.m_typeReg.compareTo(that.m_typeReg);
         if (n != 0)
             {
             return n;
@@ -225,6 +231,7 @@ public class DynamicFormalConstant
         {
         super.registerConstants(pool);
 
+        m_typeReg     = (TypeConstant)   pool.register(m_typeReg);
         m_constFormal = (FormalConstant) pool.register(m_constFormal);
         }
 
@@ -235,6 +242,7 @@ public class DynamicFormalConstant
         super.assemble(out);
 
         out.writeShort(m_reg.getIndex());
+        writePackedLong(out, m_typeReg.getPosition());
         writePackedLong(out, m_constFormal.getPosition());
         }
 
@@ -251,9 +259,19 @@ public class DynamicFormalConstant
     // ----- fields --------------------------------------------------------------------------------
 
     /**
+     * During disassembly, this holds the index of the register type.
+     */
+    private int m_iType;
+
+    /**
      * During disassembly, this holds the index of the formal constant.
      */
     private int m_iFormal;
+
+    /**
+     * The register type.
+     */
+    private TypeConstant m_typeReg;
 
     /**
      * The formal constant.
