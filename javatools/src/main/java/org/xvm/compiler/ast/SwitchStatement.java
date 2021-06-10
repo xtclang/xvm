@@ -178,13 +178,20 @@ public class SwitchStatement
 
                     assert ctxBlock == null;
 
-                    int cCases = 0;
-                    for (int iCase = group.iFirstCase; iCase < group.iFirstStmt; iCase++)
+                    ctxBlock = ctx.enter();
+                    if (fValid)
                         {
-                        cCases += ((CaseStatement) listStmts.get(iCase)).getExpressionCount();
+                        // for now, we only infer a type from a single-case blocks
+                        int cCases = 0;
+                        for (int iCase = group.iFirstCase; iCase < group.iFirstStmt; iCase++)
+                            {
+                            cCases += ((CaseStatement) listStmts.get(iCase)).getExpressionCount();
+                            }
+                        if (cCases == 1)
+                            {
+                            mgr.addTypeInference(ctxBlock);
+                            }
                         }
-
-                    ctxBlock = mgr.enterBlock(ctx, cCases, fValid);
 
                     // associate any previous "fall through" with this pseudo statement block
                     if (m_labelContinue != null)

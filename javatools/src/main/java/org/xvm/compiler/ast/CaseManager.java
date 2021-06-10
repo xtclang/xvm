@@ -574,49 +574,47 @@ public class CaseManager<CookieType>
         }
 
     /**
-     * Create a nested context used to validate the content of the "case" block.
+     * Add any existing type inference information to the specified context.
      *
-     * @param ctx     the parent context
-     * @param fValid  false if the validation has already failed at some point
+     * @param ctx  the context to use
      *
-     * @return the nested context
+     * @return true iff the switch contains any type inferring conditions
      */
-    protected Context enterBlock(Context ctx, int cCases, boolean fValid)
+    protected boolean addTypeInference(Context ctx)
         {
-        ctx = ctx.enter();
-
-        // for now, we only infer a type from a single-case blocks
-        if (fValid && m_lTypeExpr != 0L && cCases == 1)
+        if (m_lTypeExpr == 0L)
             {
-            Constant constCase = m_listsetCase.last();
-            if (m_cCondVals == 1)
+            return false;
+            }
+
+        Constant constCase = m_listsetCase.last();
+        if (m_cCondVals == 1)
+            {
+            if (constCase instanceof TypeConstant)
                 {
-                if (constCase instanceof TypeConstant)
+                NameExpression exprType = (NameExpression) m_listCond.get(0);
+                TypeConstant   typeCase = (TypeConstant) constCase;
+                assert typeCase.isTypeOfType();
+
+                exprType.narrowType(ctx, Branch.Always, typeCase);
+                }
+            }
+        else if (constCase instanceof ArrayConstant)
+            {
+            Constant[] aConstCase = ((ArrayConstant) constCase).getValue();
+            for (int i = 0, c = 64 - Long.numberOfLeadingZeros(m_lTypeExpr); i < c; i++)
+                {
+                if ((m_lTypeExpr & (1L << i)) != 0)
                     {
-                    NameExpression exprType = (NameExpression) m_listCond.get(0);
-                    TypeConstant   typeCase = (TypeConstant) constCase;
+                    NameExpression exprType = (NameExpression) m_listCond.get(i);
+                    TypeConstant   typeCase = (TypeConstant) aConstCase[i];
                     assert typeCase.isTypeOfType();
 
                     exprType.narrowType(ctx, Branch.Always, typeCase);
                     }
                 }
-            else if (constCase instanceof ArrayConstant)
-                {
-                Constant[] aConstCase = ((ArrayConstant) constCase).getValue();
-                for (int i = 0, c = 64 - Long.numberOfLeadingZeros(m_lTypeExpr); i < c; i++)
-                    {
-                    if ((m_lTypeExpr & (1L << i)) != 0)
-                        {
-                        NameExpression exprType = (NameExpression) m_listCond.get(i);
-                        TypeConstant   typeCase = (TypeConstant) aConstCase[i];
-                        assert typeCase.isTypeOfType();
-
-                        exprType.narrowType(ctx, Branch.Always, typeCase);
-                        }
-                    }
-                }
             }
-        return ctx;
+        return true;
         }
 
     private void incorporateInt(PackedInteger pint)
