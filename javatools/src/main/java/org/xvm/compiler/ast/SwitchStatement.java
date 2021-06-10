@@ -96,9 +96,10 @@ public class SwitchStatement
         boolean fValid  = true;
         Context ctxOrig = ctx;
 
-        // validate the switch condition
+        CaseManager<CaseGroup> mgr = new CaseManager<>(this);
+
         m_listGroups = new ArrayList<>();
-        m_casemgr    = new CaseManager<CaseGroup>(this);
+        m_casemgr    = mgr;
 
         // create an new context in case there are short-circuiting conditions that result in
         // narrowing inferences; for example:
@@ -110,17 +111,17 @@ public class SwitchStatement
 
         ctx = ctx.enter();
 
-        fValid &= m_casemgr.validateCondition(ctx, conds, errs);
+        fValid &= mgr.validateCondition(ctx, conds, errs);
 
         // the case manager enters a new context if the switch condition declares variables
-        Context ctxCond = m_casemgr.getSwitchContext();
+        Context ctxCond = mgr.getSwitchContext();
         if (ctxCond != null)
             {
             ctx = ctxCond;
             }
 
         // TODO this is probably all wrong now; needs REVIEW CP
-        if (m_casemgr.usesIfLadder())
+        if (mgr.usesIfLadder())
             {
             // a switch that uses an "if ladder" may have side-effects of the various case
             // statements that effect assignment, so treat the context containing the case
@@ -164,7 +165,7 @@ public class SwitchStatement
                     m_listGroups.add(group);
                     }
 
-                fValid &= m_casemgr.validateCase(ctx, (CaseStatement) stmt, errs);
+                fValid &= mgr.validateCase(ctx, (CaseStatement) stmt, errs);
                 }
             else
                 {
@@ -172,7 +173,7 @@ public class SwitchStatement
                     {
                     assert group != null && group.iFirstStmt < 0;
                     group.iFirstStmt = i;
-                    m_casemgr.endCaseGroup(group);
+                    mgr.endCaseGroup(group);
                     fInCase = false;
 
                     assert ctxBlock == null;
@@ -183,7 +184,7 @@ public class SwitchStatement
                         cCases += ((CaseStatement) listStmts.get(iCase)).getExpressionCount();
                         }
 
-                    ctxBlock = m_casemgr.enterBlock(ctx, cCases, fValid);
+                    ctxBlock = mgr.enterBlock(ctx, cCases, fValid);
 
                     // associate any previous "fall through" with this pseudo statement block
                     if (m_labelContinue != null)
@@ -242,19 +243,19 @@ public class SwitchStatement
 
         // close the context used for an "if ladder"
         // REVIEW (see corresponding section above)
-        if (m_casemgr.usesIfLadder())
+        if (mgr.usesIfLadder())
             {
             ctx = ctx.exit();
             }
 
         // notify the case manager that we're finished collecting everything
-        fValid &= m_casemgr.validateEnd(ctx, errs);
+        fValid &= mgr.validateEnd(ctx, errs);
 
         ctx = ctx.exit();
 
         // if a switch statement covers all of the possible values, or has a default label, then the
         // switch statement does not complete normally
-        if (!m_casemgr.isCompletable())
+        if (!mgr.isCompletable())
             {
             ctxOrig.setReachable(false);
             }
@@ -278,12 +279,14 @@ public class SwitchStatement
     @Override
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
+        CaseManager<CaseGroup> mgr = m_casemgr;
+
         // check for the extremely rare possibility that the switch condition is a constant and we
         // can tell which branch to use (discarding the rest of the possible case branches)
-        if (m_casemgr.isSwitchConstant())
+        if (mgr.isSwitchConstant())
             {
             // skip the condition and just spit out the reachable code inside the case group(s)
-            CaseGroup groupStart = m_casemgr.getCookie(m_casemgr.getSwitchConstantLabel());
+            CaseGroup groupStart = mgr.getCookie(mgr.getSwitchConstantLabel());
             for (int iGroup = groupStart.iGroup, cGroups = m_listGroups.size(); iGroup < cGroups; ++iGroup)
                 {
                 emitCaseGroup(ctx, fReachable, code, iGroup, errs);
@@ -298,18 +301,18 @@ public class SwitchStatement
             return false;
             }
 
-        if (m_casemgr.hasDeclarations())
+        if (mgr.hasDeclarations())
             {
             code.add(new Enter());
             }
 
-        if (m_casemgr.usesIfLadder())
+        if (mgr.usesIfLadder())
             {
-            m_casemgr.generateIfLadder(ctx, code, block.stmts, errs);
+            mgr.generateIfLadder(ctx, code, block.stmts, errs);
             }
         else
             {
-            m_casemgr.generateJumpTable(ctx, code, errs);
+            mgr.generateJumpTable(ctx, code, errs);
             }
 
         for (int iGroup = 0, cGroups = m_listGroups.size(); iGroup < cGroups; ++iGroup)
@@ -317,7 +320,7 @@ public class SwitchStatement
             emitCaseGroup(ctx, fReachable, code, iGroup, errs);
             }
 
-        if (m_casemgr.hasDeclarations())
+        if (mgr.hasDeclarations())
             {
             code.add(new Exit());
             }
@@ -329,7 +332,7 @@ public class SwitchStatement
             code.add(m_labelContinue);
             }
 
-        return m_casemgr.isCompletable();
+        return mgr.isCompletable();
         }
 
     private void emitCaseGroup(Context ctx, boolean fReachable, Code code, int iGroup, ErrorListener errs)
