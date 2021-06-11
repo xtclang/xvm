@@ -1839,15 +1839,13 @@ public class Context
                         ctxOuter.replaceArgument(sName, Branch.Always, argFalse);
                         }
                     }
-                else
+                else if (argOrig instanceof Register)
                     {
+                    // we may need to restore the original type
                     TypeConstant typeOrig = argOrig.getType();
 
                     if (!typeFalse.isA(typeOrig) || !typeTrue.isA(typeOrig))
                         {
-                        // this can only happen if the original type was already a shadow
-                        assert argOrig instanceof Register;
-
                         Register regOrig = (Register) argOrig;
                         ctxOuter.replaceArgument(sName, Branch.Always,
                             regOrig.narrowType(regOrig.getOriginalType()));
