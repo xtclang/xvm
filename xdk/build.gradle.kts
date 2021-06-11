@@ -89,6 +89,8 @@ val compileAggregate = tasks.register<JavaExec>("compileAggregate") {
 
     shouldRunAfter(compileEcstasy)
 
+    jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
+
     classpath(javatoolsJar)
     args("-verbose",
             "-o", "$libDir",
@@ -104,6 +106,8 @@ val compileCollections = tasks.register<JavaExec>("compileCollections") {
     description = "Build collections.xtc module"
 
     shouldRunAfter(compileEcstasy)
+
+    jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
 
     classpath(javatoolsJar)
     args("-verbose",
@@ -121,6 +125,8 @@ val compileJson = tasks.register<JavaExec>("compileJson") {
 
     shouldRunAfter(compileEcstasy)
 
+    jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
+
     classpath(javatoolsJar)
     args("-verbose",
             "-o", "$libDir",
@@ -137,6 +143,8 @@ val compileOODB = tasks.register<JavaExec>("compileOODB") {
 
     shouldRunAfter(compileEcstasy)
 
+    jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
+
     classpath(javatoolsJar)
     args("-verbose",
             "-o", "$libDir",
@@ -152,6 +160,8 @@ val compileIMDB = tasks.register<JavaExec>("compileIMDB") {
     description = "Build imdb.xtc module"
 
     shouldRunAfter(compileOODB)
+
+    jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
 
     classpath(javatoolsJar)
     args("-verbose",
@@ -171,6 +181,8 @@ val compileJsonDB = tasks.register<JavaExec>("compileJsonDB") {
     shouldRunAfter(compileJson)
     shouldRunAfter(compileOODB)
 
+    jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
+
     classpath(javatoolsJar)
     args("-verbose",
             "-o", "$libDir",
@@ -189,6 +201,8 @@ val compileHost = tasks.register<JavaExec>("compileHost") {
     shouldRunAfter(compileIMDB)
     shouldRunAfter(compileJsonDB)
 
+    jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
+
     classpath(javatoolsJar)
     args("-verbose",
             "-o", "$libDir",
@@ -205,6 +219,8 @@ val compileWeb = tasks.register<JavaExec>("compileWeb") {
     description = "Build web.xtc module"
 
     shouldRunAfter(compileEcstasy)
+
+    jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
 
     classpath(javatoolsJar)
     args("-verbose",

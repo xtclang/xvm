@@ -114,7 +114,8 @@ public class IsExpression
                 {
                 NameExpression exprName = (NameExpression) exprTarget;
 
-                if (typeTarget.isNestMateOf(ctx.getThisClass().getIdentityConstant()))
+                if (typeTarget.isNestMateOf(ctx.getThisClass().getIdentityConstant()) &&
+                        typeTarget.getAccess() != Access.STRUCT)
                     {
                     typeTarget = pool.ensureAccessTypeConstant(typeTarget, Access.PRIVATE);
                     }
