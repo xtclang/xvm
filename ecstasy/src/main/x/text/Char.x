@@ -626,7 +626,7 @@ const Char
      *
      * @return the StringBuilder
      */
-    Appender<Char> appendEscaped(Appender<Char> buf)
+    Appender<Char!> appendEscaped(Appender<Char!> buf)
         {
         return switch (codepoint)
             {
@@ -1572,7 +1572,7 @@ const Char
         }
 
     @Override
-    Appender<Char> appendTo(Appender<Char> buf)
+    Appender<Char!> appendTo(Appender<Char!> buf)
         {
         return buf.add(this);
         }
