@@ -621,7 +621,7 @@ public abstract class RelationalTypeConstant
     // ----- type comparison support ---------------------------------------------------------------
 
     @Override
-    public Usage checkProduction(String sTypeName, Access access, List<TypeConstant> listParams)
+    protected Usage checkProduction(String sTypeName, Access access, List<TypeConstant> listParams)
         {
         assert listParams.isEmpty();
         return Usage.valueOf(m_constType1.producesFormalType(sTypeName, access)
@@ -629,7 +629,7 @@ public abstract class RelationalTypeConstant
         }
 
     @Override
-    public Usage checkConsumption(String sTypeName, Access access, List<TypeConstant> listParams)
+    protected Usage checkConsumption(String sTypeName, Access access, List<TypeConstant> listParams)
         {
         assert listParams.isEmpty();
         return Usage.valueOf(m_constType1.consumesFormalType(sTypeName, access)
