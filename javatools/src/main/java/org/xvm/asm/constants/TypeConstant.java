@@ -5965,20 +5965,7 @@ public abstract class TypeConstant
      */
     public boolean isTypeParameter()
         {
-        if (getCategory() == Category.FORMAL)
-            {
-            Constant constant = getDefiningConstant();
-            switch (constant.getFormat())
-                {
-                case TypeParameter:
-                    return true;
-
-                case FormalTypeChild:
-                    return ((FormalTypeChildConstant) constant).
-                        getTopParent().getFormat() == Format.TypeParameter;
-                }
-            }
-        return false;
+        return getDefiningConstant().getFormat() == Format.TypeParameter;
         }
 
     /**

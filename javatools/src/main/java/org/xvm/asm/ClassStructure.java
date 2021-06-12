@@ -3425,8 +3425,7 @@ public class ClassStructure
 
             for (int i = 1; i < cParams; i++)
                 {
-                TypeConstant typeParam = method.getParam(i).getType();
-                if (!typeParam.isTypeParameter())
+                if (!method.getParam(i).isTypeParameter())
                     {
                     return false;
                     }
