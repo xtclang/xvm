@@ -31,6 +31,7 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypeParameterConstant;
 
 import org.xvm.asm.op.MoveThis;
 
@@ -1001,17 +1002,17 @@ public class Context
         }
 
     /**
-     * Mark the specified generic type as being used within this context.
+     * Mark the specified formal type as being used within this context.
      *
-     * @param type  the generic type or a type that contains generic types
+     * @param type  the formal type or a type that contains formal types
      * @param errs  the error list to log to (optional)
      */
-    public void useGenericType(TypeConstant type, ErrorListener errs)
+    public void useFormalType(TypeConstant type, ErrorListener errs)
         {
         Context ctxOuter = getOuterContext();
         if (ctxOuter != null)
             {
-            ctxOuter.useGenericType(type, errs);
+            ctxOuter.useFormalType(type, errs);
             }
         }
 
@@ -2611,18 +2612,26 @@ public class Context
             }
 
         @Override
-        public void useGenericType(TypeConstant type, ErrorListener errs)
+        public void useFormalType(TypeConstant type, ErrorListener errs)
             {
-            super.useGenericType(type, errs);
+            super.useFormalType(type, errs);
 
             if (type.isGenericType())
                 {
+                // TODO GG: add processing for formal child of generic type
                 String     sName = ((PropertyConstant) type.getDefiningConstant()).getName();
                 TargetInfo info  = (TargetInfo) resolveName(sName, null, errs);
                 assert info != null;
-                ensureGenericMap().putIfAbsent(sName, info);
+                ensureFormalMap().putIfAbsent(sName, info);
                 }
-            else
+            else if (type.isTypeParameter())
+                {
+                String     sName = ((TypeParameterConstant) type.getDefiningConstant()).getName();
+                Register   reg   = (Register) resolveName(sName, null, errs);
+                assert reg != null;
+                ensureFormalMap().putIfAbsent(sName, reg);
+                }
+            else if (type.containsGenericType(false))
                 {
                 Set<PropertyConstant> setIds = new HashSet<>();
                 type.collectGenericNames(true, setIds);
@@ -2632,8 +2641,12 @@ public class Context
                     String     sName = idProp.getName();
                     TargetInfo info  = (TargetInfo) resolveName(sName, null, errs);
                     assert info != null;
-                    ensureGenericMap().putIfAbsent(sName, info);
+                    ensureFormalMap().putIfAbsent(sName, info);
                     }
+                }
+            else if (type.containsTypeParameter(false))
+                {
+                // TODO: enhance "collectGenericNames" or add "collectTypeParameters" API
                 }
             }
 
@@ -2673,13 +2686,13 @@ public class Context
             }
 
         /**
-         * @return a map of names to generic type info
+         * @return a map of names to generic type TargetInfo or type parameter's Register
          */
-        public Map<String, TargetInfo> getGenericMap()
+        public Map<String, Argument> getFormalMap()
             {
-            return m_mapGenericInfo == null
+            return m_mapFormalInfo == null
                     ? Collections.EMPTY_MAP
-                    : m_mapGenericInfo;
+                    : m_mapFormalInfo;
             }
 
         /**
@@ -2727,20 +2740,17 @@ public class Context
             }
 
         /**
-         * Obtain the map of names to generic type info, if it has been built.
-         * <p/>
-         * Note: built by exit()
-         *
-         * @return a non-null map of variable name to TargetInfo for all generic types to capture
+         * @return a non-null map of variable name to generic type TargetInfo or
+         *         type parameter Register
          */
-        protected Map<String, TargetInfo> ensureGenericMap()
+        protected Map<String, Argument> ensureFormalMap()
             {
-            Map<String, TargetInfo> map = m_mapGenericInfo;
+            Map<String, Argument> map = m_mapFormalInfo;
             if (map == null)
                 {
                 // use a tree map, to keep the captures in alphabetical order, which will
                 // help to produce lambdas with a "predictable" signature
-                m_mapGenericInfo = map = new TreeMap<>();
+                m_mapFormalInfo = map = new TreeMap<>();
                 }
 
             return map;
@@ -2758,9 +2768,10 @@ public class Context
         private Map<String, Register> m_mapRegisters;
 
         /**
-         * A map of generic types, built by useGenericType().
+         * A map of formal types, collected by useFormalType(). Values are either of TargetInfo or
+         * Register type.
          */
-        private Map<String, TargetInfo> m_mapGenericInfo;
+        private Map<String, Argument> m_mapFormalInfo;
 
         /**
          * Set to true iff "this" is captured.

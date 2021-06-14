@@ -5952,7 +5952,7 @@ public abstract class TypeConstant
      * Collect generic property ids for this type into the passed-in set.
      *
      * @param fAllowParams  true if type parameters should contribute the corresponding names
-     * @param setGeneric    a set to add ifs to; will be filled iff the
+     * @param setGeneric    a set to add ids to; will be filled iff the
      *                      {@link #containsGenericType} method returns "true"
      */
     public void collectGenericNames(boolean fAllowParams, Set<PropertyConstant> setGeneric)
@@ -5965,7 +5965,8 @@ public abstract class TypeConstant
      */
     public boolean isTypeParameter()
         {
-        return getDefiningConstant().getFormat() == Format.TypeParameter;
+        return isSingleDefiningConstant() &&
+                getDefiningConstant().getFormat() == Format.TypeParameter;
         }
 
     /**

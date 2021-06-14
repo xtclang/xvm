@@ -765,7 +765,7 @@ public class NameExpression
 
                     if (type.containsGenericType(true))
                         {
-                        ctx.useGenericType(type, errs);
+                        ctx.useFormalType(type, errs);
                         }
                     break;
 
@@ -775,7 +775,7 @@ public class NameExpression
 
                     if (idProp.isFormalType())
                         {
-                        ctx.useGenericType(idProp.getFormalType(), errs);
+                        ctx.useFormalType(idProp.getFormalType(), errs);
                         }
                     else if (!idProp.getComponent().isStatic() && m_plan != Plan.PropertySelf)
                         {

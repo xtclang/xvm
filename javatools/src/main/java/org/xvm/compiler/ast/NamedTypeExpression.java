@@ -756,11 +756,11 @@ public class NamedTypeExpression
                     }
                 }
 
-            if (type.containsGenericType(false))
+            if (type.containsFormalType(false))
                 {
-                // the type is either a simple generic (Element), a formal child (Element.Key),
+                // the type is either a simple formal (Element), a formal child (Element.Key),
                 // or a narrowed formal type (Element + Stringable)
-                ctx.useGenericType(type, errs);
+                ctx.useFormalType(type, errs);
                 }
 
             if (m_fExternalTypedef && type.containsGenericType(true))

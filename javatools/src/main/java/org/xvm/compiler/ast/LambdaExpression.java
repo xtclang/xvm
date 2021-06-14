@@ -606,7 +606,7 @@ public class LambdaExpression
                 : pool.buildFunctionType(atypeParams, atypeRets);
 
             if (ctxLambda.getCaptureMap().isEmpty() &&
-                ctxLambda.getGenericMap().isEmpty() &&
+                ctxLambda.getFormalMap().isEmpty() &&
                 !ctxLambda.isLambdaMethod())
                 {
                 // there are no bindings, so the lambda is a constant i.e. the function is the value
@@ -986,18 +986,18 @@ public class LambdaExpression
             {
             // this is the first time that we have a chance to put together the signature, because
             // this is the first time that we are being called after validate()
-            ConstantPool            pool            = ctx.pool();
-            TypeConstant            typeFn          = getType();
-            String[]                asParams        = getParamNames();
-            TypeConstant[]          atypeParams     = pool.extractFunctionParams(typeFn);
-            TypeConstant[]          atypeReturns    = pool.extractFunctionReturns(typeFn);
-            Map<String, TargetInfo> mapGenerics     = ctxLambda.getGenericMap();
-            Map<String, Boolean>    mapCapture      = ctxLambda.getCaptureMap();
-            int                     cGenerics       = mapGenerics.size();
-            int                     cCaptures       = mapCapture.size();
-            int                     cBindArgs       = cGenerics + cCaptures;
-            Argument[]              aBindArgs       = NO_RVALUES;
-            boolean[]               afImplicitDeref = null;
+            ConstantPool          pool            = ctx.pool();
+            TypeConstant          typeFn          = getType();
+            String[]              asParams        = getParamNames();
+            TypeConstant[]        atypeParams     = pool.extractFunctionParams(typeFn);
+            TypeConstant[]        atypeReturns    = pool.extractFunctionReturns(typeFn);
+            Map<String, Argument> mapFormal       = ctxLambda.getFormalMap();
+            Map<String, Boolean>  mapCapture      = ctxLambda.getCaptureMap();
+            int                   cTypeParams     = mapFormal.size();
+            int                   cCaptures       = mapCapture.size();
+            int                   cBindArgs       = cTypeParams + cCaptures;
+            Argument[]            aBindArgs       = NO_RVALUES;
+            boolean[]             afImplicitDeref = null;
 
             // MBIND is indicated by the method structure *NOT* being static
             lambda.setStatic(!ctxLambda.isLambdaMethod());
@@ -1014,26 +1014,38 @@ public class LambdaExpression
 
                 aBindArgs = new Argument[cBindArgs];
 
-                for (Entry<String, TargetInfo> entry : mapGenerics.entrySet())
+                for (Entry<String, Argument> entry : mapFormal.entrySet())
                     {
-                    String       sCapture    = entry.getKey();
-                    TargetInfo   infoGeneric = mapGenerics.get(sCapture);
-                    TypeConstant typeGeneric = infoGeneric.getType(); // type of type
-                    Register     regFormal   = new Register(typeGeneric, Op.A_STACK);
-
-                    if (infoGeneric.getStepsOut() > 0)
+                    String       sCapture  = entry.getKey();
+                    Argument     argFormal = entry.getValue();
+                    TypeConstant typeFormal;
+                    Register     regFormal;
+                    if (argFormal instanceof TargetInfo)
                         {
-                        Register regTarget = new Register(infoGeneric.getTargetType(), Op.A_STACK);
-                        code.add(new MoveThis(infoGeneric.getStepsOut(), regTarget));
-                        code.add(new P_Get((PropertyConstant) infoGeneric.getId(), regTarget, regFormal));
+                        TargetInfo infoGeneric = (TargetInfo) argFormal;
+
+                        typeFormal = infoGeneric.getType(); // type of type
+                        regFormal   = new Register(typeFormal, Op.A_STACK);
+
+                        if (infoGeneric.getStepsOut() > 0)
+                            {
+                            Register regTarget = new Register(infoGeneric.getTargetType(), Op.A_STACK);
+                            code.add(new MoveThis(infoGeneric.getStepsOut(), regTarget));
+                            code.add(new P_Get((PropertyConstant) infoGeneric.getId(), regTarget, regFormal));
+                            }
+                        else
+                            {
+                            code.add(new L_Get((PropertyConstant) infoGeneric.getId(), regFormal));
+                            }
                         }
                     else
                         {
-                        code.add(new L_Get((PropertyConstant) infoGeneric.getId(), regFormal));
+                        regFormal  = (Register) argFormal;
+                        typeFormal = regFormal.getType();
                         }
 
                     asAllParams   [iParam] = sCapture;
-                    atypeAllParams[iParam] = typeGeneric;
+                    atypeAllParams[iParam] = typeFormal;
                     aBindArgs     [iParam] = regFormal;
 
                     iParam++;
@@ -1043,10 +1055,11 @@ public class LambdaExpression
                 // run-time knows to load them up in the inverse order
                 for (Entry<String, Boolean> entry : mapCapture.entrySet())
                     {
-                    String       sCapture    = entry.getKey();
-                    Register     regCapture  = mapRegisters.get(sCapture);
-                    TypeConstant typeCapture = regCapture.getType();
+                    String       sCapture       = entry.getKey();
+                    Register     regCapture     = mapRegisters.get(sCapture);
+                    TypeConstant typeCapture    = regCapture.getType();
                     boolean      fImplicitDeref = false;
+
                     if (entry.getValue())
                         {
                         // it's a read/write capture; capture the Var
@@ -1094,7 +1107,7 @@ public class LambdaExpression
             m_aBindArgs = aBindArgs;
 
             // store the resulting signature for the lambda
-            configureLambda(atypeParams, asParams, cGenerics, afImplicitDeref, atypeReturns);
+            configureLambda(atypeParams, asParams, cTypeParams, afImplicitDeref, atypeReturns);
             }
 
         return m_aBindArgs;
@@ -1342,12 +1355,12 @@ public class LambdaExpression
             }
 
         @Override
-        public Map<String, TargetInfo> getGenericMap()
+        public Map<String, Argument> getFormalMap()
             {
             // if the lambda requires "this", there is no need to capture the generic types
             return isLambdaMethod()
                     ? Collections.EMPTY_MAP
-                    : super.getGenericMap();
+                    : super.getFormalMap();
             }
 
         @Override
@@ -1370,6 +1383,7 @@ public class LambdaExpression
                     TypeConstant typeNarrowed = type.resolveGenerics(pool, resolver);
                     if (typeNarrowed != type)
                         {
+                        assert typeNarrowed.isA(type);
                         reg = reg.narrowType(typeNarrowed);
                         reg.markInPlace();
 
