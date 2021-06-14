@@ -2005,7 +2005,7 @@ service-stack:
     -> registers
 
 // enter critical section
-using (new CriticalSection())
+using (val cs = new CriticalSection())
     {
     // ...
     }
