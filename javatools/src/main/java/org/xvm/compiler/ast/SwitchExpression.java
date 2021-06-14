@@ -8,6 +8,7 @@ import java.util.List;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure.Code;
 
 import org.xvm.asm.constants.TypeCollector;
@@ -179,9 +180,26 @@ public class SwitchExpression
 
                 ctxCase = ctxCase.enterFork(true);
 
-                Expression exprOld = (Expression) node;
-                Expression exprNew = exprOld.validateMulti(ctxCase, atypeRequest, errs);
+                TypeConstant[] atypeReqScoped = atypeRequest;
+                Context        ctxScope       = ctxCase.enter();
+                if (fValid && mgr.addTypeInference(ctxScope))
+                    {
+                    if (atypeReqScoped != null && atypeReqScoped.length > 0)
+                        {
+                        atypeReqScoped = atypeReqScoped.clone();
 
+                        GenericTypeResolver resolver = ctxScope.getFormalTypeResolver();
+                        for (int i = 0, c = atypeReqScoped.length; i < c; i++)
+                            {
+                            atypeReqScoped[i] = atypeReqScoped[i].resolveGenerics(pool, resolver);
+                            }
+                        }
+                    }
+
+                Expression exprOld = (Expression) node;
+                Expression exprNew = exprOld.validateMulti(ctxScope, atypeReqScoped, errs);
+
+                ctxScope.discard();
                 ctxCase = ctxCase.exit();
 
                 mgr.endCaseGroup(exprNew == null ? exprOld : exprNew);
@@ -204,7 +222,9 @@ public class SwitchExpression
 
                     if (exprNew.isCompletable())
                         {
-                        collector.add(exprNew.getTypes());
+                        collector.add(atypeRequest == null || atypeRequest.length == 0
+                                ? exprNew.getTypes()
+                                : atypeRequest);
                         }
                     }
                 }

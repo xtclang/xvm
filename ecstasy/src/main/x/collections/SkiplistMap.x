@@ -2123,14 +2123,14 @@ class SkiplistMap<Key extends Orderable, Value>
             {
             (toIndex, fromIndex) = switch (Element)
                 {
-                case Bit: (e -> e /*TODO GG*/.as(Bit) .toInt64(), i -> (i!=0).toBit() /*TODO GG*/.as(Element));
-                case Nullable|Bit: (e -> e /*TODO GG*/.as(Bit?)?.toInt64() : -1, i -> (i == -1 ? Null : (i!=0).toBit()) /*TODO GG*/.as(Element));
+                case Bit: (e -> e.toInt64(), i -> (i!=0).toBit());
+                case Nullable|Bit: (e -> e?.toInt64() : -1, i -> (i == -1 ? Null : (i!=0).toBit()));
 
-                case Boolean: (e -> e /*TODO GG*/.as(Boolean) .toInt64(), i -> (i!=0) /*TODO GG*/.as(Element));
-                case Nullable|Boolean: (e -> e /*TODO GG*/.as(Boolean?)?.toInt64() : -1, i -> (i == -1 ? Null : i!=0) /*TODO GG*/.as(Element));
+                case Boolean: (e -> e.toInt64(), i -> (i!=0));
+                case Nullable|Boolean: (e -> e?.toInt64() : -1, i -> (i == -1 ? Null : i!=0));
 
-                case Nibble: (e -> e /*TODO GG*/.as(Nibble) .toInt64(), i -> i.toNibble()  /*TODO GG*/.as(Element));
-                case Nullable|Nibble: (e -> e /*TODO GG*/.as(Nibble?)?.toInt64() : -1, i -> (i == -1 ? Null : i.toNibble())  /*TODO GG*/.as(Element));
+                case Nibble: (e -> e.toInt64(), i -> i.toNibble());
+                case Nullable|Nibble: (e -> e?.toInt64() : -1, i -> (i == -1 ? Null : i.toNibble()));
 
                 default: assert as $"Unsupported type: {Element}";
                 };
