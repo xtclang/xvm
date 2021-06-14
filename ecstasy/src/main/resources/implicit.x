@@ -9,6 +9,7 @@ import ecstasy.Cloneable;
 import ecstasy.Closeable;
 import ecstasy.ConcurrentModification;
 import ecstasy.Const;
+import ecstasy.CriticalSection;
 import ecstasy.Deadlock;
 import ecstasy.Enum;
 import ecstasy.Exception;
@@ -32,6 +33,7 @@ import ecstasy.ReadOnly;
 import ecstasy.Sequential;
 import ecstasy.Service;
 import ecstasy.Sliceable;
+import ecstasy.TimeOut;
 import ecstasy.TimedOut;
 import ecstasy.UnsupportedOperation;
 
