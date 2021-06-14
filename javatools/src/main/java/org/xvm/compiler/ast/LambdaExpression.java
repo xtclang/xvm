@@ -1014,6 +1014,7 @@ public class LambdaExpression
 
                 aBindArgs = new Argument[cBindArgs];
 
+                Map<TypeConstant, Integer> mapRedefine = new HashMap<>();
                 for (Entry<String, Argument> entry : mapFormal.entrySet())
                     {
                     String       sCapture  = entry.getKey();
@@ -1040,8 +1041,16 @@ public class LambdaExpression
                         }
                     else
                         {
-                        regFormal  = (Register) argFormal;
-                        typeFormal = regFormal.getType();
+                        // the source is a register (type parameter); resolve to its constraint
+                        regFormal = (Register) argFormal;
+
+                        // we need to make sure that every lambda's parameter of this formal type
+                        // is redefined to point to the corresponding lambda's type parameter
+                        TypeConstant typeOrig = regFormal.getType().getParamType(0).resolveTypedefs();
+                        assert typeOrig.isTypeParameter();
+                        mapRedefine.put(typeOrig, iParam);
+
+                        typeFormal = typeOrig.resolveConstraints().getType();
                         }
 
                     asAllParams   [iParam] = sCapture;
@@ -1103,6 +1112,20 @@ public class LambdaExpression
                 System.arraycopy(asParams   , 0, asAllParams   , cBindArgs, cLambdaParams);
                 atypeParams = atypeAllParams;
                 asParams    = asAllParams;
+
+                if (!mapRedefine.isEmpty())
+                    {
+                    for (int i = 0, c = atypeParams.length; i < c; i++)
+                        {
+                        TypeConstant type      = atypeParams[i].resolveTypedefs();
+                        Integer      NRegister = mapRedefine.get(type);
+                        if (NRegister != null)
+                            {
+                            atypeParams[i] = pool.ensureRegisterConstant(lambda.getIdentityConstant(),
+                                    NRegister, asAllParams[NRegister]).getType();
+                            }
+                        }
+                    }
                 }
             m_aBindArgs = aBindArgs;
 

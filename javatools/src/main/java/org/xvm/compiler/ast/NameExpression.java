@@ -763,7 +763,7 @@ public class NameExpression
                         ctx.markVarRead(getNameToken(), errs);
                         }
 
-                    if (type.containsGenericType(true))
+                    if (type.containsFormalType(true))
                         {
                         ctx.useFormalType(type, errs);
                         }

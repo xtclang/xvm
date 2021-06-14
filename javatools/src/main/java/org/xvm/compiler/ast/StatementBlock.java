@@ -383,7 +383,7 @@ public class StatementBlock
                         Register regVar = (Register) ctx.getVar(sName);
 
                         TypeConstant typeNarrowed = mapNarrowed.get(sName);
-                        if (typeNarrowed != null)
+                        if (typeNarrowed != null && !typeNarrowed.isTypeParameter())
                             {
                             regVar.specifyActualType(typeNarrowed);
                             }

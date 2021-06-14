@@ -4,29 +4,13 @@ module TestSimple.test.org
 
     void run()
         {
+        function Boolean(Int) f = compare(Int:-1, 5);
+        console.println(f(4));
         }
 
-    class Test<Element>
-            implements Const
+    static <OtherType extends Number, CompileType extends Orderable>
+            function Boolean(CompileType) compare(OtherType unused, CompileType value1)
         {
-        construct()
-            {
-            }
-
-        Element value;
-
-        @Override
-        Appender<Char> appendTo(Appender<Char> buf)
-            {
-            if (Element.is(Type<Char>))
-                {
-                value.appendEscaped(buf);
-                }
-            else if (Element == String) // this used to blow with an assertion
-                {
-                value.appendEscaped(buf);
-                }
-            return buf;
-            }
+        return (value2) -> value1 < value2;
         }
     }

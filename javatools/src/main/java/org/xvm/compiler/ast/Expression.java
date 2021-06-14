@@ -556,8 +556,8 @@ public abstract class Expression
                     {
                     // there is no compile-time conversion available;
                     // continue with run-time conversion
-                    // TODO: for now it's most likely our omission; remove the soft assert below
-                    System.err.println("No conversion found for " + constVal);
+                    // TODO: for now it's most likely our omission; remove the assert below
+                    throw new IllegalStateException("No conversion found for " + constVal);
                     }
                 else
                     {
