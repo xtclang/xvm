@@ -144,7 +144,10 @@ public class BiTypeExpression
                 }
 
             // this can happen when we attempt to convert expressions to type expressions
-            log(errs, Severity.ERROR, Compiler.INVALID_OPERATION);
+            log(errs, Severity.ERROR, Compiler.INVALID_OPERATION,
+                    typeRequired == null
+                        ? type1.ensureTypeConstant().getValueString()
+                        : typeRequired.getValueString());
             }
 
         return  null;

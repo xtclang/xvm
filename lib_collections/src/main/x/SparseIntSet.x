@@ -72,8 +72,6 @@ class SparseIntSet
 
                 Int mask = bitset.rightmostBit;
                 bitset &= ~mask;
-// TODO GG error msg?
-// return index + mask.trailingZeroCount;
                 return True, (index + mask.trailingZeroCount);
                 }
 
@@ -100,6 +98,7 @@ class SparseIntSet
                 {
                 if (order != Null)
                     {
+// TODO GG
 // assert Orderer actualOrder := knownOrder();
                     assert Iterator<Int>.Orderer actualOrder := knownOrder();
                     if (order != actualOrder)
@@ -110,15 +109,13 @@ class SparseIntSet
 
                 if (val maxEntry := bitsets.max())
                     {
-// TODO GG error msg
-// return maxEntry.key + maxEntry.value.leftmostBit.trailingZeroCount;
                     return True, maxEntry.key + maxEntry.value.leftmostBit.trailingZeroCount;
                     }
 
                 return False;
                 }
 
-//@Override conditional Range<Int> range(Orderer? order = Null)
+// @Override conditional Range<Int> range(Orderer? order = Null)
             @Override conditional Range<Int> range(Iterator<Int>.Orderer? order = Null)
                 {
                 if (order != Null)
@@ -135,14 +132,10 @@ class SparseIntSet
                     {
                     if (Int maxVal := max())
                         {
-// TODO GG error msg
-//return minVal..maxVal;
                         return True, minVal..maxVal;
                         }
                     else
                         {
-// TODO GG error msg
-//return minVal..minVal;
                         return True, minVal..minVal;
                         }
                     }
