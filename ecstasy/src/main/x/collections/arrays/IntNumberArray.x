@@ -451,7 +451,7 @@ mixin IntNumberArray<Element extends IntNumber>
     IntNumberArray<@Unchecked Element> toUnchecked()
         {
         return Element.is(Type<Unchecked>)
-                ? this.as(IntNumberArray<@Unchecked Element>)
+                ? this
                 : new (@Unchecked Element)[size](i -> this[i].toUnchecked()).toArray(mutability, inPlace=True);
         }
     }
