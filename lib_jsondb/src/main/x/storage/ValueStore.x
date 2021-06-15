@@ -70,13 +70,12 @@ service ValueStore<Value extends immutable Const>
      * Obtain the singleton value as it existed immediately after the specified transaction finished
      * committing.
      *
-     * @param txId  specifies the transaction identifier to use to determine the point-in-time data
-     *              stored in the database, as if the value of the singleton were read immediately
-     *              after that specified transaction had committed
+     * @param txId    the "write" transaction identifier
+     * @param worker  a worker to handle CPU-intensive serialization and deserialization tasks
      *
-     * @return the value of the singleton at the completion of the specified transaction
+     * @return the value of the singleton as of the specified transaction
      */
-    Value load(Client.Worker worker, Int txId)
+    Value load(Int txId, Client.Worker worker)
         {
         TODO
         // read bytes
@@ -88,10 +87,11 @@ service ValueStore<Value extends immutable Const>
     /**
      * Modify the singleton as part of the specified transaction by replacing the value.
      *
-     * @param txId   the transaction being committed
-     * @param value  the new value for the singleton
+     * @param txId    the "write" transaction identifier
+     * @param worker  a worker to handle CPU-intensive serialization and deserialization tasks
+     * @param value   the new value for the singleton
      */
-    void store(Client.Worker worker, Int txId, Value value)
+    void store(Int txId, Client.Worker worker, Value value)
         {
         TODO
         }

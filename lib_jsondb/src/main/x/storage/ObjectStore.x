@@ -29,6 +29,7 @@ import oodb.DBObject.DBCategory as Category;
  * TODO background maintenance
  */
 service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
+        implements Hashable
         implements Closeable
     {
     // ----- properties ----------------------------------------------------------------------------

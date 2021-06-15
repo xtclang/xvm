@@ -43,7 +43,8 @@ import Catalog.BuiltIn;
  * root schema packaged as a module) will have a corresponding generated ("code gen") module that
  * will contain a sub-class of this class. By sub-classing this Client class, the generated code is
  * able to provide a custom, type-safe representation of each custom database, effectively merging
- * together the OODB API with the API and type system defined by the custom database.
+ * together the OODB API with the custom API and the custom type system defined by the database and
+ * its schema.
  */
 service Client<Schema extends RootSchema>
     {
@@ -58,21 +59,30 @@ service Client<Schema extends RootSchema>
      *                       any data
      * @param notifyOnClose  the function to call when the client connection is closed
      */
-    construct(Catalog<Schema> catalog, Int id, DBUser dbUser, Boolean readOnly = False, function void(Client)? notifyOnClose = Null)
+    construct(Catalog<Schema>        catalog,
+              Int                    id,
+              DBUser                 dbUser,
+              Boolean                readOnly = False,
+              function void(Client)? notifyOnClose = Null)
         {
         assert Schema == RootSchema || catalog.metadata != Null;
 
         this.id            = id;
         this.dbUser        = dbUser;
         this.catalog       = catalog;
+        this.txManager     = catalog.txManager;
         this.jsonSchema    = catalog.jsonSchema;
         this.readOnly      = readOnly || catalog.readOnly;
         this.notifyOnClose = notifyOnClose;
         }
     finally
         {
+        // exclusive re-entrancy is critically important: it eliminates race conditions while any
+        // operation (including a commit or rollback) is in flight, while still allowing re-entrancy
+        // that is required to carry out that operation
         reentrancy = Exclusive;
         conn       = new Connection(infoFor(0)).as(Connection + Schema);
+        worker     = new Worker();
         }
 
 
@@ -82,6 +92,12 @@ service Client<Schema extends RootSchema>
      * The JSON db catalog, representing the database on disk.
      */
     public/private Catalog<Schema> catalog;
+
+    /**
+     * The transaction manager for this `Catalog` object. The transaction manager provides a
+     * sequential ordered (non-concurrent) application of potentially concurrent transactions.
+     */
+    public/private TxManager txManager;
 
     /**
      * A cached reference to the JSON schema.
@@ -115,15 +131,6 @@ service Client<Schema extends RootSchema>
     public/protected (Transaction + Schema)? tx = Null;
 
     /**
-     * The base transaction ID used by this client, based on the current transaction (or based on
-     * the transaction manager, if no transaction is existent).
-     */
-    Int baseTxId.get()
-        {
-        return tx?.baseId_ : TxManager.USE_LAST_TX;
-        }
-
-    /**
      * The lazily created application DBObjects within the schema.
      */
     protected/private DBObjectImpl?[] appObjects = new DBObjectImpl[];
@@ -138,8 +145,14 @@ service Client<Schema extends RootSchema>
      */
     protected function void(Client)? notifyOnClose;
 
+    /**
+     * The serialization/deserialization "worker" that allows CPU-intensive work to be dumped back
+     * onto this Client from the database.
+     */
+    @Unassigned protected/private Worker worker;
 
-    // ----- support ----------------------------------------------------------------------------
+
+    // ----- support -------------------------------------------------------------------------------
 
     /**
      * Verify that the client connection is open and can be used for reading data.
@@ -168,15 +181,16 @@ service Client<Schema extends RootSchema>
         }
 
     /**
-     * Obtain the current transaction, creating one if necessary.
+     * Obtain the current transaction, creating one if necessary, and wrapping it in a transactional
+     * context.
      *
-     * @return the Transaction
-     * @return True if the caller is responsible for committing the returned transaction after using
-     *         it
+     * @return the transactional context object
      */
-    (Transaction + Schema tx, Boolean autocommit) ensureTransaction()
+    TxContext ensureTransaction()
         {
         checkRead();
+
+        private TxContext ctx = new TxContext();
 
         var     tx         = this.tx;
         Boolean autocommit = False;
@@ -187,7 +201,8 @@ service Client<Schema extends RootSchema>
             autocommit = True;
             }
 
-        return tx, autocommit;
+        ctx.init(tx, autocommit);
+        return ctx;
         }
 
     /**
@@ -365,6 +380,41 @@ service Client<Schema extends RootSchema>
             mapping.write(stream.createElementOutput(), value);
             stream.close();
             return buf.toString();
+            }
+        }
+
+
+    // ----- TxContext -----------------------------------------------------------------------------
+
+    /**
+     * The TxContext simplifies transaction management on an operation-by-operation basis.
+     */
+    protected class TxContext
+            implements Closeable
+        {
+        (Transaction + Schema)? tx;
+        Boolean                 autocommit;
+
+        void init(Transaction + Schema tx, Boolean autocommit)
+            {
+            assert this.tx == Null;
+            this.tx = tx;
+            this.autocommit = autocommit;
+            }
+
+        Int id.get()
+            {
+            return tx?.writeId_ : assert;
+            }
+
+        @Override void close(Exception? e = Null)
+            {
+            assert tx != Null;
+            if (autocommit)
+                {
+                tx?.commit() : assert;
+                }
+            tx = Null;
             }
         }
 
@@ -616,7 +666,7 @@ service Client<Schema extends RootSchema>
                                                  Int                    retryCount  = 0,
                                                  Boolean                readOnly    = False)
             {
-            assert outer.tx == Null;
+            assert outer.tx == Null as "Attempted to create a transaction when one already exists";
 
             import Transaction.TxInfo;
             TxInfo txInfo = new TxInfo(timeout, name, id, priority, retryCount);
@@ -647,17 +697,20 @@ service Client<Schema extends RootSchema>
             extends RootSchemaImpl(info_)
             implements oodb.Transaction<Schema>
         {
+        construct(DBObjectInfo info_, TxInfo txInfo)
+            {
+            construct RootSchemaImpl(info_);
+            this.txInfo = txInfo;
+            }
+        finally
+            {
+            writeId_ = txManager.begin(outer.id, this, readOnly);
+            }
+
         /**
          * The transaction ID that this transaction is based from.
          */
-        public/protected Int baseId_ = TxManager.USE_LAST_TX;
-
-        /**
-         * The IDs changes within the transaction. Key is the DBObject id, and the value is the
-         * corresponding TxChange object. (This differs from DBTransaction, which uses the path as
-         * the key of the map.)
-         */
-        protected Set<Int> pending_ = Set:[];
+        public/protected Int writeId_ = TxManager.NO_TX;
 
         @Override
         public/protected TxInfo txInfo;
@@ -694,6 +747,7 @@ service Client<Schema extends RootSchema>
                                       );
                 }
 
+// TODO go to tx manager
             TODO
 
             close();
@@ -748,18 +802,19 @@ service Client<Schema extends RootSchema>
         @Override
         Value get()
             {
-//            if ((Token[] tokens, val val) := store_.load(baseTxId))    // TODO why doesn't Value? work?
-//                {
-//                return val? : assert; // TODO deser tokens
-//                }
-//             return store_.initial;
-TODO
+            using (val tx = ensureTransaction())
+                {
+                return store_.load(tx.id, outer.worker);
+                }
             }
 
         @Override
         void set(Value value)
             {
-            TODO impl
+            using (val tx = ensureTransaction())
+                {
+                store_.store(tx.id, outer.worker, value);
+                }
             }
         }
 
@@ -787,31 +842,46 @@ TODO
         @Override
         @RO Int size.get()
             {
-            return store_.sizeAt(baseTxId);
+            using (val tx = ensureTransaction())
+                {
+                return store_.sizeAt(tx.id);
+                }
             }
 
         @Override
         @RO Boolean empty.get()
             {
-            return store_.emptyAt(baseTxId);
+            using (val tx = ensureTransaction())
+                {
+                return store_.emptyAt(tx.id);
+                }
             }
 
         @Override
         Boolean contains(Key key)
             {
-            return store_.existsAt(baseTxId, key);
+            using (val tx = ensureTransaction())
+                {
+                return store_.existsAt(tx.id, outer.worker, key);
+                }
             }
 
         @Override
         conditional Value get(Key key)
             {
-            return store_.load(baseTxId, key);
+            using (val tx = ensureTransaction())
+                {
+                return store_.load(tx.id, outer.worker, key);
+                }
             }
 
         @Override
         Set<Key> keys.get()
             {
-            TODO
+            using (val tx = ensureTransaction())
+                {
+                TODO
+                }
             }
         }
     }
