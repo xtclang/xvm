@@ -7,7 +7,6 @@ import org.xvm.asm.Argument;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
-import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.TypeConstant;
 
@@ -132,7 +131,7 @@ public class TernaryExpression
             }
 
         TypeConstant[] atypeThen, atypeElse;
-        Usage          use   = null;
+        Usage          use = null;
         Plan           plan;
         switch (plan = generatePlan(ctx))
             {
@@ -151,7 +150,7 @@ public class TernaryExpression
                 {
                 if (atypeRequired != null && atypeRequired.length > 0)
                     {
-                    use       = Usage.Then;
+                    use       = Usage.Required;
                     atypeThen = atypeElse = atypeRequired;
                     break;
                     }
@@ -254,6 +253,9 @@ public class TernaryExpression
                 }
             }
 
+        TypeConstant[] atypeThenV = null;
+        TypeConstant[] atypeElseV = null;
+
         ctx = ctx.enterFork(true);
         Expression exprNewThen = exprThen.validateMulti(ctx, atypeThen, errs);
         ctx = ctx.exit();
@@ -268,9 +270,10 @@ public class TernaryExpression
 
             // TODO check if it is short circuiting
 
+            atypeThenV = exprNewThen.getTypes();
             if (atypeThen.length == 0 || use == Usage.Intersection)
                 {
-                atypeThen = exprNewThen.getTypes();
+                atypeThen = atypeThenV;
                 }
             }
 
@@ -288,9 +291,10 @@ public class TernaryExpression
 
             // TODO check if it is short circuiting
 
+            atypeElseV = exprNewElse.getTypes();
             if (atypeElse.length == 0 || use == Usage.Intersection)
                 {
-                atypeElse = exprNewElse.getTypes();
+                atypeElse = atypeElseV;
                 }
             }
 
@@ -321,6 +325,9 @@ public class TernaryExpression
                     {
                     switch (use)
                         {
+                        case Required:
+                            atypeResult = selectWiderTypes(atypeThenV, atypeElseV, atypeRequired);
+                            break;
                         case Any:
                             atypeResult = selectNarrowerTypes(atypeThen, atypeElse);
                             break;
@@ -468,7 +475,8 @@ public class TernaryExpression
      *
      * @param atypeThen  the first type array
      * @param atypeElse  the second type array
-     * @return           an array of narrower types
+     *
+     * @return an array of narrower types
      */
     private TypeConstant[] selectNarrowerTypes(TypeConstant[] atypeThen, TypeConstant[] atypeElse)
         {
@@ -498,6 +506,55 @@ public class TernaryExpression
                 }
             }
         return atypeThen;
+        }
+
+    /**
+     * A helper method to create an array of wider types for two arrays, but no wider than the third.
+     *
+     * @param atypeThen  the first type array
+     * @param atypeElse  the second type array
+     * @param atypeElse  the required type array
+     *
+     * @return an array of wider types
+     */
+    private TypeConstant[] selectWiderTypes(TypeConstant[] atypeThen, TypeConstant[] atypeElse,
+                                            TypeConstant[] atypeRequired)
+        {
+        int cRequired = atypeRequired.length;
+        int cThen     = atypeThen.length;
+        int cElse     = atypeElse.length;
+
+        if (cRequired == 1 && cThen == 1 && cElse == 1)
+            {
+            // most common case
+            TypeConstant typeThen = atypeThen[0];
+            TypeConstant typeElse = atypeElse[0];
+
+            return typeThen.isA(typeElse) ? atypeElse
+                 : typeElse.isA(typeThen) ? atypeThen
+                                          : atypeRequired;
+            }
+        else
+            {
+            TypeConstant[] atypeResult = atypeRequired.clone();
+
+            for (int i = 0; i < cRequired; i++)
+                {
+                TypeConstant typeReq  = atypeRequired[i];
+                TypeConstant typeThen = i < cThen ? atypeThen[i] : typeReq;
+                TypeConstant typeElse = i < cElse ? atypeElse[i] : typeReq;
+
+                if (typeThen.isA(typeElse))
+                    {
+                    atypeResult[i] = typeElse;
+                    }
+                else if (typeElse.isA(typeThen))
+                    {
+                    atypeResult[i] = typeThen;
+                    }
+                }
+            return atypeResult;
+            }
         }
 
     private TypeConstant[] resolveConstraints(TypeConstant[] atype)
@@ -616,7 +673,7 @@ public class TernaryExpression
     private enum Plan {Symmetrical, ThenIsFalse, ElseIsFalse}
     private transient Plan m_plan = Plan.Symmetrical;
 
-    private enum Usage {Any, Then, Else, Intersection};
+    private enum Usage {Required, Any, Then, Else, Intersection};
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(TernaryExpression.class, "cond", "exprThen", "exprElse");
     }

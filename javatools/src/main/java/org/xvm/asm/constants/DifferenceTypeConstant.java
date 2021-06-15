@@ -461,7 +461,7 @@ public class DifferenceTypeConstant
                 }
             }
 
-        return type1.calculateRelationToRight(typeRight);
+        return typeRight.calculateRelation(type1);
         }
 
     @Override

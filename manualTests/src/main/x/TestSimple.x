@@ -4,22 +4,14 @@ module TestSimple.test.org
 
     void run()
         {
-        using (new Bob())
-            {
-            console.println("using Bob");
-            }
         }
 
-    class Bob
-            implements Closeable
+    void tes(Boolean flag, String? pre = Null, String? post = Null)
         {
-        construct()
-            {
-            console.println("constructing Bob");
-            }
-        @Override void close(Exception? cause = Null)
-            {
-            console.println("closing Bob");
-            }
+        (pre, post) = flag
+                    ? ("{", "}")
+                    : ("[", "]");
+
+        String s = pre; // this used to fail to compile
         }
     }
