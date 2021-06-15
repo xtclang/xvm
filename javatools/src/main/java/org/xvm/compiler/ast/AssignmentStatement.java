@@ -948,6 +948,13 @@ public class AssignmentStatement
             }
 
         @Override
+        protected Argument resolveRegisterType(Branch branch, Register reg)
+            {
+            // LValue relies only on the declared type; any inference could be reset
+            return reg.getOriginalRegister();
+            }
+
+        @Override
         public Context exit()
             {
             Context ctxOuter = getOuterContext();

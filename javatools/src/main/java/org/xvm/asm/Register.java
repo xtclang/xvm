@@ -194,6 +194,14 @@ public class Register
         }
 
     /**
+     * @return the original register, which could be different from "this" for narrowed registers
+     */
+    public Register getOriginalRegister()
+        {
+        return this;
+        }
+
+    /**
      * @return the original type, which could be different from {@link #getType} for narrowed
      *         registers
      */
@@ -624,6 +632,12 @@ public class Register
             {
             // no reason to shadow the shadow
             return Register.this.narrowType(typeNarrowed);
+            }
+
+        @Override
+        public Register getOriginalRegister()
+            {
+            return Register.this;
             }
 
         @Override

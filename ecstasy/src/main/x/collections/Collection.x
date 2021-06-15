@@ -826,13 +826,9 @@ interface Collection<Element>
         {
         if (pre == Null && post == Null)
             {
-            // TODO GG
-//            (pre, post) = this.is(Set)
-//                    ? ("{", "}")
-//                    : ("[", "]");
-
-            pre  = this.is(Set) ? "{" : "[";
-            post = this.is(Set) ? "}" : "]";
+            (pre, post) = this.is(Set)
+                    ? ("{", "}")
+                    : ("[", "]");
             }
 
         pre?.appendTo(buf);
