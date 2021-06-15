@@ -17,7 +17,7 @@
  *
  *   List<Exception> listUnguarded = new List();
  *
- *   using (val asyncSection = new AsyncSection(listUnguarded.add))
+ *   using (new AsyncSection(listUnguarded.add))
  *       {
  *       svc1.asyncCall1^();
  *       svc2.asyncCall2^();

@@ -3,7 +3,7 @@
  * that will then be accessible at any subsequent point of execution from within that scope of
  * execution.
  *
- *   using (val token = new ContextToken("userid", id))
+ *   using (new ContextToken("userid", id))
  *       {
  *       requestHandler.handle(request, response);
  *       }

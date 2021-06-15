@@ -34,12 +34,12 @@
  *   @Future Ad   ad2;
  *
  *   // async request for the page body, but don't wait more than 1000ms for it
- *   using (val timeout = new Timeout(Duration:1S))
+ *   using (new Timeout(Duration:1S))
  *       {
  *       body = contentSvc.genBody();
  *
  *       // async request for two advertisements, but don't wait more than 500ms for either
- *       using (val timeout2 = new Timeout(Duration:.5S"))
+ *       using (new Timeout(Duration:.5S"))
  *           {
  *           ad1 = adSvc1.selectAd();
  *           ad2 = adSvc2.selectAd();
@@ -59,7 +59,7 @@
  * If a service needs to begin a long-running task that is independent of the timeout that the
  * service is currently constrained by, construct an _independent_ timeout:
  *
- *   using (val timeout = new Timeout(Duration:5H, True))
+ *   using (new Timeout(Duration:5H, True))
  *       {
  *       new LongRunningReports().begin();
  *       }

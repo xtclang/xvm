@@ -26,12 +26,12 @@
  *
  *   // lock down reentrancy just to the point that only the current conceptual thread of execution
  *   // is allowed to re-enter this service
- *   using (val cs = new CriticalSection(Exclusive))
+ *   using (new CriticalSection(Exclusive))
  *       {
  *       prepare();
  *
  *       // lock down reentrancy completely
- *       using (val cs2 = new CriticalSection())
+ *       using (new CriticalSection())
  *           {
  *           commit();
  *           }
