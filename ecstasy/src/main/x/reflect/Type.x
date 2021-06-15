@@ -462,17 +462,9 @@ interface Type<DataType, OuterType>
      */
     conditional Orderer ordered()
         {
-// TODO GG
-//        return DataType.is(Type!<Orderable>)
-//                ? (True, (DataType o1, DataType o2) -> o1 <=> o2)
-//                : False;
-
-        if (DataType.is(Type!<Orderable>))
-            {
-            return True, (DataType o1, DataType o2) -> o1 <=> o2;
-            }
-
-        return False;
+        return DataType.is(Type!<Orderable>)
+                ? (True, (DataType o1, DataType o2) -> o1 <=> o2)
+                : False;
         }
 
     /**

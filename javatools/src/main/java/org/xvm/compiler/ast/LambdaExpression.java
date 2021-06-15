@@ -227,8 +227,6 @@ public class LambdaExpression
     @Override
     protected void registerStructures(StageMgr mgr, ErrorListener errs)
         {
-        m_errs = errs;
-
         // just like the MethodDeclarationStatement, lambda expressions are considered to be
         // completely opaque, and so a lambda defers the processing of its children at this point,
         // because it wants everything around its children to be set up by the time those children
@@ -242,8 +240,6 @@ public class LambdaExpression
     @Override
     public void resolveNames(StageMgr mgr, ErrorListener errs)
         {
-        m_errs = errs;
-
         // see note above
         if (m_lambda == null)
             {
@@ -254,8 +250,6 @@ public class LambdaExpression
     @Override
     public void validateContent(StageMgr mgr, ErrorListener errs)
         {
-        m_errs = errs;
-
         // see note above
         if (m_lambda == null)
             {
@@ -308,7 +302,7 @@ public class LambdaExpression
     @Override
     public TypeConstant getImplicitType(Context ctx)
         {
-        if (!ensurePrepared(m_errs))
+        if (!ensurePrepared(ErrorListener.BLACKHOLE))
             {
             return null;
             }
@@ -340,7 +334,8 @@ public class LambdaExpression
             return null;
             }
 
-        TypeConstant[] atypeReturns = extractReturnTypes(ctx, atypeParams, asParams, null);
+        TypeConstant[] atypeReturns =
+                extractReturnTypes(ctx, atypeParams, asParams, null, ErrorListener.BLACKHOLE);
         return atypeReturns == null
                 ? null
                 : pool().buildFunctionType(buildParamTypes(), atypeReturns);
@@ -349,12 +344,15 @@ public class LambdaExpression
     @Override
     public TypeFit testFit(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
+        if (errs == null)
+            {
+            errs = ErrorListener.BLACKHOLE;
+            }
+
         if (!ensurePrepared(errs))
             {
             return TypeFit.NoFit;
             }
-
-        m_errs = errs;
 
         if (isValidated())
             {
@@ -384,7 +382,7 @@ public class LambdaExpression
                 TypeConstant[] atypeReqParams  = pool.extractFunctionParams(typeFunction);
                 TypeConstant[] atypeReqReturns = pool.extractFunctionReturns(typeFunction);
 
-                fit = calculateTypeFitImpl(ctx, atypeReqParams, atypeReqReturns);
+                fit = calculateTypeFitImpl(ctx, atypeReqParams, atypeReqReturns, errs);
                 if (fit.isFit())
                     {
                     return fit;
@@ -397,16 +395,16 @@ public class LambdaExpression
             TypeConstant[] atypeReqParams  = pool.extractFunctionParams(typeRequired);
             TypeConstant[] atypeReqReturns = pool.extractFunctionReturns(typeRequired);
 
-            return calculateTypeFitImpl(ctx, atypeReqParams, atypeReqReturns);
+            return calculateTypeFitImpl(ctx, atypeReqParams, atypeReqReturns, errs);
             }
         }
 
-    public TypeFit calculateTypeFitImpl(Context ctx, TypeConstant[] atypeReqParams, TypeConstant[] atypeReqReturns)
+    private TypeFit calculateTypeFitImpl(Context ctx, TypeConstant[] atypeReqParams,
+                                         TypeConstant[] atypeReqReturns, ErrorListener errs)
         {
         int cParams = getParamCount();
         if (atypeReqParams != null && atypeReqParams.length == cParams && atypeReqReturns != null)
             {
-            ErrorListener  errs        = m_errs == null ? ErrorListener.BLACKHOLE : m_errs;
             String[]       asParams    = cParams == 0   ? NO_NAMES : new String[cParams];
             TypeConstant[] atypeParams = cParams == 0   ? TypeConstant.NO_TYPES : new TypeConstant[cParams];
 
@@ -415,7 +413,8 @@ public class LambdaExpression
                 return TypeFit.NoFit;
                 }
 
-            TypeConstant[] atypeReturns = extractReturnTypes(ctx, atypeParams, asParams, atypeReqReturns);
+            TypeConstant[] atypeReturns =
+                    extractReturnTypes(ctx, atypeParams, asParams, atypeReqReturns, errs);
             if (atypeReturns == null)
                 {
                 return TypeFit.NoFit;
@@ -454,8 +453,6 @@ public class LambdaExpression
             return finishValidation(ctx, typeRequired, null, TypeFit.NoFit, null, errs);
             }
 
-        m_errs = errs;
-
         // validation only occurs once, but we'll put some extra checks in up front, because we do
         // weird stuff on lambdas like cloning the AST so that we can pass over it once for the
         // expression validation, but use another copy of the body for the lambda method/function
@@ -479,7 +476,7 @@ public class LambdaExpression
                     TypeConstant[] atypeTestP = pool.extractFunctionParams(typeFunction);
                     TypeConstant[] atypeTestR = pool.extractFunctionReturns(typeFunction);
 
-                    if (calculateTypeFitImpl(ctx, atypeTestP, atypeTestR).isFit())
+                    if (calculateTypeFitImpl(ctx, atypeTestP, atypeTestR, errs).isFit())
                         {
                         typeReqFn       = typeFunction;
                         atypeReqParams  = atypeTestP;
@@ -718,16 +715,16 @@ public class LambdaExpression
      * @param atypeParams  the type parameters
      * @param asParams     the parameter names
      * @param atypeReturns (optional) the required return types
+     * @param errs         the error list to log to
      *
      * @return an array of return types; null if the return types could not be calculated
      */
-    protected TypeConstant[] extractReturnTypes(Context ctx,
-                                                TypeConstant[] atypeParams, String[] asParams,
-                                                TypeConstant[] atypeReturns)
+    private TypeConstant[] extractReturnTypes(Context ctx,
+                                              TypeConstant[] atypeParams, String[] asParams,
+                                              TypeConstant[] atypeReturns, ErrorListener errs)
         {
         // clone the body (to avoid damaging the original) and validate it to calculate its type
         StatementBlock blockTemp = (StatementBlock) body.clone();
-        ErrorListener  errs      = m_errs == null ? ErrorListener.BLACKHOLE : m_errs;
 
         if (!new StageMgr(blockTemp, Stage.Validated, errs).fastForward(20))
             {
@@ -1454,12 +1451,6 @@ public class LambdaExpression
     protected StatementBlock   body;
     protected long             lStartPos;
 
-    /**
-     * This is only used to provide a destination for errors when we're called out of the blue to
-     * evaluate lambda type information before we validate (since validate gets passed an error
-     * listener to use). Do not use this for anything else other than ensurePrepared().
-     */
-    private transient ErrorListener        m_errs;
     /**
      * Set to true after the expression prepares.
      */
