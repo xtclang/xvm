@@ -695,13 +695,6 @@ mixin ByteArray<Element extends Byte>
         return asBitArray().toUInt128();
         }
 
-    @Override
-// TODO GG why is this method needed again on this level? (or why would i need to but "NumberArray" in the Tuple below?)
-    Byte[] toByteArray(Mutability mutability = Constant)
-        {
-        return super(mutability);
-        }
-
     /**
      * Obtain an immutable copy of this array's byte data that exposes the underlying data as Int8
      * values, each composed of 1 Byte value.
@@ -780,8 +773,7 @@ mixin ByteArray<Element extends Byte>
     /**
      * A second name for the [toByteArray] method, to assist with readability and uniformity.
      */
-// TODO GG how do we specify optional params?
-    static Method<ByteArray, <Mutability>, <Array<Byte>>> toUInt8Array = toByteArray;
+    static Method<NumberArray, <Mutability>, <Array<Byte>>> toUInt8Array = toByteArray;
 
     /**
      * Obtain an immutable copy of this array's byte data that exposes the underlying data as UInt16
