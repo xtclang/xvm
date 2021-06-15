@@ -32,10 +32,10 @@ public class BadTypeExpression
     // ----- TypeExpression methods ----------------------------------------------------------------
 
     @Override
-    protected TypeConstant instantiateTypeConstant(Context ctx)
+    protected TypeConstant instantiateTypeConstant(Context ctx, ErrorListener errs)
         {
         return new UnresolvedTypeConstant(pool(),
-            new UnresolvedNameConstant(pool(), nonType.toString()));
+                new UnresolvedNameConstant(pool(), nonType.toString()));
         }
 
 

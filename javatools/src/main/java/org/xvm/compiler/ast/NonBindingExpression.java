@@ -63,9 +63,7 @@ public class NonBindingExpression
     @Override
     public TypeConstant getImplicitType(Context ctx)
         {
-        return type == null
-                ? null
-                : type.ensureTypeConstant(ctx);
+        return type == null ? null : type.ensureTypeConstant(ctx, null);
         }
 
     @Override
@@ -101,7 +99,7 @@ public class NonBindingExpression
             else
                 {
                 this.type = exprNewType;
-                typeArg   = exprNewType.ensureTypeConstant(ctx).resolveAutoNarrowingBase();
+                typeArg   = exprNewType.ensureTypeConstant(ctx, errs).resolveAutoNarrowingBase();
                 }
             }
 

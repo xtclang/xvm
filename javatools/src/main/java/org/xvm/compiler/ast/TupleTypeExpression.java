@@ -54,7 +54,7 @@ public class TupleTypeExpression
     // ----- TypeConstant methods ------------------------------------------------------------------
 
     @Override
-    protected TypeConstant instantiateTypeConstant(Context ctx)
+    protected TypeConstant instantiateTypeConstant(Context ctx, ErrorListener errs)
         {
         return pool().ensureTupleType(FunctionTypeExpression.toTypeConstantArray(paramTypes));
         }

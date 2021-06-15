@@ -1,6 +1,8 @@
 package org.xvm.compiler.ast;
 
 
+import org.xvm.asm.ErrorListener;
+
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.Token;
@@ -51,7 +53,7 @@ public class VariableTypeExpression
     // ----- TypeConstant methods ------------------------------------------------------------------
 
     @Override
-    protected TypeConstant instantiateTypeConstant(Context ctx)
+    protected TypeConstant instantiateTypeConstant(Context ctx, ErrorListener errs)
         {
         // this will be replaced after the actual type is known
         return pool().typeObject();

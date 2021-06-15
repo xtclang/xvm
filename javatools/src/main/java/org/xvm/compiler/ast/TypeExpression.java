@@ -41,7 +41,7 @@ public abstract class TypeExpression
      */
     public TypeConstant ensureTypeConstant()
         {
-        return ensureTypeConstant(null);
+        return ensureTypeConstant(null, null);
         }
 
     /**
@@ -49,10 +49,11 @@ public abstract class TypeExpression
      * TypeConstant if necessary.
      *
      * @param ctx  an optional Context; may be null
+     * @param errs an optional ErrorListener; may be null
      *
      * @return a TypeConstant
      */
-    public TypeConstant ensureTypeConstant(Context ctx)
+    public TypeConstant ensureTypeConstant(Context ctx, ErrorListener errs)
         {
         TypeConstant constType = m_constType;
         if (constType != null)
@@ -74,7 +75,7 @@ public abstract class TypeExpression
                 }
             else
                 {
-                constType = instantiateTypeConstant(ctx);
+                constType = instantiateTypeConstant(ctx, errs == null ? ErrorListener.BLACKHOLE : errs);
                 }
 
             m_constType = constType;
@@ -83,11 +84,12 @@ public abstract class TypeExpression
         }
 
     /**
-     * @param ctx  an optional Context; may be null
+     * @param ctx   an optional Context; may be null
+     * @param errs  error listener to log to
      *
      * @return a TypeConstant for this TypeExpression
      */
-    protected abstract TypeConstant instantiateTypeConstant(Context ctx);
+    protected abstract TypeConstant instantiateTypeConstant(Context ctx, ErrorListener errs);
 
     /**
      * @return the TypeConstant currently associated with this TypeExpression, or null
@@ -211,7 +213,7 @@ public abstract class TypeExpression
     @Override
     public TypeConstant getImplicitType(Context ctx)
         {
-        TypeConstant type = ensureTypeConstant(ctx);
+        TypeConstant type = ensureTypeConstant(ctx, null);
         if (type == null)
             {
             throw new IllegalStateException("type has not yet been determined for this: " + this);
@@ -231,7 +233,7 @@ public abstract class TypeExpression
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
-        TypeConstant type = ensureTypeConstant(ctx);
+        TypeConstant type = ensureTypeConstant(ctx, errs);
         if (typeRequired != null)
             {
             TypeConstant typeInferred = super.inferTypeFromRequired(

@@ -173,9 +173,9 @@ public class AnnotatedTypeExpression
     // ----- TypeExpression methods ----------------------------------------------------------------
 
     @Override
-    protected TypeConstant instantiateTypeConstant(Context ctx)
+    protected TypeConstant instantiateTypeConstant(Context ctx, ErrorListener errs)
         {
-        return calculateType(ctx, ErrorListener.BLACKHOLE);
+        return calculateType(ctx, errs);
         }
 
     @Override
@@ -222,7 +222,7 @@ public class AnnotatedTypeExpression
 
         type = exprTypeNew;
 
-        TypeConstant typeReferent = ensureTypeConstant(ctx);
+        TypeConstant typeReferent = ensureTypeConstant(ctx, errs);
         Annotation   anno         = annotation.ensureAnnotation(pool);
         TypeConstant typeAnno     = anno.getAnnotationType();
         TypeConstant typeReq;
@@ -276,7 +276,7 @@ public class AnnotatedTypeExpression
         else
             {
             log(errs, Severity.ERROR, Constants.VE_ANNOTATION_INCOMPATIBLE,
-                    type.ensureTypeConstant(ctx).getValueString(),
+                    type.ensureTypeConstant(ctx, errs).getValueString(),
                     anno.getAnnotationClass().getValueString(),
                     typeAnno.ensureTypeInfo(errs).getInto().getValueString());
             return null;
@@ -292,7 +292,7 @@ public class AnnotatedTypeExpression
         annotation = exprNew;
 
         resetTypeConstant();
-        typeAnno = ensureTypeConstant(ctx);
+        typeAnno = ensureTypeConstant(ctx, errs);
 
         TypeConstant typeType   = typeAnno.getType();
         Constant     constValue = typeType;
@@ -331,7 +331,7 @@ public class AnnotatedTypeExpression
         //    the underlying type is unchanged by this AnnotatedTypeExpression
 
         ConstantPool pool           = pool();
-        TypeConstant typeUnderlying = type.ensureTypeConstant(ctx);
+        TypeConstant typeUnderlying = type.ensureTypeConstant(ctx, errs);
         Annotation   anno           = annotation.ensureAnnotation(pool());
         Constant     constAnno      = anno.getAnnotationClass();
         boolean      fResolved      = !constAnno.containsUnresolved();

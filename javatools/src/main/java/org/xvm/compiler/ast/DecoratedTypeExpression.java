@@ -3,6 +3,8 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import org.xvm.asm.ErrorListener;
+
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.Token;
@@ -55,12 +57,12 @@ public class DecoratedTypeExpression
     // ----- TypeConstant methods ------------------------------------------------------------------
 
     @Override
-    protected TypeConstant instantiateTypeConstant(Context ctx)
+    protected TypeConstant instantiateTypeConstant(Context ctx, ErrorListener errs)
         {
         switch (keyword.getId())
             {
             case IMMUTABLE:
-                return pool().ensureImmutableTypeConstant(type.ensureTypeConstant(ctx));
+                return pool().ensureImmutableTypeConstant(type.ensureTypeConstant(ctx, errs));
 
             case CONDITIONAL:
                 // TODO

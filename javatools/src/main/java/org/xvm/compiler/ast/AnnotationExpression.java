@@ -335,7 +335,7 @@ public class AnnotationExpression
             }
         type = exprTypeNew;
 
-        TypeConstant  typeAnno = exprTypeNew.ensureTypeConstant(ctx);
+        TypeConstant  typeAnno = exprTypeNew.ensureTypeConstant(ctx, errs);
         ClassConstant idAnno   = (ClassConstant) typeAnno.getDefiningConstant();
 
         if (typeRequired != null)

@@ -257,7 +257,7 @@ public class NewExpression
                 }
             else
                 {
-                typeTarget  = type.ensureTypeConstant(ctx);
+                typeTarget  = type.ensureTypeConstant(ctx, errs);
                 }
             }
         else
@@ -265,7 +265,7 @@ public class NewExpression
             if (anon == null)
                 {
                 ensureInnerClass(ctx, AnonPurpose.RoughDraft, errs);
-                typeTarget = type.ensureTypeConstant(ctx);
+                typeTarget = type.ensureTypeConstant(ctx, errs);
                 }
             else
                 {
@@ -340,7 +340,7 @@ public class NewExpression
                 }
             else
                 {
-                typeTarget = type.ensureTypeConstant(ctx);
+                typeTarget = type.ensureTypeConstant(ctx, errs);
                 if (typeTarget.containsUnresolved())
                     {
                     if (typeTarget instanceof AnnotatedTypeConstant)
@@ -422,7 +422,7 @@ public class NewExpression
                             }
                         else
                             {
-                            typeTarget = exprTest.ensureTypeConstant(ctx);
+                            typeTarget = exprTest.ensureTypeConstant(ctx, errs);
                             }
                         ctx.exit();
                         exprTest.discard(true);
@@ -469,7 +469,7 @@ public class NewExpression
             else
                 {
                 this.type  = exprTypeNew;
-                typeTarget = exprTypeNew.ensureTypeConstant(ctx);
+                typeTarget = exprTypeNew.ensureTypeConstant(ctx, errs);
 
                 if (m_fDynamicAnno)
                     {
@@ -999,7 +999,7 @@ public class NewExpression
             {
             // the annotated type cannot have any ref annotations, but can have multiple type
             // annotations (e.g. @A1(arg1) @A2(arg2) C(arg)
-            AnnotatedTypeConstant typeAnno = (AnnotatedTypeConstant) type.ensureTypeConstant(ctx);
+            AnnotatedTypeConstant typeAnno = (AnnotatedTypeConstant) type.ensureTypeConstant(ctx, errs);
 
             typeTarget = generateDynamicParameters(ctx, code, typeAnno, errs);
             }

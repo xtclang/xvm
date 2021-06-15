@@ -87,7 +87,7 @@ public class ArrayTypeExpression
     @Override
     public TypeFit testFit(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
-        TypeConstant typeEl = type.ensureTypeConstant(ctx);
+        TypeConstant typeEl = type.ensureTypeConstant(ctx, errs);
         return typeEl.containsUnresolved()
                 ? TypeFit.NoFit
                 : super.testFit(ctx, typeRequired, errs);
@@ -111,7 +111,7 @@ public class ArrayTypeExpression
             }
 
         // array[c1, c2, ...] is a fixed size matrix and is allowed only for types with default values
-        TypeConstant typeArray   = exprNew.ensureTypeConstant(ctx);
+        TypeConstant typeArray   = exprNew.ensureTypeConstant(ctx, errs);
         TypeConstant typeElement = typeArray.getParamType(0);
 
         if (typeElement.getDefaultValue() == null)
@@ -138,10 +138,10 @@ public class ArrayTypeExpression
     // ----- TypeConstant methods ------------------------------------------------------------------
 
     @Override
-    protected TypeConstant instantiateTypeConstant(Context ctx)
+    protected TypeConstant instantiateTypeConstant(Context ctx, ErrorListener errs)
         {
         final ConstantPool pool = pool();
-        return pool.ensureClassTypeConstant(pool.clzArray(), null, type.ensureTypeConstant(ctx));
+        return pool.ensureClassTypeConstant(pool.clzArray(), null, type.ensureTypeConstant(ctx, errs));
 // TODO
 //        AstNode parent = getParent();
 //        while (parent instanceof TypeExpression)

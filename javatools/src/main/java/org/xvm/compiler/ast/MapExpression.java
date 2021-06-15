@@ -72,7 +72,7 @@ public class MapExpression
     @Override
     public TypeConstant getImplicitType(Context ctx)
         {
-        TypeConstant typeExplicit = type.ensureTypeConstant(ctx);
+        TypeConstant typeExplicit = type.ensureTypeConstant(ctx, null);
         TypeConstant typeKey      = null;
         TypeConstant typeVal      = null;
         if (typeExplicit != null)
@@ -215,7 +215,7 @@ public class MapExpression
                 {
                 type = exprNewType;
                 }
-            typeActual = exprNewType.ensureTypeConstant(ctx).resolveAutoNarrowingBase();
+            typeActual = exprNewType.ensureTypeConstant(ctx, errs).resolveAutoNarrowingBase();
 
             TypeConstant typeKeyTemp = typeActual.resolveGenericType("Key");
             if (typeKeyTemp != null)

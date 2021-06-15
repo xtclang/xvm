@@ -410,7 +410,7 @@ public class NamedTypeExpression
     // ----- TypeExpression methods ----------------------------------------------------------------
 
     @Override
-    protected TypeConstant instantiateTypeConstant(Context ctx)
+    protected TypeConstant instantiateTypeConstant(Context ctx, ErrorListener errs)
         {
         Constant             constId    = getIdentityConstant();
         Access               access     = getExplicitAccess();
@@ -443,7 +443,7 @@ public class NamedTypeExpression
             TypeConstant[] atypeParams = new TypeConstant[cParams];
             for (int i = 0; i < cParams; ++i)
                 {
-                atypeParams[i] = listParams.get(i).ensureTypeConstant(ctx);
+                atypeParams[i] = listParams.get(i).ensureTypeConstant(ctx, errs);
                 }
 
             type = pool.ensureParameterizedTypeConstant(type, atypeParams);
@@ -886,7 +886,7 @@ public class NamedTypeExpression
                 listParams.set(i, exprNew);
                 }
 
-            atypeParams[i] = exprNew.ensureTypeConstant(ctx);
+            atypeParams[i] = exprNew.ensureTypeConstant(ctx, errs);
             }
         return fValid ? atypeParams : null;
         }
@@ -1108,7 +1108,7 @@ public class NamedTypeExpression
             }
         else
             {
-            TypeConstant type = left.ensureTypeConstant(ctx);
+            TypeConstant type = left.ensureTypeConstant(ctx, errs);
 
             switch (m_constId.getFormat())
                 {

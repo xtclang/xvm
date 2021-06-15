@@ -74,7 +74,7 @@ public class FunctionTypeExpression
     // ----- TypeConstant methods ------------------------------------------------------------------
 
     @Override
-    protected TypeConstant instantiateTypeConstant(Context ctx)
+    protected TypeConstant instantiateTypeConstant(Context ctx, ErrorListener errs)
         {
         ConstantPool pool = pool();
         return pool.ensureClassTypeConstant(pool.clzFunction(), null,

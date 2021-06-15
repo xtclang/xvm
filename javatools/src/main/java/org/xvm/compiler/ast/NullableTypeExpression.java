@@ -58,10 +58,11 @@ public class NullableTypeExpression
     // ----- TypeConstant methods ------------------------------------------------------------------
 
     @Override
-    protected TypeConstant instantiateTypeConstant(Context ctx)
+    protected TypeConstant instantiateTypeConstant(Context ctx, ErrorListener errs)
         {
         ConstantPool pool = pool();
-        return pool.ensureIntersectionTypeConstant(pool.typeNullable(), type.ensureTypeConstant(ctx));
+        return pool.ensureIntersectionTypeConstant(
+                pool.typeNullable(), type.ensureTypeConstant(ctx, errs));
         }
 
     @Override
@@ -84,7 +85,7 @@ public class NullableTypeExpression
             }
         type = exprNew;
 
-        TypeConstant typeActual = pool().ensureNullableTypeConstant(exprNew.ensureTypeConstant(ctx));
+        TypeConstant typeActual = pool().ensureNullableTypeConstant(exprNew.ensureTypeConstant(ctx, errs));
         TypeConstant typeType   = typeActual.getType();
 
         return finishValidation(ctx, typeRequired, typeType, TypeFit.Fit, typeType, errs);
