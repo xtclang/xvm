@@ -218,7 +218,7 @@ public class VariableDeclarationStatement
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
         ConstantPool   pool      = pool();
-        StringConstant constName = pool.ensureStringConstant((String) name.getValue());
+        StringConstant constName = pool.ensureStringConstant(getName());
 
         // declare a named var
         Register reg = m_reg;

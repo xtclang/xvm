@@ -312,7 +312,7 @@ Statement
     SwitchStatement
     TryStatement
 	TypeDefStatement
-    "using" ResourceDeclaration StatementBlock
+    "using" "(" UsingResources ")" StatementBlock
     "while" "(" ConditionList ")" StatementBlock
     WithStatement
     StatementBlock
@@ -537,9 +537,9 @@ SafeCaseExpression:
     TernaryExpression
 
 TryStatement
-    "try" ResourceDeclaration-opt StatementBlock TryFinish
+    "try" TryResources-opt StatementBlock TryFinish
 
-ResourceDeclaration
+TryResources
     "(" VariableInitializationList ")"
 
 TryFinish
@@ -552,6 +552,15 @@ Catches
 
 Catch
     "catch" "(" TypeExpression Name ")" StatementBlock
+
+UsingResources
+    UsingResource
+    UsingResources "," UsingResource
+
+UsingResource
+    OptionalDeclaration "=" Expression
+    "(" OptionalDeclarationList "," OptionalDeclaration ")" "=" Expression
+    Expression                                          # implicitly "val _ = Expression"
 
 TypeDefStatement
     "typedef" TypeExpression "as"-opt Name ";"

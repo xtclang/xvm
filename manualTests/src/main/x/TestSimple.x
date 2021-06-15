@@ -4,13 +4,22 @@ module TestSimple.test.org
 
     void run()
         {
-        function Boolean(Int) f = compare(Int:-1, 5);
-        console.println(f(4));
+        using (new Bob())
+            {
+            console.println("using Bob");
+            }
         }
 
-    static <OtherType extends Number, CompileType extends Orderable>
-            function Boolean(CompileType) compare(OtherType unused, CompileType value1)
+    class Bob
+            implements Closeable
         {
-        return (value2) -> value1 < value2;
+        construct()
+            {
+            console.println("constructing Bob");
+            }
+        @Override void close(Exception? cause = Null)
+            {
+            console.println("closing Bob");
+            }
         }
     }

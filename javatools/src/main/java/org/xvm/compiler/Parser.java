@@ -2549,7 +2549,7 @@ public class Parser
         List<AssignmentStatement> resources = null;
         if (match(Id.L_PAREN) != null)
             {
-            resources = parseVariableInitializationList(true);
+            resources = parseVariableInitializationList(true, false);
             expect(Id.R_PAREN);
             }
 
@@ -2621,7 +2621,7 @@ public class Parser
         {
         Token keyword = expect(Id.USING);
         expect(Id.L_PAREN);
-        List<AssignmentStatement> resources = parseVariableInitializationList(true);
+        List<AssignmentStatement> resources = parseVariableInitializationList(true, true);
         expect(Id.R_PAREN);
         return new TryStatement(keyword, resources, parseStatementBlock(), null, null);
         }
@@ -2661,11 +2661,12 @@ public class Parser
      *     "=" Expression
      * </pre></code>
      *
-     * @param required  true iff at least one VariableInitializer is required
+     * @param required    true iff at least one VariableInitializer is required
+     * @param fAllowExpr  true iff a naked expression can be used as an implicit variable initializer
      *
      * @return a statement representing the variable initializer
      */
-    List<AssignmentStatement> parseVariableInitializationList(boolean required)
+    List<AssignmentStatement> parseVariableInitializationList(boolean required, boolean fAllowExpr)
         {
         if (!required)
             {
@@ -2679,10 +2680,10 @@ public class Parser
             }
 
         List<AssignmentStatement> list = new ArrayList<>();
-        list.add(parseVariableInitializer());
+        list.add(parseVariableInitializer(fAllowExpr));
         while (match(Id.COMMA) != null)
             {
-            list.add(parseVariableInitializer());
+            list.add(parseVariableInitializer(fAllowExpr));
             }
 
         return list;
@@ -2699,9 +2700,12 @@ public class Parser
      *     "=" Expression
      * </pre></code>
      *
+     * @param fAllowExpr  allow an R-Value expression to be specified, as if an implicit "val _ ="
+     *                    precedes it
+     *
      * @return a statement representing the variable initializer
      */
-    AssignmentStatement parseVariableInitializer()
+    AssignmentStatement parseVariableInitializer(boolean fAllowExpr)
         {
         TypeExpression type = null;
 
@@ -2728,6 +2732,19 @@ public class Parser
                 case COND_ASN:
                 case COND_NN_ASN:
                     return new AssignmentStatement(expr, current(), parseExpression(), false);
+
+                case COMMA:
+                case SEMICOLON:
+                case R_PAREN:
+                    if (fAllowExpr)
+                        {
+                        long  lPos    = expr.getStartPosition();
+                              type    = new VariableTypeExpression(new Token(lPos, lPos, Id.VAL));
+                        Token tokName = new Token(lPos, lPos, Id.ANY);
+                        Token tokAsn  = new Token(lPos, lPos, Id.ASN);
+                        VariableDeclarationStatement var = new VariableDeclarationStatement(type, tokName, false);
+                        return new AssignmentStatement(var, tokAsn, expr);
+                        }
                 }
 
             type = expr.toTypeExpression();
