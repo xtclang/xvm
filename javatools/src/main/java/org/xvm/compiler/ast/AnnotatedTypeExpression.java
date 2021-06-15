@@ -271,7 +271,9 @@ public class AnnotatedTypeExpression
             }
         else if (typeReferent.isA(typeAnno.ensureTypeInfo(errs).getInto()))
             {
-            typeReq = ((AnnotatedTypeConstant) typeReferent).getAnnotationType();
+            typeReq = typeReferent instanceof AnnotatedTypeConstant
+                    ? ((AnnotatedTypeConstant) typeReferent).getAnnotationType()
+                    : typeAnno;
             }
         else
             {
@@ -366,9 +368,25 @@ public class AnnotatedTypeExpression
                     : m_typeUnresolved;
             }
 
-        TypeConstant type = m_fDisassociate
-                ? typeUnderlying    // our annotation is not added to the underlying type constant
-                : pool.ensureAnnotatedTypeConstant(typeUnderlying, anno);
+        TypeConstant type;
+        if (m_fDisassociate)
+            {
+            // our annotation is not added to the underlying type constant
+            type = typeUnderlying;
+            }
+        else
+            {
+            if (typeUnderlying.isA(anno.getAnnotationType()))
+                {
+                type = typeUnderlying;
+                log(errs, Severity.WARNING, Constants.VE_ANNOTATION_REDUNDANT,
+                        anno.getAnnotationClass().getValueString());
+                }
+            else
+                {
+                type = pool.ensureAnnotatedTypeConstant(typeUnderlying, anno);
+                }
+            }
 
         if (m_typeUnresolved != null)
             {
