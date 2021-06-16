@@ -366,11 +366,6 @@ public class StatementBlock
             AstNode parent = getParent();
             if (parent instanceof LambdaExpression)
                 {
-                LambdaExpression          exprLambda  = (LambdaExpression) parent;
-                Map<String, TypeConstant> mapNarrowed = exprLambda.isValidated()
-                    ? exprLambda.getValidatedContext().getNarrowedParameters()
-                    : Collections.EMPTY_MAP;
-
                 // go through all of the parameters looking for any implicit de-reference params
                 // (a new local variable will be created for each, effectively hiding the original
                 // parameter)
@@ -379,19 +374,13 @@ public class StatementBlock
                     {
                     for (org.xvm.asm.Parameter param : method.getParamArray())
                         {
-                        String   sName  = param.getName();
-                        Register regVar = (Register) ctx.getVar(sName);
-
-                        TypeConstant typeNarrowed = mapNarrowed.get(sName);
-                        if (typeNarrowed != null && !typeNarrowed.isTypeParameter())
-                            {
-                            regVar.specifyActualType(typeNarrowed);
-                            }
-
                         if (param.isImplicitDeref())
                             {
+                            String     sName  = param.getName();
+                            Register   regVar = (Register) ctx.getVar(sName);
                             Assignment asnVar = ctx.getVarAssignment(sName);
                             Register   regVal = param.deref(regVar);
+
                             ctx.ensureNameMap().put(sName, regVal); // shadow using the capture
                             ctx.setVarAssignment(sName, asnVar);    // ... and copy its assignment                    }
                             }

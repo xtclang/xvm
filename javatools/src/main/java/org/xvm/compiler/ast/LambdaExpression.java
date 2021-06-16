@@ -24,12 +24,14 @@ import org.xvm.asm.Op;
 import org.xvm.asm.Register;
 import org.xvm.asm.Assignment;
 
+import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.IntersectionTypeConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeCollector;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypeParameterConstant;
 
 import org.xvm.asm.op.FBind;
 import org.xvm.asm.op.L_Get;
@@ -976,10 +978,12 @@ public class LambdaExpression
         {
         MethodStructure lambda    = m_lambda;
         LambdaContext   ctxLambda = m_ctxLambda;
-        assert lambda != null && lambda.getIdentityConstant().isLambda();
+        MethodConstant  idLambda  = lambda.getIdentityConstant();
+
+        assert lambda != null && idLambda.isLambda();
         assert ctxLambda != null;
 
-        if (lambda.getIdentityConstant().isNascent())
+        if (idLambda.isNascent())
             {
             // this is the first time that we have a chance to put together the signature, because
             // this is the first time that we are being called after validate()
@@ -1011,11 +1015,13 @@ public class LambdaExpression
 
                 aBindArgs = new Argument[cBindArgs];
 
-                Map<TypeConstant, Integer> mapRedefine = new HashMap<>();
+                Map<FormalConstant, TypeConstant> mapRedefine = new HashMap<>();
                 for (Entry<String, Argument> entry : mapFormal.entrySet())
                     {
                     String       sCapture  = entry.getKey();
                     Argument     argFormal = entry.getValue();
+                    TypeConstant typeReg   = pool.ensureRegisterConstant(
+                                                idLambda, iParam, sCapture).getType();
                     TypeConstant typeFormal;
                     Register     regFormal;
                     if (argFormal instanceof TargetInfo)
@@ -1023,17 +1029,22 @@ public class LambdaExpression
                         TargetInfo infoGeneric = (TargetInfo) argFormal;
 
                         typeFormal = infoGeneric.getType(); // type of type
-                        regFormal   = new Register(typeFormal, Op.A_STACK);
+                        regFormal  = new Register(typeFormal, Op.A_STACK);
+
+                        // make sure that every lambda's parameter of this generic type is redefined
+                        // to point to the corresponding lambda's type parameter
+                        PropertyConstant idGeneric = (PropertyConstant) infoGeneric.getId();
+                        mapRedefine.put(idGeneric, typeReg);
 
                         if (infoGeneric.getStepsOut() > 0)
                             {
                             Register regTarget = new Register(infoGeneric.getTargetType(), Op.A_STACK);
                             code.add(new MoveThis(infoGeneric.getStepsOut(), regTarget));
-                            code.add(new P_Get((PropertyConstant) infoGeneric.getId(), regTarget, regFormal));
+                            code.add(new P_Get(idGeneric, regTarget, regFormal));
                             }
                         else
                             {
-                            code.add(new L_Get((PropertyConstant) infoGeneric.getId(), regFormal));
+                            code.add(new L_Get(idGeneric, regFormal));
                             }
                         }
                     else
@@ -1041,13 +1052,12 @@ public class LambdaExpression
                         // the source is a register (type parameter); resolve to its constraint
                         regFormal = (Register) argFormal;
 
-                        // we need to make sure that every lambda's parameter of this formal type
-                        // is redefined to point to the corresponding lambda's type parameter
-                        TypeConstant typeOrig = regFormal.getType().getParamType(0).resolveTypedefs();
-                        assert typeOrig.isTypeParameter();
-                        mapRedefine.put(typeOrig, iParam);
+                        // make sure that every lambda's parameter of this formal type is redefined
+                        // to point to the corresponding lambda's type parameter
+                        TypeConstant typeParam = regFormal.getType().getParamType(0);
+                        mapRedefine.put((TypeParameterConstant) typeParam.getDefiningConstant(), typeReg);
 
-                        typeFormal = typeOrig.resolveConstraints().getType();
+                        typeFormal = typeParam.resolveConstraints().getType();
                         }
 
                     asAllParams   [iParam] = sCapture;
@@ -1112,14 +1122,28 @@ public class LambdaExpression
 
                 if (!mapRedefine.isEmpty())
                     {
-                    for (int i = 0, c = atypeParams.length; i < c; i++)
+                    GenericTypeResolver resolver = new GenericTypeResolver()
                         {
-                        TypeConstant type      = atypeParams[i].resolveTypedefs();
-                        Integer      NRegister = mapRedefine.get(type);
-                        if (NRegister != null)
+                        @Override
+                        public TypeConstant resolveGenericType(String sFormalName)
                             {
-                            atypeParams[i] = pool.ensureRegisterConstant(lambda.getIdentityConstant(),
-                                    NRegister, asAllParams[NRegister]).getType();
+                            return null;
+                            }
+
+                        @Override
+                        public TypeConstant resolveFormalType(FormalConstant constFormal)
+                            {
+                            return mapRedefine.get(constFormal);
+                            }
+                        };
+
+                    for (int i = cTypeParams, c = atypeParams.length; i < c; i++)
+                        {
+                        TypeConstant typeOld = atypeParams[i].resolveTypedefs();
+                        TypeConstant typeNew = typeOld.resolveGenerics(pool, resolver);
+                        if (typeNew != typeOld)
+                            {
+                            atypeParams[i] = typeNew;
                             }
                         }
                     }
@@ -1386,9 +1410,8 @@ public class LambdaExpression
         @Override
         protected void initNameMap(Map<String, Argument> mapByName)
             {
-            ConstantPool              pool        = pool();
-            GenericTypeResolver       resolver    = getOuterContext().getFormalTypeResolver();
-            Map<String, TypeConstant> mapNarrowed = null;
+            ConstantPool        pool     = pool();
+            GenericTypeResolver resolver = getOuterContext().getFormalTypeResolver();
 
             TypeConstant[] atypeParams = f_atypeParams;
             String[]       asParams    = f_asParams;
@@ -1407,11 +1430,7 @@ public class LambdaExpression
                         reg = reg.narrowType(typeNarrowed);
                         reg.markInPlace();
 
-                        if (mapNarrowed == null)
-                            {
-                            m_mapNarrowed = mapNarrowed = new HashMap<>();
-                            }
-                        mapNarrowed.put(sName, typeNarrowed);
+                        ensureNarrowedParameters().put(sName, typeNarrowed);
                         }
                     mapByName.put(sName, reg);
 
@@ -1423,13 +1442,24 @@ public class LambdaExpression
             }
 
         /**
+         * @return a mutable map of narrowed parameter types for the corresponding lambda
+         */
+        public Map<String, TypeConstant> ensureNarrowedParameters()
+            {
+            Map<String, TypeConstant> map = m_mapNarrowed;
+            if (map == null)
+                {
+                m_mapNarrowed = map = new HashMap<>();
+                }
+            return map;
+            }
+
+        /**
          * @return a map of narrowed parameter types for the corresponding lambda
          */
         public Map<String, TypeConstant> getNarrowedParameters()
             {
-            return m_mapNarrowed == null
-                    ? Collections.EMPTY_MAP
-                    : m_mapNarrowed;
+            return m_mapNarrowed == null ? Collections.EMPTY_MAP : m_mapNarrowed;
             }
 
         private final TypeConstant[] f_atypeParams;

@@ -656,10 +656,7 @@ mixin FPNumberArray<Element extends FPNumber>
             {
             if (e.finite)
                 {
-// TODO GG
-// Error: /Users/cameron/Development/xvm/ecstasy/src/main/x/collections/arrays/FPNumberArray.x [659:29..659:46] COMPILER-151: Return type mismatch for "round" method; required "->(?)#Element", actual "ecstasy:collections.arrays.FPNumberArray.Element". ("e.round(rounding)")
-//                Element v = e.round(rounding);
-                val v = e.round(rounding);
+                Element v = e.round(rounding);
                 return v < min
                         ? (negBounds ?: outOfBounds ?: throw new OutOfBounds("val={v}, min={min}"))
                         : v > max
