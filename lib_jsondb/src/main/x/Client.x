@@ -149,7 +149,7 @@ service Client<Schema extends RootSchema>
      * The serialization/deserialization "worker" that allows CPU-intensive work to be dumped back
      * onto this Client from the database.
      */
-    @Unassigned protected/private Worker worker;
+    @Unassigned public/private Worker worker;
 
 
     // ----- support -------------------------------------------------------------------------------
@@ -804,7 +804,7 @@ service Client<Schema extends RootSchema>
             {
             using (val tx = ensureTransaction())
                 {
-                return store_.load(tx.id, outer.worker);
+                return store_.load(tx.id);
                 }
             }
 
@@ -813,7 +813,7 @@ service Client<Schema extends RootSchema>
             {
             using (val tx = ensureTransaction())
                 {
-                store_.store(tx.id, outer.worker, value);
+                store_.store(tx.id, value);
                 }
             }
         }
@@ -860,7 +860,7 @@ service Client<Schema extends RootSchema>
             {
             using (val tx = ensureTransaction())
                 {
-                return store_.existsAt(tx.id, outer.worker, key);
+                return store_.existsAt(tx.id, key);
                 }
             }
 
@@ -869,7 +869,7 @@ service Client<Schema extends RootSchema>
             {
             using (val tx = ensureTransaction())
                 {
-                return store_.load(tx.id, outer.worker, key);
+                return store_.load(tx.id, key);
                 }
             }
 

@@ -192,6 +192,41 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
         return !catalog.readOnly && info.id > 0 && info.lifeCycle == Current;
         }
 
+    /**
+     * An internal, mutable record of Changes for a specific transaction.
+     */
+    protected class Changes(Int writeId, Int readId)
+        {
+        /**
+         * This txId, the "write" txId.
+         */
+        Int writeId;
+
+        /**
+         * The read txId that this transaction is based from. (Note that the "read" id may itself be
+         * a "write" id.)
+         */
+        Int readId;
+
+        /**
+         * The worker to dump CPU intensive serialization and deserialization work onto.
+         */
+        @Lazy Client.Worker worker.calc()
+            {
+            return txManager.workerFor(writeId);
+            }
+
+        /**
+         * Set to True when the transaction contains possible changes related to this ObjectStore.
+         */
+        Boolean modified = False;
+        }
+
+    /**
+     * In flight transactions involving this ObjectStore, keyed by "write" transaction id.
+     */
+    @Unassigned protected SkiplistMap<Int, Changes> inFlight;
+
 
     // ----- life cycle ----------------------------------------------------------------------------
 
@@ -343,11 +378,11 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
     /**
      * Prepare the specified transaction.
      *
-     * @param txId  the "write" transaction id that was used to collect the transactional changes
+     * @param writeId  the "write" transaction id that was used to collect the transactional changes
      *
      * @return a [PrepareResult]
      */
-    PrepareResult prepare(Int writeId, Int prepareId)
+    PrepareResult prepare(Int writeId)
         {
         TODO
         }

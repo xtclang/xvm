@@ -15,35 +15,17 @@ service MapStore<Key extends immutable Const, Value extends immutable Const>
     {
     // ----- properties ----------------------------------------------------------------------------
 
-    /**
-     * An internal [Changes] object for each pending transaction that has modified data.
-     */
-    protected SkiplistMap<Int, Changes> pending = new SkiplistMap();
-
-    /**
-     * An internal, mutable record of Changes for a specific transaction.
-     */
-    protected static class Changes<Key extends immutable Orderable, Value extends immutable Object>
+    @Override protected class Changes(Int writeId, Int readId)
         {
-        /**
-         * This txId, the "write" txId.
-         */
-        Int txWriteId;
-
-        /**
-         * The read txId that this transaction is based from.
-         */
-        Int txReadId;
-
         /**
          * A map of inserted and updated key/value pairs, keyed by the internal URI form.
          */
-        Map<Key, Value> modified = new SkiplistMap();
+        Map<Key, Value> added = new SkiplistMap();    // TODO URI?
 
         /**
          * A set of deleted keys, keyed by the internal URI form.
          */
-        Set<String> deleted = new SkiplistSet();
+        Set<String> removed = new SkiplistSet();
         }
 
     protected enum Action{Insert, Update, Delete}
@@ -87,7 +69,7 @@ service MapStore<Key extends immutable Const, Value extends immutable Const>
 
     // ----- ObjectStore transaction handling ------------------------------------------------------
 
-    @Override PrepareResult prepare(Int writeId, Int prepareId)
+    @Override PrepareResult prepare(Int writeId)
         {
         TODO
         }
@@ -193,13 +175,12 @@ service MapStore<Key extends immutable Const, Value extends immutable Const>
      * transaction id. The key must be specified in its domain model form, or in the JSON URI form,
      * or both if both are available.
      *
-     * @param txId    the "write" transaction identifier
-     * @param worker  a worker to handle CPU-intensive serialization and deserialization tasks
-     * @param key     specifies the key to test for
+     * @param txId  the "write" transaction identifier
+     * @param key   specifies the key to test for
      *
      * @return the True iff the specified key exists in the map
      */
-    Boolean existsAt(Int txId, Client.Worker worker, Key key)
+    Boolean existsAt(Int txId, Key key)
         {
         TODO
         }
@@ -208,8 +189,7 @@ service MapStore<Key extends immutable Const, Value extends immutable Const>
      * Obtain an iterator over all of the keys (in their internal URI format) that existed at the
      * completion of the specified transaction id.
      *
-     * @param txId    the "write" transaction identifier
-     * @param worker  a worker to handle CPU-intensive serialization and deserialization tasks
+     * @param txId  the "write" transaction identifier
      *
      * @return an Iterator of the keys, in the internal JSON URI format used for key storage, that
      *         were present in the DBMap as of the specified transaction
@@ -231,12 +211,11 @@ service MapStore<Key extends immutable Const, Value extends immutable Const>
      * Obtain an iterator over all of the keys that existed at the completion of the specified
      * transaction id.
      *
-     * @param txId    the "write" transaction identifier
-     * @param worker  a worker to handle CPU-intensive serialization and deserialization tasks
+     * @param txId  the "write" transaction identifier
      *
      * @return an Iterator of the Key objects in the DBMap as of the specified transaction
      */
-    Iterator<Key> keysAt(Int txId, Client.Worker worker)
+    Iterator<Key> keysAt(Int txId)
         {
         TODO
         }
@@ -245,15 +224,14 @@ service MapStore<Key extends immutable Const, Value extends immutable Const>
      * Obtain the value associated with the specified key, iff that key is present in the map. If
      * the key is not present in the map, then this method returns a conditional `False`.
      *
-     * @param txId    the "write" transaction identifier
-     * @param worker  a worker to handle CPU-intensive serialization and deserialization tasks
-     * @param key     specifies the key in the Ecstasy domain model form, if available
+     * @param txId  the "write" transaction identifier
+     * @param key   specifies the key in the Ecstasy domain model form, if available
      *
      * @return a True iff the value associated with the specified key exists in the DBMap as of the
      *         specified transaction
      * @return (conditional) the value associated with the specified key
      */
-    conditional Value load(Int txId, Client.Worker worker, Key key)
+    conditional Value load(Int txId, Key key)
         {
         TODO
         }
@@ -262,12 +240,11 @@ service MapStore<Key extends immutable Const, Value extends immutable Const>
      * Insert or update a key/value pair into the persistent storage, as part of the specified
      * transaction.
      *
-     * @param txId    the "write" transaction identifier
-     * @param worker  a worker to handle CPU-intensive serialization and deserialization tasks
-     * @param key     specifies the key
-     * @param value   the value to associate with the specified key
+     * @param txId   the "write" transaction identifier
+     * @param key    specifies the key
+     * @param value  the value to associate with the specified key
      */
-    void store(Int txId, Client.Worker worker, Key key, Value value)
+    void store(Int txId, Key key, Value value)
         {
         TODO
         }
@@ -276,14 +253,13 @@ service MapStore<Key extends immutable Const, Value extends immutable Const>
     /**
      * Remove the specified key and any associated value from this map.
      *
-     * @param txId    the "write" transaction identifier
-     * @param worker  a worker to handle CPU-intensive serialization and deserialization tasks
-     * @param key     specifies the key
+     * @param txId  the "write" transaction identifier
+     * @param key   specifies the key
      *
      * @return True if the specified key was in the database, and now will be deleted by this
      *         transaction
      */
-    Boolean delete(Int txId, Client.Worker worker, Key key)
+    Boolean delete(Int txId, Key key)
         {
         TODO
         }

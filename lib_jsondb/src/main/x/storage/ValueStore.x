@@ -54,39 +54,20 @@ service ValueStore<Value extends immutable Const>
     /**
      * An internal, mutable record of Changes for a specific transaction.
      */
-    protected static class Changes<Value extends immutable Const>
-            (Int writeId, Int readId, Boolean modified = False, Value? value = Null)
+    @Override protected class Changes(Int writeId, Int readId)
         {
         /**
-         * This txId, the "write" txId.
+         * The value within the transaction; only set if [modified] is set to `True`.
          */
-        Int writeId;
-
-        /**
-         * The read txId that this transaction is based from.
-         */
-        Int readId;
-
-        /**
-         *
-         */
-        Boolean modified = False;
-
-        /**
-         * The value within the transaction.
-         */
-        Value? value;
+        @Unassigned Value value;
         }
+
+    @Override protected SkiplistMap<Int, Changes> inFlight = new SkiplistMap();
 
     /**
      * Cached transaction/value pairs.
      */
     protected SkiplistMap<Int, Value> history = new SkiplistMap();
-
-    /**
-     * In flight transactions.
-     */
-    protected SkiplistMap<Int, Changes<Value>> inFlight = new SkiplistMap();
 
 
     // ----- storage API exposed to the client -----------------------------------------------------
@@ -95,41 +76,24 @@ service ValueStore<Value extends immutable Const>
      * Obtain the singleton value as it existed immediately after the specified transaction finished
      * committing.
      *
-     * @param txId    the "write" transaction identifier
-     * @param worker  a worker to handle CPU-intensive serialization and deserialization tasks
+     * @param txId  the "write" transaction identifier
      *
      * @return the value of the singleton as of the specified transaction
      */
-    Value load(Int txId, Client.Worker worker)
+    Value load(Int txId)
         {
-        Changes<Value> tx = checkTx(txId, worker);
-
-        if (tx.modified)
-            {
-            return tx.value.as(Value);
-            }
-
-        Int readId = tx.readId;
-        if (isWriteTx(readId))
-            {
-            assert readId != txId;
-            return load(readId, worker);
-            }
-
-        assert Value value := history.get(readId);
-        return value;
+        return currentValue(checkTx(txId));
         }
 
     /**
      * Modify the singleton as part of the specified transaction by replacing the value.
      *
-     * @param txId    the "write" transaction identifier
-     * @param worker  a worker to handle CPU-intensive serialization and deserialization tasks
-     * @param value   the new value for the singleton
+     * @param txId   the "write" transaction identifier
+     * @param value  the new value for the singleton
      */
-    void store(Int txId, Client.Worker worker, Value value)
+    void store(Int txId, Value value)
         {
-        Changes<Value> tx = checkTx(txId, worker);
+        Changes tx = checkTx(txId);
 
         tx.value    = value;
         tx.modified = True;
@@ -138,9 +102,39 @@ service ValueStore<Value extends immutable Const>
 
     // ----- transaction API exposed to TxManager --------------------------------------------------
 
-    @Override PrepareResult prepare(Int writeId, Int prepareId)
+    @Override PrepareResult prepare(Int writeId)
         {
-        TODO
+        // the transaction can be prepared if (a) no transaction has modified this value after the
+        // read id, or (b) the "current" value is equal to the read id transaction's value
+        Changes tx = checkTx(writeId);
+        if (!tx.modified)
+            {
+            inFlight.remove(writeId);
+            return CommittedNoChanges;
+            }
+
+        Value value = tx.value;
+        Value prev  = previousValue(tx);
+        if (value == prev)
+            {
+            inFlight.remove(writeId);
+            return CommittedNoChanges;
+            }
+
+        assert Int latestId := history.last();
+        if (latestId != tx.readId)
+            {
+            Value latest = latestValue();
+            if (latest != prev)
+                {
+                inFlight.remove(writeId);
+                return latest == value ? CommittedNoChanges : FailedRolledBack;
+                }
+            }
+
+        // there is a change to this ValueStore in this transaction, and there has not been an
+        // interleaving transaction that invalidates this transaction
+        return Prepared;
         }
 
     @Override Boolean mergeTx(Int fromTxId, Int toTxId, Boolean release = False)
@@ -165,35 +159,89 @@ service ValueStore<Value extends immutable Const>
         }
 
 
-    // ----- internal IO handling ------------------------------------------------------------------
+    // ----- internal ------------------------------------------------------------------------------
 
     /**
      * Validate the transaction.
      *
      * @param writeId  the transaction id
-     * @param worker   a worker to handle CPU-intensive serialization and deserialization tasks
      *
      * @return the Changes record for the transaction
      */
-    Changes<Value> checkTx(Int writeId, Client.Worker worker)
+    Changes checkTx(Int writeId)
         {
         assert isWriteTx(writeId);
 
         if (history.empty)
             {
-            loadInitial(worker);
+            loadInitial(writeId);
             }
 
         return inFlight.computeIfAbsent(writeId,
-                () -> new Changes<Value>(writeId, txManager.enlist(this, writeId)));
+                () -> new Changes(writeId, txManager.enlist(this, writeId)));
         }
+
+    /**
+     * Obtain the update-to-date value from the transaction.
+     *
+     * @param tx  the transaction's Changes record
+     *
+     * @return the current value
+     */
+    protected Value currentValue(Changes tx)
+        {
+        return tx.modified
+                ? tx.value
+                : previousValue(tx);
+        }
+
+    /**
+     * Obtain the original value from when the transaction began.
+     *
+     * @param tx  the transaction's Changes record
+     *
+     * @return the previous value
+     */
+    protected Value previousValue(Changes tx)
+        {
+        Int readId = tx.readId;
+        while (isWriteTx(readId))
+            {
+            tx = checkTx(readId);
+            if (tx.modified)
+                {
+                return tx.value;
+                }
+            readId = tx.readId;
+            }
+
+
+        assert readId := history.floor(readId);
+        assert Value value := history.get(readId);
+        return value;
+        }
+
+    /**
+     * Obtain the latest committed value.
+     *
+     * @return the latest value
+     */
+    protected Value latestValue()
+        {
+        assert Int   readId := history.last();
+        assert Value latest := history.get(readId);
+        return latest;
+        }
+
+
+    // ----- IO operations -------------------------------------------------------------------------
 
     /**
      * Load the value(s) from disk.
      *
-     * @param worker  a worker to handle CPU-intensive serialization and deserialization tasks
+     * @param writeId  the transaction that triggered the initial load from disk
      */
-    void loadInitial(Client.Worker worker)
+    void loadInitial(Int writeId)
         {
         using (new CriticalSection())
             {

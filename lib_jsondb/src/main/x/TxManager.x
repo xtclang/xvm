@@ -334,7 +334,8 @@ service TxManager(Catalog catalog)
      *               the specified [txId] (the "write" id)
      * @param txId   the transaction ID that the client provided to the ObjectStore (the "write" id)
      *
-     * @return the transaction id that the (the "read" id)
+     * @return the transaction id to use as the "read" transaction id; it identifies the transaction
+     *         that the specified "write" transaction id is based on
      *
      * @throws ReadOnly  if the map does not allow or support the requested mutating operation
      * @throws IllegalState if the transaction state does not allow an ObjectStore to be enlisted,
@@ -367,6 +368,22 @@ service TxManager(Catalog catalog)
         assert tx.status == InFlight && !tx.enlisted.contains(store);
         tx.enlisted.add(store);
         return readId;
+        }
+
+    /**
+     * Obtain a [Client.Worker] for the specified transaction. A `Worker` allows CPU-intensive
+     * serialization and deserialization work to be dumped back onto the client that is responsible
+     * for the request that causes the work to need to be done.
+     *
+     * @param txId  a "write" transaction ID
+     *
+     * @return worker  the [Client.Worker] to offload serialization and deserialization work onto
+     */
+    Client.Worker workerFor(Int txId)
+        {
+        checkEnabled();
+        assert TxRecord tx := byWriteId.get(txId);
+        return tx.clientTx.outer.worker;
         }
 
 
@@ -469,7 +486,7 @@ service TxManager(Catalog catalog)
      * This is the information that the TxManager maintains about each in flight transaction.
      */
     protected static class TxRecord(
-            Client.Transaction  tx,
+            Client.Transaction  clientTx,
             Int                 clientId,
             Int                 writeId,
             Int                 readId    = NO_TX,
