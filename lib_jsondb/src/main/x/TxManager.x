@@ -83,6 +83,11 @@ service TxManager(Catalog catalog)
     static Int NO_TX = Int.minvalue;
 
     /**
+     * The transaction id that was on disk from the last time that the database was closed down.
+     */
+    public/private Int lastClosedId = NO_TX;
+
+    /**
      * The count of transactions (referred to as "write transactions") that this transaction manager
      * has created. This counter is used to provide unique write transaction IDs for each in-flight
      * transaction, and also for any trigger processing that occurs during the prepare phase of a
@@ -159,7 +164,7 @@ service TxManager(Catalog catalog)
             if (status == Initial)
                 {
                 // load the previously saved off transaction manager state from disk
-                // TODO
+                // TODO lastClosedId lastPrepared lastCommited
                 }
 
             status = Enabled;
@@ -337,8 +342,33 @@ service TxManager(Catalog catalog)
      */
     Int enlist(ObjectStore store, Int txId)
         {
-        TODO
+        // an enlist cannot occur while disabling the transaction manager, or once it has disabled
+        checkEnabled();
+
+        assert TxRecord tx := byWriteId.get(txId);
+
+        Int readId = tx.readId;
+        if (readId == NO_TX)
+            {
+            // this is the first ObjectStore enlisting for this transaction, so create a mutable
+            // array to hold all the enlisting ObjectStores, as they each enlist
+            assert tx.enlisted.empty;
+            tx.enlisted = new HashSet<ObjectStore>();
+
+            // use the last successfully prepared transaction id as the basis for reading within
+            // this transaction; this reduces the potential for roll-back, since prepared
+            // transactions always commit unless (i) the plug gets pulled, (ii) a fatal error
+            // occurs, or (iii) the database is shut down abruptly
+            readId = lastPrepared;
+            assert readId != NO_TX;
+            tx.readId = readId;
+            }
+
+        assert tx.status == InFlight && !tx.enlisted.contains(store);
+        tx.enlisted.add(store);
+        return readId;
         }
+
 
     // ----- internal ------------------------------------------------------------------------------
 

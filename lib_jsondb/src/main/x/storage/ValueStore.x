@@ -7,6 +7,14 @@ import model.DBObjectInfo;
 
 /**
  * The disk storage implementation for a database "single value".
+ *
+ * The disk format follows this style:
+ *
+ *     [
+ *     {"tx":14, "value":{...}},
+ *     {"tx":17, "value":{...}},
+ *     {"tx":18, "value":{...}}
+ *     ]
  */
 service ValueStore<Value extends immutable Const>
         extends ObjectStore
@@ -44,27 +52,44 @@ service ValueStore<Value extends immutable Const>
         }
 
     /**
-     * The oldest transaction ID to keep. TODO move up, add "retain set"
+     * An internal, mutable record of Changes for a specific transaction.
      */
-    protected/private Int cutoff = Int.minvalue;
+    protected static class Changes<Value extends immutable Const>
+            (Int writeId, Int readId, Boolean modified = False, Value? value = Null)
+        {
+        /**
+         * This txId, the "write" txId.
+         */
+        Int writeId;
+
+        /**
+         * The read txId that this transaction is based from.
+         */
+        Int readId;
+
+        /**
+         *
+         */
+        Boolean modified = False;
+
+        /**
+         * The value within the transaction.
+         */
+        Value? value;
+        }
 
     /**
-     * A linked list node for transaction/value pairs.
+     * Cached transaction/value pairs.
      */
-    static class TxRecord<Value extends immutable Const>(Int txId, Indicator|Value value);
+    protected SkiplistMap<Int, Value> history = new SkiplistMap();
 
     /**
-     * The
+     * In flight transactions.
      */
-    protected TxRecord<Value>? last = Null;
-
-    /**
-     * When true, it indicates that the persistent storage contains expired transactions.
-     */
-    protected Boolean dirty = False;
+    protected SkiplistMap<Int, Changes<Value>> inFlight = new SkiplistMap();
 
 
-    // -----
+    // ----- storage API exposed to the client -----------------------------------------------------
 
     /**
      * Obtain the singleton value as it existed immediately after the specified transaction finished
@@ -77,11 +102,22 @@ service ValueStore<Value extends immutable Const>
      */
     Value load(Int txId, Client.Worker worker)
         {
-        TODO
-        // read bytes
-        // wrap as UTF8 reader
-        // deserialize
-        // return
+        Changes<Value> tx = checkTx(txId, worker);
+
+        if (tx.modified)
+            {
+            return tx.value.as(Value);
+            }
+
+        Int readId = tx.readId;
+        if (isWriteTx(readId))
+            {
+            assert readId != txId;
+            return load(readId, worker);
+            }
+
+        assert Value value := history.get(readId);
+        return value;
         }
 
     /**
@@ -93,11 +129,87 @@ service ValueStore<Value extends immutable Const>
      */
     void store(Int txId, Client.Worker worker, Value value)
         {
+        Changes<Value> tx = checkTx(txId, worker);
+
+        tx.value    = value;
+        tx.modified = True;
+        }
+
+
+    // ----- transaction API exposed to TxManager --------------------------------------------------
+
+    @Override PrepareResult prepare(Int writeId, Int prepareId)
+        {
+        TODO
+        }
+
+    @Override Boolean mergeTx(Int fromTxId, Int toTxId, Boolean release = False)
+        {
+        TODO
+        }
+
+    @Override void commit(Int prepareId, Int commitId)
+        {
+        TODO
+        }
+
+    @Override void rollback(Int uncommittedId)
+        {
+        assert isWriteTx(uncommittedId);
+        TODO
+        }
+
+    @Override void retainTx(Set<Int> inUseTxIds, Boolean force = False)
+        {
         TODO
         }
 
 
-    // ----- IO handling ---------------------------------------------------------------------------
+    // ----- internal IO handling ------------------------------------------------------------------
+
+    /**
+     * Validate the transaction.
+     *
+     * @param writeId  the transaction id
+     * @param worker   a worker to handle CPU-intensive serialization and deserialization tasks
+     *
+     * @return the Changes record for the transaction
+     */
+    Changes<Value> checkTx(Int writeId, Client.Worker worker)
+        {
+        assert isWriteTx(writeId);
+
+        if (history.empty)
+            {
+            loadInitial(worker);
+            }
+
+        return inFlight.computeIfAbsent(writeId,
+                () -> new Changes<Value>(writeId, txManager.enlist(this, writeId)));
+        }
+
+    /**
+     * Load the value(s) from disk.
+     *
+     * @param worker  a worker to handle CPU-intensive serialization and deserialization tasks
+     */
+    void loadInitial(Client.Worker worker)
+        {
+        using (new CriticalSection())
+            {
+            Value value;
+            Int   loadId = txManager.lastClosedId;
+            if (dataFile.exists)
+                {
+                TODO // value =
+                }
+            else
+                {
+                value = initial;
+                }
+            history.put(loadId, value);
+            }
+        }
 
     @Override
     Iterator<File> findFiles()
@@ -123,27 +235,4 @@ service ValueStore<Value extends immutable Const>
         {
         TODO
         }
-
-// TODO
-//String loadFile()
-//Int[] extractTxList(...)
-//String loadTxVal()
-//String or Token[] for given tx id
-//
-//save file from String
-
-
-    // ----- internal transaction cache ------------------------------------------------------------
-
-
-    FutureVar<Byte[]>? readOp = Null;
-
-    protected TxRecord ensureTxRecord()
-        {
-        TODO FutureVar waitForCompletion()
-        }
-
-    Int inFlightWrites = 0;
-
-    // TODO void flushTxRecord
     }
