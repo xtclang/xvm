@@ -978,11 +978,11 @@ public class LambdaExpression
         {
         MethodStructure lambda    = m_lambda;
         LambdaContext   ctxLambda = m_ctxLambda;
-        MethodConstant  idLambda  = lambda.getIdentityConstant();
 
-        assert lambda != null && idLambda.isLambda();
+        assert lambda != null && lambda.isLambda();
         assert ctxLambda != null;
 
+        MethodConstant idLambda = lambda.getIdentityConstant();
         if (idLambda.isNascent())
             {
             // this is the first time that we have a chance to put together the signature, because

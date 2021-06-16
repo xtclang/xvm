@@ -1043,9 +1043,14 @@ public class NamedTypeExpression
                                 new UnresolvedNameConstant(pool, clzTarget.getName()));
                             }
 
-                        // Note: keep the formal types when in a constructor
-                        boolean fFormalParent = !(component instanceof MethodStructure &&
-                                            ((MethodStructure) component).isFunction());
+                        // keep the formal types when in constructors or lambdas (a lambda that
+                        // refers to a virtual child will make a decision to become a method later)
+                        boolean fFormalParent = true;
+                        if (component instanceof MethodStructure)
+                            {
+                            MethodStructure method = (MethodStructure) component;
+                            fFormalParent = !method.isFunction() || method.isLambda();
+                            }
                         boolean fFormalChild = fFormalParent && fImplicitFormal && paramTypes == null;
 
                         typeTarget = pool.ensureVirtualTypeConstant(

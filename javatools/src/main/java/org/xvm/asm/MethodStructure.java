@@ -959,6 +959,14 @@ public class MethodStructure
         }
 
     /**
+     * @return true iff the method is a lambda
+     */
+    public boolean isLambda()
+        {
+        return getIdentityConstant().isLambda();
+        }
+
+    /**
      * Determine if this method is declared in a way that it could act as a property initializer for
      * the specified type.
      *
@@ -1749,7 +1757,7 @@ public class MethodStructure
         MethodConstant id = getIdentityConstant();
         StringBuilder  sb = new StringBuilder();
         sb.append("host=\"")
-          .append(getIdentityConstant().getNamespace().getName())
+          .append(id.getNamespace().getName())
           .append("\", id=\"")
           .append(id.getValueString());
 
@@ -1760,7 +1768,7 @@ public class MethodStructure
             }
 
         sb.append("\", sig=")
-          .append(id.isNascent() ? "n/a" : getIdentityConstant().getSignature());
+          .append(id.isNascent() ? "n/a" : id.getSignature());
 
         if (isNative())
             {

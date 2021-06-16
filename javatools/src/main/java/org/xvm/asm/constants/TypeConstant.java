@@ -4304,7 +4304,7 @@ public abstract class TypeConstant
                 {
                 for (MethodStructure method : ((MultiMethodStructure) child).methods())
                     {
-                    if (!method.getIdentityConstant().isLambda())
+                    if (!method.isLambda())
                         {
                         fComplete &= createMemberInfo(constId, fInterface, method, mapTypeParams,
                             mapProps, mapMethods, mapChildren, listExplode, nBaseRank, errs);
