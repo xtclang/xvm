@@ -329,38 +329,41 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
         }
 
     /**
-     * Prepare a transaction by evaluating the changes specified by the `writeId`, ensuring that no
-     * incompatible changes have occurred between the `readId` and the `prepareId`, and move those
-     * changes from the writeId to the prepareId.
+     * Possible outcomes from a [prepare] call:
      *
-     * @param readId     the transaction id that was used as the base transaction for the
-     *                   transactional phase, which may be badly out-of-date by this point
-     * @param writeId    the transaction id that was used to collect the pending work during the
-     *                   transactional phase
-     * @param prepareId  the transaction id that will be used as the commit transaction id if the
-     *                   transaction prepares and commits successfully
-     *
-     * @return success           True iff the prepare succeeded; False indicates a failure and
-     *                           indicates that a rollback has already occurred
-     * @return containsMutation  true iff there are any changes to this ObjectStore within this
-     *                           transaction
+     * * FailedRolledBack indicates that the prepare failed, and this ObjectStore has rolled back
+     *   all of its data associated with the specified transaction
+     * * CommittedNoChanges indicates that the prepare succeeded, but that there were no changes,
+     *   so an implicit commit has already occurred for this transaction on this ObjectStore
+     * * Prepared indicates that there were changes, and they were successfully prepared for a
+     *   subsequent commit request
      */
-    (Boolean success, Boolean containsMutation) prepare(Int readId, Int writeId, Int prepareId)
+    enum PrepareResult {FailedRolledBack, CommittedNoChanges, Prepared}
+
+    /**
+     * Prepare the specified transaction.
+     *
+     * @param txId  the "write" transaction id that was used to collect the transactional changes
+     *
+     * @return a [PrepareResult]
+     */
+    PrepareResult prepare(Int writeId, Int prepareId)
         {
         TODO
         }
 
     /**
-     * Move changes from one transaction id to another, merging the changes into the destination
+     * Move changes from one transaction id into another, merging the changes into the destination
      * transaction and leaving the source transaction empty.
      *
-     * @param fromTxId  the source (uncommitted) transaction id to move the changes from
-     * @param toTxId    the destination (uncommitted) transaction id to move the changes to
+     * @param fromTxId  the source (uncommitted) write transaction id to move the changes from
+     * @param toTxId    the destination (uncommitted) write transaction id to merge the changes into
+     * @param release   (optional) pass True to release (discard) the source transaction
      *
-     * @return containsMutation  true iff there are any changes to this ObjectStore within this
-     *                           transaction
+     * @return containsMutation  true iff there were any changes that were moved by this ObjectStore
+     *                           into the destination transaction
      */
-    Boolean mergeTx(Int fromTxId, Int toTxId)
+    Boolean mergeTx(Int fromTxId, Int toTxId, Boolean release = False)
         {
         TODO
         }
@@ -369,16 +372,13 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
      * Commit a previously prepared transaction. When this method returns, the transaction has been
      * successfully committed to disk.
      *
-     * @param prepareId  the previously prepared transaction
-     * @param oldestId   the oldest transaction id that is still being used for read purposes at the
-     *                   point that this commit occurs, just in case the storage wants to discard
-     *                   older unused data as part of the commit
+     * @param prepareId  the previously prepared transaction, which is a "write" transaction id
+     * @param commitId   the new identity of the transaction when it has been committed, which is a
+     *                   "read" transaction id
      *
-     * @return True on success
-     *
-     * @throws Exception on failure
+     * @throws Exception on any failure
      */
-    (Boolean success) commit(Int prepareId, Int oldestId)
+    void commit(Int prepareId, Int commitId)
         {
         TODO
         }
@@ -386,7 +386,9 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
     /**
      * Roll back any transactional data associated with the specified transaction id.
      *
-     * @param uncommittedId  a write-TxId or prepare-TxId
+     * @param uncommittedId  a "write" transaction id
+     *
+     * @throws Exception on hard failure
      */
     void rollback(Int uncommittedId)
         {
@@ -520,5 +522,24 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
             errs.add(err);
             }
         catch (Exception e) {}
+        }
+
+
+    // ----- IO handling ---------------------------------------------------------------------------
+
+    @Override static <CompileType extends ObjectStore> Int hashCode(CompileType value)
+        {
+        // use the hash code of the path; we are not expecting ObjectStore instances from multiple
+        // different databases to end up in the same hashed data structure, so this should be more
+        // than sufficient
+// TODO GG weird compiler error from this (two mistakes, but still, the error message ...):
+//        return value.path.hashCode;  // note: missing "()"
+        return value.info.path.hashCode();
+        }
+
+    @Override static <CompileType extends ObjectStore> Boolean equals(CompileType value1, CompileType value2)
+        {
+        // equality of ObjectStore references is very strict
+        return &value1 == &value2;
         }
     }

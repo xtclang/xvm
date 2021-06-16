@@ -828,8 +828,6 @@ service Client<Schema extends RootSchema>
 
     /**
      * The DBMap DBObject implementation.
-     *
-     * TODO how to make the client responsible for ser/deser work? yet how to make the same cacheable?
      */
     class DBMapImpl<Key extends immutable Const, Value extends immutable Const>
             (DBObjectInfo info_, MapStore<Key, Value> store_)
