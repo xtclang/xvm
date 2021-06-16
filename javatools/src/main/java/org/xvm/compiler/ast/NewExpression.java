@@ -713,46 +713,19 @@ public class NewExpression
                                     getTopmostMethodStructure(infoTarget);
                     assert constructor != null;
                     }
-
-                TypeConstant[] atypeArgs = idConstruct.getRawParams();
-
-                // test the "regular fit" first and Tuple afterwards
-                TypeConstant typeTuple = null;
-                if (!testExpressions(ctx, listArgs, atypeArgs).isFit())
-                    {
-                    // otherwise, check the tuple based invoke (see Expression.findMethod)
-                    if (listArgs.size() == 1)
-                        {
-                        typeTuple = pool.ensureTupleType(atypeArgs);
-                        if (!listArgs.get(0).testFit(ctx, typeTuple, null).isFit())
-                            {
-                            // the regular "validateExpressions" call will report an error
-                            typeTuple = null;
-                            }
-                        }
-                    }
-
-                if (typeTuple == null)
-                    {
-                    if (containsNamedArgs(listArgs))
-                        {
-                        listArgs = rearrangeNamedArgs(constructor, listArgs, errs);
-                        if (listArgs == null)
-                            {
-                            fValid = false;
-                            }
-                        args = listArgs;
-                        }
-
-                    fValid &= validateExpressions(ctx, listArgs, atypeArgs, errs) != null;
-                    }
-                else
-                    {
-                    fValid = validateExpressionsFromTuple(ctx, listArgs, typeTuple, errs) != null;
-                    m_fTupleArg = true;
-                    }
-
                 m_constructor = constructor;
+
+                if (containsNamedArgs(listArgs))
+                    {
+                    listArgs = rearrangeNamedArgs(constructor, listArgs, errs);
+                    if (listArgs == null)
+                        {
+                        fValid = false;
+                        }
+                    args = listArgs;
+                    }
+
+                fValid &= validateExpressions(ctx, listArgs, idConstruct.getRawParams(), errs) != null;
 
                 if (!typeResult.isParamsSpecified())
                     {
@@ -1800,6 +1773,7 @@ public class NewExpression
 
     private transient MethodStructure m_constructor;
     private transient boolean         m_fTupleArg;  // indicates that arguments come from a tuple
+                                                    // (currently not implemented)
 
     private transient AnonPurpose              m_purposeCurrent = AnonPurpose.None;
     private transient TypeCompositionStatement m_anonActualBackup;

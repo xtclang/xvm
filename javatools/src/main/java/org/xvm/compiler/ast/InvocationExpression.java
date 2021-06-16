@@ -828,7 +828,6 @@ public class InvocationExpression
                 TypeConstant[]  atypeParams = idMethod.getRawParams();
                 int             cTypeParams = method.getTypeParamCount();
                 int             cParams     = method.getVisibleParamCount();
-                int             cArgs       = listArgs.size();
 
                 if (cTypeParams > 0)
                     {
@@ -852,33 +851,6 @@ public class InvocationExpression
                         }
                     }
 
-                // test the "regular fit" first and Tuple afterwards
-                TypeConstant typeTuple = null;
-                if (!testExpressions(ctx, listArgs, atypeParams).isFit())
-                    {
-                    // otherwise, check the tuple based invoke (see AstNode.findMethod)
-                    if (cArgs == 1)
-                        {
-                        typeTuple = pool.ensureTupleType(atypeParams);
-                        if (!listArgs.get(0).testFit(ctx, typeTuple, null).isFit())
-                            {
-                            // the regular "validateExpressions" call will report an error
-                            typeTuple = null;
-                            }
-                        }
-                    }
-
-                TypeConstant[] atypeArgs;
-                if (typeTuple == null)
-                    {
-                    atypeArgs = validateExpressions(ctx, listArgs, atypeParams, errs);
-                    }
-                else
-                    {
-                    atypeArgs = validateExpressionsFromTuple(ctx, listArgs, typeTuple, errs);
-                    m_fTupleArg = true;
-                    }
-
                 if (typeLeft == null && !m_method.isFunction())
                     {
                     typeLeft = m_targetinfo == null
@@ -886,6 +858,7 @@ public class InvocationExpression
                             : m_targetinfo.getTargetType();
                     }
 
+                TypeConstant[] atypeArgs = validateExpressions(ctx, listArgs, atypeParams, errs);
                 if (atypeArgs != null)
                     {
                     Map<String, TypeConstant> mapTypeParams = Collections.EMPTY_MAP;
@@ -3098,6 +3071,7 @@ public class InvocationExpression
     private transient boolean         m_fBindParams;     // do we need to bind any parameters
     private transient boolean         m_fCall;           // do we need to call/invoke
     private transient boolean         m_fTupleArg;       // indicates that arguments come from a tuple
+                                                         // (currently not supported)
     private transient boolean         m_fNamedArgs;      // are there named arguments
     private transient TargetInfo      m_targetinfo;      // for left==null with prop or method name
     private transient Argument        m_argMethod;

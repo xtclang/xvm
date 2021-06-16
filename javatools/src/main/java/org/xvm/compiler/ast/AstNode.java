@@ -947,35 +947,6 @@ public abstract class AstNode
         }
 
     /**
-     * Validate the specified expressions against the required types.
-     *
-     * @param ctx         the compiler context
-     * @param listExpr    the list of expressions (may be modified)
-     * @param typeTuple   the required tuple type
-     * @param errs        the error listener
-     *
-     * @return an array of TypeConstants describing the actual expression types or null
-     *         if the validation fails, in which case an error has been reported
-     */
-    protected TypeConstant[] validateExpressionsFromTuple(Context ctx, List<Expression> listExpr,
-                                                          TypeConstant typeTuple, ErrorListener errs)
-        {
-        Expression exprOld = listExpr.get(0);
-        Expression exprNew = exprOld.validate(ctx, typeTuple, errs);
-        if (exprNew == null)
-            {
-            // validation failed
-            return null;
-            }
-
-        if (exprOld != exprNew)
-            {
-            listExpr.set(0, exprNew);
-            }
-        return exprNew.getType().getParamTypesArray();
-        }
-
-    /**
      * Given an array of expressions representing actual parameters and the TypeInfo of the target,
      * find the best matching method.
      *
@@ -1004,17 +975,9 @@ public abstract class AstNode
      * @return the MethodConstant for the desired method, or null if an exact match was not found,
      *         in which case an error has been reported
      */
-    protected MethodConstant findMethod(
-            Context          ctx,
-            TypeConstant     typeTarget,
-            TypeInfo         infoTarget,
-            String           sMethodName,
-            List<Expression> listExprArgs,
-            MethodKind       kind,
-            boolean          fCall,
-            boolean          fAllowNested,
-            TypeConstant[]   atypeReturn,
-            ErrorListener    errs)
+    protected MethodConstant findMethod(Context ctx, TypeConstant typeTarget, TypeInfo infoTarget,
+            String sMethodName, List<Expression> listExprArgs, MethodKind kind, boolean fCall,
+            boolean fAllowNested, TypeConstant[] atypeReturn, ErrorListener errs)
         {
         assert sMethodName != null && sMethodName.length() > 0;
 
@@ -1031,24 +994,9 @@ public abstract class AstNode
             return null;
             }
 
-        // allow for a Tuple based invocation; for example a method f(String s, Int i)
-        // is invocable via f(t), where "t" is an argument of type Tuple<String, Int>
-        TypeConstant typeTupleArg = null;
-        if (fCall && cExpr == 1 && mapNamedExpr.isEmpty())
-            {
-            Expression   exprTuple = listExprArgs.get(0);
-            TypeConstant typeTuple = exprTuple.isValidated()
-                    ? exprTuple.getType()
-                    : exprTuple.getImplicitType(ctx);
-
-            if (typeTuple != null && typeTuple.isTuple() && !typeTuple.isFormalType())
-                {
-                typeTupleArg = typeTuple;
-                }
-            }
-
         int                 cArgs      = fCall ? cExpr : -1;
         Set<MethodConstant> setMethods = infoTarget.findMethods(sMethodName, cArgs, kind);
+        ErrorListener       errsTemp   = errs.branch();
 
         if (fAllowNested)
             {
@@ -1083,7 +1031,7 @@ public abstract class AstNode
                 {
                 // check if there are any potentially matching private methods
                 TypeConstant typePrivate =
-                    pool().ensureAccessTypeConstant(typeTarget.removeAccess(), Access.PRIVATE);
+                        pool().ensureAccessTypeConstant(typeTarget.removeAccess(), Access.PRIVATE);
                 if (!typePrivate.ensureTypeInfo(ErrorListener.BLACKHOLE).
                         findMethods(sMethodName, cArgs, kind).isEmpty())
                     {
@@ -1092,44 +1040,17 @@ public abstract class AstNode
                     return null;
                     }
                 }
-            if (kind == MethodKind.Constructor)
-                {
-                log(errs, Severity.ERROR, Compiler.MISSING_CONSTRUCTOR, typeTarget.getValueString());
-                }
-            else
-                {
-                log(errs, Severity.ERROR, Compiler.MISSING_METHOD, sMethodName, typeTarget.getValueString());
-                }
-            return null;
             }
-
-        // collect all theoretically matching methods
-        Set<MethodConstant> setIs      = new HashSet<>();
-        Set<MethodConstant> setConvert = new HashSet<>();
-        ErrorListener       errsTemp   = errs.branch();
-
-        collectMatchingMethods(ctx, infoTarget, setMethods, listExprArgs, fCall,
-                mapNamedExpr, atypeReturn, setIs, setConvert, errsTemp);
-
-        // now choose the best match
-        if (!setIs.isEmpty())
+        else
             {
-            return chooseBest(setIs, typeTarget, errs);
-            }
+            // collect all theoretically matching methods
+            Set<MethodConstant> setIs      = new HashSet<>();
+            Set<MethodConstant> setConvert = new HashSet<>();
 
-        if (!setConvert.isEmpty())
-            {
-            return chooseBest(setConvert, typeTarget, errs);
-            }
-
-        if (typeTupleArg != null)
-            {
-            setMethods = infoTarget.findMethods(sMethodName, typeTupleArg.getParamsCount(), kind);
-
-            ErrorListener errsTempT = errs.branch();
             collectMatchingMethods(ctx, infoTarget, setMethods, listExprArgs, fCall,
-                    mapNamedExpr, atypeReturn, setIs, setConvert, errsTempT);
+                    mapNamedExpr, atypeReturn, setIs, setConvert, errsTemp);
 
+            // now choose the best match
             if (!setIs.isEmpty())
                 {
                 return chooseBest(setIs, typeTarget, errs);
@@ -1138,11 +1059,6 @@ public abstract class AstNode
             if (!setConvert.isEmpty())
                 {
                 return chooseBest(setConvert, typeTarget, errs);
-                }
-
-            if (!errsTemp.hasSeriousErrors())
-                {
-                errsTempT.merge();
                 }
             }
 
