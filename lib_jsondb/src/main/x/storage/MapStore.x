@@ -1,4 +1,7 @@
+import json.Doc;
+
 import model.DBObjectInfo;
+
 
 /**
  * Provides a key/value storage service for JSON formatted data on disk.
@@ -79,7 +82,7 @@ service MapStore<Key extends immutable Const, Value extends immutable Const>
         TODO
         }
 
-    @Override void commit(Int prepareId, Int commitId)
+    @Override Doc commit(Int prepareId, Int commitId)
         {
         TODO
         }

@@ -1,6 +1,7 @@
-import json.Mapping;
+import json.Doc;
 import json.Lexer;
 import json.Lexer.Token;
+import json.Mapping;
 
 import model.DBObjectInfo;
 
@@ -115,20 +116,31 @@ service ValueStore<Value extends immutable Const>
 
         Value value = tx.value;
         Value prev  = previousValue(tx);
-        if (value == prev)
-            {
-            inFlight.remove(writeId);
-            return CommittedNoChanges;
-            }
 
         assert Int latestId := history.last();
-        if (latestId != tx.readId)
+        if (latestId == tx.readId)
+            {
+            if (value == prev)
+                {
+                inFlight.remove(writeId);
+                return CommittedNoChanges;
+                }
+            }
+        else
             {
             Value latest = latestValue();
             if (latest != prev)
                 {
+                // the state that this transaction assumes as its starting point was altered, so the
+                // transaction must roll back
                 inFlight.remove(writeId);
-                return latest == value ? CommittedNoChanges : FailedRolledBack;
+                return FailedRolledBack;
+                }
+
+            if (value == latest)
+                {
+                inFlight.remove(writeId);
+                return CommittedNoChanges;
                 }
             }
 
@@ -142,15 +154,22 @@ service ValueStore<Value extends immutable Const>
         TODO
         }
 
-    @Override void commit(Int prepareId, Int commitId)
+    @Override Doc commit(Int prepareId, Int commitId)
         {
+        assert isWriteTx(prepareId) && isReadTx(commitId);
+
+        assert Changes tx := inFlight.get(prepareId);
+
+
+        // TODO write to disk
+
         TODO
         }
 
     @Override void rollback(Int uncommittedId)
         {
         assert isWriteTx(uncommittedId);
-        TODO
+        inFlight.remove(uncommittedId);
         }
 
     @Override void retainTx(Set<Int> inUseTxIds, Boolean force = False)

@@ -291,6 +291,14 @@ service TxManager(Catalog catalog)
 
         // validate the transaction
         assert TxRecord rec := byClientId.get(clientId);
+        Set<ObjectStore> stores = rec.enlisted;
+        if (stores.empty)
+            {
+            // empty transaction is committed without changing anything
+            byClientId.remove(clientId);
+            assert rec.readId == NO_TX;
+            return True;
+            }
 
         TODO
 
@@ -313,12 +321,9 @@ service TxManager(Catalog catalog)
         checkEnabled();
 
         // validate the transaction
-        if (TxRecord rec := byClientId.get(clientId))
-            {
-// TODO     rec.
+        assert TxRecord rec := byClientId.get(clientId);
 
-            byClientId.remove(clientId);
-            }
+        byClientId.remove(clientId);
 
         return True;
         }
@@ -329,13 +334,17 @@ service TxManager(Catalog catalog)
     // ----- API for ObjectStore instances ---------------------------------------------------------
 
     /**
+     * When an ObjectStore first encounters a transaction ID, it is responsible for enlisting itself
+     * with the transaction manager for that transaction by calling this method.
      *
      * @param store  the ObjectStore instance that needs a base transaction ID (the "read" id) for
      *               the specified [txId] (the "write" id)
      * @param txId   the transaction ID that the client provided to the ObjectStore (the "write" id)
      *
      * @return the transaction id to use as the "read" transaction id; it identifies the transaction
-     *         that the specified "write" transaction id is based on
+     *         that the specified "write" transaction id is based on; note that the read transaction
+     *         id will actually be a write transaction id while post-prepare triggers are being
+     *         executed
      *
      * @throws ReadOnly  if the map does not allow or support the requested mutating operation
      * @throws IllegalState if the transaction state does not allow an ObjectStore to be enlisted,
@@ -389,10 +398,10 @@ service TxManager(Catalog catalog)
 
     // ----- internal ------------------------------------------------------------------------------
 
+    // REVIEW this is not used ... and has no doc
     protected void reload()
         {
         }
-
 
     /**
      * Discard any record of the specified transaction.

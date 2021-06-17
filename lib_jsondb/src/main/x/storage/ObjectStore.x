@@ -1,6 +1,7 @@
 import Catalog.Status;
 import model.DBObjectInfo;
 import oodb.DBObject.DBCategory as Category;
+import json.Doc;
 
 
 /**
@@ -404,16 +405,48 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
         }
 
     /**
-     * Commit a previously prepared transaction. When this method returns, the transaction has been
-     * successfully committed to disk.
+     * Commit a group of previously prepared transactions. When this method returns, the
+     * transactional changes related to this ObjectStore will have been successfully committed to
+     * disk.
+     *
+     * @param byCommitId  a Map, keyed by "commit" transaction id, with the corresponding values
+     *                    being the "prepared" transactions ids
+     *
+     * @return the ObjectStore's commit records, as JSON documents, keyed by commit id
+     *
+     * @throws Exception on any failure
+     */
+    OrderedMap<Int, Doc> commit(OrderedMap<Int, Int> byCommitId)
+        {
+        SkiplistMap<Int, Doc> records = new SkiplistMap();
+
+        // in theory, these can all be committed together, which should be more efficient, but the
+        // default implementation simply delegates to the single-commit method
+        for ((Int commitId, Int prepareId) : byCommitId)
+            {
+            if (inFlight.contains(prepareId))
+                {
+                Doc record = commit(prepareId, commitId);
+                records.put(commitId, record);
+                }
+            }
+
+        return records;
+        }
+
+    /**
+     * Commit a previously prepared transaction. When this method returns, the transactional changes
+     * related to this ObjectStore will have been successfully committed to disk.
      *
      * @param prepareId  the previously prepared transaction, which is a "write" transaction id
      * @param commitId   the new identity of the transaction when it has been committed, which is a
      *                   "read" transaction id
      *
+     * @return the ObjectStore's commit record, as a JSON document
+     *
      * @throws Exception on any failure
      */
-    void commit(Int prepareId, Int commitId)
+    Doc commit(Int prepareId, Int commitId)
         {
         TODO
         }
