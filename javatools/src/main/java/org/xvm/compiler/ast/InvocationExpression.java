@@ -730,13 +730,27 @@ public class InvocationExpression
             // resolving the name will yield a method, a function, or something else that needs
             // to yield a function, such as a property or variable that holds a function or
             // something that can be converted to a function
-            Argument argMethod = resolveName(ctx, true, typeLeft, atypeReturn, errs);
+            List<Expression> listArgs = args;
+            ErrorListener    errsTemp = errs.branch();
+
+            Argument argMethod = resolveName(ctx, true, typeLeft, atypeReturn, errsTemp);
             if (argMethod == null)
                 {
-                return null;
+                // as the last resort, validate the arguments before trying to resolve the name again
+                TypeConstant[] atypeArgs = validateExpressions(ctx, listArgs, null, errs);
+                if (atypeArgs == null)
+                    {
+                    errsTemp.merge();
+                    return null;
+                    }
+
+                argMethod = resolveName(ctx, true, typeLeft, atypeReturn, errs);
+                if (argMethod == null)
+                    {
+                    return null;
+                    }
                 }
 
-            List<Expression> listArgs = args;
             if (m_fNamedArgs)
                 {
                 assert argMethod instanceof MethodConstant;
@@ -1309,8 +1323,8 @@ public class InvocationExpression
                                 exprLeft.generateVoid(ctx, code, errs);
                                 }
                             }
-                        argFn       = pool.ensureMethodConstant(m_idFormal, idMethod.getSignature());
-                        fConstruct  = false;
+                        argFn      = pool.ensureMethodConstant(m_idFormal, idMethod.getSignature());
+                        fConstruct = false;
                         }
                     }
                 else

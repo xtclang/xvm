@@ -696,8 +696,23 @@ public class NewExpression
                 }
             else
                 {
+                ErrorListener errsTemp = errs.branch();
                 idConstruct = findMethod(ctx, typeTarget, infoTarget, "construct", listArgs,
-                                MethodKind.Constructor, true, false, null, errs);
+                                MethodKind.Constructor, true, false, null, errsTemp);
+                if (idConstruct == null)
+                    {
+                    // as the last resort, validate the arguments before looking for the method again
+                    TypeConstant[] atypeArgs = validateExpressions(ctx, listArgs, null, errs);
+                    if (atypeArgs == null)
+                        {
+                        errsTemp.merge();
+                        }
+                    else
+                        {
+                        idConstruct = findMethod(ctx, typeTarget, infoTarget, "construct", listArgs,
+                                        MethodKind.Constructor, true, false, null, errs);
+                        }
+                    }
                 }
 
             if (idConstruct == null)

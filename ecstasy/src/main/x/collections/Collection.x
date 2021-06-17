@@ -868,8 +868,7 @@ interface Collection<Element>
     @Override
     String toString()
         {
-        // TODO GG: return appendTo(new StringBuffer(this.is(Stringable) ? estimateStringLength() : 0)).toString();
-        return appendTo(new StringBuffer(this.is(Stringable) ? this.as(Stringable).estimateStringLength() : 0)).toString();
+        return appendTo(new StringBuffer(this.is(Stringable) ? this.estimateStringLength() : 0)).toString();
         }
 
 
