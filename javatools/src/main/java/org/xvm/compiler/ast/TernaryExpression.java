@@ -167,22 +167,15 @@ public class TernaryExpression
                     int cElse = atypeElse.length;
 
                     // try to figure out which side is more flexible
-                    if (cElse > 0)
-                        {
-                        if (exprThen.testFitMulti(ctxThen, atypeElse, null).isFit())
-                            {
-                            use = Usage.Else;
-                            }
-                        }
+                    TypeFit fitThen = cElse > 0
+                            ? exprThen.testFitMulti(ctxThen, atypeElse, null)
+                            : TypeFit.NoFit;
 
-                    if (cThen > 0)
-                        {
-                        if (exprElse.testFitMulti(ctxElse, atypeThen, null).isFit())
-                            {
-                            use = use == null ? Usage.Then : Usage.Any;
-                            }
-                        }
+                    TypeFit fitElse = cThen > 0
+                            ? exprElse.testFitMulti(ctxElse, atypeThen, null)
+                            : TypeFit.NoFit;
 
+                    use = computeUsage(fitThen, fitElse);
                     if (use != null)
                         {
                         break;
@@ -193,38 +186,37 @@ public class TernaryExpression
                     TypeConstant[] atypeElseR = resolveConstraints(atypeElse);
                     if (atypeElseR != null)
                         {
-                        if (exprThen.testFitMulti(ctxThen, atypeElseR, null).isFit())
-                            {
-                            atypeElse = atypeElseR;
-                            use       = Usage.Else;
-                            }
+                        fitThen = exprThen.testFitMulti(ctxThen, atypeElseR, null);
                         }
 
                     if (atypeThenR != null)
                         {
-                        if (exprElse.testFitMulti(ctxElse, atypeThenR, null).isFit())
-                            {
-                            atypeThen = atypeThenR;
-                            use       = use == null ? Usage.Then : Usage.Any;
-                            }
+                        fitElse = exprElse.testFitMulti(ctxElse, atypeThenR, null);
                         }
 
+                    use = computeUsage(fitThen, fitElse);
                     if (use != null)
                         {
+                        if (use == Usage.Then || use == Usage.Any)
+                            {
+                            atypeThen = atypeThenR;
+                            }
+                        if (use == Usage.Else || use == Usage.Any)
+                            {
+                            atypeElse = atypeElseR;
+                            }
                         break;
                         }
 
                     // nothing worked; try an intersection of the resolved types
                     if (cThen == 0)
                         {
-                        atypeThen = atypeElse;
-                        use       = Usage.Else;
+                        use = Usage.Else;
                         break;
                         }
                     if (cElse == 0)
                         {
-                        atypeElse = atypeThen;
-                        use       = Usage.Then;
+                        use = Usage.Then;
                         break;
                         }
 
@@ -257,7 +249,8 @@ public class TernaryExpression
         TypeConstant[] atypeElseV = null;
 
         ctx = ctx.enterFork(true);
-        Expression exprNewThen = exprThen.validateMulti(ctx, atypeThen, errs);
+        Expression exprNewThen =
+                exprThen.validateMulti(ctx, use == Usage.Else ? atypeElse : atypeThen, errs);
         ctx = ctx.exit();
 
         if (exprNewThen == null)
@@ -278,7 +271,8 @@ public class TernaryExpression
             }
 
         ctx = ctx.enterFork(false);
-        Expression exprNewElse = exprElse.validateMulti(ctx, atypeElse, errs);
+        Expression exprNewElse =
+                exprElse.validateMulti(ctx, use == Usage.Then ? atypeThen : atypeElse, errs);
         ctx = ctx.exit();
 
         if (exprNewElse == null)
@@ -469,6 +463,41 @@ public class TernaryExpression
 
 
     // ----- helpers -------------------------------------------------------------------------------
+
+    /**
+     * Compute the usage plan, prioritizing a direct fit over a conversion fit.
+     *
+     * @param fitThen  a fit for "then" using "else" implicit type
+     * @param fitElse  a fit for "else" using "then" implicit type
+     */
+    private Usage computeUsage(TypeFit fitThen, TypeFit fitElse)
+        {
+        if (fitThen.isFit())
+            {
+            if (fitElse.isFit())
+                {
+                if (fitThen == TypeFit.Fit)
+                    {
+                    return fitElse == TypeFit.Fit
+                            ? Usage.Any
+                            : Usage.Else;
+                    }
+                else
+                    {
+                    return Usage.Then;
+                    }
+                }
+            else
+                {
+                return Usage.Else;
+                }
+            }
+        else if (fitElse.isFit())
+            {
+            return Usage.Then;
+            }
+        return null;
+        }
 
     /**
      * A helper method to create an array of narrower types for two arrays.
