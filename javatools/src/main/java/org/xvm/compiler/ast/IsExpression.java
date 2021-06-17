@@ -120,7 +120,7 @@ public class IsExpression
                     typeTarget = pool.ensureAccessTypeConstant(typeTarget, Access.PRIVATE);
                     }
 
-                TypeConstant typeInferred =
+                TypeConstant typeInferred = !typeTest.isTuple() &&
                         typeTest.isExplicitClassIdentity(true) &&
                         typeTarget.isExplicitClassIdentity(true)
                             ? computeInferredType(typeTarget, typeTest)
