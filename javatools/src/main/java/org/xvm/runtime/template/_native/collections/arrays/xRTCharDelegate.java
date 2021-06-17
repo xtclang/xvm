@@ -58,12 +58,12 @@ public class xRTCharDelegate
         }
 
     @Override
-    public DelegateHandle createDelegate(TypeConstant typeElement, int cCapacity,
+    public DelegateHandle createDelegate(TypeConstant typeElement, int cSize,
                                          ObjectHandle[] ahContent, Mutability mutability)
         {
-        int    cSize = ahContent.length;
-        char[] ach   = new char[cCapacity];
-        for (int i = 0; i < cSize; i++)
+        char[] ach = new char[cSize];
+
+        for (int i = 0, c = ahContent.length; i < c; i++)
             {
             ach[i] = (char) ((JavaLong) ahContent[i]).getValue();
             }

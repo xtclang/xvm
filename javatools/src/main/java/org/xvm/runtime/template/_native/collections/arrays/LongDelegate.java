@@ -49,12 +49,12 @@ public abstract class LongDelegate
         }
 
     @Override
-    public DelegateHandle createDelegate(TypeConstant typeElement, int cCapacity,
+    public DelegateHandle createDelegate(TypeConstant typeElement, int cSize,
                                          ObjectHandle[] ahContent, Mutability mutability)
         {
-        int    cSize = ahContent.length;
-        long[] al    = new long[cCapacity];
-        for (int i = 0; i < cSize; i++)
+        long[] al = new long[cSize];
+
+        for (int i = 0, c = ahContent.length; i < c; i++)
             {
             al[i] = ((JavaLong) ahContent[i]).getValue();
             }

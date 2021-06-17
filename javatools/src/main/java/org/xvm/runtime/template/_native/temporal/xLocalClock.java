@@ -129,9 +129,8 @@ public class xLocalClock
 
             long lOffset = 0; // TODO
             hTimeZone.setField("picos", xInt64.makeHandle(lOffset));
-            hTimeZone.setField("name", xNullable.NULL);
-            hTimeZone.setField("rules", xArray.makeArrayHandle(clzRuleArray, 0,
-                                            Utils.OBJECTS_NONE, Mutability.Mutable));
+            hTimeZone.setField("name",  xNullable.NULL);
+            hTimeZone.setField("rules", xArray.createEmptyArray(clzRuleArray, 0, Mutability.Mutable));
             hTimeZone.makeImmutable();
             }
 

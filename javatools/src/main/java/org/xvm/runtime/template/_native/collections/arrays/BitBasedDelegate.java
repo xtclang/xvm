@@ -33,19 +33,18 @@ public abstract class BitBasedDelegate
         }
 
     @Override
-    public DelegateHandle createDelegate(TypeConstant typeElement, int cCapacity,
+    public DelegateHandle createDelegate(TypeConstant typeElement, int cSize,
                                          ObjectHandle[] ahContent, Mutability mutability)
         {
-        byte[] ab    = new byte[storage(cCapacity)];
-        int    cSize = ahContent.length;
-        for (int i = 0; i < cSize; i++)
+        byte[] ab = new byte[storage(cSize)];
+
+        for (int i = 0, c = ahContent.length; i < c; i++)
             {
             if (isSet(ahContent[i]))
                 {
                 ab[index(i)] |= bitMask(i);
                 }
             }
-
         return new BitArrayHandle(getCanonicalClass(), ab, cSize, mutability);
         }
 

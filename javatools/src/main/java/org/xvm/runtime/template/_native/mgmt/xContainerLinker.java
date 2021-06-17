@@ -70,7 +70,7 @@ public class xContainerLinker
                 {
                 try
                     {
-                    byte[]        abFile = xByteArray.getBytes((ArrayHandle) hTarget);
+                    byte[]        abFile = xByteArray.getBytes((ArrayHandle) hArg);
                     FileStructure struct = new FileStructure(new ByteArrayInputStream(abFile));
 
                     return frame.assignValue(iReturn, xRTFileTemplate.makeHandle(struct));

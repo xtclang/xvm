@@ -253,15 +253,22 @@ public class xOSStorage
                 ObjectHandle hStore      = ahArg[0];
                 StringHandle hPathString = (StringHandle) ahArg[1];
 
-                Path path = Paths.get(hPathString.getStringValue());
-                if (Files.exists(path))
+                try
                     {
-                    return Utils.assignConditionalResult(
-                        frame,
-                        OSFileNode.createHandle(frame, hStore, path, Files.isDirectory(path), Op.A_STACK),
-                        aiReturn);
+                    Path path = Paths.get(hPathString.getStringValue());
+                    if (Files.exists(path))
+                        {
+                        return Utils.assignConditionalResult(
+                            frame,
+                            OSFileNode.createHandle(frame, hStore, path, Files.isDirectory(path), Op.A_STACK),
+                            aiReturn);
+                        }
+                    return frame.assignValue(aiReturn[0], xBoolean.FALSE);
                     }
-                return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+                catch (Exception e)
+                    {
+                    return frame.raiseException(xException.ioException(frame, e.getMessage()));
+                    }
                 }
             }
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);

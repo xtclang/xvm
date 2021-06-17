@@ -783,7 +783,7 @@ public class xArray
 
     /**
      * Create an ArrayHandle for the specified TypeComposition and fill it with objects from the
-     * specified array
+     * specified array.
      */
     public static ArrayHandle makeArrayHandle(TypeComposition clzArray, int cCapacity,
                                                ObjectHandle[] ahValue, Mutability mutability)
@@ -791,6 +791,10 @@ public class xArray
         TypeConstant typeElement      = clzArray.getType().getParamType(0);
         xRTDelegate  templateDelegate = xRTDelegate.getArrayTemplate(typeElement);
 
+        if (mutability != Mutability.Fixed)
+            {
+            cCapacity = ahValue.length;
+            }
         DelegateHandle hDelegate = templateDelegate.createDelegate(
                                     typeElement, cCapacity, ahValue, mutability);
         return new ArrayHandle(clzArray, hDelegate, mutability);
