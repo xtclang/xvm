@@ -457,7 +457,7 @@ public abstract class Container
     /**
      * Cached TypeSystem handle.
      */
-    public ObjectHandle m_hTypeSystem;
+    protected ObjectHandle m_hTypeSystem;
 
     /**
      * A counter tracking both the number of services which have pending invocations to process
