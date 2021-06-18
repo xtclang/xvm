@@ -268,7 +268,7 @@ public class Proxy
             }
 
         @Override
-        protected boolean isShared(ConstantPool poolThat, Map<ObjectHandle, Boolean> mapVisited)
+        public boolean isShared(ConstantPool poolThat, Map<ObjectHandle, Boolean> mapVisited)
             {
             return false;
             }

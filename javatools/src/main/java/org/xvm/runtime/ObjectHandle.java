@@ -224,7 +224,7 @@ public abstract class ObjectHandle
      *
      * @return true iff this object's type is shared with that pool
      */
-    protected boolean isShared(ConstantPool poolThat, Map<ObjectHandle, Boolean> mapVisited)
+    public boolean isShared(ConstantPool poolThat, Map<ObjectHandle, Boolean> mapVisited)
         {
         return true;
         }
@@ -561,7 +561,7 @@ public abstract class ObjectHandle
             }
 
         @Override
-        protected boolean isShared(ConstantPool poolThat, Map<ObjectHandle, Boolean> mapVisited)
+        public boolean isShared(ConstantPool poolThat, Map<ObjectHandle, Boolean> mapVisited)
             {
             if (!getType().isShared(poolThat))
                 {
@@ -1167,7 +1167,7 @@ public abstract class ObjectHandle
             }
 
         @Override
-        protected boolean isShared(ConstantPool poolThat, Map<ObjectHandle, Boolean> mapVisited)
+        public boolean isShared(ConstantPool poolThat, Map<ObjectHandle, Boolean> mapVisited)
             {
             return assertInitialized().isShared(poolThat, mapVisited);
             }

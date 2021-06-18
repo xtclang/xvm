@@ -800,7 +800,7 @@ public class xRTDelegate
             }
 
         @Override
-        protected boolean isShared(ConstantPool poolThat, Map<ObjectHandle, Boolean> mapVisited)
+        public boolean isShared(ConstantPool poolThat, Map<ObjectHandle, Boolean> mapVisited)
             {
             // despite the shared array type, the individual elements could be narrower
             // and need to be checked

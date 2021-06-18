@@ -843,6 +843,12 @@ public class xArray
             }
 
         @Override
+        public boolean isShared(ConstantPool poolThat, Map<ObjectHandle, Boolean> mapVisited)
+            {
+            return m_hDelegate.isShared(poolThat, mapVisited);
+            }
+
+        @Override
         public String toString()
             {
             return super.toString() + m_mutability + " " + m_hDelegate.toString();

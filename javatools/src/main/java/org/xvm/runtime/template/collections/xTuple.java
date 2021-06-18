@@ -835,7 +835,7 @@ public class xTuple
             }
 
         @Override
-        protected boolean isShared(ConstantPool poolThat, Map<ObjectHandle, Boolean> mapVisited)
+        public boolean isShared(ConstantPool poolThat, Map<ObjectHandle, Boolean> mapVisited)
             {
             if (mapVisited == null)
                 {

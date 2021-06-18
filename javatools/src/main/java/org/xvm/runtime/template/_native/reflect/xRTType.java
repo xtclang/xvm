@@ -951,8 +951,14 @@ public class xRTType
         // primordial (-1) type system, but it is not wrong to return a more specific type system
         // that includes that same type e.g. the "MyApp" type system that linked in String as part
         // of its type system
-        // TODO GG - the code here is providing the "current context" type system, which is wrong
-        return frame.f_context.f_container.ensureTypeSystemHandle(frame, iReturn);
+        if (hType.isForeign())
+            {
+            throw new UnsupportedOperationException("create a proxy");
+            }
+        else
+            {
+            return frame.f_context.f_container.ensureTypeSystemHandle(frame, iReturn);
+            }
         }
 
     /**
