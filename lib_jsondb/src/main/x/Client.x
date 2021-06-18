@@ -704,7 +704,7 @@ service Client<Schema extends RootSchema>
             }
         finally
             {
-            writeId_ = txManager.begin(outer.id, this, readOnly);
+            writeId_ = txManager.begin(this, readOnly);
             }
 
         /**

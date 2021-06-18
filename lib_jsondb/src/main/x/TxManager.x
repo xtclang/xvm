@@ -238,6 +238,30 @@ service TxManager(Catalog catalog)
     // ----- transactional API ---------------------------------------------------------------------
 
     /**
+     * Determine if the specified txId indicates a read ID, versus a write ID.
+     *
+     * @param txId  a transaction identity
+     *
+     * @return True iff the txId is in the range reserved for read transaction IDs
+     */
+    Boolean isReadTx(Int txId)
+        {
+        return txId > 0;
+        }
+
+    /**
+     * Determine if the specified txId indicates a write ID, versus a read ID.
+     *
+     * @param txId  a transaction identity
+     *
+     * @return True iff the txId is in the range reserved for write transaction IDs
+     */
+    Boolean isWriteTx(Int txId)
+        {
+        return txId < 0;
+        }
+
+    /**
      * Begin a new transaction when it performs its first operation.
      *
      * This method is intended to only be used by the [Client].
@@ -258,7 +282,6 @@ service TxManager(Catalog catalog)
      * of a transaction, and/or re-order transactions, in order to optimize for some combination of
      * throughput, latency, and resource constraints.
      *
-     * @param clientId  the Client's internal id
      * @param tx        the Client Transaction to assign TxIds for
      * @param readOnly  pass True to stipulate that the transaction must not mutate data
      * @param systemTx  indicates that the transaction is being conducted by the database system
@@ -266,9 +289,11 @@ service TxManager(Catalog catalog)
      *
      * @return  the "write" transaction ID to use
      */
-    Int begin(Int clientId, Client.Transaction tx, Boolean readOnly = False, Boolean systemTx = False)
+    Int begin(Client.Transaction tx, Boolean readOnly = False, Boolean systemTx = False)
         {
         checkEnabled();
+
+        Int clientId = tx.outer.id;
         assert !byClientId.contains(clientId);
 
         Int      writeId = -(++txCount);
@@ -284,19 +309,28 @@ service TxManager(Catalog catalog)
      * Attempt to commit an in-flight transaction.
      *
      * This method is intended to only be used by the [Client].
+     *
+     * @param writeId   the "write" transaction id previously returned from [begin]
+     *
+     * @return True if the transaction was committed; False if the transaction was rolled back for
+     *         any reason
      */
-    Boolean commit(Int clientId, Set<ObjectStore> enlisted)
+    Boolean commit(Int writeId)
         {
         checkEnabled();
 
         // validate the transaction
-        assert TxRecord rec := byClientId.get(clientId);
+        assert TxRecord rec := byWriteId.get(writeId) as $"Missing TxRecord for txid={writeId}";
+        assert rec.status == InFlight;
+
         Set<ObjectStore> stores = rec.enlisted;
         if (stores.empty)
             {
-            // empty transaction is committed without changing anything
-            byClientId.remove(clientId);
-            assert rec.readId == NO_TX;
+            // an empty transaction is considered committed
+            assert rec.readId == NO_TX || isWriteTx(rec.readId);
+            byWriteId.remove(writeId);
+            byClientId.remove(rec.clientId);
+            rec.status = Committed;
             return True;
             }
 
@@ -311,24 +345,47 @@ service TxManager(Catalog catalog)
      *
      * This method is intended to only be used by the [Client].
      *
-     * @param clientId  the Client's internal id
-     * @param enlisted  the ObjectStore instances that have been enlisted into the transaction
+     * @param writeId  the "write" transaction id previously returned from [begin]
      *
      * @return True iff the Transaction was rolled back
      */
-    Boolean rollback(Int clientId, Set<ObjectStore> enlisted)
+    void rollback(Int writeId)
         {
         checkEnabled();
 
         // validate the transaction
-        assert TxRecord rec := byClientId.get(clientId);
+        assert TxRecord rec := byWriteId.get(writeId) as $"Missing TxRecord for txid={writeId}";
+        assert rec.status == InFlight;
 
-        byClientId.remove(clientId);
+        Set<ObjectStore> stores = rec.enlisted;
+        if (stores.empty)
+            {
+            assert rec.readId == NO_TX || isWriteTx(rec.readId);
+            rec.status = RolledBack;
+            byWriteId.remove(writeId);
+            byClientId.remove(rec.clientId);
+            return;
+            }
 
-        return True;
+        FutureVar<Tuple<>>? completion = Null;
+        rec.status = RollingBack;
+        for (ObjectStore store : stores)
+            {
+            @Future Tuple<> result = store.rollback(writeId);
+            completion = completion?.and(&result, (Tuple<> t1, Tuple<> t2) -> Tuple:()) : &result;
+            // TODO GG completion = completion?.and(&result, (t1, t2) -> t1) : &result;
+            // TODO GG completion = completion?.and(&result, (_, _) -> Tuple:()) : &result;
+            // TODO CP completion = completion?.and(&result, (Tuple<> _, Tuple<> _) -> Tuple:()) : &result;
+            }
+
+        assert completion != Null;
+        return completion.thenDo(() ->
+            {
+            byWriteId.remove(writeId);
+            byClientId.remove(rec.clientId);
+            rec.status = RolledBack;
+            });
         }
-
-
 
 
     // ----- API for ObjectStore instances ---------------------------------------------------------
@@ -361,7 +418,7 @@ service TxManager(Catalog catalog)
         if (readId == NO_TX)
             {
             // this is the first ObjectStore enlisting for this transaction, so create a mutable
-            // array to hold all the enlisting ObjectStores, as they each enlist
+            // set to hold all the enlisting ObjectStores, as they each enlist
             assert tx.enlisted.empty;
             tx.enlisted = new HashSet<ObjectStore>();
 
@@ -393,99 +450,6 @@ service TxManager(Catalog catalog)
         checkEnabled();
         assert TxRecord tx := byWriteId.get(txId);
         return tx.clientTx.outer.worker;
-        }
-
-
-    // ----- internal ------------------------------------------------------------------------------
-
-    // REVIEW this is not used ... and has no doc
-    protected void reload()
-        {
-        }
-
-    /**
-     * Discard any record of the specified transaction.
-     *
-     * @param clientId  the Client Transaction to unregister
-     * @param enlisted  (optional) a set of ObjectStore instances that were enlisted into the
-     *                  transaction
-     */
-    protected void release(Int clientId, Set<ObjectStore>? enlisted = Null)
-        {
-        if (TxRecord rec := byClientId.get(clientId))
-            {
-            byClientId.remove(clientId);
-//
-//            if (rec.readId == oldestReadId, --oldestReadCount <= 0)
-//                {
-//                if (byClientId.empty)
-//                    {
-//                    oldestReadId    = Int.minvalue;
-//                    oldestReadCount = 0;
-//                    }
-//                else
-//                    {
-//                    // scan for the oldest read id and the number of occurrences thereof
-//                    Int newOldest = Int.maxvalue;
-//                    Int newCount  = 0;
-//                    for (TxRecord scanRec : byClientId.values)
-//                        {
-//                        Int scanId = scanRec.readId;
-//                        switch (scanId <=> newOldest)
-//                            {
-//                            case Lesser:
-//                                newOldest = scanId;
-//                                newCount  = 1;
-//                                break;
-//
-//                            case Equal:
-//                                ++newCount;
-//                                break;
-//                            }
-//                        }
-//
-//                    // store the result of the scan
-//                    assert newOldest >= 0 && newOldest != Int.maxvalue && newCount > 0;
-//                    oldestReadId    = newOldest;
-//                    oldestReadCount = newCount;
-//                    }
-//                }
-            }
-        }
-
-    /**
-     * Obtain the DBObjectInfo for the specified id.
-     *
-     * @param id  the internal object id
-     *
-     * @return the DBObjectInfo for the specified id
-     */
-    protected ObjectStore storeFor(Int id)
-        {
-        ObjectStore?[] stores = appStores;
-        Int            index  = id;
-        if (id < 0)
-            {
-            stores = sysStores;
-            index  = BuiltIn.byId(id).ordinal;
-            }
-
-        Int size = stores.size;
-        if (index < size)
-            {
-            return stores[index]?;
-            }
-
-        ObjectStore store = catalog.storeFor(id);
-
-        // save off the ObjectStore (lazy cache)
-        if (index > stores.size)
-            {
-            stores.fill(Null, stores.size..index);
-            }
-        stores[index] = store;
-
-        return store;
         }
 
 
