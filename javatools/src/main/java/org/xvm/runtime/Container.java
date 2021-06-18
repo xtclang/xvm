@@ -278,16 +278,38 @@ public abstract class Container
                 Frame.Continuation stepNext = frameCaller ->
                     {
                     ahArg[0] = xArray.createImmutableArray(clzArray, ahModules);
-                    return templateTS.construct(frame, constructor, clzTS, null, ahArg, iReturn);
+                    return saveTypeSystemHandle(frame, iReturn,
+                        templateTS.construct(frame, constructor, clzTS, null, ahArg, Op.A_STACK));
                     };
 
                 return new Utils.GetArguments(ahModules, stepNext).doNext(frame);
                 }
 
             ahArg[0] = xArray.createImmutableArray(clzArray, ahModules);
-            return templateTS.construct(frame, constructor, clzTS, null, ahArg, iReturn);
+            return saveTypeSystemHandle(frame, iReturn,
+                templateTS.construct(frame, constructor, clzTS, null, ahArg, Op.A_STACK));
             }
         return frame.assignValue(iReturn, hTS);
+        }
+
+    private int saveTypeSystemHandle(Frame frame, int iReturn, int iResult)
+        {
+        switch (iResult)
+            {
+            case Op.R_NEXT:
+                return frame.assignValue(iReturn, m_hTypeSystem = frame.popStack());
+
+            case Op.R_CALL:
+                frame.m_frameNext.addContinuation(frameCaller ->
+                    frameCaller.assignValue(iReturn, m_hTypeSystem = frameCaller.popStack()));
+                return Op.R_CALL;
+
+            case Op.R_EXCEPTION:
+                return Op.R_EXCEPTION;
+
+            default:
+                throw new IllegalStateException();
+            }
         }
 
     /**
