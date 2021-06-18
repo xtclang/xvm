@@ -157,7 +157,7 @@ public abstract class Utils
 
             case Op.R_CALL:
                 frame.m_frameNext.addContinuation(frameCaller ->
-                    frameCaller.assignValues(aiReturn, xBoolean.TRUE, frame.popStack()));
+                    frameCaller.assignValues(aiReturn, xBoolean.TRUE, frameCaller.popStack()));
                 return Op.R_CALL;
 
             case Op.R_EXCEPTION:

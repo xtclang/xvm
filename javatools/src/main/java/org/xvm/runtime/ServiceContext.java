@@ -1270,7 +1270,7 @@ public class ServiceContext
                             frameCaller ->
                                 {
                                 Utils.log(frameCaller, "\nUnhandled exception: " +
-                                    ((StringHandle) frame.popStack()).getStringValue());
+                                    ((StringHandle) frameCaller.popStack()).getStringValue());
                                 return Op.R_NEXT;
                                 }
                             );

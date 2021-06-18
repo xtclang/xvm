@@ -108,8 +108,8 @@ public class xService
                 frame.m_frameNext.addContinuation(frameCaller ->
                     {
                     ServiceHandle hService = (ServiceHandle) frameCaller.popStack();
-                    frame.f_context.setService(hService);
-                    return frame.assignValue(iReturn, hService);
+                    frameCaller.f_context.setService(hService);
+                    return frameCaller.assignValue(iReturn, hService);
                     });
                 return Op.R_CALL;
 

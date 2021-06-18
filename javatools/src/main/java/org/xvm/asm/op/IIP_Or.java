@@ -79,7 +79,7 @@ public class IIP_Or
 
             case R_CALL:
                 frame.m_frameNext.addContinuation(frameCaller ->
-                        template.assignArrayValue(frame, hTarget, lIndex, frame.popStack()));
+                    template.assignArrayValue(frameCaller, hTarget, lIndex, frameCaller.popStack()));
                 return R_CALL;
 
             case R_EXCEPTION:

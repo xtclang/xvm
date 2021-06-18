@@ -88,7 +88,7 @@ public class JumpLte
             case R_CALL:
                 frame.m_frameNext.addContinuation(frameCaller ->
                     frameCaller.popStack() == xOrdered.GREATER ?
-                        iPC + 1 : jump(frame, iPC + m_ofJmp, m_cExits));
+                        iPC + 1 : jump(frameCaller, iPC + m_ofJmp, m_cExits));
                 return R_CALL;
 
             case R_EXCEPTION:

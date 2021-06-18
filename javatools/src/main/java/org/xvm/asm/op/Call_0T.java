@@ -95,7 +95,7 @@ public class Call_0T
 
                 case R_CALL:
                     frame.m_frameNext.addContinuation(frameCaller ->
-                        frameCaller.assignTuple(m_nRetValue, frame.popStack()));
+                        frameCaller.assignTuple(m_nRetValue, frameCaller.popStack()));
                     return R_CALL;
 
                 case R_EXCEPTION:

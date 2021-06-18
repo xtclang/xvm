@@ -75,7 +75,7 @@ public class JumpNotEq
                 frame.m_frameNext.addContinuation(frameCaller ->
                     {
                     BooleanHandle hValue = (BooleanHandle) frameCaller.popStack();
-                    return hValue.get() ? iPC + 1 : jump(frame, iPC + m_ofJmp, m_cExits);
+                    return hValue.get() ? iPC + 1 : jump(frameCaller, iPC + m_ofJmp, m_cExits);
                     });
                 return R_CALL;
 
