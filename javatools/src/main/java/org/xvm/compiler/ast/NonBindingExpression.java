@@ -77,11 +77,15 @@ public class NonBindingExpression
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
-        TypeFit      fit      = TypeFit.Fit;
-        TypeConstant typeArg  = null;
-        Constant     constant = null;
+        TypeFit fit = TypeFit.Fit;
+
+        if (typeRequired == null)
+            {
+            typeRequired = pool().typeObject();
+            }
 
         TypeExpression exprOldType = this.type;
+        TypeConstant   typeArg;
         if (exprOldType == null)
             {
             // non binding expression without a specified type should fit anything
@@ -103,7 +107,7 @@ public class NonBindingExpression
                 }
             }
 
-        return finishValidation(ctx, typeRequired, typeArg, fit, constant, errs);
+        return finishValidation(ctx, typeRequired, typeArg, fit, null, errs);
         }
 
     @Override
