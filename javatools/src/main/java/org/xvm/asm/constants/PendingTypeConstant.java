@@ -125,6 +125,12 @@ public class PendingTypeConstant
         }
 
     @Override
+    public boolean containsTypeParameter(boolean fAllowParams)
+        {
+        return false;
+        }
+
+    @Override
     public boolean containsFormalType(boolean fAllowParams)
         {
         return true;
