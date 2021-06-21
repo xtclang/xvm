@@ -31,6 +31,7 @@ import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
+import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xService;
 import org.xvm.runtime.template.xService.ServiceHandle;
 
@@ -371,7 +372,8 @@ public abstract class Container
                         }
 
                     case Op.R_EXCEPTION:
-                        return new DeferredCallHandle(frame.m_hException);
+                        return new DeferredCallHandle(xException.makeHandle(frame,
+                            "Invalid resource: " + key, frame.m_hException));
 
                     default:
                         throw new IllegalStateException();
