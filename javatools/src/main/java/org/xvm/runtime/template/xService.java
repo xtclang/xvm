@@ -250,7 +250,7 @@ public class xService
             {
             case "typeSystem":
                 // since typeSystem is NOT atomic, this code always executes within the context of
-                // the service -- within the context of the container (and container == typesystem)
+                // the service -- within the context of the container (and container == typeSystem)
                 assert frame.f_context == hService.f_context;
                 return frame.f_context.f_container.ensureTypeSystemHandle(frame, iReturn);
 
