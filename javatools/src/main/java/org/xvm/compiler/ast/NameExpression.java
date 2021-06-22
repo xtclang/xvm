@@ -1659,7 +1659,7 @@ public class NameExpression
                         // TODO still some work here to
                         //      (i) save off the TargetInfo
                         //      (ii) use it in code gen
-                        //      (iii) mark the this (and out this's) as being used
+                        //      (iii) mark the this (and outer this) as being used
                         MultiMethodConstant  idMM = (MultiMethodConstant) id;
                         MultiMethodStructure mms  = (MultiMethodStructure) idMM.getComponent();
 
@@ -1682,7 +1682,7 @@ public class NameExpression
                         TypeConstant typeTarget = target.getTargetType();
                         TypeInfo     infoTarget = getTypeInfo(ctx, typeTarget, errs);
 
-                        // TODO still some work here to mark the this (and out this's) as being used
+                        // TODO still some work here to mark the this (and outer this) as being used
                         PropertyInfo prop = infoTarget.findProperty((PropertyConstant) id);
                         if (prop == null)
                             {
@@ -2323,14 +2323,13 @@ public class NameExpression
                     if (target == null)
                         {
                         typeLeft = pool.ensureAccessTypeConstant(ctx.getThisType(), Access.PRIVATE);
-                        infoProp = getTypeInfo(ctx, typeLeft, errs).findProperty(idProp);
                         }
                     else
                         {
                         idProp   = (PropertyConstant) target.getId();
                         typeLeft = target.getTargetType();
-                        infoProp = getTypeInfo(ctx, typeLeft, errs).findProperty(idProp);
                         }
+                    infoProp = getTypeInfo(ctx, typeLeft, errs).findProperty(idProp);
 
                     if (infoProp != null)
                         {
@@ -2635,6 +2634,14 @@ public class NameExpression
             }
 
         throw new IllegalStateException("arg=" + arg);
+        }
+
+    /**
+     * @return true iff this name represents a DVar register
+     */
+    public boolean isDynamicVar()
+        {
+        return m_arg instanceof Register && ((Register) m_arg).isDVar();
         }
 
     /**

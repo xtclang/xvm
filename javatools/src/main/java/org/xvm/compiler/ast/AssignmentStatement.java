@@ -178,7 +178,7 @@ public class AssignmentStatement
                 }
             if (aDecls == null)
                 {
-                aDecls = listDecls.toArray(new VariableDeclarationStatement[listDecls.size()]);
+                aDecls = listDecls.toArray(VariableDeclarationStatement.NONE);
                 }
             }
 
@@ -500,6 +500,16 @@ public class AssignmentStatement
                         ctx = ctx.enterInferring(typeLeft);
                         }
 
+                    if (exprLeft instanceof NameExpression &&
+                            ((NameExpression) exprLeft).isDynamicVar())
+                        {
+                        // test for a future assignment first
+                        TypeConstant typeFuture = pool.ensureFutureVar(typeLeft);
+                        if (exprRight.testFit(ctx, typeFuture, null).isFit())
+                            {
+                            typeLeft = typeFuture;
+                            }
+                        }
                     exprRightNew = exprRight.validate(ctx, typeLeft, errs);
 
                     if (fInfer)
