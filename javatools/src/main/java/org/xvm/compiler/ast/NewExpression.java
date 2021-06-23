@@ -702,13 +702,15 @@ public class NewExpression
                 if (idConstruct == null)
                     {
                     // as the last resort, validate the arguments before looking for the method again
-                    TypeConstant[] atypeArgs = validateExpressions(ctx, listArgs, null, errs);
+                    ErrorListener  errsTemp2 = errs.branch();
+                    TypeConstant[] atypeArgs = validateExpressions(ctx, listArgs, null, errsTemp2);
                     if (atypeArgs == null)
                         {
                         errsTemp.merge();
                         }
                     else
                         {
+                        errsTemp2.merge(); // may have warnings
                         idConstruct = findMethod(ctx, typeTarget, infoTarget, "construct", listArgs,
                                         MethodKind.Constructor, true, false, null, errs);
                         }

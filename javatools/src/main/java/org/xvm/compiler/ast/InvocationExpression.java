@@ -737,12 +737,14 @@ public class InvocationExpression
             if (argMethod == null)
                 {
                 // as the last resort, validate the arguments before trying to resolve the name again
-                TypeConstant[] atypeArgs = validateExpressions(ctx, listArgs, null, errs);
+                ErrorListener  errsTemp2 = errs.branch();
+                TypeConstant[] atypeArgs = validateExpressions(ctx, listArgs, null, errsTemp2);
                 if (atypeArgs == null)
                     {
                     errsTemp.merge();
                     return null;
                     }
+                errsTemp2.merge(); // may have warnings
 
                 argMethod = resolveName(ctx, true, typeLeft, atypeReturn, errs);
                 if (argMethod == null)
