@@ -3571,7 +3571,7 @@ public class Parser
                 IgnoredNameExpression exprIgnore = new IgnoredNameExpression(current());
                 return peek().getId() == Id.LAMBDA
                         ? new LambdaExpression(Collections.singletonList(exprIgnore),
-                            expect(Id.LAMBDA), parseLambdaBody(), prev().getStartPosition())
+                            expect(Id.LAMBDA), parseLambdaBody(), exprIgnore.getStartPosition())
                         : exprIgnore;
                 }
 
@@ -3642,7 +3642,7 @@ public class Parser
                 if (fNormal && peek().getId() == Id.LAMBDA)
                     {
                     return new LambdaExpression(Collections.singletonList(new NameExpression(name)),
-                            expect(Id.LAMBDA), parseLambdaBody(), prev().getStartPosition());
+                            expect(Id.LAMBDA), parseLambdaBody(), name.getStartPosition());
                     }
 
                 // the no-de-ref goes with the construct if there is a construct, not with the name
