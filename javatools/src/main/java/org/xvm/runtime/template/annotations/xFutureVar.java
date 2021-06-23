@@ -63,15 +63,19 @@ public class xFutureVar
         ClassConstant idMixin  = (ClassConstant) f_struct.getIdentityConstant();
         Annotation    anno     = pool.ensureAnnotation(idMixin);
         TypeConstant  typeVar  = xVar.INSTANCE.getCanonicalType();
-        TYPE = pool.ensureAnnotatedTypeConstant(typeVar, anno);
 
+        TYPE       = pool.ensureAnnotatedTypeConstant(typeVar, anno);
         COMPLETION = (xEnum) f_templates.getTemplate("annotations.FutureVar.Completion");
 
         markNativeMethod("thenDo", null, null);
         markNativeMethod("passTo", null, null);
         markNativeMethod("transform", null, null);
         markNativeMethod("handle", null, null);
+        markNativeMethod("transformOrHandle", null, null);
         markNativeMethod("whenComplete", null, null);
+
+        markNativeMethod("and", null, null);
+        markNativeMethod("or", null, null);
 
         markNativeMethod("get", VOID, null);
         markNativeMethod("set", null, VOID);
@@ -164,6 +168,9 @@ public class xFutureVar
             case "handle":
                 return invokeHandle(frame, hThis, (FunctionHandle) hArg, iReturn);
 
+            case "or":
+                return invokeOrFuture(frame, hThis, (FutureHandle) hArg, iReturn);
+
             case "whenComplete":
                 return invokeWhenComplete(frame, hThis, (FunctionHandle) hArg, iReturn);
             }
@@ -180,8 +187,16 @@ public class xFutureVar
         switch (method.getName())
             {
             case "transform":
-                return invokeTransform(
-                    frame, hThis, (TypeHandle) ahArg[0], (FunctionHandle) ahArg[1], iReturn);
+                return invokeTransform(frame, hThis, (TypeHandle) ahArg[0],
+                        (FunctionHandle) ahArg[1], iReturn);
+
+            case "transformOrHandle":
+                return invokeTransformOrHandle(frame, hThis, (TypeHandle) ahArg[0],
+                        (FunctionHandle) ahArg[1], iReturn);
+
+            case "and":
+                return invokeAndFuture(frame, hThis, (TypeHandle) ahArg[0], (TypeHandle) ahArg[1],
+                        (FutureHandle) ahArg[2], (FunctionHandle) ahArg[3], iReturn);
             }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
@@ -196,11 +211,11 @@ public class xFutureVar
 
         if (cf.isDone())
             {
-            ObjectHandle[] ahArg = extractResult(frame, cf);
-            if (ahArg[1] != xNullable.NULL)
+            ObjectHandle[] ahR = extractResult(frame, cf);
+            if (ahR[1] != xNullable.NULL)
                 {
                 // the future terminated exceptionally; re-throw it
-                return frame.raiseException((ExceptionHandle) ahArg[1]);
+                return frame.raiseException((ExceptionHandle) ahR[1]);
                 }
 
             switch (hRun.call1(frame, null, Utils.OBJECTS_NONE, Op.A_IGNORE))
@@ -253,16 +268,16 @@ public class xFutureVar
 
         if (cf.isDone())
             {
-            ObjectHandle[] ahArg = extractResult(frame, cf);
-            if (ahArg[1] != xNullable.NULL)
+            ObjectHandle[] ahR = extractResult(frame, cf);
+            if (ahR[1] != xNullable.NULL)
                 {
                 // the future terminated exceptionally; re-throw it
-                return frame.raiseException((ExceptionHandle) ahArg[1]);
+                return frame.raiseException((ExceptionHandle) ahR[1]);
                 }
 
-            ahArg[1] = null; // the consumer doesn't need it
+            ahR[1] = null; // the consumer doesn't need it
 
-            switch (hConsume.call1(frame, null, ahArg, Op.A_IGNORE))
+            switch (hConsume.call1(frame, null, ahR, Op.A_IGNORE))
                 {
                 case Op.R_NEXT:
                     // we can return the same handle since it's completed
@@ -304,7 +319,7 @@ public class xFutureVar
         }
 
     /**
-     * Implementation of <NewType> FutureVar!<NewType> transform(function NewType (Referent) convert)"
+     * Implementation of "<NewType> FutureVar!<NewType> transform(function NewType (Referent) convert)"
      */
     protected int invokeTransform(Frame frame, FutureHandle hThis, TypeHandle hNewType,
                                   FunctionHandle hConvert, int iReturn)
@@ -314,16 +329,16 @@ public class xFutureVar
 
         if (cf.isDone())
             {
-            ObjectHandle[] ahArg = extractResult(frame, cf);
-            if (ahArg[1] != xNullable.NULL)
+            ObjectHandle[] ahR = extractResult(frame, cf);
+            if (ahR[1] != xNullable.NULL)
                 {
                 // the future terminated exceptionally; re-throw it
-                return frame.raiseException((ExceptionHandle) ahArg[1]);
+                return frame.raiseException((ExceptionHandle) ahR[1]);
                 }
 
-            ahArg[1] = null; // the converter doesn't need it
+            ahR[1] = null; // the converter doesn't need it
 
-            switch (hConvert.call1(frame, null, ahArg, Op.A_STACK))
+            switch (hConvert.call1(frame, null, ahR, Op.A_STACK))
                 {
                 case Op.R_NEXT:
                     return frame.assignValue(iReturn, makeHandle(clzTrans,
@@ -332,7 +347,7 @@ public class xFutureVar
                 case Op.R_CALL:
                     frame.m_frameNext.addContinuation(frameCaller ->
                         frameCaller.assignValue(iReturn, makeHandle(clzTrans,
-                            CompletableFuture.completedFuture(frame.popStack()))));
+                            CompletableFuture.completedFuture(frameCaller.popStack()))));
                     return Op.R_CALL;
 
                 case Op.R_EXCEPTION:
@@ -380,13 +395,13 @@ public class xFutureVar
                 return frame.assignValue(iReturn, hThis);
                 }
 
-            ObjectHandle[] ahArg = extractResult(frame, cf);
-            assert ahArg[0] == xNullable.NULL;
+            ObjectHandle[] ahR = extractResult(frame, cf);
+            assert ahR[0] == xNullable.NULL;
 
-            ahArg[0] = ahArg[1]; // hException
-            ahArg[1] = null;
+            ahR[0] = ahR[1]; // hException
+            ahR[1] = null;
 
-            switch (hConvert.call1(frame, null, ahArg, Op.A_STACK))
+            switch (hConvert.call1(frame, null, ahR, Op.A_STACK))
                 {
                 case Op.R_NEXT:
                     return frame.assignValue(iReturn, makeHandle(clzHandle,
@@ -430,6 +445,159 @@ public class xFutureVar
         }
 
     /**
+     * Implementation of "<NewType> FutureVar!<NewType>
+     *                      transformOrHandle(function NewType (Referent?, Exception?) convert)"
+     */
+    protected int invokeTransformOrHandle(Frame frame, FutureHandle hThis, TypeHandle hNewType,
+                                          FunctionHandle hConvert, int iReturn)
+        {
+        CompletableFuture<ObjectHandle> cf       = hThis.m_future;
+        TypeComposition                 clzTrans = frame.ensureClass(hNewType.getDataType());
+
+        if (cf.isDone())
+            {
+            ObjectHandle[] ahR = extractResult(frame, cf);
+
+            switch (hConvert.call1(frame, null, ahR, Op.A_STACK))
+                {
+                case Op.R_NEXT:
+                    return frame.assignValue(iReturn, makeHandle(clzTrans,
+                            CompletableFuture.completedFuture(frame.popStack())));
+
+                case Op.R_CALL:
+                    frame.m_frameNext.addContinuation(frameCaller ->
+                        frameCaller.assignValue(iReturn, makeHandle(clzTrans,
+                            CompletableFuture.completedFuture(frameCaller.popStack()))));
+                    return Op.R_CALL;
+
+                case Op.R_EXCEPTION:
+                    return Op.R_EXCEPTION;
+
+                default:
+                    throw new IllegalStateException();
+                }
+            }
+        else
+            {
+            FutureHandle hTrans = makeHandle(clzTrans, new CompletableFuture<>());
+
+            cf.whenComplete((hR, ex) ->
+                {
+                CompletableFuture<ObjectHandle> cfTrans =
+                        frame.f_context.postRequest(frame, hConvert, combineResult(hR, ex), 1);
+
+                cfTrans.whenComplete((hNew, exTrans) ->
+                        hTrans.assign(hNew, (WrapperException) exTrans));
+                });
+            return frame.assignValue(iReturn, hTrans);
+            }
+        }
+
+    /**
+     * Implementation of "<OtherType, NewType> FutureVar!<NewType> and(FutureVar!<OtherType> other,
+     *                      function NewType (Referent, OtherType) combine)"
+     */
+    protected int invokeAndFuture(Frame frame, FutureHandle hThis,
+                                  TypeHandle hOtherType, TypeHandle hNewType,
+                                  FutureHandle hThat, FunctionHandle hCombine, int iReturn)
+        {
+        CompletableFuture<ObjectHandle> cfThis = hThis.m_future;
+        CompletableFuture<ObjectHandle> cfThat = hThat.m_future;
+        TypeComposition                 clzAnd = frame.ensureClass(hNewType.getDataType());
+
+        if (cfThis.isDone() && cfThat.isDone())
+            {
+            ObjectHandle[] ahRThis = extractResult(frame, cfThis);
+            ObjectHandle[] ahRThat = extractResult(frame, cfThis);
+
+            if (ahRThis[1] != xNullable.NULL)
+                {
+                return frame.raiseException((ExceptionHandle) ahRThis[1]);
+                }
+            if (ahRThat[1] != xNullable.NULL)
+                {
+                return frame.raiseException((ExceptionHandle) ahRThat[1]);
+                }
+
+            ObjectHandle[] ahArg = new ObjectHandle[] {ahRThis[0], ahRThat[0]};
+
+            switch (hCombine.call1(frame, null, ahArg, Op.A_STACK))
+                {
+                case Op.R_NEXT:
+                    return frame.assignValue(iReturn, makeHandle(clzAnd,
+                            CompletableFuture.completedFuture(frame.popStack())));
+
+                case Op.R_CALL:
+                    frame.m_frameNext.addContinuation(frameCaller ->
+                        frameCaller.assignValue(iReturn, makeHandle(clzAnd,
+                            CompletableFuture.completedFuture(frameCaller.popStack()))));
+                    return Op.R_CALL;
+
+                case Op.R_EXCEPTION:
+                    return Op.R_EXCEPTION;
+
+                default:
+                    throw new IllegalStateException();
+                }
+            }
+        else
+            {
+            FutureHandle hAnd = makeHandle(clzAnd, new CompletableFuture<>());
+
+            CompletableFuture.allOf(cfThis, cfThat).whenComplete((_null, ex) ->
+                {
+                if (ex == null)
+                    {
+                    ObjectHandle[] ahArg = new ObjectHandle[2];
+                    try
+                        {
+                        ahArg[0] = cfThis.get();
+                        ahArg[1] = cfThat.get();
+                        }
+                    catch (Throwable e)
+                        {
+                        // must not happen
+                        }
+
+                    CompletableFuture<ObjectHandle> cfAnd =
+                            frame.f_context.postRequest(frame, hCombine, ahArg, 1);
+
+                    cfAnd.whenComplete((hNew, exTrans) ->
+                            hAnd.assign(hNew, (WrapperException) exTrans));
+                    }
+                else
+                    {
+                    hAnd.assign(null, (WrapperException) ex);
+                    }
+                });
+            return frame.assignValue(iReturn, hAnd);
+            }
+        }
+
+    /**
+     * Implementation of "FutureVar!<Referent> or(FutureVar!<Referent> other)"
+     */
+    protected int invokeOrFuture(Frame frame, FutureHandle hThis, FutureHandle hThat, int iReturn)
+        {
+        CompletableFuture<ObjectHandle> cfThis = hThis.m_future;
+        CompletableFuture<ObjectHandle> cfThat = hThat.m_future;
+
+        if (cfThis.isDone())
+            {
+            return frame.assignValue(iReturn, hThis);
+            }
+
+        if (cfThat.isDone())
+            {
+            return frame.assignValue(iReturn, hThat);
+            }
+
+        CompletableFuture cfAny = CompletableFuture.anyOf(cfThis, cfThat);
+
+        return frame.assignValue(iReturn, makeHandle(hThis.getComposition(), cfAny));
+        }
+
+    /**
      * Implementation of "FutureVar!<Referent> whenComplete(function void (Referent?, Exception?) notify)"
      */
     protected int invokeWhenComplete(Frame frame, FutureHandle hThis, FunctionHandle hNotify, int iReturn)
@@ -438,9 +606,9 @@ public class xFutureVar
 
         if (cf.isDone())
             {
-            ObjectHandle[] ahArg = extractResult(frame, cf);
+            ObjectHandle[] ahR = extractResult(frame, cf);
 
-            switch (hNotify.call1(frame, null, ahArg, Op.A_IGNORE))
+            switch (hNotify.call1(frame, null, ahR, Op.A_IGNORE))
                 {
                 case Op.R_NEXT:
                     // we can return the same handle since it's completed
@@ -484,11 +652,11 @@ public class xFutureVar
      */
     protected ObjectHandle[] extractResult(Frame frame, CompletableFuture<ObjectHandle> cf)
         {
-        ObjectHandle[] ahArg = new ObjectHandle[2];
+        ObjectHandle[] ahR = new ObjectHandle[2];
         try
             {
-            ahArg[0] = cf.get();
-            ahArg[1] = xNullable.NULL;
+            ahR[0] = cf.get();
+            ahR[1] = xNullable.NULL;
             }
         catch (Throwable e)
             {
@@ -505,10 +673,10 @@ public class xFutureVar
                 {
                 hException = xException.makeHandle(frame, "interrupted");
                 }
-            ahArg[0] = xNullable.NULL;
-            ahArg[1] = hException;
+            ahR[0] = xNullable.NULL;
+            ahR[1] = hException;
             }
-        return ahArg;
+        return ahR;
         }
 
     /**
@@ -701,7 +869,7 @@ public class xFutureVar
         }
 
 
-    // ----- the handle -----
+    // ----- ObjectHandle --------------------------------------------------------------------------
 
     public static class FutureHandle
             extends RefHandle
@@ -746,20 +914,18 @@ public class xFutureVar
 
             if (cf.isDone())
                 {
-                throw new IllegalStateException("TODO");
+                return Op.R_NEXT;
+                }
+
+            if (ex == null)
+                {
+                cf.complete(hValue);
+                return Op.R_NEXT;
                 }
             else
                 {
-                if (ex == null)
-                    {
-                    cf.complete(hValue);
-                    return Op.R_NEXT;
-                    }
-                else
-                    {
-                    cf.completeExceptionally(ex);
-                    return Op.R_EXCEPTION;
-                    }
+                cf.completeExceptionally(ex);
+                return Op.R_EXCEPTION;
                 }
             }
 

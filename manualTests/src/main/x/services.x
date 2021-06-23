@@ -18,10 +18,10 @@ module TestServices
         console.println($"{tag()} async/wait-style result={n}");
 
         Int n0 = svc.terminateExceptionally^("n0");
-        &n0.whenComplete((n, e) ->
+        &n0.handle(e ->
             {
-            assert e != Null;
             console.println($"{tag()} 4. expected exception={e.text}");
+            return -1;
             });
 
         try
@@ -46,10 +46,10 @@ module TestServices
             }
 
         assert &n2.assigned;
-        &n2.whenComplete((n, e) ->
+        &n2.handle(e ->
             {
-            assert e != Null;
             console.println($"{tag()} 3. expected exception={e.text}");
+            return -1;
             });
 
         @Inject Timer timer;
@@ -57,7 +57,7 @@ module TestServices
         Loop: for (TestService each : svcs)
             {
             val i = Loop.count;
-            each.spin^(10_000).whenComplete((n, e) ->
+            each.spin^(10_000).passTo(n ->
                 {
                 // TODO CP console.println($"{tag()} spin {Loop.count} yielded {n}; took {timer.elapsed.milliseconds} ms");
                 console.println($"{tag()} spin {i} yielded {n}; took {timer.elapsed.milliseconds} ms");

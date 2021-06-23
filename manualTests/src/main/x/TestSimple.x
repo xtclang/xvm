@@ -6,11 +6,14 @@ module TestSimple.test.org
         {
         TestService svc = new TestService();
 
-        console.println(testThenDo(svc));
-        console.println(testPassTo(svc));
-        console.println(testTransform(svc));
-        console.println(testHandle(svc));
-        console.println(testWhen(svc));
+//        console.println(testThenDo(svc));
+//        console.println(testPassTo(svc));
+//        console.println(testTransform(svc));
+        console.println(testTransformOrHandle(svc));
+//        console.println(testHandle(svc));
+//        console.println(testWhen(svc));
+//        console.println(testOr(svc));
+        console.println(testAnd(svc));
         }
 
     Int testThenDo(TestService svc)
@@ -46,6 +49,17 @@ module TestSimple.test.org
         return i1;
         }
 
+    Int testTransformOrHandle(TestService svc)
+        {
+        @Future Int    i1 = svc.spin(1000);
+        @Future Int    i2 = &i1.passTo((r) -> report(-r));
+        @Future String s2 = &i2.transformOrHandle((r, e) ->
+                                e == Null ? $"transform {r}" : $"handle {e.text}");
+
+        console.println(s2);
+        return i1;
+        }
+
     Int testHandle(TestService svc)
         {
         @Future Int i1 = svc.spin(1000);
@@ -66,6 +80,30 @@ module TestSimple.test.org
 
         return result;
         }
+
+    Int testOr(TestService svc)
+        {
+        @Future Int i1 = svc.calcSomethingBig(Duration.ofMillis(200));
+        @Future Int i2 = svc.calcSomethingBig(Duration.ofMillis(100));
+
+        @Future Int i3 = &i1.or(&i2);
+        @Future Int i4 = &i3.passTo((r) -> report(r));
+
+        return i4;
+        }
+
+    Int testAnd(TestService svc)
+        {
+        @Future Int i1 = svc.spin(1000);
+        @Future Int i2 = svc.calcSomethingBig(Duration.ofMillis(100));
+
+        function Int (Int, Int) combine = (r1, r2) -> (r1 + r2);
+        @Future Int i3 = &i1.and(&i2, combine);
+        @Future Int i4 = &i3.passTo((r) -> report(r));
+
+        return i4;
+        }
+
     void report(Int n)
         {
         if (n < 0)
@@ -85,7 +123,7 @@ module TestSimple.test.org
             @Future Int   result;
             timer.schedule(delay, () ->
                 {
-                result=delay.seconds;
+                result=delay.milliseconds;
                 });
 
             return result;
