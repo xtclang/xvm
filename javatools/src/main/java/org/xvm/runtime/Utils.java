@@ -83,16 +83,11 @@ public abstract class Utils
      * @param ahArg  the array of arguments
      * @param cVars  the desired array size
      *
-     * @return the array of the desired size containing all the arguments
+     * @return the array of no less than the desired size containing all the arguments
      */
     public static ObjectHandle[] ensureSize(ObjectHandle[] ahArg, int cVars)
         {
         int cArgs = ahArg.length;
-        if (cArgs == cVars)
-            {
-            return ahArg;
-            }
-
         if (cArgs < cVars)
             {
             ObjectHandle[] ahVar = new ObjectHandle[cVars];
@@ -100,8 +95,7 @@ public abstract class Utils
             return ahVar;
             }
 
-        throw new IllegalArgumentException("Requested size " + cVars +
-            " is less than the array size " + cArgs);
+        return ahArg;
         }
 
     /**
@@ -883,7 +877,7 @@ public abstract class Utils
                     {
                     assert frame.f_aiReturn == null;
 
-                    boolean      fNoReentrancy = frame.f_iReturn == Op.A_BLOCK;
+                    boolean      fNoReentrancy = frame.f_iReturn == A_BLOCK;
                     FutureHandle hFuture       = (FutureHandle) frame.f_ahVar[0];
 
                     return hFuture.isAssigned()

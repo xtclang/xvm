@@ -179,19 +179,9 @@ public class xService
         switch (method.getName())
             {
             case "callLater":
-                {
-                switch (hService.f_context.callLater((FunctionHandle) hArg, Utils.OBJECTS_NONE, false))
-                    {
-                    case Op.R_NEXT:
-                        return Op.R_NEXT;
-
-                    case Op.R_EXCEPTION:
-                        return frame.raiseException(xException.serviceTerminated(frame, f_sName));
-
-                    default:
-                        throw new IllegalStateException();
-                    }
-                }
+                return hService.f_context.callLater((FunctionHandle) hArg, Utils.OBJECTS_NONE) == null
+                        ? frame.raiseException(xException.serviceTerminated(frame, f_sName))
+                        : Op.R_NEXT;
 
             case "registerTimeout":
                 if (frame.f_context == hService.f_context)

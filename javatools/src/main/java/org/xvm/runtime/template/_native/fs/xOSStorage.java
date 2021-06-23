@@ -378,7 +378,7 @@ public class xOSStorage
                     {
                     hPathDir, hPathNode, xBoolean.TRUE, xInt64.makeHandle(iKind)
                     };
-                context.hStorage.f_context.callLater(hfnOnEvent, ahArg, true);
+                context.hStorage.f_context.callLater(hfnOnEvent, ahArg);
                 }
             key.reset();
             }

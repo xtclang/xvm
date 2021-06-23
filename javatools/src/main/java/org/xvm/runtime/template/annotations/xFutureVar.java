@@ -17,7 +17,6 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHandle.DeferredFunctionCall;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle.WrapperException;
 import org.xvm.runtime.TypeComposition;
@@ -31,9 +30,10 @@ import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xService.ServiceHandle;
 
-import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
-
 import org.xvm.runtime.template.reflect.xVar;
+
+import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
+import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
 
 /**
@@ -67,10 +67,11 @@ public class xFutureVar
 
         COMPLETION = (xEnum) f_templates.getTemplate("annotations.FutureVar.Completion");
 
-        markNativeMethod("handle", null, null);
-        markNativeMethod("whenComplete", null, null);
         markNativeMethod("thenDo", null, null);
         markNativeMethod("passTo", null, null);
+        markNativeMethod("transform", null, null);
+        markNativeMethod("handle", null, null);
+        markNativeMethod("whenComplete", null, null);
 
         markNativeMethod("get", VOID, null);
         markNativeMethod("set", null, VOID);
@@ -92,8 +93,8 @@ public class xFutureVar
     @Override
     public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
         {
-        FutureHandle      hThis = (FutureHandle) hTarget;
-        CompletableFuture cf    = hThis.m_future;
+        FutureHandle                    hThis = (FutureHandle) hTarget;
+        CompletableFuture<ObjectHandle> cf    = hThis.m_future;
 
         switch (sPropName)
             {
@@ -114,9 +115,8 @@ public class xFutureVar
                         Throwable eOrig = e.getCause();
                         if (eOrig instanceof WrapperException)
                             {
-                            ExceptionHandle hException =
-                                    ((WrapperException) eOrig).getExceptionHandle();
-                            return frame.assignValue(iReturn, hException);
+                            return frame.assignValue(iReturn,
+                                    ((WrapperException) eOrig).getExceptionHandle());
                             }
                         throw new UnsupportedOperationException("Unexpected exception", e);
                         }
@@ -171,12 +171,29 @@ public class xFutureVar
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
         }
 
+    @Override
+    public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                             ObjectHandle[] ahArg, int iReturn)
+        {
+        FutureHandle hThis = (FutureHandle) hTarget;
+
+        switch (method.getName())
+            {
+            case "transform":
+                return invokeTransform(
+                    frame, hThis, (TypeHandle) ahArg[0], (FunctionHandle) ahArg[1], iReturn);
+            }
+
+        return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
+        }
+
     /**
      * Implementation of "FutureVar! thenDo(function void () run)"
      */
     protected int invokeThenDo(Frame frame, FutureHandle hThis, FunctionHandle hRun, int iReturn)
         {
         CompletableFuture<ObjectHandle> cf = hThis.m_future;
+
         if (cf.isDone())
             {
             ObjectHandle[] ahArg = extractResult(frame, cf);
@@ -206,10 +223,24 @@ public class xFutureVar
             }
         else
             {
-            CompletableFuture cf0 = cf.thenRun(() ->
-                frame.f_context.callLater(hRun, Utils.OBJECTS_NONE, false));
+            FutureHandle hThen = makeHandle(hThis.getComposition(), new CompletableFuture<>());
 
-            return frame.assignValue(iReturn, makeHandle(hThis.getComposition(), cf0));
+            cf.whenComplete((hR, ex) ->
+                {
+                if (ex == null)
+                    {
+                    CompletableFuture<ObjectHandle> cfThen =
+                            frame.f_context.postRequest(frame, hRun, Utils.OBJECTS_NONE, 0);
+
+                    cfThen.whenComplete((hVoid, exThen) ->
+                            hThen.assign(hR, (WrapperException) exThen));
+                    }
+                else
+                    {
+                    hThen.assign(null, (WrapperException) ex);
+                    }
+                });
+            return frame.assignValue(iReturn, hThen);
             }
         }
 
@@ -219,6 +250,7 @@ public class xFutureVar
     protected int invokePassTo(Frame frame, FutureHandle hThis, FunctionHandle hConsume, int iReturn)
         {
         CompletableFuture<ObjectHandle> cf = hThis.m_future;
+
         if (cf.isDone())
             {
             ObjectHandle[] ahArg = extractResult(frame, cf);
@@ -250,10 +282,86 @@ public class xFutureVar
             }
         else
             {
-            CompletableFuture cf0 = cf.thenAccept(hR ->
-                frame.f_context.callLater(hConsume, new ObjectHandle[] {hR}, false));
+            FutureHandle hPass = makeHandle(hThis.getComposition(), new CompletableFuture<>());
 
-            return frame.assignValue(iReturn, makeHandle(hThis.getComposition(), cf0));
+            cf.whenComplete((hR, ex) ->
+                {
+                if (ex == null)
+                    {
+                    CompletableFuture<ObjectHandle> cfPass =
+                            frame.f_context.postRequest(frame, hConsume, new ObjectHandle[] {hR}, 0);
+
+                    cfPass.whenComplete((hVoid, exPass) ->
+                            hPass.assign(hR, (WrapperException) exPass));
+                    }
+                else
+                    {
+                    hPass.assign(null, (WrapperException) ex);
+                    }
+                });
+            return frame.assignValue(iReturn, hPass);
+            }
+        }
+
+    /**
+     * Implementation of <NewType> FutureVar!<NewType> transform(function NewType (Referent) convert)"
+     */
+    protected int invokeTransform(Frame frame, FutureHandle hThis, TypeHandle hNewType,
+                                  FunctionHandle hConvert, int iReturn)
+        {
+        CompletableFuture<ObjectHandle> cf       = hThis.m_future;
+        TypeComposition                 clzTrans = frame.ensureClass(hNewType.getDataType());
+
+        if (cf.isDone())
+            {
+            ObjectHandle[] ahArg = extractResult(frame, cf);
+            if (ahArg[1] != xNullable.NULL)
+                {
+                // the future terminated exceptionally; re-throw it
+                return frame.raiseException((ExceptionHandle) ahArg[1]);
+                }
+
+            ahArg[1] = null; // the converter doesn't need it
+
+            switch (hConvert.call1(frame, null, ahArg, Op.A_STACK))
+                {
+                case Op.R_NEXT:
+                    return frame.assignValue(iReturn, makeHandle(clzTrans,
+                            CompletableFuture.completedFuture(frame.popStack())));
+
+                case Op.R_CALL:
+                    frame.m_frameNext.addContinuation(frameCaller ->
+                        frameCaller.assignValue(iReturn, makeHandle(clzTrans,
+                            CompletableFuture.completedFuture(frame.popStack()))));
+                    return Op.R_CALL;
+
+                case Op.R_EXCEPTION:
+                    return Op.R_EXCEPTION;
+
+                default:
+                    throw new IllegalStateException();
+                }
+            }
+        else
+            {
+            FutureHandle hTrans = makeHandle(clzTrans, new CompletableFuture<>());
+
+            cf.whenComplete((hR, ex) ->
+                {
+                if (ex == null)
+                    {
+                    CompletableFuture<ObjectHandle> cfTrans =
+                            frame.f_context.postRequest(frame, hConvert, new ObjectHandle[] {hR}, 1);
+
+                    cfTrans.whenComplete((hNew, exTrans) ->
+                            hTrans.assign(hNew, (WrapperException) exTrans));
+                    }
+                else
+                    {
+                    hTrans.assign(null, (WrapperException) ex);
+                    }
+                });
+            return frame.assignValue(iReturn, hTrans);
             }
         }
 
@@ -262,7 +370,9 @@ public class xFutureVar
      */
     protected int invokeHandle(Frame frame, FutureHandle hThis, FunctionHandle hConvert, int iReturn)
         {
-        CompletableFuture<ObjectHandle> cf = hThis.m_future;
+        CompletableFuture<ObjectHandle> cf        = hThis.m_future;
+        TypeComposition                 clzHandle = hThis.getComposition();
+
         if (cf.isDone())
             {
             if (!cf.isCompletedExceptionally())
@@ -279,12 +389,12 @@ public class xFutureVar
             switch (hConvert.call1(frame, null, ahArg, Op.A_STACK))
                 {
                 case Op.R_NEXT:
-                    return frame.assignValue(iReturn, makeHandle(hThis.getComposition(),
+                    return frame.assignValue(iReturn, makeHandle(clzHandle,
                         CompletableFuture.completedFuture(frame.popStack())));
 
                 case Op.R_CALL:
                     frame.m_frameNext.addContinuation(frameCaller ->
-                        frameCaller.assignValue(iReturn, makeHandle(hThis.getComposition(),
+                        frameCaller.assignValue(iReturn, makeHandle(clzHandle,
                             CompletableFuture.completedFuture(frameCaller.popStack()))));
                     return Op.R_CALL;
 
@@ -297,13 +407,25 @@ public class xFutureVar
             }
         else
             {
-            CompletableFuture<ObjectHandle> cf0 = cf.handle((hR, e) ->
-                e == null
-                    ? hR
-                    : new DeferredFunctionCall(hConvert.bindArguments(
-                            ((WrapperException) e).getExceptionHandle())));
+            FutureHandle hHandle = makeHandle(clzHandle, new CompletableFuture<>());
 
-            return frame.assignValue(iReturn, makeHandle(hThis.getComposition(), cf0));
+            cf.whenComplete((hR, ex) ->
+                {
+                if (ex == null)
+                    {
+                    hHandle.assign(hR, null);
+                    }
+                else
+                    {
+                    ExceptionHandle hEx = ((WrapperException) ex).getExceptionHandle();
+                    CompletableFuture<ObjectHandle> cfTrans =
+                            frame.f_context.postRequest(frame, hConvert, new ObjectHandle[] {hEx}, 1);
+
+                    cfTrans.whenComplete((hNew, exTrans) ->
+                            hHandle.assign(hNew, (WrapperException) exTrans));
+                    }
+                });
+            return frame.assignValue(iReturn, hHandle);
             }
         }
 
@@ -313,6 +435,7 @@ public class xFutureVar
     protected int invokeWhenComplete(Frame frame, FutureHandle hThis, FunctionHandle hNotify, int iReturn)
         {
         CompletableFuture<ObjectHandle> cf = hThis.m_future;
+
         if (cf.isDone())
             {
             ObjectHandle[] ahArg = extractResult(frame, cf);
@@ -325,7 +448,7 @@ public class xFutureVar
 
                 case Op.R_CALL:
                     frame.m_frameNext.addContinuation(frameCaller ->
-                        frameCaller.assignValue(iReturn, hThis));
+                            frameCaller.assignValue(iReturn, hThis));
                     return Op.R_CALL;
 
                 case Op.R_EXCEPTION:
@@ -337,11 +460,17 @@ public class xFutureVar
             }
         else
             {
-            CompletableFuture<ObjectHandle> cf0 = cf.whenComplete((hR, e) ->
-                frame.f_context.callLater(hNotify, combineResult(hR, e), false));
+            FutureHandle hWhen = makeHandle(hThis.getComposition(), new CompletableFuture<>());
 
-            // TODO GG: how to calculate the return handle type composition?
-            return frame.assignValue(iReturn, makeHandle(cf0));
+            cf.whenComplete((hR, ex) ->
+                {
+                CompletableFuture<ObjectHandle> cfWhen =
+                        frame.f_context.postRequest(frame, hNotify, combineResult(hR, ex), 0);
+
+                cfWhen.whenComplete((hVoid, exWhen) ->
+                        hWhen.assign(hR, (WrapperException) exWhen));
+                });
+            return frame.assignValue(iReturn, hWhen);
             }
         }
 
@@ -605,6 +734,33 @@ public class xFutureVar
         public boolean isCompletedNormally()
             {
             return m_future != null && m_future.isDone() && !m_future.isCompletedExceptionally();
+            }
+
+        public int assign(ObjectHandle hValue, WrapperException ex)
+            {
+            CompletableFuture<ObjectHandle> cf = m_future;
+            if (cf == null)
+                {
+                m_future = new CompletableFuture<>();
+                }
+
+            if (cf.isDone())
+                {
+                throw new IllegalStateException("TODO");
+                }
+            else
+                {
+                if (ex == null)
+                    {
+                    cf.complete(hValue);
+                    return Op.R_NEXT;
+                    }
+                else
+                    {
+                    cf.completeExceptionally(ex);
+                    return Op.R_EXCEPTION;
+                    }
+                }
             }
 
         /**

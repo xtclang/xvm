@@ -101,7 +101,7 @@ public class CoreContainer
                         : chain.invoke(frame, hModule, ahArg, Op.A_IGNORE);
                 });
 
-            m_contextMain.callLater(hInstantiateModuleAndRun, Utils.OBJECTS_NONE, false);
+            m_contextMain.callLater(hInstantiateModuleAndRun, Utils.OBJECTS_NONE);
             }
         catch (Exception e)
             {

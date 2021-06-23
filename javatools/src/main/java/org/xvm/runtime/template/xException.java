@@ -164,6 +164,11 @@ public class xException
         return makeHandle(frame, s_clzTimedOut, sMs);
         }
 
+    public static ExceptionHandle unassignedValue(Frame frame, String sName)
+        {
+        return illegalState(frame, "Unassigned value: \"" + sName + '"');
+        }
+
     public static ExceptionHandle unassignedFields(Frame frame, String sClass, List<String> listNames)
         {
         return illegalState(frame, "Unassigned fields for \"" + sClass + "\": " + listNames);

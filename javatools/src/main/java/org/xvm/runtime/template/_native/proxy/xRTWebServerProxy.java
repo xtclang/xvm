@@ -137,7 +137,7 @@ public class xRTWebServerProxy
                 });
 
             ObjectHandle hRequest = xRTHttpRequestProxy.INSTANCE.createHandle(f_frame, exchange, 0);
-            f_frame.f_context.callLater(f_hHandler, new ObjectHandle[]{hRequest, hFunction}, true);
+            f_frame.f_context.callLater(f_hHandler, new ObjectHandle[]{hRequest, hFunction});
             }
 
         final private Frame          f_frame; // TODO GG: this seems to be not necessary

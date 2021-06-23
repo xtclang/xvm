@@ -31,8 +31,7 @@ import org.xvm.asm.op.Return_0;
 
 import org.xvm.runtime.Fiber.FiberStatus;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
-
-import org.xvm.runtime.template.annotations.xFutureVar.FutureHandle;
+import org.xvm.runtime.ObjectHandle.ExceptionHandle.WrapperException;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
@@ -41,6 +40,8 @@ import org.xvm.runtime.template.xService;
 import org.xvm.runtime.template.xService.PropertyOperation10;
 import org.xvm.runtime.template.xService.PropertyOperation01;
 import org.xvm.runtime.template.xService.ServiceHandle;
+
+import org.xvm.runtime.template.annotations.xFutureVar.FutureHandle;
 
 import org.xvm.runtime.template.collections.xTuple;
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
@@ -917,32 +918,56 @@ public class ServiceContext
     // ----- helpers -------------------------------------------------------------------------------
 
     /**
-     * Send and asynchronous "call later" message to this context.
+     * Post and asynchronous "call later" message to this context. Any exception thrown by the
+     * called function will be reported as an "UnhandledExceptionNotification" (see Service.x).
      *
-     * Unlike any of the "send*" methods below, there is no "originating" fiber in this case and the
-     * future registration is done by the request itself.
+     * Unlike any of the "send*" methods below, there is no "originating" fiber in this case and
+     * the future registration is done by the request itself.
+     *
+     * @return a CompletableFuture for the call or null if the service has terminated
      */
-    public int callLater(FunctionHandle hFunction, ObjectHandle[] ahArg, boolean fSilent)
+    public CompletableFuture<ObjectHandle> callLater(FunctionHandle hFunction, ObjectHandle[] ahArg)
+        {
+        CompletableFuture<ObjectHandle> future = postRequest(null, hFunction, ahArg, 0);
+
+        if (future != null)
+            {
+            future.whenComplete((r, x) ->
+                {
+                if (x != null)
+                    {
+                    callUnhandledExceptionHandler(((WrapperException) x).getExceptionHandle());
+                    }
+                });
+            }
+
+        return future;
+        }
+
+    /**
+     * Post and asynchronous "call later" message to this context.
+     *
+     * The caller is responsible for handling any potential exceptions thrown by the called
+     * function, which would be provided via the returned CompletableFuture.
+     *
+     * @param frameCaller  (optional) the caller's frame
+     *
+     * @return a CompletableFuture for the call or null if the service has terminated
+     */
+    public CompletableFuture<ObjectHandle> postRequest(
+            Frame frameCaller, FunctionHandle hFunction, ObjectHandle[] ahArg, int cReturns)
         {
         if (getStatus() == ServiceStatus.Terminated)
             {
-            return Op.R_EXCEPTION;
+            return null;
             }
 
         CompletableFuture<ObjectHandle> future = new CompletableFuture<>();
 
         // TODO: should we reject (throw) if the service overwhelmed?
-        addRequest(new CallLaterRequest(hFunction, ahArg, future));
+        addRequest(new CallLaterRequest(frameCaller, hFunction, ahArg, cReturns, future));
 
-        future.whenComplete((r, x) ->
-            {
-            if (x != null && !fSilent)
-                {
-                callUnhandledExceptionHandler(
-                    ((ExceptionHandle.WrapperException) x).getExceptionHandle());
-                }
-            });
-        return Op.R_NEXT;
+        return future;
         }
 
     /*
@@ -1283,7 +1308,7 @@ public class ServiceContext
             }
 
         // ignore any exception coming out of the handler
-        callLater(hFunction, new ObjectHandle[]{hException}, true);
+        postRequest(null, hFunction, new ObjectHandle[]{hException}, 0);
         }
 
     /**
@@ -1490,27 +1515,31 @@ public class ServiceContext
             return frame0;
             }
 
-        final private Op  f_op;
-        final private int f_cReturns;
+        private final Op  f_op;
+        private final int f_cReturns;
         }
 
     /**
-     * Represents a "fire and forget" call request onto a service.
+     * Represents a natural "fire and forget" or a native call request to a service.
      */
     public static class CallLaterRequest
             extends Message
         {
         private final FunctionHandle                  f_hFunction;
         private final ObjectHandle[]                  f_ahArg;
+        private final int                             f_cReturns;
         private final CompletableFuture<ObjectHandle> f_future;
 
-        public CallLaterRequest(FunctionHandle hFunction, ObjectHandle[] ahArg,
-                                CompletableFuture<ObjectHandle> future)
+        public CallLaterRequest(Frame frameCaller, FunctionHandle hFunction, ObjectHandle[] ahArg,
+                                int cReturns, CompletableFuture<ObjectHandle> future)
             {
-            super(null);
+            super(frameCaller);
+
+            assert cReturns <= 1; // multiple returns are not supported for now
 
             f_hFunction = hFunction;
             f_ahArg     = ahArg;
+            f_cReturns  = cReturns;
             f_future    = future;
             }
 
@@ -1521,7 +1550,7 @@ public class ServiceContext
                 {
                 public int process(Frame frame, int iPC)
                     {
-                    return f_hFunction.call1(frame, null, f_ahArg, A_IGNORE);
+                    return f_hFunction.call1(frame, null, f_ahArg, f_cReturns == 0 ? A_IGNORE : 0);
                     }
 
                 public String toString()
@@ -1530,26 +1559,34 @@ public class ServiceContext
                     }
                 };
 
-            Frame frame0 = context.createServiceEntryFrame(this, 0,
+            Frame frame0 = context.createServiceEntryFrame(this, f_cReturns,
                     new Op[] {opCall, Return_0.INSTANCE});
 
-            // since there was no originating fiber, we need to register the request on-the-spot
-            frame0.f_fiber.registerRequest(f_future);
-
-            frame0.addContinuation(_null ->
+            if (f_fiberCaller == null)
                 {
-                // "callLater" has returned
-                ExceptionHandle hException = frame0.m_hException;
-                if (hException == null)
+                // since there was no originating fiber, we need to register the request on-the-spot
+                frame0.f_fiber.registerRequest(f_future);
+
+                frame0.addContinuation(_null ->
                     {
-                    f_future.complete(xTuple.H_VOID);
-                    }
-                else
-                    {
-                    f_future.completeExceptionally(hException.getException());
-                    }
-                return Op.R_NEXT;
-                });
+                    // "callLater" has returned
+                    ExceptionHandle hException = frame0.m_hException;
+                    if (hException == null)
+                        {
+                        f_future.complete(f_cReturns == 0 ? xTuple.H_VOID : frame0.f_ahVar[0]);
+                        }
+                    else
+                        {
+                        f_future.completeExceptionally(hException.getException());
+                        }
+                    return Op.R_NEXT;
+                    });
+                }
+            else
+                {
+                frame0.addContinuation(_null ->
+                        sendResponse(f_fiberCaller, frame0, f_future, f_cReturns));
+                }
 
             return frame0;
             }

@@ -639,7 +639,10 @@ public class Frame
                 }
             else
                 {
-                assert nVar == Op.A_IGNORE;
+                if (nVar != Op.A_IGNORE)
+                    {
+                    return raiseException(xException.unassignedValue(this, "@" + nVar));
+                    }
                 }
 
             return Op.R_NEXT;
@@ -1335,8 +1338,7 @@ public class Frame
 
                 VarInfo info  = f_aInfo[iArg];
                 String  sName = info == null ? "" : info.getName();
-                throw xException.illegalState(this,
-                    "Unassigned value: \"" + sName + '"').getException();
+                throw xException.unassignedValue(this, sName).getException();
                 }
 
             if (hValue == ObjectHandle.DEFAULT)
