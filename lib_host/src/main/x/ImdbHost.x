@@ -242,20 +242,12 @@ class ImdbHost
         return template.implicitName ?: (appName + '.' + template.displayName);
         }
 
-    /**
-     * Cached CatalogMetadata instance.
-     */
-    @Lazy CatalogMetadata meta.calc()
-        {
-        return dbContainer.innerTypeSystem.primaryModule.as(CatalogMetadata);
-        }
-
     @Override
-    Connection ensureConnection()
+    function oodb.Connection(DBUser)
+            ensureDatabase(Map<String, String>? configOverrides = Null)
         {
-        DBUser user = new oodb.model.DBUser(1, "test"); // TODO CP
-
-        return meta.createConnection(user);
+        CatalogMetadata meta = dbContainer.innerTypeSystem.primaryModule.as(CatalogMetadata);
+        return meta.ensureConnectionFactory();
         }
 
 

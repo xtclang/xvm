@@ -4,6 +4,8 @@ module host.xtclang.org
     package imdb   import imdb.xtclang.org;
     package jsondb import jsondb.xtclang.org;
 
+    import ecstasy.annotations.InjectedRef;
+
     import ecstasy.io.IOException;
 
     import ecstasy.mgmt.Container;
@@ -134,17 +136,26 @@ module host.xtclang.org
 
             dbHost.dbContainer = new Container(dbModuleTemplate, Lightweight, repository, dbInjector);
 
+            import oodb.Connection;
+            import oodb.DBUser;
+
+            function Connection(DBUser) createConnection = dbHost.ensureDatabase();
+
             injector = new Injector()
                 {
                 @Override
                 Supplier getResource(Type type, String name)
                     {
-                    import oodb.Connection;
-
                     if (type.is(Type<Connection>))
                         {
-                        Connection conn = dbHost.ensureConnection();
-                        return &conn.maskAs<Connection>(type);
+                        return (InjectedRef.Options opts) ->
+                            {
+                            // consider the injector to be passed some info about the calling
+                            // container, so the host could figure out the user
+                            DBUser user = new oodb.model.DBUser(1, "test");
+                            Connection conn = createConnection(user);
+                            return &conn.maskAs<Connection>(type);
+                            };
                         }
                     return super(type, name);
                     }
@@ -369,8 +380,6 @@ module host.xtclang.org
                 case Random:
                     if (name == "random" || name == "rnd")
                         {
-                        import ecstasy.annotations.InjectedRef;
-
                         return (InjectedRef.Options opts) ->
                             {
                             @Inject(opts=opts) Random random;

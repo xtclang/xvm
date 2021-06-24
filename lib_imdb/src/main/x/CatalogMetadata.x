@@ -49,14 +49,19 @@ mixin CatalogMetadata<Schema extends RootSchema>
     typedef (Transaction<Schema> + Schema) ClientTransaction;
 
     /**
-     * The `ClientConnection` factory. This is called by the host when a connection is injected.
+     * Create the `ClientConnection` factory, which will be called when a connection is injected by
+     * the client application.
      *
-     * @return a new `ClientConnection` of the database represented by the `Catalog`
+     * @return a new `ClientConnection` factory of the database represented by the `Catalog`
      */
-    ClientConnection createConnection(DBUser user)
+    function oodb.Connection(DBUser) ensureConnectionFactory()
         {
-        Client<Schema> client = catalog.createClient(user).as(Client<Schema>);
-        return client.conn ?: assert;
+        Catalog catalog = this.catalog; // make lambda into a function (avoiding "this" capture)
+        return user ->
+            {
+            Client<Schema> client = catalog.createClient(user).as(Client<Schema>);
+            return client.conn ?: assert;
+            };
         }
 
     /**

@@ -54,10 +54,8 @@ class JsondbHost
         }
 
     @Override
-    Connection ensureConnection()
+    function oodb.Connection(DBUser) ensureDatabase(Map<String, String>? configOverrides = Null)
         {
-        DBUser user = new oodb.model.DBUser(1, "test"); // TODO CP
-
-        return meta.createConnection(catalog, user);
+        return meta.ensureConnectionFactory(catalog);
         }
     }

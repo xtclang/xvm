@@ -15,9 +15,12 @@ class DbHost
     ModuleTemplate generateStubs(ModuleRepository repository, String dbModuleName, Directory buildDir);
 
     /**
-     * Obtain a connection.
+     * Check an existence of the DB (e.g. on disk); create or recover if necessary.
+     *
+     * @return a connection factory
      */
-    oodb.Connection ensureConnection();
+    function oodb.Connection(oodb.DBUser)
+        ensureDatabase(Map<String, String>? configOverrides = Null);
 
     /**
      * The Container that hosts the DB module.

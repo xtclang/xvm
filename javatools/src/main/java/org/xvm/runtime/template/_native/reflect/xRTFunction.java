@@ -432,6 +432,27 @@ public class xRTFunction
             return this;
             }
 
+        @Override
+        public boolean isPassThrough(Container container)
+            {
+            // function is pass through iff its "exposed" type and all the args are pass through
+            if (container != null &&
+                    !getType().isShared(container.getModule().getConstantPool()))
+                {
+                return false;
+                }
+            return checkArgumentsPassThrough(container);
+            }
+
+        /**
+         * @return true iff all the functions arguments are pass through
+         */
+        protected boolean checkArgumentsPassThrough(Container container)
+            {
+            return true;
+            }
+
+
         // ----- FunctionHandle interface ----------------------------------------------------------
 
         // call with one return value to be placed into the specified slot
@@ -611,8 +632,8 @@ public class xRTFunction
 
         protected FunctionHandle createProxyHandle(ServiceContext ctx)
             {
-            // we shouldn't get here since a simple FunctionHandle is immutable
-            throw new IllegalStateException();
+            // overridden by SingleBoundHandle
+            return null;
             }
 
         @Override
@@ -648,9 +669,9 @@ public class xRTFunction
             }
 
         @Override
-        public boolean isPassThrough(Container container)
+        protected boolean checkArgumentsPassThrough(Container container)
             {
-            return m_hDelegate == null || m_hDelegate.isPassThrough(container);
+            return m_hDelegate == null || m_hDelegate.checkArgumentsPassThrough(container);
             }
 
         @Override
@@ -788,9 +809,10 @@ public class xRTFunction
             }
 
         @Override
-        public boolean isPassThrough(Container container)
+        protected boolean checkArgumentsPassThrough(Container container)
             {
-            return m_hDelegate.isPassThrough(container) && m_hArg.isPassThrough(container);
+            return m_hDelegate.checkArgumentsPassThrough(container) &&
+                    m_hArg.isPassThrough(container);
             }
 
         @Override
@@ -931,7 +953,7 @@ public class xRTFunction
             }
 
         @Override
-        public boolean isPassThrough(Container container)
+        protected boolean checkArgumentsPassThrough(Container container)
             {
             for (ObjectHandle hArg : f_ahArg)
                 {
@@ -940,7 +962,7 @@ public class xRTFunction
                     return false;
                     }
                 }
-            return super.isPassThrough(container);
+            return true;
             }
 
         @Override
