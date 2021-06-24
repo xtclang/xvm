@@ -146,11 +146,7 @@ public class SwitchStatement
                     group.labelContinueTo = m_labelContinue;
                     group = null;
 
-                    // while not immediately apparent, a case block never completes normally; it
-                    // must break, continue (fall through), or otherwise fail to complete (e.g.
-                    // throw or return), otherwise an error occurs (detected during emit); instead
-                    // of exiting the context, it is simply discarded at this point
-                    ctxBlock.discard();
+                    ctxBlock.exit();
                     ctxBlock = null;
                     }
 
@@ -178,7 +174,7 @@ public class SwitchStatement
 
                     assert ctxBlock == null;
 
-                    ctxBlock = ctx.enter();
+                    ctxBlock = new CaseBlockContext(ctx);
                     if (fValid)
                         {
                         // for now, we only infer a type from a single-case blocks
@@ -244,7 +240,7 @@ public class SwitchStatement
                 fValid = false;
                 }
 
-            ctxBlock.discard();
+            ctxBlock.exit();
             ctxBlock = null;
             }
 
@@ -425,12 +421,38 @@ public class SwitchStatement
         }
 
 
-    // ----- inner class: CaseGroup ----------------------------------------------------------------
+    // ----- inner classes -------------------------------------------------------------------------
+
+    /**
+     * While not immediately apparent, a case block never completes normally; it must break,
+     * continue (fall through), or otherwise fail to complete (e.g. throw or return), otherwise an
+     * error occurs (detected during emit). However, it cannot be simply discarded (instead of
+     * exiting), since it needs to pass up all collected assignment information while discarding all
+     * other data.
+     */
+    protected static class CaseBlockContext
+            extends Context
+        {
+        protected CaseBlockContext(Context ctxOuter)
+            {
+            super(ctxOuter, true);
+            }
+
+        @Override
+        public Context exit()
+            {
+            Context ctxOuter = getOuterContext();
+
+            promoteAssignments(ctxOuter);
+
+            return ctxOuter;
+            }
+        }
 
     /**
      * Holds information about a case group.
      */
-    class CaseGroup
+    protected static class CaseGroup
         {
         /**
          * What group number is this? Zero-based.
