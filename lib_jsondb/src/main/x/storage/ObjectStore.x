@@ -600,8 +600,6 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
         // use the hash code of the path; we are not expecting ObjectStore instances from multiple
         // different databases to end up in the same hashed data structure, so this should be more
         // than sufficient
-// TODO GG weird compiler error from this (two mistakes, but still, the error message ...):
-//        return value.path.hashCode;  // note: missing "()"
         return value.info.path.hashCode();
         }
 

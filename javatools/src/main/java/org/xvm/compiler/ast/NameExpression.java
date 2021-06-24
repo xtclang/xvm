@@ -2536,7 +2536,14 @@ public class NameExpression
                     int cTypeParams = method.getTypeParamCount();
                     if (cTypeParams > 0)
                         {
-                        TypeConstant[]  atypeArgs = pool.extractFunctionParams(typeDesired);
+                        TypeConstant[] atypeArgs = pool.extractFunctionParams(typeDesired);
+                        if (atypeArgs == null)
+                            {
+                            log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
+                                    typeDesired.getValueString(), typeFn.getValueString());
+                            return null;
+                            }
+
                         ListMap<String, TypeConstant> mapTypeParams =
                             method.resolveTypeParameters(atypeArgs, TypeConstant.NO_TYPES, false);
 
