@@ -145,6 +145,21 @@ service TxManager(Catalog catalog)
      */
     protected/private Map<Int, Int> byReadId = new HashMap();
 
+    /**
+     * The set of DBObjects that have synchronous triggers.
+     */
+    // TODO
+
+    /**
+     * The set of DBObjects that have asynchronous triggers.
+     */
+    // TODO
+
+    /**
+     * A pool of artificial clients for processing triggers.
+     */
+    // TODO
+
     // TODO Future<???> current prepare job
 
 
@@ -323,21 +338,10 @@ service TxManager(Catalog catalog)
         assert TxRecord rec := byWriteId.get(writeId) as $"Missing TxRecord for txid={writeId}";
         assert rec.status == InFlight;
 
-        Set<ObjectStore> stores = rec.enlisted;
-        if (stores.empty)
-            {
-            // an empty transaction is considered committed
-            assert rec.readId == NO_TX || isWriteTx(rec.readId);
-            byWriteId.remove(writeId);
-            byClientId.remove(rec.clientId);
-            rec.status = Committed;
-            return True;
-            }
-
-        TODO
-
-        // issue updates to the various ObjectStore instances
-        return TODO
+        @Future Boolean prepared  = prepareImpl(rec);
+        @Future Boolean triggered = &prepared.createContinuation(ok -> ok && triggerImpl(rec));
+        @Future Boolean committed = &triggered.createContinuation(ok -> ok && commitImpl(rec));
+        return committed;
         }
 
     /**
@@ -357,34 +361,7 @@ service TxManager(Catalog catalog)
         assert TxRecord rec := byWriteId.get(writeId) as $"Missing TxRecord for txid={writeId}";
         assert rec.status == InFlight;
 
-        Set<ObjectStore> stores = rec.enlisted;
-        if (stores.empty)
-            {
-            assert rec.readId == NO_TX || isWriteTx(rec.readId);
-            rec.status = RolledBack;
-            byWriteId.remove(writeId);
-            byClientId.remove(rec.clientId);
-            return;
-            }
-
-        FutureVar<Tuple<>>? completion = Null;
-        rec.status = RollingBack;
-        for (ObjectStore store : stores)
-            {
-            @Future Tuple<> result = store.rollback(writeId);
-            completion = completion?.and(&result, (Tuple<> t1, Tuple<> t2) -> Tuple:()) : &result;
-            // TODO GG completion = completion?.and(&result, (t1, t2) -> t1) : &result;
-            // TODO GG completion = completion?.and(&result, (_, _) -> Tuple:()) : &result;
-            // TODO CP completion = completion?.and(&result, (Tuple<> _, Tuple<> _) -> Tuple:()) : &result;
-            }
-
-        assert completion != Null;
-        return completion.thenDo(() ->
-            {
-            byWriteId.remove(writeId);
-            byClientId.remove(rec.clientId);
-            rec.status = RolledBack;
-            });
+        rollbackImpl(rec);
         }
 
 
@@ -450,6 +427,148 @@ service TxManager(Catalog catalog)
         checkEnabled();
         assert TxRecord tx := byWriteId.get(txId);
         return tx.clientTx.outer.worker;
+        }
+
+
+    // ----- internal --------------------------------------------------------------------
+
+    /**
+     * Attempt to prepare an in-flight transaction.
+     *
+     * @param rec  the TxRecord representing the transaction to prepare
+     *
+     * @return True iff the Transaction was successfully prepared
+     */
+    protected Boolean prepareImpl(TxRecord rec)
+        {
+        Int              writeId = rec.writeId;
+        Set<ObjectStore> stores  = rec.enlisted;
+        if (stores.empty)
+            {
+            // an empty transaction is considered committed
+            assert rec.readId == NO_TX || isWriteTx(rec.readId);
+            byWriteId.remove(writeId);
+            byClientId.remove(rec.clientId);
+            rec.status = Committed;
+            return True;
+            }
+
+        // prepare phase
+        rec.status = Preparing;
+        Boolean abort = False;
+        FutureVar<Boolean>? preparedAll = Null;
+        for (ObjectStore store : stores)
+            {
+            // we cannot predict the order of asynchronous execution, so it is quite possible that
+            // we find out that the transaction must be rolled back while we are still busy here
+            // trying to get the various ObjectStore instances to prepare what changes they have
+            if (abort)
+                {
+                // this will eventually resolve to False, since something has failed and caused the
+                // transaction to roll back (which rollback may still be occurring asynchronously)
+                break;
+                }
+
+            import ObjectStore.PrepareResult;
+            @Future PrepareResult result      = store.prepare(writeId);
+            @Future Boolean       preparedOne = &result.transform(pr ->
+                {
+                switch (pr)
+                    {
+                    case FailedRolledBack:
+                        stores.remove(store);
+                        abort = True;
+                        return False;
+
+                    case CommittedNoChanges:
+                        stores.remove(store);
+                        return True;
+
+                    case Prepared:
+                        return True;
+                    }
+                });
+
+            preparedAll = preparedAll?.and(&preparedOne, (Boolean f1, Boolean f2) -> f1 & f2) : &preparedOne;
+            // TODO GG why is lambda param type required?
+            // preparedAll = preparedAll?.and(&preparedOne, (f1, f2) -> f1 & f2) : &preparedOne;
+            }
+
+        assert preparedAll != Null;
+        @Future Boolean result = preparedAll.thenDo(() -> rollbackImpl(rec));
+        return result;
+        }
+
+    /**
+     * Attempt to execute the synchronous triggers against a preparing transaction.
+     *
+     * @param rec  the TxRecord representing the transaction to run triggers against
+     *
+     * @return True iff the Transaction successfully evaluated its triggers
+     */
+    protected Boolean triggerImpl(TxRecord rec, Int depth = 0)
+        {
+        // determine if any triggers would fire based on the contents of the transaction
+        // TODO
+
+        // some reasonable amount of trigger recursion should be expected
+        assert depth <= 64;
+
+        TODO
+        }
+
+    /**
+     * Attempt to commit a fully prepared transaction.
+     *
+     * @param rec  the TxRecord representing the transaction to finish committing
+     *
+     * @return True iff the Transaction was successfully committed
+     */
+    protected Boolean commitImpl(TxRecord rec)
+        {
+        TODO
+        }
+
+    /**
+     * Attempt to roll back an in-flight transaction.
+     *
+     * @param rec  the TxRecord representing the transaction to roll back
+     *
+     * @return True iff the Transaction was rolled back
+     */
+    protected Boolean rollbackImpl(TxRecord rec)
+        {
+        Int              writeId = rec.writeId;
+        Set<ObjectStore> stores  = rec.enlisted;
+        if (stores.empty)
+            {
+            rec.status = RolledBack;
+            byWriteId.remove(writeId);
+            byClientId.remove(rec.clientId);
+            return True;
+            }
+
+        FutureVar<Tuple<>>? rollbackAll = Null;
+        rec.status = RollingBack;
+        for (ObjectStore store : stores)
+            {
+            @Future Tuple<> rollbackOne = store.rollback(writeId);
+            rollbackAll = rollbackAll?.and(&rollbackOne, (Tuple<> t1, Tuple<> t2) -> t1) : &rollbackOne;
+            // TODO GG rollbackAll = rollbackAll?.and(&result, (t1, t2) -> t1) : &rollbackOne;
+            // TODO GG rollbackAll = rollbackAll?.and(&result, (_, _) -> Tuple:()) : &rollbackOne;
+            // TODO CP rollbackAll = rollbackAll?.and(&result, (Tuple<> _, Tuple<> _) -> Tuple:()) : &rollbackOne;
+            }
+
+        assert rollbackAll != Null;
+        @Future Boolean completed = rollbackAll.transform((Tuple<> t) ->
+            {
+            byWriteId.remove(writeId);
+            byClientId.remove(rec.clientId);
+            rec.enlisted = [];
+            rec.status   = RolledBack;
+            return True;
+            });
+        return completed;
         }
 
 

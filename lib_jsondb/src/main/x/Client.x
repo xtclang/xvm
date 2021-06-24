@@ -190,8 +190,6 @@ service Client<Schema extends RootSchema>
         {
         checkRead();
 
-        private TxContext ctx = new TxContext();
-
         var     tx         = this.tx;
         Boolean autocommit = False;
 
@@ -201,6 +199,7 @@ service Client<Schema extends RootSchema>
             autocommit = True;
             }
 
+        private TxContext ctx = new TxContext();
         ctx.init(tx, autocommit);
         return ctx;
         }
