@@ -636,7 +636,15 @@ interface Collection<Element>
      * @throws ReadOnly  if the collection does not support element addition
      */
     @Override
-    Collection addAll(Iterator<Element> iter);
+    Collection addAll(Iterator<Element> iter)
+        {
+        Collection collection = this;
+        for (Element value : iter)
+            {
+            collection = collection.add(value);
+            }
+        return collection;
+        }
 
     /**
      * Add the specified value to this collection if it is not already present in the collection.
