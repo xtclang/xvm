@@ -1200,7 +1200,8 @@ public class StatementBlock
                 return arg;
                 }
 
-            ConstantPool pool = pool();
+            ConstantPool pool     = pool();
+            TypeConstant typeThis = getThisType();
             TypeConstant type;
             int          nReg;
             int          cSteps = 0;
@@ -1209,49 +1210,49 @@ public class StatementBlock
                 case "this":
                     if (isConstructor())
                         {
-                        type = pool.ensureAccessTypeConstant(getThisType(), Access.STRUCT);
+                        type = pool.ensureAccessTypeConstant(typeThis, Access.STRUCT);
                         nReg = Op.A_STRUCT;
                         break;
                         }
                     // fall through
                 case "this:target":
-                    type   = getThisType();
+                    type   = typeThis;
                     nReg   = Op.A_TARGET;
                     cSteps = getMethod().getThisSteps();
                     break;
 
                 case "this:public":
-                    type   = pool.ensureAccessTypeConstant(getThisType(), Access.PUBLIC);
+                    type   = pool.ensureAccessTypeConstant(typeThis, Access.PUBLIC);
                     nReg   = Op.A_PUBLIC;
                     cSteps = getMethod().getThisSteps();
                     break;
 
                 case "this:protected":
-                    type   = pool.ensureAccessTypeConstant(getThisType(), Access.PROTECTED);
+                    type   = pool.ensureAccessTypeConstant(typeThis, Access.PROTECTED);
                     nReg   = Op.A_PROTECTED;
                     cSteps = getMethod().getThisSteps();
                     break;
 
                 case "this:private":
-                    type   = pool.ensureAccessTypeConstant(getThisType(), Access.PRIVATE);
+                    type   = pool.ensureAccessTypeConstant(typeThis, Access.PRIVATE);
                     nReg   = Op.A_PRIVATE;
                     cSteps = getMethod().getThisSteps();
                     break;
 
                 case "this:struct":
                     type   = pool.ensureUnionTypeConstant(pool.typeStruct(),
-                            pool.ensureAccessTypeConstant(getThisType(), Access.STRUCT));
+                                 pool.ensureAccessTypeConstant(typeThis, Access.STRUCT));
                     nReg   = Op.A_STRUCT;
                     cSteps = getMethod().getThisSteps();
                     break;
 
                 case "this:class":
                     type   = pool.ensureParameterizedTypeConstant(pool.typeClass(),
-                            pool.ensureAccessTypeConstant(getThisType(), Access.PUBLIC),
-                            pool.ensureAccessTypeConstant(getThisType(), Access.PROTECTED),
-                            pool.ensureAccessTypeConstant(getThisType(), Access.PRIVATE),
+                            pool.ensureAccessTypeConstant(typeThis, Access.PUBLIC),
+                            pool.ensureAccessTypeConstant(typeThis, Access.PROTECTED),
+                            pool.ensureAccessTypeConstant(typeThis, Access.PRIVATE),
                             pool.ensureUnionTypeConstant(pool.typeStruct(),
-                                pool.ensureAccessTypeConstant(getThisType(), Access.STRUCT))); // TODO helpers for these all or getThisType passing access
+                                pool.ensureAccessTypeConstant(typeThis, Access.STRUCT))); // TODO helpers for these all or getThisType passing access
                     nReg   = Op.A_CLASS;
                     cSteps = getMethod().getThisSteps();
                     break;
@@ -1262,9 +1263,19 @@ public class StatementBlock
                     break;
 
                 case "super":
-                    type = getMethod().getIdentityConstant().getSignature().asFunctionType();
+                    {
+                    // see isReservedNameReadable()
+                    MethodConstant idMethod   = getMethod().getIdentityConstant();
+                    Access         access     = idMethod.isTopLevel() ? Access.PROTECTED : Access.PRIVATE;
+                    TypeConstant   typeCtx    = pool.ensureAccessTypeConstant(typeThis, access);
+                    MethodInfo     infoMethod = typeCtx.ensureTypeInfo().getMethodById(idMethod);
+
+                    type = (infoMethod == null
+                            ? idMethod.getSignature()
+                            : infoMethod.getSignature()).asFunctionType();
                     nReg = Op.A_SUPER;
                     break;
+                    }
 
                 case "this:module":
                     // the module can be resolved to the actual module component at compile time

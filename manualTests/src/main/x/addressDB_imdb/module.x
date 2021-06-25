@@ -79,7 +79,7 @@ module AddressBookDB_imdb
                         .as(DBMapStore_<String, AddressBookDB_.Contact>));
                 }
 
-            return super(id).as(Client_.DBObjectImpl); // TODO GG: why cast?
+            return super(id);
             }
 
         class ContactsImpl_(DBMapStore_<String, AddressBookDB_.Contact> store_)
