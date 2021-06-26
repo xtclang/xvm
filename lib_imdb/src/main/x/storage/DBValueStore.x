@@ -49,14 +49,12 @@ class DBValueStore<Value extends immutable Const>
 
     Value getValueAt(Int clientId)
         {
-        // TODO GG: this.DBValueStore is unnecessary
-        return valueAt.computeIfAbsent(clientId, () -> this.DBValueStore.new TxChange(value)).get();
+        return valueAt.computeIfAbsent(clientId, () -> new TxChange(value)).get();
         }
 
     void setValueAt(Int clientId, Value newValue)
         {
-        // TODO GG: this.DBValueStore is unnecessary
-        valueAt.computeIfAbsent(clientId, () -> this.DBValueStore.new TxChange(value)).set(newValue);
+        valueAt.computeIfAbsent(clientId, () -> new TxChange(value)).set(newValue);
         }
 
     @Override
