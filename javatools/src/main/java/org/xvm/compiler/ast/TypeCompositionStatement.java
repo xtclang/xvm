@@ -2092,6 +2092,8 @@ public class TypeCompositionStatement
 
         if (listUnconstrained == null)
             {
+            // call with non-existing name just to report missing type parameters
+            findImplicitConstraint(component, "", null, errs);
             return;
             }
 

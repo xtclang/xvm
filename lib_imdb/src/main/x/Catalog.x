@@ -208,8 +208,6 @@ static service Catalog
     class DBMapStore<Key extends immutable Const, Value extends immutable Const>
         (DBObjectInfo info, Appender<String> errs)
             extends storage.DBMapStore<Key, Value>(info, errs)
-                // TODO GG: if "extends" type parameters are not specified, a cast exception occurs
-                //          we need an error message
         {
         }
 
