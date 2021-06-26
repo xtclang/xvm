@@ -489,9 +489,7 @@ service TxManager(Catalog catalog)
                     }
                 });
 
-            preparedAll = preparedAll?.and(&preparedOne, (Boolean f1, Boolean f2) -> f1 & f2) : &preparedOne;
-            // TODO GG why is lambda param type required?
-            // preparedAll = preparedAll?.and(&preparedOne, (f1, f2) -> f1 & f2) : &preparedOne;
+            preparedAll = preparedAll?.and(&preparedOne, (f1, f2) -> f1 & f2) : &preparedOne;
             }
 
         assert preparedAll != Null;

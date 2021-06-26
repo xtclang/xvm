@@ -623,6 +623,7 @@ public class ParameterizedTypeConstant
         typeActual = typeActual.resolveTypedefs();
 
         // unroll the actual type down to the parameterized type
+        Unroll:
         while (true)
             {
             if (!typeActual.isModifyingType())
@@ -633,11 +634,19 @@ public class ParameterizedTypeConstant
                 return typeActual.resolveGenericType(sFormalName);
                 }
 
-            if (typeActual.getFormat() == Format.ParameterizedType)
+            switch (typeActual.getFormat())
                 {
-                break;
+                case ParameterizedType:
+                    break Unroll;
+
+                case AnnotatedType:
+                    typeActual = ((AnnotatedTypeConstant) typeActual).getAnnotationType();
+                    break;
+
+                default:
+                    typeActual = typeActual.getUnderlyingType();
+                    break;
                 }
-            typeActual = typeActual.getUnderlyingType();
             }
 
         ParameterizedTypeConstant that = (ParameterizedTypeConstant) typeActual;
