@@ -551,10 +551,7 @@ service TxManager(Catalog catalog)
         for (ObjectStore store : stores)
             {
             @Future Tuple<> rollbackOne = store.rollback(writeId);
-            rollbackAll = rollbackAll?.and(&rollbackOne, (Tuple<> t1, Tuple<> t2) -> t1) : &rollbackOne;
-            // TODO GG rollbackAll = rollbackAll?.and(&result, (t1, t2) -> t1) : &rollbackOne;
-            // TODO GG rollbackAll = rollbackAll?.and(&result, (_, _) -> Tuple:()) : &rollbackOne;
-            // TODO CP rollbackAll = rollbackAll?.and(&result, (Tuple<> _, Tuple<> _) -> Tuple:()) : &rollbackOne;
+            rollbackAll = rollbackAll?.and(&rollbackOne, (_, _) -> Tuple:()) : &rollbackOne;
             }
 
         assert rollbackAll != Null;
