@@ -374,7 +374,7 @@ interface DBObject
         @RO Boolean async.get()
             {
             // when possible, a trigger should be asynchronous, but the typical use case is a
-            // trigger thaj t needs to execute within a transaction in order to be able to prevent
+            // trigger that needs to execute within a transaction in order to be able to prevent
             // the transaction from committing if something about the transaction is wrong
             return False;
             }
