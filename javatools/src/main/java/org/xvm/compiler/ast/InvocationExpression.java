@@ -875,121 +875,123 @@ public class InvocationExpression
                     }
 
                 TypeConstant[] atypeArgs = validateExpressions(ctx, listArgs, atypeParams, errs);
-                if (atypeArgs != null)
+                if (atypeArgs == null)
                     {
-                    Map<String, TypeConstant> mapTypeParams = Collections.EMPTY_MAP;
-                    if (cTypeParams > 0)
-                        {
-                        // re-resolve against the validated types
+                    return null;
+                    }
+
+                Map<String, TypeConstant> mapTypeParams = Collections.EMPTY_MAP;
+                if (cTypeParams > 0)
+                    {
+                    // re-resolve against the validated types
                         mapTypeParams = method.resolveTypeParameters(atypeArgs,
                                 fCall || atypeReturn == null || atypeReturn.length == 0
                                     ? atypeReturn
                                     : pool.extractFunctionReturns(atypeReturn[0]),
                                 false);
-                        if (mapTypeParams.size() < cTypeParams)
+                    if (mapTypeParams.size() < cTypeParams)
+                        {
+                        log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNRESOLVABLE,
+                                method.collectUnresolvedTypeParameters(mapTypeParams.keySet()));
+                        return null;
+                        }
+
+                    Argument[] aargTypeParam = new Argument[mapTypeParams.size()];
+                    int ix = 0;
+                    for (TypeConstant typeArg : mapTypeParams.values())
+                        {
+                        if (typeArg.containsUnresolved())
                             {
                             log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNRESOLVABLE,
-                                    method.collectUnresolvedTypeParameters(mapTypeParams.keySet()));
+                                    method.getParam(ix).getName());
                             return null;
                             }
 
-                        Argument[] aargTypeParam = new Argument[mapTypeParams.size()];
-                        int ix = 0;
-                        for (TypeConstant typeArg : mapTypeParams.values())
+                        TypeConstant typeParam = idMethod.getRawParams()[ix].getParamType(0);
+
+                        // there's a possibility that type parameter constraints refer to
+                        // previous type parameters, for example:
+                        //   <T1 extends Base, T2 extends T1> foo(T1 v1, T2 v2) {...}
+                        if (typeParam.containsTypeParameter(true))
                             {
-                            if (typeArg.containsUnresolved())
-                                {
-                                log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNRESOLVABLE,
-                                        method.getParam(ix).getName());
-                                return null;
-                                }
-
-                            TypeConstant typeParam = idMethod.getRawParams()[ix].getParamType(0);
-
-                            // there's a possibility that type parameter constraints refer to
-                            // previous type parameters, for example:
-                            //   <T1 extends Base, T2 extends T1> foo(T1 v1, T2 v2) {...}
-                            if (typeParam.containsTypeParameter(true))
-                                {
-                                typeParam = typeParam.resolveGenerics(pool, mapTypeParams::get);
-                                }
-
-                            if (!typeArg.isA(typeParam))
-                                {
-                                log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
-                                        typeParam.getValueString(), typeArg.getValueString());
-                                return null;
-                                }
-                            aargTypeParam[ix++] = typeArg.getType();
+                            typeParam = typeParam.resolveGenerics(pool, mapTypeParams::get);
                             }
-                        m_aargTypeParams = aargTypeParam;
-                        }
 
-                    if (fCall)
+                        if (!typeArg.isA(typeParam))
+                            {
+                            log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
+                                    typeParam.getValueString(), typeArg.getValueString());
+                            return null;
+                            }
+                        aargTypeParam[ix++] = typeArg.getType();
+                        }
+                    m_aargTypeParams = aargTypeParam;
+                    }
+
+                if (fCall)
+                    {
+                    SignatureConstant sigMethod = idMethod.getSignature();
+                    if (!method.isFunction() && !method.isConstructor())
                         {
-                        SignatureConstant sigMethod = idMethod.getSignature();
-                        if (!method.isFunction() && !method.isConstructor())
-                            {
-                            IdentityConstant idCtx = typeLeft.isA(ctx.getThisType())
-                                    ? ctx.getThisClass().getIdentityConstant()
-                                    : null;
-                            sigMethod = sigMethod.resolveAutoNarrowing(pool, typeLeft, idCtx);
-                            }
-                        if (!mapTypeParams.isEmpty())
-                            {
-                            sigMethod = sigMethod.resolveGenericTypes(pool, mapTypeParams::get);
-                            }
-                        atypeResult = sigMethod.getRawReturns();
-
-                        if (fCondReturn)
-                            {
-                            if (getParent().allowsConditional(this))
-                                {
-                                m_fCondResult = true;
-                                }
-                            else
-                                {
-                                log(errs, Severity.ERROR, Compiler.CONDITIONAL_RETURN_NOT_ALLOWED,
-                                    method.getIdentityConstant().getValueString());
-                                return null;
-                                }
-                            }
-                        else if (atypeReturn != null)
-                            {
-                            // check for Tuple conversion for the return value; we know that the
-                            // method should fit, so the only thing to figure out is whether
-                            // "packing" to a Tuple is necessary
-                            if (calculateReturnFit(sigMethod, fCall, atypeReturn, ctx.getThisType(),
-                                    ErrorListener.BLACKHOLE).isPacking())
-                                {
-                                atypeResult = new TypeConstant[]{pool.ensureTupleType(atypeResult)};
-                                m_fPack     = true;
-                                }
-                            }
+                        IdentityConstant idCtx = typeLeft.isA(ctx.getThisType())
+                                ? ctx.getThisClass().getIdentityConstant()
+                                : null;
+                        sigMethod = sigMethod.resolveAutoNarrowing(pool, typeLeft, idCtx);
                         }
-                    else
+                    if (!mapTypeParams.isEmpty())
                         {
-                        TypeConstant typeFn = m_fBindTarget
-                                ? idMethod.getSignature().asFunctionType()
-                                : idMethod.getValueType(pool, typeLeft);
-
-                        if (cTypeParams > 0)
-                            {
-                            typeFn = removeTypeParameters(typeFn, cTypeParams);
-                            }
-
-                        if (m_fBindParams)
-                            {
-                            typeFn = bindFunctionParameters(typeFn);
-                            }
-
-                        if (!mapTypeParams.isEmpty())
-                            {
-                            typeFn = typeFn.resolveGenerics(pool, mapTypeParams::get);
-                            }
-
-                        atypeResult = new TypeConstant[] {typeFn};
+                        sigMethod = sigMethod.resolveGenericTypes(pool, mapTypeParams::get);
                         }
+                    atypeResult = sigMethod.getRawReturns();
+
+                    if (fCondReturn)
+                        {
+                        if (getParent().allowsConditional(this))
+                            {
+                            m_fCondResult = true;
+                            }
+                        else
+                            {
+                            log(errs, Severity.ERROR, Compiler.CONDITIONAL_RETURN_NOT_ALLOWED,
+                                method.getIdentityConstant().getValueString());
+                            return null;
+                            }
+                        }
+                    else if (atypeReturn != null)
+                        {
+                        // check for Tuple conversion for the return value; we know that the
+                        // method should fit, so the only thing to figure out is whether
+                        // "packing" to a Tuple is necessary
+                        if (calculateReturnFit(sigMethod, fCall, atypeReturn, ctx.getThisType(),
+                                ErrorListener.BLACKHOLE).isPacking())
+                            {
+                            atypeResult = new TypeConstant[]{pool.ensureTupleType(atypeResult)};
+                            m_fPack     = true;
+                            }
+                        }
+                    }
+                else
+                    {
+                    TypeConstant typeFn = m_fBindTarget
+                            ? idMethod.getSignature().asFunctionType()
+                            : idMethod.getValueType(pool, typeLeft);
+
+                    if (cTypeParams > 0)
+                        {
+                        typeFn = removeTypeParameters(typeFn, cTypeParams);
+                        }
+
+                    if (m_fBindParams)
+                        {
+                        typeFn = bindFunctionParameters(typeFn);
+                        }
+
+                    if (!mapTypeParams.isEmpty())
+                        {
+                        typeFn = typeFn.resolveGenerics(pool, mapTypeParams::get);
+                        }
+
+                    atypeResult = new TypeConstant[] {typeFn};
                     }
                 }
             else
