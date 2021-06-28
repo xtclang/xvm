@@ -601,13 +601,22 @@ service Client<Schema extends RootSchema>
         @Override
         Value get()
             {
-            TODO
+            return transactional && this.Client.joinTransaction(this)
+                ? store_.getValueAt(this.Client.id)
+                : store_.getValue();
             }
 
         @Override
         void set(Value value)
             {
-            TODO impl
+            if (transactional && this.Client.joinTransaction(this))
+                {
+                store_.setValueAt(this.Client.id, value);
+                }
+            else
+                {
+                store_.setValue(value);
+                }
             }
         }
 
@@ -618,34 +627,13 @@ service Client<Schema extends RootSchema>
      * The DBCounter implementation.
      */
     class DBCounterImpl(DBCounterStore store_)
-            extends DBObjectImpl(store_)
-            implements oodb.DBCounter
+            extends DBValueImpl<Int>(store_)
+            implements DBCounter
         {
         @Override
         DBCounterStore store_.get()
             {
             return super().as(DBCounterStore);
-            }
-
-        @Override
-        Int get()
-            {
-            return transactional && this.Client.joinTransaction(this)
-                ? store_.getValueAt(this.Client.id)
-                : store_.getValue();
-            }
-
-        @Override
-        void set(Int value)
-            {
-            if (transactional && this.Client.joinTransaction(this))
-                {
-                store_.setValueAt(this.Client.id, value);
-                }
-            else
-                {
-                store_.setValue(value);
-                }
             }
 
         @Override
