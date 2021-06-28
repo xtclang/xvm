@@ -161,22 +161,6 @@ public class Context
                         : getThisType().resolveGenericType(sFormalName);
                 }
 
-            // During the LambdaExpression validation, a LambdaContext/CaptureContext collects the
-            // used variables by intercepting markVarRead() and creates all the necessary captures
-            // based on that information.
-            // However, a formal type resolution based on method's type parameters may use them only
-            // implicitly, thus preventing the context to register/collect a corresponding type
-            // parameter (see the lambda in List.bubbleSort() function as an example);
-            // hence the compensation below
-            if (arg instanceof Register)
-                {
-                Register reg = (Register) arg;
-                if (!reg.isUnknown() && getMethod().isTypeParameter(reg.getIndex()))
-                    {
-                    markVarRead(sFormalName);
-                    }
-                }
-
             TypeConstant typeType = arg.getType();
             assert typeType.isTypeOfType();
             return typeType.getParamType(0);
