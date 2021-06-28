@@ -44,7 +44,7 @@ class SparseIntSet
     public/protected Int size;
 
     @Override
-    Iterator<Int> iterator() // TODO GG I have to say "Int" everywhere instead of "Element"
+    Iterator<Element> iterator()
         {
         // for each key in the SkiplistMap, there is one or more value in the set
         val bitsets = contents.entries.iterator();
@@ -75,14 +75,11 @@ class SparseIntSet
                 return True, (index + mask.trailingZeroCount);
                 }
 
-            @Override conditional Int min(Iterator<Int>.Orderer? order = Null)
-// TODO GG
-// @Override conditional Int min(Orderer? order = Null)
+            @Override conditional Int min(Orderer? order = Null)
                 {
                 if (order != Null)
                     {
-// assert Orderer actualOrder := knownOrder();
-                    assert Iterator<Int>.Orderer actualOrder := knownOrder();
+                    assert Orderer actualOrder := knownOrder();
                     if (order != actualOrder)
                         {
                         return super(order);
@@ -92,15 +89,11 @@ class SparseIntSet
                 return next();
                 }
 
-// TODO GG
-// @Override conditional Int max(Orderer? order = Null)
-            @Override conditional Int max(Iterator<Int>.Orderer? order = Null)
+            @Override conditional Int max(Orderer? order = Null)
                 {
                 if (order != Null)
                     {
-// TODO GG
-// assert Orderer actualOrder := knownOrder();
-                    assert Iterator<Int>.Orderer actualOrder := knownOrder();
+                    assert Orderer actualOrder := knownOrder();
                     if (order != actualOrder)
                         {
                         return super(order);
@@ -115,13 +108,11 @@ class SparseIntSet
                 return False;
                 }
 
-// @Override conditional Range<Int> range(Orderer? order = Null)
-            @Override conditional Range<Int> range(Iterator<Int>.Orderer? order = Null)
+            @Override conditional Range<Int> range(Orderer? order = Null)
                 {
                 if (order != Null)
                     {
-// assert Orderer actualOrder := knownOrder();
-                    assert Iterator<Int>.Orderer actualOrder := knownOrder();
+                    assert Orderer actualOrder := knownOrder();
                     if (order != actualOrder)
                         {
                         return super(order);

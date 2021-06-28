@@ -174,6 +174,14 @@ public abstract class IdentityConstant
                 return false;
                 }
 
+            // an anonymous inner class could be a nest mate to both its contributions and to its
+            // parent's child classes
+            ClassStructure clzThat = (ClassStructure) idThat.getComponent();
+            if (clzThat.isAnonInnerClass() && clzThat.hasContribution(idThis, true))
+                {
+                return true;
+                }
+
             ClassConstant idBaseThis = idThis.getAutoNarrowingBase();
             ClassConstant idBaseThat = idThat.getOutermost();
             if (idBaseThis.equals(idBaseThat))
