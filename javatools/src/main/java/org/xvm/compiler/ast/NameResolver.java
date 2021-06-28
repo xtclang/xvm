@@ -705,7 +705,8 @@ public class NameResolver
                 {
                 case TYPEDEF:
                     // typedef is allowed in type mode, but not in formal type mode
-                    if (m_typeMode == TypeMode.FORMAL_TYPE)
+                    if (m_typeMode == TypeMode.FORMAL_TYPE &&
+                            !component.getParent().getIdentityConstant().equals(getPool().clzType()))
                         {
                         m_node.log(m_errs, Severity.ERROR, Compiler.TYPEDEF_UNEXPECTED,
                                 m_sName, id.getParentConstant().getValueString());

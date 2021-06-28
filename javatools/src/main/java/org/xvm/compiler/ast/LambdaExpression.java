@@ -1426,7 +1426,6 @@ public class LambdaExpression
                     TypeConstant typeNarrowed = type.resolveGenerics(pool, resolver);
                     if (typeNarrowed != type)
                         {
-                        assert typeNarrowed.isA(type);
                         reg = reg.narrowType(typeNarrowed);
                         reg.markInPlace();
 

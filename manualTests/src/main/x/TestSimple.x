@@ -6,21 +6,23 @@ module TestSimple.test.org
         {
         }
 
-    void test()
+    interface Iter<Element extends Const>
         {
-        Boolean flag = false;
+        typedef Element.Comparer Comparer;  // used to fail the compilation
 
-        function void (Int) f = i ->
+        Boolean test(Comparer compare, Element e1, Element e2)
             {
-            switch (i)
-                {
-                case 0:
-                    flag = True; // used to fail to compile
-                    return;
+            return compare(e1, e2);
+            }
+        }
 
-                default:
-                    return;
-                }
-            };
+    @Abstract
+    class IntSet
+            implements Collection<Int>
+        {
+        void f(Orderer cmp)
+            {
+            Orderer order = (i1, i2) -> Int.compare(i1, i2); // used to fail the compilation
+            }
         }
     }

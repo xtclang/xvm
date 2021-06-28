@@ -763,11 +763,18 @@ public class NamedTypeExpression
                 ctx.useFormalType(type, errs);
                 }
 
-            if (m_fExternalTypedef && type.containsGenericType(true))
+            if (m_fExternalTypedef)
                 {
-                TypeConstant typeParent =
-                    ((TypedefConstant) m_constId).getParentConstant().getType();
-                type = type.resolveGenerics(pool, typeParent.normalizeParameters());
+                if (type.containsGenericType(true))
+                    {
+                    TypeConstant typeParent =
+                        ((TypedefConstant) m_constId).getParentConstant().getType();
+                    type = type.resolveGenerics(pool, typeParent.normalizeParameters());
+                    }
+                }
+            else
+                {
+                type = type.resolveGenerics(pool, ctx.getFormalTypeResolver());
                 }
             }
         else
@@ -993,6 +1000,18 @@ public class NamedTypeExpression
 
                     if (!idFrom.isNestMateOf(idClass))
                         {
+                        if (idFrom.equals(pool.clzType()))
+                            {
+                            // transform Type's typedefs, for example:
+                            //      Element.Comparer => Type<Element>.Comparer
+                            Constant idLeft = m_resolver.getBaseConstant();
+                            if (idLeft instanceof PropertyConstant)
+                                {
+                                typeRef = typeRef.resolveGenerics(pool,
+                                        ((PropertyConstant) idLeft).getFormalType().getType());
+                                }
+                            }
+
                         // we are "importing" a typedef from an outside class and need to resolve all
                         // formal types to their canonical values; but we cannot do it until all names
                         // are resolved

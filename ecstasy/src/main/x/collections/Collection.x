@@ -47,7 +47,7 @@ interface Collection<Element>
     /**
      * An Orderer is a function that compares two elements for order.
      */
-    typedef Type<Element>.Orderer Orderer; // TODO GG I would like to use "Element.Orderer" instead
+    typedef Element.Orderer Orderer;
 
 
     // ----- abstract methods ----------------------------------------------------------------------

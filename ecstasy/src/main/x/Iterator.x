@@ -7,7 +7,7 @@ interface Iterator<Element>
     /**
      * An Orderer is a function that compares two objects for order.
      */
-    typedef Type<Element>.Orderer Orderer; // TODO GG I would like to use "Element.Orderer" instead
+    typedef Element.Orderer Orderer;
 
     /**
      * Get the next element.
