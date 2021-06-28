@@ -334,7 +334,8 @@ module TestNumbers
 
         Int[] slice = ints[1..2];
         assert slice.asByteArray().asInt64Array() == slice;
-        assert slice.asByteArray().reify(Fixed).asInt64Array() == slice; // TODO GG: reify() is not working
+        // TODO GG: reify() (without an argument) calls a wrong method (on List)
+        assert slice.asByteArray().reify(Fixed).asInt64Array() == slice;
 
         ints = ints.reify(Mutable);
         bits = ints.asBitArray();
