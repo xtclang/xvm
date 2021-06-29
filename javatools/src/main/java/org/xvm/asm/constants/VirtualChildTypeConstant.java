@@ -221,6 +221,12 @@ public class VirtualChildTypeConstant
         }
 
     @Override
+    protected int getTypeDepth()
+        {
+        return 1 + m_typeParent.getTypeDepth();
+        }
+
+    @Override
     public boolean isVirtualChild()
         {
         return true;
