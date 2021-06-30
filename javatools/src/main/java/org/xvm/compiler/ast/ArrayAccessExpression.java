@@ -779,11 +779,10 @@ public class ArrayAccessExpression
         boolean          fTuple     = typeTarget.isTuple();
         List<MethodInfo> listMatch  = new ArrayList<>();
 
-        ConstantPool        pool   = pool();
         Set<MethodConstant> setAll = findPotentialOps(infoTarget, cArgs);
         NextOp: for (MethodConstant idMethod : setAll)
             {
-            SignatureConstant sig = idMethod.getSignature().resolveAutoNarrowing(pool, typeTarget, null);
+            SignatureConstant sig = idMethod.getSignature();
             if (!fTuple && typeReturn != null && (sig.getRawReturns().length < 1
                     || !isAssignable(ctx, sig.getRawReturns()[0], typeReturn)))
                 {
@@ -821,6 +820,15 @@ public class ArrayAccessExpression
                     }
                 }
 
+            if (info.isCapped())
+                {
+                MethodInfo infoNarrowing = infoTarget.getNarrowingMethod(info);
+                if (infoNarrowing.isOp())
+                    {
+                    listMatch.add(infoNarrowing);
+                    continue;
+                    }
+                }
             listMatch.add(info);
             }
 
