@@ -274,8 +274,10 @@ interface Ref<Referent>
 
     /**
      * Reference equality is used to determine if two references are referring to the same referent
-     * _identity_. Specifically, two references are equal iff they reference the same runtime
-     * object, or the two objects that they reference are both immutable and structurally identical.
+     * _identity_. Specifically, two references are equal if they reference the same runtime
+     * object. Additionally, for optimization purposes, the runtime is *permitted* to indicate that
+     * two references to two separate runtime objects are equal, in the case where both references
+     * are to immutable objects whose structures are identical. REVIEW GG MF
      */
     static <CompileType extends Ref> Boolean equals(CompileType value1, CompileType value2)
         {
