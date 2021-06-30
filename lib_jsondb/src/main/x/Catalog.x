@@ -139,13 +139,14 @@ service Catalog<Schema extends RootSchema>
             }
         }
 
+// TODO path literals issue
     static DBObjectInfo[] SystemInfos =
         [
-        new DBObjectInfo("",    "",    DBSchema, BuiltIn.Root.id, BuiltIn.Root.id,
+        new DBObjectInfo("",    ROOT,      DBSchema, BuiltIn.Root.id, BuiltIn.Root.id,
             [
             BuiltIn.Sys.id,
             ]),
-        new DBObjectInfo("sys", "sys", DBSchema, BuiltIn.Sys.id,  BuiltIn.Root.id,
+        new DBObjectInfo("sys", Path:/sys, DBSchema, BuiltIn.Sys.id,  BuiltIn.Root.id,
             [
             BuiltIn.Info.id,
             BuiltIn.Users.id,
@@ -164,21 +165,21 @@ service Catalog<Schema extends RootSchema>
             BuiltIn.Errors.id,
             ]),
 
-        new DBObjectInfo("info",         "sys/info",         DBValue, BuiltIn.Info.id,         BuiltIn.Sys.id, typeParams=Map:["Value"=DBInfo]),
-        new DBObjectInfo("users",        "sys/users",        DBMap,   BuiltIn.Users.id,        BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=DBUser]),
-        new DBObjectInfo("types",        "sys/types",        DBMap,   BuiltIn.Types.id,        BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=Type]),
-        new DBObjectInfo("objects",      "sys/objects",      DBMap,   BuiltIn.Objects.id,      BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=DBObject]),
-        new DBObjectInfo("schemas",      "sys/schemas",      DBMap,   BuiltIn.Schemas.id,      BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=DBSchema]),
-        new DBObjectInfo("maps",         "sys/maps",         DBMap,   BuiltIn.Maps.id,         BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=DBMap]),
-        new DBObjectInfo("queues",       "sys/queues",       DBMap,   BuiltIn.Queues.id,       BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=DBQueue]),
-        new DBObjectInfo("lists",        "sys/lists",        DBMap,   BuiltIn.Lists.id,        BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=DBList]),
-        new DBObjectInfo("logs",         "sys/logs",         DBMap,   BuiltIn.Logs.id,         BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=DBLog]),
-        new DBObjectInfo("counters",     "sys/counters",     DBMap,   BuiltIn.Counters.id,     BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=DBCounter]),
-        new DBObjectInfo("values",       "sys/values",       DBMap,   BuiltIn.Values.id,       BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=DBValue]),
-        new DBObjectInfo("functions",    "sys/functions",    DBMap,   BuiltIn.Functions.id,    BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=DBFunction]),
-        new DBObjectInfo("pending",      "sys/pending",      DBList,  BuiltIn.Pending.id,      BuiltIn.Sys.id, typeParams=Map:["Element"=DBInvoke]),
-        new DBObjectInfo("transactions", "sys/transactions", DBLog,   BuiltIn.Transactions.id, BuiltIn.Sys.id, typeParams=Map:["Element"=DBTransaction]),
-        new DBObjectInfo("errors",       "sys/errors",       DBLog,   BuiltIn.Errors.id,       BuiltIn.Sys.id, typeParams=Map:["Element"=String]),
+        new DBObjectInfo("info",         Path:/sys/info,         DBValue, BuiltIn.Info.id,         BuiltIn.Sys.id, typeParams=Map:["Value"=DBInfo]),
+        new DBObjectInfo("users",        Path:/sys/users,        DBMap,   BuiltIn.Users.id,        BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=DBUser]),
+        new DBObjectInfo("types",        Path:/sys/types,        DBMap,   BuiltIn.Types.id,        BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=Type]),
+        new DBObjectInfo("objects",      Path:/sys/objects,      DBMap,   BuiltIn.Objects.id,      BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=DBObject]),
+        new DBObjectInfo("schemas",      Path:/sys/schemas,      DBMap,   BuiltIn.Schemas.id,      BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=DBSchema]),
+        new DBObjectInfo("maps",         Path:/sys/maps,         DBMap,   BuiltIn.Maps.id,         BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=DBMap]),
+        new DBObjectInfo("queues",       Path:/sys/queues,       DBMap,   BuiltIn.Queues.id,       BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=DBQueue]),
+        new DBObjectInfo("lists",        Path:/sys/lists,        DBMap,   BuiltIn.Lists.id,        BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=DBList]),
+        new DBObjectInfo("logs",         Path:/sys/logs,         DBMap,   BuiltIn.Logs.id,         BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=DBLog]),
+        new DBObjectInfo("counters",     Path:/sys/counters,     DBMap,   BuiltIn.Counters.id,     BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=DBCounter]),
+        new DBObjectInfo("values",       Path:/sys/values,       DBMap,   BuiltIn.Values.id,       BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=DBValue]),
+        new DBObjectInfo("functions",    Path:/sys/functions,    DBMap,   BuiltIn.Functions.id,    BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=DBFunction]),
+        new DBObjectInfo("pending",      Path:/sys/pending,      DBList,  BuiltIn.Pending.id,      BuiltIn.Sys.id, typeParams=Map:["Element"=DBInvoke]),
+        new DBObjectInfo("transactions", Path:/sys/transactions, DBLog,   BuiltIn.Transactions.id, BuiltIn.Sys.id, typeParams=Map:["Element"=DBTransaction]),
+        new DBObjectInfo("errors",       Path:/sys/errors,       DBLog,   BuiltIn.Errors.id,       BuiltIn.Sys.id, typeParams=Map:["Element"=String]),
         ];
 
     /**

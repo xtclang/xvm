@@ -21,7 +21,7 @@ class SystemObject
         this.catalog  = catalog;
         this.dbParent = dbParent;
         this.dbName   = dbName;
-        this.dbPath   = dbParent?.dbPath + "/" + dbName : dbName;
+        this.dbPath   = dbParent?.dbPath + dbName : ROOT;
         }
 
     /**
@@ -33,7 +33,7 @@ class SystemObject
 
     @Override public/protected String dbName;
 
-    @Override public/protected String dbPath;
+    @Override public/protected Path dbPath;
 
     @Override Map<String, DBObject!> dbChildren.get()
         {

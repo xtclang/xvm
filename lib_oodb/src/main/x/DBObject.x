@@ -17,6 +17,14 @@
 interface DBObject
     {
     /**
+     * The root database object.
+     */
+    @RO RootSchema dbRoot.get()
+        {
+        return dbParent?.dbRoot : this.as(RootSchema);
+        }
+
+    /**
      * The parent database object, or `Null` if this is the root (the database itself).
      */
     @RO DBObject!? dbParent;
@@ -33,24 +41,17 @@ interface DBObject
 
     /**
      * Each `DBObject` has a uniquely identifying `String` name that identifies it within its parent
-     * `DBObject`.
+     * `DBObject`. The name follows the Ecstasy language lexical rules for identifiers, and by
+     * convention uses _CamelCase_.
      */
     @RO String dbName;
 
     /**
      * Each `DBObject` has a uniquely identifying path that identifies it within its database.
      */
-    @RO String dbPath.get()
+    @RO Path dbPath.get()
         {
-        if (DBObject parent ?= dbParent)
-            {
-            String thisName = this.dbName;
-            return parent.dbName == ""
-                    ? thisName
-                    : parent.dbPath + "/" + thisName;
-            }
-
-        return "";
+        return dbParent?.dbPath + dbName : Path.ROOT;
         }
 
     /**
@@ -63,61 +64,45 @@ interface DBObject
      * Obtain the specified `DBObject` by its [dbName], or by its [dbPath] relative to the `dbPath`
      * of this `DBObject`.
      *
-     * @param path  the name (or the relative path) of a `DBObject` within this `DBObject`
+     * @param path  the path of a `DBObject` relative to this `DBObject`
      *
-     * @return the specified `DBObject`, or `Null` if the path or name did not identify a `DBObject`
+     * @return the specified `DBObject`, or `Null` if the path did not identify a `DBObject`
      */
-    DBObject!? dbObjectFor(String path)
+    DBObject!? dbObjectFor(Path path)
         {
-        // REVIEW GG why aren't we using Path here?
-
-        if (path == "")
+        DBObject! result = this;
+        for (Path sub : path)
             {
-            return this;
-            }
-
-        if (DBObject dbo := dbChildren.get(path))
-            {
-            return dbo;
-            }
-
-        if (Int slash := path.indexOf('/', 1))
-            {
-            String part = path[0..slash);
-            switch (part)
+            switch (sub.form)
                 {
-                case "":
-                    DBObject  root   = this;
-                    DBObject? parent = dbParent;
-                    while (parent != Null)
+                case Root:
+                    result = dbRoot;
+                    break;
+
+                case Parent:
+                    val parent = result.dbParent;
+                    if (parent == Null)
                         {
-                        root   = parent;
-                        parent = parent.dbParent;
+                        return Null;
                         }
-                    return path.size == 1
-                            ? root
-                            : root.dbObjectFor(path.substring(1));
+                    result = parent;
+                    break;
 
-                case ".":
-                    return path.size == 2
-                            ? this
-                            : this.dbObjectFor(path.substring(2));
+                case Current:
+                    break;
 
-                case "..":
-                    return path.size == 3
-                            ? dbParent
-                            : dbParent?.dbObjectFor(path.substring(3)) : Null;
-
-                default:
-                    if (DBObject child := dbChildren.get(part))
+                case Name:
+                    if (result := dbChildren.get(sub.name))
                         {
-                        return child.dbObjectFor(path.substring(slash+1));
                         }
-                    return Null;
+                    else
+                        {
+                        return Null;
+                        }
+                    break;
                 }
             }
-
-        return Null;
+        return result;
         }
 
     /**
@@ -132,7 +117,7 @@ interface DBObject
      *        `DBMap` of the indicated `Key` and `Value` type
      * @throws IllegalArgument if the specified name or path does not refer to a `DBObject`
      */
-    <Key, Value> DBMap<Key, Value> mapOf(String path)
+    <Key, Value> DBMap<Key, Value> mapOf(Path path)
         {
         if (DBObject dbo ?= dbObjectFor(path))
             {
@@ -154,7 +139,7 @@ interface DBObject
      *        `DBQueue` of the indicated `Element` type
      * @throws IllegalArgument if the specified name or path does not refer to a `DBObject`
      */
-    <Element> DBQueue<Element> queueOf(String path)
+    <Element> DBQueue<Element> queueOf(Path path)
         {
         if (DBObject dbo ?= dbObjectFor(path))
             {
@@ -176,7 +161,7 @@ interface DBObject
      *        `DBList` of the indicated `Element` type
      * @throws IllegalArgument if the specified name or path does not refer to a `DBObject`
      */
-    <Element> DBList<Element> listOf(String path)
+    <Element> DBList<Element> listOf(Path path)
         {
         if (DBObject dbo ?= dbObjectFor(path))
             {
@@ -198,7 +183,7 @@ interface DBObject
      *        `DBLog` of the indicated `Element` type
      * @throws IllegalArgument if the specified name or path does not refer to a `DBObject`
      */
-    <Element> DBLog<Element> logOf(String path)
+    <Element> DBLog<Element> logOf(Path path)
         {
         if (DBObject dbo ?= dbObjectFor(path))
             {
@@ -220,7 +205,7 @@ interface DBObject
      *        `DBCounter`
      * @throws IllegalArgument if the specified name or path does not refer to a `DBObject`
      */
-    DBCounter counterOf(String path)
+    DBCounter counterOf(Path path)
         {
         if (DBObject dbo ?= dbObjectFor(path))
             {
@@ -242,7 +227,7 @@ interface DBObject
      *                          `DBFunction` representing a `Function`
      * @throws IllegalArgument  if the specified name or path does not exist
      */
-    Function functionFor(String path)
+    Function functionFor(Path path)
         {
         if (DBObject dbo ?= dbObjectFor(path))
             {
@@ -317,7 +302,8 @@ interface DBObject
         @RO DBObject pre;
 
         /**
-         * The state of the `DBObject`, after this change was made.
+         * The state of the `DBObject`, after this change was made. Note that, for an async trigger,
+         * the state of the database may have since changed from this "post" view.
          *
          * The returned `DBObject` does not allow mutation.
          *
@@ -328,6 +314,73 @@ interface DBObject
 
 
     // ----- transaction trigger API ---------------------------------------------------------------
+
+    /**
+     * Represents an automatic validation of any changes that occurred to the DBObject within a user
+     * transaction.
+     *
+     * (The term "user transaction" refers to changes from an application, as opposed to changes
+     * that occur from automatic trigger processing.)
+     */
+    static interface Validator<TxChange extends DBObject.TxChange>
+        {
+        /**
+         * Validate a transactional change.
+         *
+         * This method **must** not attempt to make changes to the database.
+         *
+         * @param change  the change that is being validated
+         *
+         * @return True iff the change is valid; False will cause the transaction to roll back
+         */
+        Boolean validate(TxChange change);
+        }
+
+    /**
+     * Represents an automatic processing of any changes that occurred to the DBObject within a user
+     * transaction, allowing the DBObject to be further modified before the commit occurs.
+     *
+     * (The term "user transaction" refers to changes from an application, as opposed to changes
+     * that occur from automatic trigger processing.)
+     */
+    static interface Rectifier<TxChange extends DBObject.TxChange>
+        {
+        /**
+         * Rectify the contents of a transactional change to the containing DBObject.
+         *
+         * This method **must** not attempt to make changes to any other DBObject.
+         *
+         * @param change  the change that is being rectified
+         *
+         * @return True iff the change is valid; False will cause the transaction to roll back
+         */
+        Boolean rectify(TxChange change);
+        }
+
+    /**
+     * Represents an automatic processing of any changes that occurred to the DBObject, allowing
+     * other DBObjects to be modified accordingly.
+     */
+    static interface Distributor<TxChange extends DBObject.TxChange>
+        {
+        /**
+         * Distribute changes from the transactional change to the containing DBObject, to other
+         * DBObjects.
+         *
+         * This method **must** not attempt to make changes to either (i) this DBObject, or (ii)
+         * any DBObject that was already modified withing the current transaction. (All Distributor
+         * instances that are indicated by a transaction are executed in a pass, and during that
+         * pass, any number of Distributor instances may modify the same previously-unmodified
+         * DBObjects, which in turn could trigger another Distributor pass, during which any
+         * DBObjects modified previous to that pass must not be modified by the Distributors in that
+         * pass.)
+         *
+         * @param change  the change that is being distributed
+         *
+         * @return True iff the change is valid; False will cause the transaction to roll back
+         */
+        Boolean process(TxChange change);
+        }
 
     /**
      * Represents an automatic response to a change that occurs when a transaction commits.
@@ -342,26 +395,16 @@ interface DBObject
      * implementation will be provided by a database engine implementer, while the `Trigger` will be
      * authored by the application developer.
      */
-    static interface Trigger<TxChange extends DBObject.TxChange>
+    static interface AsyncTrigger<TxChange extends DBObject.TxChange>
         {
         /**
-         * `True` iff the trigger is interested in changes made by other triggers. It is possible
-         * for cascading triggers to result in infinite loops; in such a case, the database will be
-         * killed (if the database engine is well implemented) or lock up (if it is not).
-         */
-        @RO Boolean cascades.get()
-            {
-            // when possible, a trigger should not cascade
-            return False;
-            }
-
-        /**
-         * Determine if this Trigger applies to the specified change. This method must **not** make
-         * any further modifications to the database.
+         * Determine if this AsyncTrigger applies to the specified change. This method must **not**
+         * attempt to modify the database. The use of this method by the database implementation is
+         * optional; the database engine may call [process] without first calling this method.
          *
          * @param change  the change being evaluated
          *
-         * @return `True` iff the trigger is interested in the specified change
+         * @return `True` iff the AsyncTrigger is interested in the specified change
          */
         Boolean appliesTo(TxChange change)
             {
@@ -369,20 +412,9 @@ interface DBObject
             }
 
         /**
-         * `True` iff the trigger functionality is supposed to fire _after_ the transaction commits.
-         */
-        @RO Boolean async.get()
-            {
-            // when possible, a trigger should be asynchronous, but the typical use case is a
-            // trigger that needs to execute within a transaction in order to be able to prevent
-            // the transaction from committing if something about the transaction is wrong
-            return False;
-            }
-
-        /**
-         * Execute the Trigger functionality. This method may make modifications to the database.
+         * Execute the AsyncTrigger functionality. This method may modify the database.
          *
-         * @param change  the change that the Trigger is firing in response to
+         * @param change  the change that the AsyncTrigger is firing in response to
          */
         void process(TxChange change);
         }

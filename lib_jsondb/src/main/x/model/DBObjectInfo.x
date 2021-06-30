@@ -13,7 +13,7 @@ import oodb.DBObject.DBCategory as Category;
  */
 const DBObjectInfo(
         String               name,
-        String               path,
+        Path                 path,
         Category             category,
         Int                  id,
         Int                  parentId,
@@ -46,7 +46,7 @@ const DBObjectInfo(
             {
             assert parentId == 0;
             assert name == "";
-            assert path == "";
+            assert path == ROOT;
             }
         else
             {
@@ -57,21 +57,15 @@ const DBObjectInfo(
                 throw new IllegalState(fault);
                 }
 
-            String[] names = path.split('/');
-            Int      count = names.size;
-
-            // the path has to at least include this name
-            assert count > 0;
-
             // the last name in the path must be this name
-            assert names[count-1] == name;
+            assert path[path.size-1].name == name;
 
             // each name must be valid
-            Loop: for (String pathPart : names)
+            Loop: for (Path pathPart : path)
                 {
-                if (String fault := oodb.isInvalidName(pathPart))
+                if (String fault := oodb.isInvalidName(pathPart.name))
                     {
-                    throw new IllegalState($"Path ({path.quoted()}) element {Loop.count}: {fault}");
+                    throw new IllegalState($"Path ({path.toString().quoted()}) element {Loop.count}: {fault}");
                     }
                 }
             }
@@ -196,7 +190,7 @@ const DBObjectInfo(
         assert id != 0;
         return new DBObjectInfo(
                 name            = name,
-                path            = parent.id == 0 ? name : $"{parent.path}/{name}",
+                path            = parent.path + name,
                 category        = category,
                 id              = id,
                 parentId        = parent.id,

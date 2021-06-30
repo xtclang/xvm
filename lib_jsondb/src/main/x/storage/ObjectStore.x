@@ -89,7 +89,7 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
      * The path that specifies this `DBObject`, and that indicates the storage location for the
      * data contained within it.
      */
-    String path.get()
+    Path path.get()
         {
         return info.path;
         }
@@ -101,13 +101,11 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
      */
     @Lazy public/private Directory containingDir.calc()
         {
+        // TODO this should be a lot easier ... e.g.: return catalog.dir.apply(path);
         Directory dir = catalog.dir;
-        loop: for (String part : path.split('/'))
+        for (Path part : path[1..path.size-1))
             {
-            if (!loop.last)
-                {
-                dir = dir.dirFor(part);
-                }
+            dir = dir.dirFor(part.name);
             }
         return dir;
         }

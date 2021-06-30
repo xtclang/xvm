@@ -232,16 +232,16 @@ interface DBCounter
 
     // ----- transaction trigger API ---------------------------------------------------------------
 
-    /**
-     * Represents an automatic response to a change that occurs when a transaction commits.
-     *
-     * This interface can be used in lieu of the more generic [DBObject.Trigger] interface, but it
-     * exists only as a convenience, in that it can save the application developer a few type-casts
-     * that might otherwise be necessary.
-     */
-    @Override
-    static interface Trigger<TxChange extends DBCounter.TxChange>
-            extends DBValue.Trigger<TxChange>
-        {
-        }
+    // these interfaces can be used in lieu of the more generic interfaces of the same names found
+    // on [DBObject], but these exists only as a convenience, in that they can save the application
+    // database developer a few type-casts that might otherwise be necessary.
+
+    @Override static interface Validator<TxChange extends DBCounter.TxChange>
+            extends DBObject.Validator<TxChange> {}
+    @Override static interface Rectifier<TxChange extends DBCounter.TxChange>
+            extends DBObject.Rectifier<TxChange> {}
+    @Override static interface Distributor<TxChange extends DBCounter.TxChange>
+            extends DBObject.Distributor<TxChange> {}
+    @Override static interface AsyncTrigger<TxChange extends DBCounter.TxChange>
+            extends DBObject.AsyncTrigger<TxChange> {}
     }

@@ -447,7 +447,7 @@ service Client<Schema extends RootSchema>
             }
 
         @Override
-        @RO String dbPath.get()
+        @RO Path dbPath.get()
             {
             return info_.path;
             }
