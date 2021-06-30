@@ -49,12 +49,12 @@ interface DBValue<Value extends immutable Const>
     static interface DBChange<Value>
         {
         /**
-         * True iff the counter was read during the transaction.
+         * The value that precedes this transaction.
          */
         @RO Value oldValue;
 
         /**
-         * True iff the counter was written during the transaction.
+         * The value as it was modified during the transaction.
          */
         @RO Value newValue;
         }
