@@ -39,13 +39,13 @@ module TestFiles
 
         Loop: for (Path each : path)
             {
-            console.println($"iteratoring path[{Loop.count}]={each}");
+            console.println($"iterating path[{Loop.count}]={each}");
             }
         console.println($"path[]={path.toArray()}");
 
         console.println($"path[1..2]={path[1..2]}");
         console.println($"path[0..1]={path[0..1]}");
-        console.println($"path[2..0]={path[2..0]}"); // was broken ("test/sub/more") now fixed ("more/sub/test")
+        console.println($"path[2..0]={path[2..0]}");
 
         path = ROOT + path;
         console.println("path=" + path);

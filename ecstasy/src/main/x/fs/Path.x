@@ -572,17 +572,9 @@ const Path
 
             @Override conditional Path next()
                 {
-// TODO GG
-//                return i < size
-//                        ? (True, this.Path[i++])
-//                        : False;
-                if (i >= size)
-                    {
-                    return False;
-                    }
-                Path path = this.Path[i];
-                ++i;
-                return True, path;
+                return i < size
+                        ? (True, this.Path[i++])
+                        : False;
                 }
             };
         }

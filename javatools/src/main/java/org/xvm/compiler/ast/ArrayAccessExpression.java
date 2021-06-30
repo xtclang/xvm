@@ -687,7 +687,8 @@ public class ArrayAccessExpression
             Argument         argResult      = LVal.isLocalArgument()
                                             ? LVal.getLocalArgument()
                                             : createTempVar(code, getType(), true, errs).getRegister();
-            Argument         argArray       = expr.generateArgument(ctx, code, true, true, errs);
+            // the target argument for Invoke must not be on stack
+            Argument         argArray       = expr.generateArgument(ctx, code, true, !m_fSlice, errs);
             List<Expression> listIndexExprs = indexes;
             int              cIndexes       = listIndexExprs.size();
             if (cIndexes == 1)
