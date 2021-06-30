@@ -616,11 +616,22 @@ public abstract class ObjectHandle
                 ObjectHandle hV1 = aField1[comp1.getFieldPosition(nid)];
                 ObjectHandle hV2 = aField2[comp2.getFieldPosition(nid)];
 
-                // TODO: need to prevent a potential infinite loop
-                ClassTemplate template = hV1.getTemplate();
-                if (template != hV2.getTemplate() || !template.compareIdentity(hV1, hV2))
+                // REVIEW GG MF - NPE from files.x test comparing two paths (@hash was null?)
+                if (hV1 == null || hV2 == null)
                     {
-                    return false;
+                    if (hV1 != hV2)
+                        {
+                        return false;
+                        }
+                    }
+                else
+                    {
+                    // TODO: need to prevent a potential infinite loop
+                    ClassTemplate template = hV1.getTemplate();
+                    if (template != hV2.getTemplate() || !template.compareIdentity(hV1, hV2))
+                        {
+                        return false;
+                        }
                     }
                 }
 

@@ -39,7 +39,7 @@ module TestFiles
 
         console.println($"path[1..2]={path[1..2]}");
         console.println($"path[0..1]={path[0..1]}");
-        console.println($"path[2..0]={path[2..0]}");
+        console.println($"path[2..0]={path[2..0]}"); // was broken ("test/sub/more") now fixed ("more/sub/test")
 
         path = ROOT + path;
         console.println("path=" + path);

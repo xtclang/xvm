@@ -1,21 +1,11 @@
 /**
- * Path represents a path to a file.
+ * Path represents a path to a resource, such as a file.
  */
 const Path
         implements UniformIndexed<Int, Path>
         implements Sliceable<Int>
     {
-    static Path ROOT    = new Path(Null, Root);
-    static Path PARENT  = new Path(Null, Parent);
-    static Path CURRENT = new Path(Null, Current);
-
-    enum ElementForm(String text, Int depth)
-        {
-        Root   ("/"   ,  0),
-        Parent (".."  , -1),
-        Current("."   ,  0),
-        Name   ("name",  1)
-        }
+    // ----- constructors --------------------------------------------------------------------------
 
     /**
      * Construct a Path from a String representation.
@@ -40,33 +30,20 @@ const Path
 
         String[] segments = pathString.split('/');
         Int      last     = segments.size - 1;
-        for (Int cur = 0; cur < last; ++cur)
+        if (segments[last] == "")
             {
-            parent = switch (String segment = segments[cur])
-                {
-                case "." : new Path(parent, Current);
-                case "..": new Path(parent, Parent );
-                default  : new Path(parent, segment);
-                };
+            // a blank trailing segment is ignored ("a/b/" becomes "a/b")
+            assert --last >= 0;
             }
 
-        switch (String segment = segments[last])
+        // construct a parent path composed of all of the parsed segments, except for the last one
+        for (Int i = 0; i < last; ++i)
             {
-            case "." : construct Path(parent, Current); break;
-            case "..": construct Path(parent, Parent ); break;
-            default  : construct Path(parent, segment); break;
+            parent = new Path(parent, segments[i]);
             }
-        }
 
-    /**
-     * Construct a Path based on a parent Path and a path element.
-     *
-     * @param parent  an optional parent
-     * @param name    a path element name
-     */
-    construct(Path? parent, String name)
-        {
-        construct Path(parent, Name, name);
+        // this Path object is constructed from the path parent, plus the last segment
+        construct Path(parent, segments[last]);
         }
 
     /**
@@ -81,23 +58,90 @@ const Path
         construct Path(parent, form, form.text);
         }
 
+    /**
+     * Construct a Path based on a parent Path and a path element.
+     *
+     * @param parent  an optional parent
+     * @param name    a path element name
+     */
+    construct(Path? parent, String name)
+        {
+        switch (name)
+            {
+            case "/":
+                construct Path(parent, Root);
+                break;
+
+            case ".":
+                construct Path(parent, Current);
+                break;
+
+            case "..":
+                construct Path(parent, Parent);
+                break;
+
+            default:
+                construct Path(parent, Name, name);
+                break;
+            }
+        }
+
+    /**
+     * Internal constructor.
+     *
+     * @param parent  the parent path of this path, or Null
+     * @param form    the form of the path element
+     * @param name    the path element name, or null if the form is not Name
+     */
     private construct(Path? parent, ElementForm form, String name)
         {
-        this.parent = parent;
-        this.form   = form;
-        this.name   = name;
-
+        assert name != "";
         assert form != Root || parent == Null;
         assert parent?.relative || parent.depth + form.depth >= 0;
 
-        size     = 1 + (parent?.size : 0);
-        absolute = parent?.absolute : form == Root;
+        this.parent   = parent;
+        this.form     = form;
+        this.name     = name;
+        this.size     = 1 + (parent?.size : 0);
+        this.absolute = parent?.absolute : form == Root;
         }
+
+
+    // ----- constants -----------------------------------------------------------------------------
+
+    /**
+     * A "root directory" Path instance.
+     */
+    static Path ROOT    = new Path(Null, Root);
+
+    /**
+     * A "parent directory" Path instance.
+     */
+    static Path PARENT  = new Path(Null, Parent);
+
+    /**
+     * A "current directory" Path instance.
+     */
+    static Path CURRENT = new Path(Null, Current);
+
+
+    // ----- properties ----------------------------------------------------------------------------
 
     /**
      * The Path element preceding this one.
      */
     Path? parent;
+
+    /**
+     * The various potential forms of the elements of a Path.
+     */
+    enum ElementForm(String text, Int depth)
+        {
+        Root   ("/"   ,  0),
+        Parent (".."  , -1),
+        Current("."   ,  0),
+        Name   ("name",  1)
+        }
 
     /**
      * The form of this Path element.
@@ -139,6 +183,9 @@ const Path
         return (parent?.depth : 0) + form.depth;
         }
 
+
+    // ----- Path operations -----------------------------------------------------------------------
+
     /**
      * Simplify the path, if possible, by removing any redundant information without changing the
      * meaning of the path.
@@ -179,7 +226,7 @@ const Path
             return parent.parent ?: CURRENT;
             }
 
-        return parent == this.parent
+        return &parent == this.&parent
                 ? this
                 : new Path(parent, form, name);
         }
@@ -195,18 +242,15 @@ const Path
      */
     Boolean startsWith(Path that)
         {
+        if (&this == &that)
+            {
+            return True;
+            }
+
         Int tailSize = this.size - that.size;
         if (tailSize < 0 || this.absolute != that.absolute)
             {
             return False;
-            }
-
-        // handle trailing '/'
-        if (that.form == Name && that.name.size == 0)
-            {
-            assert that.size > 0;
-            that = that.parent? : assert;
-            ++tailSize;
             }
 
         Path parent = this;
@@ -234,16 +278,39 @@ const Path
             case Lesser:
                 return False;
 
+            case Equal:
+                if (&this == &that)
+                    {
+                    return True;
+                    }
+                break;
+
             case Greater:
                 if (that.absolute)
                     {
                     return False;
                     }
-                continue;
+                break;
+            }
 
-            case Equal:
-                return this.form == that.form && this.name == that.name
-                        && (this.parent?.endsWith(that.parent?) : True);
+        Path thisElement = this;
+        Path thatElement = that;
+        while (True)
+            {
+            ElementForm form = thisElement.form;
+            if (form != thatElement.form || form == Name && this.name != that.name)
+                {
+                return False;
+                }
+
+            val thatParent = thatElement.parent;
+            if (thatParent == Null)
+                {
+                return True;
+                }
+
+            thisElement = thisElement.parent ?: assert;
+            thatElement = thatParent;
             }
         }
 
@@ -344,7 +411,14 @@ const Path
      */
     Path sibling(String name)
         {
-        return parent? + name : new Path(Null, Name, name);
+        assert depth >= 1;
+        return switch (form)
+            {
+            case Root   : assert;
+            case Parent : new Path(this, Parent) + name;
+            case Current: parent?.sibling(name) : new Path(PARENT, name);
+            case Name   : parent? + name : new Path(Null, name);
+            };
         }
 
     /**
@@ -373,9 +447,13 @@ const Path
     @Op("+") Path add(Path that)
         {
         assert that.relative;
-
-        Path parent = this.add(that.parent?) : this;
-        return new Path(parent, that.form, that.name);
+        Path result = this;
+        for (Int i : [0..that.size))
+            {
+            val segment = that[i];
+            result = new Path(result, segment.form, segment.name);
+            }
+        return result;
         }
 
 
@@ -384,14 +462,11 @@ const Path
     @Override
     @Op("[]") Path getElement(Int index)
         {
-        if (index < 0)
-            {
-            throw new OutOfBounds($"{index.toString()} < 0");
-            }
+        assert:bounds 0 <= index < size;
 
-        if (index >= size)
+        if (index == 0 && absolute)
             {
-            throw new OutOfBounds($"{index.toString()} >= {size}");
+            return ROOT;
             }
 
         Path path  = this;
@@ -400,7 +475,14 @@ const Path
             {
             path = path.parent ?: assert;
             }
-        return path.parent == Null ? path : new Path(Null, path.form, path.name);
+
+        return switch (path.form)
+            {
+            case Root   : ROOT;
+            case Parent : PARENT;
+            case Current: CURRENT;
+            case Name   : new Path(Null, Name, path.name);
+            };
         }
 
 
@@ -415,14 +497,17 @@ const Path
 
         if (lower == 0)
             {
-            assert !indexes.descending || relative;
+            assert relative || !indexes.descending;
 
-            Path result = this;
-            for (Int steps = size - upper - 1; steps > 0; --steps)
+            if (!indexes.descending)
                 {
-                result = result.parent ?: assert;
+                Path result = this;
+                for (Int steps = size - upper - 1; steps > 0; --steps)
+                    {
+                    result = result.parent ?: assert;
+                    }
+                return result;
                 }
-            return result;
             }
 
         Path? slice = Null;
@@ -472,5 +557,87 @@ const Path
             }
 
         return name.appendTo(buf);
+        }
+
+
+    // ----- funky interfaces ----------------------------------------------------------------------
+
+    /**
+     * Compare two objects of the same Hashable type for equality.
+     *
+     * @return True iff the objects are equivalent
+     */
+    @Override
+    static <CompileType extends Path> Boolean equals(CompileType value1, CompileType value2)
+        {
+        if (   value1.size     != value2.size       // quick check: how "long" the path is
+            || value1.absolute != value2.absolute)  // quick check: are they both absolute/relative?
+            {
+            return False;
+            }
+
+        Path path1 = value1;
+        Path path2 = value2;
+        while (True)
+            {
+            if (path1.form != path2.form
+                || path1.form == Name && path1.name != path2.name)
+                {
+                return False;
+                }
+
+            val parent1 = path1.parent;
+            if (parent1 == Null)
+                {
+                return True;
+                }
+            path1 = parent1;
+            path2 = path2.parent ?: assert;
+            }
+        }
+
+    @Override
+    static <CompileType extends Path> Int hashCode(CompileType value)
+        {
+        return switch (value.form)
+            {
+            case Root   : 3736988521;
+            case Parent : 12344321317;
+            case Current: 98764321261;
+            case Name   : value.name.hashCode();
+            } ^ (value.parent?.hashCode().rotateLeft(7) : 0);
+        }
+
+    @Override
+    static <CompileType extends Path> Ordered compare(CompileType value1, CompileType value2)
+        {
+        // all absolute paths come first in sort order
+        if (value1.absolute ^ value2.absolute)
+            {
+            return value1.absolute ? Lesser : Greater;
+            }
+
+        switch (value1.size <=> value2.size)
+            {
+            case Lesser:
+                val result = value1 <=> value2.parent? : assert;
+                return result == Equal ? Lesser : result;
+
+            case Equal:
+                var result = value1.parent? <=> value2.parent? : Equal;
+                if (result == Equal)
+                    {
+                    result = value1.form <=> value2.form;
+                    if (result == Equal && value1.form == Name)
+                        {
+                        result = value1.name <=> value2.name;
+                        }
+                    }
+                return result;
+
+            case Greater:
+                val result = value1.parent? <=> value2 : assert;
+                return result == Equal ? Greater : result;
+            }
         }
     }
