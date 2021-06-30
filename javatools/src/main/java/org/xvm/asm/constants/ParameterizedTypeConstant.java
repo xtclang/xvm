@@ -755,20 +755,6 @@ public class ParameterizedTypeConstant
     // ----- type comparison support --------------------------------------------------------------
 
     @Override
-    public boolean isContravariantParameter(TypeConstant typeBase, TypeConstant typeCtx)
-        {
-        if (super.isContravariantParameter(typeBase, typeCtx))
-            {
-            return true;
-            }
-
-        // we allow widening a parameter type from B<T> to D<T> or from C<D> to C<B>
-        // (assuming D "isA" B and C is a consumer)
-        // TODO GG: is the implementation below is too lax
-        return typeBase.isParamsSpecified() && typeBase.isA(this);
-        }
-
-    @Override
     protected Set<SignatureConstant> isInterfaceAssignableFrom(TypeConstant typeRight, Access accessLeft,
                                                                List<TypeConstant> listLeft)
         {

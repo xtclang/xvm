@@ -738,22 +738,6 @@ public class IntersectionTypeConstant
         }
 
     @Override
-    public boolean isContravariantParameter(TypeConstant typeBase, TypeConstant typeCtx)
-        {
-        if (super.isContravariantParameter(typeBase, typeCtx))
-            {
-            return true;
-            }
-
-        // allow widening a parameter type from T to Nullable | T
-        if (isNullable())
-            {
-            return removeNullable().isContravariantParameter(typeBase, typeCtx);
-            }
-        return false;
-        }
-
-    @Override
     protected Relation findIntersectionContribution(IntersectionTypeConstant typeLeft)
         {
         TypeConstant thisRight1 = getUnderlyingType();

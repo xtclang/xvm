@@ -1448,8 +1448,8 @@ public abstract class AstNode
      * @return the best matching method or null, if the methods are ambiguous, in which case
      *         an error has been reported
      */
-    protected MethodConstant chooseBest(Set<MethodConstant> setMethods, TypeConstant typeTarget,
-            ErrorListener errs)
+    protected MethodConstant chooseBest(Set<MethodConstant> setMethods,
+                                        TypeConstant typeTarget, ErrorListener errs)
         {
         assert !setMethods.isEmpty();
 
@@ -1474,6 +1474,32 @@ public abstract class AstNode
                     {
                     fOldBetter = sigMethod.isSubstitutableFor(sigBest, typeTarget);
                     fNewBetter = sigBest.isSubstitutableFor(sigMethod, typeTarget);
+
+                    if (!fOldBetter && !fNewBetter)
+                        {
+                        // choose the one that is narrower for every argument
+                        for (int i = 0; i < cParamsOld; i++)
+                            {
+                            TypeConstant typeOld = sigBest.getRawParams()[i];
+                            TypeConstant typeNew = sigMethod.getRawParams()[i];
+
+                            if (typeOld.isA(typeNew) && !typeNew.isA(typeOld))
+                                {
+                                fOldBetter = true;
+                                }
+                            if (typeNew.isA(typeOld) && !typeOld.isA(typeNew))
+                                {
+                                fNewBetter = true;
+                                }
+
+                            if (fNewBetter && fOldBetter)
+                                {
+                                // new was better at some but not other arg; still ambiguous
+                                fOldBetter = fNewBetter = false;
+                                break;
+                                }
+                            }
+                        }
                     }
                 else
                     {

@@ -2475,9 +2475,9 @@ public class InvocationExpression
         // - functions are NOT included because the left is NOT identity-mode
         TypeInfo      infoLeft = getTypeInfo(ctx, typeLeft, errs);
         ErrorListener errsMain = errs.branch();
+        MethodKind    kind     = fConstruct ? MethodKind.Constructor : MethodKind.Method;
 
-        Argument arg = findCallable(ctx, typeLeft, infoLeft, sName, MethodKind.Method, false,
-                            atypeReturn, errsMain);
+        Argument arg = findCallable(ctx, typeLeft, infoLeft, sName, kind, false, atypeReturn, errsMain);
         if (arg != null)
             {
             if (arg instanceof MethodConstant)
