@@ -4,6 +4,7 @@
 const Path
         implements UniformIndexed<Int, Path>
         implements Sliceable<Int>
+        implements Iterable<Path>
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -156,7 +157,7 @@ const Path
     /**
      * The number of Path elements that make up this Path.
      */
-    Int size;
+    @Override Int size;
 
     /**
      * True iff the Path is absolute, not relative.
@@ -557,6 +558,51 @@ const Path
             }
 
         return name.appendTo(buf);
+        }
+
+
+    // ----- Iterable methods ----------------------------------------------------------------------
+
+    @Override
+    Iterator<Path> iterator()
+        {
+        return new Iterator<Path>()
+            {
+            Int i = 0;
+
+            @Override conditional Path next()
+                {
+// TODO GG
+//                return i < size
+//                        ? (True, this.Path[i++])
+//                        : False;
+                if (i >= size)
+                    {
+                    return False;
+                    }
+                Path path = this.Path[i];
+                ++i;
+                return True, path;
+                }
+            };
+        }
+
+    @Override
+    Path[] toArray(Array.Mutability? mutability = Null)
+        {
+        // start with a mutable or fixed size array full of references to "this"
+        Path[] parts = mutability == Mutable
+                ? new Path[](size).fill(this, [0..size))
+                : new Path[size](this);
+
+        // now replace all the parts other than the last one (which should be "this")
+        for (Path path = this, Int i = size - 1; path ?= path.parent; )
+            {
+            parts[--i] = path;
+            }
+
+        // finally, return an array of the desired mutability
+        return parts.toArray(mutability, inPlace=True);
         }
 
 
