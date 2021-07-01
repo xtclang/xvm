@@ -17,8 +17,6 @@ import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
 import org.xvm.runtime.template.xException;
 
-import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
-
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
 

@@ -315,7 +315,7 @@ public class JumpVal_N
         // now check for presence of ranges among the rows (cases)
         for (int iR = 0; iR < cRows; iR++ )
             {
-            long lCaseBit = 1 << iR;
+            long lCaseBit = 1L << iR;
             for (int iC = 0; iC < cColumns; iC++)
                 {
                 ObjectHandle hCase = aahCases[iR][iC];
