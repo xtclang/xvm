@@ -30,9 +30,9 @@ module AddressBookDB_jsondb
         {
         return
             [
-            new DBObjectInfo_("", "", DBSchema, 0, 0, [1]),
-            new DBObjectInfo_("contacts", "contacts", DBMap, 1, 0, typeParams=Map<String, Type>:["Key"=String, "Value"=AddressBookDB_.Contact]),
-            new DBObjectInfo_("requestCount", "requestCount", DBCounter, 2, 0),
+            new DBObjectInfo_("", ROOT, DBSchema, 0, 0, [1]),
+            new DBObjectInfo_("contacts", Path:/contacts, DBMap, 1, 0, typeParams=Map<String, Type>:["Key"=String, "Value"=AddressBookDB_.Contact]),
+            new DBObjectInfo_("requestCount", Path:/requestCount, DBCounter, 2, 0),
             ];
         }
 
