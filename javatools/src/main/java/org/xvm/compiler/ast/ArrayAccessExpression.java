@@ -537,10 +537,9 @@ public class ArrayAccessExpression
                     m_fSlice = fSlice = true;
                     }
 
-                SignatureConstant sigGet = infoGet.getSignature();
-                aIndexTypes = sigGet.getRawParams();
-                m_idGet     = infoGet.getIdentity();
-                typeResult  = sigGet.getRawReturns()[0].resolveAutoNarrowing(pool, true, typeArray, null);
+                m_idGet     = typeArray.ensureTypeInfo().resolveMethodConstant(infoGet);
+                aIndexTypes = m_idGet.getRawParams();
+                typeResult  = m_idGet.getRawReturns()[0];
                 }
             }
 
@@ -751,6 +750,9 @@ public class ArrayAccessExpression
     /**
      * Search through the target type for an accessor that matches the form and type of an array
      * access operator with the arguments that are available.
+     *
+     * TODO GG: replace the return to MethodConstant; re-use AstNode.chooseBest() and
+     *          revert TypeInfo.resolveMethodConstant() back to protected
      *
      * @param ctx         the compiler context
      * @param typeTarget  the array type

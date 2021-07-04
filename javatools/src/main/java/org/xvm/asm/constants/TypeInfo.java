@@ -1834,7 +1834,7 @@ public class TypeInfo
     /**
      * @return resolved method constant, which may be synthetic (not pointing to a structure)
      */
-    protected MethodConstant resolveMethodConstant(MethodInfo method)
+    public MethodConstant resolveMethodConstant(MethodInfo method)
         {
         return resolveMethodConstant(method.getIdentity(), method);
         }
