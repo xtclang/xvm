@@ -3,7 +3,6 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -523,8 +522,8 @@ public class ArrayAccessExpression
             typeArray = exprArray.getType();
 
             // find the element access operator
-            MethodInfo infoGet = findArrayAccessor(ctx, typeArray, aexprIndexes, typeRequired);
-            if (infoGet == null)
+            MethodConstant idGet = findArrayAccessor(ctx, typeArray, aexprIndexes, typeRequired);
+            if (idGet == null)
                 {
                 log(errs, Severity.ERROR, Compiler.MISSING_OPERATOR_SIGNATURE,
                         "[]", typeArray.getValueString(), cIndexes);
@@ -532,14 +531,17 @@ public class ArrayAccessExpression
                 }
             else
                 {
+                TypeInfo   infoArray = typeArray.ensureTypeInfo();
+                MethodInfo infoGet   = infoArray.getMethodById(idGet);
+                assert infoGet != null;
                 if (!infoGet.isOp("getElement", "[]", -1))
                     {
                     m_fSlice = fSlice = true;
                     }
 
-                m_idGet     = typeArray.ensureTypeInfo().resolveMethodConstant(infoGet);
-                aIndexTypes = m_idGet.getRawParams();
-                typeResult  = m_idGet.getRawReturns()[0];
+                aIndexTypes = idGet.getRawParams();
+                typeResult  = idGet.getRawReturns()[0];
+                m_idGet     = idGet;
                 }
             }
 
@@ -751,9 +753,6 @@ public class ArrayAccessExpression
      * Search through the target type for an accessor that matches the form and type of an array
      * access operator with the arguments that are available.
      *
-     * TODO GG: replace the return to MethodConstant; re-use AstNode.chooseBest() and
-     *          revert TypeInfo.resolveMethodConstant() back to protected
-     *
      * @param ctx         the compiler context
      * @param typeTarget  the array type
      * @param aexprArgs   the arguments
@@ -761,7 +760,7 @@ public class ArrayAccessExpression
      *
      * @return the selected method to use as the array accessor
      */
-    private MethodInfo findArrayAccessor(
+    private MethodConstant findArrayAccessor(
             Context       ctx,
             TypeConstant  typeTarget,
             Expression[]  aexprArgs,
@@ -777,9 +776,9 @@ public class ArrayAccessExpression
                     : exprArg.getImplicitType(ctx);
             }
 
-        TypeInfo         infoTarget = typeTarget.ensureTypeInfo();
-        boolean          fTuple     = typeTarget.isTuple();
-        List<MethodInfo> listMatch  = new ArrayList<>();
+        TypeInfo            infoTarget = typeTarget.ensureTypeInfo();
+        boolean             fTuple     = typeTarget.isTuple();
+        Set<MethodConstant> setMatch   = new HashSet<>();
 
         Set<MethodConstant> setAll = findPotentialOps(infoTarget, cArgs);
         NextOp: for (MethodConstant idMethod : setAll)
@@ -788,7 +787,7 @@ public class ArrayAccessExpression
             if (!fTuple && typeReturn != null && (sig.getRawReturns().length < 1
                     || !isAssignable(ctx, sig.getRawReturns()[0], typeReturn)))
                 {
-                continue NextOp;
+                continue;
                 }
 
             // verify that there are enough parameters to receive the arguments
@@ -796,7 +795,7 @@ public class ArrayAccessExpression
             int            cParams     = atypeParams.length;
             if (cParams < cArgs)
                 {
-                continue NextOp;
+                continue;
                 }
 
             // verify that any additional parameters have a default value
@@ -804,7 +803,7 @@ public class ArrayAccessExpression
             if (cParams > cArgs && (cParams - cArgs) <
                     info.getTopmostMethodStructure(infoTarget).getDefaultParamCount())
                 {
-                continue NextOp;
+                continue;
                 }
 
             // verify the args each have a matching parameter
@@ -827,47 +826,25 @@ public class ArrayAccessExpression
                 MethodInfo infoNarrowing = infoTarget.getNarrowingMethod(info);
                 if (infoNarrowing.isOp())
                     {
-                    listMatch.add(infoNarrowing);
+                    setMatch.add(infoTarget.resolveMethodConstant(infoNarrowing));
                     continue;
                     }
                 }
-            listMatch.add(info);
+
+            setMatch.add(idMethod);
             }
 
-        int cMatches = listMatch.size();
-        if (cMatches == 0)
+        switch (setMatch.size())
             {
-            return null;
-            }
+            case 0:
+                return null;
 
-        if (cMatches == 1)
-            {
-            return listMatch.get(0);
-            }
+            case 1:
+                return setMatch.iterator().next();
 
-        // disambiguate (pick the best choice)
-        MethodInfo        infoBest = listMatch.get(0);
-        SignatureConstant sigBest  = infoBest.getSignature();
-        for (int i = 1; i < cMatches; i++)
-            {
-            MethodInfo        info = listMatch.get(i);
-            SignatureConstant sig  = info.getSignature();
-
-            boolean fOldBetter = sig.isSubstitutableFor(sigBest, typeTarget);
-            boolean fNewBetter = sigBest.isSubstitutableFor(sig, typeTarget);
-            if (fOldBetter ^ fNewBetter)
-                {
-                if (fNewBetter)
-                    {
-                    infoBest = info;
-                    sigBest  = sig;
-                    }
-                continue;
-                }
-            infoBest = null;
-            break;
+            default:
+                return chooseBest(setMatch, typeTarget, ErrorListener.BLACKHOLE);
             }
-        return infoBest;
         }
 
     private Set<MethodConstant> findPotentialOps(TypeInfo infoTarget, int cArgs)
@@ -875,7 +852,7 @@ public class ArrayAccessExpression
         if (isInclusiveSlice())
             {
             // it is possible that the interval is the index type of the array
-            Set<MethodConstant> setGet = infoTarget.findOpMethods("getElement", "[]", cArgs);
+            Set<MethodConstant> setGet   = infoTarget.findOpMethods("getElement", "[]", cArgs);
             Set<MethodConstant> setSlice = infoTarget.findOpMethods("sliceInclusive", "[[..]]", cArgs);
             return combineSets(setGet, setSlice);
             }
@@ -885,7 +862,7 @@ public class ArrayAccessExpression
             }
         else
             {
-            Set<MethodConstant> setGet = infoTarget.findOpMethods("getElement", "[]", cArgs);
+            Set<MethodConstant> setGet   = infoTarget.findOpMethods("getElement", "[]", cArgs);
             Set<MethodConstant> setSlice = infoTarget.findOpMethods("slice", "[..]", cArgs);
             return combineSets(setGet, setSlice);
             }
