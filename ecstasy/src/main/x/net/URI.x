@@ -176,13 +176,13 @@ const URI(String? scheme,
 
         private Char next()
             {
-            assert index < (size - 1);
+            assert index < size - 1;
             return input[++index];
             }
 
         private Char peek()
             {
-            assert index < (size - 1);
+            assert index < size - 1;
             return input[index + 1];
             }
 
@@ -194,7 +194,7 @@ const URI(String? scheme,
 
         private Boolean hasNext()
             {
-            return index < (size - 1);
+            return index < size - 1;
             }
 
         private void setPosition(Int pos)
@@ -224,7 +224,7 @@ const URI(String? scheme,
 
             if (hasNext())
                 {
-                this.ssp = input[index + 1..size];
+                this.ssp = input[index+1 .. size);
                 }
 
             this.opaque = False;
@@ -236,11 +236,12 @@ const URI(String? scheme,
                     throw new IllegalArgument($"Expected scheme name at index {index}: '{input}'.");
                     }
                 this.scheme = comp;
-                if (!hasNext()) {
+                if (!hasNext())
+                    {
                     this.path = "";
-                    this.ssp = "";
+                    this.ssp  = "";
                     return;
-                }
+                    }
                 Char c = next();
                 if (c == '/')
                     {
@@ -272,7 +273,7 @@ const URI(String? scheme,
             if (fragment.is(String) && ssp.is(String))
                 {
                 // there is a fragment so remove it from the SSP
-                this.ssp = ssp[0..ssp.size - fragment.size - 2];
+                this.ssp = ssp[0 .. ssp.size - fragment.size - 2];
                 }
             }
 
@@ -348,7 +349,7 @@ const URI(String? scheme,
                 next();
                 next();
                 parseAuthority();
-            }
+                }
 
             if (!hasNext())
                 {
@@ -429,7 +430,7 @@ const URI(String? scheme,
                     return;
                     }
                 next();
-                this.fragment = input[index..size];
+                this.fragment = input[index..size);
                 }
             }
         }
