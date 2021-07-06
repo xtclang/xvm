@@ -19,6 +19,7 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
 
+import org.xvm.asm.constants.ChildClassConstant;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.PropertyConstant;
@@ -948,17 +949,22 @@ public class NamedTypeExpression
             //    }
             //
 
-            boolean       fImplicitFormal = false;
+            boolean       fAllowFormal = false;
+            boolean       fRetainConst = true;
             ClassConstant idTarget;
             switch (constTarget.getFormat())
                 {
                 case ThisClass:
                 case ParentClass:
                     // we can only generate an implicit formal type for "this" or "parent"
-                    fImplicitFormal = true;
-                    // fall through
+                    fAllowFormal = true;
+                    idTarget     = (ClassConstant) ((PseudoConstant) constTarget).getDeclarationLevelClass();
+                    break;
+
                 case ChildClass:
-                    idTarget = (ClassConstant) ((PseudoConstant) constTarget).getDeclarationLevelClass();
+                    // we don't retain the child const unless it's a virtual child
+                    fRetainConst = false;
+                    idTarget     = (ClassConstant) ((ChildClassConstant) constTarget).getDeclarationLevelClass();
                     break;
 
                 case Class:
@@ -1070,7 +1076,7 @@ public class NamedTypeExpression
                             MethodStructure method = (MethodStructure) component;
                             fFormalParent = !method.isFunction() || method.isLambda();
                             }
-                        boolean fFormalChild = fFormalParent && fImplicitFormal && paramTypes == null;
+                        boolean fFormalChild = fFormalParent && fAllowFormal && paramTypes == null;
 
                         typeTarget = pool.ensureVirtualTypeConstant(
                                 clzBase, clzTarget, fFormalParent, fFormalChild, constTarget);
@@ -1127,7 +1133,7 @@ public class NamedTypeExpression
                 }
 
             return typeTarget == null
-                    ? pool.ensureTerminalTypeConstant(constTarget)
+                    ? pool.ensureTerminalTypeConstant(fRetainConst ? constTarget : idTarget)
                     : typeTarget;
             }
         else
@@ -1219,7 +1225,7 @@ public class NamedTypeExpression
 
         if (left != null)
             {
-            sb.append(left.toString())
+            sb.append(left)
               .append('.');
             }
 
