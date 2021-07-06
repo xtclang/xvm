@@ -697,8 +697,8 @@ interface Type<DataType, OuterType>
             {
             case Pure:
                 function Int sum(Int, Int) = (n1, n2) -> n1 + n2 + 2;
-                return 6 + properties.iterator().map(p -> p.name.size+2).reduce(0, sum)
-                         + methods   .iterator().map(m -> m.name.size+4).reduce(0, sum);
+                return 6 + properties.map(p -> p.name.size+2).reduce(0, sum)
+                         + methods   .map(m -> m.name.size+4).reduce(0, sum);
 
             case Class:
                 assert Class clz := fromClass();
@@ -741,8 +741,8 @@ interface Type<DataType, OuterType>
                 Type!<>[] types = underlyingTypes;
                 return types.size == 0
                         ? 2
-                        : types.iterator().map(t -> t.estimateStringLength() + 2)
-                                          .reduce(0, (n1, n2) -> n1 + n2);
+                        : types.map(t -> t.estimateStringLength() + 2)
+                               .reduce(0, (n1, n2) -> n1 + n2);
 
             case FormalProperty:
             case FormalParameter:
@@ -759,8 +759,8 @@ interface Type<DataType, OuterType>
             {
             return params.size == 0
                     ? 2
-                    : params.iterator().map(t -> t.estimateStringLength() + 2)
-                                       .reduce(0, (n1, n2) -> n1 + n2);
+                    : params.map(t -> t.estimateStringLength() + 2)
+                            .reduce(0, (n1, n2) -> n1 + n2);
             }
         else
             {
