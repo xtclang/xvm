@@ -148,6 +148,7 @@ public class xArray
         markNativeProperty("delegate");
         markNativeProperty("mutability");
 
+        markNativeMethod("clear", VOID, THIS);
         markNativeMethod("getElement", INT, ELEMENT_TYPE);
         markNativeMethod("setElement", null, VOID);
         markNativeMethod("elementAt", INT, null);
@@ -493,6 +494,32 @@ public class xArray
                         new ArrayHandle(xBitArray.INSTANCE.getCanonicalClass(), hView, mutability));
                 }
 
+            case "clear":
+                {
+                ArrayHandle hArray     = (ArrayHandle) hTarget;
+                Mutability  mutability = hArray.m_mutability;
+
+                if (hArray.m_hDelegate.m_cSize > 0)
+                    {
+                    switch (mutability)
+                        {
+                        case Mutable:
+                            hArray.m_hDelegate = makeDelegate(hArray.getComposition(), 0,
+                                Utils.OBJECTS_NONE, mutability);
+                            break;
+
+                        case Fixed:
+                            return frame.raiseException(xException.readOnly(frame));
+
+                        case Constant:
+                        case Persistent:
+                            hArray = createEmptyArray(hArray.getComposition(), 0, mutability);
+                            break;
+                        }
+                    }
+                return frame.assignValue(iReturn, hArray);
+                }
+
             case "setElement":
                 return assignArrayValue(frame, hTarget, ((JavaLong) ahArg[0]).getValue(), ahArg[1]);
             }
@@ -788,6 +815,17 @@ public class xArray
     public static ArrayHandle makeArrayHandle(TypeComposition clzArray, int cCapacity,
                                                ObjectHandle[] ahValue, Mutability mutability)
         {
+        DelegateHandle hDelegate = makeDelegate(clzArray, cCapacity, ahValue, mutability);
+        return new ArrayHandle(clzArray, hDelegate, mutability);
+        }
+
+    /**
+     * Create a DelegateHandle for the specified TypeComposition and fill it with objects from the
+     * specified array.
+     */
+    protected static DelegateHandle makeDelegate(TypeComposition clzArray, int cCapacity,
+                                                 ObjectHandle[] ahValue, Mutability mutability)
+        {
         TypeConstant typeElement      = clzArray.getType().getParamType(0);
         xRTDelegate  templateDelegate = xRTDelegate.getArrayTemplate(typeElement);
 
@@ -795,9 +833,7 @@ public class xArray
             {
             cCapacity = ahValue.length;
             }
-        DelegateHandle hDelegate = templateDelegate.createDelegate(
-                                    typeElement, cCapacity, ahValue, mutability);
-        return new ArrayHandle(clzArray, hDelegate, mutability);
+        return templateDelegate.createDelegate(typeElement, cCapacity, ahValue, mutability);
         }
 
     public static class ArrayHandle
