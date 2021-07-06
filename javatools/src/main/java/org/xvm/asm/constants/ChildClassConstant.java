@@ -7,7 +7,6 @@ import java.io.IOException;
 
 import java.util.function.Consumer;
 
-import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
@@ -116,42 +115,6 @@ public class ChildClassConstant
             case ChildClass:
                 IdentityConstant idParent = constParent.getDeclarationLevelClass();
                 return idParent.getComponent().getChild(m_constName.getValue()).getIdentityConstant();
-
-            default:
-                throw new IllegalStateException("constParent=" + constParent);
-            }
-        }
-
-    @Override
-    public IdentityConstant resolveClass(IdentityConstant idTarget)
-        {
-        if (idTarget == null)
-            {
-            return getDeclarationLevelClass();
-            }
-
-        PseudoConstant constParent = m_constParent;
-        switch (constParent.getFormat())
-            {
-            case ParentClass:
-            case ThisClass:
-            case ChildClass:
-                IdentityConstant idParent     = constParent.resolveClass(idTarget);
-                ClassStructure   structParent = (ClassStructure) idParent.getComponent();
-                String           sChildName   = m_constName.getValue();
-
-                while (structParent != null)
-                    {
-                    ClassStructure structChild  = (ClassStructure) structParent.getChild(sChildName);
-                    if (structChild != null)
-                        {
-                        return structChild.getIdentityConstant();
-                        }
-                    structParent = structParent.getSuper();
-                    }
-
-                // we should not ever get here; just for safety
-                return getDeclarationLevelClass();
 
             default:
                 throw new IllegalStateException("constParent=" + constParent);

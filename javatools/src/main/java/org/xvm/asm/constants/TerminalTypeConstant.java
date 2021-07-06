@@ -721,17 +721,11 @@ public class TerminalTypeConstant
                         return typeTarget.getParentType();
                         }
                     }
-                // fall through
-            case ChildClass:
-                {
-                IdentityConstant idClass = null;
-                if (typeTarget != null && typeTarget.isExplicitClassIdentity(true))
-                    {
-                    idClass = typeTarget.getSingleUnderlyingClass(true);
-                    }
+                return ((ParentClassConstant) constant).getDeclarationLevelClass().getType();
 
-                return ((PseudoConstant) constant).resolveClass(idClass).getType();
-                }
+            case ChildClass:
+                // currently not used
+                return ((ChildClassConstant) constant).getDeclarationLevelClass().getType();
 
             case UnresolvedName:
                 throw new IllegalStateException("unexpected unresolved-name constant: " + constant);
@@ -1558,18 +1552,6 @@ public class TerminalTypeConstant
                         : null;
                 }
 
-            case ThisClass:
-            case ParentClass:
-            case ChildClass:
-                {
-                TypeConstant typeDeclared   = ((PseudoConstant) constant).getDeclarationLevelClass().getType();
-                int          cInvalidations = getConstantPool().getInvalidationCount();
-
-                TypeInfo infoDeclared = typeDeclared.ensureTypeInfoInternal(errs);
-                return isComplete(infoDeclared)
-                        ? new TypeInfo(this, infoDeclared, cInvalidations)
-                        : null;
-                }
             default:
                 throw new IllegalStateException("unexpected defining constant: " + constant);
             }

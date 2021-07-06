@@ -122,22 +122,6 @@ public class ParentClassConstant
         }
 
     @Override
-    public IdentityConstant resolveClass(IdentityConstant idTarget)
-        {
-        if (idTarget == null)
-            {
-            return getDeclarationLevelClass();
-            }
-
-        IdentityConstant idParent = idTarget.getParentConstant();
-        while (!idParent.isClass())
-            {
-            idParent = idParent.getParentConstant();
-            }
-        return idParent;
-        }
-
-    @Override
     public boolean isCongruentWith(PseudoConstant that)
         {
         if (that instanceof ParentClassConstant)

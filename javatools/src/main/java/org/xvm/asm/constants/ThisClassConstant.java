@@ -77,12 +77,6 @@ public class ThisClassConstant
         }
 
     @Override
-    public IdentityConstant resolveClass(IdentityConstant idTarget)
-        {
-        return idTarget == null ? getDeclarationLevelClass() : idTarget;
-        }
-
-    @Override
     public Format getFormat()
         {
         return Format.ThisClass;

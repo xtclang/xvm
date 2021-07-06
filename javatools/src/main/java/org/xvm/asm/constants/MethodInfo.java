@@ -755,7 +755,7 @@ public class MethodInfo
         }
 
     /**
-     * @return true iff the method covers a virtual contructor
+     * @return true iff the method covers a virtual constructor
      */
     public boolean containsVirtualConstructor()
         {
