@@ -1327,9 +1327,11 @@ public class TypeInfo
 
             for (MethodBody body : methodTest.getChain())
                 {
+                TypeConstant typeCtx = methodTest.isFunction() ? null : typeThis;
+
                 // test the actual body signature
                 SignatureConstant sigTest0 = body.getSignature();
-                if (sigTest0.equals(sig) || sigTest0.isSubstitutableFor(sig, typeThis))
+                if (sigTest0.equals(sig) || sigTest0.isSubstitutableFor(sig, typeCtx))
                     {
                     if (methodTest.isCapped())
                         {
@@ -1344,7 +1346,7 @@ public class TypeInfo
 
                 // test the resolved identity signature
                 SignatureConstant sigTest1 = resolveMethodConstant(body.getIdentity(), methodTest).getSignature();
-                if (sigTest1.equals(sig) || sigTest1.isSubstitutableFor(sig, typeThis))
+                if (sigTest1.equals(sig) || sigTest1.isSubstitutableFor(sig, typeCtx))
                     {
                     if (methodTest.isCapped())
                         {
@@ -1363,7 +1365,7 @@ public class TypeInfo
                     {
                     sigTest2 = sigTest2.resolveGenericTypes(pool(), getCanonicalResolver());
 
-                    if (sigTest2.equals(sig) || sigTest2.isSubstitutableFor(sig, typeThis))
+                    if (sigTest2.equals(sig) || sigTest2.isSubstitutableFor(sig, typeCtx))
                         {
                         if (methodTest.isCapped())
                             {
