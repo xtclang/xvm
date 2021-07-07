@@ -99,7 +99,7 @@ public class NewG_1
 
             return isDeferred(hArg)
                     ? hArg.proceed(frame, frameCaller ->
-                        complete(frame, constructor, frameCaller.popStack()))
+                        complete(frameCaller, constructor, frameCaller.popStack()))
                     : complete(frame, constructor, hArg);
             }
         catch (ExceptionHandle.WrapperException e)

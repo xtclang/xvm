@@ -113,7 +113,7 @@ public class JumpInt
 
             return isDeferred(hValue)
                     ? hValue.proceed(frame, frameCaller ->
-                        complete(frame, iPC, frameCaller.popStack()))
+                        complete(frameCaller, iPC, frameCaller.popStack()))
                     : complete(frame, iPC, hValue);
             }
         catch (ExceptionHandle.WrapperException e)

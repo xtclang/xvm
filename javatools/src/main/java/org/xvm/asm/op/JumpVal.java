@@ -121,7 +121,7 @@ public class JumpVal
             Frame.Continuation stepNext = frameCaller ->
                 {
                 buildJumpMap(hValue, ahCase);
-                return complete(frame, iPC, hValue);
+                return complete(frameCaller, iPC, hValue);
                 };
             return new Utils.GetArguments(ahCase, stepNext).doNext(frame);
             }

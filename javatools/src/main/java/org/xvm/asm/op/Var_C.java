@@ -98,7 +98,7 @@ public class Var_C
 
             return isDeferred(hRef)
                     ? hRef.proceed(frame, frameCaller ->
-                        complete(frame, iPC, (RefHandle) frameCaller.popStack()))
+                        complete(frameCaller, iPC, (RefHandle) frameCaller.popStack()))
                     :  complete(frame, iPC, (RefHandle) hRef);
             }
         catch (ExceptionHandle.WrapperException e)

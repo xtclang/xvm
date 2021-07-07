@@ -87,7 +87,7 @@ public class P_Var
 
             return isDeferred(hTarget)
                     ? hTarget.proceed(frame, frameCaller ->
-                        complete(frame, frameCaller.popStack()))
+                        complete(frameCaller, frameCaller.popStack()))
                     : complete(frame, hTarget);
             }
         catch (ExceptionHandle.WrapperException e)
