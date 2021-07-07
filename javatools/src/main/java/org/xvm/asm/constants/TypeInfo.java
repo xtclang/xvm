@@ -1299,7 +1299,11 @@ public class TypeInfo
             return method;
             }
 
-        TypeConstant typeThis = getType();
+        TypeConstant typeThis = f_type;
+        if (typeThis.isFormalType())
+            {
+            typeThis = typeThis.resolveConstraints().removeAutoNarrowing();
+            }
 
         mapBySig = ensureMethodsBySignature();
 

@@ -1662,28 +1662,36 @@ public class TerminalTypeConstant
 
             case Property:
                 {
-                PropertyConstant idRight = (PropertyConstant) constIdBase;
-                return ((PropertyConstant) constIdThis).getName().equals(idRight.getName());
+                PropertyConstant idBase = (PropertyConstant) constIdBase;
+                return ((PropertyConstant) constIdThis).getName().equals(idBase.getName());
                 }
 
             case TypeParameter:
                 {
-                TypeParameterConstant idRight = (TypeParameterConstant) constIdBase;
-                return ((TypeParameterConstant) constIdThis).getRegister() == idRight.getRegister();
+                TypeParameterConstant idBase = (TypeParameterConstant) constIdBase;
+                return ((TypeParameterConstant) constIdThis).getRegister() == idBase.getRegister();
                 }
 
             case FormalTypeChild:
                 {
-                FormalTypeChildConstant idRight = (FormalTypeChildConstant) constIdBase;
-                return ((FormalTypeChildConstant) constIdThis).getName().equals(idRight.getName());
+                FormalTypeChildConstant idBase = (FormalTypeChildConstant) constIdBase;
+                return ((FormalTypeChildConstant) constIdThis).getName().equals(idBase.getName());
                 }
 
             case ThisClass:
             case ParentClass:
             case ChildClass:
                 {
-                PseudoConstant idRight = (PseudoConstant) constIdBase;
-                return idRight.isCongruentWith((PseudoConstant) constIdThis);
+                PseudoConstant constBase = (PseudoConstant) constIdBase;
+                PseudoConstant constThis = (PseudoConstant) constIdThis;
+                if (constBase.isCongruentWith(constThis))
+                    {
+                    // the declaration types must be compatible
+                    TypeConstant typeDeclBase = constBase.getDeclarationLevelClass().getType();
+                    TypeConstant typeDeclThis = constThis.getDeclarationLevelClass().getType();
+                    return typeDeclBase.isA(typeDeclThis) || typeDeclThis.isA(typeDeclBase);
+                    }
+                return false;
                 }
 
             default:
