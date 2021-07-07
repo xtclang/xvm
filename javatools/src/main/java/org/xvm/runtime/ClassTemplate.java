@@ -1643,8 +1643,13 @@ public abstract class ClassTemplate
     /**
      * Compare for identity equality two object handles that both associated with this template.
      *
-     * More specifically, the ObjectHandles must either be the same runtime object, or the objects
-     * that they represent are both immutable and structurally identical (see Ref.equals).
+     * As documented at Ref.x equals() function:
+     * <pre><quote>
+     *   Specifically, two references are equal if they reference the same runtime object.
+     *   Additionally, for optimization purposes, the runtime is *permitted* to indicate that two
+     *   references to two separate runtime objects are equal, in the case where both references
+     *   are to immutable objects whose structures are identical.
+     * </quote></pre>
      *
      * Note: this method is inherently native; it must be answered without calling any natural code
      *
@@ -1655,9 +1660,7 @@ public abstract class ClassTemplate
      */
     public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2)
         {
-        return hValue1 == hValue2 ||
-               isGenericHandle() && GenericHandle.compareIdentity(
-                        (GenericHandle) hValue1, (GenericHandle) hValue2);
+        return hValue1 == hValue2;
         }
 
 

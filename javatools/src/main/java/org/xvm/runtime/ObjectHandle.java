@@ -581,63 +581,6 @@ public abstract class ObjectHandle
                    areShared(m_aFields, poolThat, mapVisited);
             }
 
-        public static boolean compareIdentity(GenericHandle h1, GenericHandle h2)
-            {
-            if (h1 == h2)
-                {
-                return true;
-                }
-
-            if (h1.isMutable() != h2.isMutable())
-                {
-                return false;
-                }
-
-            ObjectHandle[] aField1 = h1.getFields();
-            ObjectHandle[] aField2 = h2.getFields();
-
-            if (aField1 == aField2)
-                {
-                return true;
-                }
-
-            TypeComposition comp1 = h1.getComposition();
-            TypeComposition comp2 = h2.getComposition();
-            Set<Object> nids1 = comp1.getFieldNids();
-            Set<Object> nids2 = comp2.getFieldNids();
-
-            if (!nids1.equals(nids2))
-                {
-                return false;
-                }
-
-            for (Object nid : nids1)
-                {
-                ObjectHandle hV1 = aField1[comp1.getFieldPosition(nid)];
-                ObjectHandle hV2 = aField2[comp2.getFieldPosition(nid)];
-
-                // REVIEW GG MF - NPE from files.x test comparing two paths (@hash was null?)
-                if (hV1 == null || hV2 == null)
-                    {
-                    if (hV1 != hV2)
-                        {
-                        return false;
-                        }
-                    }
-                else
-                    {
-                    // TODO: need to prevent a potential infinite loop
-                    ClassTemplate template = hV1.getTemplate();
-                    if (template != hV2.getTemplate() || !template.compareIdentity(hV1, hV2))
-                        {
-                        return false;
-                        }
-                    }
-                }
-
-            return true;
-            }
-
         /**
          * The array of field values indexed according to the ClassComposition's field layout.
          */
