@@ -1333,7 +1333,7 @@ public class Frame
                 int cAll     = f_function.getParamCount();
                 if (cDefault > 0 && iArg < cAll && iArg >= cAll - cDefault)
                     {
-                    return getDefaultArgument(iArg);
+                    return replaceDefaultArgument(iArg);
                     }
 
                 VarInfo info  = f_aInfo[iArg];
@@ -1343,7 +1343,7 @@ public class Frame
 
             if (hValue == ObjectHandle.DEFAULT)
                 {
-                return getDefaultArgument(iArg);
+                return replaceDefaultArgument(iArg);
                 }
 
             VarInfo info = f_aInfo[iArg];
@@ -1374,11 +1374,13 @@ public class Frame
         }
 
     /**
-     * @return the default value for the specified argument
+     * Replace the DefaultHandle with an actual (possibly deferred) value.
+     *
+     * @return the actual value for the specified argument
      *
      * @throw ExceptionHandle.WrapperException if the default value cannot be retrieved
      */
-    private ObjectHandle getDefaultArgument(int iArg)
+    private ObjectHandle replaceDefaultArgument(int iArg)
             throws ExceptionHandle.WrapperException
         {
         Constant constValue = f_function.getParam(iArg).getDefaultValue();
@@ -1387,7 +1389,8 @@ public class Frame
             throw xException.illegalState(this, "Unknown default value for argument \"" +
                 f_function.getParam(iArg).getName() + '"').getException();
             }
-        return getConstHandle(constValue);
+
+        return f_ahVar[iArg] = getConstHandle(constValue);
         }
 
     /**
@@ -1407,7 +1410,7 @@ public class Frame
                         : getPredefinedArgument(iArg);
 
         return hValue == ObjectHandle.DEFAULT
-                 ? getDefaultArgument(iArg)
+                 ? replaceDefaultArgument(iArg)
                  : hValue;
         }
 
@@ -1598,6 +1601,14 @@ public class Frame
         int nVar = f_anNextVar[m_iScope]++;
 
         f_aInfo[nVar] = new VarInfo(nVarReg, 0, REF_RESOLVER);
+        }
+
+    /**
+     * @return true if the specified register is assigned
+     */
+    public boolean isAssigned(int nVar)
+        {
+        return f_ahVar[nVar] != null;
         }
 
     /**

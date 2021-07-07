@@ -8,7 +8,12 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.OpMove;
 import org.xvm.asm.Register;
 
+import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.Frame.VarInfo;
+import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.reflect.xRef.RefHandle;
@@ -53,37 +58,56 @@ public class MoveVar
     @Override
     public int process(Frame frame, int iPC)
         {
-        Frame.VarInfo infoSrc = frame.getVarInfo(m_nFromValue);
+        int          nFrom   = m_nFromValue;
+        VarInfo      infoSrc = frame.getVarInfo(nFrom);
+        TypeConstant typeSrc = infoSrc.getType();
 
         if (infoSrc.isDynamicVar())
             {
             // the "dynamic ref" register must contain a RefHandle itself
-            RefHandle hRef = (RefHandle) frame.f_ahVar[m_nFromValue];
+           int       nTo  = m_nToValue;
+           RefHandle hRef = (RefHandle) frame.f_ahVar[nFrom];
 
-            if (frame.isNextRegister(m_nToValue))
+            if (frame.isNextRegister(nTo))
                 {
-                frame.introduceResolvedVar(m_nToValue, infoSrc.getType());
+                frame.introduceResolvedVar(nTo, typeSrc);
                 }
 
             // the destination type must be the same as the source
-            frame.assignValue(m_nToValue, hRef);
+            return frame.assignValue(nTo, hRef);
             }
-        else
+
+        try
             {
-            TypeComposition clzRef = xVar.INSTANCE.ensureParameterizedClass(
-                frame.poolContext(), infoSrc.getType());
-
-            RefHandle hRef = new RefHandle(clzRef, frame, m_nFromValue);
-
-            if (frame.isNextRegister(m_nToValue))
+            if (frame.isAssigned(nFrom))
                 {
-                frame.introduceResolvedVar(m_nToValue, hRef.getType());
+                ObjectHandle hReferent = frame.getArgument(nFrom);
+                if (isDeferred(hReferent))
+                    {
+                    return hReferent.proceed(frame, frameCaller -> complete(frameCaller, typeSrc));
+                    }
                 }
+            return complete(frame, typeSrc);
+            }
+       catch (ExceptionHandle.WrapperException e)
+           {
+           return frame.raiseException(e);
+           }
+        }
 
-            // the destination type must be the same as the source
-            frame.assignValue(m_nToValue, hRef);
+    protected int complete(Frame frame, TypeConstant typeSrc)
+        {
+        TypeComposition clzRef = xVar.INSTANCE.ensureParameterizedClass(frame.poolContext(), typeSrc);
+
+        int       nTo  = m_nToValue;
+        RefHandle hRef = new RefHandle(clzRef, frame, m_nFromValue);
+
+        if (frame.isNextRegister(nTo))
+            {
+            frame.introduceResolvedVar(nTo, hRef.getType());
             }
 
-        return iPC + 1;
+        // the destination type must be the same as the source
+        return frame.assignValue(nTo, hRef);
         }
     }

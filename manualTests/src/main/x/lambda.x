@@ -32,9 +32,6 @@ module TestLambda
         console.println($"f={f};\nf()={f()}");
         }
 
-    // test with params
-    // test
-
     void testEffectivelyFinalCapture()
         {
         console.println("\n** testEffectivelyFinalCapture()");
