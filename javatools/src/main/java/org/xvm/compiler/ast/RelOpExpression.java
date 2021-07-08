@@ -463,7 +463,6 @@ public class RelOpExpression
     @Override
     protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
         {
-        TypeFit fit = TypeFit.Fit;
         // figure out the best types to use to validate the two sub-expressions
         TypeConstant typeRequired = atypeRequired != null && atypeRequired.length >= 1
                 ? atypeRequired[0]
@@ -494,11 +493,12 @@ public class RelOpExpression
             expr1Copy = (Expression) expr1.clone();
             }
 
+        boolean      fValid   = true;
         Expression   expr1New = expr1.validate(ctx, type1Req, errs);
         TypeConstant type1Act = null;
         if (expr1New == null)
             {
-            fit = TypeFit.NoFit;
+            fValid = false;
             }
         else
             {
@@ -518,7 +518,7 @@ public class RelOpExpression
         TypeConstant type2Act = null;
         if (expr2New == null)
             {
-            fit = TypeFit.NoFit;
+            fValid = false;
             }
         else
             {
@@ -528,10 +528,19 @@ public class RelOpExpression
 
         ctx = ctx.exit();
 
-        if (!fit.isFit())
+        if (!fValid)
             {
             // bail out
-            return finishValidations(ctx, atypeRequired, null, TypeFit.NoFit, null, errs);
+            return null;
+            }
+
+        if (type1Act == null || type2Act == null)
+            {
+            // this can only happen in a case of a void return, e.g. "f1()..f2()", where either
+            // f1() or f2() are void methods
+            (type1Act == null ? expr1New : expr2New).
+                    log(errs, Severity.ERROR, Compiler.RETURN_EXPECTED);
+            return null;
             }
 
         boolean        fMulti       = operator.getId() == Id.DIVREM;
@@ -630,7 +639,7 @@ public class RelOpExpression
             catch (RuntimeException e) {}
             }
 
-        return finishValidations(ctx, atypeRequired, atypeResults, fit, aconstResult, errs);
+        return finishValidations(ctx, atypeRequired, atypeResults, TypeFit.Fit, aconstResult, errs);
         }
 
     /**
