@@ -441,6 +441,22 @@ public class DifferenceTypeConstant
                 }
             }
 
+        if (typeLeft instanceof DifferenceTypeConstant)
+            {
+            // if A <= A' and B' <= B, then A - B <= A' - B'
+            TypeConstant typeR1 = m_constType1;
+            TypeConstant typeR2 = m_constType2;
+            TypeConstant typeL1 = ((DifferenceTypeConstant) typeLeft).m_constType1;
+            TypeConstant typeL2 = ((DifferenceTypeConstant) typeLeft).m_constType2;
+
+            Relation rel = typeR1.calculateRelation(typeL1);
+            if (rel != Relation.INCOMPATIBLE)
+                {
+                rel = rel.worseOf(typeL2.calculateRelation(typeR2));
+                }
+            return rel;
+            }
+
         // defer the answer to the duck-type check
         return Relation.INCOMPATIBLE;
         }
