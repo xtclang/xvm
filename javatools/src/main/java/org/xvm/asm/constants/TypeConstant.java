@@ -6064,7 +6064,7 @@ public abstract class TypeConstant
      */
     public TypeConstant getExplicitClassInto()
         {
-        throw new IllegalStateException();
+        return getUnderlyingType().getExplicitClassInto();
         }
 
     /**
