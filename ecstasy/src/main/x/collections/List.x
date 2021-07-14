@@ -1410,7 +1410,7 @@ interface List<Element>
      *
      * @return the sorted list (which may not be the list that was passed in)
      */
-    static <Element> List<Element> sort(List<Element> list, List<Element>.Orderer? order = Null)
+    static <Element> List<Element> sort(List<Element> list, Element.Orderer? order = Null)
         {
         if (order == null)
             {
@@ -1440,9 +1440,9 @@ interface List<Element>
      *
      * @return True iff the list is now sorted
      */
-    static <Element> Boolean bubbleSort(List<Element>         list,
-                                        List<Element>.Orderer order,
-                                        Int                   max = Int.maxvalue)
+    static <Element> Boolean bubbleSort(List<Element>   list,
+                                        Element.Orderer order,
+                                        Int             max = Int.maxvalue)
         {
         if (!list.indexed)
             {

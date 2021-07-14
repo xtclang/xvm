@@ -27,6 +27,7 @@ import org.xvm.asm.constants.PseudoConstant;
 import org.xvm.asm.constants.ResolvableConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
+import org.xvm.asm.constants.TypeParameterConstant;
 import org.xvm.asm.constants.TypedefConstant;
 import org.xvm.asm.constants.UnresolvedNameConstant;
 import org.xvm.asm.constants.UnresolvedTypeConstant;
@@ -1015,6 +1016,10 @@ public class NamedTypeExpression
                                 {
                                 typeRef = typeRef.resolveGenerics(pool,
                                         ((PropertyConstant) idLeft).getFormalType().getType());
+                                }
+                            else if (idLeft instanceof TypeParameterConstant)
+                                {
+                                typeRef = typeRef.resolveGenerics(pool, idLeft.getType().getType());
                                 }
                             }
 

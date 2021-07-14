@@ -308,12 +308,15 @@ public class NameResolver
                             return result;
                             }
                         }
-                    else if (structure instanceof Parameter)
+                    else if (structure instanceof TypeParameterConstant)
                         {
-                        Parameter parameter = (Parameter) structure;
-                        assert parameter.isTypeParameter();
-
-                        TypeConstant typeParam = parameter.getType();
+                        TypeParameterConstant constTypeParam = (TypeParameterConstant) structure;
+                        MethodConstant        idMethod       = constTypeParam.getMethod();
+                        int                   nRegister      = constTypeParam.getRegister();
+                        MethodStructure       method         = (MethodStructure) idMethod.getComponent();
+                        TypeConstant          typeParam      = method == null
+                                ? idMethod.getRawParams()[nRegister]
+                                : method.getParam(nRegister).getType();
                         assert typeParam.isTypeOfType();
 
                         Result result = resolveFormalDotName(typeParam.getParamType(0), errs);
@@ -476,27 +479,9 @@ public class NameResolver
                     break;
 
                 case TypeParameter:
-                    {
-                    TypeParameterConstant constTypeParam = (TypeParameterConstant) id;
-                    MethodConstant        idMethod       = constTypeParam.getMethod();
-                    int                   nRegister      = constTypeParam.getRegister();
-                    MethodStructure       method         = (MethodStructure) idMethod.getComponent();
-                    if (method == null)
-                        {
-                        // use the constraint type for the corresponding parameter
-                        TypeConstant typeParam = idMethod.getRawParams()[nRegister];
-                        assert typeParam.isTypeOfType();
-
-                        TypeConstant typeConstraint = typeParam.getParamType(0).resolveAutoNarrowingBase();
-                        if (typeConstraint.isExplicitClassIdentity(true))
-                            {
-                            IdentityConstant idConstraint = (IdentityConstant) typeConstraint.getDefiningConstant();
-                            return idConstraint.getComponent();
-                            }
-                        return null;
-                        }
-                    return method.getParam(nRegister);
-                    }
+                    // type parameters could refer to not yet fully resolved method constant;
+                    // let the caller deal with that
+                    return id;
 
                 case ThisClass:
                 case ChildClass:
