@@ -1327,7 +1327,9 @@ public class TypeInfo
 
             for (MethodBody body : methodTest.getChain())
                 {
-                TypeConstant typeCtx = methodTest.isFunction() ? null : typeThis;
+                TypeConstant typeCtx = methodTest.isFunction() || methodTest.isConstructor()
+                        ? null
+                        : typeThis;
 
                 // test the actual body signature
                 SignatureConstant sigTest0 = body.getSignature();
@@ -2029,7 +2031,7 @@ public class TypeInfo
      *
      * @param methodCapped  a capped method
      *
-     * @return the narrowing method (should never after the construction - see validateCapped())
+     * @return the narrowing method (should never be null after the construction - see validateCapped())
      */
     public MethodInfo getNarrowingMethod(MethodInfo methodCapped)
         {
@@ -2041,11 +2043,12 @@ public class TypeInfo
             methodCapped = getMethodByNestedId(nidNarrowing);
             if (methodCapped == null || !methodCapped.isCapped())
                 {
-                break;
+                return methodCapped;
                 }
             nidNarrowing = methodCapped.getHead().getNarrowingNestedIdentity();
             }
-        return methodCapped;
+
+        return null;
         }
 
     /**

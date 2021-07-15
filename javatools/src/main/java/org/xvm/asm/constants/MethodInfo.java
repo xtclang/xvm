@@ -573,8 +573,7 @@ public class MethodInfo
             {
             if (body.getImplementation() == Implementation.Capped)
                 {
-                Object nid = body.getNarrowingNestedIdentity();
-                MethodInfo methodNarrowing = infoType.getMethodByNestedId(nid);
+                MethodInfo methodNarrowing = infoType.getNarrowingMethod(this);
                 assert methodNarrowing != this;
                 return methodNarrowing.getTopmostMethodStructure(infoType);
                 }
@@ -689,7 +688,8 @@ public class MethodInfo
      */
     public boolean isConstructor()
         {
-        return getHead().isConstructor();
+        // virtual constructor could be capped
+        return getTail().isConstructor();
         }
 
     /**
