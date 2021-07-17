@@ -3931,6 +3931,8 @@ public abstract class TypeConstant
                     MethodInfo infoNarrowing = mapVirtMods.get(nidNarrowing);
                     MethodInfo infoNarrowed  = mapVirtMethods.get(nidNarrowed);
 
+                    assert !nidNarrowing.equals(nidNarrowed);
+
                     if (infoNarrowing.getAccess().isAsAccessibleAs(infoNarrowed.getAccess()))
                         {
                         mapVirtMods.put(nidNarrowed, infoNarrowed.capWith(this, infoNarrowing));
@@ -5248,7 +5250,7 @@ public abstract class TypeConstant
 
         if (typeRight.isImmutabilitySpecified())
             {
-            relation = typeRight.removeImmutable().calculateRelation(typeLeft);
+            relation = typeRight.removeImmutable().calculateRelation(typeLeft.removeImmutable());
 
             mapRelations.put(typeLeft, relation);
             return relation;
@@ -5599,7 +5601,6 @@ public abstract class TypeConstant
                 // continue recursively with the right side analysis
                 return clzRight.findIntersectionContribution(typeLeft, typeRight.getParamTypes());
                 }
-
 
             case ThisClass:
             case ParentClass:
