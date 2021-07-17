@@ -5241,7 +5241,7 @@ public abstract class TypeConstant
         if (typeLeft.isImmutabilitySpecified())
             {
             relation = typeRight.isImmutable()
-                ? typeRight.calculateRelation(typeLeft.removeImmutable())
+                ? typeRight.removeImmutable().calculateRelation(typeLeft.removeImmutable())
                 : Relation.INCOMPATIBLE;
 
             mapRelations.put(typeLeft, relation);
@@ -5250,7 +5250,7 @@ public abstract class TypeConstant
 
         if (typeRight.isImmutabilitySpecified())
             {
-            relation = typeRight.removeImmutable().calculateRelation(typeLeft.removeImmutable());
+            relation = typeRight.removeImmutable().calculateRelation(typeLeft);
 
             mapRelations.put(typeLeft, relation);
             return relation;
