@@ -15,14 +15,14 @@ interface Console
     void println(Object o = "");
 
     /**
-    * Read a single text line from the console.
-    */
+     * Read a single text line from the console.
+     */
     String readLine();
 
     /**
-    * Turn the line input echo on or off.
-    *
-    * @return the previous echo value
-    */
+     * Turn the line input echo on or off.
+     *
+     * @return the previous echo value
+     */
     Boolean echo(Boolean flag);
     }
