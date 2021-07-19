@@ -95,6 +95,19 @@ public abstract class RelationalTypeConstant
                                                     TypeConstant type1, TypeConstant type2);
 
     /**
+     * Simplify this relational type based on the specified underlying types.
+     *
+     * @return the resulting type, which may or may not be relational or this type if this type
+     *         cannot be simplified
+     */
+    public TypeConstant simplify(ConstantPool pool)
+        {
+        TypeConstant typeS = simplifyInternal(m_constType1, m_constType2);
+
+        return typeS == null ? this : typeS;
+        }
+
+    /**
      * Simplify or clone this relational type based on the specified underlying types.
      *
      * @return the resulting type, which may or may not be relational
@@ -102,8 +115,18 @@ public abstract class RelationalTypeConstant
     protected TypeConstant simplifyOrClone(ConstantPool pool,
                                            TypeConstant type1, TypeConstant type2)
         {
-        return cloneRelational(pool, type1, type2);
+        TypeConstant typeS = simplifyInternal(type1, type2);
+
+        return typeS == null ? cloneRelational(pool, type1, type2) : typeS;
         }
+
+    /**
+     * Simplify this relational type based on the specified underlying types.
+     *
+     * @return the resulting type, which may or may not be relational or null if the type cannot be
+     *         simplified
+     */
+    protected abstract TypeConstant simplifyInternal(TypeConstant type1, TypeConstant type2);
 
 
     // ----- TypeConstant methods ------------------------------------------------------------------

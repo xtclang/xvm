@@ -66,19 +66,16 @@ public class DifferenceTypeConstant
         }
 
     @Override
-    protected TypeConstant simplifyOrClone(ConstantPool pool, TypeConstant type1, TypeConstant type2)
+    protected TypeConstant simplifyInternal(TypeConstant type1, TypeConstant type2)
         {
         if (type1 instanceof DifferenceTypeConstant)
             {
-            TypeConstant typeR = ((DifferenceTypeConstant) type1).andNotInternal(pool, type2);
-            if (typeR != null)
-                {
-                return typeR;
-                }
+            return ((DifferenceTypeConstant) type1).andNotInternal(type2);
             }
-        else if (type1.isRelationalType() || type1.isAnnotated())
+
+        if (type1.isRelationalType() || type1.isAnnotated())
             {
-            TypeConstant typeResult = type1.andNot(pool, type2);
+            TypeConstant typeResult = type1.andNot(getConstantPool(), type2);
 
             // andNot algorithm defaults to the "minuend" type
             if (typeResult != type1)
@@ -87,8 +84,9 @@ public class DifferenceTypeConstant
                 }
             }
 
-        return cloneRelational(pool, type1, type2);
+        return null;
         }
+
 
     // ----- TypeConstant methods ------------------------------------------------------------------
 
@@ -175,7 +173,7 @@ public class DifferenceTypeConstant
     @Override
     public TypeConstant andNot(ConstantPool pool, TypeConstant that)
         {
-        TypeConstant typeR = andNotInternal(pool, that);
+        TypeConstant typeR = andNotInternal(that);
         return typeR == null
                 ? super.andNot(pool, that)
                 : typeR;
@@ -184,7 +182,7 @@ public class DifferenceTypeConstant
     /**
      * @return a simplified type or null if it cannot bee simplified
      */
-    private TypeConstant andNotInternal(ConstantPool pool, TypeConstant that)
+    private TypeConstant andNotInternal(TypeConstant that)
         {
         TypeConstant type1 = m_constType1.resolveTypedefs();
         TypeConstant type2 = m_constType2.resolveTypedefs();
@@ -192,7 +190,7 @@ public class DifferenceTypeConstant
         if (that.isA(type1))
             {
             // (A - B) - Sub(A) => Object
-            return pool.typeObject();
+            return getConstantPool().typeObject();
             }
 
         if (type2.isA(that))

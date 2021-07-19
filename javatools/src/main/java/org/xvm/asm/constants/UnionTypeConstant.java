@@ -67,7 +67,7 @@ public class UnionTypeConstant
         }
 
     @Override
-    protected TypeConstant simplifyOrClone(ConstantPool pool, TypeConstant type1, TypeConstant type2)
+    protected TypeConstant simplifyInternal(TypeConstant type1, TypeConstant type2)
         {
         if (type1.isA(type2))
             {
@@ -77,7 +77,7 @@ public class UnionTypeConstant
             {
             return type2;
             }
-        return cloneRelational(pool, type1, type2);
+        return null;
         }
 
 
