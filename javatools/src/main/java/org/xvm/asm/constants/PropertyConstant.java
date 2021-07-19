@@ -106,6 +106,13 @@ public class PropertyConstant
             // create a normalized formal type
             ConstantPool   pool = getConstantPool();
             ClassStructure clz  = (ClassStructure) typeConstraint.getSingleUnderlyingClass(true).getComponent();
+            if (clz == null)
+                {
+                // there is a possibility for this method be called before the pool is fully
+                // assembled; return the naked type without caching it
+                return typeConstraint;
+                }
+
             if (clz.isParameterized())
                 {
                 Set<StringConstant> setFormalNames = clz.getTypeParams().keySet();
