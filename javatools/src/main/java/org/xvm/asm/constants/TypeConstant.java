@@ -362,7 +362,7 @@ public abstract class TypeConstant
         {
         return isModifyingType()
                 ? 1 + getUnderlyingType().getTypeDepth()
-                : 0;
+                : 1;
         }
 
     /**
@@ -1159,30 +1159,10 @@ public abstract class TypeConstant
 
         ConstantPool pool = getConstantPool();
 
-        TypeConstant typeThis = this.removeAutoNarrowing();
-        TypeConstant typeThat = that.removeAutoNarrowing();
-
-        if (typeThis.getParamsCount() != typeThat.getParamsCount())
+        if (this.isTypeOfType()      && that.isTypeOfType() ||
+            this.isA(pool.typeRef()) && that.isA(pool.typeRef()))
             {
-            typeThis = typeThis.normalizeParameters();
-            typeThat = typeThat.normalizeParameters();
-            }
-
-        // when the types are the same, then the values are comparable; in the case that the value
-        // is a constant, it's allowed to be of a wider type; for example:
-        //   Constant c = ...
-        //   if (c == "hello") // a valid comparison
-        //
-        // Additionally, any Ref objects are comparable, since it means the actual Ref-equality
-        if (typeThis.equals(typeThat) || fThatIsConstant && typeThat.isA(typeThis)
-         || typeThis.isA(pool.typeRef()) && typeThat.isA(pool.typeRef()))
-            {
-            return true;
-            }
-
-        if (this.isTypeOfType() && that.isTypeOfType())
-            {
-            // Type types are always comparable
+            // Type and Ref objects are always comparable
             return true;
             }
 
@@ -1201,17 +1181,37 @@ public abstract class TypeConstant
             return true;
             }
 
+        TypeConstant typeThis = this.removeAutoNarrowing();
+        TypeConstant typeThat = that.removeAutoNarrowing();
+
+        // there are natural scenarios, when non-equal types are definitely comparable, for example:
+        //  A + (B + C) <=> C + (B + A), or @A B <=> A + B
+        // therefore, instead of the type equality, we are checking for assignability in both
+        // directions and the presence of a "compare" function; additionally when the types are the
+        // same, then the values are comparable; in the case that the value
+        // is a constant, it's allowed to be of a wider type; for example:
+        //   Constant c = ...
+        //   if (c == "hello") // a valid comparison
+        //
+        if (typeThat.isA(typeThis) && (fThatIsConstant || typeThis.isA(typeThat)))
+            {
+            return true;
+            }
+
         // we also allow a comparison of a nullable type to the base type; for example:
         // String? s1 = ...
         // String  s2 = ...
         // if (s1 == s2) // is allowed despite the types are not equal
         // TODO: consider allowing this for any IntersectionType: (T1 | T2) == T1
 
-        if (typeThis.isNullable() || typeThat.isNullable())
+        if (typeThis.isNullable())
             {
-            return typeThis.removeNullable().equals(typeThat.removeNullable());
+            return typeThis.removeNullable().supportsEquals(typeThat, fThatIsConstant);
             }
-
+        if (typeThat.isNullable())
+            {
+            return typeThis.supportsEquals(typeThat.removeNullable(), false);
+            }
         return false;
         }
 
@@ -1228,20 +1228,19 @@ public abstract class TypeConstant
         {
         assert that != null;
 
-        ConstantPool pool = getConstantPool();
+        if (this.isTypeOfType() && that.isTypeOfType())
+            {
+            // Type objects are always orderable
+            return true;
+            }
 
         TypeConstant typeThis = this.removeAutoNarrowing();
         TypeConstant typeThat = that.removeAutoNarrowing();
 
-        if (typeThis.equals(typeThat) || fThatIsConstant && typeThat.isA(typeThis))
+        // see the comment in supportsEquals() method
+        if (typeThat.isA(typeThis) && (fThatIsConstant || typeThis.isA(typeThat)))
             {
-            return findFunctionInfo(pool.sigCompare()) != null;
-            }
-
-        if (this.isTypeOfType() && that.isTypeOfType())
-            {
-            // Type types are always comparable
-            return true;
+            return findFunctionInfo(getConstantPool().sigCompare()) != null;
             }
 
         return false;

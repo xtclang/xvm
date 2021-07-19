@@ -160,6 +160,12 @@ public abstract class RelationalTypeConstant
         }
 
     @Override
+    protected int getTypeDepth()
+        {
+        return m_constType1.getTypeDepth() + m_constType2.getTypeDepth();
+        }
+
+    @Override
     public boolean extendsClass(IdentityConstant constClass)
         {
         return m_constType1.extendsClass(constClass)

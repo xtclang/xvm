@@ -250,30 +250,6 @@ public class UnionTypeConstant
         }
 
     @Override
-    public boolean supportsCompare(TypeConstant that, boolean fThatIsConstant)
-        {
-        if (that instanceof UnionTypeConstant)
-            {
-            TypeConstant type1This = m_constType1;
-            TypeConstant type2This = m_constType2;
-            TypeConstant type1That = ((UnionTypeConstant) that).m_constType1;
-            TypeConstant type2That = ((UnionTypeConstant) that).m_constType2;
-
-            if (type1This.equals(type1That) && type2This.equals(type2That))
-                {
-                return type1This.supportsCompare(type1That, false)
-                    || type2This.supportsCompare(type2That, false);
-                }
-            if (type1This.equals(type2That) && type2This.equals(type1That))
-                {
-                return type1This.supportsCompare(type2That, false)
-                    || type2This.supportsCompare(type1That, false);
-                }
-            }
-        return false;
-        }
-
-    @Override
     public boolean isNestMateOf(IdentityConstant idClass)
         {
         TypeConstant type1 = m_constType1;
