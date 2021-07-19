@@ -1967,7 +1967,7 @@ public class TypeCompositionStatement
 
         if (component.isParameterized())
             {
-            checkImplicitTypeParameters(component, errs);
+            addImplicitTypeConstraints(component, errs);
             }
         else if (format == Format.MIXIN)
             {
@@ -1980,6 +1980,54 @@ public class TypeCompositionStatement
         if (format == Format.CONST)
             {
             component.synthesizeConstInterface(false);
+            }
+        }
+
+    /**
+     * Check whether all parameterizable contributions are indeed parameterized and infer the
+     * constraints if possible.
+     */
+    private void addImplicitTypeConstraints(ClassStructure component, ErrorListener errs)
+        {
+        assert component.isParameterized();
+
+        List<String> listUnconstrained = null;
+        for (Map.Entry<StringConstant, TypeConstant> entry : component.getTypeParams().entrySet())
+            {
+            String       sName          = entry.getKey().getValue();
+            TypeConstant typeConstraint = entry.getValue();
+
+            if (typeConstraint.equals(pool().typeObject()))
+                {
+                if (listUnconstrained == null)
+                    {
+                    listUnconstrained = new ArrayList<>();
+                    }
+                listUnconstrained.add(sName);
+                }
+            }
+
+        if (listUnconstrained == null)
+            {
+            // call with non-existing name just to report missing type parameters
+            findImplicitConstraint(component, "", null, errs);
+            return;
+            }
+
+        // this class is parameterized, but some generic types don't have any constraints;
+        // check if any contributions do, and infer the constraint type from those contributions
+        Map<String, TypeConstant> mapConstraints = null;
+        for (String sName : listUnconstrained)
+            {
+            mapConstraints = findImplicitConstraint(component, sName, mapConstraints, errs);
+            }
+
+        if (mapConstraints != null)
+            {
+            for (Map.Entry<String, TypeConstant> entry : mapConstraints.entrySet())
+                {
+                component.updateConstraint(entry.getKey(), entry.getValue());
+                }
             }
         }
 
@@ -2059,57 +2107,6 @@ public class TypeCompositionStatement
                 {
                 component.addTypeParam(entry.getKey(), entry.getValue())
                          .setSynthetic(true);
-                }
-            }
-        }
-
-    /**
-     * Check whether all parameterizable contributions are indeed parameterized and infer the
-     * constraints if possible.
-     */
-    private void checkImplicitTypeParameters(ClassStructure component, ErrorListener errs)
-        {
-        if (!component.isParameterized())
-            {
-            return;
-            }
-
-        List<String> listUnconstrained = null;
-        for (Map.Entry<StringConstant, TypeConstant> entry : component.getTypeParams().entrySet())
-            {
-            String       sName          = entry.getKey().getValue();
-            TypeConstant typeConstraint = entry.getValue();
-
-            if (typeConstraint.equals(pool().typeObject()))
-                {
-                if (listUnconstrained == null)
-                    {
-                    listUnconstrained = new ArrayList<>();
-                    }
-                listUnconstrained.add(sName);
-                }
-            }
-
-        if (listUnconstrained == null)
-            {
-            // call with non-existing name just to report missing type parameters
-            findImplicitConstraint(component, "", null, errs);
-            return;
-            }
-
-        // this class is parameterized, but some generic types don't have any constraints;
-        // check if any contributions do, and infer the constraint type from those contributions
-        Map<String, TypeConstant> mapConstraints = null;
-        for (String sName : listUnconstrained)
-            {
-            mapConstraints = findImplicitConstraint(component, sName, mapConstraints, errs);
-            }
-
-        if (mapConstraints != null)
-            {
-            for (Map.Entry<String, TypeConstant> entry : mapConstraints.entrySet())
-                {
-                component.updateConstraint(entry.getKey(), entry.getValue());
                 }
             }
         }
@@ -2244,6 +2241,55 @@ public class TypeCompositionStatement
             if (fInvalidate)
                 {
                 pool.invalidateTypeInfos(component.getIdentityConstant());
+                }
+            }
+
+        if (component.isParameterized())
+            {
+            resolveAnnotationTypes(component, errs);
+            }
+        }
+
+    /**
+     * If there are any undeclared formal parameters for the Annotation contributions of this class,
+     * resolve the corresponding annotation types based on this class's formal type.
+     *
+     * @param component  the ClassStructure we're creating
+     * @param errs       the error listener
+     */
+    private void resolveAnnotationTypes(ClassStructure component, ErrorListener errs)
+        {
+        for (Contribution contrib : component.getContributionsAsList())
+            {
+            switch (contrib.getComposition())
+                {
+                case Annotation:
+                    break;
+
+                default:
+                    // disregard any other contribution
+                    continue;
+                }
+
+            TypeConstant typeAnno = contrib.getTypeConstant();
+            if (typeAnno.isParamsSpecified())
+                {
+                continue;
+                }
+
+            if (typeAnno.isSingleUnderlyingClass(false))
+                {
+                ClassStructure clzAnno = (ClassStructure)
+                        typeAnno.getSingleUnderlyingClass(true).getComponent();
+
+                // update the contribution
+                contrib.narrowType(clzAnno.getFormalType().
+                        resolveGenerics(pool(), component.getFormalType()));
+                }
+            else
+                {
+                log(errs, Severity.ERROR, Constants.VE_ANNOTATION_NOT_CLASS,
+                        typeAnno.getValueString());
                 }
             }
         }
