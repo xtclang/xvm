@@ -653,11 +653,11 @@ public class UnionTypeConstant
         MethodInfo info1 = m_constType1.findFunctionInfo(sig);
         MethodInfo info2 = m_constType2.findFunctionInfo(sig);
 
-        return info1 == null ? info2 :
-               info2 == null ? info1 :
-               info1.getIdentity().equals(info2.getIdentity())
-                        ? info1
-                        : null; // ambiguous
+        return info1 == null                           ? info2 :
+               info2 == null                           ? info1 :
+               info1.containsBody(info2.getIdentity()) ? info1 :
+               info2.containsBody(info1.getIdentity()) ? info2 :
+                                                         null; // ambiguous
         }
 
 
