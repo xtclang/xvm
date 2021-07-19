@@ -1308,13 +1308,13 @@ public class TerminalTypeConstant
         }
 
     @Override
-    public TypeConstant getExplicitClassInto()
+    public TypeConstant getExplicitClassInto(boolean fResolve)
         {
         if (!isSingleDefiningConstant())
             {
             // this can only happen if this type is a Typedef referring to a relational type
             TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
-            return constId.getReferredToType().getExplicitClassInto();
+            return constId.getReferredToType().getExplicitClassInto(fResolve);
             }
 
         Constant       constId = getDefiningConstant();

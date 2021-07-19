@@ -228,11 +228,13 @@ public class ParameterizedTypeConstant
         }
 
     @Override
-    public TypeConstant getExplicitClassInto()
+    public TypeConstant getExplicitClassInto(boolean fResolve)
         {
         TypeConstant constResolved = m_constType.getExplicitClassInto();
 
-        return constResolved.resolveGenerics(getConstantPool(), this);
+        return fResolve
+                ? constResolved.resolveGenerics(getConstantPool(), this)
+                : constResolved;
         }
 
     @Override

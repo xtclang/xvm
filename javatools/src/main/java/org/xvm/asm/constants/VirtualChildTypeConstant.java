@@ -403,7 +403,7 @@ public class VirtualChildTypeConstant
         }
 
     @Override
-    public TypeConstant getExplicitClassInto()
+    public TypeConstant getExplicitClassInto(boolean fResolve)
         {
         ClassStructure struct = getChildStructure();
         if (struct == null || struct.getFormat() != Component.Format.MIXIN)

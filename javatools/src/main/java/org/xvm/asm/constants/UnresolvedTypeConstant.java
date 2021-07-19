@@ -249,11 +249,13 @@ public class UnresolvedTypeConstant
         }
 
     @Override
-    public TypeConstant getExplicitClassInto()
+    public TypeConstant getExplicitClassInto(boolean fResolve)
         {
-        return isTypeResolved()
-                ? getResolvedType().getExplicitClassInto()
-                : super.getExplicitClassInto();
+        if (isTypeResolved())
+            {
+            return getResolvedType().getExplicitClassInto(fResolve);
+            }
+        throw new IllegalStateException();
         }
 
     @Override

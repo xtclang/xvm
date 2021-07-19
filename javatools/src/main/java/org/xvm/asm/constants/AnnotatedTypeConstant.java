@@ -523,7 +523,7 @@ public class AnnotatedTypeConstant
 
                     // the annotation could be a mixin "into Class", which means that it's a
                     // non-virtual, compile-time mixin (like @Abstract)
-                    TypeConstant typeInto = typeMixin.getExplicitClassInto();
+                    TypeConstant typeInto = typeMixin.getExplicitClassInto(true);
 
                     // the mixin has to be able to apply to the remainder of the type constant chain
                     if (getUnderlyingType().isA(typeInto))
@@ -772,7 +772,7 @@ public class AnnotatedTypeConstant
             if (!fBad)
                 {
                 TypeConstant typeMixin = getAnnotationType();
-                TypeConstant typeInto  = typeMixin.getExplicitClassInto();
+                TypeConstant typeInto  = typeMixin.getExplicitClassInto(true);
                 if (!m_constType.isA(typeInto))
                     {
                     log(errs, Severity.ERROR, VE_ANNOTATION_INCOMPATIBLE,

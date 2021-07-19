@@ -2581,7 +2581,7 @@ public abstract class TypeConstant
             return;
             }
 
-        TypeConstant typeInto = typeContrib.getExplicitClassInto();
+        TypeConstant typeInto = typeContrib.getExplicitClassInto(true);
         // mixins into Class are "synthetic" (e.g. Abstract, Override); the only
         // exception is Enumeration, which needs to be processed naturally
         if (!typeInto.isIntoClassType() || typeInto.isA(pool.typeEnumeration()))
@@ -4501,7 +4501,7 @@ public abstract class TypeConstant
                 continue;
                 }
 
-            TypeConstant typeInto    = typeMixin.getExplicitClassInto();
+            TypeConstant typeInto    = typeMixin.getExplicitClassInto(true);
             TypeConstant typeIntoCat = typeInto.getIntoPropertyType();
             if (typeIntoCat == null || typeIntoCat.equals(pool.typeProperty()))
                 {
@@ -6064,7 +6064,20 @@ public abstract class TypeConstant
      */
     public TypeConstant getExplicitClassInto()
         {
-        return getUnderlyingType().getExplicitClassInto();
+        return getExplicitClassInto(false);
+        }
+
+    /**
+     * Determine the "into" type of the explicit class, iff the type is an explicit class identity
+     * and the format of the class is "mixin".
+     *
+     * @param fResolve  if true, resolve the formal "into" type based on this type constant
+     *
+     * @return a TypeConstant
+     */
+    public TypeConstant getExplicitClassInto(boolean fResolve)
+        {
+        return getUnderlyingType().getExplicitClassInto(fResolve);
         }
 
     /**

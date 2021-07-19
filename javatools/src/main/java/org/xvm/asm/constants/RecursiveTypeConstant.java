@@ -209,7 +209,7 @@ public class RecursiveTypeConstant
         }
 
     @Override
-    public TypeConstant getExplicitClassInto()
+    public TypeConstant getExplicitClassInto(boolean fResolve)
         {
         throw new IllegalStateException();
         }

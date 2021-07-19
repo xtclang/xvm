@@ -154,7 +154,7 @@ public class IsExpression
 
         if (clzNarrowing.getFormat() == Component.Format.MIXIN &&
             clzOriginal.getFormat()  != Component.Format.MIXIN &&
-                typeOriginal.isA(typeNarrowing.getExplicitClassInto()))
+                typeOriginal.isA(typeNarrowing.getExplicitClassInto(true)))
             {
             typeInferred = pool.ensureAnnotatedTypeConstant(clzNarrowing.getIdentityConstant(),
                                 null, typeOriginal.removeImmutable().removeAccess());
