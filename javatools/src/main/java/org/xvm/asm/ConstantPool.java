@@ -1758,7 +1758,9 @@ public class ConstantPool
             typeParent = fFormal ? clzBase.getFormalType() : clzBase.getCanonicalType();
             if (constTarget instanceof ThisClassConstant)
                 {
-                typeParent = constTarget.getType().adoptParameters(this, typeParent);
+                typeParent  = ((ThisClassConstant) constTarget).getDeclarationLevelClass().
+                                    getType().adoptParameters(this, typeParent);
+                fAutoNarrow = true;
                 }
             }
         else if (clzParent.isVirtualChild())
@@ -3366,7 +3368,7 @@ public class ConstantPool
             {
             // left is not conditional - we do allow an assignment from a naked
             // ConditionalTuple to Tuple<Boolean>
-            List<TypeConstant> listRight = tupleRight.isParamsSpecified()
+            List<TypeConstant> listRight = tupleRight.getParamsCount() > 0
                     ? tupleRight.getParamTypes()
                     : Collections.singletonList(typeBoolean());
 

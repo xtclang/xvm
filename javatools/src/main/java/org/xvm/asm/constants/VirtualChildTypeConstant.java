@@ -270,7 +270,7 @@ public class VirtualChildTypeConstant
     @Override
     public boolean isAutoNarrowing(boolean fAllowVirtChild)
         {
-        return fAllowVirtChild || m_fThisClass;
+        return fAllowVirtChild && m_fThisClass;
         }
 
     @Override
@@ -342,7 +342,7 @@ public class VirtualChildTypeConstant
             typeParentResolved = typeParentOriginal.
                                     resolveAutoNarrowing(pool, fRetainParams, typeTarget, idCtx);
             }
-        else if (typeTarget != null && !typeTarget.equals(this))
+        else if (typeTarget != null && m_fThisClass)
             {
             // strip the immutability and access modifiers
             while (typeTarget instanceof ImmutableTypeConstant ||
@@ -351,9 +351,14 @@ public class VirtualChildTypeConstant
                 typeTarget = typeTarget.getUnderlyingType();
                 }
 
-            if (m_fThisClass && typeTarget.isA(this))
+            if (typeTarget.isA(this))
                 {
                 return typeTarget;
+                }
+
+            if (typeTarget.isA(typeParentOriginal))
+                {
+                typeParentResolved = typeTarget;
                 }
             }
 

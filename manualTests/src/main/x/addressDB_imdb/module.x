@@ -69,8 +69,9 @@ module AddressBookDB_imdb
                 }
             }
 
+        // TODO GG: if "<AddressBookSchema_>" is omitted, the "return super(id)" compilation is wrong - uses Call_1T
         @Override
-        Client_.DBObjectImpl createImpl(String id)
+        Client_<AddressBookSchema_>.DBObjectImpl createImpl(String id)
             {
             switch (id)
                 {
