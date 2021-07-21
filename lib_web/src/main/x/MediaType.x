@@ -266,7 +266,7 @@ const MediaType
     /**
      * A wildcard media type representing all types.
      */
-    static MediaType ALL_TYPE = new MediaType(ALL, "all");
+    static MediaType ALL_TYPE = new MediaType(ALL);
 
    /**
      * Form encoded data: application/x-www-form-urlencoded.
