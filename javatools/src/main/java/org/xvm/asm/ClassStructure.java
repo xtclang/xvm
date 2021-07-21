@@ -2255,7 +2255,7 @@ public class ClassStructure
             case ThisClass:
             case ParentClass:
             case ChildClass:
-                assert typeLeft.isAutoNarrowing(false);
+                assert typeLeft.containsAutoNarrowing(false);
                 return calculateRelationImpl(typeLeft.removeAutoNarrowing(), typeRight, fAllowInto);
 
             case Typedef:

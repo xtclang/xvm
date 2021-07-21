@@ -141,7 +141,7 @@ public class ReturnStatement
         for (int i = 0; i < cRets; i++)
             {
             TypeConstant typeRet = aRetTypes[i];
-            if (typeRet.isAutoNarrowing())
+            if (typeRet.containsAutoNarrowing(false))
                 {
                 IdentityConstant idCtx = ctx.isMethod()
                         ? ctx.getThisClass().getIdentityConstant()

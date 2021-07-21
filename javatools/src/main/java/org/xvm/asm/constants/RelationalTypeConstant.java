@@ -202,13 +202,6 @@ public abstract class RelationalTypeConstant
         }
 
     @Override
-    public boolean isAutoNarrowing(boolean fAllowVirtChild)
-        {
-        return m_constType1.isAutoNarrowing(fAllowVirtChild)
-            || m_constType2.isAutoNarrowing(fAllowVirtChild);
-        }
-
-    @Override
     public boolean isConstant()
         {
         return m_constType1.isConstant()
@@ -387,6 +380,13 @@ public abstract class RelationalTypeConstant
             return atype1;
             }
         return null;
+        }
+
+    @Override
+    public boolean containsAutoNarrowing(boolean fAllowVirtChild)
+        {
+        return m_constType1.containsAutoNarrowing(fAllowVirtChild)
+            || m_constType2.containsAutoNarrowing(fAllowVirtChild);
         }
 
     @Override

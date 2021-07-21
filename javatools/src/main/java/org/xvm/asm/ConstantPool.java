@@ -1935,7 +1935,7 @@ public class ConstantPool
      */
     public TypeConstant ensureParentTypeConstant(TypeConstant constChild)
         {
-        if (constChild == null || !constChild.isAutoNarrowing(false)
+        if (constChild == null || !constChild.containsAutoNarrowing(false)
                 || !constChild.isSingleDefiningConstant() || constChild.isParamsSpecified())
             {
             throw new IllegalArgumentException("single, auto-narrowing, non-parameterized child required");
@@ -1968,7 +1968,7 @@ public class ConstantPool
      */
     public TypeConstant ensureChildTypeConstant(TypeConstant constParent, String sChild)
         {
-        if (constParent == null || !constParent.isAutoNarrowing(false)
+        if (constParent == null || !constParent.containsAutoNarrowing(false)
                 || !constParent.isSingleDefiningConstant() || constParent.isParamsSpecified())
             {
             throw new IllegalArgumentException("single, auto-narrowing, non-parameterized parent required");

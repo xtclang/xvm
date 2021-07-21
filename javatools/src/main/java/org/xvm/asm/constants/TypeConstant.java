@@ -611,19 +611,6 @@ public abstract class TypeConstant
         }
 
     /**
-     * Check if this type contains any auto-narrowing portion.
-     *
-     * @param fAllowVirtChild  if false, the virtual child constant should not be considered
-     *                         as auto-narrowing
-     *
-     * @return true iff this TypeConstant represents an auto-narrowing type
-     */
-    public boolean isAutoNarrowing(boolean fAllowVirtChild)
-        {
-        return getUnderlyingType().isAutoNarrowing(fAllowVirtChild);
-        }
-
-    /**
      * @return true iff this TypeConstant is <b>not</b> auto-narrowing, and is not a reference to a
      *         type parameter, and its type parameters, if any, are also each a constant type
      */
@@ -1023,6 +1010,19 @@ public abstract class TypeConstant
     public TypeConstant[] collectGenericParameters()
         {
         return getUnderlyingType().collectGenericParameters();
+        }
+
+    /**
+     * Check if this type contains any auto-narrowing portion.
+     *
+     * @param fAllowVirtChild  if false, virtual child constants should not be checked for
+     *                         auto-narrowing
+     *
+     * @return true iff any portion of this TypeConstant represents an auto-narrowing type
+     */
+    public boolean containsAutoNarrowing(boolean fAllowVirtChild)
+        {
+        return getUnderlyingType().containsAutoNarrowing(fAllowVirtChild);
         }
 
     /**
@@ -5489,7 +5489,7 @@ public abstract class TypeConstant
             return true;
             }
 
-        if (typeBase.isAutoNarrowing())
+        if (typeBase.containsAutoNarrowing(true))
             {
             ConstantPool pool = ConstantPool.getCurrentPool();
 
@@ -5542,7 +5542,7 @@ public abstract class TypeConstant
             return true;
             }
 
-        if (typeBase.isAutoNarrowing() || this.isAutoNarrowing())
+        if (typeBase.containsAutoNarrowing(true) || this.containsAutoNarrowing(true))
             {
             ConstantPool pool = ConstantPool.getCurrentPool();
 
@@ -6448,7 +6448,8 @@ public abstract class TypeConstant
     @Override
     public boolean isAutoNarrowing()
         {
-        return isAutoNarrowing(true);
+        // use containsAutoNarrowing() API instead
+        throw new UnsupportedOperationException();
         }
 
     @Override

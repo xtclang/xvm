@@ -418,12 +418,6 @@ public class MethodConstant
         }
 
     @Override
-    public boolean isAutoNarrowing()
-        {
-        return getSignature().isAutoNarrowing();
-        }
-
-    @Override
     public TypeConstant getValueType(ConstantPool pool, TypeConstant typeTarget)
         {
         SignatureConstant sig       = getSignature();

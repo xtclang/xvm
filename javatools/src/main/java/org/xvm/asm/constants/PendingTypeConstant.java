@@ -52,7 +52,7 @@ public class PendingTypeConstant
         }
 
     @Override
-    public boolean isAutoNarrowing(boolean fAllowVirtChild)
+    public boolean containsAutoNarrowing(boolean fAllowVirtChild)
         {
         return false;
         }

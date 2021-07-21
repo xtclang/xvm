@@ -305,9 +305,9 @@ public class UnresolvedTypeConstant
         }
 
     @Override
-    public boolean isAutoNarrowing(boolean fAllowVirtChild)
+    public boolean containsAutoNarrowing(boolean fAllowVirtChild)
         {
-        return isTypeResolved() && getResolvedType().isAutoNarrowing(fAllowVirtChild);
+        return isTypeResolved() && getResolvedType().containsAutoNarrowing(fAllowVirtChild);
         }
 
     @Override

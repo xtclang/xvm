@@ -641,14 +641,6 @@ public abstract class IdentityConstant
         }
 
     /**
-     * @return true iff this IdentityConstant represents an auto-narrowing identity
-     */
-    public boolean isAutoNarrowing()
-        {
-        return false;
-        }
-
-    /**
      * @return the TypeInfo for the type implied by this identity, which must be a class identity
      *         (including module and package), or a property identity (to obtain a nested TypeInfo
      *         for the property, as if the property were a class itself)

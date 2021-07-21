@@ -439,12 +439,6 @@ public class TerminalTypeConstant
         }
 
     @Override
-    public boolean isAutoNarrowing(boolean fAllowVirtChild)
-        {
-        return ensureResolvedConstant().isAutoNarrowing();
-        }
-
-    @Override
     public ResolutionResult resolveContributedName(String sName, Access access, ResolutionCollector collector)
         {
         if (!isSingleDefiningConstant())
@@ -669,6 +663,12 @@ public class TerminalTypeConstant
             return struct.getFormalType().getParamTypesArray();
             }
         return TypeConstant.NO_TYPES;
+        }
+
+    @Override
+    public boolean containsAutoNarrowing(boolean fAllowVirtChild)
+        {
+        return ensureResolvedConstant().isAutoNarrowing();
         }
 
     @Override
@@ -1503,7 +1503,7 @@ public class TerminalTypeConstant
                 }
 
             TypeConstant typeConstraint = ((FormalConstant) getDefiningConstant()).getConstraintType();
-            if (typeConstraint.isAutoNarrowing())
+            if (typeConstraint.containsAutoNarrowing(false))
                 {
                 typeConstraint = typeConstraint.resolveAutoNarrowingBase();
                 }
@@ -1542,7 +1542,7 @@ public class TerminalTypeConstant
                 TypeConstant typeConstraint = ((FormalConstant) constant).getConstraintType();
                 int          cInvalidations = getConstantPool().getInvalidationCount();
 
-                if (typeConstraint.isAutoNarrowing())
+                if (typeConstraint.containsAutoNarrowing(false))
                     {
                     typeConstraint = typeConstraint.resolveAutoNarrowingBase();
                     }

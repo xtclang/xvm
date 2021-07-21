@@ -167,7 +167,7 @@ public class AnonymousClassTypeConstant
         }
 
     @Override
-    public boolean isAutoNarrowing(boolean fAllowVirtChild)
+    public boolean containsAutoNarrowing(boolean fAllowVirtChild)
         {
         return false;
         }

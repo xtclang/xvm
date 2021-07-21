@@ -506,7 +506,7 @@ public class AnnotatedTypeConstant
                         return null;
                         }
 
-                    if (typeMixin.isAutoNarrowing(false))
+                    if (typeMixin.containsAutoNarrowing(false))
                         {
                         log(errs, Severity.WARNING, VE_UNEXPECTED_AUTO_NARROW,
                             typeMixin.getValueString(), this.getValueString());

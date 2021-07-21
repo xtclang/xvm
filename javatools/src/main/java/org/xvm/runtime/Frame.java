@@ -750,7 +750,7 @@ public class Frame
 
                         default:
                             // why did the compiler/verifier allow this?
-                            if (typeFrom.isAutoNarrowing())
+                            if (typeFrom.containsAutoNarrowing(false))
                                 {
                                 // TODO: how to get the narrowing context?
                                 }
@@ -1301,7 +1301,7 @@ public class Frame
         ConstantPool pool = poolContext();
 
         type = type.resolveGenerics(pool, getGenericsResolver());
-        if (type.isAutoNarrowing(false) && f_hThis != null)
+        if (type.containsAutoNarrowing(false) && f_hThis != null)
             {
             type = type.resolveAutoNarrowing(pool, false, f_hThis.getType(), null);
             }

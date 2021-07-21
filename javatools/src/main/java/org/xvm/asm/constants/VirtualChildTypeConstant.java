@@ -268,12 +268,6 @@ public class VirtualChildTypeConstant
         }
 
     @Override
-    public boolean isAutoNarrowing(boolean fAllowVirtChild)
-        {
-        return fAllowVirtChild && m_fThisClass;
-        }
-
-    @Override
     public ResolutionResult resolveContributedName(String sName, Access access, ResolutionCollector collector)
         {
         if (containsUnresolved())
@@ -331,13 +325,20 @@ public class VirtualChildTypeConstant
         }
 
     @Override
+    public boolean containsAutoNarrowing(boolean fAllowVirtChild)
+        {
+        return fAllowVirtChild && m_fThisClass ||
+                m_typeParent.containsAutoNarrowing(fAllowVirtChild);
+        }
+
+    @Override
     public TypeConstant resolveAutoNarrowing(ConstantPool pool, boolean fRetainParams,
                                              TypeConstant typeTarget, IdentityConstant idCtx)
         {
         TypeConstant typeParentOriginal = m_typeParent;
         TypeConstant typeParentResolved = typeParentOriginal;
 
-        if (typeParentOriginal.isAutoNarrowing(false))
+        if (typeParentOriginal.containsAutoNarrowing(false))
             {
             typeParentResolved = typeParentOriginal.
                                     resolveAutoNarrowing(pool, fRetainParams, typeTarget, idCtx);

@@ -505,27 +505,6 @@ public class SignatureConstant
         }
 
     @Override
-    public boolean isAutoNarrowing()
-        {
-        for (TypeConstant constant : m_aconstParams)
-            {
-            if (constant.isAutoNarrowing())
-                {
-                return true;
-                }
-            }
-
-        for (TypeConstant constant : m_aconstReturns)
-            {
-            if (constant.isAutoNarrowing())
-                {
-                return true;
-                }
-            }
-        return false;
-        }
-
-    @Override
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
         visitor.accept(m_constName);

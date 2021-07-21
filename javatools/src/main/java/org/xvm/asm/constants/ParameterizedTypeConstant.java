@@ -209,16 +209,16 @@ public class ParameterizedTypeConstant
         }
 
     @Override
-    public boolean isAutoNarrowing(boolean fAllowVirtChild)
+    public boolean containsAutoNarrowing(boolean fAllowVirtChild)
         {
-        if (m_constType.isAutoNarrowing(fAllowVirtChild))
+        if (m_constType.containsAutoNarrowing(fAllowVirtChild))
             {
             return true;
             }
 
         for (int i = 0, c = m_atypeParams.length; i < c; ++i)
             {
-            if (m_atypeParams[i].isAutoNarrowing(fAllowVirtChild))
+            if (m_atypeParams[i].containsAutoNarrowing(fAllowVirtChild))
                 {
                 return true;
                 }
