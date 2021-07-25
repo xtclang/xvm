@@ -587,6 +587,10 @@ module TestMisc
         assert Point.equals(point1, point3);
         assert point1 <=> point3 == Equal;
         assert Point.compare(point1, point3) == Equal;
+
+        AnyValue foo = new AnyValue(1, "foo");
+        AnyValue bar = new AnyValue(1, "bar");
+        assert foo == bar;
         }
 
     const Point(Int x, Int y);
@@ -607,6 +611,21 @@ module TestMisc
             x.appendTo(buf.addAll(": x="));
             y.appendTo(buf.addAll(", y="));
             return buf.add(')');
+            }
+        }
+
+    const AnyValue(Int key, String value)
+        {
+        @Override
+        static <CompileType extends AnyValue> Boolean equals(CompileType value1, CompileType value2)
+            {
+            return value1.key == value2.key;
+            }
+
+        @Override
+        static <CompileType extends AnyValue> Ordered compare(CompileType value1, CompileType value2)
+            {
+            return value1.key <=> value2.key;
             }
         }
 

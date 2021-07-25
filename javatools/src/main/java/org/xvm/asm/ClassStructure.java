@@ -3417,18 +3417,11 @@ public class ClassStructure
             {
             if (    method.getTypeParamCount() != 1
                  || method.getParamCount()     != 1  + cParams
+                 || !method.getParam(0).isTypeParameter()
                  || method.getReturnCount()    != 1
-                 || !method.getReturnTypes()[0].equals(typeReturn))
+                 || !method.getReturn(0).getType().equals(typeReturn))
                 {
                 return false;
-                }
-
-            for (int i = 1; i < cParams; i++)
-                {
-                if (!method.getParam(i).isTypeParameter())
-                    {
-                    return false;
-                    }
                 }
 
             // abstract or synthesized functions don't count and neither do the Object methods
