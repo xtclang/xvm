@@ -557,17 +557,60 @@ interface Map<Key, Value>
      *
      * @return the value for the specified key, which may have already existed in the map, or may
      *         have just been calculated by the specified function and placed into the map
+     * @return True iff the entry was absent, and this operation created it
      *
      * @throws ReadOnly  if the map does not allow or support the requested mutating operation
      */
-    Value computeIfAbsent(Key              key,
-                          function Value() compute)
+    (Value, Boolean) computeIfAbsent(Key              key,
+                                     function Value() compute)
         {
+// TODO GG I don't mind the solution that I ended up with, but I was a little surprised that this did not work:
+//        (Value value, Boolean wasAbsent) = process(key, entry ->
+//            {
+//            if (entry.exists)
+//                {
+//                return (entry.value, False);
+//                }
+//
+//            if (!inPlace)
+//                {
+//                throw new ReadOnly();
+//                }
+//
+//            Value value = compute();
+//            entry.value = value;
+//            return (value, True);
+//            });
+//
+//        return value, wasAbsent;
+//
+// ... but this did work:
+//        Tuple<Value, Boolean> result = process(key, entry ->
+//            {
+//            if (entry.exists)
+//                {
+//                return (entry.value, False);
+//                }
+//
+//            if (!inPlace)
+//                {
+//                throw new ReadOnly();
+//                }
+//
+//            Value value = compute();
+//            entry.value = value;
+//            return (value, True);
+//            });
+//
+//        return result;
+//
+// ... and I ended up going with this:
+
         return process(key, entry ->
             {
             if (entry.exists)
                 {
-                return entry.value;
+                return Tuple:(entry.value, False);
                 }
 
             if (!inPlace)
@@ -577,7 +620,7 @@ interface Map<Key, Value>
 
             Value value = compute();
             entry.value = value;
-            return value;
+            return Tuple:(value, True);
             });
         }
 
