@@ -177,7 +177,7 @@ public class ElvisExpression
             }
 
         TypeConstant typeTemp = getType().ensureNullable();
-        Assignable   var      = createTempVar(code, typeTemp, false, errs);
+        Assignable   var      = createTempVar(code, typeTemp, false);
         generateAssignment(ctx, code, var, errs);
 
         /*  Alternatively, and particularly if there were a way to ask expr1 if it can provide us an

@@ -247,7 +247,7 @@ public class ToIntExpression
             {
             // extract always results in an Int64, which is the type of this expression
             Argument   argExtractFrom = argExtracted;
-            Assignable LValExtractTo  = createTempVar(code, getType(), true, errs);
+            Assignable LValExtractTo  = createTempVar(code, getType(), true);
             argExtracted = LValExtractTo.getLocalArgument();
             code.add(idExtract instanceof PropertyConstant
                     ? new P_Get((PropertyConstant) idExtract, argExtractFrom, argExtracted)
@@ -259,7 +259,7 @@ public class ToIntExpression
         if (constOffset != null)
             {
             Argument   argAdjustFrom = argAdjusted;
-            Assignable LValAdjustTo  = createTempVar(code, argExtracted.getType(), true, errs);
+            Assignable LValAdjustTo  = createTempVar(code, argExtracted.getType(), true);
             argAdjusted = LValAdjustTo.getLocalArgument();
             code.add(new GP_Sub(argAdjustFrom, constOffset, argAdjusted));
             }
@@ -273,7 +273,7 @@ public class ToIntExpression
             {
             Assignable LValConverted = LVal.isLocalArgument()
                     ? LVal
-                    : createTempVar(code, getType(), true, errs);
+                    : createTempVar(code, getType(), true);
 
             code.add(new Invoke_01(argAdjusted, idConvert, LValConverted.getLocalArgument()));
 

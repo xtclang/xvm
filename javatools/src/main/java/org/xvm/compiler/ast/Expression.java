@@ -173,17 +173,6 @@ public abstract class Expression
         }
 
     /**
-     * @param errs  the error listener to log to
-     *
-     * @return an expression that represents the value(s) of this expression as a tuple of those
-     *         same values
-     */
-    protected Expression packedExpression(ErrorListener errs)
-        {
-        return new PackExpression(this, errs);
-        }
-
-    /**
      * (Pre-validation) Determine the type that the expression will resolve to, if it is given no
      * type inference information. If an expression is not able to determine an implicit type, that
      * indicates that a compile time error is likely to occur when the expression is validated, but
@@ -432,12 +421,7 @@ public abstract class Expression
             {
             if (cTypesRequired > 2 || !getCodeContainer().isReturnConditional())
                 {
-                // log the error, but allow validation to continue (with no particular
-                // expected type) so that we get as many errors exposed as possible in the
-                // validate phase
-                log(errs, Severity.ERROR, Compiler.WRONG_TYPE_ARITY, atypeRequired.length, 1);
-                finishValidations(ctx, atypeRequired, atypeRequired, TypeFit.Fit, null, errs);
-                return null;
+                return new UnpackExpression(this, null).validateMulti(ctx, atypeRequired, errs);
                 }
             }
 
@@ -1420,7 +1404,7 @@ public abstract class Expression
 
         if (hasSingleValueImpl() && !isVoid())
             {
-            Assignable var = createTempVar(code, getType(), fUsedOnce, errs);
+            Assignable var = createTempVar(code, getType(), fUsedOnce);
             generateAssignment(ctx, code, var, errs);
             return var.getRegister();
             }
@@ -1469,10 +1453,10 @@ public abstract class Expression
         TypeConstant[] aTypes = getTypes();
         int            cTypes = aTypes.length;
         Assignable[]   aLVals = new Assignable[cTypes];
-        aLVals[0] = createTempVar(code, aTypes[0], fUsedOnce, errs);
+        aLVals[0] = createTempVar(code, aTypes[0], fUsedOnce);
         for (int i = 1; i < cTypes; ++i)
             {
-            aLVals[i] = createTempVar(code, aTypes[i], false, errs);
+            aLVals[i] = createTempVar(code, aTypes[i], false);
             }
         generateAssignments(ctx, code, aLVals, errs);
 
@@ -1633,12 +1617,10 @@ public abstract class Expression
      * @param type       the type of the temporary variable
      * @param fUsedOnce  true iff the value will be used once and only once (such that the local
      *                   stack can be utilized for storage)
-     * @param errs       the error list to log any errors to
-     *
      * @return the Assignable representing the temporary variable; the Assignable will contain a
      *         Register
      */
-    protected Assignable createTempVar(Code code, TypeConstant type, boolean fUsedOnce, ErrorListener errs)
+    protected Assignable createTempVar(Code code, TypeConstant type, boolean fUsedOnce)
         {
         Register reg;
         if (fUsedOnce)
@@ -2423,7 +2405,7 @@ public abstract class Expression
                 case TargetProp:
                     {
                     Assignable LValTemp = LValResult == null || !LValResult.isLocalArgument()
-                            ? createTempVar(code, getType(), fUsedOnce, errs)
+                            ? createTempVar(code, getType(), fUsedOnce)
                             : LValResult;
                     code.add(new P_Get(getProperty(), getTarget(), LValTemp.getLocalArgument()));
                     if (LValResult == null)
@@ -2444,7 +2426,7 @@ public abstract class Expression
                 case IndexedProp:
                     {
                     Assignable LValTemp = LValResult == null || !LValResult.isLocalArgument()
-                            ? createTempVar(code, getType(), fUsedOnce, errs)
+                            ? createTempVar(code, getType(), fUsedOnce)
                             : LValResult;
                     Argument argTarget = m_form == AssignForm.Indexed
                             ? getArray()
@@ -2683,7 +2665,7 @@ public abstract class Expression
                             {
                             Assignable LValTemp = LValResult != null && LValResult.isLocalArgument()
                                     ? LValResult
-                                    : createTempVar(code, getType(), fUsedOnce, errs);
+                                    : createTempVar(code, getType(), fUsedOnce);
                             code.add(seq.isInc()
                                     ? new IP_PostInc(argTarget, LValTemp.getLocalArgument())
                                     : new IP_PostDec(argTarget, LValTemp.getLocalArgument()));
@@ -2717,7 +2699,7 @@ public abstract class Expression
                         {
                         Assignable LValTemp = LValResult != null && LValResult.isLocalArgument()
                                 ? LValResult
-                                : createTempVar(code, getType(), fUsedOnce, errs);
+                                : createTempVar(code, getType(), fUsedOnce);
 
                         Argument argReturn = LValTemp.getLocalArgument();
                         code.add(seq.isPre()
@@ -2758,7 +2740,7 @@ public abstract class Expression
                         {
                         Assignable LValTemp = LValResult != null && LValResult.isLocalArgument()
                                 ? LValResult
-                                : createTempVar(code, getType().resolveGenericType("Element"), fUsedOnce, errs);
+                                : createTempVar(code, getType().resolveGenericType("Element"), fUsedOnce);
 
                         Argument argReturn = LValTemp.getLocalArgument();
                         code.add(seq.isPre()
@@ -2797,7 +2779,7 @@ public abstract class Expression
                 case Inc:
                 case Dec:
                     {
-                    Assignable LValTemp = createTempVar(code, getType(), false, errs);
+                    Assignable LValTemp = createTempVar(code, getType(), false);
 
                     // get the original value
                     getValue(LValTemp, false, false, code, errs);
@@ -2816,7 +2798,7 @@ public abstract class Expression
                     {
                     Assignable LValTemp = LValResult != null && LValResult.isNormalVariable()
                             ? LValResult
-                            : createTempVar(code, getType(), false, errs);
+                            : createTempVar(code, getType(), false);
 
                     // get the original value
                     getValue(LValTemp, false, false, code, errs);
@@ -2844,11 +2826,11 @@ public abstract class Expression
                 case PostInc:
                 case PostDec:
                     {
-                    Assignable LValTemp  = createTempVar(code, getType(), false, errs);
+                    Assignable LValTemp  = createTempVar(code, getType(), false);
                     Argument   argResult = null;
                     if (LValResult == null)
                         {
-                        LValResult = createTempVar(code, getType(), fUsedOnce, errs);
+                        LValResult = createTempVar(code, getType(), fUsedOnce);
                         argResult  = LValResult.getRegister();
                         }
 

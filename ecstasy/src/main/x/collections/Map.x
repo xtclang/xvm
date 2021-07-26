@@ -564,53 +564,11 @@ interface Map<Key, Value>
     (Value, Boolean) computeIfAbsent(Key              key,
                                      function Value() compute)
         {
-// TODO GG I don't mind the solution that I ended up with, but I was a little surprised that this did not work:
-//        (Value value, Boolean wasAbsent) = process(key, entry ->
-//            {
-//            if (entry.exists)
-//                {
-//                return (entry.value, False);
-//                }
-//
-//            if (!inPlace)
-//                {
-//                throw new ReadOnly();
-//                }
-//
-//            Value value = compute();
-//            entry.value = value;
-//            return (value, True);
-//            });
-//
-//        return value, wasAbsent;
-//
-// ... but this did work:
-//        Tuple<Value, Boolean> result = process(key, entry ->
-//            {
-//            if (entry.exists)
-//                {
-//                return (entry.value, False);
-//                }
-//
-//            if (!inPlace)
-//                {
-//                throw new ReadOnly();
-//                }
-//
-//            Value value = compute();
-//            entry.value = value;
-//            return (value, True);
-//            });
-//
-//        return result;
-//
-// ... and I ended up going with this:
-
         return process(key, entry ->
             {
             if (entry.exists)
                 {
-                return Tuple:(entry.value, False);
+                return (entry.value, False);
                 }
 
             if (!inPlace)
@@ -620,7 +578,7 @@ interface Map<Key, Value>
 
             Value value = compute();
             entry.value = value;
-            return Tuple:(value, True);
+            return (value, True);
             });
         }
 

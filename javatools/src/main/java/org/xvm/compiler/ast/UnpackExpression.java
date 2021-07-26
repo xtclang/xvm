@@ -6,11 +6,16 @@ import java.util.List;
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Constant.Format;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
+import org.xvm.asm.Register;
+
 import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.asm.op.I_Get;
 
 
 /**
@@ -21,7 +26,7 @@ public class UnpackExpression
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    public UnpackExpression(TupleExpression exprTuple, ErrorListener errs)
+    public UnpackExpression(Expression exprTuple, ErrorListener errs)
         {
         super(exprTuple);
 
@@ -55,6 +60,14 @@ public class UnpackExpression
         }
 
     @Override
+    public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
+        {
+        TypeConstant typeTuple = pool().ensureTupleType(atypeRequired);
+
+        return expr.testFit(ctx, typeTuple, errs);
+        }
+
+    @Override
     protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
         {
         TypeConstant typeTuple = pool().ensureTupleType(atypeRequired);
@@ -83,15 +96,35 @@ public class UnpackExpression
             return toConstants();
             }
 
-        List<Expression> exprs  = ((TupleExpression) expr).getExpressions();
-        int              cExprs = exprs.size();
-        Argument[]       aArgs  = new Argument[cExprs];
-        for (int i = 0; i < cExprs; ++i)
+        if (expr instanceof TupleExpression)
             {
-            aArgs[i] = exprs.get(i).generateArgument(ctx, code, false, false, errs);
+            List<Expression> exprs  = ((TupleExpression) expr).getExpressions();
+            int              cExprs = exprs.size();
+            Argument[]       aArgs  = new Argument[cExprs];
+            for (int i = 0; i < cExprs; ++i)
+                {
+                aArgs[i] = exprs.get(i).generateArgument(ctx, code, false, false, errs);
+                }
+
+            return aArgs;
             }
 
-        return aArgs;
+        Argument argTuple = expr.generateArgument(ctx, code, true, false, errs);
+
+        ConstantPool   pool    = pool();
+        TypeConstant[] aTypes  = getTypes();
+        int            cValues = aTypes.length;
+        Register[]     aRegs   = new Register[cValues];
+
+        for (int i = 0; i < cValues; i++)
+            {
+            Assignable LValue   = createTempVar(code, aTypes[i], false);
+            Register   regValue = LValue.getRegister();
+            code.add(new I_Get(argTuple, pool.ensureIntConstant(i), regValue));
+            aRegs[i] = regValue;
+            }
+
+        return aRegs;
         }
 
 
@@ -128,6 +161,6 @@ public class UnpackExpression
     @Override
     public String toString()
         {
-        return "Unpacked:" + getUnderlyingExpression().toString();
+        return "Unpacked: " + getUnderlyingExpression().toString();
         }
     }

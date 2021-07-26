@@ -2,20 +2,28 @@ module TestSimple.test.org
     {
     @Inject Console console;
 
-    void run( )
+    void run()
         {
-        assert !test1("hi", "there");
-        assert !test2("hi", "there");
+        Map<String, Int> map = new HashMap();
+
+        (Int i, Boolean absent) = computeIfAbsent1(map, "a");
+        console.println($"{i} {absent}");
+
+        (i, absent) = computeIfAbsent2(map, "a");
+        console.println($"{i} {absent}");
         }
 
-    static <CompileType> Boolean test1(CompileType e1, CompileType e2)
+    (Int, Boolean) computeIfAbsent1(Map<String, Int> map, String key)
         {
-        CompileType.Comparer compare = CompileType.comparer;
-        return compare(e1, e2);
+        Tuple<Int, Boolean> t = map.computeIfAbsent(key, () -> Int:1);
+
+        (Int value, Boolean wasAbsent) = t;
+        return value, wasAbsent;
         }
 
-    static <CompileType> Boolean test2(CompileType e1, CompileType e2)
+    (Int, Boolean) computeIfAbsent2(Map<String, Int> map, String key)
         {
-        return CompileType.comparer(e1, e2);
+        (Int value, Boolean wasAbsent) = map.computeIfAbsent(key,  () -> Int:2);
+        return value, wasAbsent;
         }
     }

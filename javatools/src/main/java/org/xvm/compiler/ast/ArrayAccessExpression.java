@@ -687,7 +687,7 @@ public class ArrayAccessExpression
             // M_GET  rvalue-target, #:(rvalue-ix), lvalue    ; T = T[ix*]
             Argument         argResult      = LVal.isLocalArgument()
                                             ? LVal.getLocalArgument()
-                                            : createTempVar(code, getType(), true, errs).getRegister();
+                                            : createTempVar(code, getType(), true).getRegister();
             // the target argument for Invoke must not be on stack
             Argument         argArray       = expr.generateArgument(ctx, code, true, !m_fSlice, errs);
             List<Expression> listIndexExprs = indexes;

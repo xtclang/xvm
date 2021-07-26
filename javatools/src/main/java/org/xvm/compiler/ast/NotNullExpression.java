@@ -194,7 +194,7 @@ public class NotNullExpression
             }
 
         TypeConstant typeTemp = typeExpr.ensureNullable();
-        Assignable   var      = createTempVar(code, typeTemp, false, errs);
+        Assignable   var      = createTempVar(code, typeTemp, false);
         generateAssignment(ctx, code, var, errs);
         return var.getRegister().narrowType(typeExpr);
         }

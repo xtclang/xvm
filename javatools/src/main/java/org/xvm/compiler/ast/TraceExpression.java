@@ -140,7 +140,7 @@ public class TraceExpression
             for (int i = 0; i < cTypes; ++i)
                 {
                 TypeConstant type = aTypes[i];
-                Assignable   LVal = createTempVar(code, type, false, errs);
+                Assignable   LVal = createTempVar(code, type, false);
 
                 aLVals[i] = LVal;
                 aRegs [i] = LVal.getRegister();

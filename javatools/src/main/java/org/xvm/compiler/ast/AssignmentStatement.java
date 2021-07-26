@@ -435,7 +435,8 @@ public class AssignmentStatement
                 m_fSuppressLValue = false;
                 }
 
-            if (atypeLeft.length > 0)
+            int cLeft = atypeLeft.length;
+            if (cLeft > 0)
                 {
                 TypeConstant[] atypeTest = atypeLeft;
                 if (op.getId() == Id.COND_NN_ASN)
@@ -444,7 +445,6 @@ public class AssignmentStatement
                     }
                 else if (fConditional)
                     {
-                    int cLeft = atypeLeft.length;
                     atypeTest = new TypeConstant[cLeft + 1];
                     atypeTest[0] = pool.typeBoolean();
                     System.arraycopy(atypeLeft, 0, atypeTest, 1, cLeft);
@@ -456,13 +456,23 @@ public class AssignmentStatement
 
                 TypeFit fit = rvalue.testFitMulti(ctxInfer, atypeTest, null);
 
-                ctxInfer.discard();
+                if (!fit.isFit() && cLeft > 1)
+                    {
+                    Expression exprUnpack = new UnpackExpression(rvalue, null);
+
+                    fit = exprUnpack.testFitMulti(ctxInfer, atypeTest, null);
+                    if (fit.isFit())
+                        {
+                        rvalue = exprUnpack;
+                        }
+                    }
 
                 if (!fit.isFit())
                     {
                     // that didn't work; use the regular path
                     atypeLeft = TypeConstant.NO_TYPES;
                     }
+                ctxInfer.discard();
                 }
 
             Expression exprNew = exprLeft.validateMulti(ctxLValue, atypeLeft, errs);
