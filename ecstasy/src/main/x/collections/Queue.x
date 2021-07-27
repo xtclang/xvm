@@ -69,34 +69,31 @@ interface Queue<Element>
     Element take();
 
     /**
-     * Take the first element in the queue, or return the specified default if the Queue is empty.
+     * Take the first element in the queue, or return the specified default if the queue is empty.
      *
-     * @param key     specifies the key that may or may not already be present in the map
-     * @param dftval  the default value
+     * @param defaultElement  the default element value to return, iff the queue is empty
      *
-     * @return the value for the specified key if it exists in the map; otherwise, the default value
+     * @return the element taken from the queue; otherwise, the specified default element
      */
-    Element takeOrDefault(Element dftval)
+    Element takeOrDefault(Element defaultElement)
         {
         if (Element e := next())
             {
             return e;
             }
 
-        return dftval;
+        return defaultElement;
         }
 
     /**
-     * Obtain the value associated with the specified key, or if the key does not already exist in
-     * the map, compute a default value using the specified function. Note that his method does
-     * **not** store the result of the computation; it simply returns the computed value. To store
-     * the result, use [computeIfAbsent] instead.
+     * Take the first element in the queue, or return the result of evaluating the provided function
+     * if the queue is empty.
      *
-     * @param key      specifies the key that may or may not already be present in the map
-     * @param compute  the function that will be called iff the key does not exist in the map
+     * @param compute  the function that will be called iff the queue is empty, in order to produce
+     *                 an element to return
      *
-     * @return the value associated with the specified key iff the key exists in the map; otherwise,
-     *         the result from the provided function
+     * @return the element taken from the queue if the queue is not empty; otherwise, the result
+     *         from the provided function
      */
     Element takeOrCompute(function Element () compute)
         {
