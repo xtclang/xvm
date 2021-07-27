@@ -29,6 +29,7 @@ import storage.ObjectStore;
 import storage.ValueStore;
 
 import Catalog.BuiltIn;
+import TxManager.NO_TX;
 
 
 /**
@@ -403,7 +404,7 @@ service Client<Schema extends RootSchema>
 
         Int id.get()
             {
-            return tx?.writeId_ : assert;
+            return tx?.id_ : assert;
             }
 
         @Override void close(Exception? e = Null)
@@ -703,13 +704,19 @@ service Client<Schema extends RootSchema>
             }
         finally
             {
-            writeId_ = txManager.begin(this, readOnly);
+            id_ = txManager.begin(this, readOnly);
             }
 
         /**
-         * The transaction ID that this transaction is based from.
+         * The transaction ID assigned to this transaction by the TxManager.
+         *
+         * Internally, this ID is known as the transaction's "write id", but here on the client,
+         * it's just "the id". (Note that this id has no relation to the application-specified
+         * transaction id that is held in the TxInfo, and has no meaning within the database.)
+         *
+         * TODO need a way to re-use this client for the validate, rectify, and distribute passes
          */
-        public/protected Int writeId_ = TxManager.NO_TX;
+        public/protected Int id_ = NO_TX;
 
         @Override
         public/protected TxInfo txInfo;
@@ -746,10 +753,29 @@ service Client<Schema extends RootSchema>
                                       );
                 }
 
-// TODO go to tx manager
-            TODO
+            // clearing out the transaction reference will "close" the transaction; it becomes no
+            // longer reachable internally
+            outer.tx = Null;
 
+            // a transaction with a NO_TX id hasn't done anything
+            Boolean success = True;
+            if (id_ != NO_TX)
+                {
+                // it's important to prevent re-entrancy from the outside while this logical thread
+                // of execution is wending its way through the transaction manager and the various
+                // ObjectStores that are enlisted in the transaction; the Exclusive (isntead of
+                // Forbidden) mode is important, because work can still be delegated back to this
+                // Client's Worker instance by the enlisted ObjectStores
+                using (new CriticalSection(Exclusive))
+                    {
+                    success = txManager.commit(id_);
+                    }
+                }
+
+            // close() is called only out of respect to any potential sub-classes
             close();
+
+            return success;
             }
 
         @Override
@@ -770,17 +796,28 @@ service Client<Schema extends RootSchema>
                                       );
                 }
 
+            // (see implementation notes from commit() above)
+
+            outer.tx = Null;
+
+            if (id_ != NO_TX)
+                {
+                using (new CriticalSection(Exclusive))
+                    {
+                    txManager.rollback(id_);
+                    }
+                }
+
             close();
             }
 
         @Override
         void close(Exception? e = Null)
             {
-            val that = outer.tx;
+            Transaction? that = outer.tx;
             if (&this == &that)
                 {
                 super(e);
-                // TODO discard any tx data as well (where is it stored?)
                 outer.tx = Null;
                 }
             }

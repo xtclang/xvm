@@ -103,7 +103,7 @@ service ValueStore<Value extends immutable Const>
 
     // ----- transaction API exposed to TxManager --------------------------------------------------
 
-    @Override PrepareResult prepare(Int writeId)
+    @Override PrepareResult prepare(Int writeId, Int prepareId)
         {
         // the transaction can be prepared if (a) no transaction has modified this value after the
         // read id, or (b) the "current" value is equal to the read id transaction's value
@@ -145,31 +145,60 @@ service ValueStore<Value extends immutable Const>
             }
 
         // there is a change to this ValueStore in this transaction, and there has not been an
-        // interleaving transaction that invalidates this transaction
+        // interleaving transaction that invalidates this transaction, so the prepare registers the
+        // new value into the historical record for the transaction that is being prepared
+        mergePrepare(writeId, prepareId);
         return Prepared;
         }
 
-    @Override Boolean mergeTx(Int fromTxId, Int toTxId, Boolean release = False)
+    @Override Boolean mergePrepare(Int writeId, Int prepareId)
         {
-        TODO
+        Boolean modified = False;
+        Changes tx       = checkTx(writeId); // TODO allow it to be missing
+        if (tx.modified)
+            {
+            modified = True;
+            history.put(prepareId, tx.value);
+            tx.modified = False;    // the "changes" no longer differs from the historical record
+            }
+
+        tx.readId   = prepareId;    // slide the readId forward to the point that we just prepared
+        tx.prepared = True;         // remember that the changed the readId to the prepareId
+        return modified;
         }
 
-    @Override Doc commit(Int prepareId, Int commitId)
+    @Override Doc commit(Int writeId)
         {
-        assert isWriteTx(prepareId) && isReadTx(commitId);
+        assert isWriteTx(writeId);
 
-        assert Changes tx := inFlight.get(prepareId);
+        if (Changes tx := inFlight.get(writeId))
+            {
+            // TODO write to disk
+            TODO
+            }
 
-
-        // TODO write to disk
-
-        TODO
+        return Null;
         }
 
-    @Override void rollback(Int uncommittedId)
+    @Override void rollback(Int writeId)
         {
-        assert isWriteTx(uncommittedId);
-        inFlight.remove(uncommittedId);
+        assert isWriteTx(writeId);
+
+        // if this ObjectStore has any record of the transaction, then that record needs to be
+        // discarded
+        inFlight.processIfPresent(writeId, entry ->
+            {
+            // the transaction may point to a prepared copy of the transaction that has already been
+            // placed in the "history" records
+            Changes tx = entry.value;
+            if (tx.prepared)
+                {
+                history.remove(tx.readId);
+                }
+
+            // dispose of the transaction record
+            entry.delete();
+            });
         }
 
     @Override void retainTx(Set<Int> inUseTxIds, Boolean force = False)
@@ -187,17 +216,15 @@ service ValueStore<Value extends immutable Const>
      *
      * @return the Changes record for the transaction
      */
-    Changes checkTx(Int writeId)
+    @Override Changes checkTx(Int writeId)
         {
-        assert isWriteTx(writeId);
-
+        // REVIEW why is this being done here? shouldn't it be done proactively and earlier? (instead of lazily?)
         if (history.empty)
             {
             loadInitial(writeId);
             }
 
-        return inFlight.computeIfAbsent(writeId,
-                () -> new Changes(writeId, txManager.enlist(this, writeId)));
+        return super(writeId);
         }
 
     /**
@@ -293,12 +320,6 @@ service ValueStore<Value extends immutable Const>
 
     @Override
     Boolean quickScan()
-        {
-        TODO
-        }
-
-    @Override
-    void retainTx(Set<Int> inUseTxIds, Boolean force = False)
         {
         TODO
         }

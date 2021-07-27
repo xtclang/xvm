@@ -5,27 +5,29 @@ import json.Doc;
 
 
 /**
- * This is an abstract base class for storage services that manage information as JSON formatted
- * data on disk. The abstraction is also designed to allow support for caching optimizations to be
- * layered on top of a persistent storage implementation -- probably more to avoid expensive
- * serialization and deserialization, than to avoid raw I/O operations (which are expected to be
- * low-cost in NVMe-flash and SAN environments).
+ * This is an abstract base class for storage services, each of which manages information-on-disk on
+ * behalf of one DBObject, with that information encoded in a JSON format. The abstraction is also
+ * designed to allow support for caching optimizations to be layered on top of a persistent storage
+ * implementation -- probably more to avoid expensive serialization and deserialization, than to
+ * avoid raw I/O operations (which are expected to be low-cost in NVMe-flash and SAN environments).
  *
  * ObjectStore represents the mapping between binary storage on disk using files and directories,
  * and the fundamental set of operations that a particular DBObject interface (such as [DBMap] or
  * [DBList]) requires and uses to provide its high-level functionality.
  *
- * Each DBObject in the database has a corresponding ObjectStore that manages its persistent data on
- * disk.
+ * Each DBObject in the database has a corresponding ObjectStore instance that manages its
+ * persistent data on disk.
  *
- * When an ObjectStore is constructed, it is in an inert mode; it does not interact at all with the
- * disk storage until it is explicitly instructed to do so. Normally, the ObjectStore assumes that
- * the storage is intact, and it takes a fast-path to initialize its information about the disk
- * contents; this is called [quickScan]. If recovery of the storage is indicated or instructed, then
- * the ObjectStore uses a [deepScan], which is assumed to be far more intensive both in terms of IO
- * activity and computational time, and may even be "destructive" in the sense that it must return
- * the persistent image to a working state, and that may force it to discard information that cannot
- * be recovered.
+ * When an ObjectStore is constructed, it is in an initial, inert mode; it does not interact at all
+ * with the disk storage until it is explicitly instructed to do so. Normally, the ObjectStore
+ * assumes that the storage is either absent (if the database is newly created) or intact (from some
+ * previous shut-down), and because it is not assuming corrupted information on disk, it takes a
+ * fast-path to initialize its information about the disk contents; this is called [quickScan]. If
+ * recovery of the storage is indicated or instructed, then the ObjectStore uses a [deepScan], which
+ * is assumed to be far more intensive both in terms of IO activity and computational time, and may
+ * even be "destructive" in the sense that it is expected to return the files and directories on
+ * disk to a working and uncorrupted state, and that may force the ObjectStore implementation to
+ * discard information that cannot be safely recovered.
  *
  * TODO background maintenance
  */
@@ -36,12 +38,15 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
     // ----- properties ----------------------------------------------------------------------------
 
     /**
-     * The Catalog that this ObjectStore belongs to.
+     * The Catalog that this ObjectStore belongs to. The Catalog reference is provided as part of
+     * instantiation, and never changes.
      */
-    public/protected Catalog catalog;
+    public/private Catalog catalog;
 
     /**
-     * The Catalog that this ObjectStore belongs to.
+     * The transaction manager that this ObjectStore is being managed by. A reference to the
+     * TxManager is lazily obtained from the Catalog service and then cached here, to avoid service
+     * hopping just to get a reference to the TxManager every time that it is needed.
      */
     protected @Lazy TxManager txManager.calc()
         {
@@ -49,12 +54,13 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
         }
 
     /**
-     * The DBObjectInfo that identifies the configuration of this ObjectStore.
+     * The DBObjectInfo that identifies the configuration of this ObjectStore. The information is
+     * provided as part of instantiation, and never changes.
      */
-    public/protected DBObjectInfo info;
+    public/private DBObjectInfo info;
 
     /**
-     * The id of the database object for which this storage exists.
+     * The id of the `DBObject` for which this storage exists.
      */
     Int id.get()
         {
@@ -62,7 +68,7 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
         }
 
     /**
-     * The `DBCategory` of the `DBObject`.
+     * The `DBCategory` of the `DBObject` for which this storage exists.
      */
     Category category.get()
         {
@@ -76,18 +82,19 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
     public/protected Appender<String> errs;
 
     /**
-     * The current status of this ObjectStore.
+     * The current [Status] of this ObjectStore.
      */
     public/protected Status status = Closed;
 
     /**
-     * True iff the ObjectStore is permitted to write to persistent storage.
+     * True iff the ObjectStore is permitted to write to persistent storage. Implementations of
+     * ObjectStore must check this value before making any changes to persistent storage.
      */
     public/protected Boolean writeable = False;
 
     /**
-     * The path that specifies this `DBObject`, and that indicates the storage location for the
-     * data contained within it.
+     * The path that specifies this `DBObject`, and that implies the directory location for the data
+     * managed by this `ObjectStore` and represented by the corresponding `DBObject`.
      */
     Path path.get()
         {
@@ -145,10 +152,11 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
      */
     enum StorageModel {Empty, Small, Medium, Large}
 
-    /**
-     * A special value, used only inside the ObjectStore that indicates missing data.
-     */
-    protected enum Indicator {Missing}
+// REVIEW
+//    /**
+//     * A special value, used only inside the ObjectStore that indicates missing data.
+//     */
+//    protected enum Indicator {Missing}
 
     /**
      * Statistics: The current storage model for this ObjectStore.
@@ -172,15 +180,17 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
      */
     public/protected DateTime? lastModified = Null;
 
-    /**
-     * The most recent transaction identifier for which this ObjectStore processed data changes.
-     */
-    public/protected Int? newestTx = Null;
+// REVIEW
+//    /**
+//     * The most recent transaction identifier for which this ObjectStore processed data changes.
+//     */
+//    public/protected Int? newestTx = Null;
 
-    /**
-     * Count of the number of operations since the ObjectStore was created.
-     */
-    public/protected Int opCount = 0;
+// REVIEW
+//    /**
+//     * Count of the number of operations since the ObjectStore was created.
+//     */
+//    public/protected Int opCount = 0;
 
     /**
      * Determine if this ObjectStore for a DBObject is allowed to write to disk. True iff the
@@ -203,7 +213,8 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
 
         /**
          * The read txId that this transaction is based from. (Note that the "read" id may itself be
-         * a "write" id.)
+         * a "write" id, which will occur during the prepare phase when a Rectifier or Distributor
+         * is being executed, and the thus-far-prepared transaction is visible by the read id.)
          */
         Int readId;
 
@@ -218,13 +229,42 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
         /**
          * Set to True when the transaction contains possible changes related to this ObjectStore.
          */
-        Boolean modified = False;
+        Boolean modified;
+
+        /**
+         * Set to True when the transaction has been prepared. Note that the prepare phase can
+         * involve several steps, so changes from `Rectifier` and `Distributor` objects can occur
+         * after the transaction is marked as having been prepared.
+         */
+        Boolean prepared;
         }
 
     /**
-     * In flight transactions involving this ObjectStore, keyed by "write" transaction id.
+     * In flight transactions involving this ObjectStore, keyed by "write" transaction id. This
+     * property is required to be initialized only by transactional instances of ObjectStore.
      */
     @Unassigned protected SkiplistMap<Int, Changes> inFlight;
+
+    /**
+     * An ObjectStore can be processing up to one transaction at a time **in the prepare phase**. In
+     * other words, "prepare" is the one phase that is not pipeline-able through an ObjectStore, for
+     * two reasons:
+     *
+     * * The resulting prepared state of one transaction serves as the basis for validating the
+     *   next, which implies a deliberately sequential process, and since the transactions can
+     *   involve multiple ObjectStores preparing concurrently, the second prepare cannot begin until
+     *   all ObjectStores successfully prepare the first (unless an expensive, optimistic approach
+     *   is used, which could prepare subsequent transactions, and then undo and retry those
+     *   transactions as necessary, based on the detection of failure in preceding prepares);
+     *
+     * * Synchronous triggers (represented by the Validator, Rectifier, and Distributor interfaces)
+     *   are an even more significant barrier to pipelining, because they both require a stable
+     *   transactional demarcation (snapshot of the database as of a prepare point) against which to
+     *   execute, **and** they can modify the database, with those modifications being required to
+     *   be visible by the time that the next transaction begins to prepare.
+     *
+     */
+    Changes? inPrepare;
 
 
     // ----- life cycle ----------------------------------------------------------------------------
@@ -363,100 +403,174 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
         }
 
     /**
+     * Verify that the storage is open and can read.
+     *
+     * @param txId  the transaction id
+     *
+     * @return True if the specified transaction is permitted to read data from the database
+     *
+     * @throws Exception if the check fails
+     */
+    Boolean checkRead(Int txId)
+        {
+        return status == Recovering || status == Running
+            || throw new IllegalState($"Read is not permitted for {info.name.quoted()} storage when status is {status}");
+        }
+
+    /**
+     * Verify that the storage is open and can write.
+     *
+     * @param txId  the transaction id
+     *
+     * @return True if the specified transaction is permitted to make changes
+     *
+     * @throws Exception if the check fails
+     */
+    Boolean checkWrite(Int txId)
+        {
+        return (writeable
+                || throw new IllegalState($"Write is not enabled for the {info.name.quoted()} storage"))
+            && (status == Recovering || status == Running
+                || throw new IllegalState($"Write is not permitted for {info.name.quoted()} storage when status is {status}"))
+            && (isWriteTx(txId)
+                || throw new IllegalState($"An attempt to modify data within a read-only transaction ({txId})."));
+        }
+
+    /**
+     * Validate the transaction, and obtain the transactional information for the specified id.
+     *
+     * @param writeId  the transaction id
+     *
+     * @return the Changes record for the transaction
+     */
+    Changes checkTx(Int writeId)
+        {
+        assert isWriteTx(writeId);
+
+        return inFlight.computeIfAbsent(writeId,
+                () -> new Changes(writeId, txManager.enlist(this, writeId)));
+        }
+
+    /**
      * Possible outcomes from a [prepare] call:
      *
      * * FailedRolledBack indicates that the prepare failed, and this ObjectStore has rolled back
-     *   all of its data associated with the specified transaction
+     *   all of its data associated with the specified transaction.
+     *
      * * CommittedNoChanges indicates that the prepare succeeded, but that there were no changes,
-     *   so an implicit commit has already occurred for this transaction on this ObjectStore
-     * * Prepared indicates that there were changes, and they were successfully prepared for a
-     *   subsequent commit request
+     *   so an implicit commit has already occurred for this transaction on this ObjectStore.
+     *
+     * * Prepared indicates that there were changes, and they were successfully prepared; once
+     *   the prepare stage has completed, changes are subject to Validator evaluation, then
+     *   Rectifier evaluation, then Distributor evaluation (repeated until no further distribution
+     *   is triggered), and then finally the accrued changes (including a record of any triggered
+     *   AsyncTrigger objects) are committed.
      */
     enum PrepareResult {FailedRolledBack, CommittedNoChanges, Prepared}
 
     /**
      * Prepare the specified transaction.
      *
-     * @param writeId  the "write" transaction id that was used to collect the transactional changes
+     * If the the result of the `prepare()` operation is `FailedRolledBack` or `CommittedNoChanges`,
+     * then the `ObjectStore` will have forgotten its `Changes` (the `writeId`) by the time that
+     * this method returns, and nothing will be associated with the `prepareId`.
      *
-     * @return a [PrepareResult]
+     * If the the result of the `prepare()` operation is `Prepared`, then all of the `Changes` data
+     * will now be associated with the `prepareId`, and the `writeId` will be associated with an
+     * empty set of changes.
+     *
+     * @param writeId    the "write" transaction id that was used to collect the transactional
+     *                   changes
+     * @param prepareId  the "read" transaction id that the prepared data will be moved to in
+     *                   preparation for a commit
+     *
+     * @return a [PrepareResult] indicating the result of the `prepare()` operation
      */
-    PrepareResult prepare(Int writeId)
+    PrepareResult prepare(Int writeId, Int prepareId)
         {
         TODO
         }
 
     /**
-     * Move changes from one transaction id into another, merging the changes into the destination
-     * transaction and leaving the source transaction empty.
+     * Move changes from the specified `writeId` transaction into its corresponding `readId`
+     * transaction (its `prepareId`, since this is only used for transactions that are preparing).
+     * Merging the changes into the destination transaction, leaving the source transaction empty.
      *
-     * @param fromTxId  the source (uncommitted) write transaction id to move the changes from
-     * @param toTxId    the destination (uncommitted) write transaction id to merge the changes into
-     * @param release   (optional) pass True to release (discard) the source transaction
+     * @param writeId    the "write" transaction id that may have collected additional transactional
+     *                   changes
+     * @param prepareId  the "read" transaction id that the prepared data will be moved to in
+     *                   preparation for a commit
      *
-     * @return containsMutation  true iff there were any changes that were moved by this ObjectStore
-     *                           into the destination transaction
+     * @return True iff there were any changes that were moved by this ObjectStore into the
+     *         destination transaction
      */
-    Boolean mergeTx(Int fromTxId, Int toTxId, Boolean release = False)
+    Boolean mergePrepare(Int writeId, Int prepareId)
         {
         TODO
         }
 
-    /**
-     * Commit a group of previously prepared transactions. When this method returns, the
-     * transactional changes related to this ObjectStore will have been successfully committed to
-     * disk.
-     *
-     * @param byCommitId  a Map, keyed by "commit" transaction id, with the corresponding values
-     *                    being the "prepared" transactions ids
-     *
-     * @return the ObjectStore's commit records, as JSON documents, keyed by commit id
-     *
-     * @throws Exception on any failure
-     */
-    OrderedMap<Int, Doc> commit(OrderedMap<Int, Int> byCommitId)
-        {
-        SkiplistMap<Int, Doc> records = new SkiplistMap();
-
-        // in theory, these can all be committed together, which should be more efficient, but the
-        // default implementation simply delegates to the single-commit method
-        for ((Int commitId, Int prepareId) : byCommitId)
-            {
-            if (inFlight.contains(prepareId))
-                {
-                Doc record = commit(prepareId, commitId);
-                records.put(commitId, record);
-                }
-            }
-
-        return records;
-        }
+// REVIEW
+//    /**
+//     * Commit a group of previously prepared transactions. When this method returns, the
+//     * transactional changes related to this ObjectStore will have been successfully committed to
+//     * disk.
+//     *
+//     * @param byCommitId  a Map, keyed by "commit" transaction id, with the corresponding values
+//     *                    being the "prepared" transactions ids
+//     *
+//     * @return the ObjectStore's commit records, as JSON documents, keyed by commit id
+//     *
+//     * @throws Exception on any failure
+//     */
+//    OrderedMap<Int, Doc> commit(OrderedMap<Int, Int> byCommitId)
+//        {
+//        SkiplistMap<Int, Doc> records = new SkiplistMap();
+//
+//        // in theory, these can all be committed together, which should be more efficient, but the
+//        // default implementation simply delegates to the single-commit method
+//        for ((Int commitId, Int prepareId) : byCommitId)
+//            {
+//            if (inFlight.contains(prepareId))
+//                {
+//                Doc record = commit(prepareId, commitId);
+//                records.put(commitId, record);
+//                }
+//            }
+//
+//        return records;
+//        }
 
     /**
      * Commit a previously prepared transaction. When this method returns, the transactional changes
-     * related to this ObjectStore will have been successfully committed to disk.
+     * related to this ObjectStore will have been successfully committed to disk, and the `writeId`
+     * will have been discarded.
      *
-     * @param prepareId  the previously prepared transaction, which is a "write" transaction id
-     * @param commitId   the new identity of the transaction when it has been committed, which is a
-     *                   "read" transaction id
+     * @param writeId  the `writeId` of the prepared transaction (even though the data from the
+     *                 transaction will already have been moved to a `prepareId` by the time that
+     *                 this method is called)
      *
-     * @return the ObjectStore's commit record, as a JSON document
+     * @return the ObjectStore's commit record, as a JSON document; Null represents no changes
      *
      * @throws Exception on any failure
      */
-    Doc commit(Int prepareId, Int commitId)
+    Doc commit(Int writeId)
         {
         TODO
         }
 
     /**
-     * Roll back any transactional data associated with the specified transaction id.
+     * Roll back any transactional data associated with the specified transaction id. When this
+     * method returns, the transactional changes related to this ObjectStore will have been
+     * discarded, including any prepared changes, and the `writeId` (and the `prepareId`, if one
+     * exists) will have been discarded.
      *
-     * @param uncommittedId  a "write" transaction id
+     * @param writeId  a "write" transaction id that specifies the transaction (even though the data
+     *                 from the transaction may have been moved to a `prepareId` by the time that
+     *                 this method is called)
      *
      * @throws Exception on hard failure
      */
-    void rollback(Int uncommittedId)
+    void rollback(Int writeId)
         {
         TODO
         }
@@ -467,7 +581,8 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
      * the ObjectStore, both in-memory and in the persistent storage. For asynchronous purposes, any
      * transaction newer than the most recent transaction in the passed set must be retained.
      *
-     * @param inUseTxIds  an ordered set of transaction whose information needs to be retained
+     * @param inUseTxIds  an ordered set of read transaction ids whose information needs to be
+     *                    retained by the `ObjectStore`
      * @param force       (optional) specify True to force the ObjectStore to immediately clean out
      *                    all older transactions in order to synchronously compress the storage
      */
@@ -478,34 +593,6 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
 
 
     // ----- IO handling ---------------------------------------------------------------------------
-
-    /**
-     * Verify that the storage is open and can read.
-     *
-     * @return True if the check passes
-     *
-     * @throws Exception if the check fails
-     */
-    Boolean checkRead()
-        {
-        return status == Recovering || status == Running
-            || throw new IllegalState($"Read is not permitted for {info.name.quoted()} storage when status is {status}");
-        }
-
-    /**
-     * Verify that the storage is open and can write.
-     *
-     * @return True if the check passes
-     *
-     * @throws Exception if the check fails
-     */
-    Boolean checkWrite()
-        {
-        return (writeable
-                || throw new IllegalState($"Write is not enabled for the {info.name.quoted()} storage"))
-            && (status == Recovering || status == Running
-                || throw new IllegalState($"Write is not permitted for {info.name.quoted()} storage when status is {status}"));
-        }
 
     /**
      * Determine the files owned by this storage.
@@ -591,7 +678,7 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
         }
 
 
-    // ----- IO handling ---------------------------------------------------------------------------
+    // ----- Hashable funky interface --------------------------------------------------------------
 
     @Override static <CompileType extends ObjectStore> Int hashCode(CompileType value)
         {
