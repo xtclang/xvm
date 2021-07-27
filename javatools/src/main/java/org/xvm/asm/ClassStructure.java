@@ -2241,8 +2241,18 @@ public class ClassStructure
                     // for virtual child we need to repeat the check for the parent types
                     TypeConstant typeParentLeft  = typeLeft.getParentType();
                     TypeConstant typeParentRight = typeRight.getParentType();
-                    Relation     relationParent  = typeParentRight.calculateRelation(typeParentLeft);
-                    return relation.worseOf(relationParent);
+
+                    // similar to the algorithm at TypeConstant.calculateRelationToContribution()
+                    // for auto-narrowing constants, without any additional context auto-narrowing
+                    // virtual children of the same name are assignable if the parents are
+                    // assignable in any direction
+                    if (typeParentRight.isA(typeParentLeft) ||
+                            typeRight.containsAutoNarrowing(true) && typeParentLeft.isA(typeParentRight))
+                        {
+                        return relation;
+                        }
+
+                    return Relation.INCOMPATIBLE;
                     }
                 break;
 
@@ -2267,6 +2277,31 @@ public class ClassStructure
 
             default:
                 throw new IllegalStateException("unexpected constant: " + constIdLeft);
+            }
+
+        // similar to the comment above, without any additional context auto-narrowing virtual
+        // children of the same name are assignable if the parents are assignable in any direction
+        IdentityConstant idClzLeft = (IdentityConstant) constIdLeft;
+        if (typeLeft.isVirtualChild() && typeRight.isVirtualChild() &&
+                idClzLeft.getName().equals(idClzRight.getName()))
+            {
+            TypeConstant typeParentLeft  = typeLeft.getParentType();
+            TypeConstant typeParentRight = typeRight.getParentType();
+
+            if (typeParentRight.isA(typeParentLeft))
+                {
+                return calculateAssignability(pool, typeLeft.getParamTypes(),
+                            typeLeft.getAccess(), typeRight.getParamTypes());
+                }
+
+            if (typeRight.containsAutoNarrowing(true) && typeParentLeft.isA(typeParentRight))
+                {
+                return ((ClassStructure) idClzLeft.getComponent()).
+                        calculateAssignability(pool, typeLeft.getParamTypes(),
+                            typeLeft.getAccess(), typeRight.getParamTypes());
+                }
+
+            return Relation.INCOMPATIBLE;
             }
 
         TypeConstant typeRebase = getRebaseType();

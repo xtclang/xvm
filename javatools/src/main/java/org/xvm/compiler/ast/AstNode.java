@@ -1319,7 +1319,7 @@ public abstract class AstNode
                     }
                 else
                     {
-                    sigMethod = idMethod.getSignature().resolveGenericTypes(pool, mapTypeParams::get);
+                    sigMethod = sigMethod.resolveGenericTypes(pool, mapTypeParams::get);
                     }
                 }
 

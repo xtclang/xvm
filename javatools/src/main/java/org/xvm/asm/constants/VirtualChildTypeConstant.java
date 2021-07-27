@@ -327,8 +327,7 @@ public class VirtualChildTypeConstant
     @Override
     public boolean containsAutoNarrowing(boolean fAllowVirtChild)
         {
-        return fAllowVirtChild && m_fThisClass ||
-                m_typeParent.containsAutoNarrowing(fAllowVirtChild);
+        return fAllowVirtChild && m_fThisClass || m_typeParent.containsAutoNarrowing(false);
         }
 
     @Override
