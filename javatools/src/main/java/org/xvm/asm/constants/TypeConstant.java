@@ -5489,12 +5489,17 @@ public abstract class TypeConstant
             return true;
             }
 
-        if (typeBase.containsAutoNarrowing(true))
-            {
-            ConstantPool pool = ConstantPool.getCurrentPool();
+        ConstantPool pool = ConstantPool.getCurrentPool();
 
-            TypeConstant typeThisR = this    .resolveAutoNarrowing(pool, false, typeCtx, null);
-            TypeConstant typeBaseR = typeBase.resolveAutoNarrowing(pool, false, typeCtx, null);
+        TypeConstant typeThisR = this.containsAutoNarrowing(true)
+                ? this.resolveAutoNarrowing(pool, false, typeCtx, null)
+                : this;
+        TypeConstant typeBaseR = typeBase.containsAutoNarrowing(true)
+                ? typeBase.resolveAutoNarrowing(pool, false, typeCtx, null)
+                : typeBase;
+
+        if (typeThisR != this || typeBaseR != typeBase)
+            {
             return typeThisR.isA(typeBaseR);
             }
 
@@ -5504,7 +5509,7 @@ public abstract class TypeConstant
             // producing self referring cycles, e.g. List<Element> -> List<List<Element>>
             // or @Unchecked Element -> @Unchecked @Unchecked Element
             // (TODO need to make this algorithm more precise)
-            TypeConstant typeBaseR = typeBase.resolveGenerics(ConstantPool.getCurrentPool(), typeCtx);
+            typeBaseR = typeBase.resolveGenerics(pool, typeCtx);
             if (typeBaseR != typeBase &&
                         typeBaseR.getTypeDepth() == typeBase.getTypeDepth())
                 {
@@ -5542,13 +5547,17 @@ public abstract class TypeConstant
             return true;
             }
 
-        if (typeBase.containsAutoNarrowing(true) || this.containsAutoNarrowing(true))
+        ConstantPool pool = ConstantPool.getCurrentPool();
+
+        TypeConstant typeThisR = this.containsAutoNarrowing(true)
+                ? this.resolveAutoNarrowing(pool, false, typeCtx, null)
+                : this;
+        TypeConstant typeBaseR = typeBase.containsAutoNarrowing(true)
+                ? typeBase.resolveAutoNarrowing(pool, false, typeCtx, null)
+                : typeBase;
+
+        if (typeThisR != this || typeBaseR != typeBase)
             {
-            ConstantPool pool = ConstantPool.getCurrentPool();
-
-            TypeConstant typeThisR = this    .resolveAutoNarrowing(pool, false, typeCtx, null);
-            TypeConstant typeBaseR = typeBase.resolveAutoNarrowing(pool, false, typeCtx, null);
-
             return typeBaseR.isA(typeThisR) && typeThisR.isA(typeBaseR);
             }
 
@@ -5556,7 +5565,7 @@ public abstract class TypeConstant
             {
             // check if generic types could be resolved in the specified context without
             // producing self referring cycles (see above)
-            TypeConstant typeBaseR = typeBase.resolveGenerics(ConstantPool.getCurrentPool(), typeCtx);
+            typeBaseR = typeBase.resolveGenerics(pool, typeCtx);
             if (typeBaseR != typeBase &&
                     typeBaseR.getTypeDepth() == typeBase.getTypeDepth())
                 {
