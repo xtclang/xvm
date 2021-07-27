@@ -68,6 +68,46 @@ interface Queue<Element>
      */
     Element take();
 
+    /**
+     * Take the first element in the queue, or return the specified default if the Queue is empty.
+     *
+     * @param key     specifies the key that may or may not already be present in the map
+     * @param dftval  the default value
+     *
+     * @return the value for the specified key if it exists in the map; otherwise, the default value
+     */
+    Element takeOrDefault(Element dftval)
+        {
+        if (Element e := next())
+            {
+            return e;
+            }
+
+        return dftval;
+        }
+
+    /**
+     * Obtain the value associated with the specified key, or if the key does not already exist in
+     * the map, compute a default value using the specified function. Note that his method does
+     * **not** store the result of the computation; it simply returns the computed value. To store
+     * the result, use [computeIfAbsent] instead.
+     *
+     * @param key      specifies the key that may or may not already be present in the map
+     * @param compute  the function that will be called iff the key does not exist in the map
+     *
+     * @return the value associated with the specified key iff the key exists in the map; otherwise,
+     *         the result from the provided function
+     */
+    Element takeOrCompute(function Element () compute)
+        {
+        if (Element e := next())
+            {
+            return e;
+            }
+
+        return compute();
+        }
+
     typedef function void (Element) Consumer;
     typedef function void () Cancellable;
 

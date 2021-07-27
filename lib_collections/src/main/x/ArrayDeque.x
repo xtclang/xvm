@@ -1,3 +1,5 @@
+import ecstasy.collections.SizeLimited;
+
 /**
  * A Deque is a "double ended queue" (a "deque" or "dequeue"), which is a queue-like data structure
  * that is optimized for both insertion and deletion, and from both the "head" and the "tail" of the

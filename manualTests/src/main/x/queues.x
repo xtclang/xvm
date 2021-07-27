@@ -1,8 +1,9 @@
 module TestQueues
     {
-    import ecstasy.collections.ArrayDeque;
-    import ecstasy.collections.CircularArray;
-    import ecstasy.collections.Queue;
+    package collections import collections.xtclang.org;
+
+    import collections.ArrayDeque;
+    import collections.CircularArray;
 
     @Inject ecstasy.io.Console console;
 
