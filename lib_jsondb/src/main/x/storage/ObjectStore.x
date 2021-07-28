@@ -237,6 +237,11 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
          * after the transaction is marked as having been prepared.
          */
         Boolean prepared;
+
+        /**
+         * Set to True when the transaction has been sealed, disallowing further changes.
+         */
+        Boolean sealed;
         }
 
     /**
@@ -405,13 +410,11 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
     /**
      * Verify that the storage is open and can read.
      *
-     * @param txId  the transaction id
-     *
      * @return True if the specified transaction is permitted to read data from the database
      *
      * @throws Exception if the check fails
      */
-    Boolean checkRead(Int txId)
+    Boolean checkRead()
         {
         return status == Recovering || status == Running
             || throw new IllegalState($"Read is not permitted for {info.name.quoted()} storage when status is {status}");
@@ -426,29 +429,58 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
      *
      * @throws Exception if the check fails
      */
-    Boolean checkWrite(Int txId)
+    Boolean checkWrite()
         {
         return (writeable
                 || throw new IllegalState($"Write is not enabled for the {info.name.quoted()} storage"))
             && (status == Recovering || status == Running
-                || throw new IllegalState($"Write is not permitted for {info.name.quoted()} storage when status is {status}"))
-            && (isWriteTx(txId)
-                || throw new IllegalState($"An attempt to modify data within a read-only transaction ({txId})."));
+                || throw new IllegalState($"Write is not permitted for {info.name.quoted()} storage when status is {status}"));
         }
 
     /**
      * Validate the transaction, and obtain the transactional information for the specified id.
      *
+     * @param txId     the transaction id
+     * @param writing  (optional) pass True if a database modification by the current operation is
+     *                 expected
+     *
+     * @return True if the transaction is a write transaction
+     * @return (conditional) the Changes record for the transaction
+     */
+    conditional Changes checkTx(Int txId, Boolean writing=False)
+        {
+        if (isWriteTx(txId))
+            {
+            checkWrite();
+TODO GG
+//            return True, inFlight.computeIfAbsent(txId,
+//                    () -> new Changes(txId, txManager.enlist(this, txId)));
+            }
+        else if (writing)
+            {
+            throw new IllegalState($"An attempt to modify data within a read-only transaction ({txId}).");
+            }
+        else
+            {
+            assert isReadTx(txId);
+            checkRead();
+            return False;
+            }
+        }
+
+    /**
+     * Validate that the transaction ID is a write ID, and see if a transaction exists for that
+     * write ID on this ObjectStore.
+     *
      * @param writeId  the transaction id
      *
-     * @return the Changes record for the transaction
+     * @return True if the transaction exists on this ObjectStore
+     * @return (conditional) the Changes record for the transaction
      */
-    Changes checkTx(Int writeId)
+    conditional Changes peekTx(Int writeId)
         {
         assert isWriteTx(writeId);
-
-        return inFlight.computeIfAbsent(writeId,
-                () -> new Changes(writeId, txManager.enlist(this, writeId)));
+        return inFlight.get(writeId);
         }
 
     /**
@@ -492,6 +524,20 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
         }
 
     /**
+     * Possible outcomes from a [prepare] call:
+     *
+     * * `NoMerge` indicates that there were no changes to merge.
+     *
+     * * `CommittedNoChanges` indicates that there were changes to merge, but the result of merging
+     *   those changes undid the previously prepared changes for this one ObjectStore, because the
+     *   merged changes perfectly negated the previously prepared changes.
+     *
+     * * `Merged` indicates that there were changes to merge, and they were successfully merged into
+     *   the `prepareId` transaction.
+     */
+    enum MergeResult {NoMerge, CommittedNoChanges, Merged}
+
+    /**
      * Move changes from the specified `writeId` transaction into its corresponding `readId`
      * transaction (its `prepareId`, since this is only used for transactions that are preparing).
      * Merging the changes into the destination transaction, leaving the source transaction empty.
@@ -500,11 +546,12 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
      *                   changes
      * @param prepareId  the "read" transaction id that the prepared data will be moved to in
      *                   preparation for a commit
+     * @param seal       (optional) True indicates that, after the merge is complete, this
+     *                   ObjectStore must reject any additional changes to the specified transaction
      *
-     * @return True iff there were any changes that were moved by this ObjectStore into the
-     *         destination transaction
+     * @return a [MergeResult] indicating the result of the `mergePrepare()` operation
      */
-    Boolean mergePrepare(Int writeId, Int prepareId)
+    MergeResult mergePrepare(Int writeId, Int prepareId, Boolean seal = False)
         {
         TODO
         }
