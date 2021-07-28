@@ -229,6 +229,17 @@ service Catalog<Schema extends RootSchema>
     public/private Version? version;
 
     /**
+     * The status of this `Catalog`.
+     *
+     * * `Closed` - This `Catalog` object has not yet been opened, or it has been shut down.
+     * * `Configuring` - This `Catalog` object has the database open for schema definition and
+     *   modification, or other maintenance work.
+     * * `Running` - This `Catalog` object has the database open for data access.
+     * * `Recovering` - This `Catalog` object has been instructed to recover the database.
+     */
+    enum Status {Closed, Recovering, Configuring, Running}
+
+    /**
      * The status of this `Catalog` object.
      */
     @Atomic public/private Status status;
@@ -288,8 +299,17 @@ service Catalog<Schema extends RootSchema>
      */
     DBObjectInfo infoFor(Int id)
         {
-        assert id <= 0;
-        return BuiltIn.byId(id).info;
+        if (id < 0)
+            {
+            return BuiltIn.byId(id).info;
+            }
+
+        if (CatalogMetadata metadata ?= this.metadata)
+            {
+            return metadata.dbObjectInfos[id];
+            }
+
+        TODO("create DBObjectInfo");
         }
 
     /**
@@ -336,9 +356,8 @@ service Catalog<Schema extends RootSchema>
      */
     ObjectStore createStore(Int id)
         {
+        DBObjectInfo info = infoFor(id);
         // TODO
-
-        DBObjectInfo info  = infoFor(id);
 TODO
 //        return switch (BuiltIn.byId(id))
 //            {
@@ -373,17 +392,6 @@ TODO
         {
         return dir.fileFor("sys.json");
         }
-
-    /**
-     * The status of this `Catalog`.
-     *
-     * * `Closed` - This `Catalog` object has not yet been opened, or it has been shut down.
-     * * `Configuring` - This `Catalog` object has the database open for schema definition and
-     *   modification, or other maintenance work.
-     * * `Running` - This `Catalog` object has the database open for data access.
-     * * `Recovering` - This `Catalog` object has been instructed to recover the database.
-     */
-    enum Status {Closed, Recovering, Configuring, Running}
 
     /**
      * For an empty `Catalog` that is `Closed`, initialize the directory and file structures so that
@@ -743,9 +751,7 @@ TODO
      */
     Connection createConnection(DBUser? dbUser = Null)
         {
-        Client<Schema> client = createClient(dbUser ?: DefaultUser);
-        registerClient(client);
-        return client.conn ?: assert;
+        return createClient(dbUser).conn ?: assert;
         }
 
     /**
@@ -754,19 +760,24 @@ TODO
      * be substituted for the default, which allows custom schemas and other custom functionality to
      * be provided in a type-safe manner.
      *
-     * @param dbUser    the user that the `Client` will represent
+     * @param dbUser    (optional) the user that the `Client` will represent
      * @param readOnly  (optional) pass True to indicate that client is not permitted to modify
      *                  any data
      *
      * @return a new `Client` instance
      */
-    Client<Schema> createClient(DBUser dbUser, Boolean readOnly = False)
+    Client<Schema> createClient(DBUser? dbUser = Null, Boolean readOnly = False)
         {
-        Int clientId = genClientId();
-        val metadata = this.metadata;
-        return metadata == Null
+            dbUser   ?:= DefaultUser;
+        Int clientId   = genClientId();
+        val metadata   = this.metadata;
+
+        Client<Schema> client = metadata == Null
                 ? new Client<Schema>(this, clientId, dbUser, readOnly, unregisterClient)
                 : metadata.createClient(this, clientId, dbUser, readOnly, unregisterClient);
+
+        registerClient(client);
+        return client;
         }
 
     /**

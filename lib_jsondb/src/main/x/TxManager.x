@@ -1,3 +1,7 @@
+import collections.ArrayDeque;
+import collections.SparseIntSet;
+
+import oodb.RootSchema;
 import oodb.Transaction.TxInfo;
 
 import storage.ObjectStore;
@@ -36,12 +40,60 @@ import Catalog.BuiltIn;
  * conducts its work via asynchronous calls as much as possible, usually by delegating work to
  * [Client] and [ObjectStore] instances.
  */
-service TxManager(Catalog catalog)
+service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         implements Closeable
     {
-    construct(Catalog catalog)
+    construct(Catalog<Schema> catalog)
         {
-        this.catalog = catalog;
+        this.catalog     = catalog;
+
+        // build the quick lookup information for the optional transactional "modifiers"
+        // (validators, rectifiers, distributors, and async triggers)
+        Boolean hasValidators    = catalog.metadata?.dbObjectInfos.any(info -> !info.validators   .empty) : False;
+        Boolean hasRectifiers    = catalog.metadata?.dbObjectInfos.any(info -> !info.rectifiers   .empty) : False;
+        Boolean hasDistributors  = catalog.metadata?.dbObjectInfos.any(info -> !info.distributors .empty) : False;
+        Boolean hasAsyncTriggers = catalog.metadata?.dbObjectInfos.any(info -> !info.asyncTriggers.empty) : False;
+        Boolean hasSyncTriggers  = hasValidators |  hasRectifiers | hasDistributors;
+
+        if (hasValidators)
+            {
+            validators = catalog.metadata?.dbObjectInfos
+                    .filter(info -> !info.validators.empty)
+                    .map(info -> info.id, new SparseIntSet())
+                    .as(Set<Int>);
+            }
+
+        if (hasRectifiers)
+            {
+            rectifiers = catalog.metadata?.dbObjectInfos
+                    .filter(info -> !info.rectifiers.empty)
+                    .map(info -> info.id, new SparseIntSet())
+                    .as(Set<Int>);
+            }
+
+        if (hasDistributors)
+            {
+            distributors = catalog.metadata?.dbObjectInfos
+                    .filter(info -> !info.distributors.empty)
+                    .map(info -> info.id, new SparseIntSet())
+                    .as(Set<Int>);
+            }
+
+        if (hasSyncTriggers)
+            {
+            asyncTriggers = new SparseIntSet()
+                    .addAll(validators)
+                    .addAll(rectifiers)
+                    .addAll(distributors);
+            }
+
+        if (hasAsyncTriggers)
+            {
+            syncTriggers = catalog.metadata?.dbObjectInfos
+                    .filter(info -> !info.asyncTriggers.empty)
+                    .map(info -> info.id, new SparseIntSet())
+                    .as(Set<Int>);
+            }
         }
     finally
         {
@@ -146,19 +198,30 @@ service TxManager(Catalog catalog)
     protected/private Map<Int, Int> byReadId = new HashMap();
 
     /**
-     * The set of DBObjects that have synchronous triggers.
+     * The set of ids of DBObjects that have validators.
      */
-    // TODO
-
+    protected/private Set<Int> validators = [];
     /**
-     * The set of DBObjects that have asynchronous triggers.
+     * The set of ids of DBObjects that have rectifiers.
      */
-    // TODO
+    protected/private Set<Int> rectifiers = [];
+    /**
+     * The set of ids of DBObjects that have distributors.
+     */
+    protected/private Set<Int> distributors = [];
+    /**
+     * The set of ids of DBObjects that have validators, rectifiers, and/or distributors.
+     */
+    protected/private Set<Int> syncTriggers = [];
+    /**
+     * The set of ids of DBObjects that have asynchronous triggers.
+     */
+    protected/private Set<Int> asyncTriggers = [];
 
     /**
      * A pool of artificial clients for processing triggers.
      */
-    // TODO
+    ArrayDeque<Client<Schema>> clientCache = new ArrayDeque();
 
     // TODO Future<???> current prepare job
 
@@ -311,11 +374,11 @@ service TxManager(Catalog catalog)
         Int clientId = tx.outer.id;
         assert !byClientId.contains(clientId);
 
-        Int      writeId = -(++txCount);
-        TxRecord rec     = new TxRecord(tx, clientId, writeId);
+        Int      writeId = genWriteId();
+        TxRecord rec     = new TxRecord(tx, tx.txInfo, clientId, writeId);
 
         byClientId.put(clientId, rec);
-        byWriteId.put(writeId, rec);
+        byWriteId .put(writeId , rec);
 
         return writeId;
         }
@@ -338,10 +401,13 @@ service TxManager(Catalog catalog)
         assert TxRecord rec := byWriteId.get(writeId) as $"Missing TxRecord for txid={writeId}";
         assert rec.status == InFlight;
 
-        @Future Boolean prepared  = prepareImpl(rec);
-        @Future Boolean triggered = &prepared.createContinuation(ok -> ok && triggerImpl(rec));
-        @Future Boolean committed = &triggered.createContinuation(ok -> ok && commitImpl(rec));
-        return committed;
+        // REVIEW should this protected with a try/catch?
+        return prepare(rec)
+            && (validators  .empty || validate  (rec))
+            && (rectifiers  .empty || rectify   (rec))
+            && (distributors.empty || distribute(rec))
+                ? commit(rec)
+                : rollback(rec);
         }
 
     /**
@@ -361,7 +427,7 @@ service TxManager(Catalog catalog)
         assert TxRecord rec := byWriteId.get(writeId) as $"Missing TxRecord for txid={writeId}";
         assert rec.status == InFlight;
 
-        rollbackImpl(rec);
+        rollback(rec);
         }
 
 
@@ -433,13 +499,50 @@ service TxManager(Catalog catalog)
     // ----- internal --------------------------------------------------------------------
 
     /**
+     * Generate a write transaction ID.
+     *
+     * @return the new write id
+     */
+    protected Int genWriteId()
+        {
+        return -(++txCount);
+        }
+
+    /**
+     * Generate the next "prepare" transaction ID. Note that until a transaction finishes TODO
+     *
+     * @return the new prepare id
+     */
+    protected Int genPrepareId()
+        {
+        return lastPrepared + 1;
+        }
+
+    /**
+     * TODO
+     */
+    protected Client<Schema> allocateClient()
+        {
+        return clientCache.takeOrCompute(() -> catalog.createClient());
+        }
+
+    /**
+     * TODO
+     */
+    protected void recycleClient(Client<Schema> client)
+        {
+        return clientCache.reversed.add(client);
+        }
+
+
+    /**
      * Attempt to prepare an in-flight transaction.
      *
      * @param rec  the TxRecord representing the transaction to prepare
      *
      * @return True iff the Transaction was successfully prepared
      */
-    protected Boolean prepareImpl(TxRecord rec)
+    protected Boolean prepare(TxRecord rec)
         {
         Int              writeId = rec.writeId;
         Set<ObjectStore> stores  = rec.enlisted;
@@ -447,15 +550,14 @@ service TxManager(Catalog catalog)
             {
             // an empty transaction is considered committed
             assert rec.readId == NO_TX || isWriteTx(rec.readId);
-            byWriteId.remove(writeId);
-            byClientId.remove(rec.clientId);
-            rec.status = Committed;
+            terminate(rec, Committed);
             return True;
             }
 
         // prepare phase
         rec.status = Preparing;
-        Boolean abort = False;
+        Int                 prepareId   = genPrepareId();
+        Boolean             abort       = False;
         FutureVar<Boolean>? preparedAll = Null;
         for (ObjectStore store : stores)
             {
@@ -470,7 +572,7 @@ service TxManager(Catalog catalog)
                 }
 
             import ObjectStore.PrepareResult;
-            @Future PrepareResult result      = store.prepare(writeId);
+            @Future PrepareResult result      = store.prepare(writeId, prepareId);
             @Future Boolean       preparedOne = &result.transform(pr ->
                 {
                 switch (pr)
@@ -493,8 +595,95 @@ service TxManager(Catalog catalog)
             }
 
         assert preparedAll != Null;
-        @Future Boolean result = preparedAll.thenDo(() -> rollbackImpl(rec));
+        @Future Boolean result = preparedAll.whenComplete((v, e) ->
+            {
+            // check for successful prepare, and whether anything is left enlisted
+            switch (v, stores.empty)
+                {
+                case (False, False):
+                    // failed; remaining stores need to be rolled back
+                    rollback(rec);
+                    break;
+
+                case (False, True ):
+                    // failed; already rolled back
+                    terminate(rec, RolledBack);
+                    break;
+
+                case (True , False):
+                    // there might still be triggers to process as part of the prepare, but the
+                    // "client" portion of the prepare has completed
+                    if (rec.triggered.empty)
+                        {
+                        // no triggers; prepare is completed
+                        rec.status = Prepared;
+                        }
+                    break;
+
+                case (True , True ):
+                    // succeeded; already committed
+                    terminate(rec, Committed);
+                    break;
+                }
+            });
+
+// TODO
+//        @Future Boolean triggered = syncTriggers.empty
+//                ? &prepared
+//                : &prepared.createContinuation(ok -> ok && triggerImpl(rec));
+
         return result;
+        }
+
+    /**
+     * Attempt to prepare an in-flight transaction.
+     *
+     * @param rec  the TxRecord representing the transaction to prepare
+     *
+     * @return True iff the Transaction was successfully prepared
+     */
+    protected Boolean validate(TxRecord rec)
+        {
+        if (validators.empty)
+            {
+            return True;
+            }
+
+        TODO
+        }
+
+    /**
+     * Attempt to prepare an in-flight transaction.   TODO
+     *
+     * @param rec  the TxRecord representing the transaction to prepare
+     *
+     * @return True iff the Transaction was successfully prepared
+     */
+    protected Boolean rectify(TxRecord rec)
+        {
+        if (rectifiers.empty)
+            {
+            return True;
+            }
+
+        TODO
+        }
+
+    /**
+     * Attempt to prepare an in-flight transaction.TODO
+     *
+     * @param rec  the TxRecord representing the transaction to prepare
+     *
+     * @return True iff the Transaction was successfully prepared
+     */
+    protected Boolean distribute(TxRecord rec)
+        {
+        if (distributors.empty)
+            {
+            return True;
+            }
+
+        TODO
         }
 
     /**
@@ -504,15 +693,88 @@ service TxManager(Catalog catalog)
      *
      * @return True iff the Transaction successfully evaluated its triggers
      */
-    protected Boolean triggerImpl(TxRecord rec, Int depth = 0)
+    protected Boolean triggerImpl(TxRecord rec)
         {
-        // determine if any triggers would fire based on the contents of the transaction
-        // TODO
-
-        // some reasonable amount of trigger recursion should be expected
-        assert depth <= 64;
-
-        TODO
+        if (rec.triggered.empty)
+            {
+            return True;
+            }
+TODO
+//        // some reasonable amount of trigger recursion should be expected; consider improving the
+//        // error message here to provide some indication of how we got here, for example start
+//        // keeping track of what is triggering what once we get close to the recursion limit
+//        assert depth <= 64;
+//
+//        // the transaction record will hold on to a second transactional record that is only used
+//        // during trigger processing, and which "commits to" (merges into) the existing transaction
+//        // on each completion
+//        TxRecord triggerRec;
+//        Int      triggerId = rec.prepareId;
+//        if (triggerId == NO_TX)
+//            {
+//            // we've already completed the preparation of the transaction based on the client's
+//            // changes, so the trigger processing will occur based on the prepared transaction that
+//            // will commit on top of the most recent transaction
+//            rec.readId = lastPrepared;
+//
+//            triggerId  = genWriteId();
+//            triggerRec = new TxRecord(tx, tx.txInfo, clientId, triggerId, readId=rec.writeId);
+//
+//            byWriteId.put(writeId, rec);
+//
+//            rec.prepareId = triggerId;
+//            }
+//        else
+//            {
+//            assert triggerRec := byWriteId.get(rec.prepareId);
+//            }
+//
+//        FutureVar<Boolean>? triggeredAll = Null;
+//        for (ObjectStore store : rec.takeTriggered())
+//            {
+//            // triggers are processed in sequence
+//// TODO            @Future TODO result = store.prepare(writeId);
+//            @Future Boolean triggeredOne = &result.transform(pr ->
+//                {
+//                TODO
+//                });
+//
+//            triggeredAll = triggeredAll?.and(&triggeredOne, (f1, f2) -> f1 & f2) : &triggeredOne;
+//            }
+//
+//        assert triggeredAll != Null;
+//        @Future Boolean result = triggeredAll.whenComplete((v, e) ->
+//            {
+//            // check for successful prepare, and whether anything is left enlisted
+//            switch (v, stores.empty)
+//                {
+//                case (False, False):
+//                    // failed; remaining stores need to be rolled back
+//                    rollback(rec);
+//                    break;
+//
+//                case (False, True ):
+//                    // failed; already rolled back
+//                    terminate(rec, RolledBack);
+//                    break;
+//
+//                case (True , False):
+//                    // there might still be triggers to process as part of the prepare, but the
+//                    // "client" portion of the prepare has completed
+//                    if (rec.triggered.empty)
+//                        {
+//                        // no triggers; prepare is completed
+//                        rec.status = triggered;
+//                        }
+//                    break;
+//
+//                case (True , True ):
+//                    // succeeded; already committed
+//                    terminate(rec, Committed);
+//                    break;
+//                }
+//            });
+//        return result;
         }
 
     /**
@@ -522,7 +784,7 @@ service TxManager(Catalog catalog)
      *
      * @return True iff the Transaction was successfully committed
      */
-    protected Boolean commitImpl(TxRecord rec)
+    protected Boolean commit(TxRecord rec)
         {
         TODO
         }
@@ -534,7 +796,7 @@ service TxManager(Catalog catalog)
      *
      * @return True iff the Transaction was rolled back
      */
-    protected Boolean rollbackImpl(TxRecord rec)
+    protected Boolean rollback(TxRecord rec)
         {
         Int              writeId = rec.writeId;
         Set<ObjectStore> stores  = rec.enlisted;
@@ -566,6 +828,19 @@ service TxManager(Catalog catalog)
         return completed;
         }
 
+    /**
+     * Finish the specified transaction.
+     *
+     * @param rec     the transaction record
+     * @param status  the terminal status of the transaction
+     */
+    protected void terminate(TxRecord rec, TxRecord.Status status)
+        {
+        byWriteId.remove(rec.writeId);
+        byClientId.remove(rec.clientId);
+        rec.status = status;
+        }
+
 
     // ----- internal: TxRecord --------------------------------------------------------------------
 
@@ -574,11 +849,13 @@ service TxManager(Catalog catalog)
      */
     protected static class TxRecord(
             Client.Transaction  clientTx,
+            TxInfo              txInfo,
             Int                 clientId,
             Int                 writeId,
             Int                 readId    = NO_TX,
             Int                 prepareId = NO_TX,
-            Set<ObjectStore>    enlisted  = [],
+            Set<ObjectStore>    enlisted  = [],         // TODO set of ids
+            Set<ObjectStore>    triggered = [],         // TODO set of ids
             Status              status    = InFlight)
         {
         /**
@@ -597,8 +874,50 @@ service TxManager(Catalog catalog)
             }
 
         /**
+         * Mark a transactional resource as being triggered.
+         *
+         * @param store  the resource to enlist
+         */
+        void trigger(ObjectStore store)
+            {
+            if (triggered.is(immutable Object))
+                {
+                triggered = new HashSet(triggered);
+                }
+
+            assert triggered.addIfAbsent(store);
+            }
+
+        /**
+         * @return the ObjectStores **in a predictable order** that need to have triggers evaluated
+         */
+        Iterable<ObjectStore> takeTriggered()
+            {
+            if (triggered.empty)
+                {
+                return [];
+                }
+
+            val result = triggered.sorted((os1, os2) -> os1.id <=> os2.id);
+            triggered = [];
+            return result;
+            }
+
+        /**
          * Transaction status.
          */
-        enum Status {InFlight, Preparing, Prepared, Committing, Committed, RollingBack, RolledBack}
+        enum Status
+            {
+            InFlight,
+            Preparing,
+            Validating,
+            Rectifying,
+            Distributing,
+            Prepared,
+            Committing,
+            Committed,
+            RollingBack,
+            RolledBack,
+            }
         }
     }

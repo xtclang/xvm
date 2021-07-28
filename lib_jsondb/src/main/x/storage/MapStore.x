@@ -72,24 +72,24 @@ service MapStore<Key extends immutable Const, Value extends immutable Const>
 
     // ----- ObjectStore transaction handling ------------------------------------------------------
 
-    @Override PrepareResult prepare(Int writeId)
+    @Override PrepareResult prepare(Int writeId, Int prepareId)
         {
         TODO
         }
 
-    @Override Boolean mergeTx(Int fromTxId, Int toTxId, Boolean release = False)
+    @Override Boolean mergePrepare(Int writeId, Int prepareId)
         {
         TODO
         }
 
-    @Override Doc commit(Int prepareId, Int commitId)
+    @Override Doc commit(Int writeId)
         {
         TODO
         }
 
-    @Override void rollback(Int uncommittedId)
+    @Override void rollback(Int writeId)
         {
-        assert isWriteTx(uncommittedId);
+        assert isWriteTx(writeId);
         TODO
         }
 

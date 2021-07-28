@@ -1,4 +1,8 @@
 import oodb.DBObject.DBCategory as Category;
+import oodb.DBObject.Validator;
+import oodb.DBObject.Rectifier;
+import oodb.DBObject.Distributor;
+import oodb.DBObject.AsyncTrigger;
 
 /**
  * Persistent metadata information about a particular `DBObject`.
@@ -17,11 +21,15 @@ const DBObjectInfo(
         Category             category,
         Int                  id,
         Int                  parentId,
-        Int[]                childIds        = [],
-        Boolean              transactional   = True,
-        Map<String, Type>    typeParams      = Map:[],
-        Map<String, Class[]> concreteClasses = Map:[],
-        LifeCycle            lifeCycle       = Current,
+        Int[]                childIds          = [],
+        Boolean              transactional     = True,
+        Validator[]          validators        = [],
+        Rectifier[]          rectifiers        = [],
+        Distributor[]        distributors      = [],
+        AsyncTrigger[]       asyncTriggers     = [],
+        Map<String, Type>    typeParams        = Map:[],
+        Map<String, Class[]> concreteClasses   = Map:[],
+        LifeCycle            lifeCycle         = Current,
         )
     {
     enum LifeCycle {Current, Deprecated, Removed}
@@ -196,6 +204,10 @@ const DBObjectInfo(
                 parentId        = parent.id,
                 childIds        = childIds,
                 transactional   = transactional,
+                validators      = validators,
+                rectifiers      = rectifiers,
+                distributors    = distributors,
+                asyncTriggers   = asyncTriggers,
                 typeParams      = typeParams,
                 concreteClasses = concreteClasses,
                 lifeCycle       = lifeCycle,
@@ -224,6 +236,10 @@ const DBObjectInfo(
                 parentId        = parentId,
                 childIds        = childIds + child.id,
                 transactional   = transactional,
+                validators      = validators,
+                rectifiers      = rectifiers,
+                distributors    = distributors,
+                asyncTriggers   = asyncTriggers,
                 typeParams      = typeParams,
                 concreteClasses = concreteClasses,
                 lifeCycle       = lifeCycle,
@@ -269,6 +285,10 @@ const DBObjectInfo(
                 parentId        = parentId,
                 childIds        = mergeIds,
                 transactional   = transactional,
+                validators      = validators,
+                rectifiers      = rectifiers,
+                distributors    = distributors,
+                asyncTriggers   = asyncTriggers,
                 typeParams      = typeParams,
                 concreteClasses = concreteClasses,
                 lifeCycle       = lifeCycle,

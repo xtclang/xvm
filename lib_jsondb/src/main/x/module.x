@@ -193,6 +193,7 @@ module jsondb.xtclang.org
     {
     package oodb import oodb.xtclang.org;
     package json import json.xtclang.org;
+    package collections import collections.xtclang.org;
 
 
     // ----- temporary helpers ---------------------------------------------------------------------
