@@ -82,7 +82,7 @@ service MapStore<Key extends immutable Const, Value extends immutable Const>
         TODO
         }
 
-    @Override Doc commit(Int writeId)
+    @Override OrderedMap<Int, Doc> commit(OrderedMap<Int, Int> writeIdForPrepareId)
         {
         TODO
         }

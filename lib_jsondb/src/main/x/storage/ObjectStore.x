@@ -556,51 +556,19 @@ TODO GG
         TODO
         }
 
-// REVIEW
-//    /**
-//     * Commit a group of previously prepared transactions. When this method returns, the
-//     * transactional changes related to this ObjectStore will have been successfully committed to
-//     * disk.
-//     *
-//     * @param byCommitId  a Map, keyed by "commit" transaction id, with the corresponding values
-//     *                    being the "prepared" transactions ids
-//     *
-//     * @return the ObjectStore's commit records, as JSON documents, keyed by commit id
-//     *
-//     * @throws Exception on any failure
-//     */
-//    OrderedMap<Int, Doc> commit(OrderedMap<Int, Int> byCommitId)
-//        {
-//        SkiplistMap<Int, Doc> records = new SkiplistMap();
-//
-//        // in theory, these can all be committed together, which should be more efficient, but the
-//        // default implementation simply delegates to the single-commit method
-//        for ((Int commitId, Int prepareId) : byCommitId)
-//            {
-//            if (inFlight.contains(prepareId))
-//                {
-//                Doc record = commit(prepareId, commitId);
-//                records.put(commitId, record);
-//                }
-//            }
-//
-//        return records;
-//        }
-
     /**
-     * Commit a previously prepared transaction. When this method returns, the transactional changes
-     * related to this ObjectStore will have been successfully committed to disk, and the `writeId`
-     * will have been discarded.
+     * Commit a group of previously prepared transactions. When this method returns, the
+     * transactional changes enumerated in the returned map related to this ObjectStore will have
+     * been successfully committed to disk.
      *
-     * @param writeId  the `writeId` of the prepared transaction (even though the data from the
-     *                 transaction will already have been moved to a `prepareId` by the time that
-     *                 this method is called)
+     * @param writeIdForPrepareId  a Map, keyed by "prepareId", with the corresponding value being
+     *                             the "writeId"
      *
-     * @return the ObjectStore's commit record, as a JSON document; Null represents no changes
+     * @return the ObjectStore's commit records, as JSON documents, keyed by prepare (aka commit) id
      *
      * @throws Exception on any failure
      */
-    Doc commit(Int writeId)
+    OrderedMap<Int, Doc> commit(OrderedMap<Int, Int> writeIdForPrepareId)
         {
         TODO
         }

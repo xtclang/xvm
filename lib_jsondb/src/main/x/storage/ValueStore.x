@@ -20,6 +20,8 @@ import model.DBObjectInfo;
 service ValueStore<Value extends immutable Const>
         extends ObjectStore
     {
+    // ----- constructors --------------------------------------------------------------------------
+
     construct(Catalog          catalog,
               DBObjectInfo     info,
               Appender<String> errs,
@@ -32,6 +34,9 @@ service ValueStore<Value extends immutable Const>
         this.valueMapping = valueMapping;
         this.initial      = initial;
         }
+
+
+    // ----- properties ----------------------------------------------------------------------------
 
     /**
      * The JSON Mapping for the singleton value.
@@ -66,7 +71,8 @@ service ValueStore<Value extends immutable Const>
     @Override protected SkiplistMap<Int, Changes> inFlight = new SkiplistMap();
 
     /**
-     * Cached transaction/value pairs.
+     * Cached transaction/value pairs. This is "the database", in the sense that this is the same
+     * data that is stored on disk.
      */
     protected SkiplistMap<Int, Value> history = new SkiplistMap();
 
@@ -75,7 +81,7 @@ service ValueStore<Value extends immutable Const>
 
     /**
      * Obtain the singleton value as it existed immediately after the specified transaction finished
-     * committing.
+     * committing, or as it exists within the transaction (if it has not yet committed).
      *
      * @param txId  the "write" transaction identifier
      *
@@ -127,7 +133,7 @@ service ValueStore<Value extends immutable Const>
         assert Int latestId := history.last();
         if (latestId == tx.readId)
             {
-            if (value == prev)
+            if (&value == &prev) // any change assumed significant, so use reference equality
                 {
                 inFlight.remove(writeId);
                 return CommittedNoChanges;
@@ -136,7 +142,7 @@ service ValueStore<Value extends immutable Const>
         else
             {
             Value latest = latestValue();
-            if (latest != prev)
+            if (&latest != &prev) // any change assumed significant, so use reference equality
                 {
                 // the state that this transaction assumes as its starting point was altered, so the
                 // transaction must roll back
@@ -144,7 +150,7 @@ service ValueStore<Value extends immutable Const>
                 return FailedRolledBack;
                 }
 
-            if (value == latest)
+            if (&value == &latest) // any change assumed significant, so use reference equality
                 {
                 inFlight.remove(writeId);
                 return CommittedNoChanges;
@@ -154,7 +160,10 @@ service ValueStore<Value extends immutable Const>
         // there is a change to this ValueStore in this transaction, and there has not been an
         // interleaving transaction that invalidates this transaction, so the prepare registers the
         // new value into the historical record for the transaction that is being prepared
-        mergePrepare(writeId, prepareId);
+        history.put(prepareId, tx.value);
+        tx.readId   = prepareId;
+        tx.prepared = True;
+        tx.modified = False;
         return Prepared;
         }
 
@@ -164,35 +173,45 @@ service ValueStore<Value extends immutable Const>
 
         if (Changes tx := peekTx(writeId))
             {
+            assert !tx.sealed;
             if (tx.modified)
                 {
-                // TODO implement merge logic vs previous (NOT readId) tx value, set result
-                history.put(prepareId, tx.value);
-                tx.modified = False;    // the "changes" no longer differs from the historical record
-                }
-            else
-                {
-                result = NoMerge;
+                Value prev = latestValue(prepareId-1);
+                if (tx.&value == &prev)
+                    {
+                    // the transaction is un-doing itself
+                    inFlight.remove(writeId);
+                    history.remove(prepareId);
+                    result = CommittedNoChanges;
+                    }
+                else
+                    {
+                    history.put(prepareId, tx.value);
+                    result = Merged;
+                    }
                 }
 
             tx.readId   = prepareId;// slide the readId forward to the point that we just prepared
             tx.prepared = True;     // remember that the changed the readId to the prepareId
+            tx.modified = False;    // the "changes" no longer differs from the historical record
+            tx.sealed   = seal;
             }
 
         return result;
         }
 
-    @Override Doc commit(Int writeId)
+    @Override OrderedMap<Int, Doc> commit(OrderedMap<Int, Int> writeIdForPrepareId)
         {
-        assert isWriteTx(writeId);
-
-        if (Changes tx := inFlight.get(writeId))
-            {
-            // TODO write to disk
-            TODO
-            }
-
-        return Null;
+TODO
+//        assert isWriteTx(writeId);
+//
+//        if (Changes tx := inFlight.get(writeId))
+//            {
+//            // TODO write to disk
+//            TODO return a doc containing the tx record
+//            }
+//
+//        return Null;
         }
 
     @Override void rollback(Int writeId)
