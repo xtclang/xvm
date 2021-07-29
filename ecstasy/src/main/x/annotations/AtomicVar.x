@@ -106,7 +106,7 @@ mixin AtomicVar<Referent>
     conditional Referent replaceFailed(Referent oldValue, Referent newValue)
         {
         Referent curValue = get();
-        if (curValue == oldValue)
+        if (&curValue == &oldValue)
             {
             set(newValue);
             return False;

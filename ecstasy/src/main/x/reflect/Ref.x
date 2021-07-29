@@ -277,7 +277,7 @@ interface Ref<Referent>
      * _identity_. Specifically, two references are equal if they reference the same runtime
      * object. Additionally, for optimization purposes, the runtime is *permitted* to indicate that
      * two references to two separate runtime objects are equal, in the case where both references
-     * are to immutable objects whose structures are identical. REVIEW GG MF
+     * are to immutable objects whose structures are identical.
      */
     static <CompileType extends Ref> Boolean equals(CompileType value1, CompileType value2)
         {
