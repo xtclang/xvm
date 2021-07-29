@@ -308,10 +308,9 @@ public class NewExpression
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
-        boolean      fValid     = true;
         ConstantPool pool       = pool();
         TypeConstant typeSuper  = null;   // the super class type of the anon inner class
-        TypeConstant typeTarget = null;   // the type being constructed (might be private etc.)
+        TypeConstant typeTarget = null;   // the type to look for a constructor at (could be private)
         TypeConstant typeResult = null;   // the type being returned (always public)
 
         // being able to obtain a type for a "new anon inner class" expression requires the
@@ -340,12 +339,12 @@ public class NewExpression
                 }
             else
                 {
-                typeTarget = type.ensureTypeConstant(ctx, errs);
-                if (typeTarget.containsUnresolved())
+                typeResult = type.ensureTypeConstant(ctx, errs);
+                if (typeResult.containsUnresolved())
                     {
-                    if (typeTarget instanceof AnnotatedTypeConstant)
+                    if (typeResult instanceof AnnotatedTypeConstant)
                         {
-                        typeTarget     = ((AnnotatedTypeConstant) typeTarget).stripParameters();
+                        typeResult     = ((AnnotatedTypeConstant) typeResult).stripParameters();
                         m_fDynamicAnno = true;
                         }
                     else
@@ -367,93 +366,96 @@ public class NewExpression
             Expression exprLeftNew = exprLeftOld.validate(ctx, null, errs);
             if (exprLeftNew == null)
                 {
-                fValid = false;
+                return null;
+                }
+
+            this.left = exprLeftNew;
+
+            TypeConstant typeLeft = exprLeftNew.getType();
+
+            if (fVirt)
+                {
+                if (typeLeft.isFormalTypeType())
+                    {
+                    // the Type type doesn't have virtual constructors, so the only allowed
+                    // scenario is a virtual constructor on a formal type, e.g.:
+                    //      NumType num = NumType.new(bytes);
+                    typeLeft = typeLeft.getParamType(0);
+                    }
+                typeResult = typeTarget = typeLeft;
                 }
             else
                 {
-                this.left = exprLeftNew;
-
-                TypeConstant typeLeft = exprLeftNew.getType();
-
-                if (fVirt)
+                // first, assume the name is relative to the parent's class, e.g.:
+                //      parent.new [@Mixin] Child<...>(...)
+                TypeExpression exprType = type;
+                while (exprType instanceof AnnotatedTypeExpression)
                     {
-                    if (typeLeft.isFormalTypeType())
-                        {
-                        // the Type type doesn't have virtual constructors, so the only allowed
-                        // scenario is a virtual constructor on a formal type, e.g.:
-                        //      NumType num = NumType.new(bytes);
-                        typeLeft = typeLeft.getParamType(0);
-                        }
-                    typeResult = typeTarget = typeLeft;
+                    exprType = exprType.unwrapIntroductoryType();
                     }
-                else
+
+                NamedTypeExpression exprNameType = (NamedTypeExpression) exprType;
+                if (exprNameType.isVirtualChild())
                     {
-                    // first, assume the name is relative to the parent's class, e.g.:
-                    //      parent.new [@Mixin] Child<...>(...)
-                    TypeExpression exprType = type;
-                    while (exprType instanceof AnnotatedTypeExpression)
+                    String   sChild   = exprNameType.getName();
+                    TypeInfo infoLeft = typeLeft.ensureTypeInfo(errs);
+
+                    typeResult = infoLeft.calculateChildType(pool, sChild);
+                    if (typeResult != null)
                         {
-                        exprType = exprType.unwrapIntroductoryType();
+                        exprNameType.setTypeConstant(typeResult);
                         }
+                    }
 
-                    NamedTypeExpression exprNameType = (NamedTypeExpression) exprType;
-                    if (exprNameType.isVirtualChild())
+                if (typeResult == null)
+                    {
+                    // now try to use the NameTypeExpression validation logic for a fully qualified
+                    // type scenario, such as:
+                    //      parent.new [@Mixin] Parent.Child<...>(...)
+                    TypeExpression exprTest = (TypeExpression) type.clone();
+                    Context        ctxTest  = ctx.enter();
+                    boolean        fValid   = true;
+                    if (exprTest.validate(ctxTest, pool.typeType(), errs) == null)
                         {
-                        String   sChild   = exprNameType.getName();
-                        TypeInfo infoLeft = typeLeft.ensureTypeInfo(errs);
-
-                        typeTarget = infoLeft.calculateChildType(pool, sChild);
-                        if (typeTarget != null)
-                            {
-                            exprNameType.setTypeConstant(typeTarget);
-                            }
+                        fValid = false;
                         }
-
-                    if (typeTarget == null)
+                    else
                         {
-                        // now try to use the NameTypeExpression validation logic for a fully qualified
-                        // type scenario, such as:
-                        //      parent.new [@Mixin] Parent.Child<...>(...)
-                        TypeExpression exprTest = (TypeExpression) type.clone();
-                        Context        ctxTest  = ctx.enter();
-                        if (exprTest.validate(ctxTest, pool.typeType(), errs) == null)
-                            {
-                            fValid = false;
-                            }
-                        else
-                            {
-                            typeTarget = exprTest.ensureTypeConstant(ctx, errs);
-                            }
-                        ctx.exit();
-                        exprTest.discard(true);
+                        typeResult = exprTest.ensureTypeConstant(ctx, errs);
                         }
+                    ctx.exit();
+                    exprTest.discard(true);
 
-                    if (typeTarget != null)
+                    if (!fValid)
                         {
-                        if (!typeTarget.isVirtualChild() ||
-                            !typeTarget.getParentType().getDefiningConstant().equals(
-                                typeLeft.getDefiningConstant()))
-                            {
-                            log(errs, Severity.ERROR, Compiler.NEW_UNRELATED_PARENT,
-                                    typeTarget.getValueString(), typeLeft.getValueString());
-                            fValid = false;
-                            }
+                        return null;
+                        }
+                    }
+
+                if (typeResult != null)
+                    {
+                    if (!typeResult.isVirtualChild() ||
+                        !typeResult.getParentType().getDefiningConstant().equals(
+                            typeLeft.getDefiningConstant()))
+                        {
+                        log(errs, Severity.ERROR, Compiler.NEW_UNRELATED_PARENT,
+                                typeResult.getValueString(), typeLeft.getValueString());
+                        return null;
                         }
                     }
                 }
             }
 
-        if (fValid && !fVirt)
+        if (!fVirt)
             {
             if (typeRequired != null)
                 {
                 // infer type information from the required type; that information needs to be used to
                 // inform the validation of the type that we are "new-ing"
-                TypeConstant typeInferred = inferTypeFromRequired(typeTarget, typeRequired);
+                TypeConstant typeInferred = inferTypeFromRequired(typeResult, typeRequired);
                 if (typeInferred != null)
                     {
-                    typeTarget = typeInferred;
-                    type.setTypeConstant(typeTarget);
+                    type.setTypeConstant(typeResult = typeInferred);
                     }
                 }
 
@@ -461,28 +463,48 @@ public class NewExpression
             // the inferred target type
             TypeExpression exprTypeOld = this.type;
             TypeExpression exprTypeNew = (TypeExpression) exprTypeOld.validate(ctx,
-                    typeTarget == null ? null : typeTarget.getType(), errs);
+                    typeResult == null ? null : typeResult.getType(), errs);
             if (exprTypeNew == null)
                 {
-                fValid = false;
+                return null;
+                }
+
+            this.type  = exprTypeNew;
+            typeResult = exprTypeNew.ensureTypeConstant(ctx, errs);
+
+            if (m_fDynamicAnno)
+                {
+                typeResult = ((AnnotatedTypeConstant) typeResult).stripParameters();
+                }
+
+            // strip the annotations and, if necessary, apply them later
+            Annotation[] annos;
+            if (typeResult instanceof AnnotatedTypeConstant)
+                {
+                List<Annotation> listClass = new ArrayList<>();
+                List<Annotation> listMixin = new ArrayList<>();
+
+                typeTarget = ((AnnotatedTypeConstant) typeResult).
+                                extractAnnotation(listClass, listMixin, errs);
+                if (typeTarget == null)
+                    {
+                    // errors must have been reported
+                    return null;
+                    }
+                assert listClass.isEmpty() && !listMixin.isEmpty();
+                annos = listMixin.toArray(Annotation.NO_ANNOTATIONS);
                 }
             else
                 {
-                this.type  = exprTypeNew;
-                typeTarget = exprTypeNew.ensureTypeConstant(ctx, errs);
-
-                if (m_fDynamicAnno)
-                    {
-                    typeTarget = ((AnnotatedTypeConstant) typeTarget).stripParameters();
-                    }
-                typeResult = typeTarget;
+                assert !typeResult.isAnnotated();
+                typeTarget = typeResult;
+                annos      = null;
                 }
-            }
 
-        if (fValid && !fVirt)
-            {
             if (left == null)
                 {
+                boolean fNestMate = typeTarget.isNestMateOf(ctx.getThisClass().getIdentityConstant());
+
                 // now we should have enough type information to create the real anon inner class
                 if (fAnon)
                     {
@@ -490,42 +512,17 @@ public class NewExpression
 
                     ensureInnerClass(ctx, AnonPurpose.Actual, errsTemp);
 
-                    fValid &= !errsTemp.hasSeriousErrors();
                     errsTemp.merge();
-                    }
-
-                boolean fNestMate = typeTarget.isNestMateOf(ctx.getThisClass().getIdentityConstant());
-                if (fAnon)
-                    {
-                    // strip the annotations and apply them later
-                    Annotation[] annos;
-                    if (typeTarget instanceof AnnotatedTypeConstant)
+                    if (errsTemp.hasSeriousErrors())
                         {
-                        List<Annotation> listClass = new ArrayList<>();
-                        List<Annotation> listMixin = new ArrayList<>();
-
-                        typeSuper = ((AnnotatedTypeConstant) typeTarget).
-                                        extractAnnotation(listClass, listMixin, errs);
-                        if (typeSuper == null)
-                            {
-                            // errors must have been reported
-                            return null;
-                            }
-                        assert listClass.isEmpty() && !listMixin.isEmpty();
-                        annos = listMixin.toArray(Annotation.NO_ANNOTATIONS);
-                        }
-                    else
-                        {
-                        assert !typeTarget.isAnnotated();
-                        typeSuper = typeTarget;
-                        annos     = null;
+                        return null;
                         }
 
                     // since we are going to be extending the specified type, increase visibility from
                     // the public default to protected, which we get when a class "extends" another;
                     // the real target, though, is not the specified type being "new'd", but rather the
                     // anonymous inner class
-                    typeSuper = pool.ensureAccessTypeConstant(typeSuper,
+                    typeSuper = pool.ensureAccessTypeConstant(typeTarget,
                             fNestMate ? Access.PRIVATE : Access.PROTECTED);
 
                     ClassStructure clzAnon = (ClassStructure) anon.getComponent();
@@ -535,11 +532,12 @@ public class NewExpression
                     typeResult = typeResult.adoptParameters(pool, clzAnon.getFormalType());
                     typeResult = typeResult.resolveGenerics(pool, typeTarget);
 
+                    typeTarget = pool.ensureAccessTypeConstant(typeResult, Access.PRIVATE);
+
                     if (annos != null)
                         {
                         typeResult = pool.ensureAnnotatedTypeConstant(typeResult, annos);
                         }
-                    typeTarget = pool.ensureAccessTypeConstant(typeResult, Access.PRIVATE);
                     }
                 else if (fNestMate)
                     {
@@ -556,18 +554,16 @@ public class NewExpression
                                 {
                                 log(errs, Severity.ERROR, Compiler.PARENT_NOT_CONSTRUCTED,
                                         clzTarget.getSimpleName());
+                                return null;
                                 }
-                            else
-                                {
-                                ctx.requireThis(getStartPosition(), errs);
-                                m_nVirtualParentSteps = nSteps;
-                                }
+                            ctx.requireThis(getStartPosition(), errs);
+                            m_nVirtualParentSteps = nSteps;
                             }
                         else
                             {
                             // TODO: a better error
                             log(errs, Severity.ERROR, Compiler.INVALID_OUTER_THIS);
-                            fValid = false;
+                            return null;
                             }
                         }
                     }
@@ -601,8 +597,7 @@ public class NewExpression
                                     {
                                     log(errs, Severity.ERROR, Compiler.NO_DEFAULT_VALUE,
                                         typeElement.getValueString());
-                                    fValid = false;
-                                    break;
+                                    return null;
                                     }
                                 }
                             m_fFixedSizeArray = true;
@@ -610,8 +605,7 @@ public class NewExpression
 
                         default:
                             log(errs, Severity.ERROR, Compiler.NOT_IMPLEMENTED, "Multi-dimensional array");
-                            fValid = false;
-                            break;
+                            return null;
                         }
                     }
                 }
@@ -621,148 +615,139 @@ public class NewExpression
                 }
             }
 
-        TypeInfo infoTarget = null;
-        if (fValid)
-            {
-            infoTarget = fAnon
-                    ? typeTarget.ensureTypeInfo(errs)
-                    : getTypeInfo(ctx, typeResult, errs);
+        TypeInfo infoTarget = fAnon
+                ? typeTarget.ensureTypeInfo(errs)
+                : getTypeInfo(ctx, typeTarget, errs);
 
-            // unless it's a virtual new, the target type must be new-able
-            if (!fVirt && !infoTarget.isNewable())
-                {
-                String sTarget = infoTarget.getType().removeAccess().getValueString();
-                reportNotNewable(sTarget, infoTarget, null, errs);
-                fValid = false;
-                }
+        // unless it's a virtual new, the target type must be new-able
+        if (!fVirt && !infoTarget.isNewable())
+            {
+            String sTarget = infoTarget.getType().removeAccess().getValueString();
+            reportNotNewable(sTarget, infoTarget, null, errs);
+            return null;
             }
 
-        if (fValid)
+        List<Expression> listArgs = args;
+        MethodConstant   idConstruct;
+        if (fAnon)
             {
-            List<Expression> listArgs = args;
-            MethodConstant   idConstruct;
-            if (fAnon)
+            // first, see if the constructor that we're looking for is on the anonymous
+            // inner class (which -- other than the zero-args case -- will be rare, but it
+            // is still supported); however, since it's not an error for the constructor to
+            // be missing, trap the errors in a temporary list. if we do find the constructor
+            // that we need on the anonymous inner class, then we will simply use that one (and
+            // any required dependency that it has one a super class constructor will be handled
+            // as if this were any other normal class)
+            ErrorListener errsTemp = errs.branch();
+            idConstruct = findMethod(ctx, typeTarget, infoTarget, "construct", listArgs,
+                            MethodKind.Constructor, true, false, null, errsTemp);
+            if (idConstruct == null && !listArgs.isEmpty())
                 {
-                // first, see if the constructor that we're looking for is on the anonymous
-                // inner class (which -- other than the zero-args case -- will be rare, but it
-                // is still supported); however, since it's not an error for the constructor to
-                // be missing, trap the errors in a temporary list. if we do find the constructor
-                // that we need on the anonymous inner class, then we will simply use that one (and
-                // any required dependency that it has one a super class constructor will be handled
-                // as if this were any other normal class)
-                ErrorListener errsTemp = errs.branch();
-                idConstruct = findMethod(ctx, typeTarget, infoTarget, "construct", listArgs,
-                                MethodKind.Constructor, true, false, null, errsTemp);
-                if (idConstruct == null && !listArgs.isEmpty())
+                // the constructor that we're looking for is not on the anonymous inner class,
+                // so we need to find the specified constructor on the super class (which means
+                // that the super class must NOT be an interface), and we need to verify that
+                // there is a default constructor on the anon inner class, and it needs to be
+                // replaced by a constructor with the same signature as the super's constructor
+                // (note: the automatic creation of the synthetic no-arg constructor in the
+                // absence of any explicit constructor must do this same check)
+                TypeInfo       infoSuper = typeSuper.ensureTypeInfo(errs);
+                MethodConstant idSuper   = findMethod(ctx, typeSuper, infoSuper, "construct",
+                            listArgs, MethodKind.Constructor, true, false, null, errs);
+                if (idSuper == null)
                     {
-                    // the constructor that we're looking for is not on the anonymous inner class,
-                    // so we need to find the specified constructor on the super class (which means
-                    // that the super class must NOT be an interface), and we need to verify that
-                    // there is a default constructor on the anon inner class, and it needs to be
-                    // replaced by a constructor with the same signature as the super's constructor
-                    // (note: the automatic creation of the synthetic no-arg constructor in the
-                    // absence of any explicit constructor must do this same check)
-                    TypeInfo       infoSuper = typeSuper.ensureTypeInfo(errs);
-                    MethodConstant idSuper   = findMethod(ctx, typeSuper, infoSuper, "construct",
-                                listArgs, MethodKind.Constructor, true, false, null, errs);
-                    if (idSuper == null)
-                        {
-                        fValid = false;
-                        }
-                    else
-                        {
-                        // we found a super constructor that needs to get called from the
-                        // constructor on the inner class; find the no-parameter synthetic
-                        // "construct()" constructor on the inner class, and remove it, replacing it
-                        // with a constructor that matches the super class constructor, so that we
-                        // correctly invoke it
-                        destroyDefaultConstructor();
-
-                        MethodStructure methodSuper =
-                                infoSuper.getMethodById(idSuper).getHead().getMethodStructure();
-                        idConstruct = createPassThroughConstructor(idSuper, methodSuper);
-
-                        // since we just modified the component, flush the TypeInfo cache for
-                        // the type of the anonymous inner class
-                        typeTarget.invalidateTypeInfo();
-                        }
+                    return null;
                     }
-                else
-                    {
-                    // we did find a constructor; there were probably no errors, but just in case
-                    // something got logged, transfer it to the real error list
-                    errsTemp.merge();
-                    }
+                // we found a super constructor that needs to get called from the
+                // constructor on the inner class; find the no-parameter synthetic
+                // "construct()" constructor on the inner class and remove it, replacing it
+                // with a constructor that matches the super class constructor, so that we
+                // correctly invoke it
+                destroyDefaultConstructor();
+
+                MethodStructure methodSuper =
+                        infoSuper.getMethodById(idSuper).getHead().getMethodStructure();
+                idConstruct = createPassThroughConstructor(idSuper, methodSuper);
+
+                // since we just modified the component, flush the TypeInfo cache for
+                // the type of the anonymous inner class
+                typeTarget.invalidateTypeInfo();
                 }
             else
                 {
-                ErrorListener errsTemp = errs.branch();
-                idConstruct = findMethod(ctx, typeTarget, infoTarget, "construct", listArgs,
-                                MethodKind.Constructor, true, false, null, errsTemp);
-                if (idConstruct == null)
-                    {
-                    // as the last resort, validate the arguments before looking for the method again
-                    ErrorListener  errsTemp2 = errs.branch();
-                    TypeConstant[] atypeArgs = validateExpressions(ctx, listArgs, null, errsTemp2);
-                    if (atypeArgs == null)
-                        {
-                        errsTemp.merge();
-                        }
-                    else
-                        {
-                        errsTemp2.merge(); // may have warnings
-                        idConstruct = findMethod(ctx, typeTarget, infoTarget, "construct", listArgs,
-                                        MethodKind.Constructor, true, false, null, errs);
-                        }
-                    }
+                // we did find a constructor; there were probably no errors, but just in case
+                // something got logged, transfer it to the real error list
+                errsTemp.merge();
                 }
-
+            }
+        else
+            {
+            ErrorListener errsTemp = errs.branch();
+            idConstruct = findMethod(ctx, typeTarget, infoTarget, "construct", listArgs,
+                            MethodKind.Constructor, true, false, null, errsTemp);
             if (idConstruct == null)
                 {
-                fValid = false;
-                }
-            else if (fValid)
-                {
-                MethodStructure constructor = (MethodStructure) idConstruct.getComponent();
-                if (constructor == null)
+                // as the last resort, validate the arguments before looking for the method again
+                ErrorListener  errsTemp2 = errs.branch();
+                TypeConstant[] atypeArgs = validateExpressions(ctx, listArgs, null, errsTemp2);
+                if (atypeArgs == null)
                     {
-                    constructor = infoTarget.getMethodById(idConstruct).
-                                    getTopmostMethodStructure(infoTarget);
-                    assert constructor != null;
+                    errsTemp.merge();
                     }
-                m_constructor = constructor;
-
-                if (containsNamedArgs(listArgs))
+                else
                     {
-                    listArgs = rearrangeNamedArgs(constructor, listArgs, errs);
-                    if (listArgs == null)
-                        {
-                        fValid = false;
-                        }
-                    args = listArgs;
-                    }
-
-                fValid &= validateExpressions(ctx, listArgs, idConstruct.getRawParams(), errs) != null;
-
-                if (!typeResult.isParamsSpecified())
-                    {
-                    ClassStructure clz = (ClassStructure) constructor.getParent().getParent();
-                    if (clz.isParameterized())
-                        {
-                        // the class is parameterized, but the resulting type is not, which means
-                        // that the left is the canonical type; let's attempt to narrow it using
-                        // the constructor's argument types
-                        TypeConstant typeInferred = inferTypeFromConstructor(ctx, clz, constructor, listArgs);
-                        if (typeInferred != null)
-                            {
-                            typeResult = typeInferred;
-                            }
-                        }
+                    errsTemp2.merge(); // may have warnings
+                    idConstruct = findMethod(ctx, typeTarget, infoTarget, "construct", listArgs,
+                                    MethodKind.Constructor, true, false, null, errs);
                     }
                 }
             }
 
-        if (fAnon && fValid)
+        if (idConstruct == null)
+            {
+            return null;
+            }
+
+        MethodStructure constructor = (MethodStructure) idConstruct.getComponent();
+        if (constructor == null)
+            {
+            constructor = infoTarget.getMethodById(idConstruct).
+                            getTopmostMethodStructure(infoTarget);
+            assert constructor != null;
+            }
+        m_constructor = constructor;
+
+        if (containsNamedArgs(listArgs))
+            {
+            listArgs = rearrangeNamedArgs(constructor, listArgs, errs);
+            if (listArgs == null)
+                {
+                return null;
+                }
+            args = listArgs;
+            }
+
+        if (validateExpressions(ctx, listArgs, idConstruct.getRawParams(), errs) == null)
+            {
+            return null;
+            }
+
+        if (!typeResult.isParamsSpecified())
+            {
+            ClassStructure clz = (ClassStructure) constructor.getParent().getParent();
+            if (clz.isParameterized())
+                {
+                // the class is parameterized, but the resulting type is not, which means
+                // that the left is the canonical type; let's attempt to narrow it using
+                // the constructor's argument types
+                TypeConstant typeInferred = inferTypeFromConstructor(ctx, clz, constructor, listArgs);
+                if (typeInferred != null)
+                    {
+                    typeResult = typeInferred;
+                    }
+                }
+            }
+
+        if (fAnon)
             {
             // at this point, we need to create a temporary copy of the anonymous inner class for
             // the purpose of determining which local variables from this context will be "captured"
@@ -778,16 +763,17 @@ public class NewExpression
             // the capture information gets collected in a specialized Context that was created with
             // the inner class
             AnonInnerClassContext ctxAnon = m_ctxCapture;
-
-            if (!new StageMgr(anon, Stage.Emitted, errs).fastForward(20))
-                {
-                fValid = false;
-                }
+            boolean               fValid  = new StageMgr(anon, Stage.Emitted, errs).fastForward(20);
 
             ctxAnon.exit();
 
             // clean up temporary inner class
             destroyTempInnerClass();
+
+            if (!fValid)
+                {
+                return null;
+                }
 
             // at this point we have a fair bit of data about which variables get captured, but we
             // still lack the effectively final data that will only get reported when the various
@@ -800,8 +786,7 @@ public class NewExpression
             m_ctxCapture     = null;
             }
 
-        Expression exprResult = finishValidation(ctx, typeRequired, typeResult,
-                fValid ? TypeFit.Fit : TypeFit.NoFit, null, errs);
+        Expression exprResult = finishValidation(ctx, typeRequired, typeResult, TypeFit.Fit, null, errs);
         clearAnonTypeInfos();
         return exprResult;
         }
