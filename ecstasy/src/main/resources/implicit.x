@@ -70,6 +70,7 @@ import ecstasy.collections.ListSet;
 import ecstasy.collections.Map;
 import ecstasy.collections.Matrix;
 import ecstasy.collections.OrderedMap;
+import ecstasy.collections.OrderedSet;
 import ecstasy.collections.Queue;
 import ecstasy.collections.Set;
 import ecstasy.collections.SkiplistMap;
