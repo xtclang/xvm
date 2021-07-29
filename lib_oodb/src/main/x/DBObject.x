@@ -360,6 +360,10 @@ interface DBObject
     /**
      * Represents an automatic processing of any changes that occurred to the DBObject, allowing
      * other DBObjects to be modified accordingly.
+     *
+     * A Distributor is useful for maintaining summary data, by responding to any change on detail
+     * data, and pushing the necessary adjustments to another DBObject that holds the summary
+     * information.
      */
     static interface Distributor<TxChange extends DBObject.TxChange>
         {

@@ -533,7 +533,6 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         return clientCache.reversed.add(client);
         }
 
-
     /**
      * Attempt to prepare an in-flight transaction.
      *
