@@ -77,7 +77,7 @@ service MapStore<Key extends immutable Const, Value extends immutable Const>
         TODO
         }
 
-    @Override Boolean mergePrepare(Int writeId, Int prepareId)
+    @Override MergeResult mergePrepare(Int writeId, Int prepareId, Boolean seal = False)
         {
         TODO
         }

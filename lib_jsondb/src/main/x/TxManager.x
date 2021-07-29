@@ -361,13 +361,12 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      * throughput, latency, and resource constraints.
      *
      * @param tx        the Client Transaction to assign TxIds for
-     * @param readOnly  pass True to stipulate that the transaction must not mutate data
      * @param systemTx  indicates that the transaction is being conducted by the database system
      *                  itself, and not by an application "client"
      *
      * @return  the "write" transaction ID to use
      */
-    Int begin(Client.Transaction tx, Boolean readOnly = False, Boolean systemTx = False)
+    Int begin(Client.Transaction tx, Boolean systemTx = False)
         {
         checkEnabled();
 
@@ -455,7 +454,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         // an enlist cannot occur while disabling the transaction manager, or once it has disabled
         checkEnabled();
 
-        assert TxRecord tx := byWriteId.get(txId);
+        assert isWriteTx(txId), TxRecord tx := byWriteId.get(txId);
 
         Int readId = tx.readId;
         if (readId == NO_TX)
@@ -873,6 +872,12 @@ TODO
             enlisted.add(store);
             }
 
+        @RO Boolean readOnly.get()
+            {
+            return txInfo.readOnly;
+            }
+
+// TODO review the purpose of this
         /**
          * Mark a transactional resource as being triggered.
          *

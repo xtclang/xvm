@@ -83,7 +83,14 @@ service ValueStore<Value extends immutable Const>
      */
     Value load(Int txId)
         {
-        return currentValue(checkTx(txId));
+        if (Changes tx := checkTx(txId))
+            {
+            return currentValue(tx);
+            }
+        else
+            {
+            return latestValue(txId);
+            }
         }
 
     /**
@@ -94,8 +101,7 @@ service ValueStore<Value extends immutable Const>
      */
     void store(Int txId, Value value)
         {
-        Changes tx = checkTx(txId);
-
+        assert Changes tx := checkTx(txId, writing=True), !tx.sealed;
         tx.value    = value;
         tx.modified = True;
         }
@@ -107,15 +113,16 @@ service ValueStore<Value extends immutable Const>
         {
         // the transaction can be prepared if (a) no transaction has modified this value after the
         // read id, or (b) the "current" value is equal to the read id transaction's value
-        Changes tx = checkTx(writeId);
+        assert Changes tx := checkTx(writeId);
         if (!tx.modified)
             {
             inFlight.remove(writeId);
             return CommittedNoChanges;
             }
 
-        Value value = tx.value;
-        Value prev  = previousValue(tx);
+        Value value  = tx.value;
+        Int   readId = tx.readId;
+        Value prev   = latestValue(readId);
 
         assert Int latestId := history.last();
         if (latestId == tx.readId)
@@ -151,20 +158,28 @@ service ValueStore<Value extends immutable Const>
         return Prepared;
         }
 
-    @Override Boolean mergePrepare(Int writeId, Int prepareId)
+    @Override MergeResult mergePrepare(Int writeId, Int prepareId, Boolean seal = False)
         {
-        Boolean modified = False;
-        Changes tx       = checkTx(writeId); // TODO allow it to be missing
-        if (tx.modified)
+        MergeResult result = NoMerge;
+
+        if (Changes tx := peekTx(writeId))
             {
-            modified = True;
-            history.put(prepareId, tx.value);
-            tx.modified = False;    // the "changes" no longer differs from the historical record
+            if (tx.modified)
+                {
+                // TODO implement merge logic vs previous (NOT readId) tx value, set result
+                history.put(prepareId, tx.value);
+                tx.modified = False;    // the "changes" no longer differs from the historical record
+                }
+            else
+                {
+                result = NoMerge;
+                }
+
+            tx.readId   = prepareId;// slide the readId forward to the point that we just prepared
+            tx.prepared = True;     // remember that the changed the readId to the prepareId
             }
 
-        tx.readId   = prepareId;    // slide the readId forward to the point that we just prepared
-        tx.prepared = True;         // remember that the changed the readId to the prepareId
-        return modified;
+        return result;
         }
 
     @Override Doc commit(Int writeId)
@@ -209,23 +224,11 @@ service ValueStore<Value extends immutable Const>
 
     // ----- internal ------------------------------------------------------------------------------
 
-    /**
-     * Validate the transaction.
-     *
-     * @param writeId  the transaction id
-     *
-     * @return the Changes record for the transaction
-     */
-    @Override Changes checkTx(Int writeId)
-        {
-        // REVIEW why is this being done here? shouldn't it be done proactively and earlier? (instead of lazily?)
-        if (history.empty)
-            {
-            loadInitial(writeId);
-            }
-
-        return super(writeId);
-        }
+// REVIEW where does the "init" logic go?
+//    if (history.empty)
+//        {
+//        loadInitial(writeId);
+//        }
 
     /**
      * Obtain the update-to-date value from the transaction.
@@ -238,30 +241,18 @@ service ValueStore<Value extends immutable Const>
         {
         return tx.modified
                 ? tx.value
-                : previousValue(tx);
+                : latestValue(tx.readId);
         }
 
     /**
      * Obtain the original value from when the transaction began.
      *
-     * @param tx  the transaction's Changes record
+     * @param readId  the transaction id to read from
      *
      * @return the previous value
      */
-    protected Value previousValue(Changes tx)
+    protected Value latestValue(Int readId)
         {
-        Int readId = tx.readId;
-        while (isWriteTx(readId))
-            {
-            tx = checkTx(readId);
-            if (tx.modified)
-                {
-                return tx.value;
-                }
-            readId = tx.readId;
-            }
-
-
         assert readId := history.floor(readId);
         assert Value value := history.get(readId);
         return value;

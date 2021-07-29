@@ -669,7 +669,7 @@ service Client<Schema extends RootSchema>
             assert outer.tx == Null as "Attempted to create a transaction when one already exists";
 
             import Transaction.TxInfo;
-            TxInfo txInfo = new TxInfo(timeout, name, id, priority, retryCount);
+            TxInfo txInfo = new TxInfo(timeout, name, id, priority, retryCount, readOnly);
 
             (Transaction + Schema) newTx = new Transaction(info_, txInfo).as(Transaction + Schema);
 
