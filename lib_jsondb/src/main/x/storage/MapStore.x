@@ -93,7 +93,7 @@ service MapStore<Key extends immutable Const, Value extends immutable Const>
         TODO
         }
 
-    @Override void retainTx(Set<Int> inUseTxIds, Boolean force = False)
+    @Override void retainTx(OrderedSet<Int> inUseTxIds, Boolean force = False)
         {
         TODO
         }

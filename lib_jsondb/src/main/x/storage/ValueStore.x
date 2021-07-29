@@ -76,6 +76,18 @@ service ValueStore<Value extends immutable Const>
      */
     protected SkiplistMap<Int, Value> history = new SkiplistMap();
 
+    import TxManager.NO_TX;
+
+    /**
+     * The ID of the latest known commit for this ObjectStore.
+     */
+    public/protected Int lastCommit = NO_TX;
+
+    /**
+     * True iff there are transactions on disk that could now be safely deleted.
+     */
+    public/protected Boolean cleanupPending = False;
+
 
     // ----- storage API exposed to the client -----------------------------------------------------
 
@@ -235,19 +247,124 @@ TODO
             });
         }
 
-    @Override void retainTx(Set<Int> inUseTxIds, Boolean force = False)
+    @Override void retainTx(OrderedSet<Int> inUseTxIds, Boolean force = False)
         {
-        TODO
+        Iterator<Int> eachInUse = inUseTxIds.iterator();
+        Int inUseId;
+        if (inUseId := eachInUse.next())
+            {
+            }
+        else
+            {
+            assert inUseTxIds.empty;
+            inUseId = lastCommit;
+            }
+
+        ensureLoaded();
+        Iterator<Int> eachPresent = history.keys.iterator();
+        assert Int presentId := eachPresent.next();
+        if (presentId == lastCommit)
+            {
+            return;
+            }
+
+        Boolean discarded = False;
+        Loop: while (True)
+            {
+            Boolean loadNextPresent = False;
+            Boolean loadNextInUse   = False;
+
+            switch (presentId <=> inUseId)
+                {
+                case Lesser:
+                    // discard the transaction
+                    history.remove(presentId);
+                    discarded = True;
+
+                    // advance to the next transaction in our history log
+                    loadNextPresent = True;
+                    break;
+
+                case Equal:
+                    // the current one that we're examining in our history is still in use; advance
+                    // to the next of each list
+                    loadNextInUse   = True;
+                    loadNextPresent = True;
+                    break;
+
+                case Greater:
+                    // determine the next transaction that we're being instructed to keep
+                    loadNextInUse = True;
+                    break;
+                }
+
+            if (loadNextInUse)
+                {
+                if (inUseId := eachInUse.next())
+                    {
+                    if (inUseId > lastCommit)
+                        {
+                        // we don't have any transactions in this range
+                        inUseId = lastCommit;
+                        }
+                    }
+                else if (inUseId >= lastCommit)
+                    {
+                    // we already moved past our last transaction; we're done
+                    break Loop;
+                    }
+                else
+                    {
+                    // we're *almost* done; pretend that the only other transaction that we need to
+                    // keep is our "current" one
+                    inUseId = lastCommit;
+                    }
+                }
+
+            if (loadNextPresent)
+                {
+                if (presentId := eachPresent.next())
+                    {
+                    if (presentId >= lastCommit)
+                        {
+                        // we need to keep this one (it's our "current" history), so we're done
+                        break Loop;
+                        }
+                    }
+                else
+                    {
+                    // no more transactions to evaluate; we're done
+                    break Loop;
+                    }
+                }
+            }
+
+        if (discarded)
+            {
+            cleanupPending = True;
+            if (force)
+                {
+                cleanup();
+                }
+            }
         }
 
 
     // ----- internal ------------------------------------------------------------------------------
 
-// REVIEW where does the "init" logic go?
-//    if (history.empty)
-//        {
-//        loadInitial(writeId);
-//        }
+    /**
+     * TODO
+     */
+    Boolean ensureLoaded()
+        {
+        if (history.empty)
+            {
+            loadInitial();
+            assert !history.empty;
+            }
+
+        return True;
+        }
 
     /**
      * Obtain the update-to-date value from the transaction.
@@ -294,10 +411,8 @@ TODO
 
     /**
      * Load the value(s) from disk.
-     *
-     * @param writeId  the transaction that triggered the initial load from disk
      */
-    void loadInitial(Int writeId)
+    void loadInitial()
         {
         using (new CriticalSection())
             {
@@ -313,6 +428,8 @@ TODO
                 }
             history.put(loadId, value);
             }
+
+        // TODO model will be either empty or small (nothing else implemented for the ValueStore)
         }
 
     @Override
@@ -330,6 +447,14 @@ TODO
 
     @Override
     Boolean quickScan()
+        {
+        TODO
+        }
+
+    /**
+     * Clean up old transactions on the disk.
+     */
+    void cleanup()
         {
         TODO
         }

@@ -152,12 +152,6 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
      */
     enum StorageModel {Empty, Small, Medium, Large}
 
-// REVIEW
-//    /**
-//     * A special value, used only inside the ObjectStore that indicates missing data.
-//     */
-//    protected enum Indicator {Missing}
-
     /**
      * Statistics: The current storage model for this ObjectStore.
      */
@@ -179,18 +173,6 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
      * completed either a quick scan or a deep scan.
      */
     public/protected DateTime? lastModified = Null;
-
-// REVIEW
-//    /**
-//     * The most recent transaction identifier for which this ObjectStore processed data changes.
-//     */
-//    public/protected Int? newestTx = Null;
-
-// REVIEW
-//    /**
-//     * Count of the number of operations since the ObjectStore was created.
-//     */
-//    public/protected Int opCount = 0;
 
     /**
      * Determine if this ObjectStore for a DBObject is allowed to write to disk. True iff the
@@ -601,7 +583,7 @@ TODO GG
      * @param force       (optional) specify True to force the ObjectStore to immediately clean out
      *                    all older transactions in order to synchronously compress the storage
      */
-    void retainTx(Set<Int> inUseTxIds, Boolean force = False)
+    void retainTx(OrderedSet<Int> inUseTxIds, Boolean force = False)
         {
         TODO
         }
