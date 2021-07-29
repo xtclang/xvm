@@ -434,9 +434,9 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
         if (isWriteTx(txId))
             {
             checkWrite();
-TODO GG
-//            return True, inFlight.computeIfAbsent(txId,
-//                    () -> new Changes(txId, txManager.enlist(this, txId)));
+
+            return True, inFlight.computeIfAbsent(txId,
+                    () -> new Changes(txId, txManager.enlist(this, txId)));
             }
         else if (writing)
             {

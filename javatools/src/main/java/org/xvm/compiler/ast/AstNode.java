@@ -926,20 +926,28 @@ public abstract class AstNode
                     {
                     listExpr.set(i, exprNew);
                     }
-                if (!exprNew.isSingle())
+
+                if (exprNew.isSingle())
+                    {
+                    atype[i] = exprNew.getType();
+                    }
+                else
                     {
                     if (cExprs == 1)
                         {
                         atype = exprNew.getTypes();
                         }
+                    else if (i == cExprs - 1)
+                        {
+                        // this is the last expression, take the first value
+                        atype[i] = exprNew.getType();
+                        }
                     else
                         {
+                        exprNew.log(errs, Severity.ERROR, Compiler.ARGUMENT_WRONG_COUNT,
+                                1, exprNew.getValueCount());
                         fValid = false;
                         }
-                    }
-                else
-                    {
-                    atype[i] = exprNew.getType();
                     }
                 }
             }

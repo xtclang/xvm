@@ -6,24 +6,18 @@ module TestSimple.test.org
         {
         Map<String, Int> map = new HashMap();
 
-        (Int i, Boolean absent) = computeIfAbsent1(map, "a");
-        console.println($"{i} {absent}");
-
-        (i, absent) = computeIfAbsent2(map, "a");
-        console.println($"{i} {absent}");
+        assert Int i := test(map, "a");
+        console.println($"{i}");
         }
 
-    (Int, Boolean) computeIfAbsent1(Map<String, Int> map, String key)
+    conditional Int test(Map<String, Int> map, String key)
         {
-        Tuple<Int, Boolean> t = map.computeIfAbsent(key, () -> Int:1);
-
-        (Int value, Boolean wasAbsent) = t;
-        return value, wasAbsent;
+        return True, computeIfAbsent(map, "a");
         }
 
-    (Int, Boolean) computeIfAbsent2(Map<String, Int> map, String key)
+    (Int, Boolean) computeIfAbsent(Map<String, Int> map, String key)
         {
-        (Int value, Boolean wasAbsent) = map.computeIfAbsent(key,  () -> Int:2);
+        (Int value, Boolean wasAbsent) = map.computeIfAbsent(key,  () -> Int:42);
         return value, wasAbsent;
         }
     }
