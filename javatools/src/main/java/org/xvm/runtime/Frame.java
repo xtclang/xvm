@@ -1301,7 +1301,7 @@ public class Frame
         ConstantPool pool = poolContext();
 
         type = type.resolveGenerics(pool, getGenericsResolver());
-        if (type.containsAutoNarrowing(false) && f_hThis != null)
+        if (type.containsAutoNarrowing(true) && f_hThis != null)
             {
             type = type.resolveAutoNarrowing(pool, false, f_hThis.getType(), null);
             }

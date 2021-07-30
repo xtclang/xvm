@@ -508,14 +508,16 @@ public class TypeInfo
         }
 
     /**
-     * @return an identity of ths structure this info represents
+     * @return an identity of ths structure this info represents (can be null for relational types)
      */
     public IdentityConstant getIdentity()
         {
         // this info may represent a property
         return f_type instanceof PropertyClassTypeConstant
             ? ((PropertyClassTypeConstant) f_type).getProperty()
-            : f_struct.getIdentityConstant();
+            : f_struct == null
+                    ? null
+                    : f_struct.getIdentityConstant();
         }
 
     /**
@@ -1853,10 +1855,19 @@ public class TypeInfo
     protected MethodConstant resolveMethodConstant(MethodConstant idMethod, MethodInfo method)
         {
         ConstantPool      pool        = pool();
-        SignatureConstant sigOrig     = idMethod.getSignature();
-        SignatureConstant sigResolved = method.getSignature().resolveAutoNarrowing(pool, f_type, null);
+        SignatureConstant sigMethod   = method.getSignature();
+        SignatureConstant sigResolved = sigMethod.containsAutoNarrowing(false)
+                 ? sigMethod.resolveAutoNarrowing(pool, f_type, null)
+                 : sigMethod;
 
-        if (!sigResolved.equals(sigOrig))
+        // TODO GG: the code above skips the resolution of signature that contain only virtual types,
+        //          preventing double-resolving (which is not idempotent for virtual children);
+        //          however, this approach would not work for a mixed signature, containing
+        //          both "classic" and virtual auto-narrowing types;
+        //          a much better solution is to make resolveAutoNarrowing() API idempotent for
+        //          virtual types
+
+        if (!sigResolved.equals(idMethod.getSignature()))
             {
             idMethod = pool.ensureMethodConstant(idMethod.getNamespace(), sigResolved);
             f_cacheById.putIfAbsent(idMethod, method);

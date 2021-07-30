@@ -295,6 +295,34 @@ public class SignatureConstant
         }
 
     /**
+     * Check if this signature contains any auto-narrowing portion.
+     *
+     * @param fAllowVirtChild  if false, virtual child constants should not be checked for
+     *                         auto-narrowing
+     *
+     * @return true iff any portion of this TypeConstant represents an auto-narrowing type
+     */
+    public boolean containsAutoNarrowing(boolean fAllowVirtChild)
+        {
+        for (TypeConstant typeParam : m_aconstParams)
+            {
+            if (typeParam.containsAutoNarrowing(fAllowVirtChild))
+                {
+                return true;
+                }
+            }
+
+        for (TypeConstant typeReturn : m_aconstReturns)
+            {
+            if (typeReturn.containsAutoNarrowing(fAllowVirtChild))
+                {
+                return true;
+                }
+            }
+        return false;
+        }
+
+    /**
      * If any of the signature components are auto-narrowing (or have any references to
      * auto-narrowing types), replace the any auto-narrowing portion with an explicit class identity
      * in the context of the specified type.
