@@ -4,13 +4,6 @@
 class DBCounterStore(DBObjectInfo info, Appender<String> errs)
         extends DBValueStore<Int>(info, errs, Int:0) // TODO GG
     {
-    // TODO GG: remove this
-    @Override
-    Map<Int, TxChange> createStore()
-        {
-        return new SkiplistMap<Int, TxChange>();
-        }
-
     // ----- master view ---------------------------------------------------------------------------
 
     void adjustBy(Int value)

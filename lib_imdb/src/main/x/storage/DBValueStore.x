@@ -8,7 +8,8 @@ class DBValueStore<Value extends immutable Const>
         {
         construct DBObjectStore(info, errs);
 
-        value = initial;
+        value   = initial;
+        valueAt = new SkiplistMap();
         }
 
     // ----- master view ---------------------------------------------------------------------------
@@ -34,18 +35,7 @@ class DBValueStore<Value extends immutable Const>
     /**
      * Transactional changes keyed by the client id.
      */
-    // protected Map<Int, TxChange> valueAt = new SkiplistMap<Int, TxChange>(); // TODO GG: not virtual!
-
-    protected @Lazy Map<Int, TxChange> valueAt.calc()
-        {
-        return createStore();
-        }
-
-    // TODO GG: remove this
-    protected Map<Int, TxChange> createStore()
-        {
-        return new SkiplistMap<Int, TxChange>();
-        }
+    protected Map<Int, TxChange> valueAt;
 
     Value getValueAt(Int clientId)
         {
