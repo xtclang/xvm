@@ -365,29 +365,14 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
 
     // ----- transaction handling ------------------------------------------------------------------
 
-    /**
-     * Determine if the specified txId indicates a read ID, versus a write ID.
-     *
-     * @param txId  a transaction identity
-     *
-     * @return True iff the txId is in the range reserved for read transaction IDs
-     */
-    Boolean isReadTx(Int txId)
-        {
-        return txId > 0;
-        }
+    import TxManager.TxType;
 
-    /**
-     * Determine if the specified txId indicates a write ID, versus a read ID.
-     *
-     * @param txId  a transaction identity
-     *
-     * @return True iff the txId is in the range reserved for write transaction IDs
-     */
-    Boolean isWriteTx(Int txId)
-        {
-        return txId < 0;
-        }
+    static function Boolean(Int)     isReadTx        = TxManager.isReadTx;
+    static function Boolean(Int)     isWriteTx       = TxManager.isWriteTx;
+    static function Int(Int)         writeTxCounter  = TxManager.writeTxCounter;
+    static function TxType(Int)      txType          = TxManager.txType;
+    static function Int(Int)         generateWriteId = TxManager.generateWriteId;
+    static function Int(Int, TxType) generateTxId    = TxManager.generateTxId;
 
     /**
      * Verify that the storage is open and can read.

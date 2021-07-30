@@ -313,7 +313,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         }
 
 
-    // ----- transactional API ---------------------------------------------------------------------
+    // ----- transactional ID helpers --------------------------------------------------------------
 
     /**
      * Determine if the specified txId indicates a read ID, versus a write ID.
@@ -322,7 +322,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      *
      * @return True iff the txId is in the range reserved for read transaction IDs
      */
-    Boolean isReadTx(Int txId)
+    static Boolean isReadTx(Int txId)
         {
         return txId > 0;
         }
@@ -334,10 +334,68 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      *
      * @return True iff the txId is in the range reserved for write transaction IDs
      */
-    Boolean isWriteTx(Int txId)
+    static Boolean isWriteTx(Int txId)
         {
         return txId < 0;
         }
+
+    /**
+     * Obtain the transaction counter that was used to create the specified writeId.
+     *
+     * @param writeId  a transaction ID of type `WriteId`, `Validating`, `Rectifying`, or
+     *                 `Distributing`
+     *
+     * @return the original transaction counter
+     */
+    static Int writeTxCounter(Int writeId)
+        {
+        assert isWriteTx(writeId);
+        return -writeId >>> 2;
+        }
+
+    /**
+     * Categories of transaction IDs.
+     */
+    enum TxType {ReadId, WriteId, Validating, Rectifying, Distributing}
+
+    /**
+     * Determine the category of the transaction ID.
+     *
+     * @param txId  any transaction ID
+     *
+     * @return the TxType for the specified transaction ID
+     */
+    static TxType txType(Int txId)
+        {
+        return txId >= 0
+                ? ReadId
+                : TxType.values[1 + (-txId & 0b11)];
+        }
+
+    /**
+     * Given a transaction counter, produce a transaction ID of type `WriteId`.
+     *
+     * @param counter  the transaction counter
+     *
+     * @return the writeId for the transaction counter
+     */
+    static Int generateWriteId(Int counter)
+        {
+        assert counter >= 1;
+        return -(counter<<2);
+        }
+
+    /**
+     * TODO
+     */
+    static Int generateTxId(Int txId, TxType txType)
+        {
+        assert isWriteTx(txId), txType != ReadId;
+        return -((-txId & ~0b11) | txType.ordinal - 1);
+        }
+
+
+    // ----- transactional API ---------------------------------------------------------------------
 
     /**
      * Begin a new transaction when it performs its first operation.
