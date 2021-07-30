@@ -201,19 +201,14 @@ public class TypeInfo
         Map<Object          , PropertyInfo> mapVirtProps = new HashMap<>();
         for (Entry<PropertyConstant, PropertyInfo> entry : f_mapProps.entrySet())
             {
-            // first, determine if the property's parent would even still exist (since everything
-            // inside of it will disappear if it doesn't)
-            PropertyConstant id       = entry.getKey();
-            PropertyInfo     prop     = entry.getValue();
-            boolean          fVirtual = prop.isVirtual();
-
-            // now ask the Property itself to reduce its capabilities based on the new access level
-            prop = prop.limitAccess(access);
+            // ask the Property itself to reduce its capabilities based on the new access level
+            PropertyConstant id   = entry.getKey();
+            PropertyInfo     prop = entry.getValue().limitAccess(access);
             if (prop != null)
                 {
                 mapProps.put(id, prop);
 
-                if (fVirtual)
+                if (prop.isVirtual())
                     {
                     mapVirtProps.put(id.resolveNestedIdentity(pool, null), prop);
                     }
