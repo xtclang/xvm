@@ -93,7 +93,7 @@ public class ReturnStatement
         {
         if (exprs.size() > 1)
             {
-            // for now we don't allow any conditional parts of a multi-return statement
+            // for now, we don't allow any conditional parts of a multi-return statement
             return false;
             }
 
@@ -250,7 +250,7 @@ public class ReturnStatement
                         m_fTupleReturn = true;
                         }
                     // 4) otherwise it's most probably an error and the validation will log it
-                    //   (except cases when testFit() implementation doesn't fully match the validate
+                    //   (except cases when testFit() implementation doesn't fully match the "validate"
                     //    logic or somehow has more information to operate on, such as type inference)
                     else
                         {

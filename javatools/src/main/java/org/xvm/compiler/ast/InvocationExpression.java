@@ -653,9 +653,9 @@ public class InvocationExpression
     protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
         {
         // the reason for tracking success (fValid) is that we want to get as many things
-        // validated as possible, but if some of the expressions didn't validate, we can't
-        // predictably find the desired method or function (e.g. without a left expression
-        // providing validated type information)
+        // validated as possible, but if some expressions didn't validate, we can't predictably find
+        // the desired method or function (e.g. without a left expression providing validated type
+        // information)
         ConstantPool   pool        = pool();
         boolean        fCall       = !isSuppressCall();
         TypeConstant[] atypeResult = null;
@@ -667,7 +667,7 @@ public class InvocationExpression
         if (expr instanceof NameExpression)
             {
             // if the name expression has an expression on _its_ left, then we are now responsible
-            // for validating that "left left" expression
+            // for validating that "left's left" expression
             NameExpression exprName = (NameExpression) expr;
             Expression     exprLeft = exprName.left;
             TypeConstant   typeLeft = null;
@@ -2070,7 +2070,7 @@ public class InvocationExpression
                     TypeConstant typeTarget = ctx.getThisType();
                     TypeInfo     infoTarget = getTypeInfo(ctx, null, ErrorListener.BLACKHOLE);
 
-                    // check if the method would be callable outside of the constructor
+                    // check if the method would be callable from outside the constructor
                     if (ctx.isConstructor() &&
                             findCallable(ctx, typeTarget, infoTarget, sName, MethodKind.Any,
                                 true, atypeReturn, ErrorListener.BLACKHOLE) != null)
@@ -2152,8 +2152,8 @@ public class InvocationExpression
                             args, kind, !fNoCall, id.isNested(), atypeReturn, errsTemp);
                     if (idCallable == null)
                         {
-                        // check to see if we would have found something had we included methods in
-                        // the search
+                        // check to see if we had found something had we included methods in the
+                        // search
                         if (kind == MethodKind.Function &&
                                 findMethod(ctx, typeTarget, info, sName, args, MethodKind.Method,
                                     !fNoCall, id.isNested(), atypeReturn, ErrorListener.BLACKHOLE) != null)
@@ -2209,7 +2209,7 @@ public class InvocationExpression
                         {
                         // the property requires a target, but there is no "left." before the prop
                         // name, and there is no "this." (explicit or implicit) because there is no
-                        // this
+                        // "this"
                         exprName.log(errs, Severity.ERROR, Compiler.NO_THIS_PROPERTY, sName, target.getTargetType());
                         return null;
                         }
@@ -2471,7 +2471,7 @@ public class InvocationExpression
 
         // use the type of the left expression to get the TypeInfo that must contain the
         // method/function to call
-        // - methods are included because there is a left and it is NOT identity-mode
+        // - methods are included because there is a left, and it is NOT identity-mode
         // - functions are NOT included because the left is NOT identity-mode
         TypeInfo      infoLeft = getTypeInfo(ctx, typeLeft, errs);
         ErrorListener errsMain = errs.branch();
@@ -2625,7 +2625,7 @@ public class InvocationExpression
     /**
      * Find a named method or function that best matches the specified requirements.
      * </p>
-     * Note: we need to pass both typeParent and infoParent, since in some context sensitive cases
+     * Note: we need to pass both typeParent and infoParent, since in some context-sensitive cases
      *  typeParent.ensureTypeInfo() != infoParent and infoParent.getType() != typeParent
      *
      * @param ctx           the context

@@ -126,7 +126,7 @@ public abstract class AstNode
         }
 
     /**
-     * Return an Iterable/Iterator that represents all of the child nodes of this node.
+     * Return an Iterable/Iterator that represents all the child nodes of this node.
      *
      * @return an Iterable of child nodes (from whence an Iterator can be obtained)
      */
@@ -527,7 +527,7 @@ public abstract class AstNode
         }
 
     /**
-     * This must be overridden by any AST node that supports short circuiting children. This is
+     * This must be overridden by any AST node that supports short-circuiting children. This is
      * called during validation by a child that needs a ground.
      *
      * @param nodeOrigin  the node which is the origin of the short circuit
@@ -541,7 +541,7 @@ public abstract class AstNode
         }
 
     /**
-     * Collect all of the expressions that should be included in tracing debug output. This is used
+     * Collect all the expressions that should be included in tracing debug output. This is used
      * by "assert", for example, to display information relevant to the assertion.
      *
      * @param mapExprs  the expressions collected thus far, keyed by their source code
@@ -631,7 +631,7 @@ public abstract class AstNode
      * @param aoParam     the parameters for the error message; may be null
      *
      * @return true to attempt to abort the process that reported the error, or
-     *         false to attempt continue the process
+     *         false to attempt to continue the process
      */
     public boolean log(ErrorListener errs, Severity severity, String sCode, Object... aoParam)
         {
@@ -756,7 +756,7 @@ public abstract class AstNode
             }
 
         // method children are all deferred up until this stage, so we have to "catch them up" at
-        // this point, recreating the various compiler stages here; start by collecting all of the
+        // this point, recreating the various compiler stages here; start by collecting all the
         // children that may need to be processed and figuring out how far behind the oldest is
         Stage         stageOldest  = null;
         List<AstNode> listChildren = new ArrayList<>();
@@ -880,7 +880,7 @@ public abstract class AstNode
      * Validate the specified expressions against the required types.
      *
      * @param ctx            the compiler context
-     * @param listExpr       the list of expressions (may be modified)
+     * @param listExpr       the list of expressions (can be modified)
      * @param atypeRequired  the required types array
      * @param errs           the error listener
      *
@@ -1511,9 +1511,9 @@ public abstract class AstNode
                     }
                 else
                     {
-                    // there are two methods that match, but one has less parameters that the
+                    // there are two methods that match, but one has fewer parameters that the
                     // other, which means that the one with more parameters has default values;
-                    // therefore, we could safely choose the method with less parameters
+                    // therefore, we could safely choose the method with fewer parameters
                     fNewBetter = cParamsNew < cParamsOld;
                     fOldBetter = !fNewBetter;
                     }
@@ -1722,13 +1722,6 @@ public abstract class AstNode
                     iter.remove();
                     }
                 }
-            else if (value instanceof Collection)
-                {
-                if (((Collection) value).isEmpty())
-                    {
-                    iter.remove();
-                    }
-                }
             else if (value instanceof Object[])
                 {
                 if (((Object[]) value).length == 0)
@@ -1846,7 +1839,6 @@ public abstract class AstNode
                                 }
                             out.print(sIndent1 + "- ");
                             }
-                        out.println(sKid);
                         }
                     else
                         {
@@ -1856,8 +1848,8 @@ public abstract class AstNode
                             }
                         sKid = indentLines(sKid, sIndent2 + "  ");
                         sKid = sIndent1 + "- " + sKid.substring(sIndent1.length() + 2);
-                        out.println(sKid);
                         }
+                    out.println(sKid);
                     }
                 }
             }
@@ -2034,12 +2026,12 @@ public abstract class AstNode
             implements ChildIterator
         {
         /**
-         * Construct a ChildIterator that will iterate all of the children that are held in the
+         * Construct a ChildIterator that will iterate all the children that are held in the
          * specified fields, which are either AstNodes themselves, or are container types thereof.
          *
          * @param fields  an array of fields of the AstNode
          */
-        protected ChildIteratorImpl(Field[] fields)
+        private ChildIteratorImpl(Field[] fields)
             {
             this.fields = fields;
             }
