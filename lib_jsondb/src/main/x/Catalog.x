@@ -253,13 +253,13 @@ service Catalog<Schema extends RootSchema>
      * This data is available from the catalog through various methods; the array itself is not
      * exposed in order to avoid any concerns related to transmitting it through service boundaries.
      */
-    protected/private ObjectStore?[] appStores = new ObjectStore[];
+    protected/private ObjectStore?[] appStores = new ObjectStore?[];
 
     /**
      * The ObjectStore for each DBObject in the system schema. These are read-only stores that
      * provide a live view of the database metadata and status.
      */
-    protected/private ObjectStore?[] sysStores = new ObjectStore[];
+    protected/private ObjectStore?[] sysStores = new ObjectStore?[];
 
     /**
      * The transaction manager for this `Catalog` object. The transaction manager provides a
