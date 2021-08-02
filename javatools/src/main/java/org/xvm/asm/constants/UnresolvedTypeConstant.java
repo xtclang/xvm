@@ -107,6 +107,12 @@ public class UnresolvedTypeConstant
     // ----- TypeConstant methods ------------------------------------------------------------------
 
     @Override
+    protected int getTypeDepth()
+        {
+        return isTypeResolved() ? getResolvedType().getTypeDepth() : 1;
+        }
+
+    @Override
     public boolean isModifyingType()
         {
         return isTypeResolved() && getResolvedType().isModifyingType();
@@ -542,7 +548,7 @@ public class UnresolvedTypeConstant
     /**
      * The underlying unresolved constant.
      */
-    private UnresolvedNameConstant m_constId;
+    private final UnresolvedNameConstant m_constId;
 
     /**
      * The resolved type constant.
