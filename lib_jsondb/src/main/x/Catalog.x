@@ -513,6 +513,7 @@ service Catalog<Schema extends RootSchema>
                 snapshot -> snapshot.owned || snapshot.unowned,
                 allowReadOnly = True);
 
+        txManager.enable();
         // TODO
         }
 
@@ -530,6 +531,8 @@ service Catalog<Schema extends RootSchema>
                 break;
 
             case Running:
+                txManager.disable();
+                continue;
             case Closed:
                 transition(status, Closed, snapshot -> snapshot.owned, allowReadOnly = True);
                 break;

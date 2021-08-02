@@ -50,7 +50,9 @@ class JsondbHost
         {
         @Inject Directory curDir;
 
-        return meta.createCatalog(curDir, False);
+        Catalog catalog = meta.createCatalog(curDir, False);
+        catalog.open();
+        return catalog;
         }
 
     @Override
