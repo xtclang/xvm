@@ -15,6 +15,7 @@ module AddressBookDB_jsondb
     import jsondb_.CatalogMetadata    as CatalogMetadata_;
     import jsondb_.Client             as Client_;
     import jsondb_.model.DBObjectInfo as DBObjectInfo_;
+    import jsondb_.storage.MapStore   as MapStore_;
 
     import AddressBookDB_.AddressBookSchema as AddressBookSchema_;
 
@@ -99,6 +100,60 @@ module AddressBookDB_jsondb
             oodb_.DBCounter requestCount.get()
                 {
                 return this.AddressBookDBClient_.implFor(2).as(oodb_.DBCounter);
+                }
+            }
+
+        @Override
+        Client_.DBObjectImpl createImpl(Int id)
+            {
+            switch (id)
+                {
+                case 1:
+                    DBObjectInfo_ info = this.AddressBookDBClient_.infoFor(1);
+                    MapStore_<String, AddressBookDB_.Contact> store =
+                        this.AddressBookDBClient_.storeFor(1).as(MapStore_<String, AddressBookDB_.Contact>);
+                    return new ContactsImpl_(info, store);
+                }
+
+            return super(id);
+            }
+
+        class ContactsImpl_(DBObjectInfo_ info_, MapStore_<String, AddressBookDB_.Contact> store_)
+                extends DBMapImpl<String, AddressBookDB_.Contact>(info_, store_)
+                incorporates AddressBookDB_.Contacts
+            {
+            // ----- mixin methods ---------------------------------------------------------------------
+
+            @Override
+            void addContact(AddressBookDB_.Contact contact)
+                {
+                using (ensureTransaction())
+                    {
+                    super(contact);
+                    }
+                }
+
+            @Override
+            void addPhone(String name, AddressBookDB_.Phone phone)
+                {
+                using (ensureTransaction())
+                    {
+                    super(name, phone);
+                    }
+                }
+
+            // ----- ClientDBMap interface ------------------------------------------------------------
+
+            @Override
+            Tuple dbInvoke(String | Function fn, Tuple args = Tuple:(), (Duration|DateTime)? when = Null)
+                {
+                if (fn == "addPhone" && when == Null)
+                    {
+                    assert args.is(Tuple<String, AddressBookDB_.Phone>);
+
+                    return addPhone(args[0], args[1]);
+                    }
+                throw new UnsupportedOperation(fn.toString());
                 }
             }
         }
