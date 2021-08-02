@@ -135,12 +135,12 @@ service Client<Schema extends RootSchema>
     /**
      * The lazily created application DBObjects within the schema.
      */
-    protected/private DBObjectImpl?[] appObjects = new DBObjectImpl[];
+    protected/private DBObjectImpl?[] appObjects = new DBObjectImpl?[];
 
     /**
      * The lazily created system schema DBObjects.
      */
-    protected/private DBObjectImpl?[] sysObjects = new DBObjectImpl[];
+    protected/private DBObjectImpl?[] sysObjects = new DBObjectImpl?[];
 
     /**
      * The function to use to notify that the connection has closed.
@@ -455,12 +455,12 @@ service Client<Schema extends RootSchema>
 
         @Override void close(Exception? e = Null)
             {
-            assert tx != Null;
+            assert Transaction tx ?= this.tx;
             if (autocommit)
                 {
-                tx?.commit() : assert;
+                tx.commit();
                 }
-            tx = Null;
+            this.tx = Null;
             }
         }
 
@@ -536,12 +536,6 @@ service Client<Schema extends RootSchema>
                     }
                 };
             }
-
-        // ----- transaction management ------------------------------------------------------------
-
-//        Boolean txPrepare_()
-//        txCommit_()
-//        txReset_()
         }
 
 
@@ -943,6 +937,16 @@ service Client<Schema extends RootSchema>
             using (val tx = ensureTransaction())
                 {
                 return store_.load(tx.id, key);
+                }
+            }
+
+        @Override
+        DBMapImpl put(Key key, Value value)
+            {
+            using (val tx = ensureTransaction())
+                {
+                store_.store(tx.id, key, value);
+                return this;
                 }
             }
 

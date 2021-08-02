@@ -371,10 +371,11 @@ service Catalog<Schema extends RootSchema>
     ObjectStore createStore(Int id)
         {
         DBObjectInfo info = infoFor(id);
-        if (id < 0)
+        if (id <= 0)
             {
             return switch (BuiltIn.byId(id))
                 {
+                case Root:
                 case Sys:          new SchemaStore(this, info, log);
 //                case Info:         TODO
 // TODO the following 3 maps might end up being custom, hard-wired, read-only implementations
@@ -392,7 +393,6 @@ service Catalog<Schema extends RootSchema>
 //                case Pending:      TODO new ListStore<DBInvoke>();
 //                case Transactions: TODO new LogStore<DBTransaction>();
 //                case Errors:       TODO new LogStore<String>();
-                case Root:         // should have been handled by id >= 0 branch
                 default:           assert as $"unsupported id={id}, BuiltIn={BuiltIn.byId(id)}, info={info}";
                 };
             }
@@ -405,7 +405,17 @@ service Catalog<Schema extends RootSchema>
                     TODO
 
                 case DBMap:
-                    return new MapStore /* TODO <K, V> */ (this, info, log);
+                    assert Type keyType   := info.typeParams.get("Key");
+                    assert Type valueType := info.typeParams.get("Value");
+                    Type storeType = MapStore.parameterize([keyType, valueType]);
+                    for (val constructor : storeType.constructors)
+                        {
+                        if (constructor.params.size == 3)
+                            {
+                            return constructor.invoke(params)[0].as(ObjectStore);
+                            }
+                        }
+                    assert;
 
                 case DBList:
                     TODO
@@ -426,7 +436,7 @@ service Catalog<Schema extends RootSchema>
                         {
                         if (constructor.params.size == 3)
                             {
-                            return constructor.invoke(params).as(ObjectStore);
+                            return constructor.invoke(params)[0].as(ObjectStore);
                             }
                         }
                     assert;
