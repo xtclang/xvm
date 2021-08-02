@@ -78,13 +78,8 @@ interface OrderedMap<Key extends Orderable, Value>
         {
         static <CompileType extends Entry> Ordered compare(CompileType value1, CompileType value2)
             {
-            // TODO GG: the compile type of "order" is "function Ordered (Comparable, Comparable)",
-            //          but should be "function Ordered (CompileType.OuterType.Key, CompileType.OuterType.Key)"
-//            assert val order  := value1.outer.ordered();
-//            assert val order2 := value2.outer.ordered(), order == order2;
-            assert val order  := value1.outer.as(OrderedMap<CompileType.OuterType.Key, CompileType.OuterType.Value>).ordered();
-            assert val order2 := value2.outer.as(OrderedMap<CompileType.OuterType.Key, CompileType.OuterType.Value>).ordered(),
-                       order == order2;
+            assert val order  := value1.outer.ordered();
+            assert val order2 := value2.outer.ordered(), order == order2;
 
             return order(value1.key.as(CompileType.OuterType.Key), value2.key.as(CompileType.OuterType.Key));
             }
