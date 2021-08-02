@@ -8,7 +8,7 @@ import model.DBObjectInfo;
 /**
  * The disk storage implementation for a database schema.
  */
-service SchemaStore<Value extends immutable Const>
+service SchemaStore
         extends ObjectStore
     {
     construct(Catalog          catalog,

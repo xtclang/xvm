@@ -20,7 +20,10 @@ import oodb.RootSchema;
 
 import oodb.model.DBUser as DBUserImpl;
 
+import storage.MapStore;
 import storage.ObjectStore;
+import storage.SchemaStore;
+import storage.ValueStore;
 
 
 /**
@@ -268,6 +271,11 @@ service Catalog<Schema extends RootSchema>
         }
 
     /**
+     * An error and message log for the database.
+     */
+    Appender<String> log = new String[]; // TODO
+
+    /**
      * The existing client representations for this `Catalog` object. Each client may have a single
      * Connection representation, and each Connection may have a single Transaction representation.
      */
@@ -315,7 +323,7 @@ service Catalog<Schema extends RootSchema>
             return metadata.dbObjectInfos[id];
             }
 
-        TODO("create DBObjectInfo");
+        TODO("create DBObjectInfo"); // TODO
         }
 
     /**
@@ -363,29 +371,70 @@ service Catalog<Schema extends RootSchema>
     ObjectStore createStore(Int id)
         {
         DBObjectInfo info = infoFor(id);
-        // TODO
-TODO
-//        return switch (BuiltIn.byId(id))
-//            {
-//            case Root:         assert;
-//            case Sys:          assert;
-//            case Info:         assert;
-//            case Users:        TODO new DBMap<String, DBUser>();
-//            case Types:        TODO new DBMap<String, Type>();
-//            case Objects:      TODO new DBMap<String, DBObject>();
-//            case Schemas:      assert;
-//            case Maps:         assert;
-//            case Queues:       assert;
-//            case Lists:        assert;
-//            case Logs:         assert;
-//            case Counters:     assert;
-//            case Values:       assert;
-//            case Functions:    assert;
-//            case Pending:      TODO new DBList<DBInvoke>();
-//            case Transactions: TODO new DBLog<DBTransaction>();
-//            case Errors:       TODO new DBLog<String>();
-//            default:           assert;
-//            };
+        if (id < 0)
+            {
+            return switch (BuiltIn.byId(id))
+                {
+                case Sys:          new SchemaStore(this, info, log);
+//                case Info:         TODO
+// TODO the following 3 maps might end up being custom, hard-wired, read-only implementations
+//                case Users:        new MapStore<String, DBUser>(this, info, log);
+//                case Types:        new MapStore<String, Type>(this, info, log);
+//                case Objects:      new MapStore<String, DBObject>(this, info, log);
+//                case Schemas:      TODO
+//                case Maps:         TODO
+//                case Queues:       TODO
+//                case Lists:        TODO
+//                case Logs:         TODO
+//                case Counters:     TODO
+//                case Values:       TODO
+//                case Functions:    TODO
+//                case Pending:      TODO new ListStore<DBInvoke>();
+//                case Transactions: TODO new LogStore<DBTransaction>();
+//                case Errors:       TODO new LogStore<String>();
+                case Root:         // should have been handled by id >= 0 branch
+                default:           assert as $"unsupported id={id}, BuiltIn={BuiltIn.byId(id)}, info={info}";
+                };
+            }
+        else
+            {
+            val params = (this, info, log);
+            switch (info.category)
+                {
+                case DBSchema:
+                    TODO
+
+                case DBMap:
+                    return new MapStore /* TODO <K, V> */ (this, info, log);
+
+                case DBList:
+                    TODO
+
+                case DBQueue:
+                    TODO
+
+                case DBLog:
+                    TODO
+
+                case DBCounter:
+                    TODO
+
+                case DBValue:
+                    assert Type valueType := info.typeParams.get("Value");
+                    Type storeType = ValueStore.parameterize([valueType]);
+                    for (val constructor : storeType.constructors)
+                        {
+                        if (constructor.params.size == 3)
+                            {
+                            return constructor.invoke(params).as(ObjectStore);
+                            }
+                        }
+                    assert;
+
+                case DBFunction:
+                    TODO
+                }
+            }
         }
 
 
