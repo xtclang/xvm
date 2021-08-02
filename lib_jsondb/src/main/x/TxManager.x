@@ -221,9 +221,46 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
     /**
      * A pool of artificial clients for processing triggers.
      */
-    ArrayDeque<Client<Schema>> clientCache = new ArrayDeque();
+    protected/private ArrayDeque<Client<Schema>> clientCache = new ArrayDeque();
 
-    // TODO Future<???> current prepare job
+    /**
+     * The writeId of the transaction, if any, that is currently preparing.
+     */
+    protected/private Int currentlyPreparing = NO_TX;
+
+    /**
+     * The count of transactions, if any, that are currently committing.
+     */
+    protected/private Int currentlyCommitting = 0;
+
+    /**
+     * A record of a pending operation, with its deferred result.
+     */
+    class Pending(Int txId, TxRecord rec, Future<Boolean> result);
+
+    /**
+     * A queue of transactions that are waiting for the "green light" to start preparing. While this
+     * could be easily implemented using just a critical section, it would dramatically impinge on
+     * the concurrent execution of transaction processing, particularly since only a small portion
+     * of the prepare work is done by the TxManager service -- most is delegated to the various
+     * enlisted ObjectStore instances, or onto Client objects that handle the potentially expensive
+     * tasks of transaction validation, rectification, and distribution. As a result, the prepare
+     * process is staggeringly asynchronous, and many other things -- except other prepares! -- can
+     * be occurring while a transaction is being prepared. The result of this design is that any
+     * transaction that shows up to be prepared while another transaction is already being prepared,
+     * creates a future and places it into the queue for processing once all of the transactions
+     * ahead of it have prepared.
+     */
+    protected/private ArrayDeque<Pending> pendingPrepare = new ArrayDeque();
+
+    /**
+     * A queue of transactions that are have prepared but have not yet been committed to disk. There
+     * is no functional reason for queueing commits; the rationale is purely an optimization, based
+     * on the likelihood that conducting I/O on behalf of a number of transactions will be
+     * inherently more efficient than conducting I/O on behalf of each individual transaction in
+     * sequence.
+     */
+    protected/private ArrayDeque<Pending> pendingCommit = new ArrayDeque();
 
 
     // ----- lifecycle management ------------------------------------------------------------------
@@ -356,7 +393,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
     /**
      * Categories of transaction IDs.
      */
-    enum TxType {ReadId, WriteId, Validating, Rectifying, Distributing}
+    enum TxType {ReadOnly, Open, Validating, Rectifying, Distributing}
 
     /**
      * Determine the category of the transaction ID.
@@ -368,7 +405,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
     static TxType txType(Int txId)
         {
         return txId >= 0
-                ? ReadId
+                ? ReadOnly
                 : TxType.values[1 + (-txId & 0b11)];
         }
 
@@ -386,11 +423,11 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         }
 
     /**
-     * TODO
+     * Given a transaction `writeId`, generate a transaction id for the specified phase
      */
     static Int generateTxId(Int txId, TxType txType)
         {
-        assert isWriteTx(txId), txType != ReadId;
+        assert isWriteTx(txId), txType != ReadOnly;
         return -((-txId & ~0b11) | txType.ordinal - 1);
         }
 
@@ -576,15 +613,21 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         }
 
     /**
-     * TODO
+     * Obtain a Client object from an internal pool of Client objects. These Client objects are used
+     * to represent specific stages of transaction processing. When the use of the Client is
+     * finished, it should be returned to the pool by passing it to [recycleClient].
+     *
+     * @return an "internal" Client object
      */
     protected Client<Schema> allocateClient()
         {
-        return clientCache.takeOrCompute(() -> catalog.createClient());
+        return clientCache.takeOrCompute(() -> catalog.createClient(system=True));
         }
 
     /**
-     * TODO
+     * Return the passed Client object to the internal pool of Client objects.
+     *
+     * @param client  an "internal" Client object previously obtained from [allocateClient]
      */
     protected void recycleClient(Client<Schema> client)
         {

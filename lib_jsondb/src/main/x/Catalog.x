@@ -278,6 +278,12 @@ service Catalog<Schema extends RootSchema>
      */
     protected Int clientCounter = 0;
 
+    /**
+     * The number of internal (system) clients created by this Catalog. Used as the generator for
+     * internal client IDs.
+     */
+    protected Int systemCounter = 0;
+
 
     // ----- visibility ----------------------------------------------------------------------------
 
@@ -763,13 +769,15 @@ TODO
      * @param dbUser    (optional) the user that the `Client` will represent
      * @param readOnly  (optional) pass True to indicate that client is not permitted to modify
      *                  any data
+     * @param system    (optional) pass True to indicate that the client is an internal (or
+     *                  "system") client, that does client work on behalf of the system itself
      *
      * @return a new `Client` instance
      */
-    Client<Schema> createClient(DBUser? dbUser = Null, Boolean readOnly = False)
+    Client<Schema> createClient(DBUser? dbUser=Null, Boolean readOnly=False, Boolean system=False)
         {
             dbUser   ?:= DefaultUser;
-        Int clientId   = genClientId();
+        Int clientId   = system ? genInternalClientId() : genClientId();
         val metadata   = this.metadata;
 
         Client<Schema> client = metadata == Null
@@ -788,6 +796,27 @@ TODO
     protected Int genClientId()
         {
         return ++clientCounter;
+        }
+
+    /**
+     * Generate a unique client id for an internal (system) client. These clients are pooled, so the
+     * same internal id may appear more than once, although only one client object will use that id.
+     *
+     * @return a new client id
+     */
+    protected Int genInternalClientId()
+        {
+        return -(++systemCounter);
+        }
+
+    /**
+     * @param id  a client id
+     *
+     * @return True iff the id specifies an "internal" (or "system") client id
+     */
+    static Boolean isInternalClientId(Int id)
+        {
+        return id < 0;
         }
 
     /**

@@ -21,6 +21,7 @@ import oodb.DBValue;
 import oodb.NoTx;
 import oodb.RootSchema;
 import oodb.SystemSchema;
+import oodb.Transaction.TxInfo;
 
 import model.DBObjectInfo;
 
@@ -196,6 +197,8 @@ service Client<Schema extends RootSchema>
 
         if (tx == Null)
             {
+            assert !internal;
+
             tx         = (conn?: assert).createTransaction(name="autocommit");
             autocommit = True;
             }
@@ -206,14 +209,57 @@ service Client<Schema extends RootSchema>
         }
 
     /**
-     * For the transaction manager's reserved "singleton" transaction that it uses to represent the
-     * original state of a transaction when executing trigger logic, set the "read level" (the base
-     * transaction id).
+     * True if this is an internal ("system") client.
+     */
+    @RO Boolean internal.get()
+        {
+        return Catalog.isInternalClientId(id);
+        }
+
+    /**
+     * For the transaction manager's internal clients that emulate various stages in a transaction,
+     * this sets the current transaction id for the client.
      *
      * @param readId  the transaction id to use as a read level
      */
-    void adjustBaseTransaction(Int readId)
+    void representTransaction(Int txId)
         {
+        assert internal;
+
+        // update the readOnly property of the Client based on the requested transaction ID
+        readOnly = switch(TxManager.txType(txId))
+            {
+            case ReadOnly    : True;
+            case Open        : False;
+            case Validating  : True;
+            case Rectifying  : False;
+            case Distributing: False;
+            };
+
+        // two cached transaction info objects (one R/W, one RO) for internal use
+        static TxInfo rwInfo = new TxInfo(name="internal", readOnly=False);
+        static TxInfo roInfo = new TxInfo(name="internal", readOnly=True );
+
+        // create a transaction to represent the requested transaction ID
+        DBObjectInfo dboInfo = infoFor(0); // the root schema
+        TxInfo       txInfo  = readOnly ? roInfo : rwInfo;
+        tx = new Transaction(dboInfo, txInfo, txId).as(Transaction + Schema);
+        }
+
+    /**
+     * For the transaction manager's internal clients that emulate various stages in a transaction,
+     * this terminates the representation of a previously-specified transaction, allowing the client
+     * to be safely returned to a pool for later re-use.
+     */
+    void stopRepresentingTransaction(Int txId)
+        {
+        assert internal;
+        if (Transaction tx ?= this.tx)
+            {
+            assert tx.id_ == txId;
+            this.tx = Null;
+            tx.id_  = NO_TX;
+            }
         }
 
     /**
@@ -667,8 +713,8 @@ service Client<Schema extends RootSchema>
                                                  Boolean                readOnly    = False)
             {
             assert outer.tx == Null as "Attempted to create a transaction when one already exists";
+            assert !internal;
 
-            import Transaction.TxInfo;
             TxInfo txInfo = new TxInfo(timeout, name, id, priority, retryCount, readOnly);
 
             (Transaction + Schema) newTx = new Transaction(info_, txInfo).as(Transaction + Schema);
@@ -697,14 +743,14 @@ service Client<Schema extends RootSchema>
             extends RootSchemaImpl(info_)
             implements oodb.Transaction<Schema>
         {
-        construct(DBObjectInfo info_, TxInfo txInfo)
+        construct(DBObjectInfo info_, TxInfo txInfo, Int? id=Null)
             {
             construct RootSchemaImpl(info_);
             this.txInfo = txInfo;
             }
         finally
             {
-            id_ = txManager.begin(this, readOnly);
+            id_ = id ?: txManager.begin(this, readOnly || txInfo.readOnly);
             }
 
         /**
@@ -713,8 +759,6 @@ service Client<Schema extends RootSchema>
          * Internally, this ID is known as the transaction's "write id", but here on the client,
          * it's just "the id". (Note that this id has no relation to the application-specified
          * transaction id that is held in the TxInfo, and has no meaning within the database.)
-         *
-         * TODO need a way to re-use this client for the validate, rectify, and distribute passes
          */
         public/protected Int id_ = NO_TX;
 
@@ -739,27 +783,20 @@ service Client<Schema extends RootSchema>
         Boolean commit()
             {
             Transaction? that = outer.tx;
-            if (that == Null)
-                {
-                throw new IllegalState(`|Attempt to commit a previously closed transaction;\
-                                        | no current transaction.
-                                      );
-                }
-
-            if (&this != &that)
-                {
-                throw new IllegalState(`|Attempt to commit a previously closed transaction;\
-                                        | a different transaction is in progress.
-                                      );
-                }
+            assert that != Null
+                as "Attempt to commit a previously closed transaction; no current transaction.";
+            assert &this == &that
+                as" Attempt to commit a previously closed transaction; a different transaction is in progress.";
+            assert !internal
+                as "Illegal commit request during the prepare phase.";
 
             // clearing out the transaction reference will "close" the transaction; it becomes no
             // longer reachable internally
             outer.tx = Null;
 
-            // a transaction with a NO_TX id hasn't done anything
+            // a transaction with a NO_TX id or a ReadId hasn't done anything to commit
             Boolean success = True;
-            if (id_ != NO_TX)
+            if (TxManager.txType(id_) == Open)
                 {
                 // it's important to prevent re-entrancy from the outside while this logical thread
                 // of execution is wending its way through the transaction manager and the various
@@ -800,7 +837,7 @@ service Client<Schema extends RootSchema>
 
             outer.tx = Null;
 
-            if (id_ != NO_TX)
+            if (id_ != NO_TX) // TODO isWriteId (rollback is allowed in the preparing phases; it means to fail the tx)
                 {
                 using (new CriticalSection(Exclusive))
                     {
