@@ -8,6 +8,15 @@ module TestSimple.test.org
 
         assert Int i := test(map, "a");
         console.println($"{i}");
+
+        try
+            {
+            testThrow(i, "oops");
+            }
+        catch (Exception e)
+            {
+            console.println(e.text);
+            }
         }
 
     conditional Int test(Map<String, Int> map, String key)
@@ -21,5 +30,10 @@ module TestSimple.test.org
         {
         (Int value, Boolean wasAbsent) = map.computeIfAbsent(key,  () -> Int:42);
         return value, wasAbsent;
+        }
+
+    void testThrow(Int i, String text)
+        {
+        throw new Exception(text);
         }
     }

@@ -673,6 +673,11 @@ public class ServiceContext
                     ExceptionHandle hException = frame.m_hException;
                     assert hException != null;
 
+                    if (isDebuggerActive())
+                        {
+                        getDebugger().checkBreakPoint(frame, hException);
+                        }
+
                     while (true)
                         {
                         iPC = frame.findGuard(hException);

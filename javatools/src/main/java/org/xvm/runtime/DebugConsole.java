@@ -4,14 +4,19 @@ package org.xvm.runtime;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.PrintWriter;
+
 import java.util.HashSet;
 import java.util.Set;
 
 import org.xvm.asm.MethodStructure;
 
+import org.xvm.asm.constants.IdentityConstant;
+
 import org.xvm.runtime.Frame.VarInfo;
+import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
 import org.xvm.runtime.template._native.xTerminalConsole;
+
 import org.xvm.util.Handy;
 
 
@@ -28,14 +33,13 @@ public class DebugConsole
     @Override
     public int enter(Frame frame, int iPC)
         {
-        return enterCommand(frame, iPC, null);
+        return enterCommand(frame, iPC);
         }
 
     @Override
     public int checkBreakPoint(Frame frame, int iPC)
         {
         boolean    fDebug = false;
-        BreakPoint bp     = null;
         switch (m_stepMode)
             {
             case StepOver:
@@ -51,20 +55,41 @@ public class DebugConsole
                 fDebug = true;
                 break;
 
+            case StepLine:
+                fDebug = frame.f_iId == m_frame.f_iId && iPC == m_iPC;
+                break;
+
             case None:
-                bp     = makeBreakPoint(frame, iPC);
-                fDebug = m_setBP.contains(bp);
+                fDebug = m_setBP.stream().anyMatch(bp -> bp.matches(frame, iPC));
                 break;
             }
 
         return fDebug
-                ? enterCommand(frame, iPC, bp)
+                ? enterCommand(frame, iPC)
                 : iPC + 1;
         }
 
-    private int enterCommand(Frame frame, int iPC, BreakPoint bpCurrent)
+    @Override
+    public void checkBreakPoint(Frame frame, ExceptionHandle hEx)
+        {
+        if (m_setBP.stream().anyMatch(bp -> bp.matches(hEx)))
+            {
+            enterCommand(frame, -1);
+            }
+        }
+
+    /**
+     * Allow interactive debugger commands.
+     *
+     * @param frame  the current frame
+     * @param iPC    the current PC (-1 for an exception breakpoint)
+     *
+     * @return the next PC or any of the Op.R_* values
+     */
+    private int enterCommand(Frame frame, int iPC)
         {
         m_frame    = frame;
+        m_iPC      = iPC;
         m_stepMode = StepMode.None;
 
         PrintWriter    writer = xTerminalConsole.CONSOLE_OUT;
@@ -80,7 +105,14 @@ public class DebugConsole
                 writer.print("\nEnter command:");
                 writer.flush();
 
-                String   sCommand = reader.readLine();
+                String sCommand = reader.readLine();
+                if (sCommand == null)
+                    {
+                    // we don't have a console; ignore
+                    writer.println();
+                    return iPC + 1;
+                    }
+
                 String[] asParts  = Handy.parseDelimitedString(sCommand, ' ');
                 int      cParts   = asParts.length - 1;
                 if (cParts < 0)
@@ -94,48 +126,72 @@ public class DebugConsole
                         continue NextCommand;
 
                     case "B+": case "b+":
-                        if (cParts == 0)
+                        switch (cParts)
                             {
-                            if (bpCurrent == null)
-                                {
-                                m_setBP.add(makeBreakPoint(frame, iPC));
-                                continue NextCommand;
-                                }
-                            }
-                        else if (cParts == 2)
-                            {
-                            BreakPoint bp = parseBreakPoint(asParts[1], asParts[2]);
-                            if (bp != null)
-                                {
-                                m_setBP.add(bp);
-                                continue NextCommand;
-                                }
+                            case 0:
+                                if (iPC >= 0)
+                                    {
+                                    m_setBP.add(makeBreakPoint(frame, iPC));
+                                    continue NextCommand;
+                                    }
+                                break; // the command is not allowed
+
+                            case 2:
+                                BreakPoint bp = parseBreakPoint(asParts[1], asParts[2]);
+                                if (bp != null)
+                                    {
+                                    m_setBP.add(bp);
+                                    continue NextCommand;
+                                    }
+                                break;  // invalid break point
                             }
                         break;
 
                     case "B-": case "b-":
-                        if (cParts == 0)
+                        switch (cParts)
                             {
-                            if (bpCurrent != null)
-                                {
-                                m_setBP.remove(bpCurrent);
-                                continue NextCommand;
-                                }
-                            }
-                        else if (cParts == 2)
-                            {
-                            BreakPoint bp = parseBreakPoint(asParts[1], asParts[2]);
-                            if (bp != null)
-                                {
-                                m_setBP.remove(bp);
-                                continue NextCommand;
-                                }
+                            case 0:
+                                if (iPC >= 0)
+                                    {
+                                    m_setBP.remove(makeBreakPoint(frame, iPC));
+                                    continue NextCommand;
+                                    }
+                                break; // the command is not allowed
+
+                            case 1:
+                                if (asParts[1].equals("*"))
+                                    {
+                                    m_setBP.clear();
+                                    continue NextCommand;
+                                    }
+                                break; // invalid command
+
+                            case 2:
+                                BreakPoint bp = parseBreakPoint(asParts[1], asParts[2]);
+                                if (bp != null)
+                                    {
+                                    m_setBP.remove(bp);
+                                    continue NextCommand;
+                                    }
+                                break; // invalid break point
                             }
                         break;
 
-                    case "BE": case "be":
-                    case "BT": case "bt":
-                        throw new UnsupportedOperationException();
+                    case "BE+": case "be+":
+                        if (cParts == 1)
+                            {
+                            m_setBP.add(new BreakPoint(asParts[1]));
+                            continue NextCommand;
+                            }
+                        break; // invalid command
+
+                    case "BE-": case "be-":
+                        if (cParts == 1)
+                            {
+                            m_setBP.remove(new BreakPoint(asParts[1]));
+                            continue NextCommand;
+                            }
+                        break; // invalid command
 
                     case "F": case "f":
                         if (cParts == 1)
@@ -165,16 +221,20 @@ public class DebugConsole
                     case "R": case "r":
                         break NextCommand;
 
-                    case "S": case "s": // step over
+                    case "S": case "s":
                         m_stepMode = StepMode.StepOver;
                         break NextCommand;
 
-                    case "S+": case "s+": // step in
+                    case "S+": case "s+":
                         m_stepMode = StepMode.StepInto;
                         break NextCommand;
 
-                    case "S-": case "s-": // step out
+                    case "S-": case "s-":
                         m_stepMode = StepMode.StepOut;
+                        break NextCommand;
+
+                    case "SL": case "sl":
+                        m_stepMode = StepMode.StepLine;
                         break NextCommand;
 
                     default:
@@ -264,6 +324,25 @@ public class DebugConsole
             lineNumber = nLine;
             }
 
+        public BreakPoint(String sException)
+            {
+            className  = sException;
+            lineNumber = -1;
+            }
+
+        public boolean matches(Frame frame, int iPC)
+            {
+            MethodStructure method = frame.f_function;
+            return className.equals(method.getContainingClass().getName()) &&
+                   lineNumber == method.calculateLineNumber(iPC);
+            }
+
+        public boolean matches(ExceptionHandle hE)
+            {
+            IdentityConstant idException = (IdentityConstant) hE.getType().getDefiningConstant();
+            return lineNumber == -1 && className.equals(idException.getName());
+            }
+
         @Override
         public boolean equals(Object o)
             {
@@ -285,14 +364,14 @@ public class DebugConsole
         @Override
         public String toString()
             {
-            return "BreakPoint{" +
-                "className='" + className + '\'' +
-                ", lineNumber=" + lineNumber +
-                '}';
+            return lineNumber == -1
+                ? "BreakPoint{exceptionName='" + className + '}'
+                : "BreakPoint{className='"     + className + '\'' +
+                           ", lineNumber="     + lineNumber + '}';
             }
 
         public String className;
-        public int    lineNumber;
+        public int    lineNumber; // -1 for exceptions
         }
 
     // ----- constants and data fields -------------------------------------------------------------
@@ -300,9 +379,14 @@ public class DebugConsole
     public static final DebugConsole INSTANCE = new DebugConsole();
 
     /**
-     * The current frame.
+     * The last debugged frame.
      */
     private Frame m_frame;
+
+    /**
+     * The last debugged iPC.
+     */
+    private int m_iPC;
 
     /**
      * The set of breakpoints.
@@ -312,6 +396,6 @@ public class DebugConsole
     /**
      * The current step operation.
      */
-    enum StepMode {None, StepOver, StepInto, StepOut}
+    enum StepMode {None, StepOver, StepInto, StepOut, StepLine}
     private StepMode m_stepMode = StepMode.None;
     }
