@@ -40,11 +40,11 @@ public class DebugConsole
             {
             case StepOver:
                 // over on Return could step out
-                fDebug = frame == m_frame || frame == m_frame.f_framePrev;
+                fDebug = frame.f_iId <= m_frame.f_iId;
                 break;
 
             case StepOut:
-                fDebug = frame == m_frame;
+                fDebug = frame.f_iId < m_frame.f_iId;
                 break;
 
             case StepInto:
@@ -83,7 +83,10 @@ public class DebugConsole
                 String   sCommand = reader.readLine();
                 String[] asParts  = Handy.parseDelimitedString(sCommand, ' ');
                 int      cParts   = asParts.length - 1;
-
+                if (cParts < 0)
+                    {
+                    continue;
+                    }
                 switch (asParts[0])
                     {
                     case "B": case "b":
@@ -172,7 +175,6 @@ public class DebugConsole
 
                     case "S-": case "s-": // step out
                         m_stepMode = StepMode.StepOut;
-                        m_frame    = frame.f_framePrev;
                         break NextCommand;
 
                     default:
