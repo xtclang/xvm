@@ -706,7 +706,6 @@ service Catalog<Schema extends RootSchema>
         try
             {
 @Inject Console console;
-console.println($"lock bytes={bytes}"); // TODO GG notice trailing 0s
 console.println($"lock string={bytes?.unpackString()}");
             lock = fromBytes(Lock, bytes?);
             }

@@ -188,13 +188,15 @@ public abstract class BitBasedDelegate
         {
         BitArrayHandle hBits = (BitArrayHandle) hDelegate;
 
+        byte[] ab = hBits.m_abValue;
+
         if (hBits.getMutability() == Mutability.Constant &&
-                ofStart == 0 && cBits == hBits.m_cSize && !fReverse)
+                ofStart == 0 && cBits == ((long) ab.length << 3) && !fReverse)
             {
-            return hBits.m_abValue;
+            return ab;
             }
 
-        byte[] abBits = extractBits(hBits.m_abValue, ofStart, cBits);
+        byte[] abBits = extractBits(ab, ofStart, cBits);
 
         return fReverse ? reverseBits(abBits, cBits) : abBits;
         }

@@ -246,19 +246,18 @@ public class xRTCharDelegate
 
     // ----- helper methods ------------------------------------------------------------------------
 
-    public static char[] getChars(CharArrayHandle hChars, int ofStart, int cSize, boolean fReverse)
+    public static char[] getChars(CharArrayHandle hChars, int ofStart, int cChars, boolean fReverse)
         {
-        int    cChars = (int) hChars.m_cSize;
-        char[] ach    = hChars.m_achValue;
+        char[] ach = hChars.m_achValue;
 
         if (hChars.getMutability() == Mutability.Constant &&
-                ofStart == 0 && cChars == cSize && !fReverse)
+                ofStart == 0 && cChars == ach.length && !fReverse)
             {
             return ach;
             }
 
-        ach = Arrays.copyOfRange(ach, ofStart, ofStart + cSize);
-        return fReverse ? reverse(ach, cSize) : ach;
+        ach = Arrays.copyOfRange(ach, ofStart, ofStart + cChars);
+        return fReverse ? reverse(ach, cChars) : ach;
         }
 
     private static char[] reverse(char[] achValue, int cSize)

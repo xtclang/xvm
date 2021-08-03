@@ -189,7 +189,7 @@ public abstract class ByteBasedDelegate
         byte[] ab = hBytes.m_abValue;
 
         if (hBytes.getMutability() == Mutability.Constant &&
-                ofStart == 0 && cBytes == hBytes.m_cSize && !fReverse)
+                ofStart == 0 && cBytes == ab.length && !fReverse)
             {
             return ab;
             }
