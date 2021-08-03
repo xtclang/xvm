@@ -176,6 +176,32 @@ public class ServiceContext
         m_reentrancy = reentrancy;
         }
 
+    /**
+     * Check if a debugging session is on.
+     */
+    public boolean isDebuggerActive()
+        {
+        // for now, we use a global flag, but should allow debugging of an individual
+        // service/container.
+        return f_container.f_runtime.isDebuggerActive();
+        }
+
+    /**
+     * Set or clear a debugging session flag.
+     */
+    public void setDebuggerActive(boolean fActive)
+        {
+        f_container.f_runtime.setDebuggerActive(fActive);
+        }
+
+    /**
+     * @return the active debugger
+     */
+    public Debugger getDebugger()
+        {
+        return DebugConsole.INSTANCE;
+        }
+
 
     // ----- Op support ----------------------------------------------------------------------------
 
@@ -712,6 +738,14 @@ public class ServiceContext
                     frame.m_iPC = iPCLast;
                     fiber.setStatus(FiberStatus.Paused, cOps);
                     return frame;
+
+                case Op.R_DEBUG:
+                    iPC = getDebugger().enter(frame, iPCLast);
+                    if (iPC == Op.R_NEXT)
+                        {
+                        iPC = iPCLast + 1;
+                        }
+                    break;
 
                 default:
                     throw new IllegalStateException("Invalid code: " + iPC);

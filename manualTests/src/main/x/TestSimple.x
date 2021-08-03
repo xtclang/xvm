@@ -12,6 +12,8 @@ module TestSimple.test.org
 
     conditional Int test(Map<String, Int> map, String key)
         {
+        assert:debug;
+
         return True, computeIfAbsent(map, "a");
         }
 

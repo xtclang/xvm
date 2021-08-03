@@ -9,35 +9,27 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 
 /**
- * TODO:
+ * The runtime.
  */
 public class Runtime
     {
-    final public ThreadPoolExecutor f_daemons;
-
-    // service id producer
-    final AtomicInteger f_idProducer = new AtomicInteger();
-
-    /**
-     * The time at which the last task was submitted.
-     */
-    volatile long m_lastSubmitNanos;
-
     public Runtime()
         {
         int parallelism = Integer.parseInt(System.getProperty("xvm.parallelism", "0"));
-        if (parallelism <= 0) {
+        if (parallelism <= 0)
+            {
             parallelism = java.lang.Runtime.getRuntime().availableProcessors();
-        }
+            }
 
-        String sName = "Worker";
-        ThreadGroup group = new ThreadGroup(sName);
-        ThreadFactory factory = r -> {
+        String        sName   = "Worker";
+        ThreadGroup   group   = new ThreadGroup(sName);
+        ThreadFactory factory = r ->
+            {
             Thread thread = new Thread(group, r);
             thread.setDaemon(true);
             thread.setName(sName + "@" + thread.hashCode());
             return thread;
-        };
+            };
 
         // TODO: replace with a fair scheduling based ExecutorService; and a concurrent blocking queue
         f_daemons = new ThreadPoolExecutor(parallelism, parallelism,
@@ -70,4 +62,37 @@ public class Runtime
         return m_lastSubmitNanos < System.nanoTime() - TimeUnit.MILLISECONDS.toNanos(10)
             && f_daemons.getActiveCount() == 0;
         }
+
+    public boolean isDebuggerActive()
+        {
+        return m_fDebugger;
+        }
+
+    public void setDebuggerActive(boolean fActive)
+        {
+        m_fDebugger = fActive;
+        }
+
+
+    // ----- constants and fields ------------------------------------------------------------------
+
+    /**
+     * The executor.
+     */
+    public final ThreadPoolExecutor f_daemons;
+
+    /**
+     * A service id producer.
+     */
+    protected final AtomicInteger f_idProducer = new AtomicInteger();
+
+    /**
+     * The time at which the last task was submitted.
+     */
+    private volatile long m_lastSubmitNanos;
+
+    /**
+     * The "debugger is active" flag.
+     */
+    private boolean m_fDebugger;
     }

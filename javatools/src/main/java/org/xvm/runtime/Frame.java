@@ -2,7 +2,9 @@ package org.xvm.runtime;
 
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Deque;
+import java.util.List;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -1765,10 +1767,28 @@ public class Frame
         return typeType.getParamType(0);
         }
 
-    // temporary
+    /**
+     * @return the frame stack in a human-readable format
+     */
     public String getStackTrace()
         {
         StringBuilder sb = new StringBuilder();
+
+        for (String sFrame : getStackTraceArray())
+            {
+            sb.append("\n\t")
+              .append(sFrame);
+            }
+        sb.append('\n');
+
+        return sb.toString();
+        }
+
+    /**
+     * @return an array of frames in a human-readable format
+     */
+    public String[] getStackTraceArray()
+        {
         Frame frame = this;
         Fiber fiber = frame.f_fiber;
         int iPC = m_iPC;
@@ -1779,10 +1799,11 @@ public class Frame
             iPC--;
             }
 
+        List<String> listFrames = new ArrayList<>(7);
         while (true)
             {
-            sb.append("\n\t")
-              .append(formatFrameDetails(frame.f_context, frame.f_function, iPC, frame.f_aOp, frame.f_framePrev));
+            listFrames.add(formatFrameDetails(
+                frame.f_context, frame.f_function, iPC, frame.f_aOp, frame.f_framePrev));
 
             iPC   = frame.f_iPCPrev;
             frame = frame.f_framePrev;
@@ -1797,7 +1818,7 @@ public class Frame
 
                 frame = fiberCaller.getFrame();
 
-                sb.append("\n    =========");
+                listFrames.add("    =========");
 
                 if (frame != null)
                     {
@@ -1808,17 +1829,14 @@ public class Frame
                     // the caller's fiber has moved away from the calling frame;
                     // simply show the calling function
                     MethodStructure fnCaller = fiber.f_fnCaller;
-                    sb.append("\n  ")
-                      .append(formatFrameDetails(fiberCaller.f_context, fnCaller, -1, null, null));
+                    listFrames.add(formatFrameDetails(
+                        fiberCaller.f_context, fnCaller, -1, null, null));
                     break;
                     }
                 fiber = fiberCaller;
                 }
             }
-
-        sb.append('\n');
-
-        return sb.toString();
+        return listFrames.toArray(Utils.NO_NAMES);
         }
 
     protected static String formatFrameDetails(ServiceContext ctx, MethodStructure function,

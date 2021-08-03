@@ -30,9 +30,9 @@ import org.xvm.runtime.template.text.xString.StringHandle;
 public class xTerminalConsole
         extends xService
     {
-    private static final Console        CONSOLE     = System.console();
-    private static final BufferedReader CONSOLE_IN;
-    private static final PrintWriter    CONSOLE_OUT;
+    public static final Console        CONSOLE     = System.console();
+    public static final BufferedReader CONSOLE_IN;
+    public static final PrintWriter    CONSOLE_OUT;
     static
         {
         CONSOLE_IN  = CONSOLE == null || CONSOLE.reader() == null

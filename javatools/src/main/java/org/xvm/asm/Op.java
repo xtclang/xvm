@@ -2087,6 +2087,11 @@ public abstract class Op
      */
     public static final int R_PAUSE            = -10;
 
+    /**
+     * Result from process() method: enter the debugger.
+     */
+    public static final int R_DEBUG            = -11;
+
 
     // ----- other constants -----------------------------------------------------------------------
 

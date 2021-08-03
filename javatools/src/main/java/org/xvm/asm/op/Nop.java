@@ -92,7 +92,9 @@ public class Nop extends Op
     @Override
     public int process(Frame frame, int iPC)
         {
-        return iPC + 1;
+        return frame.f_context.isDebuggerActive()
+                ? frame.f_context.getDebugger().checkBreakPoint(frame, iPC)
+                : iPC + 1;
         }
 
     @Override
