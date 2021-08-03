@@ -96,14 +96,14 @@ class DefaultUriRouteMatch
             return True;
             }
 
-        if (route.produces.contains(MediaType.ALL_TYPE))
+        if (producedTypes.contains(MediaType.ALL_TYPE))
             {
             return True;
             }
 
         for (MediaType acceptableType : acceptableTypes)
             {
-            if (acceptableType == MediaType.ALL_TYPE || route.produces.contains(acceptableType))
+            if (acceptableType == MediaType.ALL_TYPE || producedTypes.contains(acceptableType))
                 {
                 return True;
                 }

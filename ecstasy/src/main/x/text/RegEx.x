@@ -1,9 +1,9 @@
 /**
  * A representation of a regular expression pattern.
  *
- * A RegEx can be matched against String values, which if successful will produce a Matcher.
+ * A RegEx can be matched against String values, which if successful will produce a Match.
  *
- * A RegEx is a constant, the state of the result of a match is in the Matcher, meaning that a
+ * A RegEx is a constant, the state of the result of a match is in the Match, meaning that a
  * single RegEx may be safely used multiple times to match different input values.
  */
 const RegEx(String pattern)
@@ -14,9 +14,9 @@ const RegEx(String pattern)
      * @param input  the string value to match
      *
      * @return True iff the entire input String matches this pattern
-     * @return (optional) a Matcher resulting from matching the input string
+     * @return (optional) a Match resulting from matching the input string
      */
-    conditional Matcher match(String input)
+    conditional Match match(String input)
         {
         return False;
         }
@@ -27,18 +27,17 @@ const RegEx(String pattern)
      * Unlike the `match` method that matches the whole input value this method only matches the
      * beginning, subsequent characters remaining after the pattern was matched are ignored.
      *
-     * For example, the expression "[0-9]" matches a single digit.
-     *
-     * Calling this method with the input "a2bc" will return False, because the beginning of the
-     * input is not a digit. Calling this method with the input "2bc" will return True and a
-     * `Matcher` that matches the "2", ignoring the remaining "bc".
+     * For example, the expression "[0-9]" matches a single digit, so calling this method with
+     * the input "a2bc" will return False, because the beginning of the input is not a digit.
+     * Calling this method with the input "2bc" will return True and a `Match` that matches
+     * the "2", ignoring the remaining "bc".
      *
      * @param input  the string value to match
      *
      * @return True iff the input starts with a sub-sequence that matches this pattern
-     * @return (optional) a Matcher resulting from matching the input string
+     * @return (optional) a Match resulting from matching the input string
      */
-    conditional Matcher matchPrefix(String input)
+    conditional Match matchPrefix(String input)
         {
         return False;
         }
@@ -48,22 +47,47 @@ const RegEx(String pattern)
      *
      * This method will start at the beginning of the input and search for the first sub-sequence
      * that matches this pattern. Subsequent matches may be found by calling the `find()` method on
-     * the returned `Matcher`.
+     * the returned `Match`.
      *
      * When searching for matches any non-matching sequences will be skipped.
      *
      * For example, the expression `[0-9]` matches a single digit. Calling this method with the
-     * input "a1b2c3" will first match the "1", returning `true` and a `Matcher`. Subsequent calls
-     * to `Matcher.find()` will match the "2" and the "3".
+     * input "a1b2c3" will first match the "1", returning `true` and a `Match`. Subsequent calls
+     * to `Match.find()` will match the "2" and the "3".
      *
-     * @param input  the string value to match
+     * @param input   the string value to match
+     * @param offset  the optional index of the character in the input String to begin searching from
      *
      * @return True iff the input contains a sub-sequence that matches this pattern
-     * @return (optional) a Matcher resulting from matching the input string
+     * @return (optional) a Match resulting from matching the input string
      */
-    conditional Matcher find(String input)
+    conditional Match find(String input, Int offset = 0)
         {
         return False;
+        }
+
+    /**
+     * Replaces every subsequence of the input text that matches this regular expression pattern
+     * with the given replacement string.
+     *
+     * This method scans the input text looking for matches of the regular expression pattern.
+     * Characters that are not part of any match are appended directly to the result string;
+     * each match is replaced in the result by the replacement string.
+     *
+     * Note that backslashes `\` and dollar signs `$` in the replacement string may cause the
+     * results to be different than if it were being treated as a literal replacement string.
+     * Dollar signs may be treated as references to captured subsequences as described above, and
+     * backslashes are used to escape literal characters in the replacement string.
+     *
+     * @param  text         the string in which to replace matches of the regular expression pattern
+     * @param  replacement  the replacement string
+     *
+     * @return  a string constructed by replacing each matching subsequence by the replacement
+     *          string, substituting captured subsequences as needed
+     */
+    String replaceAll(String text, String replacement)
+        {
+        TODO
         }
 
     /**

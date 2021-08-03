@@ -1,4 +1,4 @@
-import ecstasy.text.Matcher;
+import ecstasy.text.Match;
 import ecstasy.text.RegEx;
 
 /**
@@ -132,27 +132,27 @@ const UriTemplate(String template, List<PathSegment> segments, Int variableCount
 
             if (PATTERN_SCHEME.match(template))
                 {
-                if (Matcher matcher := PATTERN_FULL_URI.find(template))
+                if (Match match := PATTERN_FULL_URI.find(template))
                     {
-                    if (String scheme := matcher.group(GROUP_SCHEME))
+                    if (String scheme := match.group(GROUP_SCHEME))
                         {
                         segments.add(new RawPathSegment(False, scheme + "://"));
                         }
-                    if (String userInfo := matcher.group(GROUP_USER_INFO))
+                    if (String userInfo := match.group(GROUP_USER_INFO))
                         {
                         createSegmentParser(userInfo, arguments).parse(segments);
                         }
-                    if (String host := matcher.group(GROUP_HOST))
+                    if (String host := match.group(GROUP_HOST))
                         {
                         createSegmentParser(host, arguments).parse(segments);
                         }
-                    if (String port := matcher.group(GROUP_PORT))
+                    if (String port := match.group(GROUP_PORT))
                         {
                         createSegmentParser(':' + port, arguments).parse(segments);
                         }
-                    if (String path := matcher.group(GROUP_PATH))
+                    if (String path := match.group(GROUP_PATH))
                         {
-                        if (String fragment := matcher.group(GROUP_FRAGMENT))
+                        if (String fragment := match.group(GROUP_FRAGMENT))
                             {
                             createSegmentParser(path + HASH_OPERATOR + fragment, [])
                                     .parse(segments);
@@ -162,7 +162,7 @@ const UriTemplate(String template, List<PathSegment> segments, Int variableCount
                             createSegmentParser(path, arguments).parse(segments);
                             }
                         }
-                    if (String query := matcher.group(GROUP_QUERY))
+                    if (String query := match.group(GROUP_QUERY))
                         {
                         createSegmentParser(query, arguments).parse(segments);
                         }
@@ -660,14 +660,18 @@ const UriTemplate(String template, List<PathSegment> segments, Int variableCount
             RegEx PATTERN_PERCENT;
             @Inject(opts = "\\s")
             RegEx PATTERN_SPACE;
-            if (Matcher m := PATTERN_PERCENT.find(s))
-                {
-                s = m.replaceAll("%25");
-                }
-            if (Matcher m := PATTERN_SPACE.find(s))
-                {
-                s = m.replaceAll("%20");
-                }
+
+            s = PATTERN_PERCENT.replaceAll(s, "%25");
+//            if (Matcher m := PATTERN_PERCENT.find(s))
+//                {
+//                s = m.replaceAll("%25");
+//                }
+
+            s = PATTERN_SPACE.replaceAll(s, "%20");
+//            if (Matcher m := PATTERN_SPACE.find(s))
+//                {
+//                s = m.replaceAll("%20");
+//                }
             return s;
             }
 

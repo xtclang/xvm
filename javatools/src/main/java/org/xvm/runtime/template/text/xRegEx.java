@@ -1,24 +1,34 @@
 package org.xvm.runtime.template.text;
 
 
+import java.util.regex.MatchResult;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.RegExConstant;
 
+import org.xvm.asm.constants.TypeConstant;
+import org.xvm.runtime.ClassComposition;
+import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
+import org.xvm.runtime.template.collections.xArray;
+import org.xvm.runtime.template.numbers.xInt64;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
+import org.xvm.runtime.template.xNullable;
 
 
 /**
@@ -42,15 +52,27 @@ public class xRegEx
     @Override
     public void initNative()
         {
-        String[] Regex = new String[]{"text.RegEx"};
-
         markNativeProperty("pattern");
         markNativeMethod("construct", STRING, VOID);
-        markNativeMethod("find", STRING, null);
+        markNativeMethod("find", new String[] {"text.String", "numbers.Int64"}, null);
         markNativeMethod("match", STRING, null);
         markNativeMethod("matchPrefix", STRING, null);
+        markNativeMethod("replaceAll", new String[] {"text.String", "text.String"}, STRING);
 
         getCanonicalType().invalidateTypeInfo();
+
+        ClassTemplate    clzTempMatch      = f_templates.getTemplate("text.Match");
+        TypeComposition  typeMatch         = clzTempMatch.getCanonicalClass();
+        ClassStructure   clzStructMatch    = f_templates.getClassStructure("text.Match");
+        ConstantPool     pool              = pool();
+        TypeConstant     typeRangeInt      = pool.ensureParameterizedTypeConstant(pool.typeRange(), pool.typeInt());
+        TypeConstant     typeNullableRange = pool.ensureIntersectionTypeConstant(pool.typeNullable(), typeRangeInt);
+        TypeConstant     typeArray         = pool.ensureParameterizedTypeConstant(pool.typeArray(), typeNullableRange);
+        ClassComposition clzRange          = f_templates.getTemplate("Range").getCanonicalClass();
+
+        m_clzMatchStruct   = typeMatch.ensureAccess(Constants.Access.STRUCT);
+        m_constructorMatch = clzStructMatch.findConstructor(pool.typeRegEx(), pool.typeString(), typeArray);
+        m_clzRangeOfInt    = clzRange.ensureCanonicalizedComposition(typeRangeInt);
         }
 
     @Override
@@ -84,9 +106,34 @@ public class xRegEx
                 String regex = ((RegExHandle) hTarget).getRegex() + ((RegExHandle) hArg).getRegex();
                 return frame.assignValue(iReturn, new RegExHandle(INSTANCE.getCanonicalClass(), regex));
                 }
+            case "appendTo":
+                {
+                xString.StringHandle hRegex = xString.makeHandle(((RegExHandle) hTarget).getRegex());
+                return xString.callAppendTo(frame, hRegex, hArg, iReturn);
+                }
             }
 
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
+        }
+
+    @Override
+    public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                             ObjectHandle[] ahArg, int iReturn)
+        {
+        switch (method.getName())
+            {
+            case "replaceAll":
+                {
+                xString.StringHandle hText       = (xString.StringHandle) ahArg[0];
+                String               text        = hText.getStringValue();
+                String               replacement = ((xString.StringHandle) ahArg[1]).getStringValue();
+                Matcher              matcher     = ((RegExHandle) hTarget).getPattern().matcher(text);
+                xString.StringHandle hResult     = xString.makeHandle(matcher.replaceAll(replacement));
+                return frame.assignValue(iReturn, hResult);
+                }
+            }
+
+        return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
         }
 
     @Override
@@ -98,42 +145,49 @@ public class xRegEx
             {
             case "match":
                 {
-                String value = ((xString.StringHandle) ahArg[0]).getStringValue();
-                Pattern pattern = hRegEx.getPattern();
-                Matcher matcher = pattern.matcher(value);
+                xString.StringHandle hText   = (xString.StringHandle) ahArg[0];
+                Pattern              pattern = hRegEx.getPattern();
+                Matcher              matcher = pattern.matcher(hText.getStringValue());
                 if (matcher.matches())
                     {
+                    MatchResult result = matcher.toMatchResult();
                     return Utils.assignConditionalResult(
                         frame,
-                        xMatcher.INSTANCE.createHandle(frame, matcher, hRegEx, Op.A_STACK),
+                        createMatchHandle(frame, result, hText, hRegEx, Op.A_STACK),
                         aiReturn);
                     }
                 return frame.assignValue(aiReturn[0], xBoolean.FALSE);
                 }
             case "matchPrefix":
                 {
-                String value = ((xString.StringHandle) ahArg[0]).getStringValue();
-                Pattern pattern = hRegEx.getPattern();
-                Matcher matcher = pattern.matcher(value);
+                xString.StringHandle hText   = (xString.StringHandle) ahArg[0];
+                Pattern              pattern = hRegEx.getPattern();
+                Matcher              matcher = pattern.matcher(hText.getStringValue());
                 if (matcher.lookingAt())
                     {
+                    MatchResult result = matcher.toMatchResult();
                     return Utils.assignConditionalResult(
                         frame,
-                        xMatcher.INSTANCE.createHandle(frame, matcher, hRegEx, Op.A_STACK),
+                        createMatchHandle(frame, result, hText, hRegEx, Op.A_STACK),
                         aiReturn);
                     }
                 return frame.assignValue(aiReturn[0], xBoolean.FALSE);
                 }
             case "find":
                 {
-                String value = ((xString.StringHandle) ahArg[0]).getStringValue();
-                Pattern pattern = hRegEx.getPattern();
-                Matcher matcher = pattern.matcher(value);
-                if (matcher.find())
+                xString.StringHandle hText   = (xString.StringHandle) ahArg[0];
+                Pattern              pattern = hRegEx.getPattern();
+                Matcher              matcher = pattern.matcher(hText.getStringValue());
+                ObjectHandle         hStart  = ahArg[1];
+                long                 nStart  = hStart instanceof ObjectHandle.JavaLong
+                                                    ? ((ObjectHandle.JavaLong) hStart).getValue()
+                                                    : 0L;
+                if (matcher.find((int) nStart))
                     {
+                    MatchResult result = matcher.toMatchResult();
                     return Utils.assignConditionalResult(
                         frame,
-                        xMatcher.INSTANCE.createHandle(frame, matcher, hRegEx, Op.A_STACK),
+                        createMatchHandle(frame, result, hText, hRegEx, Op.A_STACK),
                         aiReturn);
                     }
                 return frame.assignValue(aiReturn[0], xBoolean.FALSE);
@@ -142,21 +196,78 @@ public class xRegEx
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
         }
 
-    public int createConstHandle(Frame frame, String regex)
-        {
-        return createConstHandle(frame, new RegExConstant(frame.poolContext(), regex));
-        }
-
     @Override
     public int createConstHandle(Frame frame, Constant constant)
         {
         if (constant instanceof RegExConstant)
             {
             return frame.pushStack(new RegExHandle(getCanonicalClass(),
-                    ((RegExConstant) constant).getValue()));
+                ((RegExConstant) constant).getValue()));
             }
 
         return super.createConstHandle(frame, constant);
+        }
+
+    /**
+     * Create an object handle for a RegEx using the specified String pattern and push it on the
+     * frame's local stack.
+     *
+     * @param frame  the current frame
+     * @param regex  the regular expression pattern
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
+     */
+    public int createConstHandle(Frame frame, String regex)
+        {
+        return createConstHandle(frame, new RegExConstant(frame.poolContext(), regex));
+        }
+
+
+    /**
+     * Construct a new text.Match hanle representing the specified {@link MatchResult}.
+     *
+     * @param frame   the current frame
+     * @param match   the immutable {@link MatchResult}
+     * @param hText   the handle of the matched String
+     * @param hRegEx  the handle of the pattern used to create the result
+     * @param iReturn the register id to place the created handle into
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
+     */
+    public int createMatchHandle(Frame frame, MatchResult match, xString.StringHandle hText,
+                                 xRegEx.RegExHandle hRegEx, int iReturn)
+        {
+        TypeComposition clzRange    = m_clzRangeOfInt;
+        TypeComposition clzStruct   = m_clzMatchStruct;
+        MethodStructure constructor = m_constructorMatch;
+
+        ObjectHandle[] ah = new ObjectHandle[match.groupCount() + 1];
+        for (int i = 0; i <= match.groupCount(); i++)
+            {
+            int nStart = match.start(i);
+            if (nStart >= 0)
+                {
+                GenericHandle hRange = new ObjectHandle.GenericHandle(clzRange);
+                hRange.setField("lowerBound", xInt64.INSTANCE.makeJavaLong(nStart));
+                hRange.setField("lowerExclusive", xBoolean.FALSE);
+                hRange.setField("upperBound", xInt64.INSTANCE.makeJavaLong(match.end(i)));
+                hRange.setField("upperExclusive", xBoolean.TRUE);
+                hRange.setField("descending", xBoolean.FALSE);
+                hRange.makeImmutable();
+                ah[i] = hRange;
+                }
+            else
+                {
+                ah[i] = xNullable.NULL;
+                }
+            }
+
+        ObjectHandle   hGroups = xArray.makeObjectArrayHandle(ah, xArray.Mutability.Fixed);
+        ObjectHandle[] ahArgs  = new ObjectHandle[]{hRegEx, hText, hGroups};
+        ObjectHandle[] ahVar   = Utils.ensureSize(ahArgs, constructor.getMaxVars());
+        GenericHandle  hMatch  = new GenericHandle(clzStruct);
+
+        return proceedConstruction(frame, constructor, true, hMatch, ahVar, iReturn);
         }
 
     /**
@@ -221,4 +332,21 @@ public class xRegEx
             return super.toString() + m_regex;
             }
         }
+
+    // ----- data members ---------------------------------------------------
+
+    /**
+     * The text.Match constructor.
+     */
+    private MethodStructure m_constructorMatch;
+
+    /**
+     * The text.Match struct.
+     */
+    private TypeComposition m_clzMatchStruct;
+
+    /**
+     * The Range struct.
+     */
+    private TypeComposition m_clzRangeOfInt;
     }

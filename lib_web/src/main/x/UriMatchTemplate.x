@@ -1,5 +1,5 @@
 import ecstasy.text.RegEx;
-import ecstasy.text.Matcher;
+import ecstasy.text.Match;
 
 /**
  * An extension of UriTemplate that also implements UriMatcher adding
@@ -58,14 +58,14 @@ const UriMatchTemplate(String             template,
             uri = uri.size > 1 ? uri[0..uri.size - 2] : "";
             }
 
-        if (Matcher matcher := matchRegEx.match(uri))
+        if (Match match := matchRegEx.match(uri))
             {
             if (variables.empty)
                 {
                 return True, new DefaultUriMatchInfo(uri, Map<String, Object>:[], variables);
                 }
 
-            Int                     count       = matcher.groupCount;
+            Int                     count       = match.groupCount;
             ListMap<String, String> variableMap = new ListMap();
             for (Int j = 0; j < this.variables.size; j++)
                 {
@@ -75,7 +75,7 @@ const UriMatchTemplate(String             template,
                     break;
                     }
                 UriMatchVariable variable = variables[j];
-                String?          value    = matcher[index];
+                String?          value    = match[index];
                 if (value != Null)
                     {
                     variableMap.put(variable.name, value);

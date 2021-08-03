@@ -317,6 +317,84 @@ const String
          }
 
     /**
+     * Match all characters in this String to a regular expression pattern.
+     *
+     * @param pattern  the regular expression to match
+     *
+     * @return True iff this entire String matches the pattern
+     * @return (optional) a Matcher resulting from matching the regular expression with this String
+     */
+    conditional Match matches(RegEx pattern)
+        {
+        return pattern.match(this);
+        }
+
+    /**
+     * Match the start of this String to a regular expression pattern.
+     *
+     * Unlike the `match` method that matches the whole String value this method only matches the
+     * beginning, subsequent characters remaining after the pattern was matched are ignored.
+     *
+     * @param pattern  the regular expression to match
+     *
+     * @return True iff this String starts with a sub-sequence that matches the regular expression
+     * @return (optional) a Matcher resulting from matching the start of this String
+     */
+    conditional Match prefixMatches(RegEx pattern)
+        {
+        return pattern.matchPrefix(this);
+        }
+
+    /**
+     * Find the first sub-sequence of characters in this String that match a regular expression
+     * pattern.
+     *
+     * This method will start at the specified `offset` in this String and search for the first
+     * sub-sequence that matches the expression. Subsequent matches may be found by calling the
+     *  `matchAny()` method with an offset equal to the `end` property of the returned `Match`.
+     *
+     * When searching for matches any non-matching sub-sequences of characters will be skipped.
+     *
+     * @param pattern  the regular expression to match
+     * @param offset   the position in the String to start searching from
+     *
+     * @return True iff the input contains a sub-sequence that matches the pattern
+     * @return (optional) a Match resulting from matching the pattern
+     */
+    conditional Match containsMatch(RegEx pattern, Int offset = 0)
+        {
+        return pattern.find(this, offset);
+        }
+
+    /**
+     * Replaces every subsequence of this String that matches the pattern with the given
+     * replacement string; optionally starting at a given offset in this String.
+     *
+     * This method first resets this matcher.  It then scans the input sequence looking for matches
+     * of the pattern.  Characters that are not part of any match are appended directly to the
+     * result string; each match is replaced in the result by the replacement string.
+     *
+     * Note that backslashes `\` and dollar signs `$` in the replacement string may cause the
+     * results to be different than if it were being treated as a literal replacement string.
+     * Dollar signs may be treated as references to captured subsequences as described above, and
+     * backslashes are used to escape literal characters in the replacement string.
+     *
+     * Invoking this method changes this matcher's state.  If the matcher is to be used in further
+     * matching operations then it should first be reset.
+     *
+     * @param pattern      the regular expression to match
+     * @param replacement  the replacement string
+     * @param offset       the position in the String to start searching from
+     *
+     * @return  A String constructed by replacing each matching subsequence by the replacement
+     *          string
+     */
+    String! replaceAll(RegEx pattern, String replacement, Int offset = 0)
+        {
+        return pattern.replaceAll(this[offset..this.size), replacement);
+        }
+
+    /**
      * Format this String into a left-justified String of the specified length, with the remainder
      * of the new String filled with the specified character. If the specified length is shorter
      * than the size of this String, then the result will be a truncated copy of this String,
