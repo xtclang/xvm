@@ -201,6 +201,14 @@ public class xService
                     }
                 return frame.f_fiber.registerAsyncSection(frame, hArg);
 
+            case "registerCriticalSection":
+                if (frame.f_context != hService.f_context)
+                    {
+                    return frame.raiseException("Call out of context");
+                    }
+                hService.f_context.setCriticalSection(hArg);
+                return Op.R_NEXT;
+
             case "registerUnhandledExceptionNotification":
                 hService.f_context.m_hExceptionHandler = (FunctionHandle) hArg;
                 return Op.R_NEXT;
@@ -269,8 +277,8 @@ public class xService
                 return frame.assignValue(iReturn, frame.f_fiber.getAsyncSection());
 
             case "criticalSection":
-                // TODO GG: implement registerCriticalSection(CriticalSection?)
-                return frame.assignValue(iReturn, xNullable.NULL);
+                ObjectHandle hCriticalSection = hService.f_context.getCriticalSection();
+                return frame.assignValue(iReturn, hCriticalSection == null ? xNullable.NULL : hCriticalSection);
             }
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
         }

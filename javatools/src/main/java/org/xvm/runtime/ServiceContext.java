@@ -123,6 +123,28 @@ public class ServiceContext
         }
 
     /**
+     * Supporting method for natural Service.registerCriticalSection() API.
+     *
+     * @return the current CriticalSection? handle
+     */
+    public ObjectHandle getCriticalSection()
+        {
+        return m_hCriticalSection;
+        }
+
+    /**
+     * Supporting method for natural Service.registerCriticalSection() API.
+     *
+     * @param hCriticalSection  the new CriticalSection? handle
+     */
+    public void setCriticalSection(ObjectHandle hCriticalSection)
+        {
+        assert hCriticalSection != null;
+
+        m_hCriticalSection = hCriticalSection;
+        }
+
+    /**
      * @return the currently active frame
      */
     public Frame getCurrentFrame()
@@ -1713,6 +1735,11 @@ public class ServiceContext
      * The current Timeout that will be used by the service when it invokes other services.
      */
     private ObjectHandle m_hTimeout;
+
+    /**
+     * The current CriticalSection for the service.
+     */
+    private ObjectHandle m_hCriticalSection;
 
     /**
      * Metrics: the total time (in nanos) this service has been running.

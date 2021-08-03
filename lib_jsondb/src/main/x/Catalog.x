@@ -469,9 +469,12 @@ service Catalog<Schema extends RootSchema>
      */
     void create(String name)
         {
-        transition(Closed, Configuring, snapshot -> snapshot.empty);
+        using (val cs = new CriticalSection(Exclusive))
+            {
+            transition(Closed, Configuring, snapshot -> snapshot.empty);
 
-        // TODO maybe return a config API?
+            // TODO maybe return a config API?
+            }
         }
 
     /**
@@ -483,9 +486,12 @@ service Catalog<Schema extends RootSchema>
      */
     void edit()
         {
-        transition([Closed, Recovering, Running], Configuring, snapshot -> !snapshot.empty && !snapshot.lockedOut);
+        using (val cs = new CriticalSection(Exclusive))
+            {
+            transition([Closed, Recovering, Running], Configuring, snapshot -> !snapshot.empty && !snapshot.lockedOut);
 
-        // TODO maybe return a config API?
+            // TODO maybe return a config API?
+            }
         }
 
     /**
@@ -496,9 +502,13 @@ service Catalog<Schema extends RootSchema>
      */
     void recover()
         {
-        transition(Closed, Recovering, snapshot -> !snapshot.empty || sysDir.exists, ignoreLock = True);
+        using (val cs = new CriticalSection(Exclusive))
+            {
+            transition(Closed, Recovering, snapshot -> !snapshot.empty || sysDir.exists, ignoreLock = True);
 
-        // TODO
+            txManager.enable();
+            // TODO
+            }
         }
 
     /**
@@ -509,12 +519,15 @@ service Catalog<Schema extends RootSchema>
      */
     void open()
         {
-        transition([Closed, Recovering, Configuring], Running,
-                snapshot -> snapshot.owned || snapshot.unowned,
-                allowReadOnly = True);
+        using (val cs = new CriticalSection(Exclusive))
+            {
+            transition([Closed, Recovering, Configuring], Running,
+                    snapshot -> snapshot.owned || snapshot.unowned,
+                    allowReadOnly = True);
 
-        txManager.enable();
-        // TODO
+            txManager.enable();
+            // TODO
+            }
         }
 
     /**
@@ -523,22 +536,25 @@ service Catalog<Schema extends RootSchema>
     @Override
     void close(Exception? cause = Null)
         {
-        switch (status)
+        using (val cs = new CriticalSection(Exclusive))
             {
-            case Configuring:
-            case Recovering:
-                transition(status, Closed, snapshot -> snapshot.owned);
-                break;
+            switch (status)
+                {
+                case Configuring:
+                case Recovering:
+                    transition(status, Closed, snapshot -> snapshot.owned);
+                    break;
 
-            case Running:
-                txManager.disable();
-                continue;
-            case Closed:
-                transition(status, Closed, snapshot -> snapshot.owned, allowReadOnly = True);
-                break;
+                case Running:
+                    txManager.disable();
+                    continue;
+                case Closed:
+                    transition(status, Closed, snapshot -> snapshot.owned, allowReadOnly = True);
+                    break;
 
-            default:
-                assert;
+                default:
+                    assert;
+                }
             }
         }
 
@@ -550,19 +566,22 @@ service Catalog<Schema extends RootSchema>
      */
     void delete()
         {
-        transition([Closed, Configuring], Configuring, snapshot -> snapshot.owned || snapshot.unowned);
-
-        for (Directory subdir : dir.dirs())
+        using (val cs = new CriticalSection(Exclusive))
             {
-            subdir.deleteRecursively();
-            }
+            transition([Closed, Configuring], Configuring, snapshot -> snapshot.owned || snapshot.unowned);
 
-        for (File file : dir.files())
-            {
-            file.delete();
-            }
+            for (Directory subdir : dir.dirs())
+                {
+                subdir.deleteRecursively();
+                }
 
-        transition(status, Closed, snapshot -> snapshot.empty);
+            for (File file : dir.files())
+                {
+                file.delete();
+                }
+
+            transition(status, Closed, snapshot -> snapshot.empty);
+            }
         }
 
     /**

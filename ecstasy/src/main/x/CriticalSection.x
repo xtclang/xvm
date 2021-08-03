@@ -47,6 +47,9 @@ const CriticalSection
         {
         assert reentrancy == Exclusive || reentrancy == Forbidden;
 
+        @Inject Clock clock;
+        this.startTime = clock.now;
+
         // store off the previous reentrancy setting; it will be replaced by this CriticalSection,
         // and restored when this CriticalSection is closed
         previousReentrancy = this:service.reentrancy;

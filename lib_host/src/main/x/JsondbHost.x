@@ -62,8 +62,15 @@ class JsondbHost
             }
         catch (IllegalState e)
             {
-            catalog.create("name_goes_here");
-            catalog.open();
+            try
+                {
+                catalog.create("name_goes_here");
+                catalog.open();
+                }
+            catch (IllegalState e2)
+                {
+                catalog.recover();
+                }
             }
         return catalog;
         }
