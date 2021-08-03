@@ -49,9 +49,22 @@ class JsondbHost
     @Lazy Catalog catalog.calc()
         {
         @Inject Directory curDir;
+        Directory dataDir = curDir;
+        if (val subDir := dataDir.find("data"), subDir.is(Directory))
+            {
+            dataDir = subDir;
+            }
 
-        Catalog catalog = meta.createCatalog(curDir, False);
-        catalog.open();
+        Catalog catalog = meta.createCatalog(dataDir, False);
+        try
+            {
+            catalog.open();
+            }
+        catch (IllegalState e)
+            {
+            catalog.create("name_goes_here");
+            catalog.open();
+            }
         return catalog;
         }
 

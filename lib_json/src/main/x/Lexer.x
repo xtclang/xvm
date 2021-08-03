@@ -276,6 +276,7 @@ class Lexer
                 case '\r':
                 case '\n':
                 case '\t':
+                case '\0': // TODO GG - started getting trailing \0 in json output files (or when reading them in? Not sure ...)
                     break;
 
                 default:
@@ -350,7 +351,7 @@ class Lexer
                 break;
 
             default:
-                throw new IOException($"unexpected '{ch}'");
+                throw new IOException($"unexpected character: {ch.quoted()}");
             }
 
         TextPosition end = reader.position;
