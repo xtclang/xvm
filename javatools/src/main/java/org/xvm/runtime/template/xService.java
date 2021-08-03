@@ -267,6 +267,10 @@ public class xService
 
             case "asyncSection":
                 return frame.assignValue(iReturn, frame.f_fiber.getAsyncSection());
+
+            case "criticalSection":
+                // TODO GG: implement registerCriticalSection(CriticalSection?)
+                return frame.assignValue(iReturn, xNullable.NULL);
             }
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
         }
