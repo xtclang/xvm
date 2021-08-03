@@ -750,7 +750,7 @@ public class Frame
 
                         default:
                             // why did the compiler/verifier allow this?
-                            if (typeFrom.containsAutoNarrowing(false))
+                            if (typeFrom.containsAutoNarrowing(true))
                                 {
                                 // TODO: how to get the narrowing context?
                                 }
