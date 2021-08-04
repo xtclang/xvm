@@ -719,14 +719,6 @@
             case @Unchecked Int128  : n -> n.toInt128() .toUnchecked().as(To);
             case @Unchecked IntN    : n -> n.toIntN()   .toUnchecked().as(To);
 
-// TODO GG
-//            case (Int8  -Unchecked) : n -> n.toInt8()   .toChecked()  .as(To);
-//            case (Int16 -Unchecked) : n -> n.toInt16()  .toChecked()  .as(To);
-//            case (Int32 -Unchecked) : n -> n.toInt32()  .toChecked()  .as(To);
-//            case (Int64 -Unchecked) : n -> n.toInt64()  .toChecked()  .as(To);
-//            case (Int128-Unchecked) : n -> n.toInt128() .toChecked()  .as(To);
-//            case (IntN  -Unchecked) : n -> n.toIntN()   .toChecked()  .as(To);
-
             case Int8               : n -> n.toInt8()                 .as(To);
             case Int16              : n -> n.toInt16()                .as(To);
             case Int32              : n -> n.toInt32()                .as(To);
@@ -740,14 +732,6 @@
             case @Unchecked UInt64  : n -> n.toUInt64() .toUnchecked().as(To);
             case @Unchecked UInt128 : n -> n.toUInt128().toUnchecked().as(To);
             case @Unchecked UIntN   : n -> n.toUIntN()  .toUnchecked().as(To);
-
-// TODO GG
-//            case (UInt8  -Unchecked): n -> n.toUInt8()  .toChecked()  .as(To);
-//            case (UInt16 -Unchecked): n -> n.toUInt16() .toChecked()  .as(To);
-//            case (UInt32 -Unchecked): n -> n.toUInt32() .toChecked()  .as(To);
-//            case (UInt64 -Unchecked): n -> n.toUInt64() .toChecked()  .as(To);
-//            case (UInt128-Unchecked): n -> n.toUInt128().toChecked()  .as(To);
-//            case (UIntN  -Unchecked): n -> n.toUIntN()  .toChecked()  .as(To);
 
             case UInt8              : n -> n.toUInt8()                .as(To);
             case UInt16             : n -> n.toUInt16()               .as(To);
