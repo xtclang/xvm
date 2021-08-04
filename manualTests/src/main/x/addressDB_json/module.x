@@ -127,7 +127,7 @@ module AddressBookDB_jsondb
             @Override
             void addContact(AddressBookDB_.Contact contact)
                 {
-                using (ensureTransaction())
+                using (this.AddressBookDBClient_.ensureTransaction())
                     {
                     super(contact);
                     }
@@ -136,7 +136,7 @@ module AddressBookDB_jsondb
             @Override
             void addPhone(String name, AddressBookDB_.Phone phone)
                 {
-                using (ensureTransaction())
+                using (this.AddressBookDBClient_.ensureTransaction())
                     {
                     super(name, phone);
                     }
