@@ -187,10 +187,9 @@ static service Catalog
     // TODO GG: if inlined, doesn't compile (registers mismatch)
     DBObjectStore createMapStore(DBObjectInfo info, Appender<String> errs)
         {
-        Type<DBMap>   typeDBMap   = info.type.as(Type<DBMap>);
-        assert Type[] typeParams := typeDBMap.parameterized();
-        Type<immutable Const> keyType = typeParams[0].as(Type<immutable Const>);
-        Type<immutable Const> valType = typeParams[1].as(Type<immutable Const>);
+        Type<DBMap> typeDBMap = info.type.as(Type<DBMap>);
+        assert Type keyType := typeDBMap.resolveFormalType("Key")  , keyType.is(Type<immutable Const>);
+        assert Type valType := typeDBMap.resolveFormalType("Value"), valType.is(Type<immutable Const>);
         return new DBMapStore<keyType.DataType, valType.DataType>(info, storeFor("").errs);
         }
 

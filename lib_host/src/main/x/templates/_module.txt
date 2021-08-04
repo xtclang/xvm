@@ -1,16 +1,70 @@
 module %appName%_imdb
+        incorporates imdb_.CatalogMetadata<%appSchema%_>
     {
-    package db import oodb.xtclang.org;
-    package imdb import imdb;
-    package %appName% import %appName%;
+    package oodb_ import oodb.xtclang.org;
+    package imdb_ import imdb.xtclang.org;
 
-    import %appName%.%appSchema%;
+    import oodb_.DBUser as DBUser_;
 
-    typedef (db.Connection<%appSchema%> + %appSchema%) Connection;
+    import imdb_.Client       as Client_;
+    import imdb_.DBObjectInfo as DBObjectInfo_;
 
-    Connection simulateInjection()
+    package %appName%_ import %appName%;
+
+    import %appName%_.%appSchema% as %appSchema%_;
+
+    @Override
+    @RO Module schemaModule.get()
         {
-        Connection connection = Server%appSchema%.createConnection();
-        return &connection.maskAs<Connection>();
+        assert Module m := %appName%_.isModuleImport();
+        return m;
+        }
+
+    @Override
+    @Lazy Map<String, DBObjectInfo_> dbObjectInfos.calc()
+        {
+        return Map:
+            [
+            "" = new DBObjectInfo_("", DBSchema, oodb_.DBSchema),
+%PropertyInfos%
+            ];
+        }
+
+    @Override
+    Client_<%appSchema%_> createClient(
+            Int                     clientId,
+            DBUser_                 dbUser,
+            Boolean                 readOnly = False,
+            function void(Client_)? notifyOnClose = Null)
+        {
+        return new %appName%Client_(clientId, dbUser, readOnly, notifyOnClose);
+        }
+
+    service %appName%Client_(
+            Int                     clientId,
+            DBUser_                 dbUser,
+            Boolean                 readOnly = False,
+            function void(Client_)? notifyOnClose = Null)
+                extends Client_<%appSchema%_>(clientId, dbUser, readOnly, notifyOnClose)
+        {
+        @Override
+        class RootSchemaImpl(imdb_.Catalog.SchemaStore store_)
+                implements %appSchema%_
+            {
+%PropertyGetters%
+            }
+
+        @Override
+        Client_.DBObjectImpl createImpl(String id)
+            {
+            switch (id)
+                {
+%CustomImplInstantiations%
+                }
+
+            return super(id);
+            }
+
+%CustomImplDeclarations%
         }
     }

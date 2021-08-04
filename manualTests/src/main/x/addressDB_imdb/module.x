@@ -4,15 +4,10 @@ module AddressBookDB_imdb
     package oodb_ import oodb.xtclang.org;
     package imdb_ import imdb.xtclang.org;
 
-    import oodb_.DBSchema  as DBSchema_;
-    import oodb_.DBCounter as DBCounter_;
-    import oodb_.DBMap     as DBMap_;
-    import oodb_.DBUser    as DBUser_;
+    import oodb_.DBUser as DBUser_;
 
-    import imdb_.Client             as Client_;
-    import imdb_.DBObjectInfo       as DBObjectInfo_;
-    import imdb_.DBObjectStore      as DBObjectStore_;
-    import imdb_.storage.DBMapStore as DBMapStore_;
+    import imdb_.Client       as Client_;
+    import imdb_.DBObjectInfo as DBObjectInfo_;
 
     package AddressBookDB_ import AddressBookDB;
 
@@ -30,9 +25,10 @@ module AddressBookDB_imdb
         {
         return Map:
             [
-            "" = new DBObjectInfo_("", DBSchema, DBSchema_),
-            "contacts" = new DBObjectInfo_("contacts", DBMap, DBMap_<String, AddressBookDB_.Contact>),
-            "requestCount" = new DBObjectInfo_("requestCount", DBCounter, DBCounter_),
+            "" = new DBObjectInfo_("", DBSchema, oodb_.DBSchema),
+            "contacts" = new DBObjectInfo_("contacts", DBMap, AddressBookDB_.Contacts),
+            "requestCount" = new DBObjectInfo_("requestCount", DBCounter, AddressBookDB_.oodb.DBCounter),
+
             ];
         }
 
@@ -46,11 +42,12 @@ module AddressBookDB_imdb
         return new AddressBookDBClient_(clientId, dbUser, readOnly, notifyOnClose);
         }
 
-    service AddressBookDBClient_(Int                     clientId,
-                                 DBUser_                 dbUser,
-                                 Boolean                 readOnly = False,
-                                 function void(Client_)? notifyOnClose = Null)
-            extends Client_<AddressBookSchema_>(clientId, dbUser, readOnly, notifyOnClose)
+    service AddressBookDBClient_(
+            Int                     clientId,
+            DBUser_                 dbUser,
+            Boolean                 readOnly = False,
+            function void(Client_)? notifyOnClose = Null)
+                extends Client_<AddressBookSchema_>(clientId, dbUser, readOnly, notifyOnClose)
         {
         @Override
         class RootSchemaImpl(imdb_.Catalog.SchemaStore store_)
@@ -63,9 +60,9 @@ module AddressBookDB_imdb
                 }
 
             @Override
-            oodb_.DBCounter requestCount.get()
+            AddressBookDB_.oodb.DBCounter requestCount.get()
                 {
-                return this.AddressBookDBClient_.implFor("requestCount").as(oodb_.DBCounter);
+                return this.AddressBookDBClient_.implFor("requestCount").as(AddressBookDB_.oodb.DBCounter);
                 }
             }
 
@@ -76,13 +73,13 @@ module AddressBookDB_imdb
                 {
                 case "contacts":
                     return new ContactsImpl_(this.AddressBookDBClient_.storeFor("contacts")
-                        .as(DBMapStore_<String, AddressBookDB_.Contact>));
+                        .as(imdb_.storage.DBMapStore<String, AddressBookDB_.Contact>));
                 }
 
             return super(id);
             }
 
-        class ContactsImpl_(DBMapStore_<String, AddressBookDB_.Contact> store_)
+        class ContactsImpl_(imdb_.storage.DBMapStore<String, AddressBookDB_.Contact> store_)
                 extends DBMapImpl<String, AddressBookDB_.Contact>(store_)
                 incorporates AddressBookDB_.Contacts
             {
@@ -91,7 +88,7 @@ module AddressBookDB_imdb
             @Override
             void addContact(AddressBookDB_.Contact contact)
                 {
-                using (ensureTransaction(this))
+                using (this.AddressBookDBClient_.ensureTransaction(this))
                     {
                     super(contact);
                     }
@@ -100,7 +97,7 @@ module AddressBookDB_imdb
             @Override
             void addPhone(String name, AddressBookDB_.Phone phone)
                 {
-                using (ensureTransaction(this))
+                using (this.AddressBookDBClient_.ensureTransaction(this))
                     {
                     super(name, phone);
                     }

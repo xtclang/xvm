@@ -1,0 +1,3 @@
+                case "%propertyName%":
+                    return new %propertyTypeName%Impl_(this.%appName%Client_.storeFor("%propertyName%")
+                        .as(%propertyType%));

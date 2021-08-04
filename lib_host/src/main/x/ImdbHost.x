@@ -45,15 +45,9 @@ class ImdbHost
             throw new IllegalState($"Schema is not found in {dbModuleName} module");
             }
 
-        String appSchema  = appSchemaTemplate.name;
-        File   moduleFile = moduleDir.fileFor("module.x");
+        File moduleFile = moduleDir.fileFor("module.x");
 
-        createModule(moduleFile, appName, appSchema);
-
-        String clientSchema = "Client" + appSchema;
-        File   clientFile   = moduleDir.fileFor($"{clientSchema}.x");
-
-        createClient(clientFile, appName, appSchema, clientSchema, appSchemaTemplate);
+        createModule(moduleFile, appName, appSchemaTemplate);
 
         // temporary; replace with the compilation of generated source
         return repository.getModule(dbModuleName + "_imdb");
@@ -87,40 +81,21 @@ class ImdbHost
     /**
      * Create module.x source file.
      */
-    void createModule(File moduleFile, String appName, String appSchema)
+    void createModule(File moduleFile, String appName, ClassTemplate appSchemaTemplate)
         {
-        String moduleTemplate = $./templates/_module.txt;
-        String moduleSource   = moduleTemplate
-                                .replace("%appName%",   appName)
-                                .replace("%appSchema%", appSchema);
-        moduleFile.create();
-        writeUtf(moduleFile, moduleSource);
-        }
-
-    /**
-     * Create Client%appSchema%.x source file.
-     */
-     void createClient(File clientFile, String appName, String appSchema, String clientSchema,
-                       ClassTemplate appSchemaTemplate)
-        {
-        String clientTemplate = $./templates/ClientSchema.txt;
-        String clientSource   = clientTemplate
-                                .replace("%appName%",   appName)
-                                .replace("%appSchema%", appSchema)
-                                ;
+        String appSchema = appSchemaTemplate.name;
 
         Tuple<PropertyTemplate, DBCategory>[] dbProps = collectDBProps(appSchemaTemplate);
 
-        String propertyDeclarations = "";
-        String childClasses         = "";
-        String txGetters            = "";
+        String propertyInfos            = "";
+        String propertyGetters          = "";
+        String customImplInstantiations = "";
+        String customImplDeclarations   = "";
 
         for (Tuple<PropertyTemplate, DBCategory> propInfo : dbProps)
             {
             PropertyTemplate property = propInfo[0];
             DBCategory       category = propInfo[1];
-
-            String declarationTemplate  = $./templates/ClientPropertyDeclaration.txt;
 
             assert Composition typeTemplate := property.type.fromClass();
             assert typeTemplate.is(ClassTemplate);
@@ -129,67 +104,70 @@ class ImdbHost
             String propertyType     = displayName(typeTemplate, appName);
             String propertyTypeName = typeTemplate.name; // TODO handle composite type
 
-            propertyDeclarations  += declarationTemplate
-                                    .replace("%appSchema%"       , appSchema)
-                                    .replace("%propertyName%"    , propertyName)
-                                    .replace("%propertyType%"    , propertyType)
-                                    .replace("%propertyTypeName%", propertyTypeName)
-                                    ;
+            String propertyInfo = $./templates/PropertyInfo.txt;
 
-            String txGetterTemplate = $./templates/ClientTxPropertyGetter.txt;
+            propertyInfos += propertyInfo
+                                .replace("%propertyName%"    , propertyName)
+                                .replace("%propertyCategory%", category.name)
+                                .replace("%propertyType%"    , propertyType)
+                                ;
 
-            txGetters += txGetterTemplate
-                                    .replace("%appSchema%"       , appSchema)
-                                    .replace("%propertyName%"    , propertyName)
-                                    .replace("%propertyType%"    , propertyType)
-                                    ;
+            String propertyGetter = $./templates/PropertyGetter.txt;
 
-            switch (category)
-                {
-                case DBMap:
-                    assert TypeTemplate keyType       := property.type.resolveFormalType("Key");
-                    assert TypeTemplate valueType     := property.type.resolveFormalType("Value");
-                    assert Composition  keyTemplate   := keyType.fromClass();
-                    assert Composition  valueTemplate := valueType.fromClass();
-                    assert keyTemplate.is(ClassTemplate);
-                    assert valueTemplate.is(ClassTemplate);
+            propertyGetters += propertyGetter
+                                .replace("%appName%"     , appName)
+                                .replace("%propertyName%", propertyName)
+                                .replace("%propertyType%", propertyType)
+                                ;
 
-                    String childClass = $./templates/ClientDBMap.txt;
-                    String methods     = "";
-                    String invocations = "";
-
-                    childClasses  += childClass
-                                    .replace("%appSchema%"             , appSchema)
-                                    .replace("%propertyType%"          , propertyType)
-                                    .replace("%propertyTypeName%"      , propertyTypeName)
-                                    .replace("%keyType%"               , displayName(keyTemplate, appName))
-                                    .replace("%valueType%"             , displayName(valueTemplate, appName))
-                                    .replace("%ClientDBMapMethods%"    , methods)
-                                    .replace("%ClientDBMapInvocations%", invocations)
-                                    ;
-                    break;
-
-                case DBCounter:
-                    String childClass = $./templates/ClientDBCounter.txt;
-                    childClasses  += childClass
-                                    .replace("%appSchema%"       , appSchema)
-                                    .replace("%propertyType%"    , propertyType)
-                                    .replace("%propertyTypeName%", propertyTypeName);
-                    break;
-
-                default:
-                    TODO
-                }
+//            switch (category)
+//                {
+//                case DBMap:
+//                    assert TypeTemplate keyType       := property.type.resolveFormalType("Key");
+//                    assert TypeTemplate valueType     := property.type.resolveFormalType("Value");
+//                    assert Composition  keyTemplate   := keyType.fromClass();
+//                    assert Composition  valueTemplate := valueType.fromClass();
+//                    assert keyTemplate.is(ClassTemplate);
+//                    assert valueTemplate.is(ClassTemplate);
+//
+//                    String childClass = $./templates/ClientDBMap.txt;
+//                    String methods     = "";
+//                    String invocations = "";
+//
+//                    childClasses  += childClass
+//                                    .replace("%appSchema%"             , appSchema)
+//                                    .replace("%propertyType%"          , propertyType)
+//                                    .replace("%propertyTypeName%"      , propertyTypeName)
+//                                    .replace("%keyType%"               , displayName(keyTemplate, appName))
+//                                    .replace("%valueType%"             , displayName(valueTemplate, appName))
+//                                    .replace("%ClientDBMapMethods%"    , methods)
+//                                    .replace("%ClientDBMapInvocations%", invocations)
+//                                    ;
+//                    break;
+//
+//                case DBCounter:
+//                    String childClass = $./templates/ClientDBCounter.txt;
+//                    childClasses  += childClass
+//                                    .replace("%appSchema%"       , appSchema)
+//                                    .replace("%propertyType%"    , propertyType)
+//                                    .replace("%propertyTypeName%", propertyTypeName);
+//                    break;
+//
+//                default:
+//                    TODO
+//                }
             }
 
-        clientSource = clientSource
-                        .replace("%ClientPropertyDeclarations%",  propertyDeclarations)
-                        .replace("%ClientChildrenClasses%",       childClasses)
-                        .replace("%ClientTxPropertyGetters%",     txGetters)
-                        ;
+        String moduleTemplate = $./templates/_module.txt;
+        String moduleSource   = moduleTemplate
+                                .replace("%appName%"        , appName)
+                                .replace("%appSchema%"      , appSchema)
+                                .replace("%PropertyInfos%"  , propertyInfos)
+                                .replace("%PropertyGetters%", propertyGetters)
+                                ;
 
-        clientFile.create();
-        writeUtf(clientFile, clientSource);
+        moduleFile.create();
+        writeUtf(moduleFile, moduleSource);
         }
 
     /**
@@ -239,7 +217,7 @@ class ImdbHost
      */
     String displayName(ClassTemplate template, String appName)
         {
-        return template.implicitName ?: (appName + '.' + template.displayName);
+        return template.implicitName ?: (appName + "_." + template.displayName);
         }
 
     @Override
