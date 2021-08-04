@@ -91,26 +91,18 @@ module AddressBookDB_imdb
             @Override
             void addContact(AddressBookDB_.Contact contact)
                 {
-                (oodb_.Transaction tx, Boolean autoCommit) = ensureTransaction(this);
-
-                super(contact);
-
-                if (autoCommit)
+                using (ensureTransaction(this))
                     {
-                    tx.commit();
+                    super(contact);
                     }
                 }
 
             @Override
             void addPhone(String name, AddressBookDB_.Phone phone)
                 {
-                (oodb_.Transaction tx, Boolean autoCommit) = ensureTransaction(this);
-
-                super(name, phone);
-
-                if (autoCommit)
+                using (ensureTransaction(this))
                     {
-                    tx.commit();
+                    super(name, phone);
                     }
                 }
 

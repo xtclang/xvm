@@ -136,15 +136,14 @@ service Client<Schema extends RootSchema>
         }
 
     /**
-     * Obtain the current transaction, creating one if necessary.
+     * Obtain the current transaction, creating one if necessary, and wrapping it in a transactional
+     * context.
      *
      * @param impl  the DBObjectImpl that should be enlisted into the transaction
      *
-     * @return the Transaction
-     * @return True if the caller is responsible for committing the returned transaction after using
-     *         it
+     * @return the transactional context object
      */
-    (Transaction + Schema tx, Boolean autocommit) ensureTransaction(DBObjectImpl impl)
+    TxContext ensureTransaction(DBObjectImpl impl)
         {
         checkRead();
 
@@ -158,7 +157,10 @@ service Client<Schema extends RootSchema>
             }
 
         tx.enlist(impl);
-        return tx, autocommit;
+
+        private TxContext ctx = new TxContext();
+        ctx.init(tx, autocommit);
+        return ctx;
         }
 
     /**
@@ -579,6 +581,37 @@ service Client<Schema extends RootSchema>
 
             enlisted_.clear();
             outer.tx  = Null; // pending == False
+            }
+        }
+
+
+    // ----- TxContext -----------------------------------------------------------------------------
+
+    /**
+     * The TxContext simplifies transaction management on an operation-by-operation basis.
+     */
+    protected class TxContext
+            implements Closeable
+        {
+        (Transaction + Schema)? tx;
+        Boolean                 autocommit;
+
+        void init(Transaction + Schema tx, Boolean autocommit)
+            {
+            assert this.tx == Null;
+            this.tx = tx;
+            this.autocommit = autocommit;
+            }
+
+        @Override
+        void close(Exception? e = Null)
+            {
+            assert Transaction tx ?= this.tx;
+            if (autocommit)
+                {
+                tx.commit();
+                }
+            this.tx = Null;
             }
         }
 
