@@ -39,16 +39,17 @@ public class DebugConsole
     @Override
     public int checkBreakPoint(Frame frame, int iPC)
         {
-        boolean    fDebug = false;
+        boolean fDebug = false;
         switch (m_stepMode)
             {
             case StepOver:
-                // over on Return could step out
-                fDebug = frame.f_iId <= m_frame.f_iId;
+                // "step over" on Return can turn into "step out"
+                fDebug = frame.f_context == m_frame.f_context && frame.f_iId <= m_frame.f_iId;
                 break;
 
             case StepOut:
-                fDebug = frame.f_iId < m_frame.f_iId;
+                // TODO: how to "step out" of service?
+                fDebug = frame.f_context == m_frame.f_context && frame.f_iId < m_frame.f_iId;
                 break;
 
             case StepInto:
@@ -56,7 +57,8 @@ public class DebugConsole
                 break;
 
             case StepLine:
-                fDebug = frame.f_iId == m_frame.f_iId && iPC == m_iPC;
+                fDebug = frame.f_context == m_frame.f_context && frame.f_iId == m_frame.f_iId &&
+                         iPC == m_iPC;
                 break;
 
             case None:
@@ -244,7 +246,7 @@ public class DebugConsole
 
                 writer.println("invalid command: " + sCommand);
                 }
-            catch (IOException e) {}
+            catch (IOException ignored) {}
             }
 
         frame.f_context.setDebuggerActive(!m_setBP.isEmpty() || m_stepMode != StepMode.None);
