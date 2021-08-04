@@ -2425,10 +2425,10 @@ public class TypeCompositionStatement
                 }
             }
 
-        ClassStructure clzSuper  = component.getSuper();
-        TypeInfo       infoSuper = clzSuper == null
-                ? null
-                : pool().ensureAccessTypeConstant(clzSuper.getFormalType(), Access.PROTECTED).ensureTypeInfo(errs);
+        Contribution contribExtends = component.findContribution(Composition.Extends);
+        TypeConstant typeSuper      = contribExtends == null ? null : contribExtends.getTypeConstant();
+
+        TypeInfo         infoSuper;
         MethodConstant   idSuper;
         MethodStructure  constructSuper;
         List<Expression> listArgs;
@@ -2462,23 +2462,26 @@ public class TypeCompositionStatement
 
         if (listArgs != null && !listArgs.isEmpty())
             {
-            assert clzSuper != null;
+            assert typeSuper != null;
             }
 
-        if (clzSuper == null)
+        if (typeSuper == null)
             {
+            infoSuper      = null;
             idSuper        = null;
             constructSuper = null;
             }
         else
             {
-            idSuper = findMethod(ctxValidate, infoSuper.getType(), infoSuper, "construct", listArgs,
+            infoSuper = pool().ensureAccessTypeConstant(typeSuper, Access.PROTECTED).
+                            ensureTypeInfo(errs);
+            idSuper   = findMethod(ctxValidate, infoSuper.getType(), infoSuper, "construct", listArgs,
                             MethodKind.Constructor, true, false, null, errs);
             if (idSuper == null)
                 {
                 // if an error have already been logged, this is additional information
                 log(errs, Severity.ERROR, Compiler.IMPLICIT_SUPER_CONSTRUCTOR_MISSING,
-                        component.getIdentityConstant().getValueString(), clzSuper.getName());
+                        component.getIdentityConstant().getValueString(), typeSuper.getValueString());
                 return;
                 }
             constructSuper = infoSuper.getMethodById(idSuper).getHead().getMethodStructure();

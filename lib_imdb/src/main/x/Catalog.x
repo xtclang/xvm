@@ -213,7 +213,7 @@ static service Catalog
 
 
     /**
-     * DBCoounterStore as a virtual child.
+     * DBCounterStore as a virtual child.
      */
     class DBCounterStore(DBObjectInfo info, Appender<String> errs)
             extends storage.DBCounterStore(info, errs)

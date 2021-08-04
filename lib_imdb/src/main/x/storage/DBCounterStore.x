@@ -2,7 +2,7 @@
  * In-memory store for a DBCounter.
  */
 class DBCounterStore(DBObjectInfo info, Appender<String> errs)
-        extends DBValueStore<Int>(info, errs, Int:0) // TODO GG
+        extends DBValueStore<Int>(info, errs, 0)
     {
     // ----- master view ---------------------------------------------------------------------------
 
