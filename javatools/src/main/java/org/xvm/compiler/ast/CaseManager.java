@@ -348,7 +348,7 @@ public class CaseManager<CookieType>
                             AstNode nodeCond = listCond.get(i);
                             if (nodeCond instanceof NameExpression)
                                 {
-                                m_lTypeExpr |= 1 << i;
+                                m_lTypeExpr |= 1L << i;
                                 }
                             }
                         }
@@ -430,14 +430,14 @@ public class CaseManager<CookieType>
                     Expression exprField = listFields.get(i);
                     if (exprField instanceof IgnoredNameExpression)
                         {
-                        lIgnore |= 1 << i;
+                        lIgnore |= 1L << i;
                         }
                     else if (!exprField.testFit(ctx, m_atypeCond[i], null).isFit())
                         {
                         TypeConstant typeRange = pool.ensureRangeType(m_atypeCond[i]);
                         if (exprField.testFit(ctx, typeRange, null).isFit())
                             {
-                            lRange |= 1 << i;
+                            lRange |= 1L << i;
 
                             if (atypeAlt == null)
                                 {
@@ -667,10 +667,7 @@ public class CaseManager<CookieType>
         boolean fValid = true;
 
         // the context must match
-        if (m_ctxSwitch != null)
-            {
-            assert ctx == m_ctxSwitch;
-            }
+        assert m_ctxSwitch == null || ctx == m_ctxSwitch;
 
         if (m_labelCurrent != null)
             {
