@@ -52,7 +52,7 @@ val compileAll = tasks.register<JavaExec>("compileAll") {
         "-L", "${xdk.buildDir}/xdk/javatools/javatools_bridge.xtc")
 
     args(opts + tests)
-    main = "org.xvm.tool.Compiler"
+    mainClass.set("org.xvm.tool.Compiler")
 }
 
 tasks.register<JavaExec>("runAll") {
@@ -71,7 +71,7 @@ tasks.register<JavaExec>("runAll") {
         "${javatools.buildDir}/classes/java/test")
 
     args(tests)
-    main = "org.xvm.runtime.TestConnector"
+    mainClass.set("org.xvm.runtime.TestConnector")
 }
 
 val compileOne = tasks.register<JavaExec>("compileOne") {
@@ -89,7 +89,7 @@ val compileOne = tasks.register<JavaExec>("compileOne") {
          "-L", "${xdk.buildDir}/xdk/javatools/javatools_bridge.xtc",
          "-L", "$buildDir",
          "src/main/x/$name.x")
-    main = "org.xvm.tool.Compiler"
+    mainClass.set("org.xvm.tool.Compiler")
 }
 
 tasks.register<JavaExec>("runOne") {
@@ -110,7 +110,7 @@ tasks.register<JavaExec>("runOne") {
         "${javatools.buildDir}/classes/java/test")
 
     args("src/main/x/$name.x")
-    main = "org.xvm.runtime.TestConnector"
+    mainClass.set("org.xvm.runtime.TestConnector")
 }
 
 tasks.register<JavaExec>("hostOne") {
@@ -132,7 +132,7 @@ tasks.register<JavaExec>("hostOne") {
         "${xdk.buildDir}/xdk/lib/host.xtc")
 
     args(opts + "build/$name.xtc")
-    main = "org.xvm.tool.Runner"
+    mainClass.set("org.xvm.tool.Runner")
 }
 
 tasks.register<JavaExec>("hostAll") {
@@ -176,5 +176,5 @@ tasks.register<JavaExec>("hostAll") {
         "build/TestTuples.xtc")
 
     args(opts + names)
-    main = "org.xvm.tool.Runner"
+    mainClass.set("org.xvm.tool.Runner")
 }

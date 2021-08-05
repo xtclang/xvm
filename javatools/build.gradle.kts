@@ -52,14 +52,19 @@ tasks.jar {
     }
 }
 
-java {
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
+tasks.compileTestJava {
+    dependsOn(tasks["copyImplicits"])
+    dependsOn(tasks["copyUtils"])
 }
 
 tasks.test {
     useJUnit();
     maxHeapSize = "1G"
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
 }
 
 dependencies {

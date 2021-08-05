@@ -74,7 +74,7 @@ val compileEcstasy = tasks.register<JavaExec>("compileEcstasy") {
             "-version", "$version",
             "$ecstasyMain/x/module.x",
             "$bridgeMain/x/module.x")
-    main = "org.xvm.tool.Compiler"
+    mainClass.set("org.xvm.tool.Compiler")
 
     doLast {
         file("$libDir/_native.xtc").
@@ -87,6 +87,8 @@ val compileAggregate = tasks.register<JavaExec>("compileAggregate") {
     group       = "Build"
     description = "Build aggregate.xtc module"
 
+    dependsOn(javatools.tasks["build"])
+
     shouldRunAfter(compileEcstasy)
 
     jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
@@ -98,12 +100,14 @@ val compileAggregate = tasks.register<JavaExec>("compileAggregate") {
             "-L", "$coreLib",
             "-L", "$bridgeLib",
             "$aggregateMain/x/module.x")
-    main = "org.xvm.tool.Compiler"
+    mainClass.set("org.xvm.tool.Compiler")
 }
 
 val compileCollections = tasks.register<JavaExec>("compileCollections") {
     group       = "Build"
     description = "Build collections.xtc module"
+
+    dependsOn(javatools.tasks["build"])
 
     shouldRunAfter(compileEcstasy)
 
@@ -116,12 +120,14 @@ val compileCollections = tasks.register<JavaExec>("compileCollections") {
             "-L", "$coreLib",
             "-L", "$bridgeLib",
             "$collectionsMain/x/module.x")
-    main = "org.xvm.tool.Compiler"
+    mainClass.set("org.xvm.tool.Compiler")
 }
 
 val compileJson = tasks.register<JavaExec>("compileJson") {
     group       = "Build"
     description = "Build json.xtc module"
+
+    dependsOn(javatools.tasks["build"])
 
     shouldRunAfter(compileEcstasy)
 
@@ -134,12 +140,14 @@ val compileJson = tasks.register<JavaExec>("compileJson") {
             "-L", "$coreLib",
             "-L", "$bridgeLib",
             "$jsonMain/x/module.x")
-    main = "org.xvm.tool.Compiler"
+    mainClass.set("org.xvm.tool.Compiler")
 }
 
 val compileOODB = tasks.register<JavaExec>("compileOODB") {
     group       = "Build"
     description = "Build oodb.xtc module"
+
+    dependsOn(javatools.tasks["build"])
 
     shouldRunAfter(compileEcstasy)
 
@@ -152,12 +160,14 @@ val compileOODB = tasks.register<JavaExec>("compileOODB") {
             "-L", "$coreLib",
             "-L", "$bridgeLib",
             "$oodbMain/x/module.x")
-    main = "org.xvm.tool.Compiler"
+   mainClass.set("org.xvm.tool.Compiler")
 }
 
 val compileIMDB = tasks.register<JavaExec>("compileIMDB") {
     group       = "Build"
     description = "Build imdb.xtc module"
+
+    dependsOn(javatools.tasks["build"])
 
     shouldRunAfter(compileOODB)
 
@@ -171,12 +181,14 @@ val compileIMDB = tasks.register<JavaExec>("compileIMDB") {
             "-L", "$bridgeLib",
             "-L", "$libDir",
             "$imdbMain/x/module.x")
-    main = "org.xvm.tool.Compiler"
+    mainClass.set("org.xvm.tool.Compiler")
 }
 
 val compileJsonDB = tasks.register<JavaExec>("compileJsonDB") {
     group       = "Build"
     description = "Build jsondb.xtc module"
+
+    dependsOn(javatools.tasks["build"])
 
     shouldRunAfter(compileJson)
     shouldRunAfter(compileOODB)
@@ -191,12 +203,14 @@ val compileJsonDB = tasks.register<JavaExec>("compileJsonDB") {
             "-L", "$bridgeLib",
             "-L", "$libDir",
             "$jsondbMain/x/module.x")
-    main = "org.xvm.tool.Compiler"
+    mainClass.set("org.xvm.tool.Compiler")
 }
 
 val compileHost = tasks.register<JavaExec>("compileHost") {
     group       = "Build"
     description = "Build host.xtc module"
+
+    dependsOn(javatools.tasks["build"])
 
     shouldRunAfter(compileIMDB)
     shouldRunAfter(compileJsonDB)
@@ -211,12 +225,14 @@ val compileHost = tasks.register<JavaExec>("compileHost") {
             "-L", "$bridgeLib",
             "-L", "$libDir",
             "$hostMain/x/module.x")
-    main = "org.xvm.tool.Compiler"
+    mainClass.set("org.xvm.tool.Compiler")
 }
 
 val compileWeb = tasks.register<JavaExec>("compileWeb") {
     group       = "Execution"
     description = "Build web.xtc module"
+
+    dependsOn(javatools.tasks["build"])
 
     shouldRunAfter(compileEcstasy)
 
@@ -225,11 +241,12 @@ val compileWeb = tasks.register<JavaExec>("compileWeb") {
     classpath(javatoolsJar)
     args("-verbose",
             "-o", "$libDir",
+            "-version", "$version",
             "-L", "$coreLib",
             "-L", "$bridgeLib",
             "-L", "$libDir",
             "$webMain/x/module.x")
-    main = "org.xvm.tool.Compiler"
+    mainClass.set("org.xvm.tool.Compiler")
 }
 
 tasks.register("build") {

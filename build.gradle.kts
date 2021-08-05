@@ -15,7 +15,7 @@ allprojects {
     }
 
     repositories {
-        jcenter {
+        mavenCentral {
             content {
                 excludeGroup("org.xtclang.xvm")
             }

@@ -18,5 +18,5 @@ dependencies {
 }
 
 application {
-    mainClassName = "org.xvm.tool.BuildUnicodeTables"
+    getMainClass().set("org.xvm.tool.BuildUnicodeTables")
 }
