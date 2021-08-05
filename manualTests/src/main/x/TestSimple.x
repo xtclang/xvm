@@ -17,6 +17,7 @@ module TestSimple.test.org
             {
             console.println(e.text);
             }
+        console.println("ok");
         }
 
     conditional Int test(Map<String, Int> map, String key)

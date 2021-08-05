@@ -23,6 +23,8 @@ import org.xvm.runtime.template.xService;
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
+import org.xvm.util.ConsoleLog;
+
 
 /**
  * The injectable "Console" that prints to the screen / terminal.
@@ -33,6 +35,7 @@ public class xTerminalConsole
     public static final Console        CONSOLE     = System.console();
     public static final BufferedReader CONSOLE_IN;
     public static final PrintWriter    CONSOLE_OUT;
+    public static final ConsoleLog     CONSOLE_LOG = new ConsoleLog();
     static
         {
         CONSOLE_IN  = CONSOLE == null || CONSOLE.reader() == null
@@ -148,14 +151,18 @@ public class xTerminalConsole
 
     private static Frame.Continuation PRINT = frameCaller ->
         {
-        CONSOLE_OUT.print(((StringHandle) frameCaller.popStack()).getValue());
+        char[] ach = ((StringHandle) frameCaller.popStack()).getValue();
+        CONSOLE_LOG.log(ach, false);
+        CONSOLE_OUT.print(ach);
         CONSOLE_OUT.flush();
         return Op.R_NEXT;
         };
 
     private static Frame.Continuation PRINTLN = frameCaller ->
         {
-        CONSOLE_OUT.println(((StringHandle) frameCaller.popStack()).getValue());
+        char[] ach = ((StringHandle) frameCaller.popStack()).getValue();
+        CONSOLE_LOG.log(ach, true);
+        CONSOLE_OUT.println(ach);
         return Op.R_NEXT;
         };
 
