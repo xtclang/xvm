@@ -357,9 +357,17 @@ public class CaseManager<CookieType>
             }
 
         m_listCond = listCond;
-        m_typeCase = pool.ensureImmutableTypeConstant(m_atypeCond.length == 1
-                ? m_atypeCond[0]
-                : pool.ensureTupleType(m_atypeCond));
+        if (m_atypeCond.length == 1)
+            {
+            TypeConstant typeCond = m_atypeCond[0];
+            m_typeCase = typeCond.isImmutable()
+                    ? typeCond
+                    : pool.ensureImmutableTypeConstant(typeCond);;
+            }
+        else
+            {
+            m_typeCase = pool.ensureImmutableTypeConstant(pool.ensureTupleType(m_atypeCond));
+            }
 
         return fValid;
         }
