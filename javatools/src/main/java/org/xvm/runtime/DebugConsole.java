@@ -100,7 +100,7 @@ public class DebugConsole
         PrintWriter    writer = xTerminalConsole.CONSOLE_OUT;
         BufferedReader reader = xTerminalConsole.CONSOLE_IN;
 
-        writer.println(reportFrame());
+        writer.println(renderDisplay());
 
         NextCommand:
         while (true)
@@ -319,7 +319,8 @@ public class DebugConsole
                                     }
                                 m_frame = frame;
                                 }
-                            writer.println(reportFrame());
+                            m_nViewMode = 0;
+                            writer.println(renderFrames());
                             continue NextCommand;
                             }
                         break;
@@ -348,13 +349,13 @@ public class DebugConsole
                         break NextCommand;
 
                     case "VC":
-                        writer.println("Console:");
-                        writer.println(xTerminalConsole.CONSOLE_LOG.render(m_cWidth, m_cHeight-1));
+                        m_nViewMode = 1;
+                        writer.println(renderConsole());
                         continue NextCommand;
 
                     case "VD":
-                        // TODO
-                        writer.println("TODO view debugger");
+                        m_nViewMode = 0;
+                        writer.println(renderFrames());
                         continue NextCommand;
 
                     case "VW":
@@ -532,7 +533,31 @@ public class DebugConsole
             }
         }
 
-    private String reportFrame()
+    /**
+     * @return a string for whatever the debugger is supposed to display
+     */
+    private String renderDisplay()
+        {
+        switch (m_nViewMode)
+            {
+            case 0: return renderFrames();
+            case 1: return renderConsole();
+            default: return "unknown view mode #" + m_nViewMode;
+            }
+        }
+
+    /**
+     * @return a string for the entire "console" view
+     */
+    private String renderConsole()
+        {
+        return "Console:\n" + xTerminalConsole.CONSOLE_LOG.render(m_cWidth, m_cHeight-1);
+        }
+
+    /**
+     * @return a string for the entire "frames and variables" view
+     */
+    private String renderFrames()
         {
         Frame frame = m_frame;
 
@@ -819,6 +844,18 @@ public class DebugConsole
     // ----- constants and data fields -------------------------------------------------------------
 
     public static final DebugConsole INSTANCE = new DebugConsole();
+
+    /**
+     * Current view mode.
+     * 0=frames & variables
+     * 1=console
+     */
+    private int m_nViewMode = 0;
+
+    /**
+     * The order that the frames were last listed in.
+     */
+    private Frame[] m_aFrames;
 
     /**
      * The last debugged frame.
