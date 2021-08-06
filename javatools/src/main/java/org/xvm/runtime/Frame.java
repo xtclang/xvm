@@ -20,6 +20,7 @@ import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -1782,6 +1783,170 @@ public class Frame
         sb.append('\n');
 
         return sb.toString();
+        }
+
+    public class StackFrame
+        {
+        public StackFrame(Frame frame, MethodStructure function, int iPC)
+            {
+            this.frame    = frame;
+            this.function = function;
+            this.iPC      = iPC;
+            }
+
+        public Frame           frame;
+        public boolean         boundary;
+        public MethodStructure function;
+        public int             iPC;
+
+        @Override
+        public String toString()
+            {
+            StringBuilder sb = new StringBuilder();
+            if (boundary)
+                {
+                sb.append("^");
+                }
+
+            if (function == null)
+                {
+                sb.append("???()");
+                }
+            else
+                {
+                buildShortName(function.getIdentityConstant(), sb, false);
+                }
+
+            sb.append(':');
+
+            if (iPC >= 0)
+                {
+                int nLine = 0;
+                if (function != null)
+                    {
+                    nLine = function.calculateLineNumber(iPC);
+                    }
+
+                if (nLine > 0)
+                    {
+                    sb.append(nLine);
+                    }
+                else
+                    {
+                    sb.append("iPC=")
+                      .append(iPC);
+                    }
+                }
+
+            return sb.toString();
+            }
+
+        private boolean buildShortName(IdentityConstant id, StringBuilder sb, boolean fHasName)
+            {
+            switch (id.getFormat())
+                {
+                case Module:
+                    if (!fHasName)
+                        {
+                        sb.append(((ModuleConstant) id).getUnqualifiedName());
+                        return true;
+                        }
+                    else
+                        {
+                        return false;
+                        }
+
+                case Package:
+                    if (!fHasName)
+                        {
+                        sb.append(id.getName());
+                        return true;
+                        }
+                    else
+                        {
+                        return false;
+                        }
+
+                case Class:
+                    if (buildShortName(id.getParentConstant(), sb, true))
+                        {
+                        sb.append('.');
+                        }
+                    sb.append(id.getName());
+                    return true;
+
+                case Property:
+                    if (buildShortName(id.getParentConstant(), sb, false))
+                        {
+                        sb.append('.');
+                        }
+                    sb.append(id.getName());
+                    return true;
+
+                case Method:
+                    if (buildShortName(id.getParentConstant(), sb, false))
+                        {
+                        sb.append('.');
+                        }
+                    sb.append(id.getName())
+                      .append("()");
+                    return true;
+
+                default:
+                    return buildShortName(id.getParentConstant(), sb, fHasName);
+                }
+            }
+        }
+
+    StackFrame[] getStackFrameArray()
+        {
+        Frame frame = this;
+        Fiber fiber = frame.f_fiber;
+        int   iPC   = m_iPC;
+
+        if (f_fiber.getStatus() != Fiber.FiberStatus.Running)
+            {
+            // the exception was caused by the previous op-code
+            iPC--;
+            }
+
+        List<StackFrame> listFrames = new ArrayList<>(7);
+        while (true)
+            {
+            StackFrame stackFrame = new StackFrame(frame, frame.f_function, iPC);
+            listFrames.add(stackFrame);
+
+            iPC   = frame.f_iPCPrev;
+            frame = frame.f_framePrev;
+            if (frame == null)
+                {
+                Fiber fiberCaller = fiber.f_fiberCaller;
+                if (fiberCaller == null ||
+                    fiberCaller.f_context.f_container != fiber.f_context.f_container)
+                    {
+                    break;
+                    }
+
+                frame = fiberCaller.getFrame();
+
+                stackFrame.boundary = true;
+
+                if (frame != null)
+                    {
+                    frame = frame.findCallerFrame(fiber.f_iCallerId);
+                    }
+                if (frame == null)
+                    {
+                    // the caller's fiber has moved away from the calling frame;
+                    // simply show the calling function
+                    MethodStructure fnCaller = fiber.f_fnCaller;
+                    listFrames.add(new StackFrame(null, fnCaller, 0));
+                    break;
+                    }
+                fiber = fiberCaller;
+                }
+            }
+        return listFrames.toArray(new StackFrame[0]);
         }
 
     /**

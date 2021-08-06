@@ -5,6 +5,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Optional;
@@ -304,23 +305,17 @@ public class DebugConsole
                         break;
 
                     case "F":
-                        if (cArgs == 1)
+                        if (cArgs == 1 && asParts[1].chars().allMatch(n -> n >= '0' && n <= '9'))
                             {
-                            int nFrame = parseNonNegative(asParts[1]);
-                            if (nFrame > 0)
+                            Frame.StackFrame[] aFrames = m_aFrames;
+                            int                cFrames = aFrames == null ? 0 : aFrames.length;
+                            int                iFrame  = Integer.parseInt(asParts[1]);
+                            if (iFrame >= 0 && iFrame < cFrames)
                                 {
-                                for (int i = nFrame; i > 0; i--)
-                                    {
-                                    frame = frame.f_framePrev;
-                                    if (frame == null)
-                                        {
-                                        break; // invalid frame number
-                                        }
-                                    }
-                                m_frame = frame;
+                                m_frameFocus = aFrames[iFrame].frame;
                                 }
                             m_nViewMode = 0;
-                            writer.println(renderFrames());
+                            writer.println(renderDebugger());
                             continue NextCommand;
                             }
                         break;
@@ -355,21 +350,41 @@ public class DebugConsole
 
                     case "VD":
                         m_nViewMode = 0;
-                        writer.println(renderFrames());
+                        writer.println(renderDebugger());
                         continue NextCommand;
 
-                    case "VW":
+                    case "VS":
                         switch (cArgs)
                             {
                             case 0:
-                                writer.println("Current debugger text width: " + m_cWidth + " characters.");
+                                writer.println("Current debugger text width=" + m_cWidth + " characters, height= " + m_cHeight + " lines.");
                                 continue NextCommand;
 
+                            case 2:
+                                if (asParts[2].chars().allMatch(n -> n >= '0' && n <= '9'))
+                                    {
+                                    int n = Integer.parseInt(asParts[2]);
+                                    if (n >= 10 && n < 1000)
+                                        {
+                                        writer.println("Altering debugger text height from " + m_cHeight + " to " + n + " lines.");
+                                        m_cHeight = n;
+                                        }
+                                    else
+                                        {
+                                        writer.println("Illegal text height: " + n);
+                                        }
+                                    continue NextCommand;
+                                    }
+                                else
+                                    {
+                                    break;
+                                    }
+                                // fall through
                             case 1:
                                 if (asParts[1].chars().allMatch(n -> n >= '0' && n <= '9'))
                                     {
                                     int n = Integer.parseInt(asParts[1]);
-                                    if (n >= 10 && n < 1000)
+                                    if (n >= 40 && n < 1000)
                                         {
                                         writer.println("Altering debugger text width from " + m_cWidth + " to " + n + " characters.");
                                         m_cWidth = n;
@@ -540,7 +555,7 @@ public class DebugConsole
         {
         switch (m_nViewMode)
             {
-            case 0: return renderFrames();
+            case 0: return renderDebugger();
             case 1: return renderConsole();
             default: return "unknown view mode #" + m_nViewMode;
             }
@@ -554,44 +569,196 @@ public class DebugConsole
         return "Console:\n" + xTerminalConsole.CONSOLE_LOG.render(m_cWidth, m_cHeight-1);
         }
 
+    private String renderDebugger()
+        {
+        String[] asFrames  = renderFrames();
+        String[] asVars    = renderVars();
+        String   sFHeader  = "Call stack frames:";
+        String   sVHeader  = "Variables and watches:";
+        int      cchFrames = Math.max(longestOf(asFrames), sFHeader.length());
+        int      cchVars   = Math.max(longestOf(asVars  ), sVHeader.length());
+        if (cchFrames + cchVars + 1 > m_cWidth)
+            {
+            int max = m_cWidth - 1;
+            int half = max / 2;
+            if (cchFrames <= half)
+                {
+                cchVars = max - cchFrames;
+                }
+            else if (cchVars <= half)
+                {
+                cchFrames = max - cchVars;
+                }
+            else
+                {
+                cchFrames = half;
+                cchVars   = max - cchFrames;
+                }
+            }
+
+        StringBuilder sb = new StringBuilder();
+        sb.append(ljust(sFHeader, cchFrames))
+          .append('|')
+          .append(sVHeader)
+          .append('\n')
+          .append(dup('-', cchFrames))
+          .append('|')
+          .append(dup('-', cchVars));
+
+        int    iFrame  = 0;
+        int    cFrames = asFrames.length;
+        String sFrame  = null;
+        int    iVar    = 0;
+        int    cVars   = asVars.length;
+        String sVar    = null;
+        while (true)
+            {
+            // load the next frame to render
+            if (sFrame == null)
+                {
+                if (iFrame < cFrames)
+                    {
+                    sFrame = asFrames[iFrame++];
+                    }
+                }
+            else
+                {
+                // indent trailing lines
+                sFrame = "    " + sFrame;
+                }
+
+            // load the next var to render
+            if (sVar == null)
+                {
+                if (iVar < cVars)
+                    {
+                    sVar = asVars[iVar++];
+                    }
+                }
+            else
+                {
+                // indent trailing lines
+                sFrame = "    " + sVar;
+                }
+
+            if (sFrame == null && sVar == null)
+                {
+                return sb.toString();
+                }
+
+            sb.append('\n');
+
+            // render the frame
+            if (sFrame == null)
+                {
+                sb.append(dup(' ', cchFrames));
+                }
+            else if (sFrame.length() > cchFrames)
+                {
+                sb.append(sFrame.substring(0, cchFrames));
+                sFrame = sFrame.substring(cchFrames);
+                }
+            else
+                {
+                sb.append(ljust(sFrame, cchFrames));
+                sFrame = null;
+                }
+
+            sb.append('|');
+
+            // render the var
+            if (sVar == null)
+                {
+                sb.append(dup(' ', cchVars));
+                }
+            else if (sVar.length() > cchVars)
+                {
+                sb.append(sVar.substring(0, cchVars));
+                sVar = sVar.substring(cchVars);
+                }
+            else
+                {
+                sb.append(ljust(sVar, cchVars));
+                sVar = null;
+                }
+            }
+        }
+
     /**
      * @return a string for the entire "frames and variables" view
      */
-    private String renderFrames()
+    private String[] renderFrames()
         {
-        Frame frame = m_frame;
+        Frame.StackFrame[] aFrames = m_frame.getStackFrameArray();
+        Frame frameNewTop =   aFrames == null ||   aFrames.length < 1 ? null :   aFrames[0].frame;
+        Frame frameOldTop = m_aFrames == null || m_aFrames.length < 1 ? null : m_aFrames[0].frame;
+        m_aFrames = aFrames;
 
-        String[] asStack = frame.getStackTraceArray();
-
-        StringBuilder sb = new StringBuilder();
-// TODO
-        sb.append("Frames: ------------------------------------\n");
-
-        for (int i = 0, c = asStack.length; i < c; i++)
+        Frame frameFocus = m_frameFocus;
+        if (frameOldTop != frameNewTop)
             {
-            sb.append("\n[")
-              .append(i)
-              .append("] ")
-              .append(asStack[i]);
+            frameFocus = frameNewTop;
+            m_frameFocus = frameFocus;
             }
 
-        sb.append("\n\nVariables: ---------------------------------\n");
+        int      cFrames     = aFrames.length;
+        int      cchFrameNum = numlen(cFrames-1);
+        String[] asFrames    = new String[cFrames];
+        for (int i = 0; i < cFrames; ++i)
+            {
+            StringBuilder sb = new StringBuilder();
+            Frame.StackFrame sframe = aFrames[i];
+            sb.append(sframe.frame == frameFocus ? '>' : ' ')
+              .append(rjust(Integer.toString(i), cchFrameNum))
+              .append("  ")
+              .append(sframe.toString());
+            asFrames[i] = sb.toString();
+            }
 
-        int cVars = frame.f_anNextVar[frame.m_iScope];
-        for (int i = 0; i < cVars; i++)
+        return asFrames;
+        }
+
+    private String[] renderVars()
+        {
+        Frame              frame     = m_frameFocus;
+        int                cVars     = frame.f_anNextVar[frame.m_iScope];
+        int                cchVarNum = numlen(cVars-1);
+        ArrayList<VarInfo> listVars  = new ArrayList<>(cVars);
+        ArrayList<String>  listVals  = new ArrayList<>(cVars);
+        for (int i = 0, n = 0; i < cVars; i++)
             {
             VarInfo info = frame.getVarInfo(i);
             String  sVar = info.getName();
             if (!sVar.isEmpty())
                 {
                 ObjectHandle hValue = frame.f_ahVar[i];
-                sb.append("\n")
+                listVars.add(info);
+
+                StringBuilder sb = new StringBuilder();
+                sb.append(rjust(Integer.toString(i), cchVarNum))
+                  .append("  ")
                   .append(sVar)
-                  .append(" = ")
+                  .append('=')
                   .append(hValue == null ? "<not assigned>" : hValue.toString());
+                listVals.add(sb.toString());
                 }
             }
-        return sb.toString();
+        m_aVars = listVars.toArray(new VarInfo[0]);
+        return listVals.toArray(new String[0]);
+        }
+
+    private int longestOf(String[] as)
+        {
+        int max = 0;
+        for (int i = 0, c = as.length; i < c; ++i)
+            {
+            int cch = as[i].length();
+            if (cch > max)
+                {
+                max = cch;
+                }
+            }
+        return max;
         }
 
     private BreakPoint[] allBreakpoints()
@@ -641,43 +808,53 @@ public class DebugConsole
         {
         StringBuilder sb = new StringBuilder();
         sb.append("\n");
-        sb.append("Command            Description\n");
-        sb.append("-----------------  ---------------------------------------------\n");
-        sb.append("F <frame#>         Switch to the specified Frame number\n");
-        sb.append("X <var#>           Expand (or contract) the specified variable number\n");
+        sb.append("Command              Description\n");
+        sb.append("-------------------  ---------------------------------------------\n");
+        sb.append("F <frame#>           Switch to the specified Frame number\n");
+        sb.append("X <var#>             Expand (or contract) the specified variable number\n");
         sb.append("\n");
-        sb.append("S                  Step over\n");
-        sb.append("S+                 Step in\n");
-        sb.append("S-                 Step out of frame\n");
-        sb.append("SL                 Step (run) to current line\n");
-        sb.append("R                  Run to next breakpoint\n");
+        sb.append("S                    Step over\n");
+        sb.append("S+                   Step in\n");
+        sb.append("S-                   Step out of frame\n");
+        sb.append("SL                   Step (run) to current line\n");
+        sb.append("R                    Run to next breakpoint\n");
         sb.append("\n");
-        sb.append("B+                 Add breakpoint for the current line\n");
-        sb.append("B-                 Remove breakpoint for the current line\n");
-        sb.append("BT                 Toggle breakpoint for the current line\n");
-        sb.append("B+ <name> <line>   Add specified breakpoint\n");
-        sb.append("B- <name> <line>   Remove specified breakpoint\n");
-        sb.append("BT <name> <line>   Toggle specified breakpoint\n");
-        sb.append("BE+ <exception>    Break on exception\n");
-        sb.append("BE- <exception>    Remove exception breakpoint\n");
-        sb.append("BE+ *              Break on all exceptions\n");
-        sb.append("BE- *              Remove the \"all exception\" breakpoint\n");
-        sb.append("B- *               Clear all breakpoints\n");
-        sb.append("BT *               Toggle all breakpoints (enable all iff all enabled; otherwise disable all)\n");
-        sb.append("B                  List current breakpoints\n");
-        sb.append("B- <breakpoint#>   Remove specified breakpoint (from the breakpoint list)\n");
-        sb.append("BT <breakpoint#>   Toggle specified breakpoint (from the breakpoint list)\n");
+        sb.append("B+                   Add breakpoint for the current line\n");
+        sb.append("B-                   Remove breakpoint for the current line\n");
+        sb.append("BT                   Toggle breakpoint for the current line\n");
+        sb.append("B+ <name> <line>     Add specified breakpoint\n");
+        sb.append("B- <name> <line>     Remove specified breakpoint\n");
+        sb.append("BT <name> <line>     Toggle specified breakpoint\n");
+        sb.append("BE+ <exception>      Break on exception\n");
+        sb.append("BE- <exception>      Remove exception breakpoint\n");
+        sb.append("BE+ *                Break on all exceptions\n");
+        sb.append("BE- *                Remove the \"all exception\" breakpoint\n");
+        sb.append("B- *                 Clear all breakpoints\n");
+        sb.append("BT *                 Toggle all breakpoints (enable all iff all enabled; otherwise disable all)\n");
+        sb.append("B                    List current breakpoints\n");
+        sb.append("B- <breakpoint#>     Remove specified breakpoint (from the breakpoint list)\n");
+        sb.append("BT <breakpoint#>     Toggle specified breakpoint (from the breakpoint list)\n");
         sb.append("\n");
-        sb.append("VC                 View Console\n");
-        sb.append("VD                 View Debugger\n");
-        sb.append("VW <width>         Set view width for debugger and console views\n");
-        sb.append("?                  Display this help message");
+        sb.append("VC                   View Console\n");
+        sb.append("VD                   View Debugger\n");
+        sb.append("VS <width> <height>  Set view width and optional height for debugger and console views\n");
+        sb.append("?                    Display this help message");
         return sb.toString();
         }
 
     private static int numlen(int n)
         {
         return Integer.toString(n).length();
+        }
+
+    private static String ljust(String s, int cch)
+        {
+        int cOld    = s.length();
+        int cSpaces = cch - cOld;
+        assert cSpaces >= 0;
+        return cSpaces > 0
+                ? s + dup(' ', cSpaces)
+                : s;
         }
 
     private static String rjust(String s, int cch)
@@ -695,6 +872,16 @@ public class DebugConsole
             s = sb.append(s).toString();
             }
         return s;
+        }
+
+    private static String dup(char ch, int cch)
+        {
+        StringBuilder sb = new StringBuilder(cch);
+        for (int i = 0; i < cch; ++i)
+            {
+            sb.append(ch);
+            }
+        return sb.toString();
         }
 
 
@@ -855,12 +1042,22 @@ public class DebugConsole
     /**
      * The order that the frames were last listed in.
      */
-    private Frame[] m_aFrames;
+    private Frame.StackFrame[] m_aFrames;
 
     /**
-     * The last debugged frame.
+     * The current frame.
      */
     private Frame m_frame;
+
+    /**
+     * The selected frame (for showing variables).
+     */
+    private Frame m_frameFocus;
+
+    /**
+     * The displayed list of variables.
+     */
+    private VarInfo[] m_aVars;
 
     /**
      * The last debugged iPC.
