@@ -1,8 +1,0 @@
-        class %propTypeName%Impl_(%propStoreType% store_)
-                extends %propBaseType%(store_)
-                incorporates %propType%
-            {
-            // ----- mixin methods ---------------------------------------------------------------------
-
-%CustomMethods%
-            }

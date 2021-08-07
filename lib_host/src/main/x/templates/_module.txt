@@ -59,12 +59,12 @@ module %appName%_imdb
             {
             switch (id)
                 {
-%CustomImplInstantiations%
+%CustomInstantiations%
                 }
 
             return super(id);
             }
 
-%CustomImplDeclarations%
+%CustomDeclarations%
         }
     }

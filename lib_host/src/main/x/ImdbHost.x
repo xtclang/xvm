@@ -47,7 +47,7 @@ class ImdbHost
 
         File moduleFile = moduleDir.fileFor("module.x");
 
-        createModule(moduleFile, appName, appSchemaTemplate);
+        createModule(moduleFile, appName, dbModule, appSchemaTemplate);
 
         // temporary; replace with the compilation of generated source
         return repository.getModule(dbModuleName + "_imdb");
@@ -81,28 +81,31 @@ class ImdbHost
     /**
      * Create module.x source file.
      */
-    void createModule(File moduleFile, String appName, ClassTemplate appSchemaTemplate)
+    void createModule(File moduleFile, String appName,
+                      ModuleTemplate moduleTemplate, ClassTemplate appSchemaTemplate)
         {
         String appSchema = appSchemaTemplate.name;
 
         Tuple<PropertyTemplate, DBCategory>[] dbProps = collectDBProps(appSchemaTemplate);
 
-        String propertyInfos            = "";
-        String propertyGetters          = "";
-        String customImplInstantiations = "";
-        String customImplDeclarations   = "";
+        String propertyInfos        = "";
+        String propertyGetters      = "";
+        String customInstantiations = "";
+        String customDeclarations   = "";
 
         for (Tuple<PropertyTemplate, DBCategory> propInfo : dbProps)
             {
             PropertyTemplate property = propInfo[0];
             DBCategory       category = propInfo[1];
 
-            assert Composition typeTemplate := property.type.fromClass();
-            assert typeTemplate.is(ClassTemplate);
+            TypeTemplate typeTemplate = property.type;
 
-            String propertyName     = property.name;
-            String propertyType     = displayName(typeTemplate, appName);
-            String propertyTypeName = typeTemplate.name; // TODO handle composite type
+            // already checked at collectDBProps()
+            assert Composition classTemplate := typeTemplate.fromClass();
+            assert classTemplate.is(ClassTemplate);
+
+            String propertyName = property.name;
+            String propertyType = displayName(classTemplate, appName);
 
             String propertyInfo = $./templates/PropertyInfo.txt;
 
@@ -120,50 +123,66 @@ class ImdbHost
                                 .replace("%propertyType%", propertyType)
                                 ;
 
-//            switch (category)
-//                {
-//                case DBMap:
-//                    assert TypeTemplate keyType       := property.type.resolveFormalType("Key");
-//                    assert TypeTemplate valueType     := property.type.resolveFormalType("Value");
-//                    assert Composition  keyTemplate   := keyType.fromClass();
-//                    assert Composition  valueTemplate := valueType.fromClass();
-//                    assert keyTemplate.is(ClassTemplate);
-//                    assert valueTemplate.is(ClassTemplate);
-//
-//                    String childClass = $./templates/ClientDBMap.txt;
-//                    String methods     = "";
-//                    String invocations = "";
-//
-//                    childClasses  += childClass
-//                                    .replace("%appSchema%"             , appSchema)
-//                                    .replace("%propertyType%"          , propertyType)
-//                                    .replace("%propertyTypeName%"      , propertyTypeName)
-//                                    .replace("%keyType%"               , displayName(keyTemplate, appName))
-//                                    .replace("%valueType%"             , displayName(valueTemplate, appName))
-//                                    .replace("%ClientDBMapMethods%"    , methods)
-//                                    .replace("%ClientDBMapInvocations%", invocations)
-//                                    ;
-//                    break;
-//
-//                case DBCounter:
-//                    String childClass = $./templates/ClientDBCounter.txt;
-//                    childClasses  += childClass
-//                                    .replace("%appSchema%"       , appSchema)
-//                                    .replace("%propertyType%"    , propertyType)
-//                                    .replace("%propertyTypeName%", propertyTypeName);
-//                    break;
-//
-//                default:
-//                    TODO
-//                }
+            if (classTemplate.containingModule != moduleTemplate)
+                {
+                continue;
+                }
+
+            String propertyTypeName = classTemplate.name.replace(".", "_");
+            String propertyStoreType;
+            String propertyBaseType;
+
+            String customInstantiation = $./templates/CustomInstantiation.txt;
+            String customDeclaration   = $./templates/CustomDeclaration.txt;
+
+            switch (category)
+                {
+                case DBMap:
+                    assert TypeTemplate keyType       := typeTemplate.resolveFormalType("Key");
+                    assert TypeTemplate valueType     := typeTemplate.resolveFormalType("Value");
+                    assert Composition  keyTemplate   := keyType.fromClass()  , keyTemplate.is(ClassTemplate);
+                    assert Composition  valueTemplate := valueType.fromClass(), valueTemplate.is(ClassTemplate);
+
+                    String keyTypeName   = displayName(keyTemplate, appName);
+                    String valueTypeName = displayName(valueTemplate, appName);
+
+                    propertyStoreType = $"imdb_.storage.DBMapStore<{keyTypeName}, {valueTypeName}>";
+                    propertyBaseType  = $"DBMapImpl<{keyTypeName}, {valueTypeName}>";
+                    break;
+
+                case DBCounter:
+                    propertyStoreType = "imdb_.storage.DBCounterStore";
+                    propertyBaseType  = "DBCounterImpl";
+                    break;
+
+                default:
+                    TODO
+                }
+
+            customInstantiations += customInstantiation
+                                    .replace("%appName%"          , appName)
+                                    .replace("%propertyName%"     , propertyName)
+                                    .replace("%propertyType%"     , propertyType)
+                                    .replace("%propertyTypeName%" , propertyTypeName)
+                                    .replace("%propertyStoreType%", propertyStoreType)
+                                    ;
+
+            customDeclarations += customDeclaration
+                                    .replace("%propertyType%"     , propertyType)
+                                    .replace("%propertyTypeName%" , propertyTypeName)
+                                    .replace("%propertyStoreType%", propertyStoreType)
+                                    .replace("%propertyBaseType%" , propertyBaseType)
+                                    ;
             }
 
-        String moduleTemplate = $./templates/_module.txt;
-        String moduleSource   = moduleTemplate
-                                .replace("%appName%"        , appName)
-                                .replace("%appSchema%"      , appSchema)
-                                .replace("%PropertyInfos%"  , propertyInfos)
-                                .replace("%PropertyGetters%", propertyGetters)
+
+        String moduleSource = $./templates/_module.txt
+                                .replace("%appName%"             , appName)
+                                .replace("%appSchema%"           , appSchema)
+                                .replace("%PropertyInfos%"       , propertyInfos)
+                                .replace("%PropertyGetters%"     , propertyGetters)
+                                .replace("%CustomInstantiations%", customInstantiations)
+                                .replace("%CustomDeclarations%"  , customDeclarations)
                                 ;
 
         moduleFile.create();
@@ -180,15 +199,21 @@ class ImdbHost
         NextProperty:
         for (PropertyTemplate prop : appSchemaTemplate.properties)
             {
-            for ((DBCategory category, TypeTemplate dbType) : DB_TEMPLATES)
+            TypeTemplate typeTemplate = prop.type;
+
+            if (Composition classTemplate := typeTemplate.fromClass(),
+                            classTemplate.is(ClassTemplate))
                 {
-                if (prop.type.isA(dbType))
+                for ((DBCategory category, TypeTemplate dbType) : DB_TEMPLATES)
                     {
-                    properties += Tuple:(prop, category);
-                    continue NextProperty;
+                    if (typeTemplate.isA(dbType))
+                        {
+                        properties += Tuple:(prop, category);
+                        continue NextProperty;
+                        }
                     }
                 }
-            throw new UnsupportedOperation($"Unsupported property type {prop.name} {prop.type}");
+            throw new UnsupportedOperation($"Unsupported property type: {prop.name} {prop.type}");
             }
 
         // TODO recurse to super template
