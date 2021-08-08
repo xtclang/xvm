@@ -10,6 +10,7 @@ import org.xvm.asm.Component;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
+import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.PropertyStructure;
 
@@ -31,6 +32,7 @@ import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
 
 import org.xvm.runtime.template.collections.xArray;
+import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
@@ -221,9 +223,9 @@ public class xRTClassTemplate
                 }
             }
 
-        ObjectHandle hArray = xArray.createImmutableArray(
+        ArrayHandle hArray = xArray.createImmutableArray(
                 ensureClassTemplateArrayComposition(),
-                listTemplates.toArray(new ComponentTemplateHandle[0]));
+                listTemplates.toArray(NO_TEMPLATES));
         return frame.assignValue(iReturn, hArray);
         }
 
@@ -316,7 +318,7 @@ public class xRTClassTemplate
         {
         ClassStructure clz       = (ClassStructure) hComponent.getComponent();
         GenericHandle  hTemplate = null; // TODO
-        return frame.assignValue(iReturn, hTemplate);
+        return frame.raiseException("Not implemented");
         }
 
     /**
@@ -324,8 +326,21 @@ public class xRTClassTemplate
      */
     public int getPropertyMultimethods(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
         {
-        ClassStructure clz    = (ClassStructure) hComponent.getComponent();
-        GenericHandle  hArray = null; // TODO
+        ClassStructure clz = (ClassStructure) hComponent.getComponent();
+
+        List<ComponentTemplateHandle> listHandles = new ArrayList<>();
+        for (Component child : clz.children())
+            {
+            if (child instanceof MultiMethodStructure)
+                {
+                listHandles.add(makeComponentHandle(child));
+                }
+            }
+
+        ArrayHandle hArray = xArray.createImmutableArray(
+                ensureMultiMethodTemplateArrayComposition(),
+                listHandles.toArray(NO_TEMPLATES));
+
         return frame.assignValue(iReturn, hArray);
         }
 
@@ -349,8 +364,8 @@ public class xRTClassTemplate
                 }
             }
 
-        ComponentTemplateHandle[] ahProp = listProps.toArray(new ComponentTemplateHandle[0]);
-        ObjectHandle hArray = xArray.createImmutableArray(
+        ComponentTemplateHandle[] ahProp = listProps.toArray(NO_TEMPLATES);
+        ArrayHandle hArray = xArray.createImmutableArray(
                 xRTPropertyTemplate.ensureArrayComposition(), ahProp);
         return frame.assignValue(iReturn, hArray);
         }
@@ -382,7 +397,7 @@ public class xRTClassTemplate
         {
         ClassStructure clz   = (ClassStructure) hComponent.getComponent();
         GenericHandle  hInfo = null; // TODO
-        return frame.assignValue(iReturn, hInfo);
+        return frame.raiseException("Not implemented");
         }
 
     /**
@@ -451,7 +466,7 @@ public class xRTClassTemplate
         {
         ClassStructure clz = (ClassStructure) hComponent.getComponent();
         // TODO CP
-        throw new UnsupportedOperationException();
+        return frame.raiseException("Not implemented");
         }
 
     /**
@@ -504,8 +519,25 @@ public class xRTClassTemplate
         if (clz == null)
             {
             ConstantPool pool = INSTANCE.pool();
-            TypeConstant typeClassTemplateArray = pool.ensureArrayType(CLASS_TEMPLATE_COMP.getType());
-            CLASS_TEMPLATE_ARRAY_COMP = clz = INSTANCE.f_templates.resolveClass(typeClassTemplateArray);
+            TypeConstant typeTemplateArray = pool.ensureArrayType(CLASS_TEMPLATE_COMP.getType());
+            CLASS_TEMPLATE_ARRAY_COMP = clz = INSTANCE.f_templates.resolveClass(typeTemplateArray);
+            assert clz != null;
+            }
+        return clz;
+        }
+
+    /**
+     * @return the ClassComposition for an Array of MultiMethodTemplates
+     */
+    public static TypeComposition ensureMultiMethodTemplateArrayComposition()
+        {
+        TypeComposition clz = MULTI_METHOD_TEMPLATE_ARRAY_COMP;
+        if (clz == null)
+            {
+            ConstantPool pool = INSTANCE.pool();
+            TypeConstant typeTemplate = pool.ensureEcstasyTypeConstant("reflect.MultiMethodTemplate");
+            TypeConstant typeTemplateArray = pool.ensureArrayType(typeTemplate);
+            MULTI_METHOD_TEMPLATE_ARRAY_COMP = clz = INSTANCE.f_templates.resolveClass(typeTemplateArray);
             assert clz != null;
             }
         return clz;
@@ -531,12 +563,15 @@ public class xRTClassTemplate
 
     // ----- constants -----------------------------------------------------------------------------
 
+    public static ComponentTemplateHandle[] NO_TEMPLATES = new ComponentTemplateHandle[0];
+
     private static TypeComposition CLASS_TEMPLATE_COMP;
     private static TypeComposition CLASS_TEMPLATE_ARRAY_COMP;
+    private static TypeComposition MULTI_METHOD_TEMPLATE_ARRAY_COMP;
     private static TypeComposition CONTRIBUTION_COMP;
     private static TypeComposition CONTRIBUTION_ARRAY_COMP;
 
-    private static ObjectHandle    TYPE_PARAMETER_ARRAY_EMPTY;
+    private static ArrayHandle     TYPE_PARAMETER_ARRAY_EMPTY;
 
     public static xEnum           ACTION;
     public static MethodStructure CREATE_CONTRIB_METHOD;

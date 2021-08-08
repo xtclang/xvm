@@ -27,6 +27,7 @@ import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xNullable;
 
 import org.xvm.runtime.template.collections.xArray;
+import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 
 import org.xvm.runtime.template.text.xString;
 
@@ -113,8 +114,8 @@ public class xRTComponentTemplate
         }
 
     @Override
-    public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                             ObjectHandle hArg, int iReturn)
+    public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                             ObjectHandle[] ahArg, int iReturn)
         {
         ComponentTemplateHandle hComponent = (ComponentTemplateHandle) hTarget;
         switch (method.getName())
@@ -123,7 +124,7 @@ public class xRTComponentTemplate
                 return invokeChildren(frame, hComponent, iReturn);
             }
 
-        return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
+        return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
         }
 
     @Override
@@ -237,16 +238,13 @@ public class xRTComponentTemplate
         int i = 0;
         for (Component child : component.children())
             {
-            ahChildren[i++] = null; // TODO GG
+            ahChildren[i++] = makeComponentHandle(child);
             }
         assert i == cChildren;
 
-        // turn the Java array into an Ecstasy array
-        ObjectHandle hArray = xArray.createImmutableArray(ensureComponentArrayType(), ahChildren);
+        ArrayHandle hArray = xArray.createImmutableArray(ensureComponentArrayType(), ahChildren);
 
-        // create and return an iterator of the Ecstasy array
-        // TODO GG return frame.assignValue(iReturn, hIter);
-        throw new UnsupportedOperationException();
+        return frame.assignValue(iReturn, hArray);
         }
 
     @Override
