@@ -6373,7 +6373,10 @@ public abstract class TypeConstant
             }
 
         // this type is a common [compile time] type that should be used for the comparison
-        TypeComposition clz = frame.ensureClass(this);
+        TypeComposition clz =
+                hValue1.getComposition().getType().equals(this) ? hValue1.getComposition() :
+                hValue2.getComposition().getType().equals(this) ? hValue2.getComposition() :
+                                                                  frame.ensureClass(this);
         return clz.getTemplate().callEquals(frame, clz, hValue1, hValue2, iReturn);        }
 
     /**
@@ -6394,7 +6397,10 @@ public abstract class TypeConstant
             }
 
         // this type is a common [compile time] type that should be used for the comparison
-        TypeComposition clz = frame.ensureClass(this);
+        TypeComposition clz =
+                hValue1.getComposition().getType().equals(this) ? hValue1.getComposition() :
+                hValue2.getComposition().getType().equals(this) ? hValue2.getComposition() :
+                                                                  frame.ensureClass(this);
         return clz.getTemplate().callCompare(frame, clz, hValue1, hValue2, iReturn);
         }
 
