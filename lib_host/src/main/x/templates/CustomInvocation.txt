@@ -1,0 +1,6 @@
+                if (fn == "%methodName%" && when == Null)
+                    {
+                    assert args.is(Tuple<%argTypes%>);
+
+                    return %methodName%(&argValues%);
+                    }

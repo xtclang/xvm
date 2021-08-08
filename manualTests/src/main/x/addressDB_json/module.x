@@ -142,7 +142,7 @@ module AddressBookDB_jsondb
                     }
                 }
 
-            // ----- ClientDBMap interface ------------------------------------------------------------
+            // ----- DBObject interface ------------------------------------------------------------
 
             @Override
             Tuple dbInvoke(String | Function fn, Tuple args = Tuple:(), (Duration|DateTime)? when = Null)

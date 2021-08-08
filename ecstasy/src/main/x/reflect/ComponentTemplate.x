@@ -148,5 +148,5 @@ interface ComponentTemplate
     /**
      * The child templates of this template.
      */
-    ComponentTemplate![] children();
+    ComponentTemplate[] children();
     }

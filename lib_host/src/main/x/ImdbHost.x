@@ -4,7 +4,9 @@ import ecstasy.reflect.ClassTemplate;
 import ecstasy.reflect.ClassTemplate.Composition;
 import ecstasy.reflect.ClassTemplate.Contribution;
 import ecstasy.reflect.FileTemplate;
+import ecstasy.reflect.MethodTemplate;
 import ecstasy.reflect.ModuleTemplate;
+import ecstasy.reflect.MultiMethodTemplate;
 import ecstasy.reflect.PropertyTemplate;
 import ecstasy.reflect.TypeParameter;
 import ecstasy.reflect.TypeTemplate;
@@ -159,6 +161,29 @@ class ImdbHost
                     TODO
                 }
 
+            String customMethods     = "";
+            String customInvocations = "";
+
+            assert:debug;
+            for (MultiMethodTemplate multimethod : classTemplate.multimethods)
+                {
+                String methodName = multimethod.name;
+                for (MethodTemplate method : multimethod.children())
+                    {
+                    if (!method.isConstructor && !method.isStatic && method.access == Public)
+                        {
+                        String customMethod     = $./templates/CustomMethod.txt;
+                        String customInvocation = $./templates/CustomInvocation.txt;
+
+                        customMethods += customMethod
+                                            .replace("%methodName%", methodName);
+
+                        customInvocations += customInvocation
+                                            .replace("%methodName%", methodName);
+                        }
+                    }
+                }
+
             customInstantiations += customInstantiation
                                     .replace("%appName%"          , appName)
                                     .replace("%propertyName%"     , propertyName)
@@ -172,9 +197,10 @@ class ImdbHost
                                     .replace("%propertyTypeName%" , propertyTypeName)
                                     .replace("%propertyStoreType%", propertyStoreType)
                                     .replace("%propertyBaseType%" , propertyBaseType)
+                                    .replace("%CustomMethods%"    , customMethods)
+                                    .replace("%CustomInvocations%", customInvocations)
                                     ;
             }
-
 
         String moduleSource = $./templates/_module.txt
                                 .replace("%appName%"             , appName)

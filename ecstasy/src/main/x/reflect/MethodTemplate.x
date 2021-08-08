@@ -15,6 +15,14 @@ interface MethodTemplate
     */
     Annotation[] annotations;
 
+    /**
+     * True iff the method is a constructor.
+     */
+    @RO Boolean isConstructor.get()
+        {
+        return name == "construct";
+        }
+
     @Override
     @RO String path.get()
         {

@@ -103,11 +103,17 @@ module AddressBookDB_imdb
                     }
                 }
 
-            // ----- ClientDBMap interface ------------------------------------------------------------
+            // ----- DBObject interface ------------------------------------------------------------
 
             @Override
             Tuple dbInvoke(String | Function fn, Tuple args = Tuple:(), (Duration|DateTime)? when = Null)
                 {
+                if (fn == "addContact" && when == Null)
+                    {
+                    assert args.is(Tuple<AddressBookDB_.Contact>);
+
+                    return addContact(args[0]);
+                    }
                 if (fn == "addPhone" && when == Null)
                     {
                     assert args.is(Tuple<String, AddressBookDB_.Phone>);
