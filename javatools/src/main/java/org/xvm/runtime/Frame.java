@@ -562,7 +562,7 @@ public class Frame
         {
         if (f_hThis == null)
             {
-            throw new IllegalStateException("Frame has no \"this\": " + toString());
+            throw new IllegalStateException("Frame has no \"this\": " + this);
             }
         return f_hThis;
         }
@@ -1330,7 +1330,7 @@ public class Frame
             ObjectHandle hValue = f_ahVar[iArg];
             if (hValue == null)
                 {
-                // there is a possibility this method introduced a default value at the sub class
+                // there is a possibility this method introduced a default value at the subclass
                 // that didn't exist at the base class
                 int cDefault = f_function.getDefaultParamCount();
                 int cAll     = f_function.getParamCount();
@@ -1397,7 +1397,7 @@ public class Frame
         }
 
     /**
-     * Unlike getArgument(), this could return a non-completed FutureHandle and it never throws
+     * Unlike getArgument(), this could return a non-completed FutureHandle, and it never throws
      *
      * @return an ObjectHandle (could be DeferredCallHandle)
      *
@@ -1785,7 +1785,7 @@ public class Frame
         return sb.toString();
         }
 
-    public class StackFrame
+    public static class StackFrame
         {
         public StackFrame(Frame frame, MethodStructure function, int iPC)
             {

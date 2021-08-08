@@ -10,8 +10,8 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
-
 import java.util.TreeSet;
+
 import org.xvm.asm.MethodStructure;
 
 import org.xvm.asm.constants.IdentityConstant;
@@ -706,13 +706,10 @@ public class DebugConsole
         String[] asFrames    = new String[cFrames];
         for (int i = 0; i < cFrames; ++i)
             {
-            StringBuilder sb = new StringBuilder();
             Frame.StackFrame sframe = aFrames[i];
-            sb.append(sframe.frame == frameFocus ? '>' : ' ')
-              .append(rjust(Integer.toString(i), cchFrameNum))
-              .append("  ")
-              .append(sframe.toString());
-            asFrames[i] = sb.toString();
+            asFrames[i] =
+                (sframe.frame == frameFocus ? '>' : ' ') +
+                rjust(Integer.toString(i), cchFrameNum) + "  " + sframe;;
             }
 
         return asFrames;
@@ -725,7 +722,7 @@ public class DebugConsole
         int                cchVarNum = numlen(cVars-1);
         ArrayList<VarInfo> listVars  = new ArrayList<>(cVars);
         ArrayList<String>  listVals  = new ArrayList<>(cVars);
-        for (int i = 0, n = 0; i < cVars; i++)
+        for (int i = 0; i < cVars; i++)
             {
             VarInfo info = frame.getVarInfo(i);
             String  sVar = info.getName();
@@ -734,13 +731,13 @@ public class DebugConsole
                 ObjectHandle hValue = frame.f_ahVar[i];
                 listVars.add(info);
 
-                StringBuilder sb = new StringBuilder();
-                sb.append(rjust(Integer.toString(i), cchVarNum))
-                  .append("  ")
-                  .append(sVar)
-                  .append('=')
-                  .append(hValue == null ? "<not assigned>" : hValue.toString());
-                listVals.add(sb.toString());
+                listVals.add(
+                    rjust(Integer.toString(i), cchVarNum) +
+                    "  " +
+                    sVar +
+                    '=' +
+                    (hValue == null ? "<not assigned>" : hValue.toString())
+                    );
                 }
             }
         m_aVars = listVars.toArray(new VarInfo[0]);

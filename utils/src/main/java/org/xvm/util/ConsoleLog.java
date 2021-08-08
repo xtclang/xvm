@@ -43,6 +43,7 @@ public class ConsoleLog
                 }
             else if (!Character.isDefined(ch) || Character.isISOControl(ch))
                 {
+                ach = ach.clone();
                 ach[of] = '?';
                 }
             ++of;
