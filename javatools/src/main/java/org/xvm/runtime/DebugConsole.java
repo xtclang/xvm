@@ -357,45 +357,41 @@ public class DebugConsole
                         switch (cArgs)
                             {
                             case 0:
-                                writer.println("Current debugger text width=" + m_cWidth + " characters, height= " + m_cHeight + " lines.");
+                                writer.println("Current debugger text width=" + m_cWidth +
+                                               " characters, height= " + m_cHeight + " lines.");
                                 continue NextCommand;
 
                             case 2:
-                                if (asParts[2].chars().allMatch(n -> n >= '0' && n <= '9'))
+                                {
+                                int n = parseNonNegative(asParts[2]);
+                                if (n >= 10 && n < 1000)
                                     {
-                                    int n = Integer.parseInt(asParts[2]);
-                                    if (n >= 10 && n < 1000)
-                                        {
-                                        writer.println("Altering debugger text height from " + m_cHeight + " to " + n + " lines.");
-                                        m_cHeight = n;
-                                        }
-                                    else
-                                        {
-                                        writer.println("Illegal text height: " + n);
-                                        }
-                                    continue NextCommand;
+                                    writer.println("Altering debugger text height from " + m_cHeight +
+                                                   " to " + n + " lines.");
+                                    m_cHeight = n;
                                     }
                                 else
                                     {
-                                    break;
-                                    }
-                                // fall through
-                            case 1:
-                                if (asParts[1].chars().allMatch(n -> n >= '0' && n <= '9'))
-                                    {
-                                    int n = Integer.parseInt(asParts[1]);
-                                    if (n >= 40 && n < 1000)
-                                        {
-                                        writer.println("Altering debugger text width from " + m_cWidth + " to " + n + " characters.");
-                                        m_cWidth = n;
-                                        }
-                                    else
-                                        {
-                                        writer.println("Illegal text width: " + n);
-                                        }
+                                    writer.println("Illegal text height: " + asParts[2]);
                                     continue NextCommand;
                                     }
-                                break;
+                                }
+                                // fall through
+                            case 1:
+                                {
+                                int n = parseNonNegative(asParts[1]);
+                                if (n >= 40 && n < 1000)
+                                    {
+                                    writer.println("Altering debugger text width from " + m_cWidth +
+                                                   " to " + n + " characters.");
+                                    m_cWidth = n;
+                                    }
+                                else
+                                    {
+                                    writer.println("Illegal text width: " + asParts[1]);
+                                    }
+                                continue NextCommand;
+                                }
                             }
                         break;
 
@@ -571,12 +567,13 @@ public class DebugConsole
 
     private String renderDebugger()
         {
-        String[] asFrames  = renderFrames();
-        String[] asVars    = renderVars();
         String   sFHeader  = "Call stack frames:";
-        String   sVHeader  = "Variables and watches:";
+        String[] asFrames  = renderFrames();
         int      cchFrames = Math.max(longestOf(asFrames), sFHeader.length());
-        int      cchVars   = Math.max(longestOf(asVars  ), sVHeader.length());
+
+        String   sVHeader  = "Variables and watches:";
+        String[] asVars    = renderVars(m_cWidth - cchFrames - 2);
+        int      cchVars   = Math.max(longestOf(asVars), sVHeader.length());
         if (cchFrames + cchVars + 1 > m_cWidth)
             {
             int max = m_cWidth - 1;
@@ -638,7 +635,7 @@ public class DebugConsole
             else
                 {
                 // indent trailing lines
-                sFrame = "    " + sVar;
+                sVar = "    " + sVar;
                 }
 
             if (sFrame == null && sVar == null)
@@ -655,7 +652,7 @@ public class DebugConsole
                 }
             else if (sFrame.length() > cchFrames)
                 {
-                sb.append(sFrame.substring(0, cchFrames));
+                sb.append(sFrame, 0, cchFrames);
                 sFrame = sFrame.substring(cchFrames);
                 }
             else
@@ -673,7 +670,7 @@ public class DebugConsole
                 }
             else if (sVar.length() > cchVars)
                 {
-                sb.append(sVar.substring(0, cchVars));
+                sb.append(sVar, 0, cchVars);
                 sVar = sVar.substring(cchVars);
                 }
             else
@@ -706,16 +703,17 @@ public class DebugConsole
         String[] asFrames    = new String[cFrames];
         for (int i = 0; i < cFrames; ++i)
             {
-            Frame.StackFrame sframe = aFrames[i];
+            Frame.StackFrame segment = aFrames[i];
+
             asFrames[i] =
-                (sframe.frame == frameFocus ? '>' : ' ') +
-                rjust(Integer.toString(i), cchFrameNum) + "  " + sframe;;
+                (segment.frame == frameFocus ? '>' : ' ') +
+                rjust(Integer.toString(i), cchFrameNum) + "  " + segment;
             }
 
         return asFrames;
         }
 
-    private String[] renderVars()
+    private String[] renderVars(int cMax)
         {
         Frame              frame     = m_frameFocus;
         int                cVars     = frame.f_anNextVar[frame.m_iScope];
@@ -725,18 +723,27 @@ public class DebugConsole
         for (int i = 0; i < cVars; i++)
             {
             VarInfo info = frame.getVarInfo(i);
-            String  sVar = info.getName();
+            String  sVar = info == null ? "" : info.getName();
             if (!sVar.isEmpty())
                 {
                 ObjectHandle hValue = frame.f_ahVar[i];
                 listVars.add(info);
+
+                String sDescr = hValue.toString();
+                sDescr = sDescr.replace('\n', ' ');
+
+                int cDescrMax = cMax - cchVarNum - sVar.length() - 3;
+                if (sDescr.length() > cDescrMax)
+                    {
+                    sDescr = sDescr.substring(0, cDescrMax - 3) + "...";
+                    }
 
                 listVals.add(
                     rjust(Integer.toString(i), cchVarNum) +
                     "  " +
                     sVar +
                     '=' +
-                    (hValue == null ? "<not assigned>" : hValue.toString())
+                    (hValue == null ? "<not assigned>" : sDescr)
                     );
                 }
             }
@@ -1069,7 +1076,7 @@ public class DebugConsole
     /**
      * The debugger screen width.
      */
-    private int m_cWidth = 100;
+    private int m_cWidth = 120;
 
     /**
      * The set of breakpoints on line numbers.

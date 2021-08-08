@@ -1643,7 +1643,7 @@ public class Frame
             int cArgs = f_function.getParamCount();
             if (nVar >= cArgs)
                 {
-                throw new IllegalStateException("Variable " + nVar + " ouf of scope " + f_function);
+                return null; // not assigned; the caller should deal with this
                 }
 
             Parameter    param = f_function.getParam(nVar);
