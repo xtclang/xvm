@@ -160,7 +160,7 @@ public class xRTPropertyClassTemplate
 
         ObjectHandle hArray = xArray.createImmutableArray(
                 xRTClassTemplate.ensureClassTemplateArrayComposition(),
-                listTemplates.toArray(new ComponentTemplateHandle[0]));
+                listTemplates.toArray(xRTClassTemplate.NO_TEMPLATES));
         return frame.assignValue(iReturn, hArray);
         }
 
@@ -226,7 +226,7 @@ public class xRTPropertyClassTemplate
         {
         PropertyStructure prop   = (PropertyStructure) hComponent.getComponent();
         GenericHandle     hArray = null; // TODO
-        return frame.assignValue(iReturn, hArray);
+        return frame.raiseException("Not implemented");
         }
 
     /**
@@ -249,7 +249,7 @@ public class xRTPropertyClassTemplate
                 }
             }
 
-        ComponentTemplateHandle[] ahProp = listProps.toArray(new ComponentTemplateHandle[0]);
+        ComponentTemplateHandle[] ahProp = listProps.toArray(xRTClassTemplate.NO_TEMPLATES);
         ObjectHandle hArray = xArray.createImmutableArray(
                 xRTPropertyTemplate.ensureArrayComposition(), ahProp);
         return frame.assignValue(iReturn, hArray);
@@ -272,7 +272,7 @@ public class xRTPropertyClassTemplate
         {
         PropertyStructure prop  = (PropertyStructure) hComponent.getComponent();
         GenericHandle     hInfo = null; // TODO
-        return frame.assignValue(iReturn, hInfo);
+        return frame.raiseException("Not implemented");
         }
 
     /**
