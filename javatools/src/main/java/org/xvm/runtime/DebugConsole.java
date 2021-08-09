@@ -729,7 +729,7 @@ public class DebugConsole
                 ObjectHandle hValue = frame.f_ahVar[i];
                 listVars.add(info);
 
-                String sDescr = hValue.toString();
+                String sDescr = hValue == null ? "<not assigned>" : hValue.toString();
                 sDescr = sDescr.replace('\n', ' ');
 
                 int cDescrMax = cMax - cchVarNum - sVar.length() - 3;
@@ -740,10 +740,7 @@ public class DebugConsole
 
                 listVals.add(
                     rjust(Integer.toString(i), cchVarNum) +
-                    "  " +
-                    sVar +
-                    '=' +
-                    (hValue == null ? "<not assigned>" : sDescr)
+                    "  " + sVar + '=' + sDescr
                     );
                 }
             }
