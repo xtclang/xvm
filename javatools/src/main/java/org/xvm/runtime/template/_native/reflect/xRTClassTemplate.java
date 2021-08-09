@@ -544,6 +544,23 @@ public class xRTClassTemplate
         }
 
     /**
+     * @return the ClassComposition for an Array of MethodTemplates
+     */
+    public static TypeComposition ensureMethodTemplateArrayComposition()
+        {
+        TypeComposition clz = METHOD_TEMPLATE_ARRAY_COMP;
+        if (clz == null)
+            {
+            ConstantPool pool = INSTANCE.pool();
+            TypeConstant typeTemplate = pool.ensureEcstasyTypeConstant("reflect.MethodTemplate");
+            TypeConstant typeTemplateArray = pool.ensureArrayType(typeTemplate);
+            METHOD_TEMPLATE_ARRAY_COMP = clz = INSTANCE.f_templates.resolveClass(typeTemplateArray);
+            assert clz != null;
+            }
+        return clz;
+        }
+
+    /**
      * @return the handle for an empty Array of TypeParameters
      */
     public static ObjectHandle ensureEmptyTypeParameterArray()
@@ -568,6 +585,7 @@ public class xRTClassTemplate
     private static TypeComposition CLASS_TEMPLATE_COMP;
     private static TypeComposition CLASS_TEMPLATE_ARRAY_COMP;
     private static TypeComposition MULTI_METHOD_TEMPLATE_ARRAY_COMP;
+    private static TypeComposition METHOD_TEMPLATE_ARRAY_COMP;
     private static TypeComposition CONTRIBUTION_COMP;
     private static TypeComposition CONTRIBUTION_ARRAY_COMP;
 

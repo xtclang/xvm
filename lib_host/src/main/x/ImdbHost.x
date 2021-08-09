@@ -164,7 +164,6 @@ class ImdbHost
             String customMethods     = "";
             String customInvocations = "";
 
-            assert:debug;
             for (MultiMethodTemplate multimethod : classTemplate.multimethods)
                 {
                 String methodName = multimethod.name;

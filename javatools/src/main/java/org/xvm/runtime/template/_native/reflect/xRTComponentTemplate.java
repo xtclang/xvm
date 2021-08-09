@@ -8,6 +8,7 @@ import org.xvm.asm.Constants.Access;
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleStructure;
+import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.PackageStructure;
 import org.xvm.asm.PropertyStructure;
 
@@ -242,9 +243,12 @@ public class xRTComponentTemplate
             }
         assert i == cChildren;
 
-        ArrayHandle hArray = xArray.createImmutableArray(ensureComponentArrayType(), ahChildren);
+        // the only possible child type of MultiMethodTemplate is the MethodTemplate
+        TypeComposition clzArray = component instanceof MultiMethodStructure
+            ? xRTClassTemplate.ensureMethodTemplateArrayComposition()
+            : ensureComponentArrayType();
 
-        return frame.assignValue(iReturn, hArray);
+        return frame.assignValue(iReturn, xArray.createImmutableArray(clzArray, ahChildren));
         }
 
     @Override
