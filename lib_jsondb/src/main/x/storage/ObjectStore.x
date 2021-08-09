@@ -87,6 +87,11 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
     public/protected Status status = Closed;
 
     /**
+     * True iff the ObjectStore is in a running state and has performed its initial load of data.
+     */
+    private Boolean loaded = False;
+
+    /**
      * True iff the ObjectStore is permitted to write to persistent storage. Implementations of
      * ObjectStore must check this value before making any changes to persistent storage.
      */
@@ -250,6 +255,7 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
      *   execute, **and** they can modify the database, with those modifications being required to
      *   be visible by the time that the next transaction begins to prepare.
      *
+     * REVIEW why is this a property?
      */
     Changes? inPrepare;
 
@@ -264,39 +270,48 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
      */
     Boolean recover()
         {
-        assert status == Closed;
-        status = Recovering;
-        if (deepScan(True))
-            {
-            status    = Running;
-            writeable = defaultWriteable;
-            return True;
-            }
+        assert status == Closed as $"Illegal attempt to recover {info.name.quoted()} storage while {status}";
 
-        status    = Closed;
-        writeable = False;
-        return False;
+        status = Recovering;
+        using (new CriticalSection())
+            {
+            if (deepScan(True))
+                {
+                status    = Running;
+                writeable = defaultWriteable;
+                return True;
+                }
+
+            status    = Closed;
+            writeable = False;
+            return False;
+            }
         }
 
     /**
      * For a closed ObjectStore, quickly open the contents of the persistent storage in order to
      * achieve a running state.
      *
+     * @param txId  the transaction ID that indicates the version of the database being opened
+     *
      * @throws IllegalState  if the ObjectStore is not `Closed`
      */
-    Boolean open()
+    Boolean open(Int txId)
         {
-        assert status == Closed;
-        if (quickScan())
+        assert status == Closed as $"Illegal attempt to open {info.name.quoted()} storage while {status}";
+        using (new CriticalSection())
             {
-            status    = Running;
-            writeable = defaultWriteable;
-            return True;
-            }
+            if (quickScan())
+                {
+                status    = Running;
+                writeable = defaultWriteable;
+                return True;
+                }
 
-        status    = Closed;
-        writeable = False;
-        return False;
+            status    = Closed;
+            writeable = False;
+            return False;
+            }
         }
 
     /**
@@ -305,24 +320,12 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
     @Override
     void close(Exception? cause = Null)
         {
-        switch (status)
+        if (status == Running)
             {
-            case Recovering:
-                // there is nothing that the generic ObjectStore can do
-                break;
-
-            case Running:
-                // there is nothing for the generic ObjectStore to do
-                break;
-
-            case Closed:
-                break;
-
-            case Configuring:
-                assert as $"Illegal attempt to close {info.name.quoted()} storage while Configuring";
-
-            default:
-                assert as $"Illegal status: {status}";
+            using (new CriticalSection())
+                {
+                unload();
+                }
             }
 
         status    = Closed;
@@ -339,16 +342,22 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
             case Recovering:
             case Configuring:
             case Closed:
-                model        = Empty;
-                filesUsed    = 0;
-                bytesUsed    = 0;
-                lastAccessed = Null;
-                lastModified = Null;
-
-                Directory dir = dataDir;
-                if (dir.exists)
+                using (new CriticalSection())
                     {
-                    dir.deleteRecursively();
+                    model        = Empty;
+                    filesUsed    = 0;
+                    bytesUsed    = 0;
+
+                    Directory dir = dataDir;
+                    if (dir.exists)
+                        {
+                        dir.deleteRecursively();
+                        }
+
+                    // this cannot be assumed to be correct, since the filing system could run on
+                    // a different clock, so make sure that the timestamp is not moving backwards
+                    @Inject Clock clock;
+                    lastModified = lastModified?.maxOf(clock.now) : clock.now;
                     }
                 break;
 
@@ -359,7 +368,6 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
             default:
                 assert as $"Illegal status: {status}";
             }
-
         }
 
 
@@ -373,36 +381,6 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
     static function TxType(Int)      txType          = TxManager.txType;
     static function Int(Int)         generateWriteId = TxManager.generateWriteId;
     static function Int(Int, TxType) generateTxId    = TxManager.generateTxId;
-
-    /**
-     * Verify that the storage is open and can read.
-     *
-     * @return True if the specified transaction is permitted to read data from the database
-     *
-     * @throws Exception if the check fails
-     */
-    Boolean checkRead()
-        {
-        return status == Recovering || status == Running
-            || throw new IllegalState($"Read is not permitted for {info.name.quoted()} storage when status is {status}");
-        }
-
-    /**
-     * Verify that the storage is open and can write.
-     *
-     * @param txId  the transaction id
-     *
-     * @return True if the specified transaction is permitted to make changes
-     *
-     * @throws Exception if the check fails
-     */
-    Boolean checkWrite()
-        {
-        return (writeable
-                || throw new IllegalState($"Write is not enabled for the {info.name.quoted()} storage"))
-            && (status == Recovering || status == Running
-                || throw new IllegalState($"Write is not permitted for {info.name.quoted()} storage when status is {status}"));
-        }
 
     /**
      * Validate the transaction, and obtain the transactional information for the specified id.
@@ -643,6 +621,88 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
         {
         // knowledge of how to perform a deep scan is handled by specific ObjectStore sub-classes
         return quickScan();
+        }
+
+    /**
+     * Verify that the storage is open and can read.
+     *
+     * @return True if the specified transaction is permitted to read data from the database
+     *
+     * @throws Exception if the check fails
+     */
+    Boolean checkRead()
+        {
+        return status == Recovering || status == Running && ready()
+            || throw new IllegalState($"Read is not permitted for {info.name.quoted()} storage when status is {status}");
+        }
+
+    /**
+     * Verify that the storage is open and can write.
+     *
+     * @param txId  the transaction id
+     *
+     * @return True if the specified transaction is permitted to make changes
+     *
+     * @throws Exception if the check fails
+     */
+    Boolean checkWrite()
+        {
+        return (writeable
+                || throw new IllegalState($"Write is not enabled for the {info.name.quoted()} storage"))
+            && (status == Recovering || status == Running && ready()
+                || throw new IllegalState($"Write is not permitted for {info.name.quoted()} storage when status is {status}"));
+        }
+
+    /**
+     * Ensure that the ObjectStore has loaded its initial set of data from disk.
+     *
+     * @return True
+     *
+     * @throws Exception if loading the initial data fails in any way
+     */
+    protected Boolean ready()
+        {
+        if (!loaded)
+            {
+            using (new CriticalSection())
+                {
+                if (model == Empty)
+                    {
+                    initializeEmpty();
+                    }
+                else
+                    {
+                    loadInitial();
+                    }
+                }
+            loaded = True;
+            }
+
+        return True;
+        }
+
+    /**
+     * Initialize the ObjectStore as empty, to its default state.
+     */
+    void initializeEmpty()
+        {
+        assert model == Empty;
+        }
+
+    /**
+     * Load the necessary ObjectStore state from disk.
+     */
+    void loadInitial()
+        {
+        TODO
+        }
+
+    /**
+     * Jettison any loaded data.
+     */
+    void unload()
+        {
+        TODO
         }
 
     /**

@@ -409,27 +409,24 @@ TODO
 
     // ----- IO operations -------------------------------------------------------------------------
 
-    /**
-     * Load the value(s) from disk.
-     */
+    @Override
+    void initializeEmpty()
+        {
+        assert model == Empty;
+        assert !dataFile.exists;
+
+        history.put(0, initial);
+        }
+
+    @Override
     void loadInitial()
         {
-        using (new CriticalSection())
-            {
-            Value value;
-            Int   loadId = txManager.lastClosedId;
-            if (dataFile.exists)
-                {
-                TODO // value =
-                }
-            else
-                {
-                value = initial;
-                }
-            history.put(loadId, value);
-            }
+        assert model == Small;
+        assert dataFile.exists;
 
-        // TODO model will be either empty or small (nothing else implemented for the ValueStore)
+        Value value;
+        Int   loadId = txManager.lastClosedId;
+        TODO history.put(loadId, value);
         }
 
     @Override
@@ -454,8 +451,15 @@ TODO
     /**
      * Clean up old transactions on the disk.
      */
-    void cleanup()
+    void cleanup() // REVIEW should this be here or on the base ObjectStore class?
         {
         TODO
+        }
+
+    @Override
+    void unload()
+        {
+        inFlight.clear();
+        history.clear();
         }
     }

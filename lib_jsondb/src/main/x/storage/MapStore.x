@@ -1,4 +1,5 @@
 import json.Doc;
+import json.Mapping;
 
 import model.DBObjectInfo;
 
@@ -6,66 +7,98 @@ import model.DBObjectInfo;
 /**
  * Provides a key/value storage service for JSON formatted data on disk.
  *
- * TODO API using URI string instead of (or in addition to) Key type
- * TODO API using String or Reader/Writer instead of (or in addition to) Value type
- * TODO expose Key and Value serializers and deserializers
- * TODO select i.e. query support
- * TODO bulk operations (including deletes, stores, and "in place processing")
+ * The disk format follows this style:
+ *
+ *     [
+ *     {"tx":14, [{"d":{...}}, {"k":{...}, "v":{...}}]},
+ *     {"tx":17, [{"k":{...}, "v":{...}}, {"k":{...}, "v":{...}}]},
+ *     {"tx":18, [{"k":{...}, "v":{...}}, {"k":{...}, "v":{...}}, {"d":{...}}]}
+ *     ]
  */
 service MapStore<Key extends immutable Const, Value extends immutable Const>
-        (Catalog catalog, DBObjectInfo info, Appender<String> errs)
-        extends ObjectStore(catalog, info, errs)
+        extends ObjectStore
     {
+    // ----- constructors --------------------------------------------------------------------------
+
+    construct(Catalog          catalog,
+              DBObjectInfo     info,
+              Appender<String> errs,
+              Mapping<Key>     keyMapping,
+              Mapping<Value>   valueMapping,
+              )
+        {
+        construct ObjectStore(catalog, info, errs);
+
+        this.keyMapping   = keyMapping;
+        this.valueMapping = valueMapping;
+        }
+
+
     // ----- properties ----------------------------------------------------------------------------
+
+    /**
+     * The JSON Mapping for the keys in the Map.
+     */
+    public/protected Mapping<Key> keyMapping;
+
+    /**
+     * The JSON Mapping for the values in the Map.
+     */
+    public/protected Mapping<Value> valueMapping;
+
+    /**
+     * Used internally within the in-memory MapStore data structures to represent a deleted
+     * key/value pair.
+     */
+    protected enum Deletion {Deleted}
+
+    /**
+     * Used as a "singleton" empty map.
+     */
+    protected immutable Map<Key, Value|Deletion> NoChanges = Map<Key, Value|Deletion>:[].makeImmutable();
 
     @Override protected class Changes(Int writeId, Int readId)
         {
         /**
          * A map of inserted and updated key/value pairs, keyed by the internal URI form.
          */
-        Map<Key, Value> added = new SkiplistMap();    // TODO URI?
+        OrderedMap<Key, Value|Deletion>? mods;
 
         /**
-         * A set of deleted keys, keyed by the internal URI form.
+         * @return a map used to view previously collected modifications, but not intended to be
+         *         modified by the caller
          */
-        Set<String> removed = new SkiplistSet();
-        }
+        Map<Key, Value|Deletion> peekMods()
+            {
+            return mods ?: NoChanges;
+            }
 
-    protected enum Action{Insert, Update, Delete}
-
-    protected static class Change
-        (
-        String uri,
-        Key    key,
-        Action action,
-        Value? newValue,
-        Value? oldValue,
-        );
-
-    /**
-     * Obtain the set of [Changes] for the specified write transaction, or create a new `Changes` if
-     * none has already been recorded.
-     *
-     * @param txId  the write txId
-     *
-     * @return the `Changes` for the txId
-     */
-    Changes changesFor(Int txId)
-        {
-        TODO
-//        return pending.computeIfAbsent(txId, () ->
-//            {
-//            TODO txManager
-//            });
+        /**
+         * @return the read/write map used to collect modifications
+         */
+        OrderedMap<Key, Value|Deletion> ensureMods()
+            {
+            return mods ?:
+                {
+                val map = new SkiplistMap<Key, Value|Deletion>();
+                mods = map;
+                return map;
+                };
+            }
         }
 
     /**
-     * TODO
+     * Cached key/transaction/value triples. This is "the database", in the sense that this is the same
+     * data that is stored on disk.
+     *
+     * TODO if the value for a key is stable, replace the nested SkiplistMap with a single Value?
      */
-    conditional Changes hasChanges(Int txId)
-        {
-        TODO if (pending.contains())
-        }
+    protected SkiplistMap<Key, SkiplistMap<Int, Value|Deletion>> history = new SkiplistMap();
+
+    /**
+     * Cached map sizes, keyed by transaction id.
+     */
+    protected SkiplistMap<Int, Int> sizeByTx = new SkiplistMap();
 
 
     // ----- ObjectStore life cycle ----------------------------------------------------------------
@@ -199,14 +232,6 @@ service MapStore<Key extends immutable Const, Value extends immutable Const>
      */
     Iterator<String> urisAt(Int txId)
         {
-        if (isWriteTx(txId))
-            {
-            Changes tx = changesFor(txId);
-
-            }
-//                ? new TxKeyIterator(txId)
-//            {
-//            }
         TODO
         }
 
