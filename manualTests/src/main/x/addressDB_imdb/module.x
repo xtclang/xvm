@@ -90,7 +90,7 @@ module AddressBookDB_imdb
                 {
                 using (this.AddressBookDBClient_.ensureTransaction(this))
                     {
-                    super(contact);
+                    return super(contact);
                     }
                 }
 
@@ -99,7 +99,7 @@ module AddressBookDB_imdb
                 {
                 using (this.AddressBookDBClient_.ensureTransaction(this))
                     {
-                    super(name, phone);
+                    return super(name, phone);
                     }
                 }
 

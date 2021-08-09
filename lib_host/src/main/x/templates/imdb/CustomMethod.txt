@@ -1,8 +1,8 @@
             @Override
-            %methodRetType% %methodName%(%methodArgDecl%)
+            %retType% %name%(%argDecl%)
                 {
                 using (this.AddressBookDBClient_.ensureTransaction(this))
                     {
-                    return super(%methodArgs%);
+                    return super(%args%);
                     }
                 }

@@ -7,6 +7,7 @@ import ecstasy.reflect.FileTemplate;
 import ecstasy.reflect.MethodTemplate;
 import ecstasy.reflect.ModuleTemplate;
 import ecstasy.reflect.MultiMethodTemplate;
+import ecstasy.reflect.ParameterTemplate;
 import ecstasy.reflect.PropertyTemplate;
 import ecstasy.reflect.TypeParameter;
 import ecstasy.reflect.TypeTemplate;
@@ -103,13 +104,13 @@ class ImdbHost
             TypeTemplate typeTemplate = property.type;
 
             // already checked at collectDBProps()
-            assert Composition classTemplate := typeTemplate.fromClass();
-            assert classTemplate.is(ClassTemplate);
+            assert Composition classTemplate := typeTemplate.fromClass(),
+                   classTemplate.is(ClassTemplate);
 
             String propertyName = property.name;
             String propertyType = displayName(classTemplate, appName);
 
-            String propertyInfo = $./templates/PropertyInfo.txt;
+            String propertyInfo = $./templates/imdb/PropertyInfo.txt;
 
             propertyInfos += propertyInfo
                                 .replace("%propertyName%"    , propertyName)
@@ -117,7 +118,7 @@ class ImdbHost
                                 .replace("%propertyType%"    , propertyType)
                                 ;
 
-            String propertyGetter = $./templates/PropertyGetter.txt;
+            String propertyGetter = $./templates/imdb/PropertyGetter.txt;
 
             propertyGetters += propertyGetter
                                 .replace("%appName%"     , appName)
@@ -134,19 +135,17 @@ class ImdbHost
             String propertyStoreType;
             String propertyBaseType;
 
-            String customInstantiation = $./templates/CustomInstantiation.txt;
-            String customDeclaration   = $./templates/CustomDeclaration.txt;
+            String customInstantiation = $./templates/imdb/CustomInstantiation.txt;
+            String customDeclaration   = $./templates/imdb/CustomDeclaration.txt;
 
             switch (category)
                 {
                 case DBMap:
-                    assert TypeTemplate keyType       := typeTemplate.resolveFormalType("Key");
-                    assert TypeTemplate valueType     := typeTemplate.resolveFormalType("Value");
-                    assert Composition  keyTemplate   := keyType.fromClass()  , keyTemplate.is(ClassTemplate);
-                    assert Composition  valueTemplate := valueType.fromClass(), valueTemplate.is(ClassTemplate);
+                    assert TypeTemplate keyType   := typeTemplate.resolveFormalType("Key");
+                    assert TypeTemplate valueType := typeTemplate.resolveFormalType("Value");
 
-                    String keyTypeName   = displayName(keyTemplate, appName);
-                    String valueTypeName = displayName(valueTemplate, appName);
+                    String keyTypeName   = displayName(keyType, appName);
+                    String valueTypeName = displayName(valueType, appName);
 
                     propertyStoreType = $"imdb_.storage.DBMapStore<{keyTypeName}, {valueTypeName}>";
                     propertyBaseType  = $"DBMapImpl<{keyTypeName}, {valueTypeName}>";
@@ -171,14 +170,79 @@ class ImdbHost
                     {
                     if (!method.isConstructor && !method.isStatic && method.access == Public)
                         {
-                        String customMethod     = $./templates/CustomMethod.txt;
-                        String customInvocation = $./templates/CustomInvocation.txt;
+                        String customMethod     = $./templates/imdb/CustomMethod.txt;
+                        String customInvocation = $./templates/imdb/CustomInvocation.txt;
+
+                        ParameterTemplate[] params  = method.parameters;
+                        ParameterTemplate[] returns = method.returns;
+
+                        String retType = switch (returns.size)
+                                {
+                                case 0 : "void";
+                                case 1 : displayName(returns[0].type, appName);
+                                default: $"({{for (val r : returns) {$.addAll(displayName(r.type, appName)); $.add(',');} }})";
+
+// TODO CP: the equivalent multi-line doesn't parse
+//                                default: $|({{for (val r : returns)
+//                                          |    {
+//                                          |    $.addAll(displayName(r.type, appName));
+//                                          |    $.add(',');
+//                                          |    }
+//                                          |}})
+//                                          ;
+                                };
+
+                        String argDecl     = "";
+                        String args        = "";
+                        String argTypes    = "";
+                        String tupleValues = "";
+                        switch (params.size)
+                            {
+                            case 0:
+                                break;
+
+                            case 1:
+                                args        = params[0].name? : assert;
+                                argTypes    = displayName(params[0].type, appName);
+                                argDecl     = $"{argTypes} {args}";
+                                tupleValues = "args[0]";
+                                break;
+
+                            default:
+                                Loop:
+                                for (ParameterTemplate param : params)
+                                    {
+                                    String name = param.name? : assert;
+                                    String type = displayName(param.type, appName);
+
+                                    if (!Loop.first)
+                                        {
+                                        argDecl     += ", ";
+                                        args        += ", ";
+                                        argTypes    += ", ";
+                                        tupleValues += ", ";
+                                        }
+                                    argDecl     += $"{type} {name}";
+                                    args        += name;
+                                    argTypes    += type;
+                                    tupleValues += $"args[{Loop.count}]";
+                                    }
+                                break;
+                            }
 
                         customMethods += customMethod
-                                            .replace("%methodName%", methodName);
+                                            .replace("%name%"   , methodName)
+                                            .replace("%retType%", retType)
+                                            .replace("%argDecl%", argDecl)
+                                            .replace("%args%"   , args)
+                                            ;
 
                         customInvocations += customInvocation
-                                            .replace("%methodName%", methodName);
+                                            .replace("%name%"        , methodName)
+                                            .replace("%argTypes%"    , argTypes)
+                                            .replace("%arg%"         , args)
+                                            .replace("%tupleValues%" , tupleValues)
+                                            ;
                         }
                     }
                 }
@@ -201,7 +265,7 @@ class ImdbHost
                                     ;
             }
 
-        String moduleSource = $./templates/_module.txt
+        String moduleSource = $./templates/imdb/_module.txt
                                 .replace("%appName%"             , appName)
                                 .replace("%appSchema%"           , appSchema)
                                 .replace("%PropertyInfos%"       , propertyInfos)
@@ -265,9 +329,22 @@ class ImdbHost
     /**
      * Obtain a display name for the specified type for the specified application.
      */
-    String displayName(ClassTemplate template, String appName)
+    String displayName(TypeTemplate type, String appName)
         {
-        return template.implicitName ?: (appName + "_." + template.displayName);
+        assert Composition composition := type.fromClass();
+        return displayName(composition, appName);
+        }
+
+    /**
+     * Obtain a display name for the specified composition for the specified application.
+     */
+    String displayName(Composition composition, String appName)
+        {
+        if (composition.is(ClassTemplate))
+            {
+            return composition.implicitName ?: (appName + "_." + composition.displayName);
+            }
+        TODO AnnotatingComposition
         }
 
     @Override
