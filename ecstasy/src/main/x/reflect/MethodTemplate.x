@@ -23,6 +23,16 @@ interface MethodTemplate
         return name == "construct";
         }
 
+    /**
+     * The method parameters.
+     */
+    ParameterTemplate[] parameters;
+
+    /**
+     * The method return values.
+     */
+    ParameterTemplate[] returns;
+
     @Override
     @RO String path.get()
         {
