@@ -183,5 +183,11 @@ public abstract class OSFileNode
             {
             return f_path;
             }
+
+        @Override
+        public String toString()
+            {
+            return super.toString() + " " + f_path;
+            }
         }
     }

@@ -202,6 +202,12 @@ public class xOSFileChannel
             f_channel = channel;
             f_path    = path;
             }
+
+        @Override
+        public String toString()
+            {
+            return super.toString() + " " + f_path;
+            }
         }
 
 

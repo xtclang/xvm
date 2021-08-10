@@ -146,6 +146,12 @@ public class xInjectedRef
             m_hReferent = hReferent;
             }
 
+        @Override
+        public String toString()
+            {
+            return super.toString() + " " + f_sResource;
+            }
+
         // ----- fields ----------------------------------------------------------------------------
 
         private final String f_sResource;

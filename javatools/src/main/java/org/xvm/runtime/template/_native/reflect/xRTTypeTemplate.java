@@ -195,6 +195,12 @@ public class xRTTypeTemplate
             return f_type;
             }
 
+        @Override
+        public String toString()
+            {
+            return super.toString() + " " + f_type;
+            }
+
         final private TypeConstant f_type;
         }
 
