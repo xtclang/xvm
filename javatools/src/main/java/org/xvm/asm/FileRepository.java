@@ -52,7 +52,7 @@ public class FileRepository
     /**
      * @return the module file (which may or may not exist)
      */
-    File getFile()
+    public File getFile()
         {
         return file;
         }
@@ -60,7 +60,7 @@ public class FileRepository
     /**
      * @return true iff read-only
      */
-    boolean isReadOnly()
+    public boolean isReadOnly()
         {
         return fRO;
         }

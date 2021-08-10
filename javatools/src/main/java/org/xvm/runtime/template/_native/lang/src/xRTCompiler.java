@@ -111,7 +111,24 @@ public class xRTCompiler
 
         if (hLibRepo == null || hLibRepo instanceof CoreRepoHandle)
             {
-            compiler.setLibraryRepo(f_templates.f_repository);
+            // TODO: this is a temporary solution
+            LinkedRepository repoCore = (LinkedRepository) f_templates.f_repository;
+
+            List<ModuleRepository> listNew = new ArrayList<>();
+            listNew.add(new BuildRepository());
+
+            for (ModuleRepository repo : repoCore.asList())
+                {
+                // take all read-only repositories
+                if (repo instanceof DirRepository  && ((DirRepository) repo).isReadOnly() ||
+                    repo instanceof FileRepository && ((FileRepository) repo).isReadOnly())
+                    {
+                    listNew.add(repo);
+                    }
+                }
+
+            compiler.setLibraryRepo(
+                new LinkedRepository(true, listNew.toArray(new ModuleRepository[0])));
             }
         else
             {
@@ -245,23 +262,9 @@ public class xRTCompiler
         // ----- Compiler API ----------------------------------------------------------------------
 
         @Override
-        protected ModuleRepository configureLibraryRepo(List<File> path)
+        protected ModuleRepository configureLibraryRepo(List<File> ignore)
             {
-            // TODO: this is a temporary hack
-            LinkedRepository repoCore = (LinkedRepository) getLibraryRepo();
-
-            List<ModuleRepository> listCore   = repoCore.asList();
-            BuildRepository        repoLib    = new BuildRepository();
-            ModuleRepository       repoXdk    = listCore.get(1);
-            ModuleRepository       repoNative = listCore.get(2);
-            ModuleRepository       repoManual = listCore.get(3);
-
-            repoLib.storeModule(repoXdk.loadModule("ecstasy.xtclang.org"));
-            repoLib.storeModule(repoNative.loadModule("_native.xtclang.org"));
-            repoLib.storeModule(repoXdk.loadModule("oodb.xtclang.org"));
-            repoLib.storeModule(repoManual.loadModule("imdb"));
-
-            return new LinkedRepository(true, makeBuildRepo(), repoLib);
+            return getLibraryRepo();
             }
 
         @Override

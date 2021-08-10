@@ -48,11 +48,12 @@ class ImdbHost
             throw new IllegalState($"Schema is not found in {dbModuleName} module");
             }
 
-        File moduleFile = moduleDir.fileFor("module.x");
+        File sourceFile = moduleDir.fileFor("module.x");
 
-        createModule(moduleFile, appName, dbModule, appSchemaTemplate);
+        createModule(sourceFile, appName, dbModule, appSchemaTemplate);
 
-        // temporary; replace with the compilation of generated source
+        compileModule(sourceFile, buildDir);
+
         return repository.getModule(dbModuleName + "_imdb");
         }
 
@@ -84,7 +85,7 @@ class ImdbHost
     /**
      * Create module.x source file.
      */
-    void createModule(File moduleFile, String appName,
+    void createModule(File sourceFile, String appName,
                       ModuleTemplate moduleTemplate, ClassTemplate appSchemaTemplate)
         {
         String appSchema = appSchemaTemplate.name;
@@ -274,8 +275,8 @@ class ImdbHost
                                 .replace("%CustomDeclarations%"  , customDeclarations)
                                 ;
 
-        moduleFile.create();
-        writeUtf(moduleFile, moduleSource);
+        sourceFile.create();
+        writeUtf(sourceFile, moduleSource);
         }
 
     /**
@@ -307,6 +308,21 @@ class ImdbHost
 
         // TODO recurse to super template
         return properties;
+        }
+
+    protected Boolean compileModule(File sourceFile, Directory buildDir)
+        {
+        @Inject ecstasy.lang.src.Compiler compiler;
+
+        compiler.setResultLocation(buildDir);
+
+        (Boolean success, String errors) = compiler.compile([sourceFile]);
+
+        if (!success)
+            {
+            console.println(errors);
+            }
+        return success;
         }
 
     /**

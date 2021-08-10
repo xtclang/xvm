@@ -40,7 +40,7 @@ public class DirRepository
     /**
      * @return the directory containing the module files
      */
-    File getDir()
+    public File getDir()
         {
         return m_dir;
         }
@@ -48,7 +48,7 @@ public class DirRepository
     /**
      * @return true iff read-only
      */
-    boolean isReadOnly()
+    public boolean isReadOnly()
         {
         return m_fRO;
         }
