@@ -20,8 +20,6 @@ public abstract class xUncheckedUnsignedInt
                                  long cMinValue, long cMaxValue, int cNumBits)
         {
         super(templates, structure, cMinValue, cMaxValue, cNumBits, false);
-
-        f_nMask = cMaxValue - cMinValue;
         }
 
     @Override
@@ -102,10 +100,8 @@ public abstract class xUncheckedUnsignedInt
         {
         if (f_cNumBits < 64)
             {
-            lValue &= f_nMask;
+            lValue &= f_lValueMask;
             }
         return super.makeJavaLong(lValue);
         }
-
-    private final long f_nMask;
     }

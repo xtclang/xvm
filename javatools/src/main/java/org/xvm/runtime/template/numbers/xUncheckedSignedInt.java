@@ -21,7 +21,6 @@ public abstract class xUncheckedSignedInt
         {
         super(templates, structure, cMinValue, cMaxValue, cNumBits, false, false);
 
-        f_nMask = cMaxValue - cMinValue;
         f_nSign = cMaxValue + 1; // used only for signed
         }
 
@@ -103,7 +102,7 @@ public abstract class xUncheckedSignedInt
         {
         if (f_cNumBits < 64)
             {
-            lValue &= f_nMask;
+            lValue &= f_lValueMask;
             if ((lValue & f_nSign) != 0 && f_fSigned)
                 {
                 lValue = -lValue;
@@ -112,6 +111,5 @@ public abstract class xUncheckedSignedInt
         return super.makeJavaLong(lValue);
         }
 
-    private final long f_nMask;
     private final long f_nSign;
     }

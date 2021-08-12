@@ -55,6 +55,7 @@ public abstract class xConstrainedInteger
 
         f_cAddCheckShift = 64 - cNumBits;
         f_cMulCheckShift = fUnsigned ? (cNumBits / 2) : (cNumBits / 2 - 1);
+        f_lValueMask     = -1L >>> (64 - cNumBits);
         }
 
     @Override
@@ -320,6 +321,12 @@ public abstract class xConstrainedInteger
             case "shiftAllRight":
                 return invokeShrAll(frame, hTarget, hArg, iReturn);
 
+            case "rotateLeft":
+                return invokeRotateL(frame, hTarget, hArg, iReturn);
+
+            case "rotateRight":
+                return invokeRotateR(frame, hTarget, hArg, iReturn);
+
             case "stepsTo":
                 {
                 long lFrom = ((JavaLong) hTarget ).getValue();
@@ -439,8 +446,6 @@ public abstract class xConstrainedInteger
             case "neg":
                 return invokeNeg(frame, hTarget, iReturn);
 
-            case "rotateLeft":
-            case "rotateRight":
             case "reverseBits":
             case "reverseBytes":
                 throw new UnsupportedOperationException("subclass implementation required for " + method.getName());
@@ -679,6 +684,32 @@ public abstract class xConstrainedInteger
         return frame.assignValue(iReturn, xInt64.makeHandle(l));
         }
 
+
+    // ----- type specific -------------------------------------------------------------------------
+
+    protected int invokeRotateL(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        long l = ((JavaLong) hTarget).getValue();
+        int  c  = (int) (((JavaLong) hArg).getValue() % f_cNumBits);
+
+        long lHead = l << c;
+        long lTail = l >>> (f_cNumBits - c);
+
+        return frame.assignValue(iReturn, makeJavaLong(lHead | lTail));
+        }
+
+    protected int invokeRotateR(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        long l = ((JavaLong) hTarget).getValue();
+        int  c  = (int) (((JavaLong) hArg).getValue() % f_cNumBits);
+
+        long lHead = l << (f_cNumBits - c);
+        long lTail = l >>> c;
+
+        return frame.assignValue(iReturn, makeJavaLong(lHead | lTail));
+        }
+
+
     // ----- comparison support --------------------------------------------------------------------
 
     @Override
@@ -826,6 +857,7 @@ public abstract class xConstrainedInteger
     protected final int  f_cNumBits;
     protected final int  f_cAddCheckShift;
     protected final int  f_cMulCheckShift;
+    protected final long f_lValueMask;
 
     protected final boolean f_fChecked;
     protected final boolean f_fSigned;
