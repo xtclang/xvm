@@ -26,15 +26,12 @@ module TestCompiler
 
         compiler.setResultLocation(buildDir);
 
-        (Boolean success, String errors) = compiler.compile([sourceModule]);
+        (Boolean success, String[] errors) = compiler.compile([sourceModule]);
 
-        if (success)
+        console.println(success ? "Compiled successfully" : "Compilation failed:");
+        for (String error : errors)
             {
-            console.println("Done!");
-            }
-        else
-            {
-            console.println(errors);
+            console.println(error);
             }
         }
     }

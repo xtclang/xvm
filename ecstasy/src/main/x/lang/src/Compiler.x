@@ -22,8 +22,7 @@ interface Compiler
      * @param  sources locations of existing .x files representing modules to be compiled
      *
      * @return success True if the compilation was successful and .xtc modules were produced
-     * @return errors  the errors (including warnings);
-     *                 most commonly not empty if 'success' is False  // TODO: replace w/ Error[]
+     * @return errors  the errors (including warnings);  must not be empty if 'success' is False
      */
-    (Boolean success, String errors) compile((Directory|File)[] sources);
+    (Boolean success, String[] errors) compile((Directory|File)[] sources);
     }

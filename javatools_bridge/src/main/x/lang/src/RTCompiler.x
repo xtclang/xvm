@@ -26,6 +26,6 @@ service RTCompiler
         }
 
     @Override
-    (Boolean success, String errors) compile((Directory|File)[] sources)
+    (Boolean success, String[] errors) compile((Directory|File)[] sources)
         {TODO("native");}
     }

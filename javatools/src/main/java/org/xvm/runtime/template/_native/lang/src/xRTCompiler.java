@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.IOException;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.xvm.asm.ClassStructure;
@@ -31,9 +32,11 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xService;
 
+import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 
 import org.xvm.runtime.template.text.xString;
+import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.runtime.template._native.fs.OSFileNode.NodeHandle;
 
@@ -135,8 +138,8 @@ public class xRTCompiler
             throw new UnsupportedOperationException(); // TODO
             }
 
-        boolean fSuccess;
-        String  sErrors;
+        boolean      fSuccess;
+        List<String> listErrors;
         try
             {
             compiler.run();
@@ -156,20 +159,40 @@ public class xRTCompiler
                     repoOut.storeModule(repoBuild.loadModule(sModule));
                     }
                 }
-            sErrors = compiler.getErrors();
+
+            listErrors = compiler.getErrors();
+
+            assert fSuccess || !listErrors.isEmpty(); // a compilation failure must report reasons
             }
         catch (CompilerException e)
             {
-            fSuccess = false;
-            sErrors  = compiler.getErrors();
+            fSuccess   = false;
+            listErrors = compiler.getErrors();
+            if (listErrors.isEmpty())
+                {
+                listErrors.add(e.toString());
+                }
             }
         catch (IOException e)
             {
-            fSuccess = false;
-            sErrors  = e.toString();
+            fSuccess   = false;
+            listErrors = new ArrayList<>();
+            listErrors.add(e.toString());
             }
 
-        return frame.assignValues(aiReturn, xBoolean.makeHandle(fSuccess), xString.makeHandle(sErrors));
+        ArrayHandle hErrors = xString.ensureEmptyArray();
+        if (!listErrors.isEmpty())
+            {
+            int            cErrors  = listErrors.size();
+            StringHandle[] ahErrors = new StringHandle[cErrors];
+            for (int i = 0; i < cErrors; i++)
+                {
+                ahErrors[i] = xString.makeHandle(listErrors.get(i));
+                }
+            hErrors = xArray.makeStringArrayHandle(ahErrors);
+            }
+
+        return frame.assignValues(aiReturn, xBoolean.makeHandle(fSuccess), hErrors);
         }
 
     @Override
@@ -249,9 +272,9 @@ public class xRTCompiler
             return m_sevWorst;
             }
 
-        public String getErrors()
+        public List<String> getErrors()
             {
-            return m_sbErrs.toString();
+            return m_log == null ? Collections.EMPTY_LIST : m_log;
             }
 
         public ModuleRepository getBuildRepository()
@@ -282,6 +305,12 @@ public class xRTCompiler
         @Override
         protected void log(Severity sev, String sMsg)
             {
+            List<String> log = m_log;
+            if (log == null)
+                {
+                log = m_log = new ArrayList<>();
+                }
+
             if (sev.compareTo(m_sevWorst) > 0)
                 {
                 m_sevWorst = sev;
@@ -289,10 +318,7 @@ public class xRTCompiler
 
             if (sev.compareTo(Severity.WARNING) >= 0)
                 {
-                m_sbErrs.append(sev.desc())
-                        .append(": ")
-                        .append(sMsg)
-                        .append('\n');
+                log.add(sev.desc() + ": " + sMsg);
                 }
             }
 
@@ -346,7 +372,7 @@ public class xRTCompiler
         private ModuleRepository m_repoLib;
         private List<File>       m_listSources;
         private ModuleRepository m_repoResults;
-        private Version          m_version  = new Version("CI");
-        private StringBuffer     m_sbErrs   = new StringBuffer();
+        private Version          m_version = new Version("CI");
+        private List<String>     m_log = new ArrayList<>();
         }
     }

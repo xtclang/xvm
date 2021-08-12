@@ -112,11 +112,11 @@ class DbHost
 
         compiler.setResultLocation(buildDir);
 
-        (Boolean success, String error) = compiler.compile([sourceFile]);
+        (Boolean success, String[] compilationErrors) = compiler.compile([sourceFile]);
 
-        if (!success)
+        if (compilationErrors.size > 0)
             {
-            errors.add(error);
+            errors.addAll(compilationErrors);
             }
         return success;
         }
