@@ -92,6 +92,7 @@ service MapStore<Key extends immutable Const, Value extends immutable Const>
      * data that is stored on disk.
      *
      * TODO if the value for a key is stable, replace the nested SkiplistMap with a single Value?
+     * TODO need insert vs. update vs. delete information (expensive to build on the fly)
      */
     protected SkiplistMap<Key, SkiplistMap<Int, Value|Deletion>> history = new SkiplistMap();
 
@@ -190,7 +191,9 @@ service MapStore<Key extends immutable Const, Value extends immutable Const>
      */
     Boolean emptyAt(Int txId)
         {
-        TODO
+        // no obvious way to optimize this call without calculating the size, since size information
+        // gets cached in memory
+        return sizeAt(txId) == 0;
         }
 
     /**
@@ -203,7 +206,37 @@ service MapStore<Key extends immutable Const, Value extends immutable Const>
      */
     Int sizeAt(Int txId)
         {
-        TODO
+        checkRead();
+
+        // the adjustments to the size of the transaction will be implied by what is in the Changes
+        // record for the transaction, assuming that the transaction is a write ID; otherwise the
+        // size is cached by transaction ID in the sizeByTx map
+        if (Changes tx := checkTx(txId))
+            {
+            Int readId = tx.readId;
+            Int size   = sizeAt(readId);
+            for ((Key key, Value|Deletion value) : tx.peekMods())
+                {
+                if (value.is(Deletion))
+                    {
+                    --size;
+                    }
+                else if (!existsAt(readId, key))
+                    {
+                    ++size;
+                    }
+                }
+            return size;
+            }
+
+        assert isReadTx(txId);
+        if (model != Empty, Int closestTxId := sizeByTx.floor(txId))
+            {
+            assert Int size := sizeByTx.get(txId);
+            return size;
+            }
+
+        return 0;
         }
 
     /**
@@ -218,28 +251,46 @@ service MapStore<Key extends immutable Const, Value extends immutable Const>
      */
     Boolean existsAt(Int txId, Key key)
         {
-        TODO
+        while (Changes tx := checkTx(txId))
+            {
+            if (Value|Deletion value := tx.peekMods().get(key))
+                {
+                // return &value != &Deleted; // TODO GG
+                return !value.is(Deletion);
+                }
+
+            txId = tx.readId;
+            }
+
+        assert isReadTx(txId);
+        switch (model)
+            {
+            case Empty:
+                return False;
+
+            case Small:
+                // the entire MapStore is cached in the history map
+                // SkiplistMap<Key, SkiplistMap<Int, Value|Deletion>> history
+                if (val keyHistory := history.get(key), Int ver := keyHistory.floor(txId))
+                    {
+                    assert Value|Deletion value := keyHistory.get(ver);
+                    // return &value != &Deleted; // TODO GG
+                    return !value.is(Deletion);
+                    }
+                return False;
+
+            case Medium:
+                TODO
+
+            case Large:
+                TODO
+            }
         }
 
     /**
-     * Obtain an iterator over all of the keys (in their internal URI format) that existed at the
-     * completion of the specified transaction id.
+     * Obtain an iterator over all of the keys that exist for the specified transaction.
      *
-     * @param txId  the "write" transaction identifier
-     *
-     * @return an Iterator of the keys, in the internal JSON URI format used for key storage, that
-     *         were present in the DBMap as of the specified transaction
-     */
-    Iterator<String> urisAt(Int txId)
-        {
-        TODO
-        }
-
-    /**
-     * Obtain an iterator over all of the keys that existed at the completion of the specified
-     * transaction id.
-     *
-     * @param txId  the "write" transaction identifier
+     * @param txId  the transaction identifier
      *
      * @return an Iterator of the Key objects in the DBMap as of the specified transaction
      */
@@ -249,8 +300,65 @@ service MapStore<Key extends immutable Const, Value extends immutable Const>
         }
 
     /**
-     * Obtain the value associated with the specified key, iff that key is present in the map. If
-     * the key is not present in the map, then this method returns a conditional `False`.
+     * Obtain an iterator over all of the keys and values that exist for the specified transaction.
+     *
+     * @param txId  the transaction identifier
+     *
+     * @return an Iterator of the Key and Value objects in the DBMap as of the specified transaction
+     */
+    Iterator<Tuple<Key,Value>> keysAndValuesAt(Int txId)
+        {
+        TODO
+        }
+
+//    /**
+//     * Obtain an iterator over all of the keys (in their internal URI format) for the specified
+//     * transaction.
+//     *
+//     * @param txId  the transaction identifier
+//     *
+//     * @return an Iterator of the keys, in the internal JSON URI format used for key storage, that
+//     *         were present in the DBMap as of the specified transaction
+//     */
+//    Iterator<String> urisAt(Int txId)
+//        {
+//        TODO
+//        }
+//
+//    /**
+//     * Obtain an iterator over all of the keys (in their internal URI format) and values that exist
+//     * for the specified transaction.
+//     *
+//     * @param txId  the transaction identifier
+//     *
+//     * @return an Iterator of the keys and values, with the keys in the internal JSON URI format
+//     *         used for key storage
+//     */
+//    Iterator<Tuple<String,Value>> urisAndValuesAt(Int txId)
+//        {
+//        TODO
+//        }
+//
+//    /**
+//     * Obtain the value associated with the specified key, iff that key is present in the map. If
+//     * the key is not present in the map, then this method returns a conditional `False`.
+//     *
+//     * @param txId  the "write" transaction identifier
+//     * @param key   specifies the key in the Ecstasy domain model form, if available
+//     *
+//     * @return a True iff the value associated with the specified key exists in the DBMap as of the
+//     *         specified transaction
+//     * @return (conditional) the value associated with the specified key
+//     */
+//    conditional Value loadByUri(Int txId, String uri)
+//        {
+//        TODO
+//        }
+
+    /**
+     * Obtain the value associated with the specified key (in its internal URI format), iff that key
+     * is present in the map. If the key is not present in the map, then this method returns a
+     * conditional `False`.
      *
      * @param txId  the "write" transaction identifier
      * @param key   specifies the key in the Ecstasy domain model form, if available

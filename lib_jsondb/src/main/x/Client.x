@@ -794,7 +794,7 @@ service Client<Schema extends RootSchema>
                 {
                 // it's important to prevent re-entrancy from the outside while this logical thread
                 // of execution is wending its way through the transaction manager and the various
-                // ObjectStores that are enlisted in the transaction; the Exclusive (isntead of
+                // ObjectStores that are enlisted in the transaction; the Exclusive (instead of
                 // Forbidden) mode is important, because work can still be delegated back to this
                 // Client's Worker instance by the enlisted ObjectStores
                 using (new CriticalSection(Exclusive))
@@ -831,7 +831,7 @@ service Client<Schema extends RootSchema>
 
             outer.tx = Null;
 
-            if (id_ != NO_TX) // TODO isWriteId (rollback is allowed in the preparing phases; it means to fail the tx)
+            if (id_ != NO_TX)
                 {
                 using (new CriticalSection(Exclusive))
                     {
@@ -848,8 +848,17 @@ service Client<Schema extends RootSchema>
             Transaction? that = outer.tx;
             if (&this == &that)
                 {
-                super(e);
-                outer.tx = Null;
+                try
+                    {
+                    // this needs to eventually make its way to the implementation of close() on the
+                    // Transaction interface itself, which will decide to either commit or to roll
+                    // back the transaction, in the case that the transaction is still open
+                    super(e);
+                    }
+                finally
+                    {
+                    outer.tx = Null;
+                    }
                 }
             }
         }
