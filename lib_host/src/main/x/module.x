@@ -113,12 +113,27 @@ module host.xtclang.org
 
         if (String dbModuleName := detectDatabase(fileTemplate))
             {
-            console.println($"found {dbModuleName}");
             Path?     buildPath = fileXtc.path.parent;
             Directory buildDir  = fileXtc.store.dirFor(buildPath?) : curDir;
+            String[]  errors    = new String[];
 
-            DbHost         dbHost           = createDBHost();
-            ModuleTemplate dbModuleTemplate = dbHost.generateStubs(repository, dbModuleName, buildDir);
+            DbHost         dbHost;
+            ModuleTemplate dbModuleTemplate;
+
+            if (dbHost           := createDBHost(errors),
+                dbModuleTemplate := dbHost.generateDBModule(repository, dbModuleName, buildDir, errors))
+                {
+                console.println($"Created a host module '{dbModuleTemplate.name}' for '{dbModuleName}'");
+                }
+            else
+                {
+                console.println($"Failed to create a host for : {dbModuleName}");
+                for (String error : errors)
+                    {
+                    console.println(error);
+                    }
+                return Null;
+                }
 
             // give the db container the real console
             Injector dbInjector = new Injector()
@@ -126,11 +141,9 @@ module host.xtclang.org
                 @Override
                 Supplier getResource(Type type, String name)
                     {
-                    if (type.isA(Console))
-                        {
-                        return console;
-                        }
-                    return super(type, name);
+                    return type.isA(Console)
+                            ? console
+                            : super(type, name);
                     }
                 };
 
@@ -208,20 +221,21 @@ module host.xtclang.org
     /**
      * Create a DbHost.
      */
-    DbHost createDBHost()
+    conditional DbHost createDBHost(Log errors)
         {
         @Inject Map<String, String> properties;
 
         switch (String impl = properties.getOrDefault("db.impl", "imdb"))
             {
             case "imdb":
-                return new ImdbHost();
+                return True, new ImdbHost();
 
             case "json":
-                return new JsondbHost();
+                return True, new JsondbHost();
 
             default:
-                throw new Exception($"Unknown db implementation: {impl}");
+                errors.add($"Unknown db implementation: {impl}");
+                return False;
             }
         }
 

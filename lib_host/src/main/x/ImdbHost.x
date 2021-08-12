@@ -1,3 +1,5 @@
+import ecstasy.io.Log;
+
 import ecstasy.mgmt.ModuleRepository;
 
 import ecstasy.reflect.ClassTemplate;
@@ -28,7 +30,8 @@ class ImdbHost
     @Inject Console console;
 
     @Override
-    ModuleTemplate generateStubs(ModuleRepository repository, String dbModuleName, Directory buildDir)
+    conditional ModuleTemplate generateDBModule(
+            ModuleRepository repository, String dbModuleName, Directory buildDir, Log errors)
         {
         ModuleTemplate dbModule = repository.getResolvedModule(dbModuleName);
 
@@ -45,16 +48,18 @@ class ImdbHost
         if (appSchemaTemplate := findSchema(dbModule)) {}
         else
             {
-            throw new IllegalState($"Schema is not found in {dbModuleName} module");
+            errors.add($"Schema is not found in {dbModuleName} module");
+            return False;
             }
 
         File sourceFile = moduleDir.fileFor("module.x");
 
-        createModule(sourceFile, appName, dbModule, appSchemaTemplate);
-
-        compileModule(sourceFile, buildDir);
-
-        return repository.getModule(dbModuleName + "_imdb");
+        if (createModule(sourceFile, appName, dbModule, appSchemaTemplate, errors) &&
+            compileModule(sourceFile, buildDir, errors))
+            {
+            return True, repository.getModule(dbModuleName + "_imdb");
+            }
+        return False;
         }
 
     conditional ClassTemplate findSchema(ModuleTemplate dbModule)
@@ -73,7 +78,7 @@ class ImdbHost
                         ClassTemplate template = contrib.ingredient.as(ClassTemplate);
                         if (template == schemaTemplate)
                             {
-                            return (True, classTemplate);
+                            return True, classTemplate;
                             }
                         }
                     }
@@ -85,12 +90,17 @@ class ImdbHost
     /**
      * Create module.x source file.
      */
-    void createModule(File sourceFile, String appName,
-                      ModuleTemplate moduleTemplate, ClassTemplate appSchemaTemplate)
+    Boolean createModule(File sourceFile, String appName,
+                         ModuleTemplate moduleTemplate, ClassTemplate appSchemaTemplate, Log errors)
         {
         String appSchema = appSchemaTemplate.name;
 
-        Tuple<PropertyTemplate, DBCategory>[] dbProps = collectDBProps(appSchemaTemplate);
+        Tuple<PropertyTemplate, DBCategory>[] dbProps;
+        if (dbProps := collectDBProps(appSchemaTemplate, errors)) {}
+        else
+            {
+            return False;
+            }
 
         String propertyInfos        = "";
         String propertyGetters      = "";
@@ -277,90 +287,7 @@ class ImdbHost
 
         sourceFile.create();
         writeUtf(sourceFile, moduleSource);
-        }
-
-    /**
-     * Collect all DB properties.
-     */
-    Tuple<PropertyTemplate, DBCategory>[] collectDBProps(ClassTemplate appSchemaTemplate)
-        {
-        Tuple<PropertyTemplate, DBCategory>[] properties = new Array();
-
-        NextProperty:
-        for (PropertyTemplate prop : appSchemaTemplate.properties)
-            {
-            TypeTemplate typeTemplate = prop.type;
-
-            if (Composition classTemplate := typeTemplate.fromClass(),
-                            classTemplate.is(ClassTemplate))
-                {
-                for ((DBCategory category, TypeTemplate dbType) : DB_TEMPLATES)
-                    {
-                    if (typeTemplate.isA(dbType))
-                        {
-                        properties += Tuple:(prop, category);
-                        continue NextProperty;
-                        }
-                    }
-                }
-            throw new UnsupportedOperation($"Unsupported property type: {prop.name} {prop.type}");
-            }
-
-        // TODO recurse to super template
-        return properties;
-        }
-
-    protected Boolean compileModule(File sourceFile, Directory buildDir)
-        {
-        @Inject ecstasy.lang.src.Compiler compiler;
-
-        compiler.setResultLocation(buildDir);
-
-        (Boolean success, String errors) = compiler.compile([sourceFile]);
-
-        if (!success)
-            {
-            console.println(errors);
-            }
-        return success;
-        }
-
-    /**
-     * The code below should be replaced with
-     *      file.contents = contents.utfBytes();
-     */
-    void writeUtf(File file, String contents)
-        {
-        import ecstasy.io.ByteArrayOutputStream as Stream;
-        import ecstasy.io.UTF8Writer;
-        import ecstasy.io.Writer;
-
-        Stream out    = new Stream(contents.size);
-        Writer writer = new UTF8Writer(out);
-        writer.addAll(contents);
-
-        file.contents = out.bytes.freeze(True);
-        }
-
-    /**
-     * Obtain a display name for the specified type for the specified application.
-     */
-    String displayName(TypeTemplate type, String appName)
-        {
-        assert Composition composition := type.fromClass();
-        return displayName(composition, appName);
-        }
-
-    /**
-     * Obtain a display name for the specified composition for the specified application.
-     */
-    String displayName(Composition composition, String appName)
-        {
-        if (composition.is(ClassTemplate))
-            {
-            return composition.implicitName ?: (appName + "_." + composition.displayName);
-            }
-        TODO AnnotatingComposition
+        return True;
         }
 
     @Override
@@ -370,21 +297,4 @@ class ImdbHost
         CatalogMetadata meta = dbContainer.innerTypeSystem.primaryModule.as(CatalogMetadata);
         return meta.ensureConnectionFactory();
         }
-
-
-    // ----- constants -----------------------------------------------------------------------------
-
-    static TypeTemplate DBObject_TEMPLATE = DBObject.baseTemplate.type;
-
-    static Map<DBCategory, TypeTemplate> DB_TEMPLATES = Map:
-            [
-            DBMap       = oodb.DBMap     .baseTemplate.type,
-            DBList      = oodb.DBList    .baseTemplate.type,
-            DBQueue     = oodb.DBQueue   .baseTemplate.type,
-            DBLog       = oodb.DBLog     .baseTemplate.type,
-            DBCounter   = oodb.DBCounter .baseTemplate.type,
-            DBValue     = oodb.DBValue   .baseTemplate.type,
-            DBFunction  = oodb.DBFunction.baseTemplate.type,
-            DBSchema    = oodb.DBSchema  .baseTemplate.type
-            ];
     }

@@ -21,7 +21,7 @@ interface Compiler
      *
      * @param  sources locations of existing .x files representing modules to be compiled
      *
-     * @return success true if the compilation was successful and .xtc modules were produced
+     * @return success True if the compilation was successful and .xtc modules were produced
      * @return errors  the errors (including warnings);
      *                 most commonly not empty if 'success' is False  // TODO: replace w/ Error[]
      */

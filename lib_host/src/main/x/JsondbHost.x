@@ -1,3 +1,5 @@
+import ecstasy.io.Log;
+
 import ecstasy.mgmt.ModuleRepository;
 
 import ecstasy.reflect.ModuleTemplate;
@@ -18,7 +20,8 @@ class JsondbHost
     @Inject Console console;
 
     @Override
-    ModuleTemplate generateStubs(ModuleRepository repository, String dbModuleName, Directory buildDir)
+    conditional ModuleTemplate generateDBModule(
+            ModuleRepository repository, String dbModuleName, Directory buildDir, Log errors)
         {
         ModuleTemplate dbModule = repository.getResolvedModule(dbModuleName);
 
@@ -32,7 +35,7 @@ class JsondbHost
         moduleDir.create();
 
         // temporary; replace with the compilation of generated source
-        return repository.getModule(dbModuleName + "_jsondb");
+        return True, repository.getModule(dbModuleName + "_jsondb");
         }
 
     /**
