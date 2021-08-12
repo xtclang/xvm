@@ -314,7 +314,7 @@ public class MapExpression
             return null;
             }
 
-        // build a constant if it's a known container type and all of the elements are constants
+        // build a constant if it's a known container type and all keys and values are constants
         Constant constVal = null;
         if (fConstKeys)
             {
@@ -333,7 +333,8 @@ public class MapExpression
 
             if (fConstVals)
                 {
-                constVal = pool.ensureMapConstant(typeActual, map);
+                typeActual = pool.ensureImmutableTypeConstant(typeActual);
+                constVal   = pool.ensureMapConstant(typeActual, map);
                 }
             }
 

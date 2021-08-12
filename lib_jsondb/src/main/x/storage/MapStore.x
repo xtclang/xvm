@@ -55,7 +55,7 @@ service MapStore<Key extends immutable Const, Value extends immutable Const>
     /**
      * Used as a "singleton" empty map.
      */
-    protected immutable Map<Key, Value|Deletion> NoChanges = Map<Key, Value|Deletion>:[].makeImmutable();
+    protected immutable Map<Key, Value|Deletion> NoChanges = Map<>:[];
 
     @Override protected class Changes(Int writeId, Int readId)
         {
