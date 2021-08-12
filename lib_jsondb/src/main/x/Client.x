@@ -960,6 +960,16 @@ service Client<Schema extends RootSchema>
             }
 
         @Override
+        DBMapImpl remove(Key key)
+            {
+            using (val tx = ensureTransaction())
+                {
+                store_.delete(tx.id, key);
+                return this;
+                }
+            }
+
+        @Override
         Set<Key> keys.get()
             {
             using (val tx = ensureTransaction())

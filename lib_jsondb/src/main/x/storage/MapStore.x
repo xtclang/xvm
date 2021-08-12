@@ -171,9 +171,7 @@ service MapStore<Key extends immutable Const, Value extends immutable Const>
             StorageModel weight = bytesUsed <= 0x03FFFF ? Small : Medium;
 
             // combine the two measure into the model to actually use
-            StorageModel actual = quantity.maxOf(weight);
-
-            TODO
+            model = quantity.maxOf(weight);
             }
 
         return False;
@@ -300,17 +298,123 @@ service MapStore<Key extends immutable Const, Value extends immutable Const>
         }
 
     /**
-     * Obtain an iterator over all of the keys and values that exist for the specified transaction.
+     * Obtain the value associated with the specified key (in its internal URI format), iff that key
+     * is present in the map. If the key is not present in the map, then this method returns a
+     * conditional `False`.
      *
-     * @param txId  the transaction identifier
+     * @param txId  the "write" transaction identifier
+     * @param key   specifies the key in the Ecstasy domain model form, if available
      *
-     * @return an Iterator of the Key and Value objects in the DBMap as of the specified transaction
+     * @return a True iff the value associated with the specified key exists in the DBMap as of the
+     *         specified transaction
+     * @return (conditional) the value associated with the specified key
      */
-    Iterator<Tuple<Key,Value>> keysAndValuesAt(Int txId)
+    conditional Value load(Int txId, Key key)
         {
-        TODO
+        while (Changes tx := checkTx(txId))
+            {
+            if (Value|Deletion value := tx.peekMods().get(key))
+                {
+                if (value.is(Deletion))
+                    {
+                    return False;
+                    }
+                return True, value;
+                }
+
+            txId = tx.readId;
+            }
+
+        assert isReadTx(txId);
+        switch (model)
+            {
+            case Empty:
+                return False;
+
+            case Small:
+                // the entire MapStore is cached in the history map
+                // SkiplistMap<Key, SkiplistMap<Int, Value|Deletion>> history
+                if (val keyHistory := history.get(key), Int ver := keyHistory.floor(txId))
+                    {
+                    assert Value|Deletion value := keyHistory.get(ver);
+                    if (value.is(Deletion))
+                        {
+                        return False;
+                        }
+                    return True, value;
+                    }
+                return False;
+
+            case Medium:
+                TODO
+
+            case Large:
+                TODO
+            }
         }
 
+    /**
+     * Insert or update a key/value pair into the persistent storage, as part of the specified
+     * transaction.
+     *
+     * @param txId   the "write" transaction identifier
+     * @param key    specifies the key
+     * @param value  the value to associate with the specified key
+     */
+    void store(Int txId, Key key, Value value)
+        {
+        storeImpl(txId, key, value);
+        }
+
+    /**
+     * Remove the specified key and any associated value from this map.
+     *
+     * @param txId  the "write" transaction identifier
+     * @param key   specifies the key
+     */
+    void delete(Int txId, Key key)
+        {
+        storeImpl(txId, key, Deletion.Deleted);
+        }
+
+    // TODO something like this? -> protected Boolean storeImpl(Int txId, Key key, Value|Deletion value, Boolean blind)
+    protected void storeImpl(Int txId, Key key, Value|Deletion value)
+        {
+        assert Changes tx := checkTx(txId, writing=True);
+        OrderedMap<Key, Value|Deletion> mods = tx.ensureMods();
+        if (Value|Deletion current := mods.get(key))
+            {
+            if (&value != &current)
+                {
+                if (value.is(Deletion) && !existsAt(tx.readId, key))
+                    {
+                    mods.remove(key);
+                    }
+                else
+                    {
+                    mods.put(key, value);
+                    }
+                }
+            }
+        else if (!(value.is(Deletion) && !existsAt(tx.readId, key)))
+            {
+            mods.put(key, value);
+            }
+        }
+
+// TODO
+//    /**
+//     * Obtain an iterator over all of the keys and values that exist for the specified transaction.
+//     *
+//     * @param txId  the transaction identifier
+//     *
+//     * @return an Iterator of the Key and Value objects in the DBMap as of the specified transaction
+//     */
+//    Iterator<Tuple<Key,Value>> keysAndValuesAt(Int txId)
+//        {
+//        TODO
+//        }
+//
 //    /**
 //     * Obtain an iterator over all of the keys (in their internal URI format) for the specified
 //     * transaction.
@@ -354,49 +458,4 @@ service MapStore<Key extends immutable Const, Value extends immutable Const>
 //        {
 //        TODO
 //        }
-
-    /**
-     * Obtain the value associated with the specified key (in its internal URI format), iff that key
-     * is present in the map. If the key is not present in the map, then this method returns a
-     * conditional `False`.
-     *
-     * @param txId  the "write" transaction identifier
-     * @param key   specifies the key in the Ecstasy domain model form, if available
-     *
-     * @return a True iff the value associated with the specified key exists in the DBMap as of the
-     *         specified transaction
-     * @return (conditional) the value associated with the specified key
-     */
-    conditional Value load(Int txId, Key key)
-        {
-        TODO
-        }
-
-    /**
-     * Insert or update a key/value pair into the persistent storage, as part of the specified
-     * transaction.
-     *
-     * @param txId   the "write" transaction identifier
-     * @param key    specifies the key
-     * @param value  the value to associate with the specified key
-     */
-    void store(Int txId, Key key, Value value)
-        {
-        TODO
-        }
-
-
-    /**
-     * Remove the specified key and any associated value from this map.
-     *
-     * @param txId  the "write" transaction identifier
-     * @param key   specifies the key
-     *
-     * @return True if the specified key was in the database, and now will be deleted by this
-     *         transaction
-     */
-    Boolean delete(Int txId, Key key)
-        {
-        TODO
-        }
     }
