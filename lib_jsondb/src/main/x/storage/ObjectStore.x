@@ -214,11 +214,6 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
             }
 
         /**
-         * Set to True when the transaction contains possible changes related to this ObjectStore.
-         */
-        Boolean modified;
-
-        /**
          * Set to True when the transaction has been prepared. Note that the prepare phase can
          * involve several steps, so changes from `Rectifier` and `Distributor` objects can occur
          * after the transaction is marked as having been prepared.
@@ -720,7 +715,8 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
 
     // ----- Hashable funky interface --------------------------------------------------------------
 
-    @Override static <CompileType extends ObjectStore> Int hashCode(CompileType value)
+    @Override
+    static <CompileType extends ObjectStore> Int hashCode(CompileType value)
         {
         // use the hash code of the path; we are not expecting ObjectStore instances from multiple
         // different databases to end up in the same hashed data structure, so this should be more
@@ -728,7 +724,8 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
         return value.info.path.hashCode();
         }
 
-    @Override static <CompileType extends ObjectStore> Boolean equals(CompileType value1, CompileType value2)
+    @Override
+    static <CompileType extends ObjectStore> Boolean equals(CompileType value1, CompileType value2)
         {
         // equality of ObjectStore references is very strict
         return &value1 == &value2;

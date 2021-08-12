@@ -60,15 +60,22 @@ service ValueStore<Value extends immutable Const>
     /**
      * An internal, mutable record of Changes for a specific transaction.
      */
-    @Override protected class Changes(Int writeId, Int readId)
+    @Override
+    protected class Changes(Int writeId, Int readId)
         {
+        /**
+         * Set to True when the transaction contains possible changes related to this ObjectStore.
+         */
+        Boolean modified;
+
         /**
          * The value within the transaction; only set if [modified] is set to `True`.
          */
         @Unassigned Value value;
         }
 
-    @Override protected SkiplistMap<Int, Changes> inFlight = new SkiplistMap();
+    @Override
+    protected SkiplistMap<Int, Changes> inFlight = new SkiplistMap();
 
     /**
      * Cached transaction/value pairs. This is "the database", in the sense that this is the same
@@ -127,7 +134,8 @@ service ValueStore<Value extends immutable Const>
 
     // ----- transaction API exposed to TxManager --------------------------------------------------
 
-    @Override PrepareResult prepare(Int writeId, Int prepareId)
+    @Override
+    PrepareResult prepare(Int writeId, Int prepareId)
         {
         // the transaction can be prepared if (a) no transaction has modified this value after the
         // read id, or (b) the "current" value is equal to the read id transaction's value
@@ -179,7 +187,8 @@ service ValueStore<Value extends immutable Const>
         return Prepared;
         }
 
-    @Override MergeResult mergePrepare(Int writeId, Int prepareId, Boolean seal = False)
+    @Override
+    MergeResult mergePrepare(Int writeId, Int prepareId, Boolean seal = False)
         {
         MergeResult result = NoMerge;
 
@@ -212,7 +221,8 @@ service ValueStore<Value extends immutable Const>
         return result;
         }
 
-    @Override OrderedMap<Int, Doc> commit(OrderedMap<Int, Int> writeIdForPrepareId)
+    @Override
+    OrderedMap<Int, Doc> commit(OrderedMap<Int, Int> writeIdForPrepareId)
         {
 TODO
 //        assert isWriteTx(writeId);
@@ -226,7 +236,8 @@ TODO
 //        return Null;
         }
 
-    @Override void rollback(Int writeId)
+    @Override
+    void rollback(Int writeId)
         {
         assert isWriteTx(writeId);
 
@@ -247,7 +258,8 @@ TODO
             });
         }
 
-    @Override void retainTx(OrderedSet<Int> inUseTxIds, Boolean force = False)
+    @Override
+    void retainTx(OrderedSet<Int> inUseTxIds, Boolean force = False)
         {
         Iterator<Int> eachInUse = inUseTxIds.iterator();
         Int inUseId;
