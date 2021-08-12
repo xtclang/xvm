@@ -88,6 +88,9 @@ service MapStore<Key extends immutable Const, Value extends immutable Const>
             }
         }
 
+    @Override
+    protected SkiplistMap<Int, Changes> inFlight = new SkiplistMap();
+
     /**
      * Cached key/transaction/value triples. This is "the database", in the sense that this is the same
      * data that is stored on disk.
