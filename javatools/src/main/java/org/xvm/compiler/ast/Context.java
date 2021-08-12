@@ -207,7 +207,19 @@ public class Context
      */
     public Context enterIf()
         {
-        return new IfContext(this);
+        return new IfContext(this, true);
+        }
+
+    /**
+     * Create a nested multi-condition "if" of this context.
+     * <p/>
+     * Note: This can only be used during the validate() stage.
+     *
+     * @return the new multi-condition "if" context
+     */
+    public Context enterMultiConditionIf()
+        {
+        return new IfContext(this, false);
         }
 
     /**
@@ -1719,9 +1731,28 @@ public class Context
     static class IfContext
             extends Context
         {
-        public IfContext(Context outer)
+        /**
+         * Construct an IfContext.
+         *
+         * @param outer     the outer context
+         * @param fRegular  if false, indicates that this IfContext is a part of and-if chain
+         *                  created by a multi-condition "if" statement
+         */
+        public IfContext(Context outer, boolean fRegular)
             {
-            super(outer, true);
+            super(outer, fRegular);
+
+            // Note: at the moment, regular (demuxing) and multi-condition (non-demuxing) are the
+            //       only possible scenarios, so there is no need to create another field
+            assert fRegular || outer.getOuterContext() instanceof IfContext;
+            }
+
+        /**
+         * @return true iff this context represents a multi-condition "if"
+         */
+        public boolean isMultiCondition()
+            {
+            return !isDemuxing();
             }
 
         @Override
@@ -1884,7 +1915,18 @@ public class Context
             {
             if (isReachable())
                 {
-                if (m_ctxWhenTrue != null && !m_ctxWhenTrue.isReachable())
+                if (isMultiCondition())
+                    {
+                    IfContext ctxIf = (IfContext) getOuterContext().getOuterContext();
+
+                    assert m_ctxWhenTrue != null && ctxIf.m_ctxWhenTrue == null;
+
+                    // note: no matching exit is required here (even though most enter() calls
+                    //       require a matching exit), because the outer If context holds and
+                    //       manages the two sub-branches
+                    copyAssignments(m_ctxWhenTrue, ctxIf.enterFork(true));
+                    }
+                else if (m_ctxWhenTrue != null && !m_ctxWhenTrue.isReachable())
                     {
                     discardBranch(true);
                     }
@@ -1895,6 +1937,21 @@ public class Context
                 }
 
             return super.exit();
+            }
+
+        private void copyAssignments(Context ctxSrc, Context ctxDst)
+            {
+            Map<String, Assignment> mapSrc = ctxSrc.ensureDefiniteAssignments();
+            Map<String, Assignment> mapDst = ctxDst.ensureDefiniteAssignments();
+
+            for (Map.Entry<String, Assignment> entry : mapSrc.entrySet())
+                {
+                String sName = entry.getKey();
+                if (!ctxSrc.isVarDeclaredInThisScope(sName))
+                    {
+                    mapDst.put(sName, entry.getValue());
+                    }
+                }
             }
 
         private void discardBranch(boolean fWhenTrue)
@@ -2087,7 +2144,7 @@ public class Context
         @Override
         protected Assignment promote(String sName, Assignment asnInner, Assignment asnOuter)
             {
-            // the "when false" portion of this context is combined with the the "when false"
+            // the "when false" portion of this context is combined with the "when false"
             // portion of the outer context;  the "when true" portion of this context replaces the
             // "when true" portion of the outer context
             Assignment asnFalse = Assignment.join(asnOuter.whenFalse(), asnInner.whenFalse());

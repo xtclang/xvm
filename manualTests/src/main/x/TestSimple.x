@@ -4,37 +4,22 @@ module TestSimple.test.org
 
     void run()
         {
-        Map<String, Int> map = new HashMap();
-
-        assert Int i := test(map, "a");
-        console.println($"{i}");
-
-        try
+        Int i1;
+        Int i2;
+        if (i1 := test(1), Int i3 := test(3), i2 := test(2), Int i4 := test(4))
             {
-            testThrow(i, "oops");
+            console.println(i1 + i2 + i3 + i4);
             }
-        catch (Exception e)
+        else
             {
-            console.println(e.text);
+            console.println("failed");
+            return;
             }
-        console.println("ok");
+        console.println(i1 + i2);
         }
 
-    conditional Int test(Map<String, Int> map, String key)
+    conditional Int test(Int i)
         {
-        assert:debug;
-
-        return True, computeIfAbsent(map, "a");
-        }
-
-    (Int, Boolean) computeIfAbsent(Map<String, Int> map, String key)
-        {
-        (Int value, Boolean wasAbsent) = map.computeIfAbsent(key,  () -> Int:42);
-        return value, wasAbsent;
-        }
-
-    void testThrow(Int i, String text)
-        {
-        throw new Exception(text);
+        return True, i;
         }
     }

@@ -115,7 +115,7 @@ public class IfStatement
 
             if (i > 0)
                 {
-                ctx = ctx.enterAnd();
+                ctx = ctx.enterAnd().enterMultiConditionIf();
                 }
 
             // the condition is either a boolean expression or an assignment statement whose R-value
@@ -162,6 +162,11 @@ public class IfStatement
             stmtThen = stmtThenNew;
             }
 
+        while (--cConditions > 0)
+            {
+            ctx = ctx.exit().exit(); // "and-if"s
+            }
+
         // create a context for "else" even if there is no statement, thus facilitating a merge;
         // for example (see Array.x):
         //
@@ -201,11 +206,6 @@ public class IfStatement
                 }
             }
         ctx = ctx.exit(); // "else"
-
-        while (--cConditions > 0)
-            {
-            ctx = ctx.exit(); // "and"s
-            }
         ctx = ctx.exit(); // "if"
 
         return fValid ? this : null;
