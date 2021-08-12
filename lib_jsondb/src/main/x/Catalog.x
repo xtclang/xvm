@@ -353,6 +353,23 @@ service Catalog<Schema extends RootSchema>
 
         ObjectStore store = createStore(id);
 
+        // whatever state the Catalog is in, the ObjectStore has to be "caught up" to that state
+        switch (status)
+            {
+            case Closed:
+                break;
+
+            case Recovering:
+                TODO
+
+            case Configuring:
+                TODO
+
+            case Running:
+                store.open();
+                break;
+            }
+
         // save off the ObjectStore (lazy cache)
         if (index > stores.size)
             {
@@ -648,6 +665,8 @@ service Catalog<Schema extends RootSchema>
                     {
                     statusFile.contents = toBytes(new SysInfo(this));
                     }
+
+                // TODO is this the correct place to transition all of the already-existent ObjectStore instances?
                 }
             }
         }

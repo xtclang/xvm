@@ -292,11 +292,9 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
      * For a closed ObjectStore, quickly open the contents of the persistent storage in order to
      * achieve a running state.
      *
-     * @param txId  the transaction ID that indicates the version of the database being opened
-     *
      * @throws IllegalState  if the ObjectStore is not `Closed`
      */
-    Boolean open(Int txId)
+    Boolean open()
         {
         assert status == Closed as $"Illegal attempt to open {info.name.quoted()} storage while {status}";
         using (new CriticalSection())

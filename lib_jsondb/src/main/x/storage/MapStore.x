@@ -174,7 +174,7 @@ service MapStore<Key extends immutable Const, Value extends immutable Const>
             model = quantity.maxOf(weight);
             }
 
-        return False;
+        return True;
         }
 
     // ----- Map operations support ----------------------------------------------------------------
