@@ -2,7 +2,7 @@ module TestSimple.test.org
     {
     @Inject Console console;
 
-    void run()
+    void run(  )
         {
         new Test<Int, String>();
         }

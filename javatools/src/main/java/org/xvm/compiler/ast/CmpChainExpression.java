@@ -331,30 +331,38 @@ public class CmpChainExpression
             }
 
         ConstantPool     pool       = pool();
-        List<Expression> lisExprs   = expressions;
+        List<Expression> listExprs  = expressions;
+        int              cExprs     = listExprs.size();
+        Argument[]       aArgs      = new Argument[cExprs];
         Constant         constVal   = m_constEq;
         TypeConstant     typeCmp    = m_typeCommon;
         Argument         argResult  = LVal.getLocalArgument();
         Label            labelFalse = new Label("not_eq");
         Label            labelEnd   = new Label("end_eq");
+
+        // evaluate all the sub-expressions upfront - we may need them to produce an
+        // assertion exception; local properties should not be used (could cause a "double dip",
+        // and only the last argument is allowed to be on stack
+        for (int i = 0; i < cExprs; i++)
+            {
+            aArgs[i] = listExprs.get(i).generateArgument(ctx, code, false, i == cExprs-1, errs);
+            }
+
         if (constVal == null)
             {
             // everything has to get compared, left to right
-            Token[]  aTokOp  = operators;
-            Argument argPrev = null;
-            for (int iCmp = 0, iLastCmp = aTokOp.length - 1; iCmp <= iLastCmp; ++iCmp)
+            Token[]    aTokOp = operators;
+            int        cOps   = aTokOp.length;
+            for (int iCmp = 0; iCmp < cOps; iCmp++)
                 {
-                // evaluate the sub-expressions
-                boolean  fLast = iCmp == iLastCmp;
-                Argument arg1  = argPrev == null
-                        ? lisExprs.get(iCmp).generateArgument(ctx, code, true, true, errs)
-                        : argPrev;
-                Argument arg2  = lisExprs.get(iCmp+1).generateArgument(ctx, code, fLast, fLast, errs);
+                Token    tok  = aTokOp[iCmp];
+                Argument arg1 = aArgs[iCmp];
+                Argument arg2 = aArgs[iCmp + 1];
 
-                if (fLast)
+                if (iCmp == cOps - 1) // last
                     {
                     OpTest opTest;
-                    switch (operators[iCmp].getId())
+                    switch (tok.getId())
                         {
                         case COMP_EQ:
                             opTest = new IsEq(arg1, arg2, argResult);
@@ -384,7 +392,7 @@ public class CmpChainExpression
                 else
                     {
                     OpCondJump opCondJump;
-                    switch (operators[iCmp].getId())
+                    switch (tok.getId())
                         {
                         case COMP_EQ:
                             opCondJump = new JumpNotEq(arg1, arg2, labelFalse);
@@ -411,22 +419,16 @@ public class CmpChainExpression
                     opCondJump.setCommonType(typeCmp);
                     code.add(opCondJump);
                     }
-
-                // each time through the loop after the first time, the "left" expression to compare
-                // is the same value that was computed/loaded for the "right" expression on the
-                // previous loop
-                argPrev = arg2;
                 }
             }
         else
             {
             // optimize equality comparisons to a constant, especially to null
             boolean fNull = constVal.equals(pool.valNull());
-            for (int iExpr = 0, iLastExpr = lisExprs.size() - 1; iExpr <= iLastExpr; ++iExpr)
+            for (int iExpr = 0; iExpr < cExprs; ++iExpr)
                 {
-                Expression expr  = lisExprs.get(iExpr);
-                Argument   arg   = expr.generateArgument(ctx, code, true, true, errs);
-                if (iExpr == iLastExpr)
+                Argument arg = aArgs[iExpr];
+                if (iExpr == cExprs - 1) // last
                     {
                     OpTest opTest = fNull
                             ? new IsNull(arg, argResult)
@@ -464,14 +466,22 @@ public class CmpChainExpression
 
         // optimize equality comparisons to a constant, especially to null
         List<Expression> listExprs = expressions;
+        int              cExprs    = listExprs.size();
+        Argument[]       aArgs     = new Argument[cExprs];
         Constant         constVal  = m_constEq;
         TypeConstant     typeCmp   = m_typeCommon;
+
+        for (int i = 0; i < cExprs; i++)
+            {
+            aArgs[i] = listExprs.get(i).generateArgument(ctx, code, false, i == cExprs-1, errs);
+            }
+
         if (constVal != null)
             {
             boolean fNull = constVal.equals(pool().valNull());
-            for (Expression expr : listExprs)
+            for (int i = 0; i < cExprs; i++)
                 {
-                Argument   arg = expr.generateArgument(ctx, code, true, true, errs);
+                Argument   arg = aArgs[i];
                 OpCondJump op  = fNull
                         ? new JumpNull(arg, label)
                         : new JumpEq(arg, constVal, label);
@@ -483,19 +493,14 @@ public class CmpChainExpression
 
         // otherwise, everything has to get compared, left to right
         Token[]  aTokOp  = operators;
-        Argument argPrev = null;
-        for (int iCmp = 0, iLastCmp = aTokOp.length - 1; iCmp <= iLastCmp; ++iCmp)
+        for (int iCmp = 0, cOps = aTokOp.length; iCmp < cOps; ++iCmp)
             {
-            // evaluate the sub-expressions
-            boolean  fLast = iCmp == iLastCmp;
-            Argument arg1  = argPrev == null
-                    ? listExprs.get(iCmp).generateArgument(ctx, code, true, true, errs)
-                    : argPrev;
-            Argument arg2  = listExprs.get(iCmp+1).generateArgument(ctx, code, fLast, fLast, errs);
+            Argument arg1 = aArgs[iCmp];
+            Argument arg2 = aArgs[iCmp + 1];
 
             // generate the op that combines the two sub-expressions
             OpCondJump op;
-            switch (operators[iCmp].getId())
+            switch (aTokOp[iCmp].getId())
                 {
                 case COMP_EQ:
                     op = fWhenTrue
@@ -539,11 +544,6 @@ public class CmpChainExpression
 
             op.setCommonType(typeCmp);
             code.add(op);
-
-            // each time through the loop after the first time, the "left" expression to compare is
-            // the same value that was computed/loaded for the "right" expression on the previous
-            // loop
-            argPrev = arg2;
             }
         }
 
