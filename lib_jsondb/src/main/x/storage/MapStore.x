@@ -57,7 +57,8 @@ service MapStore<Key extends immutable Const, Value extends immutable Const>
      */
     protected immutable Map<Key, Value|Deletion> NoChanges = Map<>:[];
 
-    @Override protected class Changes(Int writeId, Int readId)
+    @Override
+    protected class Changes(Int writeId, Int readId)
         {
         /**
          * A map of inserted and updated key/value pairs, keyed by the internal URI form.
@@ -106,28 +107,67 @@ service MapStore<Key extends immutable Const, Value extends immutable Const>
 
     // ----- ObjectStore transaction handling ------------------------------------------------------
 
-    @Override PrepareResult prepare(Int writeId, Int prepareId)
+    @Override
+    PrepareResult prepare(Int writeId, Int prepareId)
         {
         TODO
         }
 
-    @Override MergeResult mergePrepare(Int writeId, Int prepareId, Boolean seal = False)
+    @Override
+    MergeResult mergePrepare(Int writeId, Int prepareId, Boolean seal = False)
+        {
+        MergeResult result = NoMerge;
+
+        if (Changes tx := peekTx(writeId))
+            {
+            assert !tx.sealed;
+
+            val mods = tx.mods;
+            if (mods != Null)
+                {
+                for ((Key key, Value|Deletion value) : mods)
+                    {
+                    if (Value prev := latestValue(key, prepareId-1), &value == &prev)
+                        {
+                        // this part of the transaction is un-doing itself
+                        assert val mapByTx := history.get(key);
+                        mapByTx.remove(prepareId);
+                        continue;
+                        }
+
+                    // TODO GG val mapByTx = history.computeIfAbsent(key, () -> new SkiplistMap());
+                    val mapByTx = history.computeIfAbsent(key, () -> new SkiplistMap<Int, Value|Deletion>());
+                    mapByTx.put(prepareId, value);
+                    }
+
+                // REVIEW it is not possible to easily determine a result of CommittedNoChanges
+                result = Merged;
+                }
+
+            tx.readId   = prepareId;// slide the readId forward to the point that we just prepared
+            tx.prepared = True;     // remember that the changed the readId to the prepareId
+            tx.mods     = Null;     // the "changes" no longer differs from the historical record
+            tx.sealed   = seal;
+            }
+
+        return result;
+        }
+
+    @Override
+    OrderedMap<Int, Doc> commit(OrderedMap<Int, Int> writeIdForPrepareId)
         {
         TODO
         }
 
-    @Override OrderedMap<Int, Doc> commit(OrderedMap<Int, Int> writeIdForPrepareId)
-        {
-        TODO
-        }
-
-    @Override void rollback(Int writeId)
+    @Override
+    void rollback(Int writeId)
         {
         assert isWriteTx(writeId);
         TODO
         }
 
-    @Override void retainTx(OrderedSet<Int> inUseTxIds, Boolean force = False)
+    @Override
+    void retainTx(OrderedSet<Int> inUseTxIds, Boolean force = False)
         {
         TODO
         }
@@ -151,6 +191,74 @@ service MapStore<Key extends immutable Const, Value extends immutable Const>
 //            delete(txId, key);
 //            }
 //        }
+
+
+    // ----- internal ------------------------------------------------------------------------------
+
+    /**
+     * Obtain the update-to-date value from the transaction.
+     *
+     * @param key  the key in the map to obtain the value for
+     * @param tx   the transaction's Changes record
+     *
+     * @return True if the key has a value
+     * @return the current value
+     */
+    protected conditional Value currentValue(Key key, Changes tx)
+        {
+        if (Value|Deletion value := tx.peekMods().get(key))
+            {
+            return value.is(Deletion)
+                    ? False
+                    : (True, value);
+            }
+
+        return latestValue(key, tx.readId);
+        }
+
+    /**
+     * Obtain the original value from when the transaction began.
+     *
+     * @param key     the key in the map to obtain the value for
+     * @param readId  the transaction id to read from
+     *
+     * @return True if the key has a value as of the specified readId transaction
+     * @return the previous value
+     */
+    protected conditional Value latestValue(Key key, Int readId)
+        {
+        if (val mapByTx := history.get(key), readId := mapByTx.floor(readId))
+            {
+            assert Value|Deletion value := mapByTx.get(readId);
+            return value.is(Deletion)
+                    ? False
+                    : (True, value);
+            }
+
+        return False;
+        }
+
+    /**
+     * Obtain the latest committed value.
+     *
+     * @param key  the key in the map to obtain the value for
+     *
+     * @return True if the key has a value
+     * @return the latest value
+     */
+    protected conditional Value latestValue(Key key)
+        {
+        if (val mapByTx := history.get(key))
+            {
+            assert Int readId := mapByTx.last();
+            assert Value|Deletion value := mapByTx.get(readId);
+            return value.is(Deletion)
+                    ? False
+                    : (True, value);
+            }
+
+        return False;
+        }
 
 
     // ----- ObjectStore IO handling ---------------------------------------------------------------
