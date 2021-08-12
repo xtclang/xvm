@@ -115,9 +115,12 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
         {
         // TODO this should be a lot easier ... e.g.: return catalog.dir.apply(path);
         Directory dir = catalog.dir;
-        for (Path part : path[1..path.size-1))
+        if (path.size > 2)
             {
-            dir = dir.dirFor(part.name);
+            for (Path part : path[1..path.size-1))
+                {
+                dir = dir.dirFor(part.name);
+                }
             }
         return dir;
         }
