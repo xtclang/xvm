@@ -2,6 +2,8 @@ import model.DBObjectInfo;
 import model.Lock;
 import model.SysInfo;
 
+import json.Mapping;
+
 import oodb.DBCounter;
 import oodb.DBFunction;
 import oodb.DBInfo;
@@ -398,7 +400,7 @@ service Catalog<Schema extends RootSchema>
             }
         else
             {
-            val params = (this, info, log);
+            Tuple params = (this, info, log);
             switch (info.category)
                 {
                 case DBSchema:
@@ -410,8 +412,10 @@ service Catalog<Schema extends RootSchema>
                     Type storeType = MapStore.parameterize([keyType, valueType]);
                     for (val constructor : storeType.constructors)
                         {
-                        if (constructor.params.size == 3)
+                        if (constructor.params.size == 5)
                             {
+                            params = params.add(jsonSchema.ensureMapping(keyType))
+                                           .add(jsonSchema.ensureMapping(valueType));
                             return constructor.invoke(params)[0].as(ObjectStore);
                             }
                         }
@@ -434,8 +438,13 @@ service Catalog<Schema extends RootSchema>
                     Type storeType = ValueStore.parameterize([valueType]);
                     for (val constructor : storeType.constructors)
                         {
-                        if (constructor.params.size == 3)
+                        if (constructor.params.size == 5)
                             {
+                            assert Class  valueClass   := valueType.fromClass(),
+                                   Object defaultValue := valueClass.defaultValue();
+
+                            params = params.add(jsonSchema.ensureMapping(valueType))
+                                           .add(defaultValue);
                             return constructor.invoke(params)[0].as(ObjectStore);
                             }
                         }
