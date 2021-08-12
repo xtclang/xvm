@@ -51,7 +51,12 @@ public class xListMap
         {
         if (constant instanceof MapConstant)
             {
-            TypeConstant            typeMap   = constant.getType();
+            TypeConstant typeMap = constant.getType();
+            if (typeMap.containsFormalType(true))
+                {
+                typeMap = typeMap.resolveGenerics(frame.poolContext(), frame.getGenericsResolver());
+                }
+
             Map<Constant, Constant> mapValues = ((MapConstant) constant).getValue();
             int                     cEntries  = mapValues.size();
 

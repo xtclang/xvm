@@ -196,6 +196,12 @@ public class MapConstant
         }
 
     @Override
+    public boolean isValueCacheable()
+        {
+        return !m_constType.containsFormalType(true);
+        }
+
+    @Override
     public boolean containsUnresolved()
         {
         if (m_constType.containsUnresolved())
