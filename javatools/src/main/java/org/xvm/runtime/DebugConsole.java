@@ -853,13 +853,12 @@ public class DebugConsole
                 }
             sb.append(hVal.getType().getValueString());
 
-            ObjectHandle[] ahValue = composition.getFieldValueArray((GenericHandle) hVal);
             for (String sField : listNames)
                 {
-                ObjectHandle hField = ahValue[composition.getFieldPosition(sField)];
+                ObjectHandle hField = ((GenericHandle) hVal).getField(sField);
 
-                sb.append('\n');
-                sb.append(sTab)
+                sb.append('\n')
+                  .append(sTab)
                   .append(sField);
                 renderVar(hField, true, sb, sTab + "   ");
                 }
