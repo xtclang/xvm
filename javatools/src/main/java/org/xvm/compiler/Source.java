@@ -89,7 +89,7 @@ public class Source
         {
         try
             {
-            StringBuffer sb = new StringBuffer();
+            StringBuilder sb = new StringBuilder();
             int n;
             while ((n = stream.read()) >= 0)
                 {

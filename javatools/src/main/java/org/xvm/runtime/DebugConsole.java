@@ -8,6 +8,7 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
@@ -18,6 +19,9 @@ import org.xvm.asm.constants.IdentityConstant;
 
 import org.xvm.runtime.Frame.VarInfo;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+import org.xvm.runtime.ObjectHandle.GenericHandle;
+
+import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 
 import org.xvm.runtime.template._native.xTerminalConsole;
 
@@ -175,7 +179,7 @@ public class DebugConsole
                         switch (cArgs)
                             {
                             case 0:
-                                // "B-" remove the currrent line from the list of breakpoints
+                                // "B-" remove the current line from the list of breakpoints
                                 if (iPC >= 0)
                                     {
                                     removeBP(makeBreakPoint(frame, iPC));
@@ -193,9 +197,9 @@ public class DebugConsole
                                     continue NextCommand;
                                     }
                                 // "B- 3"  (# is from the previously displayed list of breakpoints)
-                                else if (m_aBreaks != null && asParts[1].chars().allMatch(n -> n >= '0' && n <= '9'))
+                                else if (m_aBreaks != null)
                                     {
-                                    int n = Integer.parseInt(asParts[1]);
+                                    int n = parseNonNegative(asParts[1]);
                                     if (n >= 0 && n < m_aBreaks.length)
                                         {
                                         removeBP(m_aBreaks[n]);
@@ -262,14 +266,15 @@ public class DebugConsole
                                     else
                                         {
                                         Arrays.stream(aBP).forEach(BreakPoint::enable);
-                                        m_fBreakOnAllThrows = Arrays.stream(aBP).anyMatch(bp -> bp.className.equals("*"));
+                                        m_fBreakOnAllThrows =
+                                            Arrays.stream(aBP).anyMatch(bp -> bp.className.equals("*"));
                                         }
                                     continue NextCommand;
                                     }
                                 // "BT 3"  (# is from the previously displayed list of breakpoints)
-                                else if (m_aBreaks != null && asParts[1].chars().allMatch(n -> n >= '0' && n <= '9'))
+                                else if (m_aBreaks != null)
                                     {
-                                    int n = Integer.parseInt(asParts[1]);
+                                    int n = parseNonNegative(asParts[1]);
                                     if (n >= 0 && n < m_aBreaks.length)
                                         {
                                         BreakPoint bp = m_aBreaks[n];
@@ -305,11 +310,17 @@ public class DebugConsole
                         break;
 
                     case "F":
-                        if (cArgs == 1 && asParts[1].chars().allMatch(n -> n >= '0' && n <= '9'))
+                        if (cArgs == 0)
+                            {
+                            writer.println(renderDebugger());
+                            continue NextCommand;
+                            }
+
+                        if (cArgs == 1)
                             {
                             Frame.StackFrame[] aFrames = m_aFrames;
                             int                cFrames = aFrames == null ? 0 : aFrames.length;
-                            int                iFrame  = Integer.parseInt(asParts[1]);
+                            int                iFrame  = parseNonNegative(asParts[1]);
                             if (iFrame >= 0 && iFrame < cFrames)
                                 {
                                 m_frameFocus = aFrames[iFrame].frame;
@@ -395,6 +406,23 @@ public class DebugConsole
                             }
                         break;
 
+                    case "X":
+                        if (cArgs == 1)
+                            {
+                            String[] asVars = m_asVars;
+                            int iVar = parseNonNegative(asParts[1]);
+                            if (iVar >= 0 && iVar < asVars.length)
+                                {
+                                ObjectHandle  hVar = getVar(asVars[iVar]);
+                                StringBuilder sb   = new StringBuilder();
+
+                                renderVar(hVar, false, sb, "   +");
+                                writer.println(sb);
+                                continue NextCommand;
+                                }
+                            }
+                        break;
+
                     default:
                         writer.println("Unknown command: \"" + sCommand + "\"; enter '?' for help");
                         continue NextCommand;
@@ -418,7 +446,7 @@ public class DebugConsole
         return new BreakPoint(sName, nLine);
         }
 
-    void addBP(BreakPoint bp)
+    private void addBP(BreakPoint bp)
         {
         if (bp == null)
             {
@@ -454,7 +482,7 @@ public class DebugConsole
             }
         }
 
-    void removeBP(BreakPoint bp)
+    private void removeBP(BreakPoint bp)
         {
         if (bp == null)
             {
@@ -485,7 +513,7 @@ public class DebugConsole
             }
         }
 
-    void toggleBP(BreakPoint bp)
+    private void toggleBP(BreakPoint bp)
         {
         bp = findBP(bp);
         if (bp != null)
@@ -507,7 +535,7 @@ public class DebugConsole
             }
         }
 
-    BreakPoint findBP(BreakPoint bp)
+    private BreakPoint findBP(BreakPoint bp)
         {
         if (bp != null)
             {
@@ -715,37 +743,127 @@ public class DebugConsole
 
     private String[] renderVars(int cMax)
         {
-        Frame              frame     = m_frameFocus;
-        int                cVars     = frame.f_anNextVar[frame.m_iScope];
-        int                cchVarNum = numlen(cVars-1);
-        ArrayList<VarInfo> listVars  = new ArrayList<>(cVars);
-        ArrayList<String>  listVals  = new ArrayList<>(cVars);
+        Frame frame = m_frameFocus;
+        if (frame.isNative())
+            {
+            return Handy.NO_ARGS;
+            }
+
+        int               cVars     = frame.f_anNextVar[frame.m_iScope];
+        int               cchVarNum = numlen(cVars-1);
+        ArrayList<String> listVars  = new ArrayList<>(cVars + 1);
+        ArrayList<String> listVals  = new ArrayList<>(cVars + 1);
+
+        int          index = 0;
+        ObjectHandle hThis = frame.f_hThis;
+        if (hThis != null)
+            {
+            addVal(listVars, listVals, "this", hThis, index++, cMax, cchVarNum);
+            }
+
         for (int i = 0; i < cVars; i++)
             {
             VarInfo info = frame.getVarInfo(i);
             String  sVar = info == null ? "" : info.getName();
             if (!sVar.isEmpty())
                 {
-                ObjectHandle hValue = frame.f_ahVar[i];
-                listVars.add(info);
-
-                String sDescr = hValue == null ? "<not assigned>" : hValue.toString();
-                sDescr = sDescr.replace('\n', ' ');
-
-                int cDescrMax = cMax - cchVarNum - sVar.length() - 3;
-                if (sDescr.length() > cDescrMax)
-                    {
-                    sDescr = sDescr.substring(0, cDescrMax - 3) + "...";
-                    }
-
-                listVals.add(
-                    rjust(Integer.toString(i), cchVarNum) +
-                    "  " + sVar + '=' + sDescr
-                    );
+                addVal(listVars, listVals, sVar, frame.f_ahVar[i], index++, cMax, cchVarNum);
                 }
             }
-        m_aVars = listVars.toArray(new VarInfo[0]);
-        return listVals.toArray(new String[0]);
+        m_asVars = listVars.toArray(Handy.NO_ARGS);
+        return listVals.toArray(Handy.NO_ARGS);
+        }
+
+    private void addVal(ArrayList<String> listVars, ArrayList<String> listVals,
+                        String sVar, ObjectHandle hValue, int iVar,
+                        int cMax, int cchVarNum)
+        {
+        String sDescr = hValue == null ? "<not assigned>" : hValue.toString();
+        if (sDescr.indexOf('\n') >= 0)
+            {
+            sDescr = sDescr.replace('\n', ' ');
+            }
+
+        int cDescrMax = cMax - cchVarNum - sVar.length() - 3;
+        if (sDescr.length() > cDescrMax)
+            {
+            sDescr = sDescr.substring(0, cDescrMax - 3) + "...";
+            }
+
+        listVars.add(sVar);
+        listVals.add(
+            rjust(Integer.toString(iVar), cchVarNum) +
+            "  " + sVar + '=' + sDescr
+            );
+        }
+
+    private ObjectHandle getVar(String sName)
+        {
+        Frame frame = m_frameFocus;
+        if (sName.equals("this"))
+            {
+            return frame.f_hThis;
+            }
+
+        int cVars = frame.f_anNextVar[frame.m_iScope];
+        for (int i = 0; i < cVars; i++)
+            {
+            VarInfo info = frame.getVarInfo(i);
+            if (info != null && info.getName().equals(sName))
+                {
+                return frame.f_ahVar[i];
+                }
+            }
+        return null;
+        }
+
+    private void renderVar(ObjectHandle hVal, boolean fField, StringBuilder sb, String sTab)
+        {
+        if (hVal == null)
+            {
+            if (fField)
+                {
+                sb.append('=');
+                }
+            sb.append("<unassigned>");
+            return;
+            }
+
+        TypeComposition composition = hVal.getComposition();
+        List<String>    listNames   = composition.getFieldNames();
+        if (listNames.isEmpty())
+            {
+            if (fField)
+                {
+                sb.append('=');
+                }
+
+            if (hVal instanceof ArrayHandle)
+                {
+                ArrayHandle hArray = (ArrayHandle) hVal;
+                // TODO GG show the array values
+                }
+            sb.append(hVal);
+            }
+        else
+            {
+            if (fField)
+                {
+                sb.append(": ");
+                }
+            sb.append(hVal.getType().getValueString());
+
+            ObjectHandle[] ahValue = composition.getFieldValueArray((GenericHandle) hVal);
+            for (String sField : listNames)
+                {
+                ObjectHandle hField = ahValue[composition.getFieldPosition(sField)];
+
+                sb.append('\n');
+                sb.append(sTab)
+                  .append(sField);
+                renderVar(hField, true, sb, sTab + "   ");
+                }
+            }
         }
 
     private int longestOf(String[] as)
@@ -1056,9 +1174,9 @@ public class DebugConsole
     private Frame m_frameFocus;
 
     /**
-     * The displayed list of variables.
+     * The displayed array of variable names.
      */
-    private VarInfo[] m_aVars;
+    private String[] m_asVars;
 
     /**
      * The last debugged iPC.

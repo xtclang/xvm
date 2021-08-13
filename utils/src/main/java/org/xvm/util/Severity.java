@@ -11,7 +11,7 @@ public enum Severity
     public String desc()
         {
         String sName = name();
-        StringBuffer sb = new StringBuffer(sName.length());
+        StringBuilder sb = new StringBuilder(sName.length());
         sb.append(sName.charAt(0));
         sb.append(sName.substring(1).toLowerCase());
         return sb.toString();

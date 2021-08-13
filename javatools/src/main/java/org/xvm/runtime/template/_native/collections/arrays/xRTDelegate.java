@@ -859,7 +859,7 @@ public class xRTDelegate
         @Override
         public String toString()
             {
-            return getClass().getSimpleName() + " " + m_mutability + ", size=" + m_cSize;
+            return getClass().getSimpleName() + ", size=" + m_cSize;
             }
         }
 

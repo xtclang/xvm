@@ -1810,16 +1810,16 @@ public class Frame
 
             if (function == null)
                 {
-                sb.append("???()");
+                sb.append("Service ")
+                  .append(frame.f_context.f_sName);
                 }
             else
                 {
                 buildShortName(function.getIdentityConstant(), sb, false);
+                sb.append(':');
                 }
 
-            sb.append(':');
-
-            if (iPC >= 0)
+            if (function != null && iPC >= 0)
                 {
                 int nLine = 0;
                 if (function != null)
@@ -1898,7 +1898,7 @@ public class Frame
             }
         }
 
-    StackFrame[] getStackFrameArray()
+    protected StackFrame[] getStackFrameArray()
         {
         Frame frame = this;
         Fiber fiber = frame.f_fiber;
