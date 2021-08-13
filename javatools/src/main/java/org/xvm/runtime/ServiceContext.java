@@ -606,6 +606,11 @@ public class ServiceContext
 
                 case Op.R_RETURN:
                     {
+                    if (isDebuggerActive())
+                        {
+                        getDebugger().onReturn(frame);
+                        }
+
                     Frame.Continuation continuation = frame.m_continuation;
                     frame = m_frameCurrent = frame.f_framePrev; // GC the old frame
 

@@ -47,17 +47,16 @@ public class DebugConsole
     @Override
     public int checkBreakPoint(Frame frame, int iPC)
         {
-        boolean fDebug = false;
+        boolean fDebug;
         switch (m_stepMode)
             {
             case StepOver:
-                // "step over" on Return can turn into "step out"
-                fDebug = frame.f_context == m_frame.f_context && frame.f_iId <= m_frame.f_iId;
+                fDebug = frame == m_frame;
                 break;
 
             case StepOut:
-                // TODO: how to "step out" of service?
-                fDebug = frame.f_context == m_frame.f_context && frame.f_iId < m_frame.f_iId;
+                // handled by onReturn()
+                fDebug = false;
                 break;
 
             case StepInto:
@@ -65,13 +64,15 @@ public class DebugConsole
                 break;
 
             case StepLine:
-                fDebug = frame.f_context == m_frame.f_context && frame.f_iId == m_frame.f_iId &&
-                         iPC == m_iPC;
+                fDebug = frame == m_frame && iPC == m_iPC;
                 break;
 
             case None:
                 fDebug = m_setLineBreaks != null && m_setLineBreaks.stream().anyMatch(bp -> bp.matches(frame, iPC));
                 break;
+
+            default:
+                throw new IllegalStateException();
             }
 
         return fDebug
@@ -85,6 +86,16 @@ public class DebugConsole
         if (m_fBreakOnAllThrows || m_setThrowBreaks != null && m_setThrowBreaks.stream().anyMatch(bp -> bp.matches(hEx)))
             {
             enterCommand(frame, -1);
+            }
+        }
+
+    @Override
+    public void onReturn(Frame frame)
+        {
+        if (m_stepMode == StepMode.StepOver && frame == m_frame)
+            {
+            // we're exiting the frame; stop at the first chance
+            m_stepMode = StepMode.StepInto;
             }
         }
 

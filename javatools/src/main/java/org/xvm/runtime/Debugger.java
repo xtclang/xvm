@@ -26,6 +26,13 @@ public interface Debugger
     int checkBreakPoint(Frame frame, int iPC);
 
     /**
+     * Inform the debugger that a frame is being exited.
+     *
+     * @param frame  the frame that exits
+     */
+    void onReturn(Frame frame);
+
+    /**
      * Check for a breakpoint for the specified exception.
      *
      * @param frame  the current frame
