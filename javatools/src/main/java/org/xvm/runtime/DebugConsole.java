@@ -7,6 +7,7 @@ import java.io.PrintWriter;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -840,8 +841,11 @@ public class DebugConsole
             return;
             }
 
+        // composition could be null for deferred values (e.g. <default>)
         TypeComposition composition = hVal.getComposition();
-        List<String>    listNames   = composition.getFieldNames();
+        List<String>    listNames   = composition == null
+                ? Collections.EMPTY_LIST
+                : composition.getFieldNames();
         if (listNames.isEmpty())
             {
             if (fField)
