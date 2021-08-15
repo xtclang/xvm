@@ -394,7 +394,7 @@ interface DataOutput
     /**
      * Write an integer to the passed stream, encoding it using the packed integer format.
      *
-     * The packed integer format represents a signed, 2's-complement integer of 1-512 bytes in size.
+     * The packed integer format represents a signed, 2's-complement integer of 1-512 bits in size.
      * The storage format is compressed as much as possible. There are four storage formats:
      *
      * * **Tiny**: For a value in the range -64..63 (7 bits), the value can be encoded in one byte.
@@ -402,15 +402,15 @@ interface DataOutput
      *   to 1. When writing in a packed integer, if bit 0x1 of the first byte is 1, then it's Tiny.
      *
      * * **Small**: For a value in the range -4096..4095 (13 bits), the value can be encoded in two
-     *   bytes. The first byte contains the value 0x2 in the least significant 3 bits (010), and
+     *   bytes. The first byte contains the value 0x2 (010) in the least significant 3 bits, and
      *   bits 8-12 of the integer in bits 3-7; the second byte contains bits 0-7 of the integer.
      *
      * * **Medium**: For a value in the range -1048576..1048575 (21 bits), the value can be encoded
-     *   in three bytes. The first byte contains the value 0x6 in the least significant 3 bits
-     *   (110), and bits 16-20 of the integer in bits 3-7; the second byte contains bits 8-15 of the
+     *   in three bytes. The first byte contains the value 0x6 (110) in the least significant 3
+     *   bits, and bits 16-20 of the integer in bits 3-7; the second byte contains bits 8-15 of the
      *   integer; the third byte contains bits 0-7 of the integer.
      *
-     * * **Large**: For a value in the range -(2^511)..2^511-1 (4096 bits), a value with `s`
+     * * **Large**: For a value in the range -(2^511)..2^511-1 (up to 512 bits), a value with `s`
      *   significant bits can be encoded in no less than `1+max(1,(s+7)/8)}` bytes; let `b` be
      *   the selected encoding length, in bytes. The first byte contains the value 0x0 in the least
      *   significant 2 bits (00), and the least 6 significant bits of `(b-2)` in bits 2-7. The
