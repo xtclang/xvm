@@ -394,12 +394,12 @@ interface DataOutput
     /**
      * Write an integer to the passed stream, encoding it using the packed integer format.
      *
-     * The packed integer format represents a signed, 2's-complement integer of 1-512 bits in size.
-     * The storage format is compressed as much as possible. There are four storage formats:
+     * The packed integer format represents a signed, 2's-complement integer of 1-512 bits (1-64
+     * bytes) in size. There are four storage formats:
      *
      * * **Tiny**: For a value in the range -64..63 (7 bits), the value can be encoded in one byte.
      *   The least significant 7 bits of the value are shifted left by 1 bit, and the 0x1 bit is set
-     *   to 1. When writing in a packed integer, if bit 0x1 of the first byte is 1, then it's Tiny.
+     *   to 1. When reading a packed integer, if bit 0x1 of the first byte is 1, then it's Tiny.
      *
      * * **Small**: For a value in the range -4096..4095 (13 bits), the value can be encoded in two
      *   bytes. The first byte contains the value 0x2 (010) in the least significant 3 bits, and
@@ -411,7 +411,7 @@ interface DataOutput
      *   integer; the third byte contains bits 0-7 of the integer.
      *
      * * **Large**: For a value in the range -(2^511)..2^511-1 (up to 512 bits), a value with `s`
-     *   significant bits can be encoded in no less than `1+max(1,(s+7)/8)}` bytes; let `b` be
+     *   significant bits can be encoded in no less than `1+max(1,(s+7)/8)` bytes; let `b` be
      *   the selected encoding length, in bytes. The first byte contains the value 0x0 in the least
      *   significant 2 bits (00), and the least 6 significant bits of `(b-2)` in bits 2-7. The
      *   following `(b-1)` bytes contain the least significant `(b-1)*8` bits of the integer.
