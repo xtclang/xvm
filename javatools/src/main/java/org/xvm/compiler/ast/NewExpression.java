@@ -948,8 +948,8 @@ public class NewExpression
             ChildInfo infoChild = entry.getValue();
             if (infoChild.isVirtualClass())
                 {
-                TypeConstant typeChild = infoChild.getIdentity().getType();
-                TypeInfo     info      = typeChild.ensureTypeInfo();
+                ClassStructure clzChild = (ClassStructure) infoChild.getIdentity().getComponent();
+                TypeInfo       info     = clzChild.getFormalType().ensureTypeInfo();
                 if (!info.isExplicitlyAbstract() && info.isAbstract())
                     {
                     reportNotNewable(sType, info, entry.getKey(), errs);
