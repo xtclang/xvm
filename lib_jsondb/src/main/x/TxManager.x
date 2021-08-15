@@ -599,7 +599,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      */
     protected Int genWriteId()
         {
-        return -(++txCount);
+        return generateWriteId(++txCount);
         }
 
     /**
