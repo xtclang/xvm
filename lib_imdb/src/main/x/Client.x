@@ -18,9 +18,9 @@ import oodb.NoTx;
 import oodb.RootSchema;
 import oodb.SystemSchema;
 
-import storage.DBCounterStore;
-import storage.DBMapStore;
-import storage.DBValueStore;
+import storage.CounterStore;
+import storage.MapStore;
+import storage.ValueStore;
 
 import Catalog.SchemaStore;
 
@@ -229,12 +229,12 @@ service Client<Schema extends RootSchema>
         return switch (info.category)
             {
             case DBSchema:   new DBSchemaImpl(storeFor(id).as(SchemaStore));
-            case DBMap:      new DBMapImpl(storeFor(id).as(DBMapStore));
+            case DBMap:      new DBMapImpl(storeFor(id).as(MapStore));
             case DBList:     TODO
             case DBQueue:    TODO
             case DBLog:      TODO
-            case DBCounter:  new DBCounterImpl(storeFor(id).as(DBCounterStore));
-            case DBValue:    new DBValueImpl(storeFor(id).as(DBValueStore));
+            case DBCounter:  new DBCounterImpl(storeFor(id).as(CounterStore));
+            case DBValue:    new DBValueImpl(storeFor(id).as(ValueStore));
             case DBFunction: TODO
             };
         }
@@ -621,14 +621,14 @@ service Client<Schema extends RootSchema>
     /**
      * The DBValue DBObject implementation.
      */
-    class DBValueImpl<Value extends immutable Const>(DBValueStore<Value> store_)
+    class DBValueImpl<Value extends immutable Const>(ValueStore<Value> store_)
             extends DBObjectImpl(store_)
             implements DBValue<Value>
         {
         @Override
-        DBValueStore<Value> store_.get()
+        ValueStore<Value> store_.get()
             {
-            return super().as(DBValueStore<Value>);
+            return super().as(ValueStore<Value>);
             }
 
         @Override
@@ -659,14 +659,14 @@ service Client<Schema extends RootSchema>
     /**
      * The DBCounter implementation.
      */
-    class DBCounterImpl(DBCounterStore store_)
+    class DBCounterImpl(CounterStore store_)
             extends DBValueImpl<Int>(store_)
             implements DBCounter
         {
         @Override
-        DBCounterStore store_.get()
+        CounterStore store_.get()
             {
-            return super().as(DBCounterStore);
+            return super().as(CounterStore);
             }
 
         @Override
@@ -690,15 +690,15 @@ service Client<Schema extends RootSchema>
      * The DBMap implementation.
      */
     class DBMapImpl<Key extends immutable Const, Value extends immutable Const>
-        (DBMapStore<Key, Value> store_)
+        (MapStore<Key, Value> store_)
             extends DBObjectImpl(store_)
             implements DBMap<Key, Value>
             incorporates KeySetBasedMap<Key, Value>
         {
         @Override
-        DBMapStore<Key, Value> store_.get()
+        MapStore<Key, Value> store_.get()
             {
-            return super().as(DBMapStore<Key, Value>);
+            return super().as(MapStore<Key, Value>);
             }
 
         @Override

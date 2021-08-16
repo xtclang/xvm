@@ -177,7 +177,7 @@ static service Catalog
             case DBList:     TODO
             case DBQueue:    TODO
             case DBLog:      TODO
-            case DBCounter:  new DBCounterStore(info, storeFor("").errs);
+            case DBCounter:  new CounterStore(info, storeFor("").errs);
             case DBValue:    TODO
             case DBFunction: TODO
             default:         assert;
@@ -190,7 +190,7 @@ static service Catalog
         Type<DBMap> typeDBMap = info.type.as(Type<DBMap>);
         assert Type keyType := typeDBMap.resolveFormalType("Key")  , keyType.is(Type<immutable Const>);
         assert Type valType := typeDBMap.resolveFormalType("Value"), valType.is(Type<immutable Const>);
-        return new DBMapStore<keyType.DataType, valType.DataType>(info, storeFor("").errs);
+        return new MapStore<keyType.DataType, valType.DataType>(info, storeFor("").errs);
         }
 
     /**
@@ -202,20 +202,20 @@ static service Catalog
         }
 
     /**
-     * DBMapStore as a virtual child.
+     * MapStore as a virtual child.
      */
-    class DBMapStore<Key extends immutable Const, Value extends immutable Const>
+    class MapStore<Key extends immutable Const, Value extends immutable Const>
         (DBObjectInfo info, Appender<String> errs)
-            extends storage.DBMapStore<Key, Value>(info, errs)
+            extends storage.MapStore<Key, Value>(info, errs)
         {
         }
 
 
     /**
-     * DBCounterStore as a virtual child.
+     * CounterStore as a virtual child.
      */
-    class DBCounterStore(DBObjectInfo info, Appender<String> errs)
-            extends storage.DBCounterStore(info, errs)
+    class CounterStore(DBObjectInfo info, Appender<String> errs)
+            extends storage.CounterStore(info, errs)
         {
         }
 

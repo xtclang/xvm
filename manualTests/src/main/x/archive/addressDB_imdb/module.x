@@ -73,13 +73,13 @@ module AddressBookDB_imdb
                 {
                 case "contacts":
                     return new ContactsImpl_(this.AddressBookDBClient_.storeFor("contacts")
-                        .as(imdb_.storage.DBMapStore<String, AddressBookDB_.Contact>));
+                        .as(imdb_.storage.MapStore<String, AddressBookDB_.Contact>));
                 }
 
             return super(id);
             }
 
-        class ContactsImpl_(imdb_.storage.DBMapStore<String, AddressBookDB_.Contact> store_)
+        class ContactsImpl_(imdb_.storage.MapStore<String, AddressBookDB_.Contact> store_)
                 extends DBMapImpl<String, AddressBookDB_.Contact>(store_)
                 incorporates AddressBookDB_.Contacts
             {

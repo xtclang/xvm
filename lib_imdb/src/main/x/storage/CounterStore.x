@@ -1,8 +1,8 @@
 /**
  * In-memory store for a DBCounter.
  */
-class DBCounterStore(DBObjectInfo info, Appender<String> errs)
-        extends DBValueStore<Int>(info, errs, 0)
+class CounterStore(DBObjectInfo info, Appender<String> errs)
+        extends ValueStore<Int>(info, errs, 0)
     {
     // ----- master view ---------------------------------------------------------------------------
 
@@ -62,7 +62,7 @@ class DBCounterStore(DBObjectInfo info, Appender<String> errs)
             {
             if (relativeOnly)
                 {
-                oldValue     = this.DBCounterStore.getValue();
+                oldValue     = this.CounterStore.getValue();
                 newValue    += oldValue;
                 relativeOnly = False;
                 }
@@ -74,7 +74,7 @@ class DBCounterStore(DBObjectInfo info, Appender<String> errs)
             {
             if (relativeOnly)
                 {
-                oldValue     = this.DBCounterStore.getValue();
+                oldValue     = this.CounterStore.getValue();
                 relativeOnly = False;
                 }
             newValue = value;

@@ -1,0 +1,1 @@
+            new DBObjectInfo_("%propertyName%", Path:/%propertyName%, %propertyCategory%, %propertyId%, %propertyParentId%, typeParams=Map<String, Type>:[%propertyTypeParams%]),

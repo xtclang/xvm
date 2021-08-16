@@ -1,7 +1,7 @@
 /**
  * In-memory store for a DBValue.
  */
-class DBValueStore<Value extends immutable Const>
+class ValueStore<Value extends immutable Const>
         extends DBObjectStore(info, errs)
     {
     construct (DBObjectInfo info, Appender<String> errs, Value initial)

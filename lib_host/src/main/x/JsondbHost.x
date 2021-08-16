@@ -1,9 +1,5 @@
 import ecstasy.io.Log;
 
-import ecstasy.mgmt.ModuleRepository;
-
-import ecstasy.reflect.ModuleTemplate;
-
 import jsondb.Catalog;
 import jsondb.CatalogMetadata;
 import jsondb.Client;
@@ -12,7 +8,7 @@ import oodb.Connection;
 import oodb.DBUser;
 
 /**
- * Host for jsondb-based db module.
+ * Host for jsondb-based DB module.
  */
 class JsondbHost
         extends DbHost
@@ -20,23 +16,28 @@ class JsondbHost
     @Inject Console console;
 
     @Override
-    conditional ModuleTemplate generateDBModule(
-            ModuleRepository repository, String dbModuleName, Directory buildDir, Log errors)
-        {
-        ModuleTemplate dbModule = repository.getResolvedModule(dbModuleName);
+    String hostName = "jsondb";
 
-        String appName = dbModuleName;
+    @Override
+    String moduleSourceTemplate = $./templates/jsondb/_module.txt;
 
-        Directory moduleDir = buildDir.dirFor(appName + "_jsondb");
-        if (moduleDir.exists)
-            {
-            moduleDir.deleteRecursively();
-            }
-        moduleDir.create();
+    @Override
+    String propertyGetterTemplate = $./templates/jsondb/PropertyGetter.txt;
 
-        // temporary; replace with the compilation of generated source
-        return True, repository.getModule(dbModuleName + "_jsondb");
-        }
+    @Override
+    String propertyInfoTemplate = $./templates/jsondb/PropertyInfo.txt;
+
+    @Override
+    String customInstantiationTemplate = $./templates/jsondb/CustomInstantiation.txt;
+
+    @Override
+    String customDeclarationTemplate = $./templates/jsondb/CustomDeclaration.txt;
+
+    @Override
+    String customMethodTemplate = $./templates/jsondb/CustomMethod.txt;
+
+    @Override
+    String customInvocationTemplate = $./templates/common/CustomInvocation.txt;
 
     /**
      * Cached CatalogMetadata instance.

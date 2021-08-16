@@ -1,3 +1,6 @@
+// TODO discuss how a developer writing the @Database module can provide user information (if at all)
+// TODO creation actions (to initially populate the database), upgrade actions, etc.
+
 import model.DBObjectInfo;
 
 import oodb.Connection;

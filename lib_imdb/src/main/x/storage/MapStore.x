@@ -1,7 +1,7 @@
 /**
  * In-memory store for a DBMap.
  */
-class DBMapStore<Key extends immutable Const, Value extends immutable Const>
+class MapStore<Key extends immutable Const, Value extends immutable Const>
     (DBObjectInfo info, Appender<String> errs)
         extends DBObjectStore(info, errs)
         delegates Map<Key, Value>(contents)
@@ -17,7 +17,7 @@ class DBMapStore<Key extends immutable Const, Value extends immutable Const>
     protected Map<Key, DateTime> dates    = new HashMap<Key, DateTime>();
 
     @Override
-    DBMapStore put(Key key, Value value)
+    MapStore put(Key key, Value value)
         {
         contents.put(key, value);
         dates.put(key, clock.now);
@@ -70,7 +70,7 @@ class DBMapStore<Key extends immutable Const, Value extends immutable Const>
 
     conditional Value getAt(Int clientId, Key key)
         {
-        return contentsAt.computeIfAbsent(clientId, () -> this.DBMapStore.new TxChange()).get(key);
+        return contentsAt.computeIfAbsent(clientId, () -> this.MapStore.new TxChange()).get(key);
         }
 
     Set<Key> keysAt(Int clientId)
@@ -87,12 +87,12 @@ class DBMapStore<Key extends immutable Const, Value extends immutable Const>
 
     void putAt(Int clientId, Key key, Value value)
         {
-        contentsAt.computeIfAbsent(clientId, () -> this.DBMapStore.new TxChange()).put(key, value);
+        contentsAt.computeIfAbsent(clientId, () -> this.MapStore.new TxChange()).put(key, value);
         }
 
     void removeAt(Int clientId, Key key)
         {
-        contentsAt.computeIfAbsent(clientId, () -> this.DBMapStore.new TxChange()).remove(key);
+        contentsAt.computeIfAbsent(clientId, () -> this.MapStore.new TxChange()).remove(key);
         }
 
     @Override

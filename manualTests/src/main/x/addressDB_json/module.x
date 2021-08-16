@@ -1,21 +1,17 @@
-// TODO discuss how a developer writing the @Database module can provide user information (if at all)
-// TODO creation actions (to initially populate the database), upgrade actions, etc.
-
 module AddressBookDB_jsondb
-        incorporates CatalogMetadata_<AddressBookSchema_>
+        incorporates jsondb_.CatalogMetadata_<AddressBookSchema_>
     {
     package oodb_          import oodb.xtclang.org;
     package json_          import json.xtclang.org;
     package jsondb_        import jsondb.xtclang.org;
-    package AddressBookDB_ import AddressBookDB;
 
     import oodb_.DBUser as DBUser_;
 
     import jsondb_.Catalog            as Catalog_;
-    import jsondb_.CatalogMetadata    as CatalogMetadata_;
     import jsondb_.Client             as Client_;
     import jsondb_.model.DBObjectInfo as DBObjectInfo_;
-    import jsondb_.storage.MapStore   as MapStore_;
+
+    package AddressBookDB_ import AddressBookDB;
 
     import AddressBookDB_.AddressBookSchema as AddressBookSchema_;
 
@@ -52,7 +48,7 @@ module AddressBookDB_jsondb
     @Lazy json_.Schema jsonSchema.calc()
         {
         return new json_.Schema(
-                mappings         = [],              // TODO use dbTypes?
+                mappings         = [], // TODO use dbTypes?
                 version          = dbVersion,
                 randomAccess     = True,
                 enableMetadata   = True,
@@ -65,26 +61,26 @@ module AddressBookDB_jsondb
     @Override
     Catalog_<AddressBookSchema_> createCatalog(Directory dir, Boolean readOnly = False)
         {
-        return new Catalog_<AddressBookDB_.AddressBookSchema>(dir, this, readOnly);
+        return new Catalog_<AddressBookSchema_>(dir, this, readOnly);
         }
 
     @Override
     Client_<AddressBookSchema_> createClient(
             Catalog_<AddressBookSchema_> catalog,
-            Int                          id,
+            Int                          clientId,
             DBUser_                      dbUser,
             Boolean                      readOnly = False,
             function void(Client_)?      notifyOnClose = Null)
         {
-        return new AddressBookDBClient_(catalog, id, dbUser, readOnly, notifyOnClose);
+        return new AddressBookDBClient_(catalog, clientId, dbUser, readOnly, notifyOnClose);
         }
 
     service AddressBookDBClient_(Catalog_<AddressBookSchema_> catalog,
-                                 Int                          id,
-                                 DBUser_                      dbUser,
-                                 Boolean                      readOnly = False,
-                                 function void(Client_)?      notifyOnClose = Null)
-            extends Client_<AddressBookSchema_>(catalog, id, dbUser, readOnly, notifyOnClose)
+                                 Int                     clientId,
+                                 DBUser_                 dbUser,
+                                 Boolean                 readOnly = False,
+                                 function void(Client_)? notifyOnClose = Null)
+            extends Client_<AddressBookSchema_>(catalog, clientId, dbUser, readOnly, notifyOnClose)
         {
         @Override
         class RootSchemaImpl(DBObjectInfo_ info_)
@@ -110,15 +106,15 @@ module AddressBookDB_jsondb
                 {
                 case 1:
                     DBObjectInfo_ info = this.AddressBookDBClient_.infoFor(1);
-                    MapStore_<String, AddressBookDB_.Contact> store =
-                        this.AddressBookDBClient_.storeFor(1).as(MapStore_<String, AddressBookDB_.Contact>);
+                    jsondb_.storage.MapStore<String, AddressBookDB_.Contact> store =
+                        this.AddressBookDBClient_.storeFor(1).as(jsondb_.storage.MapStore<String, AddressBookDB_.Contact>);
                     return new ContactsImpl_(info, store);
                 }
 
             return super(id);
             }
 
-        class ContactsImpl_(DBObjectInfo_ info_, MapStore_<String, AddressBookDB_.Contact> store_)
+        class ContactsImpl_(DBObjectInfo_ info_, jsondb_.storage.MapStore<String, AddressBookDB_.Contact> store_)
                 extends DBMapImpl<String, AddressBookDB_.Contact>(info_, store_)
                 incorporates AddressBookDB_.Contacts
             {
@@ -129,7 +125,7 @@ module AddressBookDB_jsondb
                 {
                 using (this.AddressBookDBClient_.ensureTransaction())
                     {
-                    super(contact);
+                    return super(contact);
                     }
                 }
 
@@ -138,7 +134,7 @@ module AddressBookDB_jsondb
                 {
                 using (this.AddressBookDBClient_.ensureTransaction())
                     {
-                    super(name, phone);
+                    return super(name, phone);
                     }
                 }
 

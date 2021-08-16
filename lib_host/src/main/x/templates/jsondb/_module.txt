@@ -1,0 +1,107 @@
+module %appName%_jsondb
+        incorporates jsondb_.CatalogMetadata<%appSchema%_>
+    {
+    package oodb_   import oodb.xtclang.org;
+    package json_   import json.xtclang.org;
+    package jsondb_ import jsondb.xtclang.org;
+
+    import oodb_.DBUser as DBUser_;
+
+    import jsondb_.Catalog            as Catalog_;
+    import jsondb_.Client             as Client_;
+    import jsondb_.model.DBObjectInfo as DBObjectInfo_;
+
+    package %appName%_ import %appName%;
+
+    import %appName%_.%appSchema% as %appSchema%_;
+
+    @Override
+    @RO Module schemaModule.get()
+        {
+        assert Module m := %appName%_.isModuleImport();
+        return m;
+        }
+
+    @Override
+    @Lazy immutable DBObjectInfo_[] dbObjectInfos.calc()
+        {
+        return
+            [
+            new DBObjectInfo_("", ROOT, DBSchema, 0, 0, [1]),
+%PropertyInfos%
+            ];
+        }
+
+    @Override
+    Map<String, Type> dbTypes.get()
+        {
+        return Map:
+            [
+%PropertyTypes%
+// TODO:
+//            "String"=String,
+//            "AddressBookDB_:Contact"=AddressBookDB_.Contact,
+
+            ];
+        }
+
+    @Override
+    @Lazy json_.Schema jsonSchema.calc()
+        {
+        return new json_.Schema(
+                mappings         = [], // TODO use dbTypes?
+                version          = dbVersion,
+                randomAccess     = True,
+                enableMetadata   = True,
+                enablePointers   = True,
+                enableReflection = True,
+                typeSystem       = &this.actualType.typeSystem,
+                );
+        }
+
+    @Override
+    Catalog_<%appSchema%_> createCatalog(Directory dir, Boolean readOnly = False)
+        {
+        return new Catalog_<%appSchema%_>(dir, this, readOnly);
+        }
+
+    @Override
+    Client_<%appSchema%_> createClient(
+            Catalog_<%appSchema%_> catalog,
+            Int                     clientId,
+            DBUser_                 dbUser,
+            Boolean                 readOnly = False,
+            function void(Client_)? notifyOnClose = Null)
+        {
+        return new %appName%Client_(catalog, clientId, dbUser, readOnly, notifyOnClose);
+        }
+
+    service %appName%Client_(
+            Catalog_<%appSchema%_> catalog,
+            Int                     clientId,
+            DBUser_                 dbUser,
+            Boolean                 readOnly = False,
+            function void(Client_)? notifyOnClose = Null)
+                extends Client_<%appSchema%_>(catalog, clientId, dbUser, readOnly, notifyOnClose)
+        {
+        @Override
+        class RootSchemaImpl(DBObjectInfo_ info_)
+                implements %appSchema%_
+            {
+%PropertyGetters%
+            }
+
+        @Override
+        Client_.DBObjectImpl createImpl(Int id)
+            {
+            switch (id)
+                {
+%CustomInstantiations%
+                }
+
+            return super(id);
+            }
+
+%CustomDeclarations%
+        }
+    }
