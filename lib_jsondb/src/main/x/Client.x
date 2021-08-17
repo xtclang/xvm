@@ -970,11 +970,155 @@ service Client<Schema extends RootSchema>
             }
 
         @Override
-        Set<Key> keys.get()
+        @Lazy public/private Set<Key> keys.calc()
             {
-            using (val tx = ensureTransaction())
+            return new KeySet();
+            }
+
+        /**
+         * A representation of the Keys from the MapStore.
+         */
+        protected class KeySet
+                implements Set<Key>
+            {
+            @Override
+            Int size.get()
                 {
-                TODO
+                return outer.size;
+                }
+
+            @Override
+            Boolean empty.get()
+                {
+                return outer.empty;
+                }
+
+            @Override
+            Iterator<Element> iterator()
+                {
+                return new KeyIterator();
+                }
+
+            /**
+             * An iterator over the keys in the MapStore.
+             */
+            protected class KeyIterator
+                    implements Iterator<Key>
+                {
+                /**
+                 * Set to true once iteration has begun.
+                 */
+                protected/private Boolean started = False;
+
+                /**
+                 * The current block of keys.
+                 */
+                protected/private Key[] keyBlock = [];
+
+                /**
+                 * The index to use to get the next key.
+                 */
+                protected/private Int nextIndex = 0;
+
+                /**
+                 * The cookie to use to load the next block of keys.
+                 */
+                protected/private immutable Const? cookie = Null;
+
+                /**
+                 * Set to true once the iterator has been exhausted.
+                 */
+                protected/private Boolean finished.set(Boolean done)
+                    {
+                    if (done)
+                        {
+                        // make sure that the iterator has been marked as having started
+                        started = True;
+                        }
+
+                    super(done);
+                    }
+
+                @Override
+                conditional Element next()
+                    {
+                    while (True)
+                        {
+                        if (nextIndex < keyBlock.size)
+                            {
+                            return True, keyBlock[nextIndex++];
+                            }
+
+                        if (started && cookie == Null || finished)
+                            {
+                            close();
+                            return False;
+                            }
+
+                        // if there is no transaction, then we'll be creating an auto-commit
+                        // transaction, but if we already have a cookie left over from a
+                        // previous partial iteration, we can't guarantee that we will get the
+                        // same read tx-id from the new autocommit transaction
+                        assert !started || this.Client.tx != Null as
+                                `|Unable to complete iteration in auto-commit mode;
+                                 | the Map contained too many keys at the start of the iteration
+                                 | to deliver them within a single autocommit transaction.
+                                ;
+
+                        // load the next (or the first) block of keys
+                        started = True;
+                        using (val tx = ensureTransaction())
+                            {
+                            (keyBlock, cookie) = store_.keysAt(tx.id, cookie);
+                            nextIndex = 0;
+                            }
+                        }
+                    }
+
+                @Override
+                Boolean knownDistinct()
+                    {
+                    return True;
+                    }
+
+                @Override
+                conditional Int knownSize()
+                    {
+                    if (!started)
+                        {
+                        return True, outer.size;
+                        }
+
+                    if (finished)
+                        {
+                        return True, 0;
+                        }
+
+                    return False;
+                    }
+
+                @Override
+                void close(Exception? cause = Null)
+                    {
+                    // idempotent clean-up, and clear all unnecessary references
+                    finished  = True;
+                    keyBlock  = [];
+                    nextIndex = 0;
+                    cookie    = Null;
+                    }
+                }
+
+            @Override
+            Boolean contains(Key key)
+                {
+                return outer.contains(key);
+                }
+
+            @Override
+            KeySet remove(Key key)
+                {
+                outer.remove(key);
+                return this;
                 }
             }
         }
