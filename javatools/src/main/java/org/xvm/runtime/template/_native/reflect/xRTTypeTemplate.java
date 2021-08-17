@@ -1,11 +1,13 @@
 package org.xvm.runtime.template._native.reflect;
 
 
+import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
+import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
@@ -28,6 +30,7 @@ import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xNullable;
 
 import org.xvm.runtime.template.collections.xArray;
+import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
@@ -71,6 +74,8 @@ public class xRTTypeTemplate
         markNativeMethod("relational",        null, null);
         markNativeMethod("parameterized",     null, null);
         markNativeMethod("purify",            null, null);
+        markNativeMethod("parameterize",      null, null);
+        markNativeMethod("annotate",          null, null);
         markNativeMethod("resolveFormalType", null, null);
 
         getCanonicalType().invalidateTypeInfo();
@@ -114,11 +119,27 @@ public class xRTTypeTemplate
             case "isA":
                 return invokeIsA(frame, hType, hArg, iReturn);
 
+            case "parameterize":
+                return invokeParameterize(frame, hType, hArg, iReturn);
+
+            case "annotate":
+                return invokeAnnotate(frame, hType, hArg, iReturn);
+            }
+
+        return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
+        }
+
+    @Override
+    public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
+        {
+        TypeTemplateHandle hType = (TypeTemplateHandle) hTarget;
+        switch (method.getName())
+            {
             case "purify":
                 return invokePurify(frame, hType, iReturn);
             }
 
-        return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
+        return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
         }
 
     @Override
@@ -456,6 +477,58 @@ public class xRTTypeTemplate
     public int invokePurify(Frame frame, TypeTemplateHandle hType, int iReturn)
         {
         return frame.assignValue(iReturn, hType); // TODO GG - implement Pure type constant etc.
+        }
+
+    /**
+     * Implementation for: {@code TypeTemplate! parameterize(TypeTemplate![] paramTypes = [])}.
+     */
+    public int invokeParameterize(Frame frame, TypeTemplateHandle hType, ObjectHandle hArg, int iReturn)
+        {
+        TypeConstant typeThis = hType.getDataType();
+        ArrayHandle  hArray   = (ArrayHandle) hArg;
+
+        if (typeThis.isParamsSpecified())
+            {
+            return frame.raiseException("Already parameterized: " + typeThis.getValueString());
+            }
+
+        int            cTypes = (int) hArray.m_hDelegate.m_cSize;
+        TypeConstant[] aTypes = new TypeConstant[cTypes];
+        for (int i = 0; i < cTypes; i++)
+            {
+            int iResult = hArray.getTemplate().extractArrayValue(frame, hArray, i, Op.A_STACK);
+            if (iResult != Op.R_NEXT)
+                {
+                return frame.raiseException("Invalid type array argument");
+                }
+            aTypes[i] = ((TypeTemplateHandle) frame.popStack()).getDataType();
+
+            // TODO: validate constraints
+            }
+        return frame.assignValue(iReturn,
+                makeHandle(frame.poolContext().ensureParameterizedTypeConstant(typeThis, aTypes)));
+        }
+
+    /**
+     * Implementation for: {@code TypeTemplate! annotate(AnnotationTemplate annotation)}.
+     */
+    public int invokeAnnotate(Frame frame, TypeTemplateHandle hType, ObjectHandle hArg, int iReturn)
+        {
+        TypeConstant typeThis = hType.getDataType();
+        TypeConstant typeThat = ((TypeTemplateHandle) hArg).getDataType();
+
+        if (typeThat.isExplicitClassIdentity(false))
+            {
+            ConstantPool  pool    = frame.poolContext();
+            ClassConstant clzAnno = (ClassConstant) typeThat.getDefiningConstant();
+            Annotation    anno    = pool.ensureAnnotation(clzAnno);
+
+            // TODO: validate mixin
+
+            return frame.assignValue(iReturn,
+                    makeHandle(pool.ensureAnnotatedTypeConstant(typeThis, anno)));
+            }
+        return frame.raiseException("Invalid annotation: " + typeThat.getValueString());
         }
 
     /**

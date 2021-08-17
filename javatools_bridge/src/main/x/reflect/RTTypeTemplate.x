@@ -29,6 +29,8 @@ const RTTypeTemplate
     @Override conditional TypeTemplate[] parameterized();
     @Override TypeTemplate purify();
     @Override conditional TypeTemplate resolveFormalType(String typeName);
+    @Override TypeTemplate parameterize(TypeTemplate[] paramTypes = []);
+    @Override TypeTemplate annotate(AnnotationTemplate annotation);
 
     // natural:
     //   toString()

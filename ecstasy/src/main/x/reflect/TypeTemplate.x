@@ -250,6 +250,27 @@ interface TypeTemplate // TODO move
     // ----- type operations -----------------------------------------------------------------------
 
     /**
+     * Create a type that is a parameterized form of this type. Passing an empty sequence will
+     * produce the canonical type.
+     *
+     * @param paramTypes  a sequence of type parameter types
+     *
+     * @return a corresponding type parameterized as indicated
+     *
+     * @throws InvalidType  if the parameterization would violate the rules of the type system
+     */
+    TypeTemplate! parameterize(TypeTemplate![] paramTypes = []);
+
+    /**
+     * Add the specified annotation to this type.
+     *
+     * @param annotation  the annotation to add to this type
+     *
+     * @return the annotated type
+     */
+    TypeTemplate! annotate(AnnotationTemplate annotation);
+
+    /**
      * Test whether this type is type-compatible with the specified second type, such that any
      * object of `this` type would also be an object of `that` type.
      *

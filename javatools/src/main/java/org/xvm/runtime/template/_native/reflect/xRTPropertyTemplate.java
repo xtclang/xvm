@@ -3,6 +3,8 @@ package org.xvm.runtime.template._native.reflect;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.MethodStructure;
+import org.xvm.asm.Op;
 import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -12,6 +14,8 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
+
+import org.xvm.runtime.template.xBoolean;
 
 
 /**
@@ -36,6 +40,10 @@ public class xRTPropertyTemplate
     public void initNative()
         {
         markNativeProperty("type");
+        markNativeProperty("isConstant");
+
+        markNativeMethod("hasInitialValue", null, null);
+        markNativeMethod("hasInitializer", null, null);
 
         super.initNative();
         }
@@ -48,22 +56,75 @@ public class xRTPropertyTemplate
             {
             case "type":
                 return getPropertyType(frame, hProp, iReturn);
+
+            case "isConstant":
+                return getPropertyisConstant(frame, hProp, iReturn);
             }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
+        }
+
+    @Override
+    public int invokeNativeNN(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                              ObjectHandle[] ahArg, int[] aiReturn)
+        {
+        ComponentTemplateHandle hProp = (ComponentTemplateHandle) hTarget;
+        switch (method.getName())
+            {
+            case "hasInitialValue":
+                return invokeInitialValue(frame, hProp, aiReturn);
+
+            case "hasInitializer":
+                return frame.raiseException("Not implemented: hasInitializer()");
+            }
+
+        return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
         }
 
 
     // ----- property implementations --------------------------------------------------------------
 
     /**
-     * Implements property: type.get()
+     * Implements property: {@code type.get()}.
      */
     public int getPropertyType(Frame frame, ComponentTemplateHandle hProp, int iReturn)
         {
         PropertyStructure prop = (PropertyStructure) hProp.getComponent();
 
         return frame.assignValue(iReturn, xRTTypeTemplate.makeHandle(prop.getType()));
+        }
+
+    /**
+     * Implements property: {@code isConstant.get()}.
+     */
+    public int getPropertyisConstant(Frame frame, ComponentTemplateHandle hProp, int iReturn)
+        {
+        PropertyStructure prop = (PropertyStructure) hProp.getComponent();
+
+        return frame.assignValue(iReturn, xBoolean.makeHandle(prop.isConstant()));
+        }
+
+
+    // ----- method implementations ----------------------------------------------------------------
+
+    /**
+     * Implements method: {@code conditional Const hasInitialValue()}.
+     */
+    public int invokeInitialValue(Frame frame, ComponentTemplateHandle hProp, int[] aiReturn)
+        {
+        PropertyStructure prop = (PropertyStructure) hProp.getComponent();
+
+        if (prop.hasInitialValue())
+            {
+            ObjectHandle hInitial = frame.getConstHandle(prop.getInitialValue());
+
+            return Op.isDeferred(hInitial)
+                ? hInitial.proceed(frame, frameCaller ->
+                    frameCaller.assignValues(aiReturn, xBoolean.TRUE, frameCaller.popStack()))
+                : frame.assignValues(aiReturn, xBoolean.TRUE, hInitial);
+            }
+
+        return frame.assignValue(aiReturn[0], xBoolean.FALSE);
         }
 
 
