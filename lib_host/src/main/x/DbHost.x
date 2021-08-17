@@ -126,7 +126,7 @@ class DbHost
                    classTemplate.is(ClassTemplate);
 
             String propertyName = property.name;
-            String propertyType = displayName(classTemplate, appName);
+            String propertyType = displayName(typeTemplate, appName);
             String propertyId   = (++pid).toString();
 
             String propertyTypeName = classTemplate.name.replace(".", "_");
@@ -152,6 +152,16 @@ class DbHost
                     propertyStoreType  = "{hostName}_.storage.CounterStore";
                     propertyBaseType   = "DBCounterImpl";
                     propertyTypeParams = "";
+                    break;
+
+                case DBValue:
+                    assert TypeTemplate valueType := typeTemplate.resolveFormalType("Value");
+
+                    String valueTypeName = displayName(valueType, appName);
+
+                    propertyStoreType  = $"{hostName}_.storage.ValueStore<{valueTypeName}>";
+                    propertyBaseType   = $"DBValueImpl<{valueTypeName}>";
+                    propertyTypeParams = $"\"Value\"={valueTypeName}";
                     break;
 
                 default:
@@ -382,7 +392,19 @@ class DbHost
     String displayName(TypeTemplate type, String appName)
         {
         assert Composition composition := type.fromClass();
-        return displayName(composition, appName);
+
+        String name = displayName(composition, appName);
+
+        if (TypeTemplate[] typeParams := type.parameterized())
+            {
+            name += '<';
+            for (TypeTemplate typeParam : typeParams)
+                {
+                name += displayName(typeParam, appName);
+                }
+            name += '>';
+            }
+        return name;
         }
 
     /**

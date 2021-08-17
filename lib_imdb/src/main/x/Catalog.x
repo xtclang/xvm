@@ -93,6 +93,11 @@ static service Catalog
     protected/private Map<String, DBObjectStore> stores = new HashMap();
 
     /**
+     * An error and message log for the database.
+     */
+    Appender<String> log = new String[]; // TODO
+
+    /**
      * The existing client representations for this `Catalog` object. Each client may have a single
      * Connection representation, and each Connection may have a single Transaction representation.
      */
@@ -172,32 +177,43 @@ static service Catalog
         {
         return switch (info.category)
             {
-            case DBSchema:   new SchemaStore(info, new String[]);
-            case DBMap:      createMapStore(info, storeFor("").errs);
+            case DBSchema:   new SchemaStore(info, log);
+            case DBMap:      createMapStore(info, log);
             case DBList:     TODO
             case DBQueue:    TODO
             case DBLog:      TODO
-            case DBCounter:  new CounterStore(info, storeFor("").errs);
-            case DBValue:    TODO
+            case DBCounter:  new CounterStore(info, log);
+            case DBValue:    createValueStore(info, log);
             case DBFunction: TODO
             default:         assert;
             };
         }
 
     // TODO GG: if inlined, doesn't compile (registers mismatch)
-    DBObjectStore createMapStore(DBObjectInfo info, Appender<String> errs)
+    DBObjectStore createMapStore(DBObjectInfo info, Appender<String> log)
         {
         Type<DBMap> typeDBMap = info.type.as(Type<DBMap>);
         assert Type keyType := typeDBMap.resolveFormalType("Key")  , keyType.is(Type<immutable Const>);
         assert Type valType := typeDBMap.resolveFormalType("Value"), valType.is(Type<immutable Const>);
-        return new MapStore<keyType.DataType, valType.DataType>(info, storeFor("").errs);
+        return new MapStore<keyType.DataType, valType.DataType>(info, log);
+        }
+
+    DBObjectStore createValueStore(DBObjectInfo info, Appender<String> log)
+        {
+        Type<DBValue> typeDBValue = info.type.as(Type<DBValue>);
+        assert Type valueType := typeDBValue.resolveFormalType("Value"), valueType.is(Type<immutable Const>);
+
+        assert Class  valueClass   := valueType.fromClass(),
+               Object defaultValue := valueClass.defaultValue();
+
+        return new ValueStore<valueType.DataType>(info, log, defaultValue.as(valueType.DataType));
         }
 
     /**
      * In-memory schema store has no additional state.
      */
-    class SchemaStore(DBObjectInfo info, Appender<String> errs)
-            extends DBObjectStore(info, errs)
+    class SchemaStore(DBObjectInfo info, Appender<String> log)
+            extends DBObjectStore(info, log)
         {
         }
 
@@ -205,17 +221,24 @@ static service Catalog
      * MapStore as a virtual child.
      */
     class MapStore<Key extends immutable Const, Value extends immutable Const>
-        (DBObjectInfo info, Appender<String> errs)
-            extends storage.MapStore<Key, Value>(info, errs)
+        (DBObjectInfo info, Appender<String> log)
+            extends storage.MapStore<Key, Value>(info, log)
         {
         }
-
 
     /**
      * CounterStore as a virtual child.
      */
-    class CounterStore(DBObjectInfo info, Appender<String> errs)
-            extends storage.CounterStore(info, errs)
+    class CounterStore(DBObjectInfo info, Appender<String> log)
+            extends storage.CounterStore(info, log)
+        {
+        }
+
+    /**
+     * CounterStore as a virtual child.
+     */
+    class ValueStore<Value extends immutable Const>(DBObjectInfo info, Appender<String> log, Value defaultValue)
+            extends storage.ValueStore<Value>(info, log, defaultValue)
         {
         }
 
