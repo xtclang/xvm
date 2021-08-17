@@ -235,28 +235,6 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
      */
     @Unassigned protected SkiplistMap<Int, Changes> inFlight;
 
-    /**
-     * An ObjectStore can be processing up to one transaction at a time **in the prepare phase**. In
-     * other words, "prepare" is the one phase that is not pipeline-able through an ObjectStore, for
-     * two reasons:
-     *
-     * * The resulting prepared state of one transaction serves as the basis for validating the
-     *   next, which implies a deliberately sequential process, and since the transactions can
-     *   involve multiple ObjectStores preparing concurrently, the second prepare cannot begin until
-     *   all ObjectStores successfully prepare the first (unless an expensive, optimistic approach
-     *   is used, which could prepare subsequent transactions, and then undo and retry those
-     *   transactions as necessary, based on the detection of failure in preceding prepares);
-     *
-     * * Synchronous triggers (represented by the Validator, Rectifier, and Distributor interfaces)
-     *   are an even more significant barrier to pipelining, because they both require a stable
-     *   transactional demarcation (snapshot of the database as of a prepare point) against which to
-     *   execute, **and** they can modify the database, with those modifications being required to
-     *   be visible by the time that the next transaction begins to prepare.
-     *
-     * REVIEW why is this a property?
-     */
-    Changes? inPrepare;
-
 
     // ----- life cycle ----------------------------------------------------------------------------
 

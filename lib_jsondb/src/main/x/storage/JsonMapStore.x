@@ -97,7 +97,6 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
      * data that is stored on disk.
      *
      * TODO if the value for a key is stable, replace the nested SkiplistMap with a single Value?
-     * TODO need insert vs. update vs. delete information (expensive to build on the fly)
      */
     protected SkiplistMap<Key, SkiplistMap<Int, Value|Deletion>> history = new SkiplistMap();
 
@@ -114,8 +113,6 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
      */
     protected SkiplistMap<Int, OrderedMap<Key, Value|Deletion>> modsByTx = new SkiplistMap();
 
-
-    // ----- ObjectStore life cycle ----------------------------------------------------------------
 
     // ----- ObjectStore transaction handling ------------------------------------------------------
 
@@ -306,26 +303,6 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
         TODO
         }
 
-//    /**
-//     * Insert, update, and delete the specified data, as part of the specified transaction.
-//     *
-//     * @param txId      the transaction identifier
-//     * @param modified  the keys and values to store
-//     * @param deleted   the keys to delete
-//     */
-//    void commit(Int txId, Map<Key, Value> modified, Key[] deleted)
-//        {
-//        for ((Key key, Value value) : modified)
-//            {
-//            store(txId, key, value);
-//            }
-//
-//        for (Key key : deleted)
-//            {
-//            delete(txId, key);
-//            }
-//        }
-
 
     // ----- internal ------------------------------------------------------------------------------
 
@@ -392,6 +369,28 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
             }
 
         return False;
+        }
+
+
+    // ----- ObjectStore life cycle ----------------------------------------------------------------
+
+    @Override
+    void initializeEmpty()
+        {
+        assert model == Empty;
+        sizeByTx.put(0, 0);
+        }
+
+    @Override
+    void loadInitial()
+        {
+        TODO
+        }
+
+    @Override
+    void unload()
+        {
+        TODO
         }
 
 
