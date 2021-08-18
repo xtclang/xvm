@@ -61,6 +61,7 @@ class StringBuffer
         chars.clear();
         }
 
+
     // ----- Stringable methods --------------------------------------------------------------------
 
     @Override
@@ -107,6 +108,7 @@ class StringBuffer
         return chars.iterator();
         }
 
+
     // ----- UniformIndexed methods ----------------------------------------------------------------------
 
     @Override
@@ -122,6 +124,7 @@ class StringBuffer
         {
         chars[index] = value;
         }
+
 
     // ----- Sliceable methods ----------------------------------------------------------------------
 
