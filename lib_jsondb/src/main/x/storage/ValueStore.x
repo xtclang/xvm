@@ -72,6 +72,13 @@ service ValueStore<Value extends immutable Const>
          * The value within the transaction; only set if [modified] is set to `True`.
          */
         @Unassigned Value value;
+
+        /**
+         * When the transaction is sealed (or after it is sealed, but before it commits), the
+         * changes to the value in the transaction are rendered for the transaction log, and for
+         * storage on disk.
+         */
+        String? json;
         }
 
     @Override
@@ -222,18 +229,62 @@ service ValueStore<Value extends immutable Const>
         }
 
     @Override
-    OrderedMap<Int, Doc> commit(OrderedMap<Int, Int> writeIdForPrepareId)
+    String sealPrepare(Int writeId)
         {
-TODO
-//        assert isWriteTx(writeId);
-//
-//        if (Changes tx := inFlight.get(writeId))
-//            {
-//            // TODO write to disk
-//            TODO return a doc containing the tx record
-//            }
-//
-//        return Null;
+        assert Changes tx := checkTx(writeId), tx.prepared;
+        if (tx.sealed)
+            {
+            return tx.json ?: assert;
+            }
+
+        String json = tx.worker.writeUsing(valueMapping, tx.value);
+        tx.json = json;
+        return json;
+        }
+
+    @Override
+    void commit(Int[] writeIds)
+        {
+        assert !writeIds.empty;
+
+        StringBuffer buf          = new StringBuffer();
+        Int          lastCommitId = NO_TX;
+        for (Int writeId : writeIds)
+            {
+            // because the same array of writeIds are sent to all of the potentially enlisted
+            // ObjectStore instances, it is possible that this ObjectStore has no changes for this
+            // transaction
+            if (Changes tx := peekTx(writeId))
+                {
+                assert tx.prepared, tx.sealed, String json ?= tx.json;
+
+                // build the String that will be appended to the disk file
+                // format is "{"tx":14, "value":{...}},"; comma is first (since we are appending)
+                buf.append(",\n{\"tx\":")
+                  .append(tx.readId)
+                  .append(", \"value\":")
+                  .append(json)
+                  .append('}');
+
+                // remember the id of the last transaction that we process here
+                lastCommitId = tx.readId;
+                }
+            }
+
+        if (lastCommitId != NO_TX)
+            {
+            // write the changes to disk
+            // TODO
+
+            // remember which is the "current" value
+            lastCommit = lastCommitId;
+
+            // discard the transactional records
+            for (Int writeId : writeIds)
+                {
+                inFlight.remove(writeId);
+                }
+            }
         }
 
     @Override

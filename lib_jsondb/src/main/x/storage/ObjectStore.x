@@ -1,6 +1,9 @@
 import Catalog.Status;
+
 import model.DBObjectInfo;
+
 import oodb.DBObject.DBCategory as Category;
+
 import json.Doc;
 
 
@@ -476,20 +479,58 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
         }
 
     /**
+     * Render a previously prepared transaction that is ready to commit into a JSON document that
+     * can be stored in a commit log. This "seals" the transaction; subsequent changes to the
+     * transaction cannot occur, but the transaction may still be rolled back.
+     *
+     * @param writeId  the write ID to commit
+     *
+     * @return the ObjectStore's commit record, as a JSON document String, corresponding to the
+     *         passed `writeId`
+     *
+     * @throws Exception on any failure, including if serialization of the transactional data into
+     *         the JSON log format fails
+     */
+    String sealPrepare(Int writeId)
+        {
+        TODO
+
+        // (long story ... didn't want to lose this error)
+        // writeIds.map(writeId -> commit(writeId), results);
+        // TODO GG: replace the above line with this for a type error:
+        //      COMPILER-151: Return type mismatch for "map" method; required "Array<Nullable | String>", actual "Collection<Nullable | String>".
+        // results = writeIds.map(writeId -> commit(writeId), results);
+        // return results.freeze(inPlace=True);
+        }
+
+    /**
      * Commit a group of previously prepared transactions. When this method returns, the
-     * transactional changes enumerated in the returned map related to this ObjectStore will have
-     * been successfully committed to disk.
+     * transactional changes will have been successfully committed to disk.
      *
-     * @param writeIdForPrepareId  a Map, keyed by "prepareId", with the corresponding value being
-     *                             the "writeId"
-     *
-     * @return the ObjectStore's commit records, as JSON documents, keyed by prepare (aka commit) id
+     * @param writeIds  an array of write IDs that correspond to the order of transactions in the
+     *                  pipeline that are being committed
      *
      * @throws Exception on any failure
      */
-    OrderedMap<Int, Doc> commit(OrderedMap<Int, Int> writeIdForPrepareId)
+    void commit(Int[] writeIds)
         {
-        TODO
+        for (Int writeId : writeIds)
+            {
+            commit(writeId);
+            }
+        }
+
+    /**
+     * Commit a previously prepared transaction. When this method returns, the transactional changes
+     * will have been successfully committed to disk.
+     *
+     * @param writeId  the write ID to commit
+     *
+     * @throws Exception on any failure
+     */
+    void commit(Int writeId)
+        {
+        commit([writeId]);
         }
 
     /**

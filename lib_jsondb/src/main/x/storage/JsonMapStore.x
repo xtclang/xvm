@@ -285,7 +285,13 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
         }
 
     @Override
-    OrderedMap<Int, Doc> commit(OrderedMap<Int, Int> writeIdForPrepareId)
+    String sealPrepare(Int writeId)
+        {
+        TODO
+        }
+
+    @Override
+    void commit(Int[] writeIds)
         {
         TODO
         }
@@ -293,8 +299,28 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
     @Override
     void rollback(Int writeId)
         {
-        assert isWriteTx(writeId);
-        TODO
+        if (Changes tx := peekTx(writeId))
+            {
+            if (tx.prepared)
+                {
+                Int prepareId = tx.readId;
+
+                // the transaction is already sprinkled all over the history
+                assert OrderedMap<Key, Value|Deletion> mods := modsByTx.get(prepareId);
+                for (Key key : mods)
+                    {
+                    if (val byTx := history.get(key))
+                        {
+                        byTx.remove(prepareId);
+                        }
+                    }
+
+                modsByTx.remove(prepareId);
+                sizeByTx.remove(prepareId);
+                }
+
+            inFlight.remove(writeId);
+            }
         }
 
     @Override
