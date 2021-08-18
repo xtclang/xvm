@@ -273,8 +273,28 @@ service ValueStore<Value extends immutable Const>
 
         if (lastCommitId != NO_TX)
             {
+            // the JSON value data is inside an array
+            buf.append("\n]");
+
             // write the changes to disk
-            // TODO
+            File file = dataFile;
+            if (file.exists)
+                {
+                Int length = file.size;
+
+                // TODO right now this assumes that no manual edits have occured; must cache "last
+                //      update timestamp" and rebuild file if someone else changed it
+                assert length >= 6;
+
+                file.truncate(length-2)
+                    .append(buf.toString().utf8());
+                }
+            else
+                {
+                // replace the opening "," with an array begin "["
+                buf[0] = '[';
+                file.contents = buf.toString().utf8();
+                }
 
             // remember which is the "current" value
             lastCommit = lastCommitId;
@@ -489,6 +509,7 @@ service ValueStore<Value extends immutable Const>
 
         Value value;
         Int   loadId = txManager.lastClosedId;
+        // TODO
         TODO history.put(loadId, value);
         }
 
