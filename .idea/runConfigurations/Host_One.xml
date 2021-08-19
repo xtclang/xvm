@@ -1,0 +1,12 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Host One" type="Application" factoryName="Application">
+    <option name="MAIN_CLASS_NAME" value="org.xvm.tool.Runner" />
+    <module name="xvm.javatools.main" />
+    <option name="PROGRAM_PARAMETERS" value="-L . -L ~/Development/xvm/xdk/build/xdk/lib -L ~/Development/xvm/xdk/build/xdk/javatools/javatools_bridge.xtc -L ./build ~/Development/xvm/xdk/build/xdk/lib/host.xtc build/AddressBookApp.xtc" />
+    <option name="VM_PARAMETERS" value="-Xms256m -Xmx1024m -ea -Dxvm.parallelism=1 -Dxvm.db.impl=imdb" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/manualTests" />
+    <method v="2">
+      <option name="Gradle.BeforeRunTask" enabled="true" tasks="build" externalProjectPath="$PROJECT_DIR$/javatools" vmOptions="" scriptParameters="" />
+    </method>
+  </configuration>
+</component>
