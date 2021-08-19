@@ -1,12 +1,15 @@
 package org.xvm.runtime.template._native.reflect;
 
 
+import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.PropertyStructure;
 
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassTemplate;
@@ -14,8 +17,11 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
+import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean;
+
+import org.xvm.runtime.template.collections.xArray;
 
 
 /**
@@ -41,6 +47,7 @@ public class xRTPropertyTemplate
         {
         markNativeProperty("type");
         markNativeProperty("isConstant");
+        markNativeProperty("annotations");
 
         markNativeMethod("hasInitialValue", null, null);
         markNativeMethod("hasInitializer", null, null);
@@ -58,7 +65,10 @@ public class xRTPropertyTemplate
                 return getPropertyType(frame, hProp, iReturn);
 
             case "isConstant":
-                return getPropertyisConstant(frame, hProp, iReturn);
+                return getPropertyIsConstant(frame, hProp, iReturn);
+
+            case "annotations":
+                return getPropertyAnnotations(frame, hProp, iReturn);
             }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
@@ -97,11 +107,65 @@ public class xRTPropertyTemplate
     /**
      * Implements property: {@code isConstant.get()}.
      */
-    public int getPropertyisConstant(Frame frame, ComponentTemplateHandle hProp, int iReturn)
+    public int getPropertyIsConstant(Frame frame, ComponentTemplateHandle hProp, int iReturn)
         {
         PropertyStructure prop = (PropertyStructure) hProp.getComponent();
 
         return frame.assignValue(iReturn, xBoolean.makeHandle(prop.isConstant()));
+        }
+
+    /**
+     * Implements property: {@code isConstant.get()}.
+     */
+    public int getPropertyAnnotations(Frame frame, ComponentTemplateHandle hProp, int iReturn)
+        {
+        PropertyStructure prop     = (PropertyStructure) hProp.getComponent();
+        TypeComposition   clzArray = xRTClassTemplate.ensureAnnotationTemplateArrayComposition();
+
+        Annotation[] aAnnotation = prop.getPropertyAnnotations();
+        int          cAnnos      = aAnnotation.length;
+
+        if (cAnnos == 0)
+            {
+            return frame.assignValue(iReturn,
+                    xArray.createEmptyArray(clzArray, 0, xArray.Mutability.Constant));
+            }
+
+        Utils.ValueSupplier supplier = (frameCaller, index) ->
+            {
+            Annotation       anno      = aAnnotation[index];
+            IdentityConstant idClass   = (IdentityConstant) anno.getAnnotationClass();
+            Constant[]       aconstArg = anno.getParams();
+            int              cArgs     = aconstArg.length;
+
+            ComponentTemplateHandle hClass =
+                    xRTComponentTemplate.makeComponentHandle(idClass.getComponent());
+
+            ObjectHandle[] ahArg;
+            if (cArgs == 0)
+                {
+                ahArg = Utils.OBJECTS_NONE;
+                }
+            else
+                {
+                ahArg = new ObjectHandle[cArgs];
+                for (int i = 0; i < cArgs; i++)
+                    {
+                    ahArg[i] = xRTType.makeArgumentHandle(frame, aconstArg[i]);
+                    }
+                }
+
+            if (Op.anyDeferred(ahArg))
+                {
+                Frame.Continuation stepNext = frameCaller2 ->
+                    Utils.constructAnnotationTemplate(frameCaller2, hClass, ahArg, Op.A_STACK);
+                return new Utils.GetArguments(ahArg, stepNext).doNext(frameCaller);
+                }
+
+            return Utils.constructAnnotationTemplate(frameCaller, hClass, ahArg, Op.A_STACK);
+            };
+
+        return xArray.createAndFill(frame, clzArray, cAnnos, supplier, iReturn);
         }
 
 

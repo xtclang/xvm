@@ -1060,13 +1060,7 @@ public class xRTType
         TypeConstant typeThis = hType.getDataType();
         if (typeThis.isAnnotated())
             {
-            while (!(typeThis instanceof AnnotatedTypeConstant))
-                {
-                assert typeThis.isModifyingType();
-                typeThis = typeThis.getUnderlyingType();
-                }
-
-            Annotation       annotation = ((AnnotatedTypeConstant) typeThis).getAnnotation();
+            Annotation       annotation = typeThis.getAnnotations()[0];
             IdentityConstant idClass    = (IdentityConstant) annotation.getAnnotationClass();
             Constant[]       aconstArg  = annotation.getParams();
 
@@ -1499,7 +1493,7 @@ public class xRTType
             }
         }
 
-    private int makePropertyArray(Frame frame, TypeConstant typeTarget,
+    private static int makePropertyArray(Frame frame, TypeConstant typeTarget,
                                   List<ObjectHandle> listProps, int iReturn)
         {
         ObjectHandle[]  ahProps  = listProps.toArray(Utils.OBJECTS_NONE);
@@ -1515,7 +1509,7 @@ public class xRTType
         return frame.assignValue(iReturn, xArray.createImmutableArray(clzArray, ahProps));
         }
 
-    private ObjectHandle makeArgumentHandle(Frame frame, Constant constArg)
+    public static ObjectHandle makeArgumentHandle(Frame frame, Constant constArg)
         {
         ObjectHandle hArg = frame.getConstHandle(constArg);
         if (Op.isDeferred(hArg))

@@ -35,6 +35,7 @@ import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
+import org.xvm.runtime.template._native.reflect.xRTComponentTemplate.ComponentTemplateHandle;
 
 /**
  * Native TypeTemplate implementation.
@@ -341,10 +342,47 @@ public class xRTTypeTemplate
      */
     public int invokeAnnotated(Frame frame, TypeTemplateHandle hType, int[] aiReturn)
         {
-        ObjectHandle hAnnotation = null; // TODO
-        return hAnnotation == null
-                ? frame.assignValue(aiReturn[0], xBoolean.FALSE)
-                : frame.assignValues(aiReturn, xBoolean.TRUE, hAnnotation);
+        TypeConstant type = hType.getDataType();
+
+        if (type.isAnnotated())
+            {
+            Annotation       annotation = type.getAnnotations()[0];
+            IdentityConstant idClass    = (IdentityConstant) annotation.getAnnotationClass();
+            Constant[]       aconstArg  = annotation.getParams();
+            int              cArgs      = aconstArg.length;
+
+            ComponentTemplateHandle hClass =
+                    xRTComponentTemplate.makeComponentHandle(idClass.getComponent());
+
+            ObjectHandle[] ahArg;
+            if (cArgs == 0)
+                {
+                ahArg = Utils.OBJECTS_NONE;
+                }
+            else
+                {
+                ahArg = new ObjectHandle[cArgs];
+                for (int i = 0; i < cArgs; i++)
+                    {
+                    ahArg[i] = xRTType.makeArgumentHandle(frame, aconstArg[i]);
+                    }
+                }
+
+            if (Op.anyDeferred(ahArg))
+                {
+                Frame.Continuation stepNext = frameCaller ->
+                    {
+                    frameCaller.assignValue(aiReturn[0], xBoolean.TRUE);
+                    return Utils.constructAnnotationTemplate(frame, hClass, ahArg, aiReturn[1]);
+                    };
+                return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
+                }
+
+            frame.assignValue(aiReturn[0], xBoolean.TRUE);
+            return Utils.constructAnnotationTemplate(frame, hClass, ahArg, aiReturn[1]);
+            }
+
+        return frame.assignValue(aiReturn[0], xBoolean.FALSE);
         }
 
     /**

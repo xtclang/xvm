@@ -26,4 +26,13 @@ interface PropertyTemplate
      * @return (optional) the MethodTemplate representing the initializer of the property
      */
     conditional MethodTemplate hasInitializer();
+
+    /**
+    * The property annotations. These are the annotations that apply to the property itself (i.e.
+    * they mix into `Property`), such as `@RO`. The order of the annotations in the array is
+    * "left-to-right"; so for example an annotated property:
+    *     @A1 @A2 List list = ...
+    * would produce the `annotations` array holding `A1` at index zero.
+    */
+    @RO immutable AnnotationTemplate[] annotations;
     }

@@ -561,6 +561,23 @@ public class xRTClassTemplate
         }
 
     /**
+     * @return the ClassComposition for an Array of AnnotationTemplates
+     */
+    public static TypeComposition ensureAnnotationTemplateArrayComposition()
+        {
+        TypeComposition clz = ANNOTATION_TEMPLATE_ARRAY_COMP;
+        if (clz == null)
+            {
+            ConstantPool pool = INSTANCE.pool();
+            TypeConstant typeTemplate = pool.ensureEcstasyTypeConstant("reflect.AnnotationTemplate");
+            TypeConstant typeTemplateArray = pool.ensureArrayType(typeTemplate);
+            ANNOTATION_TEMPLATE_ARRAY_COMP = clz = INSTANCE.f_templates.resolveClass(typeTemplateArray);
+            assert clz != null;
+            }
+        return clz;
+        }
+
+    /**
      * @return the handle for an empty Array of TypeParameters
      */
     public static ObjectHandle ensureEmptyTypeParameterArray()
@@ -586,6 +603,7 @@ public class xRTClassTemplate
     private static TypeComposition CLASS_TEMPLATE_ARRAY_COMP;
     private static TypeComposition MULTI_METHOD_TEMPLATE_ARRAY_COMP;
     private static TypeComposition METHOD_TEMPLATE_ARRAY_COMP;
+    private static TypeComposition ANNOTATION_TEMPLATE_ARRAY_COMP;
     private static TypeComposition CONTRIBUTION_COMP;
     private static TypeComposition CONTRIBUTION_ARRAY_COMP;
 

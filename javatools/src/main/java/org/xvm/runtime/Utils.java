@@ -51,6 +51,7 @@ import org.xvm.runtime.template.reflect.xRef.RefHandle;
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
+import org.xvm.runtime.template._native.reflect.xRTComponentTemplate.ComponentTemplateHandle;
 import org.xvm.runtime.template._native.reflect.xRTFunction;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FullyBoundHandle;
 
@@ -67,14 +68,16 @@ public abstract class Utils
      */
     public static void initNative(TemplateRegistry templates)
         {
-        REGISTRY               = templates;
-        ANNOTATION_TEMPLATE    = templates.getTemplate("reflect.Annotation");
-        ARGUMENT_TEMPLATE      = templates.getTemplate("reflect.Argument");
-        RT_PARAMETER_TEMPLATE  = templates.getTemplate("_native.reflect.RTParameter");
-        ANNOTATION_CONSTRUCT   = ANNOTATION_TEMPLATE.getStructure().findMethod("construct", 2);
-        ARGUMENT_CONSTRUCT     = ARGUMENT_TEMPLATE.getStructure().findMethod("construct", 2);
-        RT_PARAMETER_CONSTRUCT = RT_PARAMETER_TEMPLATE.getStructure().findMethod("construct", 5);
-        LIST_MAP_CONSTRUCT     = templates.getClassStructure("collections.ListMap").findMethod("construct", 2);
+        REGISTRY                      = templates;
+        ANNOTATION_TEMPLATE           = templates.getTemplate("reflect.Annotation");
+        ANNOTATION_TEMPLATE_TEMPLATE  = templates.getTemplate("reflect.AnnotationTemplate");
+        ARGUMENT_TEMPLATE             = templates.getTemplate("reflect.Argument");
+        RT_PARAMETER_TEMPLATE         = templates.getTemplate("_native.reflect.RTParameter");
+        ANNOTATION_CONSTRUCT          = ANNOTATION_TEMPLATE.getStructure().findMethod("construct", 2);
+        ANNOTATION_TEMPLATE_CONSTRUCT = ANNOTATION_TEMPLATE_TEMPLATE.getStructure().findMethod("construct", 2);
+        ARGUMENT_CONSTRUCT            = ARGUMENT_TEMPLATE.getStructure().findMethod("construct", 2);
+        RT_PARAMETER_CONSTRUCT        = RT_PARAMETER_TEMPLATE.getStructure().findMethod("construct", 5);
+        LIST_MAP_CONSTRUCT            = templates.getClassStructure("collections.ListMap").findMethod("construct", 2);
         }
 
     /**
@@ -1618,7 +1621,7 @@ public abstract class Utils
         }
 
     /**
-     * Construct a ListMap based on the arrays of keys and values.
+     * Construct a {@code collections.ListMap} based on the arrays of keys and values.
      *
      * @param frame     the current frame
      * @param clzMap    the ListMap class
@@ -1640,7 +1643,7 @@ public abstract class Utils
         }
 
     /**
-     * Construct a  reflect.Argument constant and place it on the stack.
+     * Construct a {@code reflect.Argument} constant and place it on the stack.
      *
      * @param frame         the current frame
      * @param typeReferent  the type of Referent
@@ -1663,7 +1666,7 @@ public abstract class Utils
         }
 
     /**
-     * Construct a  reflect.Annotation constant.
+     * Construct a {@code reflect.Annotation} constant.
      *
      * @param frame      the current frame
      * @param hMixin     the mixin class handle
@@ -1680,9 +1683,32 @@ public abstract class Utils
         ahArg[0] = hMixin;
         ahArg[1] = makeArgumentArrayHandle(frame.poolContext(), ahAnnoArg);
 
-        ClassTemplate templateAnno = ANNOTATION_TEMPLATE;
-        return templateAnno.construct(frame, constructor,
-                templateAnno.getCanonicalClass(), null, ahArg, iReturn);
+        ClassTemplate template = ANNOTATION_TEMPLATE;
+        return template.construct(frame, constructor,
+                template.getCanonicalClass(), null, ahArg, iReturn);
+        }
+
+    /**
+     * Construct a {@code reflect.AnnotationTemplate} constant.
+     *
+     * @param frame      the current frame
+     * @param hClass     the ClassTemplate handle for the annotation
+     * @param ahAnnoArg  the array of annotation arguments
+     * @param iReturn    the register to assign the value into
+     *
+     * @return R_CALL or R_EXCEPTION
+     */
+    public static int constructAnnotationTemplate(Frame frame, ComponentTemplateHandle hClass,
+                                                  ObjectHandle[] ahAnnoArg, int iReturn)
+        {
+        MethodStructure constructor = ANNOTATION_TEMPLATE_CONSTRUCT;
+        ObjectHandle[]  ahArg = new ObjectHandle[constructor.getMaxVars()];
+        ahArg[0] = hClass;
+        ahArg[1] = Utils.makeArgumentArrayHandle(frame.poolContext(), ahAnnoArg);
+
+        ClassTemplate template = ANNOTATION_TEMPLATE_TEMPLATE;
+        return template.construct(frame, constructor,
+                template.getCanonicalClass(), null, ahArg, iReturn);
         }
 
     /**
@@ -1761,6 +1787,8 @@ public abstract class Utils
     // assigned by initNative()
     private static ClassTemplate   ANNOTATION_TEMPLATE;
     private static MethodStructure ANNOTATION_CONSTRUCT;
+    private static ClassTemplate   ANNOTATION_TEMPLATE_TEMPLATE;
+    private static MethodStructure ANNOTATION_TEMPLATE_CONSTRUCT;
     private static ClassTemplate   ARGUMENT_TEMPLATE;
     private static MethodStructure ARGUMENT_CONSTRUCT;
     private static ClassTemplate   RT_PARAMETER_TEMPLATE;
