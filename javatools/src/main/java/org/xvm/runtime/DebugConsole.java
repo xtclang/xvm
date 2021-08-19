@@ -116,10 +116,16 @@ public class DebugConsole
     @Override
     public void onReturn(Frame frame)
         {
-        if (m_stepMode == StepMode.StepOver && frame == m_frame)
+        if (frame == m_frame)
             {
-            // we're exiting the frame; stop at the first chance
-            m_stepMode = StepMode.StepInto;
+            switch (m_stepMode)
+                {
+                case StepOver:
+                case StepOut:
+                    // we're exiting the frame; stop at the first chance
+                    m_stepMode = StepMode.StepInto;
+                    break;
+                }
             }
         }
 
