@@ -35,8 +35,8 @@ static service Catalog
 
     static Map<String, DBObjectInfo> SystemInfos = Map:
         [
-        ""    = new DBObjectInfo("",    DBSchema, DBSchema),
-        "sys" = new DBObjectInfo("sys", DBSchema, DBSchema, "",
+        ""    = new DBObjectInfo("",    DBSchema),
+        "sys" = new DBObjectInfo("sys", DBSchema, "",
             [
             "sys/info",
             "sys/users",
@@ -55,21 +55,21 @@ static service Catalog
             "sys/errors",
             ]),
 
-        "sys/info"         = new DBObjectInfo("sys/info",         DBValue, DBValue<DBInfo>),
-        "sys/users"        = new DBObjectInfo("sys/users",        DBMap,   DBMap<String, DBUser>),
-        "sys/types"        = new DBObjectInfo("sys/types",        DBMap,   DBMap<String, Type>),
-        "sys/objects"      = new DBObjectInfo("sys/objects",      DBMap,   DBMap<String, DBObject>),
-        "sys/schemas"      = new DBObjectInfo("sys/schemas",      DBMap,   DBMap<String, DBSchema>),
-        "sys/maps"         = new DBObjectInfo("sys/maps",         DBMap,   DBMap<String, DBMap>),
-        "sys/queues"       = new DBObjectInfo("sys/queues",       DBMap,   DBMap<String, DBQueue>),
-        "sys/lists"        = new DBObjectInfo("sys/lists",        DBMap,   DBMap<String, DBList>),
-        "sys/logs"         = new DBObjectInfo("sys/logs",         DBMap,   DBMap<String, DBLog>),
-        "sys/counters"     = new DBObjectInfo("sys/counters",     DBMap,   DBMap<String, DBCounter>),
-        "sys/values"       = new DBObjectInfo("sys/values",       DBMap,   DBMap<String, DBValue>),
-        "sys/functions"    = new DBObjectInfo("sys/functions",    DBMap,   DBMap<String, DBFunction>),
-        "sys/pending"      = new DBObjectInfo("sys/pending",      DBList,  DBList<>),
-        "sys/transactions" = new DBObjectInfo("sys/transactions", DBLog,   DBLog<>),
-        "sys/errors"       = new DBObjectInfo("sys/errors",       DBLog,   DBLog<>),
+        "sys/info"         = new DBObjectInfo("sys/info",         DBValue, typeParams=Map:["Value"=DBInfo]),
+        "sys/users"        = new DBObjectInfo("sys/users",        DBMap,   typeParams=Map:["Key"=String, "Value"=DBUser]),
+        "sys/types"        = new DBObjectInfo("sys/types",        DBMap,   typeParams=Map:["Key"=String, "Value"=Type]),
+        "sys/objects"      = new DBObjectInfo("sys/objects",      DBMap,   typeParams=Map:["Key"=String, "Value"=DBObject]),
+        "sys/schemas"      = new DBObjectInfo("sys/schemas",      DBMap,   typeParams=Map:["Key"=String, "Value"=DBSchema]),
+        "sys/maps"         = new DBObjectInfo("sys/maps",         DBMap,   typeParams=Map:["Key"=String, "Value"=DBMap]),
+        "sys/queues"       = new DBObjectInfo("sys/queues",       DBMap,   typeParams=Map:["Key"=String, "Value"=DBQueue]),
+        "sys/lists"        = new DBObjectInfo("sys/lists",        DBMap,   typeParams=Map:["Key"=String, "Value"=DBList]),
+        "sys/logs"         = new DBObjectInfo("sys/logs",         DBMap,   typeParams=Map:["Key"=String, "Value"=DBLog]),
+        "sys/counters"     = new DBObjectInfo("sys/counters",     DBMap,   typeParams=Map:["Key"=String, "Value"=DBCounter]),
+        "sys/values"       = new DBObjectInfo("sys/values",       DBMap,   typeParams=Map:["Key"=String, "Value"=DBValue]),
+        "sys/functions"    = new DBObjectInfo("sys/functions",    DBMap,   typeParams=Map:["Key"=String, "Value"=DBFunction]),
+        "sys/pending"      = new DBObjectInfo("sys/pending",      DBList,  typeParams=Map:[]),
+        "sys/transactions" = new DBObjectInfo("sys/transactions", DBLog,   typeParams=Map:[]),
+        "sys/errors"       = new DBObjectInfo("sys/errors",       DBLog,   typeParams=Map:[]),
         ];
 
     /**
@@ -192,10 +192,9 @@ static service Catalog
     // TODO GG: if inlined, doesn't compile (registers mismatch)
     ObjectStore createMapStore(DBObjectInfo info, Appender<String> log)
         {
-        Type<DBMap> dbMapType = info.type.as(Type<DBMap>);
-        assert Type keyType := dbMapType.resolveFormalType("Key")  ,
+        assert Type keyType := info.typeParams.get("Key"),
                     keyType.is(Type<immutable Const>);
-        assert Type valType := dbMapType.resolveFormalType("Value"),
+        assert Type valType := info.typeParams.get("Value"),
                     valType.is(Type<immutable Const>);
 
         return new MapStore<keyType.DataType, valType.DataType>(info, log);
@@ -203,8 +202,7 @@ static service Catalog
 
     ObjectStore createValueStore(DBObjectInfo info, Appender<String> log)
         {
-        Type<DBValue> dbValueType = info.type.as(Type<DBValue>);
-        assert Type valueType := dbValueType.resolveFormalType("Value"),
+        assert Type valueType := info.typeParams.get("Value"),
                     valueType.is(Type<immutable Const>);
 
         return new ValueStore<valueType.DataType>(info, log, info.initial.as(valueType.DataType));

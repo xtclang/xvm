@@ -241,21 +241,17 @@ service Client<Schema extends RootSchema>
 
     private DBMapImpl createMapImpl(DBObjectInfo info, MapStore store)
         {
-        Type<DBMap> dbMapType = info.type.as(Type<DBMap>);
-
-        assert Type keyType := dbMapType.resolveFormalType("Key"),
+        assert Type keyType := info.typeParams.get("Key"),
                     keyType.is(Type<immutable Const>);
-        assert Type valueType := dbMapType.resolveFormalType("Value"),
-                    valueType.is(Type<immutable Const>);
+        assert Type valType := info.typeParams.get("Value"),
+                    valType.is(Type<immutable Const>);
 
-        return new DBMapImpl<keyType.DataType, valueType.DataType>(store);
+        return new DBMapImpl<keyType.DataType, valType.DataType>(store);
         }
 
     private DBValueImpl createValueImpl(DBObjectInfo info, ValueStore store)
         {
-        Type<DBValue> dbValueType = info.type.as(Type<DBValue>);
-
-        assert Type valueType := dbValueType.resolveFormalType("Value"),
+        assert Type valueType := info.typeParams.get("Value"),
                     valueType.is(Type<immutable Const>);
 
         return new DBValueImpl<valueType.DataType>(store);

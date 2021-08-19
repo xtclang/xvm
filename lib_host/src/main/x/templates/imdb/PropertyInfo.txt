@@ -1,1 +1,2 @@
-            "%propertyName%" = new DBObjectInfo_("%propertyName%", %propertyCategory%, %propertyType%, initial=%initialValue%),
+            "%propertyName%" = new DBObjectInfo_("%propertyName%", %propertyCategory%,
+                    typeParams=Map<String, Type>:[%propertyTypeParams%], initial=%initialValue%),
