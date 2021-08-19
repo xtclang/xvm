@@ -21,15 +21,16 @@ const DBObjectInfo(
         Category             category,
         Int                  id,
         Int                  parentId,
-        Int[]                childIds          = [],
-        Boolean              transactional     = True,
-        Validator[]          validators        = [],
-        Rectifier[]          rectifiers        = [],
-        Distributor[]        distributors      = [],
-        AsyncTrigger[]       asyncTriggers     = [],
-        Map<String, Type>    typeParams        = Map:[],
-        Map<String, Class[]> concreteClasses   = Map:[],
-        LifeCycle            lifeCycle         = Current,
+        Int[]                childIds        = [],
+        Boolean              transactional   = True,
+        Validator[]          validators      = [],
+        Rectifier[]          rectifiers      = [],
+        Distributor[]        distributors    = [],
+        AsyncTrigger[]       asyncTriggers   = [],
+        Map<String, Type>    typeParams      = Map:[],
+        Map<String, Class[]> concreteClasses = Map:[],
+        LifeCycle            lifeCycle       = Current,
+        immutable Object     initial         = Null, // for now used only by DBValue
         )
     {
     enum LifeCycle {Current, Deprecated, Removed}

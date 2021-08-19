@@ -348,14 +348,32 @@ service Client<Schema extends RootSchema>
         return switch (info.category)
             {
             case DBSchema:   new DBSchemaImpl(info);
-            case DBMap:      new DBMapImpl(info, storeFor(id).as(MapStore));
+            case DBMap:      createDBMapImpl(info, storeFor(id).as(MapStore));
             case DBList:     TODO
             case DBQueue:    TODO
             case DBLog:      TODO
             case DBCounter:  TODO
-            case DBValue:    new DBValueImpl(info, storeFor(id).as(ValueStore));
+            case DBValue:    createDBValueImpl(info, storeFor(id).as(ValueStore));
             case DBFunction: TODO
             };
+        }
+
+    private DBMapImpl createDBMapImpl(DBObjectInfo info, MapStore store)
+        {
+        assert Type keyType := info.typeParams.get("Key"),
+                    keyType.is(Type<immutable Const>);
+        assert Type valType := info.typeParams.get("Value"),
+                    valType.is(Type<immutable Const>);
+
+        return new DBMapImpl<keyType.DataType, valType.DataType>(info, store);
+        }
+
+    private DBValueImpl createDBValueImpl(DBObjectInfo info, ValueStore store)
+        {
+        assert Type valueType := info.typeParams.get("Value"),
+                    valueType.is(Type<immutable Const>);
+
+        return new DBValueImpl<valueType.DataType>(info, store);
         }
 
     /**

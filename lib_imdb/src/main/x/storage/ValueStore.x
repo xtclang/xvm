@@ -2,11 +2,11 @@
  * In-memory store for a DBValue.
  */
 class ValueStore<Value extends immutable Const>
-        extends DBObjectStore(info, errs)
+        extends ObjectStore(info, errs)
     {
     construct (DBObjectInfo info, Appender<String> errs, Value initial)
         {
-        construct DBObjectStore(info, errs);
+        construct ObjectStore(info, errs);
 
         value   = initial;
         valueAt = new SkiplistMap();

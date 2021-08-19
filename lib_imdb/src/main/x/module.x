@@ -4,24 +4,26 @@ module imdb.xtclang.org
 
     import oodb.DBObject.DBCategory as Category;
 
-    const DBObjectInfo(String   id,
-                       Category category,
-                       Type     type,
-                       String   parentId      = "",
-                       String[] childIds      = [],
-                       Boolean  transactional = True,
-                      )
-          {
-          }
+    const DBObjectInfo(
+            String   id,
+            Category category,
+            Type     type,
+            String   parentId        = "",
+            String[] childIds        = [],
+            Boolean  transactional   = True,
+            immutable Object initial = Null, // for now used only by DBValue
+            )
+        {
+        }
 
     /**
      * This is an abstract base class for specific DB implementations that manage data in memory.
      */
     @Abstract
-    class DBObjectStore(DBObjectInfo info, Appender<String> errs)
+    class ObjectStore(DBObjectInfo info, Appender<String> errs)
         {
         /**
-         * The DBObjectInfo that identifies the configuration of this DBObjectStore.
+         * The DBObjectInfo that identifies the configuration of this ObjectStore.
          */
         public/protected DBObjectInfo info;
 

@@ -7,7 +7,7 @@ module AddressBookApp
         @Inject Console console;
         @Inject db.Connection dbc;
 
-        console.println($"actualType=({&dbc.actualType})");
+        console.println($"actualType=({&dbc.actualType})\n");
 
         db.Contacts contacts = dbc.contacts;
 
@@ -19,6 +19,8 @@ module AddressBookApp
 
         dbc.requestCount.set(2);
 
+        dbc.title.set("My Contacts");
+
         using (val tx = dbc.createTransaction())
             {
             tx.contacts.addPhone(george.rolodexName, new db.Phone(Work, "202-555-0000"));
@@ -26,7 +28,7 @@ module AddressBookApp
             tx.requestCount.adjustBy(1);
             }
 
-        console.println("Contacts:");
+        console.println(dbc.title.get());
         for (db.Contact contact : contacts.values)
             {
             console.println(contact);

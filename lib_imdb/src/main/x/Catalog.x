@@ -88,9 +88,9 @@ static service Catalog
     public/private CatalogMetadata? metadata;
 
     /**
-     * The map of `DBObjectStore`s in the `Catalog` keyed by the 'id'.
+     * The map of `ObjectStore`s in the `Catalog` keyed by the 'id'.
      */
-    protected/private Map<String, DBObjectStore> stores = new HashMap();
+    protected/private Map<String, ObjectStore> stores = new HashMap();
 
     /**
      * An error and message log for the database.
@@ -145,16 +145,16 @@ static service Catalog
         }
 
     /**
-     * Obtain the DBObjectStore for the specified id.
+     * Obtain the ObjectStore for the specified id.
      *
      * @param id  the object id
      *
      * @return DBObject for the specified id
      * @throws IllegalArgument if there is no DBObjectInfo for the specified id
      */
-    DBObjectStore storeFor(String id)
+    ObjectStore storeFor(String id)
         {
-        DBObjectStore store;
+        ObjectStore store;
         if (store := stores.get(id))
             {
             return store;
@@ -167,13 +167,13 @@ static service Catalog
         }
 
     /**
-     * Create an DBObjectStore for the specified database object id.
+     * Create an ObjectStore for the specified database object id.
      *
      * @param id  the object id
      *
-     * @return the new DBObjectStore
+     * @return the new ObjectStore
      */
-    DBObjectStore createStore(DBObjectInfo info)
+    ObjectStore createStore(DBObjectInfo info)
         {
         return switch (info.category)
             {
@@ -190,30 +190,31 @@ static service Catalog
         }
 
     // TODO GG: if inlined, doesn't compile (registers mismatch)
-    DBObjectStore createMapStore(DBObjectInfo info, Appender<String> log)
+    ObjectStore createMapStore(DBObjectInfo info, Appender<String> log)
         {
-        Type<DBMap> typeDBMap = info.type.as(Type<DBMap>);
-        assert Type keyType := typeDBMap.resolveFormalType("Key")  , keyType.is(Type<immutable Const>);
-        assert Type valType := typeDBMap.resolveFormalType("Value"), valType.is(Type<immutable Const>);
+        Type<DBMap> dbMapType = info.type.as(Type<DBMap>);
+        assert Type keyType := dbMapType.resolveFormalType("Key")  ,
+                    keyType.is(Type<immutable Const>);
+        assert Type valType := dbMapType.resolveFormalType("Value"),
+                    valType.is(Type<immutable Const>);
+
         return new MapStore<keyType.DataType, valType.DataType>(info, log);
         }
 
-    DBObjectStore createValueStore(DBObjectInfo info, Appender<String> log)
+    ObjectStore createValueStore(DBObjectInfo info, Appender<String> log)
         {
-        Type<DBValue> typeDBValue = info.type.as(Type<DBValue>);
-        assert Type valueType := typeDBValue.resolveFormalType("Value"), valueType.is(Type<immutable Const>);
+        Type<DBValue> dbValueType = info.type.as(Type<DBValue>);
+        assert Type valueType := dbValueType.resolveFormalType("Value"),
+                    valueType.is(Type<immutable Const>);
 
-        assert Class  valueClass   := valueType.fromClass(),
-               Object defaultValue := valueClass.defaultValue();
-
-        return new ValueStore<valueType.DataType>(info, log, defaultValue.as(valueType.DataType));
+        return new ValueStore<valueType.DataType>(info, log, info.initial.as(valueType.DataType));
         }
 
     /**
      * In-memory schema store has no additional state.
      */
     class SchemaStore(DBObjectInfo info, Appender<String> log)
-            extends DBObjectStore(info, log)
+            extends ObjectStore(info, log)
         {
         }
 
@@ -295,24 +296,24 @@ static service Catalog
 
     // ----- Transaction support -------------------------------------------------------------------
 
-    Boolean commit(DBObjectStore[] stores, Int clientId)
+    Boolean commit(ObjectStore[] stores, Int clientId)
         {
 // TODO GG
-//        for (DBObjectStore store : stores)
+//        for (ObjectStore store : stores)
 //            {
 //            prepare(clientId);
 //            }
 
-        for (DBObjectStore store : stores)
+        for (ObjectStore store : stores)
             {
             store.apply(clientId);
             }
         return True;
         }
 
-    void rollback(DBObjectStore[] stores, Int clientId)
+    void rollback(ObjectStore[] stores, Int clientId)
         {
-        for (DBObjectStore store : stores)
+        for (ObjectStore store : stores)
             {
             store.discard(clientId);
             }

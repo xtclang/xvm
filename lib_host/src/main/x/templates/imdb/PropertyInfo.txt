@@ -1,1 +1,1 @@
-            "%propertyName%" = new DBObjectInfo_("%propertyName%", %propertyCategory%, %propertyType%),
+            "%propertyName%" = new DBObjectInfo_("%propertyName%", %propertyCategory%, %propertyType%, initial=%initialValue%),

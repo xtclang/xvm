@@ -8,6 +8,7 @@ module AddressBookDB
         {
         @RO Contacts     contacts;
         @RO oodb.DBCounter requestCount;
+        @RO @oodb.annotations.Initial("Untitled") oodb.DBValue<String> title;
         }
 
     /**

@@ -3,7 +3,7 @@
  */
 class MapStore<Key extends immutable Const, Value extends immutable Const>
     (DBObjectInfo info, Appender<String> errs)
-        extends DBObjectStore(info, errs)
+        extends ObjectStore(info, errs)
         delegates Map<Key, Value>(contents)
     {
     @Inject("clock") Clock clock;

@@ -229,14 +229,36 @@ service Client<Schema extends RootSchema>
         return switch (info.category)
             {
             case DBSchema:   new DBSchemaImpl(storeFor(id).as(SchemaStore));
-            case DBMap:      new DBMapImpl(storeFor(id).as(MapStore));
+            case DBMap:      createMapImpl(info, storeFor(id).as(MapStore));
             case DBList:     TODO
             case DBQueue:    TODO
             case DBLog:      TODO
             case DBCounter:  new DBCounterImpl(storeFor(id).as(CounterStore));
-            case DBValue:    new DBValueImpl(storeFor(id).as(ValueStore));
+            case DBValue:    createValueImpl(info, storeFor(id).as(ValueStore));
             case DBFunction: TODO
             };
+        }
+
+    private DBMapImpl createMapImpl(DBObjectInfo info, MapStore store)
+        {
+        Type<DBMap> dbMapType = info.type.as(Type<DBMap>);
+
+        assert Type keyType := dbMapType.resolveFormalType("Key"),
+                    keyType.is(Type<immutable Const>);
+        assert Type valueType := dbMapType.resolveFormalType("Value"),
+                    valueType.is(Type<immutable Const>);
+
+        return new DBMapImpl<keyType.DataType, valueType.DataType>(store);
+        }
+
+    private DBValueImpl createValueImpl(DBObjectInfo info, ValueStore store)
+        {
+        Type<DBValue> dbValueType = info.type.as(Type<DBValue>);
+
+        assert Type valueType := dbValueType.resolveFormalType("Value"),
+                    valueType.is(Type<immutable Const>);
+
+        return new DBValueImpl<valueType.DataType>(store);
         }
 
     /**
@@ -246,7 +268,7 @@ service Client<Schema extends RootSchema>
      *
      * @return the DBObjectInfo for the specified id
      */
-    DBObjectStore storeFor(String id)
+    ObjectStore storeFor(String id)
         {
         return Catalog.storeFor(id);
         }
@@ -258,13 +280,13 @@ service Client<Schema extends RootSchema>
      * The shared base implementation for all of the client DBObject representations.
      */
     @Abstract
-    class DBObjectImpl(DBObjectStore store_)
+    class DBObjectImpl(ObjectStore store_)
             implements oodb.DBObject
         {
         /**
          * The corresponding store.
          */
-        DBObjectStore store_;
+        ObjectStore store_;
 
         @Override
         oodb.DBObject? dbParent.get()
@@ -545,7 +567,7 @@ service Client<Schema extends RootSchema>
                                       );
                 }
 
-            DBObjectStore[] stores = new DBObjectStore[];
+            ObjectStore[] stores = new ObjectStore[];
             enlisted_.values.map(impl -> impl.store_, stores);
 
             Boolean result = Catalog.commit(stores.makeImmutable(), this.Client.id);
@@ -574,7 +596,7 @@ service Client<Schema extends RootSchema>
                                       );
                 }
 
-            DBObjectStore[] stores = new DBObjectStore[];
+            ObjectStore[] stores = new ObjectStore[];
             enlisted_.values.map(impl -> impl.store_, stores);
 
             Catalog.rollback(stores.makeImmutable(), this.Client.id);

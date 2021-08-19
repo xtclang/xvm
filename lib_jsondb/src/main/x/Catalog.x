@@ -22,7 +22,7 @@ import oodb.RootSchema;
 
 import oodb.model.DBUser as DBUserImpl;
 
-import storage.MapStore;
+import storage.JsonMapStore;
 import storage.ObjectStore;
 import storage.SchemaStore;
 import storage.ValueStore;
@@ -398,9 +398,9 @@ service Catalog<Schema extends RootSchema>
                 case Sys:          new SchemaStore(this, info, log);
 //                case Info:         TODO
 // TODO the following 3 maps might end up being custom, hard-wired, read-only implementations
-//                case Users:        new MapStore<String, DBUser>(this, info, log);
-//                case Types:        new MapStore<String, Type>(this, info, log);
-//                case Objects:      new MapStore<String, DBObject>(this, info, log);
+//                case Users:        new JsonMapStore<String, DBUser>(this, info, log);
+//                case Types:        new JsonMapStore<String, Type>(this, info, log);
+//                case Objects:      new JsonMapStore<String, DBObject>(this, info, log);
 //                case Schemas:      TODO
 //                case Maps:         TODO
 //                case Queues:       TODO
@@ -424,19 +424,7 @@ service Catalog<Schema extends RootSchema>
                     TODO
 
                 case DBMap:
-                    assert Type keyType   := info.typeParams.get("Key");
-                    assert Type valueType := info.typeParams.get("Value");
-                    Type storeType = MapStore.parameterize([keyType, valueType]);
-                    for (val constructor : storeType.constructors)
-                        {
-                        if (constructor.params.size == 5)
-                            {
-                            params = params.add(jsonSchema.ensureMapping(keyType))
-                                           .add(jsonSchema.ensureMapping(valueType));
-                            return constructor.invoke(params)[0].as(ObjectStore);
-                            }
-                        }
-                    assert;
+                    return createMapStore(info, log);
 
                 case DBList:
                     TODO
@@ -451,27 +439,36 @@ service Catalog<Schema extends RootSchema>
                     TODO
 
                 case DBValue:
-                    assert Type valueType := info.typeParams.get("Value");
-                    Type storeType = ValueStore.parameterize([valueType]);
-                    for (val constructor : storeType.constructors)
-                        {
-                        if (constructor.params.size == 5)
-                            {
-                            assert Class  valueClass   := valueType.fromClass(),
-                                   Object defaultValue := valueClass.defaultValue();
-
-                            params = params.add(jsonSchema.ensureMapping(valueType))
-                                           .add(defaultValue);
-                            return constructor.invoke(params)[0].as(ObjectStore);
-                            }
-                        }
-                    assert;
+                    return createValueStore(info, log);
 
                 case DBFunction:
                     TODO
                 }
             }
         }
+
+    private ObjectStore createMapStore(DBObjectInfo info, Appender<String> log)
+        {
+        assert Type keyType := info.typeParams.get("Key"),
+                    keyType.is(Type<immutable Const>);
+        assert Type valType := info.typeParams.get("Value"),
+                    valType.is(Type<immutable Const>);
+
+        return new JsonMapStore<keyType.DataType, valType.DataType>(this, info, log,
+                jsonSchema.ensureMapping(keyType).as(Mapping<keyType.DataType>),
+                jsonSchema.ensureMapping(valType).as(Mapping<valType.DataType>));
+        }
+
+    private ObjectStore createValueStore(DBObjectInfo info, Appender<String> log)
+        {
+        assert Type valueType := info.typeParams.get("Value"),
+                    valueType.is(Type<immutable Const>);
+
+        return new ValueStore<valueType.DataType>(this, info, log,
+                jsonSchema.ensureMapping(valueType).as(Mapping<valueType.DataType>),
+                info.initial.as(valueType.DataType));
+        }
+
 
 
     // ----- status management ---------------------------------------------------------------------

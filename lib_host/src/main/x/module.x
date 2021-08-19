@@ -234,7 +234,7 @@ module host.xtclang.org
                 return True, new JsondbHost();
 
             default:
-                errors.add($"Unknown db implementation: {impl}");
+                errors.add($"Error: Unknown db implementation: {impl}");
                 return False;
             }
         }

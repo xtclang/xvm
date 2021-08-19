@@ -3,6 +3,7 @@ import ecstasy.io.Log;
 import ecstasy.mgmt.Container;
 import ecstasy.mgmt.ModuleRepository;
 
+import ecstasy.reflect.AnnotationTemplate;
 import ecstasy.reflect.ClassTemplate;
 import ecstasy.reflect.ClassTemplate.Composition;
 import ecstasy.reflect.ClassTemplate.Contribution;
@@ -14,9 +15,8 @@ import ecstasy.reflect.PropertyTemplate;
 import ecstasy.reflect.TypeParameter;
 import ecstasy.reflect.TypeTemplate;
 
-
-import oodb.DBObject;
 import oodb.DBObject.DBCategory;
+
 
 /**
  * An abstract host for a DB module.
@@ -78,7 +78,7 @@ class DbHost
         if (appSchemaTemplate := findSchema(dbModule)) {}
         else
             {
-            errors.add($"Schema is not found in {dbModuleName} module");
+            errors.add($"Error: Schema is not found in {dbModuleName} module");
             return False;
             }
 
@@ -128,6 +128,7 @@ class DbHost
             String propertyName = property.name;
             String propertyType = displayName(typeTemplate, appName);
             String propertyId   = (++pid).toString();
+            String initialValue = "Null";
 
             String propertyTypeName = classTemplate.name.replace(".", "_");
             String propertyStoreType;
@@ -162,6 +163,29 @@ class DbHost
                     propertyStoreType  = $"{hostName}_.storage.ValueStore<{valueTypeName}>";
                     propertyBaseType   = $"DBValueImpl<{valueTypeName}>";
                     propertyTypeParams = $"\"Value\"={valueTypeName}";
+
+                    for (AnnotationTemplate annotation : property.annotations)
+                        {
+                        if (annotation.template.displayName == "oodb.annotations.Initial")
+                            {
+                            initialValue = displayValue(annotation.arguments[0].value);
+                            break;
+                            }
+                        }
+
+                    if (initialValue == "Null")
+                        {
+                        if (Const initial := property.hasInitialValue())
+                            {
+                            initialValue = displayValue(initial);
+                            }
+                        else
+                            {
+                            errors.add($"Error: Property \"{propertyName}\" must specify an initial value");
+                            return False;
+                            }
+                        }
+
                     break;
 
                 default:
@@ -175,6 +199,7 @@ class DbHost
                                 .replace("%propertyParentId%"  , "0") // TODO
                                 .replace("%propertyType%"      , propertyType)
                                 .replace("%propertyTypeParams%", propertyTypeParams)
+                                .replace("%initialValue%"      , initialValue)
                                 ;
 
             propertyGetters += propertyGetterTemplate
@@ -378,7 +403,7 @@ class DbHost
                         }
                     }
                 }
-            errors.add($"Unsupported property type: {prop.name} {prop.type}");
+            errors.add($"Error: Unsupported property type: \"{prop.type} {prop.name}\"");
             return False;
             }
 
@@ -420,6 +445,24 @@ class DbHost
         }
 
     /**
+     * Obtain a display values for the specified constant.
+     */
+    String displayValue(Const value)
+        {
+        Type typeActual = &value.actualType;
+        if (typeActual.is(Type<String>))
+            {
+            return value.as(String).quoted();
+            }
+        if (typeActual.is(Type<Char>))
+            {
+            return $"'{value.as(Char).toString()}'";
+            }
+
+        return value.toString();
+        }
+
+    /**
      * Compile the specified source file.
      */
     Boolean compileModule(File sourceFile, Directory buildDir, Log errors)
@@ -456,8 +499,6 @@ class DbHost
 
 
     // ----- constants -----------------------------------------------------------------------------
-
-    static TypeTemplate DBObject_TEMPLATE = DBObject.baseTemplate.type;
 
     static Map<DBCategory, TypeTemplate> DB_TEMPLATES = Map:
             [
