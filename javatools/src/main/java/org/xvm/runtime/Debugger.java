@@ -8,12 +8,9 @@ public interface Debugger
     /**
      * Activate the debugger.
      *
-     * @param frame  the current frame
-     * @param iPC    the current PC
-     *
-     * @return the iPC for the next op or any of the Op.R_* values
+     * @param ctx  the current service context
      */
-    int enter(Frame frame, int iPC);
+    void activate(ServiceContext ctx);
 
     /**
      * Check for a breakpoint at the specified frame and program counter.
@@ -37,6 +34,10 @@ public interface Debugger
      *
      * @param frame  the current frame
      * @param hEx    the exception handler
+     *
+     * @return Op.R_EXCEPTION if the exception needs to be processed naturally or the iPC for the
+     *         next op, Op.R_NEXT or Op.R_CALL values if the exception was caused by the debugger
+     *         itself and has been handled
      */
-    void checkBreakPoint(Frame frame, ObjectHandle.ExceptionHandle hEx);
+    int checkBreakPoint(Frame frame, ObjectHandle.ExceptionHandle hEx);
     }

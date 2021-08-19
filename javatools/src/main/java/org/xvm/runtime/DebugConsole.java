@@ -43,9 +43,12 @@ public class DebugConsole
         }
 
     @Override
-    public int enter(Frame frame, int iPC)
+    public void activate(ServiceContext ctx)
         {
-        return enterCommand(frame, iPC, true);
+        ctx.setDebuggerActive(true);
+
+        // stop at the first possibility
+        m_stepMode = StepMode.StepInto;
         }
 
     @Override
@@ -54,6 +57,10 @@ public class DebugConsole
         boolean fDebug;
         switch (m_stepMode)
             {
+            case NaturalCall:
+                fDebug = false;
+                break;
+
             case StepOver:
                 fDebug = frame == m_frame;
                 break;
@@ -85,13 +92,25 @@ public class DebugConsole
         }
 
     @Override
-    public void checkBreakPoint(Frame frame, ExceptionHandle hEx)
+    public int checkBreakPoint(Frame frame, ExceptionHandle hEx)
         {
-        if (m_fBreakOnAllThrows ||
-            m_setThrowBreaks != null && m_setThrowBreaks.stream().anyMatch(bp -> bp.matches(hEx)))
+        if (m_stepMode == StepMode.NaturalCall)
+            {
+            // exception by the natural code called from the debugger
+            if (frame == m_frame)
+                {
+                xTerminalConsole.CONSOLE_OUT.println("Call \"toString()\" threw an exception " + hEx);
+                frame.m_hException = null;
+                return enterCommand(frame, m_iPC, false);
+                }
+            }
+        else if (m_fBreakOnAllThrows ||
+                 m_setThrowBreaks != null && m_setThrowBreaks.stream().anyMatch(bp -> bp.matches(hEx)))
             {
             enterCommand(frame, -1, true);
             }
+
+        return Op.R_EXCEPTION;
         }
 
     @Override
@@ -461,6 +480,7 @@ public class DebugConsole
                                     {
                                     case Op.R_NEXT:
                                         writer.println(((StringHandle) frame.popStack()).getStringValue());
+                                        m_stepMode = StepMode.None;
                                         continue NextCommand;
 
                                     case Op.R_CALL:
@@ -469,13 +489,8 @@ public class DebugConsole
                                             writer.println(((StringHandle) frameCaller.popStack()).getStringValue());
                                             return enterCommand(frameCaller, iPC, false);
                                             });
+                                        m_stepMode = StepMode.NaturalCall;
                                         return Op.R_CALL;
-
-                                    case Op.R_EXCEPTION:
-                                        ExceptionHandle hEx = frame.m_hException;
-                                        frame.m_hException = null;
-                                        writer.println("Call \"toString()\" threw an exception " + hEx);
-                                        continue NextCommand;
 
                                     default:
                                         throw new IllegalStateException();
@@ -1282,6 +1297,6 @@ public class DebugConsole
     /**
      * The current step operation.
      */
-    enum StepMode {None, StepOver, StepInto, StepOut, StepLine}
+    enum StepMode {None, StepOver, StepInto, StepOut, StepLine, NaturalCall}
     private StepMode m_stepMode = StepMode.None;
     }

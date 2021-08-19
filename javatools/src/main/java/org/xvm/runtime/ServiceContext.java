@@ -678,13 +678,20 @@ public class ServiceContext
                     ExceptionHandle hException = frame.m_hException;
                     assert hException != null;
 
-                    if (isDebuggerActive())
-                        {
-                        getDebugger().checkBreakPoint(frame, hException);
-                        }
-
                     while (true)
                         {
+                        if (isDebuggerActive())
+                            {
+                            iPC = getDebugger().checkBreakPoint(frame, hException);
+                            if (iPC != Op.R_EXCEPTION)
+                                {
+                                // handled exception; go to the handler
+                                m_frameCurrent = frame;
+                                aOp = frame.f_aOp;
+                                break;
+                                }
+                            }
+
                         iPC = frame.findGuard(hException);
                         if (iPC >= 0)
                             {
@@ -748,14 +755,6 @@ public class ServiceContext
                     frame.m_iPC = iPCLast;
                     fiber.setStatus(FiberStatus.Paused, cOps);
                     return frame;
-
-                case Op.R_DEBUG:
-                    iPC = getDebugger().enter(frame, iPCLast);
-                    if (iPC == Op.R_NEXT)
-                        {
-                        iPC = iPCLast + 1;
-                        }
-                    break;
 
                 default:
                     throw new IllegalStateException("Invalid code: " + iPC);
