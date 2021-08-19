@@ -15,12 +15,15 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import org.xvm.asm.MethodStructure;
+import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.IdentityConstant;
 
 import org.xvm.runtime.Frame.VarInfo;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
+
+import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 
@@ -42,7 +45,7 @@ public class DebugConsole
     @Override
     public int enter(Frame frame, int iPC)
         {
-        return enterCommand(frame, iPC);
+        return enterCommand(frame, iPC, true);
         }
 
     @Override
@@ -77,16 +80,17 @@ public class DebugConsole
             }
 
         return fDebug
-                ? enterCommand(frame, iPC)
+                ? enterCommand(frame, iPC, true)
                 : iPC + 1;
         }
 
     @Override
     public void checkBreakPoint(Frame frame, ExceptionHandle hEx)
         {
-        if (m_fBreakOnAllThrows || m_setThrowBreaks != null && m_setThrowBreaks.stream().anyMatch(bp -> bp.matches(hEx)))
+        if (m_fBreakOnAllThrows ||
+            m_setThrowBreaks != null && m_setThrowBreaks.stream().anyMatch(bp -> bp.matches(hEx)))
             {
-            enterCommand(frame, -1);
+            enterCommand(frame, -1, true);
             }
         }
 
@@ -103,12 +107,13 @@ public class DebugConsole
     /**
      * Allow interactive debugger commands.
      *
-     * @param frame  the current frame
-     * @param iPC    the current PC (-1 for an exception breakpoint)
+     * @param frame    the current frame
+     * @param iPC      the current PC (-1 for an exception breakpoint)
+     * @param fRender  specifies whether to render the console initially
      *
      * @return the next PC or any of the Op.R_* values
      */
-    private int enterCommand(Frame frame, int iPC)
+    private int enterCommand(Frame frame, int iPC, boolean fRender)
         {
         m_frame    = frame;
         m_iPC      = iPC;
@@ -117,7 +122,10 @@ public class DebugConsole
         PrintWriter    writer = xTerminalConsole.CONSOLE_OUT;
         BufferedReader reader = xTerminalConsole.CONSOLE_IN;
 
-        writer.println(renderDisplay());
+        if (fRender)
+            {
+            writer.println(renderDisplay());
+            }
 
         NextCommand:
         while (true)
@@ -418,7 +426,7 @@ public class DebugConsole
                             }
                         break;
 
-                    case "X":
+                    case "D":
                         if (cArgs == 1)
                             {
                             String[] asVars = m_asVars;
@@ -435,6 +443,47 @@ public class DebugConsole
                             }
                         break;
 
+                    case "DS":
+                        if (cArgs == 1)
+                            {
+                            String[] asVars = m_asVars;
+                            int iVar = parseNonNegative(asParts[1]);
+                            if (iVar >= 0 && iVar < asVars.length)
+                                {
+                                ObjectHandle hVar = getVar(asVars[iVar]);
+                                if (hVar == null)
+                                    {
+                                    writer.println("<unassigned>");
+                                    continue NextCommand;
+                                    }
+
+                                switch (Utils.callToString(frame, hVar))
+                                    {
+                                    case Op.R_NEXT:
+                                        writer.println(((StringHandle) frame.popStack()).getStringValue());
+                                        continue NextCommand;
+
+                                    case Op.R_CALL:
+                                        frame.m_frameNext.addContinuation(frameCaller ->
+                                            {
+                                            writer.println(((StringHandle) frameCaller.popStack()).getStringValue());
+                                            return enterCommand(frameCaller, iPC, false);
+                                            });
+                                        return Op.R_CALL;
+
+                                    case Op.R_EXCEPTION:
+                                        ExceptionHandle hEx = frame.m_hException;
+                                        frame.m_hException = null;
+                                        writer.println("Call \"toString()\" threw an exception " + hEx);
+                                        continue NextCommand;
+
+                                    default:
+                                        throw new IllegalStateException();
+                                    }
+                                }
+                            }
+                        break;
+
                     default:
                         writer.println("Unknown command: \"" + sCommand + "\"; enter '?' for help");
                         continue NextCommand;
@@ -445,7 +494,8 @@ public class DebugConsole
             catch (IOException ignored) {}
             }
 
-        frame.f_context.setDebuggerActive(m_setLineBreaks != null || m_setThrowBreaks != null || m_stepMode != StepMode.None);
+        frame.f_context.setDebuggerActive(
+            m_setLineBreaks != null || m_setThrowBreaks != null || m_stepMode != StepMode.None);
         return iPC + 1;
         }
 
@@ -945,6 +995,8 @@ public class DebugConsole
         sb.append("-------------------  ---------------------------------------------\n");
         sb.append("F <frame#>           Switch to the specified Frame number\n");
         sb.append("X <var#>             Expand (or contract) the specified variable number\n");
+        sb.append("D <var#>             Display the structure view of the specified variable number\n");
+        sb.append("DS <var#>            Display the \"toString()\" value of the specified variable number\n");
         sb.append("\n");
         sb.append("S                    Step over\n");
         sb.append("S+                   Step in\n");
