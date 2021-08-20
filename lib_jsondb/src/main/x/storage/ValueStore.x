@@ -90,6 +90,11 @@ service ValueStore<Value extends immutable Const>
      */
     protected SkiplistMap<Int, Value> history = new SkiplistMap();
 
+    /**
+     * A record of how all persistent transactions are layed out on disk.
+     */
+    protected SkiplistMap<Int, Range<Int>> storageLayout = new SkiplistMap();
+
     import TxManager.NO_TX;
 
     /**
@@ -343,7 +348,6 @@ service ValueStore<Value extends immutable Const>
             inUseId = lastCommit;
             }
 
-        ensureLoaded();
         Iterator<Int> eachPresent = history.keys.iterator();
         assert Int presentId := eachPresent.next();
         if (presentId == lastCommit)
@@ -436,20 +440,6 @@ service ValueStore<Value extends immutable Const>
     // ----- internal ------------------------------------------------------------------------------
 
     /**
-     * TODO
-     */
-    Boolean ensureLoaded()
-        {
-        if (history.empty)
-            {
-            loadInitial();
-            assert !history.empty;
-            }
-
-        return True;
-        }
-
-    /**
      * Obtain the update-to-date value from the transaction.
      *
      * @param tx  the transaction's Changes record
@@ -507,8 +497,12 @@ service ValueStore<Value extends immutable Const>
         assert model == Small;
         assert dataFile.exists;
 
+        // parse the file, finding each transaction and remembering its location
+        // TODO
+
         Value value;
         Int   loadId = txManager.lastClosedId;
+
         // TODO
         TODO history.put(loadId, value);
         }

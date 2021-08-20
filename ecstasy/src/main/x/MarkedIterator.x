@@ -86,7 +86,7 @@ class MarkedIterator<Element>(Iterator<Element> that)
     // ----- Markable ------------------------------------------------------------------------------
 
     @Override
-    Object mark()
+    immutable Object mark()
         {
         assert !closed;
         ++markCount;
@@ -94,7 +94,7 @@ class MarkedIterator<Element>(Iterator<Element> that)
         }
 
     @Override
-    void restore(Object mark, Boolean unmark = False)
+    void restore(immutable Object mark, Boolean unmark = False)
         {
         assert !closed;
         assert:arg mark.is(Int) && mark >= 0 && mark <= buffer.size;
@@ -108,7 +108,7 @@ class MarkedIterator<Element>(Iterator<Element> that)
         }
 
     @Override
-    void unmark(Object mark)
+    void unmark(immutable Object mark)
         {
         if (!closed)
             {

@@ -769,7 +769,7 @@ class ObjectInputStream(Schema schema, Parser parser)
          * This is the parser mark to undo any impact that this stream has, if this stream is used
          * for peeking ahead and has to erase any signs of its work.
          */
-        private Object undo = FakeMark.NotPeeking;
+        private immutable Object undo = FakeMark.NotPeeking;
 
         @Override
         protected Boolean peekingAhead

@@ -94,16 +94,16 @@ class Parser
 
     // ----- Markable ------------------------------------------------------------------------------
 
-    protected static const Mark(Object mark, Token? token);
+    protected static const Mark(immutable Object mark, Token? token);
 
     @Override
-    Object mark()
+    immutable Object mark()
         {
         return new Mark(lexer.mark(), token);
         }
 
     @Override
-    void restore(Object mark, Boolean unmark = False)
+    void restore(immutable Object mark, Boolean unmark = False)
         {
         assert mark.is(Mark);
         lexer.restore(mark.mark);
@@ -190,7 +190,7 @@ class Parser
      * @return the first token of the JSON document skipped
      * @return the last token of the JSON document skipped
      */
-    (Token first, Token last) skipDoc(Token[]? skipped)
+    (Token first, Token last) skipDoc(Token[]? skipped = Null)
         {
         switch (token?.id)
             {
@@ -243,7 +243,7 @@ class Parser
      * @return the first token of the JSON array skipped
      * @return the last token of the JSON array skipped
      */
-    (Token first, Token last) skipArray(Token[]? skipped)
+    (Token first, Token last) skipArray(Token[]? skipped = Null)
         {
         Token first = expect(ArrayEnter, skipped);
         Token last;
@@ -262,6 +262,85 @@ class Parser
             }
 
         return first, last;
+        }
+
+    /**
+     * Test to see if the next token is the start of an array.
+     *
+     * @return True iff the next token was an opening square bracket of an array
+     * @return (conditional) the opening square bracket token
+     */
+    conditional Token matchArray()
+        {
+        TODO
+        }
+
+    /**
+     * Obtain the next token, which must be the opening square bracket of an array.
+     *
+     * @return the opening square bracket token
+     */
+    Token expectObject()
+        {
+        TODO
+        }
+
+    /**
+     * Following a call to [matchObject] or [expectObject], this method will test the key of the
+     * next key/value pair to see if it matches the specified key, or if no key is specified, then
+     * it assumes that any key matches.
+     *
+     * @param key  the key to match
+     *
+     * @return True iff there was a key/value pair and the key matches the passed key (or no key was
+     *         passed)
+     * @return the key token, if it was found
+     */
+    conditional Token matchKey(String? key = Null)
+        {
+        TODO
+        }
+
+    /**
+     * Following a call to [matchObject] or [expectObject], this method will test the key of the
+     * next key/value pair to see if it matches the specified key, or if no key is specified, then
+     * it assumes that any key matches.
+     *
+     * @param key  the expected key; Null indicates that any key is acceptable
+     *
+     * @return the key token
+     */
+    Token expectKey(String? key = Null)
+        {
+        TODO
+        }
+
+    /**
+     * Following a call to [matchObject] or [expectObject], this method will parse from the current
+     * point to the end of the object, looking for the specified key (of a key/value pair).
+     *
+     * @param key      the key to find
+     * @param skipped  the optional array to accrue skipped tokens into
+     *
+     * @return True iff the key was found inside the object
+     * @return Token the key token, if it was found
+     */
+    conditional Token findKey(String key, Token[]? skipped = Null)
+        {
+        TODO
+        }
+
+    /**
+     * Following a call to [matchArray] or [expectArray], this method will parse from the current
+     * point to the end of the array, and read past the closing square bracket.
+     *
+     * @param skipped  the optional array to accrue skipped tokens into
+     *
+     * @return the closing square bracket token
+     */
+    Token closeObject(Token[]? skipped = Null)
+        {
+        TODO
         }
 
     /**
@@ -324,7 +403,7 @@ class Parser
      * @return the first token of the JSON object skipped
      * @return the last token of the JSON object skipped
      */
-    (Token first, Token last) skipObject(Token[]? skipped)
+    (Token first, Token last) skipObject(Token[]? skipped = Null)
         {
         Token first = expect(ObjectEnter, skipped);
         Token last;
@@ -345,6 +424,85 @@ class Parser
             }
 
         return first, last;
+        }
+
+    /**
+     * Test to see if the next token is the start of an object.
+     *
+     * @return True iff the next token was an opening brace of an object
+     * @return (conditional) the opening brace token
+     */
+    conditional Token matchObject()
+        {
+        TODO
+        }
+
+    /**
+     * Obtain the next token, which must be the opening brace of a document.
+     *
+     * @return the opening brace token
+     */
+    Token expectObject()
+        {
+        TODO
+        }
+
+    /**
+     * Following a call to [matchObject] or [expectObject], this method will test the key of the
+     * next key/value pair to see if it matches the specified key, or if no key is specified, then
+     * it assumes that any key matches.
+     *
+     * @param key  the key to match
+     *
+     * @return True iff there was a key/value pair and the key matches the passed key (or no key was
+     *         passed)
+     * @return the key token, if it was found
+     */
+    conditional Token matchKey(String? key = Null)
+        {
+        TODO
+        }
+
+    /**
+     * Following a call to [matchObject] or [expectObject], this method will test the key of the
+     * next key/value pair to see if it matches the specified key, or if no key is specified, then
+     * it assumes that any key matches.
+     *
+     * @param key  the expected key; Null indicates that any key is acceptable
+     *
+     * @return the key token
+     */
+    Token expectKey(String? key = Null)
+        {
+        TODO
+        }
+
+    /**
+     * Following a call to [matchObject] or [expectObject], this method will parse from the current
+     * point to the end of the object, looking for the specified key (of a key/value pair).
+     *
+     * @param key      the key to find
+     * @param skipped  the optional array to accrue skipped tokens into
+     *
+     * @return True iff the key was found inside the object
+     * @return Token the key token, if it was found
+     */
+    conditional Token findKey(String key, Token[]? skipped = Null)
+        {
+        TODO
+        }
+
+    /**
+     * Following a call to [matchObject] or [expectObject], this method will parse from the current
+     * point to the end of the object, and read past the closing brace.
+     *
+     * @param skipped  the optional array to accrue skipped tokens into
+     *
+     * @return the closing brace token
+     */
+    Token closeObject(Token[]? skipped = Null)
+        {
+        TODO
         }
 
     /**

@@ -136,19 +136,18 @@ class Lexer
     /**
      * A restorable position within the Lexer (Literally, Lex-Mark.)
      */
-    protected static class Mark(Reader reader, TextPosition position, Int pastEOF, Boolean whitespace);
+    protected static const Mark(TextPosition position, Int pastEOF, Boolean whitespace);
 
     @Override
-    Object mark()
+    immutable Object mark()
         {
-        return new Mark(reader, reader.position, pastEOF, whitespace);
+        return new Mark(reader.position, pastEOF, whitespace);
         }
 
     @Override
-    void restore(Object mark, Boolean unmark = False)
+    void restore(immutable Object mark, Boolean unmark = False)
         {
         assert mark.is(Mark);
-        assert mark.reader == reader;
         reader.position = mark.position;
         this.pastEOF    = mark.pastEOF;
         this.whitespace = mark.whitespace;
@@ -182,13 +181,13 @@ class Lexer
                 }
 
             @Override
-            Object mark()
+            immutable Object mark()
                 {
                 return index;
                 }
 
             @Override
-            void restore(Object mark, Boolean unmark = False)
+            void restore(immutable Object mark, Boolean unmark = False)
                 {
                 index = mark.as(Int);
                 }

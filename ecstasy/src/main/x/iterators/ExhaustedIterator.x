@@ -33,18 +33,18 @@ const ExhaustedIterator<Element>
     // ----- Markable ------------------------------------------------------------------------------
 
     @Override
-    Object mark()
+    immutable Object mark()
         {
         return Null;
         }
 
     @Override
-    void restore(Object mark, Boolean unmark = False)
+    void restore(immutable Object mark, Boolean unmark = False)
         {
         }
 
     @Override
-    void unmark(Object mark)
+    void unmark(immutable Object mark)
         {
         }
     }

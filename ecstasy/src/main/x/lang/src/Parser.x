@@ -1161,25 +1161,23 @@ class Parser
     /**
      * A restorable position within the Lexer (Literally, Lex-Mark.)
      */
-    protected static class Mark(Lexer  lexer,
-                                Object lexerMark,
-                                Token? nextToken,
-                                Token? prevToken,
-                                Token? backToken,
-                                Token? prevDoc,
-                                Boolean suppressRecovery);
+    protected static const Mark(immutable Object lexerMark,
+                                Token?           nextToken,
+                                Token?           prevToken,
+                                Token?           backToken,
+                                Token?           prevDoc,
+                                Boolean          suppressRecovery);
 
     @Override
-    Object mark()
+    immutable Object mark()
         {
-        return new Mark(lexer, lexer.mark(), nextToken, prevToken, backToken, prevDoc, suppressRecovery);
+        return new Mark(lexer.mark(), nextToken, prevToken, backToken, prevDoc, suppressRecovery);
         }
 
     @Override
-    void restore(Object mark, Boolean unmark = False)
+    void restore(immutable Object mark, Boolean unmark = False)
         {
         assert mark.is(Mark);
-        assert mark.lexer == lexer;
 
         lexer.restore(mark.lexerMark);
         nextToken        = mark.nextToken;
@@ -1193,10 +1191,8 @@ class Parser
     void unmark(Object mark)
         {
         assert mark.is(Mark);
-        assert mark.lexer == lexer;
 
         lexer.unmark(mark.lexerMark);
-        mark.lexerMark = Null;
         }
 
 

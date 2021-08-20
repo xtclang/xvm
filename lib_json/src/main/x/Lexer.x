@@ -229,13 +229,13 @@ class Lexer
     // ----- Markable ------------------------------------------------------------------------------
 
     @Override
-    Object mark()
+    immutable Object mark()
         {
         return reader.position;
         }
 
     @Override
-    void restore(Object mark, Boolean unmark = False)
+    void restore(immutable Object mark, Boolean unmark = False)
         {
         assert mark.is(TextPosition);
         reader.position = mark;
@@ -247,7 +247,7 @@ class Lexer
         }
 
     @Override
-    void unmark(Object mark)
+    void unmark(immutable Object mark)
         {
         }
 
