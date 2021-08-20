@@ -2,14 +2,14 @@ module TestSimple.test.org
     {
     @Inject Console console;
 
-    void run(  )
+    void run()
         {
-        new Test<Int, String>();
+        Iterator<String> iter =  iter("");
         }
 
-    class Test<Key, Value>
+    Iterator<String> iter(String s)
         {
-        immutable Map<Key, Value> bug1 = Map:[];
-        immutable Map<Key, Value> bug2 = Map<Key, Value>:[].makeImmutable();
+        // that used to blow up
+        return (s.size > 0 ? [s] : []).iterator();
         }
     }

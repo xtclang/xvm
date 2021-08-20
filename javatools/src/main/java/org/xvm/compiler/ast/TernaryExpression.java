@@ -245,6 +245,24 @@ public class TernaryExpression
                 }
             }
 
+        if (use == Usage.Any)
+            {
+            // even though both types fit, choose "more" parameterized one if possible
+            for (int i = 0, c = Math.min(atypeThen.length, atypeElse.length); i < c; i++)
+                {
+                TypeConstant typeT = atypeThen[i];
+                TypeConstant typeE = atypeElse[i];
+                int          cT    = typeT.getParamsCount();
+                int          cE    = typeE.getParamsCount();
+
+                if (cT != cE)
+                    {
+                    use = cT > cE ? Usage.Then : Usage.Else;
+                    break;
+                    }
+                }
+            }
+
         TypeConstant[] atypeThenV = null;
         TypeConstant[] atypeElseV = null;
 
