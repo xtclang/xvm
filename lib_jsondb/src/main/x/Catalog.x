@@ -360,14 +360,20 @@ service Catalog<Schema extends RootSchema>
                 break;
 
             case Recovering:
-                // TODO
+                if (!store.recover())
+                    {
+                    throw new IllegalState($"Failed to recover \"{store.info.name}\" store at {store.path}");
+                    }
                 break;
 
             case Configuring:
                 TODO
 
             case Running:
-                store.open();
+                if (!store.open())
+                    {
+                    throw new IllegalState($"Failed to open \"{store.info.name}\" store at {store.path}");
+                    }
                 break;
             }
 

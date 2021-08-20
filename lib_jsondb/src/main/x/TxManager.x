@@ -291,6 +291,22 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 {
                 // load the previously saved off transaction manager state from disk
                 // TODO lastClosedId lastPrepared lastCommitted
+
+                File file = logFile;
+                if (file.exists)
+                    {
+                    // +++ HACK HACK
+                    String content = ecstasy.lang.src.Source.loadText(file);
+
+                    assert Int blockStart := content.lastIndexOf('{');
+                    assert Int idStart := content.indexOf(':', blockStart);
+                    assert Int idEnd   := content.indexOf(',', ++idStart);
+                    String idString = content.slice([idStart .. idEnd));
+
+                    Int id = new IntLiteral(idString).toInt64();
+                    lastPrepared  = id;
+                    lastCommitted = id;
+                    }
                 }
 
             status = Enabled;
@@ -930,16 +946,15 @@ TODO
         Int          writeId = rec.writeId;
         StringBuffer buf     = new StringBuffer();
 
-        buf.append(",\n{");
+        buf.append(",\n{")
+           .append("\n\"_tx\":")
+           .append(rec.prepareId);
         Loop: for (ObjectStore store : stores)
             {
             String json = store.sealPrepare(writeId);
 
-            if (!Loop.first)
-                {
-                buf.add(',');
-                }
-            buf.append("\n\"")
+            buf.add(',')
+               .append("\n\"")
                .append(store.info.name)
                .append("\":")
                .append(json);
@@ -965,35 +980,19 @@ TODO
             file.contents = buf.toString().utf8();
             }
 
-// TODO
-//      {
-//      "path1":sealresult1,  // TODO path or id or whatever we want to uniquely identify the dbObject in a persistent form
-//      "path2":sealresult2,
-//      ...
-//      }
-
-// e.g. the entire transaction record for -17 aka 44:
-//      {
-//      "title":"hello",
-//      "contacts":[{"key":1, "value":{Bob...}}, {"key":2, "value":{Sam...}}, {"key":7, "deleted":true}],
-//      ...
-//      }
 
 // TODO write this information to the end of the database tx log, e.g. :
 // the "transaction log" just is these appended, e.g.
 //      [
 //      {
+//      "_id":1
 //      "title":"hello",
 //      "contacts":[{"key":1, "value":{Bob...}}, {"key":2, "value":{Sam...}}, {"key":7, "deleted":true}],
 //      ...
 //      },
 //      {
-//      "title":"hello",
-//      "contacts":[{"key":1, "value":{Bob...}}, {"key":2, "value":{Sam...}}, {"key":7, "deleted":true}],
-//      ...
-//      },
-//      {
-//      "title":"hello",
+//      "_id":2
+//      "title":"goodbye",
 //      "contacts":[{"key":1, "value":{Bob...}}, {"key":2, "value":{Sam...}}, {"key":7, "deleted":true}],
 //      ...
 //      }

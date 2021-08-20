@@ -4,12 +4,14 @@ module TestSimple.test.org
 
     void run()
         {
-        Iterator<String> iter =  iter("");
+        report(   1..5   );
+        report(  [1..5)  );
+        report(  (1..5)  );
         }
 
-    Iterator<String> iter(String s)
+    void report(Range<Int> range)
         {
-        // that used to blow up
-        return (s.size > 0 ? [s] : []).iterator();
+        String s = "012345678";
+        console.println(s.slice(range));
         }
     }

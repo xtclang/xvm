@@ -497,38 +497,55 @@ service ValueStore<Value extends immutable Const>
     @Override
     void loadInitial()
         {
+        File file = dataFile;
+
         assert model == Small;
-        assert dataFile.exists;
+        assert file.exists;
+
+        // +++ HACK HACK
+        String content = ecstasy.lang.src.Source.loadText(file);
+
+        assert Int valueStart := content.lastIndexOf(':');
+        assert Int valueEnd   := content.indexOf('}', valueStart);
+        String valueString = content.slice([valueStart+1 .. valueEnd));
+
+        assert Int idStart := content.lastIndexOf(':', valueStart-1);
+        assert Int idEnd   := content.indexOf(',', idStart);
+        String idString = content.slice([idStart+1 .. idEnd));
+
+        Int loadId = new IntLiteral(idString).toInt64();
+        history.put(loadId, valueString.as(Value));
+        // --- HACK HACK
 
         // parse the file, finding each transaction and remembering its location
         // TODO
 
-        Value value;
-        Int   loadId = txManager.lastClosedId;
-
-        // TODO
-        TODO history.put(loadId, value);
+//        Value value;
+//        Int   loadId = txManager.lastClosedId;
+//
+//        // TODO
+//        TODO history.put(loadId, value);
         }
 
     @Override
     Iterator<File> findFiles()
         {
         File file = dataFile;
-        // TODO GG: fails at run-time with "Missing method "Iterator<File> iterator()" on immutable Array<Object>"
         return (file.exists ? [file] : []).iterator();
         }
 
     @Override
     Boolean deepScan(Boolean fix = True)
         {
-        TODO
+        // TODO
+        return super();
         }
 
     @Override
     Boolean quickScan()
         {
         // TODO
-        return True;
+        return super();
         }
 
     /**

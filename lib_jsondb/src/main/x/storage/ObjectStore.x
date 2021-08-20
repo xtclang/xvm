@@ -245,6 +245,8 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
      * For a closed ObjectStore, examine the contents of the persistent storage and recover from
      * that to a running state if at all possible.
      *
+     * @return True iff the store has successfully recovered and is `Running`
+     *
      * @throws IllegalState  if the ObjectStore is not `Closed`
      */
     Boolean recover()
@@ -270,6 +272,8 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
     /**
      * For a closed ObjectStore, quickly open the contents of the persistent storage in order to
      * achieve a running state.
+     *
+     * @return True iff the store has successfully opened and is `Running`
      *
      * @throws IllegalState  if the ObjectStore is not `Closed`
      */
