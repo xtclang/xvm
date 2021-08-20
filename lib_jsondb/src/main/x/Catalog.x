@@ -360,7 +360,8 @@ service Catalog<Schema extends RootSchema>
                 break;
 
             case Recovering:
-                TODO
+                // TODO
+                break;
 
             case Configuring:
                 TODO

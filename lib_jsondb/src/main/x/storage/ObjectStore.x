@@ -139,7 +139,7 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
      */
     @Lazy public/private Directory dataDir.calc()
         {
-        return containingDir.dirFor(info.name);
+        return containingDir.dirFor(info.name).ensure();
         }
 
     /**

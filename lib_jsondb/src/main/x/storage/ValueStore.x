@@ -16,6 +16,8 @@ import model.DBObjectInfo;
  *     {"tx":17, "value":{...}},
  *     {"tx":18, "value":{...}}
  *     ]
+ *
+ * where the "{...}" part is also what sealPrepare() will have returned.
  */
 service ValueStore<Value extends immutable Const>
         extends ObjectStore
@@ -243,7 +245,8 @@ service ValueStore<Value extends immutable Const>
             }
 
         String json = tx.worker.writeUsing(valueMapping, tx.value);
-        tx.json = json;
+        tx.json   = json;
+        tx.sealed = true;
         return json;
         }
 
@@ -269,7 +272,7 @@ service ValueStore<Value extends immutable Const>
                   .append(tx.readId)
                   .append(", \"value\":")
                   .append(json)
-                  .append('}');
+                  .add   ('}');
 
                 // remember the id of the last transaction that we process here
                 lastCommitId = tx.readId;
@@ -287,7 +290,7 @@ service ValueStore<Value extends immutable Const>
                 {
                 Int length = file.size;
 
-                // TODO right now this assumes that no manual edits have occured; must cache "last
+                // TODO right now this assumes that no manual edits have occurred; must cache "last
                 //      update timestamp" and rebuild file if someone else changed it
                 assert length >= 6;
 
@@ -511,6 +514,7 @@ service ValueStore<Value extends immutable Const>
     Iterator<File> findFiles()
         {
         File file = dataFile;
+        // TODO GG: fails at run-time with "Missing method "Iterator<File> iterator()" on immutable Array<Object>"
         return (file.exists ? [file] : []).iterator();
         }
 
@@ -523,7 +527,8 @@ service ValueStore<Value extends immutable Const>
     @Override
     Boolean quickScan()
         {
-        TODO
+        // TODO
+        return True;
         }
 
     /**

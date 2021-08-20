@@ -45,7 +45,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
     {
     construct(Catalog<Schema> catalog)
         {
-        this.catalog     = catalog;
+        this.catalog = catalog;
 
         // build the quick lookup information for the optional transactional "modifiers"
         // (validators, rectifiers, distributors, and async triggers)
@@ -130,6 +130,17 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
     private ObjectStore?[] sysStores = new ObjectStore[];
 
     /**
+     * The transaction log file (sys/txlog.json).
+     */
+    @Lazy public/private File logFile.calc()
+        {
+        Directory dataDir = catalog.dir;
+        Directory sysDir  = dataDir.dirFor("sys").ensure();
+
+        return sysDir.fileFor("txlog.json");
+        }
+
+    /**
      * An illegal transaction ID used to indicate that no ID has been assigned yet.
      */
     static Int NO_TX = Int.minvalue;
@@ -175,7 +186,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      *
      * Note: `lastPrepared >= lastCommitted`
      */
-    public/private Int lastCommited = 0;
+    public/private Int lastCommitted = 0;
 
     /**
      * The transactions that have begun, but have not yet committed or rolled back. The key is the
@@ -279,11 +290,13 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             if (status == Initial)
                 {
                 // load the previously saved off transaction manager state from disk
-                // TODO lastClosedId lastPrepared lastCommited
+                // TODO lastClosedId lastPrepared lastCommitted
                 }
 
             status = Enabled;
             }
+
+        // REVIEW: should we "quickScan" the transaction log here?
         }
 
     /**
@@ -500,6 +513,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             && (validators  .empty || validate  (rec))
             && (rectifiers  .empty || rectify   (rec))
             && (distributors.empty || distribute(rec))
+                // TODO RIGHT HERE!! this is the earliest point that we can check the pending queue
                 ? commit(rec)
                 : rollback(rec);
         }
@@ -653,11 +667,14 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             return True;
             }
 
+        // TODO: add ourselves to the pendingPrepare queue; proceed only if it was empty
+
         // prepare phase
-        rec.status = Preparing;
         Int                 prepareId   = genPrepareId();
         Boolean             abort       = False;
         FutureVar<Boolean>? preparedAll = Null;
+        rec.status    = Preparing;
+        rec.prepareId = prepareId;
         for (ObjectStore store : stores)
             {
             // we cannot predict the order of asynchronous execution, so it is quite possible that
@@ -715,6 +732,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                     if (rec.triggered.empty)
                         {
                         // no triggers; prepare is completed
+                        lastPrepared = rec.prepareId; // TODO: remember to add the same logic to the trigger processing completion
                         rec.status = Prepared;
                         }
                     break;
@@ -748,7 +766,16 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             return True;
             }
 
+        // TODO allocateClient()
+        // TODO fake create transaction with writeId - 1 (so -17 becomes -18)
+        // TODO for each enlisted storage
+            {
+            // TODO future call method on Client (that doesn't exist yet) called "run validators" and pass the [] of validators for the specific storage
+            }
+        // TODO return future result
         TODO
+
+        // TODO (somewhere else) is-readonly has to eval to true for -18
         }
 
     /**
@@ -765,7 +792,11 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             return True;
             }
 
+        // TODO see all the TODO in validate
+        // TODO seal each objectstore after it rectifies
         TODO
+
+        // TODO (somewhere else) is-readonly has to eval to true for all object store instances other than the one inside the for loop
         }
 
     /**
@@ -782,7 +813,10 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             return True;
             }
 
+        // TODO after weeding out any stores that have been enlisted but have no changes, seal all of the already-enlisted stores
+        // TODO see all the TODO in validate
         TODO
+        // TODO seal each objectstore after all of them have finished distributing (second for loop)
         }
 
     /**
@@ -885,7 +919,101 @@ TODO
      */
     protected Boolean commit(TxRecord rec)
         {
-        TODO
+        Set<ObjectStore> stores = rec.enlisted;
+        if (stores.empty)
+            {
+            terminate(rec, Committed);
+            return True;
+            }
+
+        // bundle the results of "sealPrepare()" into a buffer
+        Int          writeId = rec.writeId;
+        StringBuffer buf     = new StringBuffer();
+
+        buf.append(",\n{");
+        Loop: for (ObjectStore store : stores)
+            {
+            String json = store.sealPrepare(writeId);
+
+            if (!Loop.first)
+                {
+                buf.add(',');
+                }
+            buf.append("\n\"")
+               .append(store.info.name)
+               .append("\":")
+               .append(json);
+            }
+        buf.append("\n}\n]");
+
+        File file = logFile;
+        if (file.exists)
+            {
+            Int length = file.size;
+
+            // TODO right now this assumes that no manual edits have occurred; must cache "last
+            //      update timestamp" and rebuild file if someone else changed it (see ValueStore.commit)
+            assert length >= 6;
+
+            file.truncate(length-2)
+                .append(buf.toString().utf8());
+            }
+        else
+            {
+            // replace the opening "," with an array begin "["
+            buf[0] = '[';
+            file.contents = buf.toString().utf8();
+            }
+
+// TODO
+//      {
+//      "path1":sealresult1,  // TODO path or id or whatever we want to uniquely identify the dbObject in a persistent form
+//      "path2":sealresult2,
+//      ...
+//      }
+
+// e.g. the entire transaction record for -17 aka 44:
+//      {
+//      "title":"hello",
+//      "contacts":[{"key":1, "value":{Bob...}}, {"key":2, "value":{Sam...}}, {"key":7, "deleted":true}],
+//      ...
+//      }
+
+// TODO write this information to the end of the database tx log, e.g. :
+// the "transaction log" just is these appended, e.g.
+//      [
+//      {
+//      "title":"hello",
+//      "contacts":[{"key":1, "value":{Bob...}}, {"key":2, "value":{Sam...}}, {"key":7, "deleted":true}],
+//      ...
+//      },
+//      {
+//      "title":"hello",
+//      "contacts":[{"key":1, "value":{Bob...}}, {"key":2, "value":{Sam...}}, {"key":7, "deleted":true}],
+//      ...
+//      },
+//      {
+//      "title":"hello",
+//      "contacts":[{"key":1, "value":{Bob...}}, {"key":2, "value":{Sam...}}, {"key":7, "deleted":true}],
+//      ...
+//      }
+//      ]
+
+        FutureVar<Tuple<>>? commitAll = Null;
+        rec.status = Committing;
+        for (ObjectStore store : stores)
+            {
+            @Future Tuple<> commitOne = store.commit(writeId);
+            commitAll = commitAll?.and(&commitOne, (_, _) -> Tuple:()) : &commitOne;
+            }
+
+        assert commitAll != Null;
+        @Future Boolean completed = commitAll.transform((Tuple<> t) ->
+            {
+            terminate(rec, Committed);
+            return True;
+            });
+        return completed;
         }
 
     /**
@@ -897,16 +1025,14 @@ TODO
      */
     protected Boolean rollback(TxRecord rec)
         {
-        Int              writeId = rec.writeId;
-        Set<ObjectStore> stores  = rec.enlisted;
+        Set<ObjectStore> stores = rec.enlisted;
         if (stores.empty)
             {
-            rec.status = RolledBack;
-            byWriteId.remove(writeId);
-            byClientId.remove(rec.clientId);
+            terminate(rec, RolledBack);
             return True;
             }
 
+        Int                 writeId     = rec.writeId;
         FutureVar<Tuple<>>? rollbackAll = Null;
         rec.status = RollingBack;
         for (ObjectStore store : stores)
@@ -918,10 +1044,7 @@ TODO
         assert rollbackAll != Null;
         @Future Boolean completed = rollbackAll.transform((Tuple<> t) ->
             {
-            byWriteId.remove(writeId);
-            byClientId.remove(rec.clientId);
-            rec.enlisted = [];
-            rec.status   = RolledBack;
+            terminate(rec, RolledBack);
             return True;
             });
         return completed;
@@ -937,7 +1060,8 @@ TODO
         {
         byWriteId.remove(rec.writeId);
         byClientId.remove(rec.clientId);
-        rec.status = status;
+        rec.status   = status;
+        rec.enlisted = [];
         }
 
 

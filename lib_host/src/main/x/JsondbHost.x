@@ -59,14 +59,8 @@ class JsondbHost
             dataDir = subDir;
             }
 
-        // +++ TODO temporary for testing; always start afresh -- REMOVE!!
-        dataDir = curDir.dirFor("build/data");
-        if (dataDir.exists)
-            {
-            dataDir.deleteRecursively();
-            }
-        dataDir.create();
-        // ---
+        // +++ TODO temporary for testing
+        dataDir = curDir.dirFor("build/data").ensure();
 
         Catalog catalog = meta.createCatalog(dataDir, False);
         try
