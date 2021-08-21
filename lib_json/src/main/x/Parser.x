@@ -10,8 +10,7 @@ import Lexer.Token;
  * A parser for a JSON document. Turns the output of a JSON Lexer into a JSON Doc.
  */
 class Parser
-        implements Iterator<Doc>
-        implements Markable
+        implements AnyParser
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -47,6 +46,14 @@ class Parser
         {
         this.lexer = lexer.ensureMarkable();
         this.token = token;
+        }
+
+    /**
+     * Internal constructor used by sub-classes.
+     */
+    protected construct(Parser raw)
+        {
+        this.lexer = raw.lexer;
         }
 
 
@@ -86,6 +93,7 @@ class Parser
     /**
      * Determine if the parser has encountered the end of file (no tokens left).
      */
+    @Override
     Boolean eof.get()
         {
         return token == Null;
@@ -141,6 +149,7 @@ class Parser
      *
      * @param skipped  the optional array to accrue skipped tokens into
      */
+    @Override
     void skip(Token[]? skipped = Null)
         {
         if (!eof)
@@ -150,7 +159,7 @@ class Parser
         }
 
 
-    // ----- advanced ------------------------------------------------------------------------------
+    // ----- parsing (advanced) --------------------------------------------------------------------
 
     /**
      * Parse a JSON value, which is called a "document" here. A JSON value can be an individual
@@ -158,6 +167,7 @@ class Parser
      *
      * @return a JSON value
      */
+    @Override
     Doc parseDoc()
         {
         switch (token?.id)
@@ -190,6 +200,7 @@ class Parser
      * @return the first token of the JSON document skipped
      * @return the last token of the JSON document skipped
      */
+    @Override
     (Token first, Token last) skipDoc(Token[]? skipped = Null)
         {
         switch (token?.id)
@@ -219,6 +230,7 @@ class Parser
      *
      * @return an array of JSON values
      */
+    @Override
     Array<Doc> parseArray()
         {
         Doc[] array = new Doc[];
@@ -243,6 +255,7 @@ class Parser
      * @return the first token of the JSON array skipped
      * @return the last token of the JSON array skipped
      */
+    @Override
     (Token first, Token last) skipArray(Token[]? skipped = Null)
         {
         Token first = expect(ArrayEnter, skipped);
@@ -267,80 +280,62 @@ class Parser
     /**
      * Test to see if the next token is the start of an array.
      *
+     * This method is intended to be used with a `using` statement, such as:
+     *
+     *     if (ArrayParser arrayParser = parser.matchArray())
+     *         {
+     *         using (arrayParser)
+     *             {
+     *             console.println("Array contents:");
+     *             while (!arrayParser.eof)
+     *                 {
+     *                 Int index = arrayParser.index;
+     *                 Doc doc   = arrayParser.parseDoc();
+     *                 console.println($"[{index}] = {doc}");
+     *                 }
+     *             }
+     *         }
+     *
+     * While the ArrayParser is not yet closed, the parser from which it came must not be used,
+     * or the parse stream may be corrupted. Always make sure to close the returned ArrayParser.
+     *
      * @return True iff the next token was an opening square bracket of an array
      * @return (conditional) the opening square bracket token
      */
-    conditional Token matchArray()
+    @Override
+    conditional ArrayParser matchArray()
         {
-        TODO
+        return match(ArrayEnter)
+                ? (True, new ArrayParser(this))
+                : False;
         }
 
     /**
      * Obtain the next token, which must be the opening square bracket of an array.
      *
+     * This method is intended to be used within a `using` statement, such as:
+     *
+     *     using (ArrayParser arrayParser = parser.expectArray())
+     *         {
+     *         console.println("Array contents:");
+     *         while (!arrayParser.eof)
+     *             {
+     *             Int index = arrayParser.index;
+     *             Doc doc   = arrayParser.parseDoc();
+     *             console.println($"[{index}] = {doc}");
+     *             }
+     *         }
+     *
+     * While the ArrayParser is not yet closed, the parser from which it came must not be used,
+     * or the parse stream may be corrupted. Always make sure to close the returned ArrayParser.
+     *
      * @return the opening square bracket token
      */
-    Token expectObject()
+    @Override
+    ArrayParser expectArray()
         {
-        TODO
-        }
-
-    /**
-     * Following a call to [matchObject] or [expectObject], this method will test the key of the
-     * next key/value pair to see if it matches the specified key, or if no key is specified, then
-     * it assumes that any key matches.
-     *
-     * @param key  the key to match
-     *
-     * @return True iff there was a key/value pair and the key matches the passed key (or no key was
-     *         passed)
-     * @return the key token, if it was found
-     */
-    conditional Token matchKey(String? key = Null)
-        {
-        TODO
-        }
-
-    /**
-     * Following a call to [matchObject] or [expectObject], this method will test the key of the
-     * next key/value pair to see if it matches the specified key, or if no key is specified, then
-     * it assumes that any key matches.
-     *
-     * @param key  the expected key; Null indicates that any key is acceptable
-     *
-     * @return the key token
-     */
-    Token expectKey(String? key = Null)
-        {
-        TODO
-        }
-
-    /**
-     * Following a call to [matchObject] or [expectObject], this method will parse from the current
-     * point to the end of the object, looking for the specified key (of a key/value pair).
-     *
-     * @param key      the key to find
-     * @param skipped  the optional array to accrue skipped tokens into
-     *
-     * @return True iff the key was found inside the object
-     * @return Token the key token, if it was found
-     */
-    conditional Token findKey(String key, Token[]? skipped = Null)
-        {
-        TODO
-        }
-
-    /**
-     * Following a call to [matchArray] or [expectArray], this method will parse from the current
-     * point to the end of the array, and read past the closing square bracket.
-     *
-     * @param skipped  the optional array to accrue skipped tokens into
-     *
-     * @return the closing square bracket token
-     */
-    Token closeObject(Token[]? skipped = Null)
-        {
-        TODO
+        expect(ArrayEnter);
+        return new ArrayParser(this);
         }
 
     /**
@@ -348,6 +343,7 @@ class Parser
      *
      * @return a Map representing a JSON object
      */
+    @Override
     Map<String, Doc> parseObject()
         {
         ListMap<String, Doc> map = new ListMap();
@@ -403,6 +399,7 @@ class Parser
      * @return the first token of the JSON object skipped
      * @return the last token of the JSON object skipped
      */
+    @Override
     (Token first, Token last) skipObject(Token[]? skipped = Null)
         {
         Token first = expect(ObjectEnter, skipped);
@@ -432,9 +429,12 @@ class Parser
      * @return True iff the next token was an opening brace of an object
      * @return (conditional) the opening brace token
      */
-    conditional Token matchObject()
+    @Override
+    conditional ObjectParser matchObject()
         {
-        TODO
+        return match(ObjectEnter)
+                ? (True, new ObjectParser(this))
+                : False;
         }
 
     /**
@@ -442,74 +442,25 @@ class Parser
      *
      * @return the opening brace token
      */
-    Token expectObject()
+    @Override
+    ObjectParser expectObject()
         {
-        TODO
+        expect(ObjectEnter);
+        return new ObjectParser(this);
         }
 
-    /**
-     * Following a call to [matchObject] or [expectObject], this method will test the key of the
-     * next key/value pair to see if it matches the specified key, or if no key is specified, then
-     * it assumes that any key matches.
-     *
-     * @param key  the key to match
-     *
-     * @return True iff there was a key/value pair and the key matches the passed key (or no key was
-     *         passed)
-     * @return the key token, if it was found
-     */
-    conditional Token matchKey(String? key = Null)
-        {
-        TODO
-        }
+
+    // ----- token handling (advanced) -------------------------------------------------------------
 
     /**
-     * Following a call to [matchObject] or [expectObject], this method will test the key of the
-     * next key/value pair to see if it matches the specified key, or if no key is specified, then
-     * it assumes that any key matches.
+     * Obtain the next [Token] **without** advancing to the next token.
      *
-     * @param key  the expected key; Null indicates that any key is acceptable
-     *
-     * @return the key token
-     */
-    Token expectKey(String? key = Null)
-        {
-        TODO
-        }
-
-    /**
-     * Following a call to [matchObject] or [expectObject], this method will parse from the current
-     * point to the end of the object, looking for the specified key (of a key/value pair).
-     *
-     * @param key      the key to find
-     * @param skipped  the optional array to accrue skipped tokens into
-     *
-     * @return True iff the key was found inside the object
-     * @return Token the key token, if it was found
-     */
-    conditional Token findKey(String key, Token[]? skipped = Null)
-        {
-        TODO
-        }
-
-    /**
-     * Following a call to [matchObject] or [expectObject], this method will parse from the current
-     * point to the end of the object, and read past the closing brace.
-     *
-     * @param skipped  the optional array to accrue skipped tokens into
-     *
-     * @return the closing brace token
-     */
-    Token closeObject(Token[]? skipped = Null)
-        {
-        TODO
-        }
-
-    /**
-     * Take the next [Token]. This automatically loads a new "next token", if one exists.
+     * This method is primarily intended for use within the parser, but available from outside of
+     * the parser to support complex use cases.
      *
      * @return the token
      */
+    @Override
     Token peek()
         {
         return token?;
@@ -519,8 +470,13 @@ class Parser
     /**
      * Take the next [Token]. This automatically loads a new "next token", if one exists.
      *
+     * This method is primarily intended for use within the parser, but available from outside of
+     * the parser to support complex use cases. Using this method requires knowledge of the parsing
+     * implementation, and thus may leave the parser in an unusable state.
+     *
      * @return the token
      */
+    @Override
     Token takeToken()
         {
         Token? token = this.token;
@@ -530,7 +486,12 @@ class Parser
 
     /**
      * Replace the next [Token] with the token that follows it, or Null if there are no more tokens.
+     *
+     * This method is primarily intended for use within the parser, but available from outside of
+     * the parser to support complex use cases. Using this method requires knowledge of the parsing
+     * implementation, and thus may leave the parser in an unusable state.
      */
+    @Override
     void advance()
         {
         Token? next = Null;
@@ -541,12 +502,17 @@ class Parser
     /**
      * Obtain the next token, which is expected to have the specified [Token.Id].
      *
+     * This method is primarily intended for use within the parser, but available from outside of
+     * the parser to support complex use cases. Using this method requires knowledge of the parsing
+     * implementation, and thus may leave the parser in an unusable state.
+     *
      * @param id  the expected [Token.Id] of the next token
      *
      * @return the expected Token
      *
      * @throws IllegalJSON if the expected Token is not the next token
      */
+    @Override
     Token expect(Id id)
         {
         if (Token token := match(id))
@@ -560,6 +526,10 @@ class Parser
     /**
      * Obtain the next token, which is expected to have the specified [Token.Id].
      *
+     * This method is primarily intended for use within the parser, but available from outside of
+     * the parser to support complex use cases. Using this method requires knowledge of the parsing
+     * implementation, and thus may leave the parser in an unusable state.
+     *
      * @param id       the expected [Token.Id] of the next token
      * @param skipped  the optional array to accrue skipped tokens into
      *
@@ -567,6 +537,7 @@ class Parser
      *
      * @throws IllegalJSON if the expected Token is not the next token
      */
+    @Override
     Token expect(Id id, Token[]? skipped)
         {
         Token token = expect(id);
@@ -577,11 +548,16 @@ class Parser
     /**
      * Test if the next [Token] is of the specified [Token.Id], and if it is, take it.
      *
+     * This method is primarily intended for use within the parser, but available from outside of
+     * the parser to support complex use cases. Using this method requires knowledge of the parsing
+     * implementation, and thus may leave the parser in an unusable state.
+     *
      * @param id  the [Token.Id] to use to determine if the next Token is the desired match
      *
      * @return True iff the next Token has the specified Id
      * @return (conditional) the matching Token
      */
+    @Override
     conditional Token match(Id id)
         {
         Token? token = this.token;
@@ -602,12 +578,17 @@ class Parser
     /**
      * Test if the next [Token] is of the specified [Token.Id], and if it is, take it.
      *
+     * This method is primarily intended for use within the parser, but available from outside of
+     * the parser to support complex use cases. Using this method requires knowledge of the parsing
+     * implementation, and thus may leave the parser in an unusable state.
+     *
      * @param id       the [Token.Id] to use to determine if the next Token is the desired match
      * @param skipped  the optional array to accrue skipped tokens into
      *
      * @return True iff the next Token has the specified Id
      * @return (conditional) the matching Token
      */
+    @Override
     conditional Token match(Id id, Token[]? skipped)
         {
         if (Token token := match(id))
@@ -617,5 +598,371 @@ class Parser
             }
 
         return False;
+        }
+
+
+    // -----
+
+    /**
+     * The entire parsing API of the Parser class.
+     */
+    static interface AnyParser
+            extends Iterator<Doc>
+            extends Markable
+        {
+        @RO Boolean eof;
+        void skip(Token[]? skipped = Null);
+        Doc parseDoc();
+        (Token first, Token last) skipDoc(Token[]? skipped = Null);
+        Array<Doc> parseArray();
+        (Token first, Token last) skipArray(Token[]? skipped = Null);
+        conditional ArrayParser matchArray();
+        ArrayParser expectArray();
+        Map<String, Doc> parseObject();
+        (Token first, Token last) skipObject(Token[]? skipped = Null);
+        conditional ObjectParser matchObject();
+        ObjectParser expectObject();
+        Token peek();
+        Token takeToken();
+        void advance();
+        Token expect(Id id);
+        Token expect(Id id, Token[]? skipped);
+        conditional Token match(Id id);
+        conditional Token match(Id id, Token[]? skipped);
+        }
+
+    /**
+     * An abstract nested parser.
+     */
+    protected static @Abstract class NestedParser
+            extends Parser
+            delegates AnyParser(raw)
+        {
+        construct(Parser raw, function void()? notifyClosed = Null)
+            {
+            construct Parser(raw);
+            this.raw          = raw;
+            this.notifyClosed = notifyClosed;
+            }
+
+        /**
+         * The parser that this ArrayParser delegates to.
+         */
+        public/protected Parser raw;
+
+        @Override
+        protected Token? token.get()
+            {
+            return raw.token;
+            }
+
+        /**
+         * Set to True after the end of the parser has been closed.
+         */
+        protected Boolean closed = False;
+
+        /**
+         * An optional notification to make when this parser has been closed.
+         */
+        protected function void()? notifyClosed;
+
+// TODO mark/restore
+
+        @Override
+        void skip(Token[]? skipped = Null)
+            {
+            if (!eof)
+                {
+                raw.skip(skipped);
+                checkDelimiter();
+                }
+            }
+
+        @Override
+        Doc parseDoc()
+            {
+            assert !closed;
+            Doc doc = raw.parseDoc();
+            checkDelimiter();
+            return doc;
+            }
+
+        @Override
+        (Token first, Token last) skipDoc(Token[]? skipped = Null)
+            {
+            (Token first, Token last) = raw.skipDoc(skipped);
+            checkDelimiter();
+            return first, last;
+            }
+
+        @Override
+        Array<Doc> parseArray()
+            {
+            Array<Doc> array = raw.parseArray();
+            checkDelimiter();
+            return array;
+            }
+
+        @Override
+        (Token first, Token last) skipArray(Token[]? skipped = Null)
+            {
+            (Token first, Token last) = raw.skipArray(skipped);
+            checkDelimiter();
+            return first, last;
+            }
+
+        @Override
+        conditional ArrayParser matchArray()
+            {
+            return match(ArrayEnter)
+                    ? (True, new ArrayParser(this, checkDelimiter))
+                    : False;
+            }
+
+        @Override
+        ArrayParser expectArray()
+            {
+            expect(ArrayEnter);
+            return new ArrayParser(this, checkDelimiter);
+            }
+
+        @Override
+        Map<String, Doc> parseObject()
+            {
+            Map<String, Doc> map = raw.parseObject();
+            checkDelimiter();
+            return map;
+            }
+
+        @Override
+        (Token first, Token last) skipObject(Token[]? skipped = Null)
+            {
+            (Token first, Token last) = raw.skipObject(skipped);
+            checkDelimiter();
+            return first, last;
+            }
+
+        @Override
+        conditional ObjectParser matchObject()
+            {
+            return match(ObjectEnter)
+                    ? (True, new ObjectParser(this, checkDelimiter))
+                    : False;
+            }
+
+        @Override
+        ObjectParser expectObject()
+            {
+            expect(ObjectEnter);
+            return new ObjectParser(this, checkDelimiter);
+            }
+
+        /**
+         * After each value is read, this method is invoked to handle any counting, delimiters,
+         * mode changes, etc.
+         */
+        protected @Abstract void checkDelimiter();
+
+        @Override
+        void close(Exception? cause = Null)
+            {
+            if (!closed)
+                {
+                while (!eof)
+                    {
+                    skipDoc();
+                    }
+                expect(ArrayExit);
+                closed = True;
+
+                notifyClosed?();
+                }
+            }
+        }
+
+    /**
+     * A nested parser for walking through an array one element at a time.
+     */
+    static class ArrayParser(Parser raw, function void()? notifyClosed = Null)
+            extends NestedParser(raw, notifyClosed)
+        {
+        /**
+         * The index of the next element to read, which is also the count of elements already read.
+         */
+        public/protected Int index = 0;
+
+        @Override
+        @RO Boolean eof.get()
+            {
+            assert !closed;
+            return raw.eof || raw.peek().id == ArrayExit;
+            }
+
+// TODO mark/restore
+
+        /**
+         * After each value is read, there will be a comma separating it from the next value, or
+         * (after the last value) there will be an ArrayExit. To set up the parser position on the
+         * next value, we must skip over the comma after each parsed value.
+         */
+        @Override
+        protected void checkDelimiter()
+            {
+            ++index;
+            if (raw.token?.id != ArrayExit)
+                {
+                raw.expect(Comma);
+                }
+            }
+        }
+
+    /**
+     * A nested parser for walking through an object one key and value at a time.
+     */
+    static class ObjectParser(Parser raw, function void()? notifyClosed = Null)
+            extends NestedParser(raw, notifyClosed)
+        {
+        protected Boolean isKeyNext = True;
+
+        protected Boolean isValueNext.get()
+            {
+            return !isKeyNext;
+            }
+
+        @Override
+        @RO Boolean eof.get()
+            {
+            assert !closed;
+            return raw.eof || raw.peek().id == ObjectExit;
+            }
+
+// TODO mark/restore
+
+        /**
+         * This method will test the key of the next key/value pair to see if it matches the
+         * specified key, or if no key is specified, then it assumes that any key matches.
+         *
+         * @param key  the key to match
+         *
+         * @return True iff there was a key/value pair and the key matches the passed key (or no key
+         *         was passed)
+         * @return the key token, if it was found
+         */
+        conditional Token matchKey(String? key = Null)
+            {
+            assert isKeyNext as "JSON parsing error: attempt to match a key while  Key \"{key}\" expected, but \"{token.value}\" encountered.";
+
+            Token keyToken = peek();
+            if (keyToken.id == StrVal && key? == keyToken.value.as(String) : True)
+                {
+                skipDoc();
+                return True, keyToken;
+                }
+
+            return False;
+            }
+
+        /**
+         * Following a call to [matchObject] or [expectObject], this method will test the key of the
+         * next key/value pair to see if it matches the specified key, or if no key is specified, then
+         * it assumes that any key matches.
+         *
+         * Note: Also consumes the colon that separates the key from the value.
+         *
+         * @param key  the expected key; Null indicates that any key is acceptable
+         *
+         * @return the key token
+         */
+        Token expectKey(String? key = Null)
+            {
+            if (Token keyToken := matchKey(key))
+                {
+                return keyToken;
+                }
+
+            assert val token ?= this.token;
+            throw new IllegalJSON(switch (key == Null, token.id)
+                {
+                case (False, StrVal): $"JSON parsing error: Key \"{key}\" expected, but \"{token.value}\" encountered.";
+                case (False, _     ): $"JSON format error: Key \"{key}\" expected, but {token.id} encountered.";
+                case (True , _     ): $"JSON format error: Key expected, but {token.id} encountered.";
+                });
+            }
+
+        /**
+         * This method will parse from the current point to the end of the object, looking for the
+         * specified key (of a key/value pair).
+         *
+         * @param key      the key to find
+         * @param skipped  the optional array to accrue skipped tokens into
+         *
+         * @return True iff the key was found inside the object
+         * @return Token the key token, if it was found
+         */
+        conditional Token findKey(String key, Token[]? skipped = Null)
+            {
+            if (isValueNext)
+                {
+                skipDoc(skipped);
+                assert isKeyNext;
+                }
+
+            while (!eof)
+                {
+                if (Token keyToken := matchKey(key))
+                    {
+                    return True, keyToken;
+                    }
+
+                skipDoc(skipped);   // key
+                skipDoc(skipped);   // value
+                }
+
+            return False;
+            }
+
+        /**
+         * This method will skip all remaining keys and values in the object.
+         *
+         * @param skipped  the optional array to accrue skipped tokens into
+         */
+        void skipRemaining(Token[]? skipped = Null)
+            {
+            if (isValueNext)
+                {
+                skipDoc(skipped);
+                assert isKeyNext;
+                }
+
+            while (!eof)
+                {
+                skipDoc(skipped);   // key
+                skipDoc(skipped);   // value
+                }
+            }
+
+        /**
+         * After each key is read, there will be a colon separating it from the value, and after
+         * each value is read, there will be a comma separating it from the next key, and after the
+         * last key/value pair, there will be an ArrayExit. To set up the parser position to the
+         * start of the next key or value, we must skip over the colon or comma.
+         */
+        @Override
+        protected void checkDelimiter()
+            {
+            isKeyNext = !isKeyNext;
+
+            if (isKeyNext)
+                {
+                if (raw.token?.id != ObjectExit)
+                    {
+                    raw.expect(Comma);
+                    }
+                }
+            else
+                {
+                raw.expect(Colon);
+                }
+            }
         }
     }
