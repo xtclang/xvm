@@ -33,7 +33,7 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * A representation of the file structure that contains one more more Ecstasy (XVM) modules. The
+ * A representation of the file structure that contains one or more Ecstasy (XVM) modules. The
  * FileStructure is generally used as a container of one module, which may have dependencies on
  * other modules, some of which may be wholly embedded into the file structure. In other words, the
  * FileStructure is the "module container".
@@ -236,7 +236,6 @@ public class FileStructure
         {
         FileOutputStream fos = new FileOutputStream(file);
 
-        m_file = file;
         try
             {
             BufferedOutputStream bos = new BufferedOutputStream(fos);
@@ -536,10 +535,7 @@ public class FileStructure
 
         if (!fExact)
             {
-            if (getVersionTree().findHighestVersion(ver) != null)
-                {
-                return true;
-                }
+            return getVersionTree().findHighestVersion(ver) != null;
             }
 
         return false;
@@ -780,6 +776,15 @@ public class FileStructure
     public int getFileMinorVersion()
         {
         return m_nMinorVer;
+        }
+
+    /**
+     * @return the OS file that this structure was loaded from or null if the structure
+     *         is transient (in-memory only)
+     */
+    public File getOSFile()
+        {
+        return m_file;
         }
 
     /**
@@ -1027,7 +1032,7 @@ public class FileStructure
     protected void dump(PrintWriter out, String sIndent)
         {
         out.print(sIndent);
-        out.println(toString());
+        out.println(this);
 
         final ConstantPool pool = m_pool;
         if (pool != null)

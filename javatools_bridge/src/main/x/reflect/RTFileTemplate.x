@@ -21,4 +21,16 @@ class RTFileTemplate
 
     @Override
     ModuleTemplate getModule(String name)   {TODO("native");}
+
+    @Override
+    DateTime? created.get()
+        {
+        // see OSFileNode.created.get()
+        Int createdMillis = this.createdMillis;
+        return createdMillis == 0
+                ? Null
+                : new DateTime(createdMillis*Time.PICOS_PER_MILLI);
+        }
+
+    private Int createdMillis.get() { TODO("native"); }
     }

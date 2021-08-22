@@ -39,6 +39,12 @@ interface FileTemplate
      */
     ModuleTemplate getModule(String name);
 
+    /**
+     * The date/time at which the FileTemplate was created. The value is not Null for FileTemplates
+     * that are read from a persistent storage.
+     */
+    @RO DateTime? created;
+
     @Override
     @RO FileTemplate containingFile.get()
         {

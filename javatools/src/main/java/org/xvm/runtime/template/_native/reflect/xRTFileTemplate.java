@@ -1,6 +1,12 @@
 package org.xvm.runtime.template._native.reflect;
 
 
+import java.io.File;
+import java.io.IOException;
+
+import java.nio.file.Files;
+import java.nio.file.attribute.BasicFileAttributes;
+
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.MethodStructure;
@@ -13,6 +19,8 @@ import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
+
+import org.xvm.runtime.template.numbers.xInt64;
 
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
@@ -46,6 +54,8 @@ public class xRTFileTemplate
 
         markNativeProperty("mainModule");
         markNativeProperty("resolved");
+        markNativeProperty("createdMillis");
+
         markNativeMethod("getModule", STRING, null);
         markNativeMethod("resolve", null, null);
         }
@@ -66,6 +76,21 @@ public class xRTFileTemplate
                 {
                 return frame.assignValue(iReturn, xBoolean.makeHandle(
                     ((FileStructure) hTemplate.getComponent()).isLinked()));
+                }
+
+            case "createdMillis":
+                {
+                File file = ((FileStructure) hTemplate.getComponent()).getOSFile();
+                if (file != null)
+                    {
+                    try
+                        {
+                        BasicFileAttributes attr = Files.readAttributes(file.toPath(), BasicFileAttributes.class);
+                        return frame.assignValue(iReturn, xInt64.makeHandle(attr.creationTime().toMillis()));
+                        }
+                    catch (IOException ignore) {}
+                    }
+                return frame.assignValue(iReturn, xInt64.makeHandle(0L));
                 }
             }
 
