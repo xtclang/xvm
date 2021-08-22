@@ -49,7 +49,7 @@ module TestSimple.test.org
                 using (p3)
                     {
                     p3.expectKey("tx");
-                    if (p3.parseDoc().as(IntLiteral) == 17)
+                    if (p3.expectInt() == 17)
                         {
                         assert p3.findKey("value");
                         Doc doc = p3.parseDoc();

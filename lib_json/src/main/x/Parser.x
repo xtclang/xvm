@@ -239,6 +239,259 @@ class Parser
         }
 
     /**
+     * Test for the next document being a Boolean, and if so, return that Boolean value.
+     *
+     * @return True iff the next document is a Boolean value
+     * @return (conditional) the Boolean value
+     */
+    conditional Boolean matchBoolean()
+        {
+        if (token?.id == BoolVal)
+            {
+            return True, parseDoc().as(Boolean);
+            }
+
+        return False;
+        }
+
+    /**
+     * Obtain the next document as a Boolean, or throw a parsing exception.
+     *
+     * @return the Boolean value
+     */
+    Boolean expectBoolean()
+        {
+        if (Boolean value := matchBoolean())
+            {
+            return value;
+            }
+
+        throw new IllegalJSON($"JSON parsing error: Boolean expected, but {token?.id.toString() : "EOF"} encountered.");
+        }
+
+    /**
+     * Test for the next document being an IntLiteral, and if so, return that IntLiteral value.
+     *
+     * @return True iff the next document is a IntLiteral value
+     * @return (conditional) the IntLiteral value
+     */
+    conditional IntLiteral matchIntLiteral()
+        {
+        if (token?.id == IntVal)
+            {
+            return True, parseDoc().as(IntLiteral);
+            }
+
+        return False;
+        }
+
+    /**
+     * Obtain the next document as an IntLiteral, or throw a parsing exception.
+     *
+     * @return the IntLiteral value
+     */
+    IntLiteral expectIntLiteral()
+        {
+        if (IntLiteral value := matchIntLiteral())
+            {
+            return value;
+            }
+
+        throw new IllegalJSON($"JSON parsing error: IntLiteral expected, but {token?.id.toString() : "EOF"} encountered.");
+        }
+
+    /**
+     * Test for the next document being an Int, and if so, return that Int value.
+     *
+     * @return True iff the next document is a Int value
+     * @return (conditional) the Int value
+     */
+    conditional Int matchInt()
+        {
+        if (token?.id == IntVal)
+            {
+            return True, parseDoc().as(IntLiteral).toInt64();
+            }
+
+        return False;
+        }
+
+    /**
+     * Obtain the next document as an Int, or throw a parsing exception.
+     *
+     * @param range  (optional) the range that the value is expected to be within
+     *
+     * @return the Int value
+     */
+    Int expectInt(Range<Int>? range = Null)
+        {
+        if (Int value := matchInt())
+            {
+            if (!range?.contains(value))
+                {
+                throw new IllegalJSON($"JSON parsing error: An Int value in the range {range} was expected, but {value} encountered.");
+                }
+
+            return value;
+            }
+
+        throw new IllegalJSON($"JSON parsing error: Int expected, but {token?.id.toString() : "EOF"} encountered.");
+        }
+
+    /**
+     * Test for the next document being a FPLiteral, and if so, return that FPLiteral value.
+     *
+     * @return True iff the next document is a FPLiteral value
+     * @return (conditional) the FPLiteral value
+     */
+    conditional FPLiteral matchFPLiteral()
+        {
+        if (token?.id == FPVal)
+            {
+            return True, parseDoc().as(FPLiteral);
+            }
+
+        if (token?.id == IntVal)
+            {
+            return True, parseDoc().as(IntLiteral).toFPLiteral();
+            }
+
+        return False;
+        }
+
+    /**
+     * Obtain the next document as a FPLiteral, or throw a parsing exception.
+     *
+     * @return the FPLiteral value
+     */
+    FPLiteral expectFPLiteral()
+        {
+        if (FPLiteral value := matchFPLiteral())
+            {
+            return value;
+            }
+
+        throw new IllegalJSON($"JSON parsing error: FPLiteral expected, but {token?.id.toString() : "EOF"} encountered.");
+        }
+
+    /**
+     * Test for the next document being a decimal value, and if so, return that decimal value.
+     *
+     * @return True iff the next document is a decimal value
+     * @return (conditional) the decimal value
+     */
+    conditional Dec matchDec()
+        {
+        if (token?.id == FPVal)
+            {
+            return True, parseDoc().as(FPLiteral).toDec64();
+            }
+
+        if (token?.id == IntVal)
+            {
+            return True, parseDoc().as(IntLiteral).toDec64();
+            }
+
+        return False;
+        }
+
+    /**
+     * Obtain the next document as a decimal value, or throw a parsing exception.
+     *
+     * @param range  (optional) the range that the value is expected to be within
+     *
+     * @return the decimal value
+     */
+    Dec expectDec(Range<Dec>? range = Null)
+        {
+        if (Dec value := matchDec())
+            {
+            if (!range?.contains(value))
+                {
+                throw new IllegalJSON($"JSON parsing error: A decimal value in the range {range} was expected, but {value} encountered.");
+                }
+
+            return value;
+            }
+
+        throw new IllegalJSON($"JSON parsing error: Decimal value expected, but {token?.id.toString() : "EOF"} encountered.");
+        }
+
+    /**
+     * Test for the next document being a Double, and if so, return that Double value.
+     *
+     * @return True iff the next document is a Double value
+     * @return (conditional) the Double value
+     */
+    conditional Double matchDouble()
+        {
+        if (token?.id == FPVal)
+            {
+            return True, parseDoc().as(FPLiteral).toFloat64();
+            }
+
+        if (token?.id == IntVal)
+            {
+            return True, parseDoc().as(IntLiteral).toFloat64();
+            }
+
+        return False;
+        }
+
+    /**
+     * Obtain the next document as a Double, or throw a parsing exception.
+     *
+     * @param range  (optional) the range that the value is expected to be within
+     *
+     * @return the Double value
+     */
+    Double expectDouble(Range<Double>? range = Null)
+        {
+        if (Double value := matchDouble())
+            {
+            if (!range?.contains(value))
+                {
+                throw new IllegalJSON($"JSON parsing error: A Double value in the range {range} was expected, but {value} encountered.");
+                }
+
+            return value;
+            }
+
+        throw new IllegalJSON($"JSON parsing error: Double expected, but {token?.id.toString() : "EOF"} encountered.");
+        }
+
+    /**
+     * Test for the next document being a String, and if so, return that String value.
+     *
+     * @return True iff the next document is a String value
+     * @return (conditional) the String value
+     */
+    conditional String matchString()
+        {
+        if (token?.id == StrVal)
+            {
+            return True, parseDoc().as(String);
+            }
+
+        return False;
+        }
+
+    /**
+     * Obtain the next document as a String, or throw a parsing exception.
+     *
+     * @return the String value
+     */
+    String expectString()
+        {
+        if (String value := matchString())
+            {
+            return value;
+            }
+
+        throw new IllegalJSON($"JSON parsing error: String expected, but {token?.id.toString() : "EOF"} encountered.");
+        }
+
+    /**
      * Parse an array of JSON values.
      *
      * @return an array of JSON values
