@@ -163,15 +163,16 @@ public class FileStructure
         m_nMinorVer = fileStructure.m_nMinorVer;
         m_pool      = new ConstantPool(this);
 
-        merge(module);
+        merge(module, false);
         }
 
     /**
      * Merge the specified module into this FileStructure.
      *
-     * @param module  the module to merge
+     * @param module     the module to merge
+     * @param fTakeFile  if true, merge the os-file info as well
      */
-    public void merge(ModuleStructure module)
+    public void merge(ModuleStructure module, boolean fTakeFile)
         {
         m_sModuleName = module.getName();
 
@@ -218,6 +219,11 @@ public class FileStructure
         if (typeNakedRef != null)
             {
             pool.setNakedRefType(typeNakedRef);
+            }
+
+        if (fTakeFile)
+            {
+            m_file = module.getFileStructure().m_file;
             }
         }
 

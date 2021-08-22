@@ -63,7 +63,26 @@ class DbHost
     conditional ModuleTemplate generateDBModule(
             ModuleRepository repository, String dbModuleName, Directory buildDir, Log errors)
         {
-        ModuleTemplate dbModule = repository.getResolvedModule(dbModuleName);
+        ModuleTemplate dbModule   = repository.getResolvedModule(dbModuleName);
+        String         hostedName = $"{dbModuleName}_{hostName}";
+
+        if (repository.moduleNames.contains(hostedName))
+            {
+            // try to see if the host module already exists and newer than the original module;
+            // if anything goes wrong - follow a regular path
+            try
+                {
+                ModuleTemplate hostModule = repository.getModule(hostedName);
+                DateTime?      dbStamp    = dbModule.parent.created;
+                DateTime?      hostStamp  = hostModule.parent.created;
+                if (dbStamp != Null && hostStamp != Null && hostStamp > dbStamp)
+                    {
+                    console.println($"Info: Host module '{hostedName}' for '{dbModuleName}' is up to date");
+                    return True, hostModule;
+                    }
+                }
+            catch (Exception ignore) {}
+            }
 
         String appName = dbModuleName; // TODO GG: allow fully qualified name
 
@@ -78,7 +97,7 @@ class DbHost
         if (appSchemaTemplate := findSchema(dbModule)) {}
         else
             {
-            errors.add($"Error: Schema is not found in {dbModuleName} module");
+            errors.add($"Error: Schema is not found in module '{dbModuleName}'");
             return False;
             }
 
@@ -87,7 +106,8 @@ class DbHost
         if (createModule(sourceFile, appName, dbModule, appSchemaTemplate, errors) &&
             compileModule(sourceFile, buildDir, errors))
             {
-            return True, repository.getModule($"{dbModuleName}_{hostName}");
+            console.println($"Info: Created a host module '{hostedName}' for '{dbModuleName}'");
+            return True, repository.getModule(hostedName);
             }
         return False;
         }
