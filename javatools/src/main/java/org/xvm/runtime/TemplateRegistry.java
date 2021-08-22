@@ -61,7 +61,7 @@ public class TemplateRegistry
 
         // "root" is a merge of "native" module into the "system"
         FileStructure containerRoot = new FileStructure(moduleRoot);
-        containerRoot.merge(moduleNative);
+        containerRoot.merge(moduleNative, true);
 
         // obtain the cloned modules that belong to the merged container
         m_moduleSystem = (ModuleStructure) containerRoot.getChild(Constants.ECSTASY_MODULE);
@@ -267,8 +267,8 @@ public class TemplateRegistry
     public FileStructure createFileStructure(ModuleStructure moduleApp)
         {
         FileStructure structApp = new FileStructure(m_moduleSystem);
-        structApp.merge(m_moduleNative);
-        structApp.merge(moduleApp);
+        structApp.merge(m_moduleNative, false);
+        structApp.merge(moduleApp, true);
 
         assert structApp.validateConstants();
 
