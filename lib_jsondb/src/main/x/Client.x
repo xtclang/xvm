@@ -4,6 +4,8 @@ import ecstasy.reflect.Annotation;
 import json.Doc;
 import json.Lexer.Token;
 import json.Mapping;
+import json.ObjectInputStream;
+import json.ObjectOutputStream;
 
 import oodb.DBCounter;
 import oodb.DBFunction;
@@ -399,10 +401,6 @@ service Client<Schema extends RootSchema>
      */
     class Worker
         {
-        import ecstasy.io.CharArrayReader;
-        import json.ObjectInputStream;
-        import json.ObjectOutputStream;
-
         /**
          * Deserialize a value from a JSON string.
          *
@@ -413,7 +411,7 @@ service Client<Schema extends RootSchema>
          */
         <Serializable> Serializable readUsing(Mapping<Serializable> mapping, String jsonText)
             {
-            return mapping.read(new ObjectInputStream(jsonSchema, new CharArrayReader(jsonText)).ensureElementInput());
+            return mapping.read(new ObjectInputStream(jsonSchema, jsonText.toReader()).ensureElementInput());
             }
 
         /**

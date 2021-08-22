@@ -2,6 +2,8 @@ import json.Doc;
 import json.Lexer;
 import json.Lexer.Token;
 import json.Mapping;
+import json.ObjectInputStream;
+import json.Parser;
 
 import model.DBObjectInfo;
 
@@ -33,12 +35,18 @@ service ValueStore<Value extends immutable Const>
         {
         construct ObjectStore(catalog, info, errs);
 
+        this.jsonSchema   = catalog.jsonSchema;
         this.valueMapping = valueMapping;
         this.initial      = initial;
         }
 
 
     // ----- properties ----------------------------------------------------------------------------
+
+    /**
+     * A cached reference to the JSON schema.
+     */
+    public/protected json.Schema jsonSchema;
 
     /**
      * The JSON Mapping for the singleton value.
@@ -498,33 +506,48 @@ service ValueStore<Value extends immutable Const>
     void loadInitial()
         {
         File file = dataFile;
+        storageLayout.clear();
 
         assert model == Small;
         assert file.exists;
 
-        // +++ HACK HACK
-        String content = ecstasy.lang.src.Source.loadText(file);
+        Int         closest = NO_TX;
+        Range<Int>  txLoc   = -1..0; // some illegal value
+        Int         desired = txManager.lastClosedId;
+        assert desired != NO_TX && desired > 0;
 
-        assert Int valueStart := content.lastIndexOf(':');
-        assert Int valueEnd   := content.indexOf('}', valueStart);
-        String valueString = content.slice([valueStart+1 .. valueEnd));
+        Byte[] bytes      = file.contents;
+        String jsonStr    = bytes.unpackString();
+        Parser fileParser = new Parser(jsonStr.toReader());
+        using (val arrayParser = fileParser.expectArray())
+            {
+            while (!arrayParser.eof)
+                {
+                using (val objectParser = arrayParser.expectObject())
+                    {
+                    objectParser.expectKey("tx");
+                    Int txId = objectParser.expectInt();
+                    if (txId <= desired && (txId > closest || closest == NO_TX))
+                        {
+                        closest = txId;
+                        objectParser.expectKey("value");
+                        (Token first, Token last) = objectParser.skipDoc();
+                        txLoc = [first.start.offset .. last.end.offset);
+                        }
+                    }
+                }
+            }
+        assert closest != NO_TX;
 
-        assert Int idStart := content.lastIndexOf(':', valueStart-1);
-        assert Int idEnd   := content.indexOf(',', idStart);
-        String idString = content.slice([idStart+1 .. idEnd));
+        String jsonRecord = jsonStr.slice(txLoc);
+        Value  value;
+        using (ObjectInputStream stream = new ObjectInputStream(jsonSchema, jsonRecord.toReader()))
+            {
+            value = valueMapping.read(stream.ensureElementInput());
+            }
 
-        Int loadId = new IntLiteral(idString).toInt64();
-        history.put(loadId, valueString.as(Value));
-        // --- HACK HACK
-
-        // parse the file, finding each transaction and remembering its location
-        // TODO
-
-//        Value value;
-//        Int   loadId = txManager.lastClosedId;
-//
-//        // TODO
-//        TODO history.put(loadId, value);
+        history.put(closest, value);
+        storageLayout.put(closest, txLoc);
         }
 
     @Override
@@ -561,5 +584,6 @@ service ValueStore<Value extends immutable Const>
         {
         inFlight.clear();
         history.clear();
+        storageLayout.clear();
         }
     }
