@@ -19,6 +19,7 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.template.xException;
 
 import org.xvm.runtime.template.collections.xArray;
+import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
@@ -67,7 +68,8 @@ public class xCoreRepository
                     ahName[i++] = xString.makeHandle(sName);
                     }
 
-                return frame.assignValue(iReturn, xArray.makeStringArrayHandle(ahName));
+                ArrayHandle hArray = xArray.makeStringArrayHandle(ahName);
+                return xArray.createListSet(frame, hArray, iReturn);
                 }
             }
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);

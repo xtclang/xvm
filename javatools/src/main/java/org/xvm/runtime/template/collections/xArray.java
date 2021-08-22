@@ -235,11 +235,11 @@ public class xArray
             if (fDeferred)
                 {
                 Frame.Continuation stepNext = frameCaller ->
-                    createListSet(frameCaller, typeEl, ahValue);
+                    createListSet(frameCaller, typeEl, ahValue, Op.A_STACK);
                 return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
                 }
 
-            return createListSet(frame, typeEl, ahValue);
+            return createListSet(frame, typeEl, ahValue, Op.A_STACK);
             }
         else
             {
@@ -253,19 +253,6 @@ public class xArray
 
             return frame.pushStack(createImmutableArray(clzArray, ahValue));
             }
-        }
-
-    private int createListSet(Frame frame, TypeConstant typeEl, ObjectHandle[] ahValue)
-        {
-        ConstantPool    pool      = frame.poolContext();
-        TypeConstant    typeArray = pool.ensureArrayType(typeEl);
-        TypeComposition clzArray  = f_templates.resolveClass(typeArray);
-
-        ObjectHandle[] ahVar = new ObjectHandle[CREATE_LIST_SET.getMaxVars()];
-        ahVar[0] = typeEl.ensureTypeHandle(pool);
-        ahVar[1] = createImmutableArray(clzArray, ahValue);
-
-        return frame.call1(CREATE_LIST_SET, null, ahVar, Op.A_STACK);
         }
 
     @Override
@@ -623,6 +610,42 @@ public class xArray
 
 
     // ----- helper methods ------------------------------------------------------------------------
+
+    /**
+     * Construct an immutable ListSet handle based on the specified array of handles.
+     *
+     * @param frame    the current frame
+     * @param typeEl   the array element type
+     * @param ahValue  the array handles
+     * @param iResult  the register to place the result into
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
+     */
+    private int createListSet(Frame frame, TypeConstant typeEl, ObjectHandle[] ahValue, int iResult)
+        {
+        TypeConstant    typeArray = frame.poolContext().ensureArrayType(typeEl);
+        TypeComposition clzArray  = f_templates.resolveClass(typeArray);
+
+        return createListSet(frame, createImmutableArray(clzArray, ahValue), iResult);
+        }
+
+    /**
+     * Construct an immutable ListSet handle based on the specified array.
+     *
+     * @param frame    the current frame
+     * @param hArray   the array handle
+     * @param iResult  the register to place the result into
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
+     */
+    public static int createListSet(Frame frame, ArrayHandle hArray, int iResult)
+        {
+        ObjectHandle[] ahVar = new ObjectHandle[CREATE_LIST_SET.getMaxVars()];
+        ahVar[0] = hArray.getType().getParamType(0).ensureTypeHandle(frame.poolContext());
+        ahVar[1] = hArray;
+
+        return frame.call1(CREATE_LIST_SET, null, ahVar, iResult);
+        }
 
     /**
      * slice(Interval<Int>) implementation.
