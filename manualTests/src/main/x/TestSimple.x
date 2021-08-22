@@ -58,23 +58,5 @@ module TestSimple.test.org
                     }
                 }
             }
-
-
-//        using (p.openArray())
-//            {
-//            using (p.openObject())
-//                {
-//
-//                }
-//            }
-//        expect/match Boolean/Int/IntLiteral/Dec/Float/FloatLiteral/String/Array/Object
-//        p.expect/match Open Array/Object
-//        p.expect/match/find Close
-//
-//        p.expectArrayOpen()
-//        while p.matchObjectOpen()
-//        p.expectKey("tx")
-//        closeArray(Boolean skipRemains=False)
-//        closeObject(Boolean skipRemains=False)
         }
     }

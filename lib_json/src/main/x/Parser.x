@@ -158,6 +158,19 @@ class Parser
             }
         }
 
+    /**
+     * Skip over all remaining JSON documents.
+     *
+     * @param skipped  the optional array to accrue skipped tokens into
+     */
+    @Override
+    void skipRemaining(Token[]? skipped = Null)
+        {
+        while (!eof)
+            {
+            skip(skipped);
+            }
+        }
 
     // ----- parsing (advanced) --------------------------------------------------------------------
 
@@ -612,6 +625,7 @@ class Parser
         {
         @RO Boolean eof;
         void skip(Token[]? skipped = Null);
+        void skipRemaining(Token[]? skipped = Null);
         Doc parseDoc();
         (Token first, Token last) skipDoc(Token[]? skipped = Null);
         Array<Doc> parseArray();
@@ -679,6 +693,9 @@ class Parser
             }
 
         @Override
+        @Abstract void skipRemaining(Token[]? skipped = Null);
+
+        @Override
         Doc parseDoc()
             {
             assert !closed;
@@ -715,7 +732,7 @@ class Parser
         conditional ArrayParser matchArray()
             {
             return match(ArrayEnter)
-                    ? (True, new ArrayParser(this, checkDelimiter))
+                    ? (True, new ArrayParser(raw, checkDelimiter))
                     : False;
             }
 
@@ -723,7 +740,7 @@ class Parser
         ArrayParser expectArray()
             {
             expect(ArrayEnter);
-            return new ArrayParser(this, checkDelimiter);
+            return new ArrayParser(raw, checkDelimiter);
             }
 
         @Override
@@ -746,7 +763,7 @@ class Parser
         conditional ObjectParser matchObject()
             {
             return match(ObjectEnter)
-                    ? (True, new ObjectParser(this, checkDelimiter))
+                    ? (True, new ObjectParser(raw, checkDelimiter))
                     : False;
             }
 
@@ -754,7 +771,7 @@ class Parser
         ObjectParser expectObject()
             {
             expect(ObjectEnter);
-            return new ObjectParser(this, checkDelimiter);
+            return new ObjectParser(raw, checkDelimiter);
             }
 
         /**
@@ -768,16 +785,27 @@ class Parser
             {
             if (!closed)
                 {
-                while (!eof)
+                if (cause == Null)
                     {
-                    skipDoc();
+                    skipRemaining();
+                    skipEOF();
+                    closed = True;
+                    notifyClosed?();
                     }
-                expect(ArrayExit);
-                closed = True;
-
-                notifyClosed?();
+                else
+                    {
+                    // don't try to recover; just leave the mess as-is (but mark this parser as
+                    // closed)
+                    closed = True;
+                    }
                 }
             }
+
+        /**
+         * This method will move "past the EOF". The parser must be "at EOF" when this method is
+         * called.
+         */
+        protected @Abstract void skipEOF();
         }
 
     /**
@@ -798,7 +826,43 @@ class Parser
             return raw.eof || raw.peek().id == ArrayExit;
             }
 
-// TODO mark/restore
+        @Override
+        void skipRemaining(Token[]? skipped = Null)
+            {
+            while (!eof)
+                {
+                skipDoc(skipped);
+                }
+            }
+
+        protected static const ArrayMark(immutable Object mark, Int index);
+
+        @Override
+        immutable Object mark()
+            {
+            return new ArrayMark(raw.mark(), index);
+            }
+
+        @Override
+        void restore(immutable Object mark, Boolean unmark = False)
+            {
+            assert !closed;
+            assert mark.is(ArrayMark);
+            raw.restore(mark.mark);
+            index = mark.index;
+
+            if (unmark)
+                {
+                this.unmark(mark);
+                }
+            }
+
+        @Override
+        void unmark(Object mark)
+            {
+            assert mark.is(ArrayMark);
+            raw.unmark(mark.mark);
+            }
 
         /**
          * After each value is read, there will be a comma separating it from the next value, or
@@ -813,6 +877,12 @@ class Parser
                 {
                 raw.expect(Comma);
                 }
+            }
+
+        @Override
+        protected void skipEOF()
+            {
+            expect(ArrayExit);
             }
         }
 
@@ -836,7 +906,49 @@ class Parser
             return raw.eof || raw.peek().id == ObjectExit;
             }
 
-// TODO mark/restore
+        @Override
+        void skipRemaining(Token[]? skipped = Null)
+            {
+            if (isValueNext)
+                {
+                skipDoc(skipped);
+                }
+
+            while (!eof)
+                {
+                skipDoc(skipped);   // key
+                skipDoc(skipped);   // value
+                }
+            }
+
+        protected static const ObjectMark(immutable Object mark, Boolean isKeyNext);
+
+        @Override
+        immutable Object mark()
+            {
+            return new ObjectMark(raw.mark(), isKeyNext);
+            }
+
+        @Override
+        void restore(immutable Object mark, Boolean unmark = False)
+            {
+            assert !closed;
+            assert mark.is(ObjectMark);
+            raw.restore(mark.mark);
+            isKeyNext = mark.isKeyNext;
+
+            if (unmark)
+                {
+                this.unmark(mark);
+                }
+            }
+
+        @Override
+        void unmark(Object mark)
+            {
+            assert mark.is(ObjectMark);
+            raw.unmark(mark.mark);
+            }
 
         /**
          * This method will test the key of the next key/value pair to see if it matches the
@@ -922,26 +1034,6 @@ class Parser
             }
 
         /**
-         * This method will skip all remaining keys and values in the object.
-         *
-         * @param skipped  the optional array to accrue skipped tokens into
-         */
-        void skipRemaining(Token[]? skipped = Null)
-            {
-            if (isValueNext)
-                {
-                skipDoc(skipped);
-                assert isKeyNext;
-                }
-
-            while (!eof)
-                {
-                skipDoc(skipped);   // key
-                skipDoc(skipped);   // value
-                }
-            }
-
-        /**
          * After each key is read, there will be a colon separating it from the value, and after
          * each value is read, there will be a comma separating it from the next key, and after the
          * last key/value pair, there will be an ArrayExit. To set up the parser position to the
@@ -963,6 +1055,12 @@ class Parser
                 {
                 raw.expect(Colon);
                 }
+            }
+
+        @Override
+        protected void skipEOF()
+            {
+            expect(ObjectExit);
             }
         }
     }
