@@ -121,10 +121,7 @@ module host.xtclang.org
             ModuleTemplate dbModuleTemplate;
 
             if (dbHost           := createDBHost(errors),
-                dbModuleTemplate := dbHost.generateDBModule(repository, dbModuleName, buildDir, errors))
-                {
-                console.println($"Created a host module '{dbModuleTemplate.name}' for '{dbModuleName}'");
-                }
+                dbModuleTemplate := dbHost.generateDBModule(repository, dbModuleName, buildDir, errors)) {}
             else
                 {
                 console.println($"Failed to create a host for : {dbModuleName}");
