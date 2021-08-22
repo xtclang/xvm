@@ -567,6 +567,14 @@ const String
         return chars.as(immutable Char[]);
         }
 
+    /**
+     * @return a Reader over the characters of this String
+     */
+    Reader toReader()
+        {
+        return new io.CharArrayReader(chars.as(immutable Char[])); // TODO GG why is cast necessary here?
+        }
+
     @Override
     String! toString()
         {
