@@ -376,8 +376,8 @@ class Lexer
             //     other       PreWhole
             if (ch == '-')
                 {
-                ch = reader.nextChar();
                 ++count;
+                ch = reader.nextChar();
                 }
 
             // PreWhole
@@ -385,12 +385,12 @@ class Lexer
             //     '1'..'9'    MidWhole
             if (ch == '0')
                 {
+                ++count;
                 if (reader.eof)
                     {
                     break EOF;
                     }
                 ch = reader.nextChar();
-                ++count;
                 }
             else if (ch >= '1' && ch <= '9')
                 {
@@ -399,12 +399,12 @@ class Lexer
                 //     other       PostWhole
                 do
                     {
+                    ++count;
                     if (reader.eof)
                         {
                         break EOF;
                         }
                     ch = reader.nextChar();
-                    ++count;
                     }
                 while (ch >= '0' && ch <= '9');
                 }
@@ -419,8 +419,8 @@ class Lexer
             if (ch == '.')
                 {
                 fp = True;
-                ch = reader.nextChar();
                 ++count;
+                ch = reader.nextChar();
 
                 // PreFrac
                 //     '0'..'9'    MidFrac
@@ -431,12 +431,12 @@ class Lexer
                     //     other       PostFrac
                     do
                         {
+                        ++count;
                         if (reader.eof)
                             {
                             break EOF;
                             }
                         ch = reader.nextChar();
-                        ++count;
                         }
                     while (ch >= '0' && ch <= '9');
                     }
@@ -452,16 +452,16 @@ class Lexer
             if (ch == 'e' || ch == 'E')
                 {
                 fp = True;
-                ch = reader.nextChar();
                 ++count;
+                ch = reader.nextChar();
 
                 // PreExpSign
                 //     '+' '-'     PreExp
                 //     other       PreExp
                 if (ch == '+' || ch == '-')
                     {
-                    ch = reader.nextChar();
                     ++count;
+                    ch = reader.nextChar();
                     }
 
                 // PreExp
@@ -474,12 +474,12 @@ class Lexer
                     //     other       finished
                     do
                         {
+                        ++count;
                         if (reader.eof)
                             {
                             break EOF;
                             }
                         ch = reader.nextChar();
-                        ++count;
                         }
                     while (ch >= '0' && ch <= '9');
                     }

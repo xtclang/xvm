@@ -29,6 +29,7 @@ import model.DBObjectInfo;
 
 import storage.MapStore;
 import storage.ObjectStore;
+import storage.CounterStore;
 import storage.ValueStore;
 
 import Catalog.BuiltIn;
@@ -354,7 +355,7 @@ service Client<Schema extends RootSchema>
             case DBList:     TODO
             case DBQueue:    TODO
             case DBLog:      TODO
-            case DBCounter:  TODO
+            case DBCounter:  new DBCounterImpl(info, storeFor(id).as(CounterStore));
             case DBValue:    createDBValueImpl(info, storeFor(id).as(ValueStore));
             case DBFunction: TODO
             };
@@ -913,7 +914,22 @@ service Client<Schema extends RootSchema>
 
     // ----- DBCounter -----------------------------------------------------------------------------
 
-    // TODO
+    /**
+     * The DBCounter DBObject implementation.
+     */
+    class DBCounterImpl(DBObjectInfo info_, CounterStore store_)
+            extends DBValueImpl<Int>(info_, store_)
+            implements DBCounter
+        {
+        @Override
+        void adjustBy(Int value)
+            {
+            using (val tx = ensureTransaction())
+                {
+                store_.adjust(tx.id, value);
+                }
+            }
+        }
 
 
     // ----- DBMap ---------------------------------------------------------------------------------
