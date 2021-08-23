@@ -3,8 +3,6 @@ import ecstasy.io.Log;
 import imdb.CatalogMetadata;
 
 import oodb.Connection;
-import oodb.DBObject;
-import oodb.DBObject.DBCategory;
 import oodb.DBUser;
 
 
@@ -14,7 +12,23 @@ import oodb.DBUser;
 class ImdbHost
         extends DbHost
     {
-    @Inject Console console;
+    // ---- run-time support -----------------------------------------------------------------------
+
+    @Override
+    function Connection(DBUser)
+            ensureDatabase(Map<String, String>? configOverrides = Null)
+        {
+        CatalogMetadata meta = dbContainer.innerTypeSystem.primaryModule.as(CatalogMetadata);
+        return meta.ensureConnectionFactory();
+        }
+
+    @Override
+    void closeDatabase()
+        {
+        }
+
+
+    // ---- load-time support ----------------------------------------------------------------------
 
     @Override
     String hostName = "imdb";
@@ -39,12 +53,4 @@ class ImdbHost
 
     @Override
     String customInvocationTemplate = $./templates/common/CustomInvocation.txt;
-
-    @Override
-    function oodb.Connection(DBUser)
-            ensureDatabase(Map<String, String>? configOverrides = Null)
-        {
-        CatalogMetadata meta = dbContainer.innerTypeSystem.primaryModule.as(CatalogMetadata);
-        return meta.ensureConnectionFactory();
-        }
     }

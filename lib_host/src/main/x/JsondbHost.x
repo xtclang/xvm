@@ -2,7 +2,6 @@ import ecstasy.io.Log;
 
 import jsondb.Catalog;
 import jsondb.CatalogMetadata;
-import jsondb.Client;
 
 import oodb.Connection;
 import oodb.DBUser;
@@ -13,31 +12,7 @@ import oodb.DBUser;
 class JsondbHost
         extends DbHost
     {
-    @Inject Console console;
-
-    @Override
-    String hostName = "jsondb";
-
-    @Override
-    String moduleSourceTemplate = $./templates/jsondb/_module.txt;
-
-    @Override
-    String propertyGetterTemplate = $./templates/jsondb/PropertyGetter.txt;
-
-    @Override
-    String propertyInfoTemplate = $./templates/jsondb/PropertyInfo.txt;
-
-    @Override
-    String customInstantiationTemplate = $./templates/jsondb/CustomInstantiation.txt;
-
-    @Override
-    String customDeclarationTemplate = $./templates/jsondb/CustomDeclaration.txt;
-
-    @Override
-    String customMethodTemplate = $./templates/jsondb/CustomMethod.txt;
-
-    @Override
-    String customInvocationTemplate = $./templates/common/CustomInvocation.txt;
+    // ---- run-time support -----------------------------------------------------------------------
 
     /**
      * Cached CatalogMetadata instance.
@@ -87,4 +62,37 @@ class JsondbHost
         {
         return meta.ensureConnectionFactory(catalog);
         }
+
+    @Override
+    void closeDatabase()
+        {
+        catalog.close();
+        }
+
+
+    // ----- load-time support ---------------------------------------------------------------------
+
+    @Override
+    String hostName = "jsondb";
+
+    @Override
+    String moduleSourceTemplate = $./templates/jsondb/_module.txt;
+
+    @Override
+    String propertyGetterTemplate = $./templates/jsondb/PropertyGetter.txt;
+
+    @Override
+    String propertyInfoTemplate = $./templates/jsondb/PropertyInfo.txt;
+
+    @Override
+    String customInstantiationTemplate = $./templates/jsondb/CustomInstantiation.txt;
+
+    @Override
+    String customDeclarationTemplate = $./templates/jsondb/CustomDeclaration.txt;
+
+    @Override
+    String customMethodTemplate = $./templates/jsondb/CustomMethod.txt;
+
+    @Override
+    String customInvocationTemplate = $./templates/common/CustomInvocation.txt;
     }

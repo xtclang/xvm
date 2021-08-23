@@ -24,6 +24,30 @@ import oodb.DBObject.DBCategory;
 @Abstract
 class DbHost
     {
+    // ---- run-time support -----------------------------------------------------------------------
+
+    /**
+     * The Container that hosts the DB module.
+     */
+    @Unassigned
+    Container dbContainer;
+
+    /**
+     * Check an existence of the DB (e.g. on disk); create or recover if necessary.
+     *
+     * @return a connection factory
+     */
+    function oodb.Connection(oodb.DBUser)
+        ensureDatabase(Map<String, String>? configOverrides = Null);
+
+    /**
+     * Life cycle: close the database.
+     */
+    void closeDatabase();
+
+
+    // ---- load-time support ----------------------------------------------------------------------
+
     @Abstract
     @RO String hostName;
 
@@ -47,7 +71,6 @@ class DbHost
 
     @Abstract
     @RO String customInvocationTemplate;
-
 
     /**
      * Generate all the necessary classes to use a DB modules.
@@ -366,20 +389,6 @@ class DbHost
         writeUtf(sourceFile, moduleSource);
         return True;
         }
-
-    /**
-     * Check an existence of the DB (e.g. on disk); create or recover if necessary.
-     *
-     * @return a connection factory
-     */
-    function oodb.Connection(oodb.DBUser)
-        ensureDatabase(Map<String, String>? configOverrides = Null);
-
-    /**
-     * The Container that hosts the DB module.
-     */
-    @Unassigned
-    Container dbContainer;
 
 
     // ----- common helper methods -----------------------------------------------------------------

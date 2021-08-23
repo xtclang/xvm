@@ -108,8 +108,9 @@ module host.xtclang.org
             return Null;
             }
 
-        ModuleTemplate moduleTemplate = fileTemplate.mainModule;
-        Injector       injector;
+        ModuleTemplate  moduleTemplate = fileTemplate.mainModule;
+        Injector        injector;
+        function void() terminate = () -> {};
 
         if (String dbModuleName := detectDatabase(fileTemplate))
             {
@@ -131,6 +132,8 @@ module host.xtclang.org
                     }
                 return Null;
                 }
+
+            terminate = dbHost.closeDatabase;
 
             // give the db container the real console
             Injector dbInjector = new Injector()
@@ -182,6 +185,7 @@ module host.xtclang.org
         buffer.println($"++++++ Loading module: {moduleTemplate.qualifiedName} +++++++\n");
 
         @Future Tuple result = container.invoke("run", Tuple:());
+        &result.whenComplete((r, x) -> terminate());
         return (&result, buffer);
         }
 

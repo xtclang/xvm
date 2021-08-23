@@ -302,7 +302,9 @@ service Catalog<Schema extends RootSchema>
     @Override
     String toString()
         {
-        return $"{this:class.name}:\{dir={dir}, version={version}, status={status}, readOnly={readOnly}, unique-id={timestamp}}";
+        return $|{this:class.name}:\{dir={dir}, version={version}, status={status},
+                | readOnly={readOnly}, unique-id={timestamp}}
+                ;
         }
 
 
@@ -546,7 +548,73 @@ service Catalog<Schema extends RootSchema>
             transition(Closed, Recovering, snapshot -> !snapshot.empty || sysDir.exists, ignoreLock = True);
 
             txManager.enable();
-            // TODO
+
+            ObjectStore[] repair = new ObjectStore[];
+            if (CatalogMetadata metadata ?= this.metadata)
+                {
+                for (DBObjectInfo info : metadata.dbObjectInfos)
+                    {
+                    if (info.lifeCycle != Removed)
+                        {
+                        // get the storage
+                        ObjectStore store = storeFor(info.id);
+
+                        // validate the storage
+                        try
+                            {
+                            if (store.deepScan())
+                                {
+                                continue;
+                                }
+
+                            log.add($"During recovery, corruption was detected in \"{info.path}\"");
+                            }
+                        catch (Exception e)
+                            {
+                            log.add($"During recovery, an error occurred in the deepScan() of \"{info.path}\": {e}");
+                            }
+
+                        repair += store;
+                        }
+                    }
+                }
+            else
+                {
+                TODO("need an algorithm that finds all of the implied Storage impls based on the info in /sys/*");
+                }
+
+// REVIEW CP - why did the algorithm have to scan everything before doing any repairs?
+
+            Boolean error = False;
+            for (ObjectStore store : repair)
+                {
+                try
+                    {
+                    // repair the storage
+                    if (store.deepScan(fix=True))
+                        {
+                        log.add($"Successfully recovered \"{store.info.path}\"");
+                        continue;
+                        }
+
+                    log.add($"During recovery, unable to fix \"{store.info.path}\"");
+                    }
+                catch (Exception e)
+                    {
+                    log.add($"During recovery, unable to fix \"{store.info.path}\" due to an error: {e}");
+                    }
+
+                error = True;
+                }
+
+            if (error)
+                {
+                transition(Recovering, Closed);
+                }
+            else
+                {
+                transition(Recovering, Running, snapshot -> snapshot.owned);
+                }
             }
         }
 
