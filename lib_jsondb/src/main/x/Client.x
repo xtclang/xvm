@@ -920,6 +920,12 @@ service Client<Schema extends RootSchema>
             implements DBCounter
         {
         @Override
+        Boolean transactional.get()
+            {
+            return info_.transactional;
+            }
+
+        @Override
         void adjustBy(Int value)
             {
             using (val tx = ensureTransaction())

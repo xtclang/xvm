@@ -686,6 +686,12 @@ service Client<Schema extends RootSchema>
             }
 
         @Override
+        Boolean transactional.get()
+            {
+            return store_.info.transactional;
+            }
+
+        @Override
         void adjustBy(Int value)
             {
             if (transactional && this.Client.joinTransaction(this))
