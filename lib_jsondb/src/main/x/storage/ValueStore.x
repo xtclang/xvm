@@ -4,20 +4,22 @@
 interface ValueStore<Value extends immutable Const>
     {
     /**
-     * Obtain the singleton value as it existed immediately after the specified transaction finished
+     * Obtain the single value as it existed immediately after the specified transaction finished
      * committing, or as it exists within the transaction (if it has not yet committed).
      *
-     * @param txId  the "write" transaction identifier
+     * @param txId  specifies the transaction identifier to use to determine the point-in-time data
+     *              stored in the database, as if the value of the singleton were read immediately
+     *              after that specified transaction had committed
      *
-     * @return the value of the singleton as of the specified transaction
+     * @return the single value as of the specified transaction
      */
     Value load(Int txId);
 
     /**
-     * Modify the singleton as part of the specified transaction by replacing the value.
+     * Modify the single value as part of the specified transaction by replacing the value.
      *
      * @param txId   the "write" transaction identifier
-     * @param value  the new value for the singleton
+     * @param value  the new single value
      */
     void store(Int txId, Value value);
     }

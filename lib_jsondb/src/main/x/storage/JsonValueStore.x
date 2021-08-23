@@ -567,13 +567,6 @@ service JsonValueStore<Value extends immutable Const>
         return super();
         }
 
-    @Override
-    Boolean quickScan()
-        {
-        // TODO
-        return super();
-        }
-
     /**
      * Clean up old transactions on the disk.
      */

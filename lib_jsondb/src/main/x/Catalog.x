@@ -22,10 +22,12 @@ import oodb.RootSchema;
 
 import oodb.model.DBUser as DBUserImpl;
 
+import storage.JsonCounterStore;
 import storage.JsonMapStore;
+import storage.JsonNtxCounterStore;
+import storage.JsonValueStore;
 import storage.ObjectStore;
 import storage.SchemaStore;
-import storage.JsonValueStore;
 
 
 /**
@@ -443,7 +445,7 @@ service Catalog<Schema extends RootSchema>
                     TODO
 
                 case DBCounter:
-                    TODO
+                    return createCounterStore(info, log);
 
                 case DBValue:
                     return createValueStore(info, log);
@@ -464,6 +466,13 @@ service Catalog<Schema extends RootSchema>
         return new JsonMapStore<keyType.DataType, valType.DataType>(this, info, log,
                 jsonSchema.ensureMapping(keyType).as(Mapping<keyType.DataType>),
                 jsonSchema.ensureMapping(valType).as(Mapping<valType.DataType>));
+        }
+
+    private ObjectStore createCounterStore(DBObjectInfo info, Appender<String> log)
+        {
+        return info.transactional
+                ? new JsonCounterStore(this, info, log)
+                : new JsonNtxCounterStore(this, info, log);
         }
 
     private ObjectStore createValueStore(DBObjectInfo info, Appender<String> log)
