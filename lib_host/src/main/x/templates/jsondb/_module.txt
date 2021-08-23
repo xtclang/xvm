@@ -27,7 +27,7 @@ module %appName%_jsondb
         {
         return
             [
-            new DBObjectInfo_("", ROOT, DBSchema, 0, 0, [1]),
+            new DBObjectInfo_("", ROOT, DBSchema, 0, 0, [1], False),
 %PropertyInfos%
             ];
         }

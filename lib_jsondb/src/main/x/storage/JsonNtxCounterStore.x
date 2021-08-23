@@ -1,6 +1,6 @@
 import model.DBObjectInfo;
 
-import json.Lexer;
+import json.Parser;
 
 /**
  * Provides the low-level I/O for a non-transactional (i.e. extra-transactional) counter.
@@ -17,18 +17,20 @@ service JsonNtxCounterStore(Catalog catalog, DBObjectInfo info, Appender<String>
      */
     @Lazy public/private File dataFile.calc()
         {
-        return dataDir.fileFor(info.name + ".json");
+        return dataDir.fileFor("value.json");
         }
 
     @Override
     Int load(Int txId)
         {
+        assert ready();
         return current;
         }
 
     @Override
     void store(Int txId, Int value)
         {
+        assert ready();
         current = value;
         dataFile.contents = value.toString().utf8();
         }
@@ -52,9 +54,9 @@ service JsonNtxCounterStore(Catalog catalog, DBObjectInfo info, Appender<String>
         Int     assumeValue = 0;
         try
             {
-            Lexer lexer = new Lexer(dataFile.contents.unpackString().toReader());
-            assumeValue = lexer.next().as(IntLiteral).toInt64();
-            assert !lexer.next();
+            Parser parser = new Parser(dataFile.contents.unpackString().toReader());
+            assumeValue = parser.expectInt();
+            assert !parser.next();
             corrupted = False;
             }
         catch (Exception e)
@@ -83,7 +85,10 @@ service JsonNtxCounterStore(Catalog catalog, DBObjectInfo info, Appender<String>
     void loadInitial()
         {
         assert dataFile.exists;
-        current = new Lexer(dataFile.contents.unpackString().toReader()).next().as(IntLiteral).toInt64();
+
+        Parser parser = new Parser(dataFile.contents.unpackString().toReader());
+        current = parser.expectInt();
+        assert !parser.next();
         }
 
     @Override

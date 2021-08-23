@@ -14,7 +14,6 @@ import oodb.DBSchema;
 import oodb.DBTransaction;
 import oodb.DBUser;
 import oodb.DBValue;
-import oodb.NoTx;
 import oodb.RootSchema;
 import oodb.SystemSchema;
 
@@ -327,7 +326,6 @@ service Client<Schema extends RootSchema>
      */
     class DBSchemaImpl(SchemaStore store_)
             extends DBObjectImpl(store_)
-            incorporates oodb.NoTx
             implements DBSchema
         {
         @Override

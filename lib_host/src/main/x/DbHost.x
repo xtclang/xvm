@@ -145,10 +145,11 @@ class DbHost
             assert Composition classTemplate := typeTemplate.fromClass(),
                    classTemplate.is(ClassTemplate);
 
-            String propertyName = property.name;
-            String propertyType = displayName(typeTemplate, appName);
-            String propertyId   = (++pid).toString();
-            String initialValue = "Null";
+            String propertyName  = property.name;
+            String propertyType  = displayName(typeTemplate, appName);
+            String propertyId    = (++pid).toString();
+            String transactional = "True";
+            String initialValue  = "Null";
 
             String propertyTypeName = classTemplate.name.replace(".", "_");
             String propertyStoreType;
@@ -173,6 +174,11 @@ class DbHost
                     propertyStoreType  = "{hostName}_.storage.CounterStore";
                     propertyBaseType   = "DBCounterImpl";
                     propertyTypeParams = "";
+
+                    if (AnnotationTemplate annotation := findAnnotation(property, "oodb.NoTx"))
+                        {
+                        transactional = "False";
+                        }
                     break;
 
                 case DBValue:
@@ -184,13 +190,9 @@ class DbHost
                     propertyBaseType   = $"DBValueImpl<{valueTypeName}>";
                     propertyTypeParams = $"\"Value\"={valueTypeName}";
 
-                    for (AnnotationTemplate annotation : property.annotations)
+                    if (AnnotationTemplate annotation := findAnnotation(property, "oodb.Initial"))
                         {
-                        if (annotation.template.displayName == "oodb.Initial")
-                            {
-                            initialValue = displayValue(annotation.arguments[0].value);
-                            break;
-                            }
+                        initialValue = displayValue(annotation.arguments[0].value);
                         }
 
                     if (initialValue == "Null")
@@ -208,6 +210,17 @@ class DbHost
 
                     break;
 
+                case DBLog:
+                    propertyStoreType  = "{hostName}_.storage.LogStore";
+                    propertyBaseType   = "DBLogImpl";
+                    propertyTypeParams = "";
+
+                    if (AnnotationTemplate annotation := findAnnotation(property, "oodb.NoTx"))
+                        {
+                        transactional = "False";
+                        }
+                    break;
+
                 default:
                     TODO
                 }
@@ -219,6 +232,7 @@ class DbHost
                                 .replace("%propertyParentId%"  , "0") // TODO
                                 .replace("%propertyType%"      , propertyType)
                                 .replace("%propertyTypeParams%", propertyTypeParams)
+                                .replace("%transactional%"     , transactional)
                                 .replace("%initialValue%"      , initialValue)
                                 ;
 
@@ -462,6 +476,25 @@ class DbHost
             return composition.implicitName ?: (appName + "_." + composition.displayName);
             }
         TODO AnnotatingComposition
+        }
+
+    /**
+     * Check if the `PropertyTemplate` has a specified annotation.
+     *
+     * @return True iff there is an annotation of the specified name
+     * @return the corresponding `AnnotationTemplate` (optional)
+     */
+    conditional AnnotationTemplate findAnnotation(PropertyTemplate property, String annotationName)
+        {
+        for (AnnotationTemplate annotation : property.annotations)
+            {
+            if (annotation.template.displayName == annotationName)
+                {
+                return True, annotation;
+                }
+            }
+
+        return False;
         }
 
     /**

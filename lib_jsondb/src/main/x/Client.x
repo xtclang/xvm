@@ -20,7 +20,6 @@ import oodb.DBSchema;
 import oodb.DBTransaction;
 import oodb.DBUser;
 import oodb.DBValue;
-import oodb.NoTx;
 import oodb.RootSchema;
 import oodb.SystemSchema;
 import oodb.Transaction.TxInfo;
@@ -563,7 +562,6 @@ service Client<Schema extends RootSchema>
      */
     class DBSchemaImpl(DBObjectInfo info_)
             extends DBObjectImpl(info_)
-            incorporates NoTx
             implements DBSchema
         {
         @Override

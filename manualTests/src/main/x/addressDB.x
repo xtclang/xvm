@@ -18,14 +18,15 @@ module AddressBookDB
     import oodb.DBMap;
     import oodb.DBValue;
     import oodb.Initial;
+    import oodb.NoTx;
     import oodb.Transaction;
     import oodb.RootSchema;
 
     interface AddressBookSchema
             extends RootSchema
         {
-        @RO Contacts     contacts;
-        @RO DBCounter requestCount;
+        @RO Contacts contacts;
+        @RO @NoTx DBCounter requestCount;
         @RO @Initial("Untitled") DBValue<String> title;
         }
 

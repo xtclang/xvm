@@ -17,29 +17,14 @@ module oodb.xtclang.org
      * Marks specific DBObjects as extra-transactional. Applies only to DBCounter and DBLog.
      */
     mixin NoTx
-            into DBObject
+            into Property<DBSchema, DBCounter | DBLog>
         {
-        assert()
-            {
-            // verify that the mixin is into a DBSchema (redundant), a DBValue, or a DBLog;
-            // the instantiation of the "real this" has not yet occurred, so at this point,
-            // "this" refers to the structure
-            // REVIEW GG
-            assert this.is(DBSchema:struct)
-                || this.is(DBCounter:struct)
-                || this.is(DBLog:struct);
-            }
-
-        @Override
-        @RO Boolean transactional.get()
-            {
-            return False;
-            }
         }
 
     /**
-     * Used for specifying an initial value for a DBValue. Must be used if the DBValue's type
-     * does not have a `default` value (e.g. the String type).
+     * Used for specifying an initial value for a DBValue. Must be used if the DBValue's `Value`
+     * type does not have a `default` value. For example, the String type does not have a default
+     * value, but `String?` does (it defaults to `Null`), as does Boolean (False) and Int (0).
      */
     mixin Initial<Value>(Value initial)
              into Property<DBSchema, DBValue<Value>>
