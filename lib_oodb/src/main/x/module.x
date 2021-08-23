@@ -38,6 +38,15 @@ module oodb.xtclang.org
         }
 
     /**
+     * Used for specifying an initial value for a DBValue. Must be used if the DBValue's type
+     * does not have a `default` value (e.g. the String type).
+     */
+    mixin Initial<Value>(Value initial)
+             into Property<DBSchema, DBValue<Value>>
+        {
+        }
+
+    /**
      * Check to see if any of the database object name rules is broken by the specified name, and
      * if so, provide an explanation of the broken rule.
      *

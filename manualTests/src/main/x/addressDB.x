@@ -8,30 +8,39 @@
  * See the addressApp.x file for the test program that uses this database schema.
  */
 module AddressBookDB
-        incorporates oodb.Database
+        incorporates Database
     {
     package oodb import oodb.xtclang.org;
 
+    import oodb.Connection;
+    import oodb.Database;
+    import oodb.DBCounter;
+    import oodb.DBMap;
+    import oodb.DBValue;
+    import oodb.Initial;
+    import oodb.Transaction;
+    import oodb.RootSchema;
+
     interface AddressBookSchema
-            extends oodb.RootSchema
+            extends RootSchema
         {
         @RO Contacts     contacts;
-        @RO oodb.DBCounter requestCount;
-        @RO @oodb.annotations.Initial("Untitled") oodb.DBValue<String> title;
+        @RO DBCounter requestCount;
+        @RO @Initial("Untitled") DBValue<String> title;
         }
 
     /**
      * This is the interface that will get injected.
      */
-    typedef (oodb.Connection<AddressBookSchema> + AddressBookSchema) Connection;
+    typedef (Connection<AddressBookSchema> + AddressBookSchema) Connection;
 
     /**
      * This is the interface that will come back from createTransaction.
      */
-    typedef (oodb.Transaction<AddressBookSchema> + AddressBookSchema) Transaction;
+    typedef (Transaction<AddressBookSchema> + AddressBookSchema) Transaction;
 
     mixin Contacts
-            into oodb.DBMap<String, Contact>
+            into DBMap<String, Contact>
         {
         void addContact(Contact contact)
             {
@@ -59,7 +68,7 @@ module AddressBookDB
 
     const Contact(String firstName, String lastName, Email[] emails = [], Phone[] phones = [])
         {
-        // @oodb.PKey
+        // @PKey
         String rolodexName.get()
             {
             return $"{lastName}, {firstName}";

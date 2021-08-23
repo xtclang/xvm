@@ -186,7 +186,7 @@ class DbHost
 
                     for (AnnotationTemplate annotation : property.annotations)
                         {
-                        if (annotation.template.displayName == "oodb.annotations.Initial")
+                        if (annotation.template.displayName == "oodb.Initial")
                             {
                             initialValue = displayValue(annotation.arguments[0].value);
                             break;
