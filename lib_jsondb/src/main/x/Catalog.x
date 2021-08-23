@@ -756,8 +756,6 @@ service Catalog<Schema extends RootSchema>
 
         try
             {
-@Inject Console console;
-console.println($"lock string={bytes?.unpackString()}");
             lock = fromBytes(Lock, bytes?);
             }
         catch (Exception e)
@@ -823,9 +821,7 @@ console.println($"lock string={bytes?.unpackString()}");
             try
                 {
                 Byte[] oldBytes = lockFile.contents;
-                String text     = oldBytes.all(b -> b >= 32 && b <= 127 || new Char(b).isWhitespace())
-                    ? new String(new Char[oldBytes.size](i -> new Char(oldBytes[i])))
-                    : oldBytes.toString();
+                String text     = oldBytes.unpackString();
                 msg = $"{msg}; Catalog timestamp={timestamp}; lock file contains: {text}";
                 }
             catch (Exception e)

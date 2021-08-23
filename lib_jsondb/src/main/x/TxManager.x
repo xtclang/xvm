@@ -304,6 +304,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                     String idString = content.slice([idStart .. idEnd));
 
                     Int id = new IntLiteral(idString).toInt64();
+                    lastClosedId  = id;
                     lastPrepared  = id;
                     lastCommitted = id;
                     }
