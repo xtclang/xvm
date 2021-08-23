@@ -25,7 +25,7 @@ import oodb.model.DBUser as DBUserImpl;
 import storage.JsonMapStore;
 import storage.ObjectStore;
 import storage.SchemaStore;
-import storage.ValueStore;
+import storage.JsonValueStore;
 
 
 /**
@@ -471,7 +471,7 @@ service Catalog<Schema extends RootSchema>
         assert Type valueType := info.typeParams.get("Value"),
                     valueType.is(Type<immutable Const>);
 
-        return new ValueStore<valueType.DataType>(this, info, log,
+        return new JsonValueStore<valueType.DataType>(this, info, log,
                 jsonSchema.ensureMapping(valueType).as(Mapping<valueType.DataType>),
                 info.initial.as(valueType.DataType));
         }
