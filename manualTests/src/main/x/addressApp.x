@@ -1,3 +1,20 @@
+/**
+ * This is a database test application for the AddressBook test schema.
+ *
+ * To compile this test:
+ *
+ *     gradle compileOne -PtestName=addressApp
+ *
+ * To run this test using the "imdb" database implementation:
+ *
+ *     gradle -Dxvm.db.impl=imdb hostOne -PtestName=AddressBookApp
+ *
+ * To run this test using the "jsonDB" database implementation:
+ *
+ *     gradle -Dxvm.db.impl=json hostOne -PtestName=AddressBookApp
+ *
+ * See also: addressDB.x file for the database schema.
+ */
 module AddressBookApp
     {
     package db import AddressBookDB;

@@ -1,3 +1,12 @@
+/**
+ * This is a database schema for the AddressBook test.
+ *
+ * To compile this test:
+ *
+ *     gradle compileOne -PtestName=addressDB
+ *
+ * See the addressApp.x file for the test program that uses this database schema.
+ */
 module AddressBookDB
         incorporates oodb.Database
     {
