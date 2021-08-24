@@ -498,13 +498,6 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
     String sealPrepare(Int writeId)
         {
         TODO
-
-        // (long story ... didn't want to lose this error)
-        // writeIds.map(writeId -> commit(writeId), results);
-        // TODO GG: replace the above line with this for a type error:
-        //      COMPILER-151: Return type mismatch for "map" method; required "Array<Nullable | String>", actual "Collection<Nullable | String>".
-        // results = writeIds.map(writeId -> commit(writeId), results);
-        // return results.freeze(inPlace=True);
         }
 
     /**
