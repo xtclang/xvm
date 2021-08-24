@@ -130,7 +130,19 @@ public class TypeSequenceTypeConstant
         }
 
     @Override
+    public Access getAccess()
+        {
+        return Access.PUBLIC;
+        }
+
+    @Override
     public boolean isSingleUnderlyingClass(boolean fAllowInterface)
+        {
+        return false;
+        }
+
+    @Override
+    public boolean isConstant()
         {
         return false;
         }

@@ -1,62 +1,18 @@
 module TestSimple.test.org
     {
-    import ecstasy.io.CharArrayReader;
-
-    package json import json.xtclang.org;
-
-    import json.Doc;
-    import json.Lexer;
-    import json.Parser;
-
     @Inject Console console;
 
     void run()
         {
-        String s = `|[
-                    |{"tx":14, "value":{"a":1, "d":[1,2,3]}},
-                    |{"tx":17, "value":{"b":2, "d":[1,2,3]}},
-                    |{"tx":18, "value":{"c":3, "d":[1,2,3]}}
-                    |]
-                    ;
+        Int[] ints = new Int[];
+        ints.add(0).add(1);
 
-        console.println("JSON:");
-        console.println(s);
-        console.println();
+        console.println(test(ints));
+        }
 
-        // straight through lex
-        console.println("Lexer:");
-        Lexer l = new Lexer(new CharArrayReader(s));
-        for (val tok : l)
-            {
-            console.println(tok);
-            }
-
-        // parse into a complete doc
-        console.println("Parser:");
-        Parser p = new Parser(new CharArrayReader(s));
-        for (val doc : p)
-            {
-            console.println(doc);
-            }
-
-        console.println();
-        console.println("Finding transaction 17:");
-        p = new Parser(new CharArrayReader(s));
-        using (val p2 = p.expectArray())
-            {
-            while (val p3 := p2.matchObject())
-                {
-                using (p3)
-                    {
-                    p3.expectKey("tx");
-                    if (p3.expectInt() == 17)
-                        {
-                        assert p3.findKey("value");
-                        Doc doc = p3.parseDoc();
-                        console.println(doc);
-                        }
-                    }
-                }
-            }
+    Boolean test(Int[] ints)
+        {
+        immutable Int[] myInts = [0, 1];
+        return myInts == ints;
         }
     }

@@ -1198,6 +1198,18 @@ public abstract class TypeConstant
             return true;
             }
 
+        // we allow a comparison of "immutable T" with "T"
+        if (typeThat.isImmutabilitySpecified())
+            {
+            return typeThis.supportsEquals(typeThat.removeImmutable(), false);
+            }
+
+        // and we allow a comparison of "T:access" with "T"
+        if (typeThat.isAccessSpecified())
+            {
+            return typeThis.supportsEquals(typeThat.removeAccess(), false);
+            }
+
         // we also allow a comparison of a nullable type to the base type; for example:
         // String? s1 = ...
         // String  s2 = ...
