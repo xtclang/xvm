@@ -563,8 +563,108 @@ service JsonValueStore<Value extends immutable Const>
     @Override
     Boolean deepScan(Boolean fix = True)
         {
-        // TODO
-        return super();
+        if (super() && !dataFile.exists)
+            {
+            return True;
+            }
+
+        Boolean intact = False;
+        val     byTx   = new SkiplistMap<Int, Range<Int>>();
+        String jsonStr = "";
+        try
+            {
+            jsonStr = dataFile.contents.unpackString();
+            using (val fileParser = new Parser(jsonStr.toReader()))
+                {
+                using (val arrayParser = fileParser.expectArray())
+                    {
+                    Int prevId = -1;
+                    while (!arrayParser.eof)
+                        {
+                        using (val objectParser = arrayParser.expectObject())
+                            {
+                            objectParser.expectKey("tx");
+                            Int txId = objectParser.expectInt();
+
+                            // verify that the transaction id is legal
+                            Boolean valid = True;
+                            if (!isReadTx(txId))
+                                {
+                                log($"During deepScan() of DBValue \"{info.path}\", encountered the illegal transaction ID {txId}");
+                                valid = False;
+                                }
+                            // verify that the id is unique
+                            else if (byTx.contains(txId))
+                                {
+                                log($"During deepScan() of DBValue \"{info.path}\", encountered a duplicate transaction ID {txId}");
+                                }
+                            // verify that the id occurs in ascending order
+                            else if (txId <= prevId)
+                                {
+                                log($"During deepScan() of DBValue \"{info.path}\", encountered an out-of-order transaction ID {txId}");
+                                }
+                            else
+                                {
+                                prevId = txId;
+                                }
+
+                            objectParser.expectKey("value");
+                            (Token first, Token last) = objectParser.skipDoc();
+                            byTx.put(txId, [first.start.offset .. last.end.offset));
+                            }
+                        }
+                    }
+                }
+
+            // no problems parsing; make sure that the file doesn't appear to have been edited by
+            // hand in a way that isn't fitting with the assumptions made by this store
+            intact = jsonStr.startsWith("[\n{") && jsonStr.endsWith("}\n]");
+            }
+        catch (Exception e)
+            {
+            log($"During deepScan() of DBValue \"{info.path}\", encountered exception: {e}");
+            }
+
+        if (!intact && fix)
+            {
+            try
+                {
+                createBackup(dataFile, move=True);
+
+                if (byTx.empty)
+                    {
+                    if (dataFile.exists)
+                        {
+                        dataFile.delete();
+                        log($"During deepScan() of DBValue \"{info.path}\", no data could be recovered, and the data file was deleted.");
+                        }
+                    }
+                else
+                    {
+                    // format all of the parsed data into a newly formatted file
+                    StringBuffer buf = new StringBuffer(jsonStr.size);
+                    Loop: for ((Int txId, Range<Int> txLoc) : byTx)
+                        {
+                        buf.add(Loop.first ? '[' : ',')
+                           .append("\n{\"tx\":")
+                           .append(txId)
+                           .append(", \"value\":")
+                           .append(jsonStr[txLoc]);
+                        }
+                    buf.append("\n]");
+                    dataFile.contents = buf.toString().utf8();
+                    log($"During deepScan() of DBValue \"{info.path}\", {byTx.size} transactions were recovered.");
+                    }
+
+                return True;
+                }
+            catch (Exception e)
+                {
+                log($"During deepScan() of DBValue \"{info.path}\", encountered exception: {e}");
+                }
+            }
+
+        return intact;
         }
 
     /**

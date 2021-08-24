@@ -61,7 +61,7 @@ service JsonNtxCounterStore(Catalog catalog, DBObjectInfo info, Appender<String>
             }
         catch (Exception e)
             {
-            errs.add($"While attempting to read and parse \"{dataFile}\", encountered exception: {e}");
+            log($"While attempting to read and parse \"{dataFile}\", encountered exception: {e}");
             }
 
         if (corrupted && fix)

@@ -226,4 +226,63 @@ module jsondb.xtclang.org
 
         console.println($"{desc}={s}");
         }
+
+    /**
+     * Back up a file.
+     *
+     * @param file  the file to back up
+     * @param move  (optional) True means that the file should be moved instead of copied, if
+     *              possible
+     *
+     * @return the newly created backup file
+     */
+    static File createBackup(File file, Boolean move = False)
+        {
+        // in theory, a backup could fail because some other file operation could be happening
+        // concurrently, so allow the backup operation to be automatically retried a few times
+        // before giving up with a failure; this is one of those failures that could only happen in
+        // a production system, and is the type of failure that is impossible to reproduce
+        Exception failure;
+        failure = new Exception(); // TODO GG this is a temporary work-around
+        for (Int i : 1..3)
+            {
+            try
+                {
+                String name = file.name;
+                if (Int dot := name.lastIndexOf('.'))
+                    {
+                    name = name[0..dot);
+                    }
+
+                Directory dir   = file.parent ?: assert;
+                Int       count = 0;
+                while (True)
+                    {
+                    String test = $"{name}.bak{count > 0 ? count : ""}";
+                    if (!dir.find(test))
+                        {
+                        name = test;
+                        break;
+                        }
+                    }
+
+                if (move, File newFile := file.renameTo(name))
+                    {
+                    return newFile;
+                    }
+
+                File newFile = dir.fileFor(name);
+                assert !newFile.exists;
+                file.store.copy(file.path, newFile.path);
+                return newFile;
+                }
+            catch (Exception e)
+                {
+                failure = e;
+                }
+            }
+
+        // TODO GG COMPILER-81: The variable "failure" is not definitely assigned. ("failure")
+        throw failure;
+        }
     }
