@@ -351,14 +351,14 @@ public class ServiceContext
      */
     protected void releaseSchedulingLock()
         {
-        // If isContended is true then the service requires more processing and we can immediately
+        // If isContended is true then the service requires more processing, so we can immediately
         // reschedule, thus transferring our lock ownership. Between checking that state and releasing
         // the lock isContended could transition to true and the thread doing that transition would
         // fail to get our yet to be released lock. We could defend against this by checking isContended
-        // after releasing but portions (FiberQueue) of isContended are not thread-safe and thus we
-        // shouldn't query it after releasing the lock. Instead we defend against this by detecting
+        // after releasing but portions (FiberQueue) of isContended are not thread-safe, and thus we
+        // shouldn't query it after releasing the lock. Instead, we defend against this by detecting
         // contention on the lock itself and inferring that the contending thread must have injected
-        // more work and thus we must reschedule on their behalf. Note if we're wrong and the contention
+        // more work, so we must reschedule on their behalf. Note if we're wrong and the contention
         // doesn't represent new work then the scheduled task will be a no-op and just come back here
         // to release again, and is thus safe.
 
@@ -709,7 +709,7 @@ public class ServiceContext
                             continue;
                             }
 
-                        // no one handled the exception and we have reached the "proto-frame";
+                        // no one handled the exception, and we have reached the "proto-frame";
                         // it will process the exception
                         if (frame.m_continuation == null)
                             {
@@ -969,8 +969,7 @@ public class ServiceContext
         }
 
     /**
-     * Unregister a notification for this service. Note, that this method can be
-     * called on on any thread.
+     * Unregister a notification for this service. Note, that this method can be called on any thread.
      */
     public void unregisterNotification()
         {
@@ -1696,7 +1695,7 @@ public class ServiceContext
         }
 
     /**
-     * The wake up scheduler.
+     * The wake-up scheduler.
      */
     protected class WakeUpScheduler
         {
@@ -1740,7 +1739,7 @@ public class ServiceContext
     public final TemplateRegistry f_templates;
 
     /**
-     * The queue size threshold at which the caller should pushed back.
+     * The queue size threshold at which the caller should be pushed back.
      */
     public final static int QUEUE_THRESHOLD = 256;
 
@@ -1830,11 +1829,11 @@ public class ServiceContext
      * The context scheduling "lock", atomic operations are performed via {@link #SCHEDULING_LOCK_HANDLE}.
      * <p>
      * This lock must be acquired in order to schedule context processing and is not released until
-     * the context is not longer scheduled.
+     * the context is no longer scheduled.
      * <p>
      * The lock is implemented as a volatile counter, the thread which transitions from 0 to 1 becomes
-     * the lock holder will release the lock by setting back via a getAndSet(0), which if it yields
-     * a prior value of something other then 1 indicates lock contention.
+     * the lock holder will release the lock by setting back via a getAndSet(0), which, if it yields
+     * a prior value of something other than 1, indicates the lock contention.
      */
     volatile long m_lLockScheduling;
 
@@ -1848,7 +1847,7 @@ public class ServiceContext
         Busy,
         BusyWaiting,
         ShuttingDown,
-        Terminated;
+        Terminated
         }
 
     /**
