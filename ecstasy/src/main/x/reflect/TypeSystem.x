@@ -93,7 +93,7 @@ const TypeSystem
     /**
      * The implicitly-imported types from the Ecstasy core library.
      */
-    static Map<String, Type> implicitTypes =
+    static immutable Map<String, Type> implicitTypes =
         {
         import lang.src.Lexer.Token;
         import lang.src.Parser;
@@ -279,6 +279,20 @@ const TypeSystem
             }
 
         return False;
+        }
+
+    /**
+     * Obtain a [Type] based on a name specified in the implicitly-imported types from the Ecstasy
+     * core library.
+     *
+     * @param name  the type name that may be implicitly defined
+     *
+     * @return True iff the name identifies a `Type` that is implicitly defined
+     * @return (conditional) the specified `Type`
+     */
+    conditional Type typeForImplicitName(String name)
+        {
+        return implicitTypes.get(name);
         }
 
     /**

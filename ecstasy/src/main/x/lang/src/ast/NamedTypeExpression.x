@@ -69,7 +69,7 @@ const NamedTypeExpression(Token[]?          moduleNames,
             // if we are resolving the first name, and no type exists within the module for that
             // name, then the name may be an implicit import
             else if (Loop.first && moduleNames == Null,
-                    type := TypeSystem.implicitTypes.get(name.valueText))
+                    type := typeSystem.typeForImplicitName(name.valueText))
                 {
                 }
             else
