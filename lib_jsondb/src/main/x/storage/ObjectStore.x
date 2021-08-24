@@ -615,12 +615,7 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
             // knowledge of model categorization is owned by the ObjectStore sub-classes; this is
             // just an initial guess at this level; sub-classes should override this if there is a
             // more correct calculation
-            model = switch (filesUsed)
-                {
-                case 0: Empty;
-                case 1: Small;
-                default: Medium;
-                };
+            model = filesUsed == 0 ? Empty : Small;
             }
 
         return True;
