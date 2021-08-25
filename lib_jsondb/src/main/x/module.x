@@ -243,8 +243,8 @@ module jsondb.xtclang.org
         // before giving up with a failure; this is one of those failures that could only happen in
         // a production system, and is the type of failure that is impossible to reproduce
         Exception failure;
-        failure = new Exception(); // TODO GG this is a temporary work-around
-        for (Int i : 1..3)
+        Int       retry = 3;
+        do
             {
             try
                 {
@@ -281,8 +281,8 @@ module jsondb.xtclang.org
                 failure = e;
                 }
             }
+        while (--retry > 0);
 
-        // TODO GG COMPILER-81: The variable "failure" is not definitely assigned. ("failure")
         throw failure;
         }
     }

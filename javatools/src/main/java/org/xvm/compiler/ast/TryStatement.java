@@ -165,11 +165,9 @@ public class TryStatement
 
         if (cCatches > 0)
             {
-            Context ctxNext = ctxOrig.enter();
-
-            // now we collect all of the impact from the end of the "try" block, together with all
-            // of the impact from the end of each "catch" block, which is semantically the same
-            // as the following "if" ladder:
+            // now we combine the impact from the end of the "try" block with the impacts from
+            // the end of each "catch" block, which is semantically the same as the following "if"
+            // ladder:
             //
             //    catch (e1)          if (e1())
             //        {                   {
@@ -184,8 +182,22 @@ public class TryStatement
             //                            // unreachable else clause
             //                            throw ...
             //                            }
-            // the only difference is that the top context is not an IfContext, which prevents any
-            // narrowing assumptions from "catch" scopes percolating up to the original context
+            // the only difference is that the top context is an extension of the IfContext that
+            // prevents any narrowing assumptions from "catch" scopes percolating up to the original
+            // context
+
+            Context ctxNext = new Context.IfContext(ctxOrig, true)
+                {
+                @Override
+                protected void promoteNarrowedType(String sName, Argument arg, Branch branch)
+                    {
+                    }
+
+                @Override
+                protected void promoteNarrowedGenericType(String sName, TypeConstant type, Branch branch)
+                    {
+                    }
+                };
 
             boolean fReachable = ctxTryBlock.isReachable();
             if (fReachable)
@@ -200,8 +212,8 @@ public class TryStatement
                 CatchStatement catchOld = catches.get(i);
                 CatchStatement catchNew = (CatchStatement) catchOld.validate(ctxCatch, errs);
 
+                fReachable |= ctxCatch.isReachable();
                 ctxNext     = ctxCatch.exit();
-                fReachable |= ctxNext.isReachable();
 
                 if (catchNew == null)
                     {
