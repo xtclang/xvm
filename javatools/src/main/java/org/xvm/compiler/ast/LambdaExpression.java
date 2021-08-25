@@ -65,11 +65,12 @@ public class LambdaExpression
     // ----- constructors --------------------------------------------------------------------------
 
     /**
+     * Construct the LambdaExpression.
      *
      * @param params     either a list of Expression objects or a list of Parameter objects
-     * @param operator
-     * @param body
-     * @param lStartPos
+     * @param operator   the operator (for now always {@link Id#LAMBDA})
+     * @param body       the StatementBlock of the lambda
+     * @param lStartPos   the expression's start position in the source code
      */
     public LambdaExpression(List params, Token operator, StatementBlock body, long lStartPos)
         {
@@ -232,7 +233,7 @@ public class LambdaExpression
         // just like the MethodDeclarationStatement, lambda expressions are considered to be
         // completely opaque, and so a lambda defers the processing of its children at this point,
         // because it wants everything around its children to be set up by the time those children
-        // need to be able to answer all of the questions about names and types and so on
+        // need to be able to answer all the questions about names and types and so on
         if (m_lambda == null)
             {
             mgr.deferChildren();
@@ -284,7 +285,7 @@ public class LambdaExpression
         //   lambda (m_lambda)
         // - when the expression was subsequently asked to generate code that obtains the lambda
         //   (via generateAssignment), it was then able to use that VAS information to build the
-        //   final signature for the lambda, including all of the parameters necessary to capture
+        //   final signature for the lambda, including all the parameters necessary to capture
         //   the various variables in the lexical scope of the lambda declaration that needed to be
         //   passed to the lambda (via FBIND)
         // - so now, at this point, we have the signature, we have the method structure, and we just
@@ -370,10 +371,7 @@ public class LambdaExpression
             return fit;
             }
 
-        if (typeRequired == null || !hasOnlyParamNames())
-            {
-            return calcFit(ctx, getImplicitType(ctx), typeRequired);
-            }
+        assert typeRequired != null; // the calcFit() above would have returned a "Fit""
 
         if (typeRequired instanceof IntersectionTypeConstant)
             {
@@ -1343,7 +1341,7 @@ public class LambdaExpression
         protected void markVarRead(boolean fNested, String sName, Token tokName, ErrorListener errs)
             {
             // variable capture will create a parameter (a variable in this scope) for the lambda,
-            // so if the variable isn't already declared in this scope but it exists in the outer
+            // so if the variable isn't already declared in this scope, but it exists in the outer
             // scope, then capture it
             Context ctxOuter = getOuterContext();
             if (!isVarDeclaredInThisScope(sName) && ctxOuter.isVarReadable(sName))

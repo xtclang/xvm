@@ -265,8 +265,7 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                         continue;
                         }
 
-                    // TODO GG val mapByTx = history.computeIfAbsent(key, () -> new SkiplistMap());
-                    val mapByTx = history.computeIfAbsent(key, () -> new SkiplistMap<Int, Value|Deletion>());
+                    val mapByTx = history.computeIfAbsent(key, () -> new SkiplistMap());
                     mapByTx.put(prepareId, value);
                     }
 
