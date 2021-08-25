@@ -106,6 +106,12 @@ service JsonValueStore<Value extends immutable Const>
      */
     protected SkiplistMap<Int, Range<Int>> storageLayout = new SkiplistMap();
 
+    /**
+     * The append offset, measured in Chars, within the data file.
+     * (Initialized to an obviously illegal value.)
+     */
+    protected Int storageOffset = Int.minvalue;
+
     import TxManager.NO_TX;
 
     /**
@@ -132,6 +138,7 @@ service JsonValueStore<Value extends immutable Const>
     @Override
     Value load(Int txId)
         {
+        updateReadStats();
         if (Changes tx := checkTx(txId))
             {
             return currentValue(tx);
@@ -266,8 +273,27 @@ service JsonValueStore<Value extends immutable Const>
         {
         assert !writeIds.empty;
 
-        StringBuffer buf          = new StringBuffer();
-        Int          lastCommitId = NO_TX;
+        StringBuffer buf = new StringBuffer();
+        Int offset;
+        if (cleanupPending)
+            {
+            // rebuild the contents of the file, keeping only the transactions that we need
+            (String json, storageLayout) = rebuildJson(dataFile.contents.unpackString(), storageLayout);
+
+            // we don't want the closing "\n]"
+            offset = json.size-2;
+            buf.append(json[0..offset));
+
+            // everything is getting replaced, and has now been moved into the buffer, so the
+            // storage offset of what we are keeping from the existing file is 0
+            this.storageOffset = 0;
+            }
+        else
+            {
+            offset = this.storageOffset;
+            }
+
+        Int lastCommitId = NO_TX;
         for (Int writeId : writeIds)
             {
             // because the same array of writeIds are sent to all of the potentially enlisted
@@ -280,24 +306,36 @@ service JsonValueStore<Value extends immutable Const>
                 // build the String that will be appended to the disk file
                 // format is "{"tx":14, "value":{...}},"; comma is first (since we are appending)
                 buf.append(",\n{\"tx\":")
-                  .append(tx.readId)
-                  .append(", \"value\":")
-                  .append(json)
-                  .add   ('}');
+                   .append(tx.readId)
+                   .append(", \"value\":");
+
+                Int start = buf.size;
+                buf.append(json);
+                Int end   = buf.size;
+
+                buf.add('}');
 
                 // remember the id of the last transaction that we process here
                 lastCommitId = tx.readId;
+
+                // remember the transaction location
+                storageLayout.put(lastCommitId, [offset+start .. offset+end));
                 }
             }
 
-        if (lastCommitId != NO_TX)
+        if (lastCommitId != NO_TX || cleanupPending)
             {
-            // the JSON value data is inside an array
+            // update where we will append the next record to, in terms of Chars (not bytes), so
+            // that subsequent storageLayout information can be determined without expanding the
+            // contents of the UTF-8 encoded file into Chars to calculate the "append location"
+            this.storageOffset += buf.size;
+
+            // the JSON value data is inside an array, so "close" the array
             buf.append("\n]");
 
             // write the changes to disk
             File file = dataFile;
-            if (file.exists)
+            if (file.exists && !cleanupPending)
                 {
                 Int length = file.size;
 
@@ -311,8 +349,9 @@ service JsonValueStore<Value extends immutable Const>
             else
                 {
                 // replace the opening "," with an array begin "["
-                buf[0] = '[';
-                file.contents = buf.toString().utf8();
+                buf[0]         = '[';
+                file.contents  = buf.toString().utf8();
+                cleanupPending = False;
                 }
 
             // remember which is the "current" value
@@ -323,6 +362,8 @@ service JsonValueStore<Value extends immutable Const>
                 {
                 inFlight.remove(writeId);
                 }
+
+            updateWriteStats();
             }
         }
 
@@ -380,6 +421,7 @@ service JsonValueStore<Value extends immutable Const>
                 case Lesser:
                     // discard the transaction
                     history.remove(presentId);
+                    storageLayout.remove(presentId);
                     discarded = True;
 
                     // advance to the next transaction in our history log
@@ -442,10 +484,18 @@ service JsonValueStore<Value extends immutable Const>
 
         if (discarded)
             {
-            cleanupPending = True;
             if (force)
                 {
-                cleanup();
+                (String json, storageLayout) = rebuildJson(dataFile.contents.unpackString(), storageLayout);
+                this.storageOffset += json.size - 2; // appends will occur before the closing "\n]"
+                dataFile.contents = json.utf8();
+                cleanupPending = False;
+
+                updateWriteStats();
+                }
+            else
+                {
+                cleanupPending = True;
                 }
             }
         }
@@ -522,10 +572,12 @@ service JsonValueStore<Value extends immutable Const>
         Byte[] bytes      = file.contents;
         String jsonStr    = bytes.unpackString();
         Parser fileParser = new Parser(jsonStr.toReader());
+        Int    txCount    = 0;
         using (val arrayParser = fileParser.expectArray())
             {
             while (!arrayParser.eof)
                 {
+                ++txCount;
                 using (val objectParser = arrayParser.expectObject())
                     {
                     objectParser.expectKey("tx");
@@ -551,6 +603,12 @@ service JsonValueStore<Value extends immutable Const>
 
         history.put(closest, value);
         storageLayout.put(closest, txLoc);
+        this.storageOffset = jsonStr.size - 2; // append position is before the closing "\n]"
+        if (txCount > 0)
+            {
+            // there's extra stuff in the file that we should get rid of now
+            retainTx(new SkiplistSet<Int>(1).add(closest), force=True);
+            }
         }
 
     @Override
@@ -642,20 +700,13 @@ service JsonValueStore<Value extends immutable Const>
                 else
                     {
                     // format all of the parsed data into a newly formatted file
-                    StringBuffer buf = new StringBuffer(jsonStr.size);
-                    Loop: for ((Int txId, Range<Int> txLoc) : byTx)
-                        {
-                        buf.add(Loop.first ? '[' : ',')
-                           .append("\n{\"tx\":")
-                           .append(txId)
-                           .append(", \"value\":")
-                           .append(jsonStr[txLoc]);
-                        }
-                    buf.append("\n]");
-                    dataFile.contents = buf.toString().utf8();
+                    String jsonFix = rebuildJson(jsonStr, byTx);
+                    dataFile.contents = jsonFix.utf8();
+                    updateWriteStats();
                     log($"During deepScan() of DBValue \"{info.path}\", {byTx.size} transactions were recovered.");
                     }
 
+                updateWriteStats();
                 return True;
                 }
             catch (Exception e)
@@ -668,11 +719,58 @@ service JsonValueStore<Value extends immutable Const>
         }
 
     /**
-     * Clean up old transactions on the disk.
+     * Re-format the JSON structure that is stored on disk, to contain only the transactions
+     * specified in the passed map, pulled from the passed JSON structure.
      */
-    void cleanup() // REVIEW should this be here or on the base ObjectStore class?
+    (String newJson, SkiplistMap<Int, Range<Int>> newLocationsByTx) rebuildJson(String json, SkiplistMap<Int, Range<Int>> byTx)
         {
-        TODO
+        StringBuffer                 buf    = new StringBuffer(json.size);
+        SkiplistMap<Int, Range<Int>> newLoc = new SkiplistMap();
+
+        Loop: for ((Int txId, Range<Int> txLoc) : byTx)
+            {
+            buf.add(Loop.first ? '[' : ',')
+               .append("\n{\"tx\":")
+               .append(txId)
+               .append(", \"value\":");
+
+            Int startPos = buf.size;
+            buf.append(json[txLoc]);
+            Int endPos = buf.size;
+            newLoc.put(txId, [startPos..endPos));
+            }
+
+        buf.append("\n]");
+        return buf.toString(), newLoc;
+        }
+
+    /**
+     * Update the access statistics.
+     */
+    void updateReadStats()
+        {
+        @Inject Clock clock;
+        lastAccessed = clock.now;
+        }
+
+    /**
+     * Update the data modification statistics.
+     */
+    void updateWriteStats()
+        {
+        if (dataFile.exists)
+            {
+            filesUsed    = 1;
+            bytesUsed    = dataFile.size;
+            lastModified = dataFile.modified;
+            }
+        else
+            {
+            @Inject Clock clock;
+            filesUsed    = 0;
+            bytesUsed    = 0;
+            lastModified = clock.now;
+            }
         }
 
     @Override
