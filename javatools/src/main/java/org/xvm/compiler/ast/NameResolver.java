@@ -15,7 +15,8 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
-import org.xvm.asm.Parameter;
+import org.xvm.asm.ModuleStructure;
+import org.xvm.asm.PackageStructure;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.TypedefStructure;
 import org.xvm.asm.XvmStructure;
@@ -754,6 +755,18 @@ public class NameResolver
             // transitions the NameResolver into a "type mode", which is a one-way transition
             switch (component.getFormat())
                 {
+                case PACKAGE:
+                    PackageStructure pkg = (PackageStructure) component;
+                    if (pkg.isModuleImport())
+                        {
+                        ModuleStructure module = pkg.getImportedModule();
+                        component = module.isFingerprint()
+                                ? module.getFingerprintOrigin()
+                                : module;
+                        id = component.getIdentityConstant();
+                        }
+                    break;
+
                 case PROPERTY:
                     if (((PropertyStructure) component).isGenericTypeParameter())
                         {

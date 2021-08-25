@@ -353,12 +353,7 @@ module TestNumbers
 
     void testAggregator()
         {
-        // TODO GG import agg.* does not work
-        import agg.Sum;
-        import agg.Average;
-        import agg.Min;
-        import agg.Max;
-        import agg.MinMax;
+        import agg.*;
 
         console.println("\n** testAggregator()");
 
