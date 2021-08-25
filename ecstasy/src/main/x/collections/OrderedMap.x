@@ -69,6 +69,9 @@ interface OrderedMap<Key extends Orderable, Value>
      */
     conditional Key floor(Key key);
 
+    @Override
+    @RO OrderedSet<Key> keys;
+
 
     // ----- Entry ---------------------------------------------------------------------------------
 

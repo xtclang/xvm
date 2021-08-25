@@ -6,7 +6,8 @@
  * associated with maintaining a balanced structure.
  */
 class SkiplistSet<Element extends Orderable>
-        extends MapSet<Element>
+        extends OrderedMapSet<Element>
+        implements OrderedSet<Element>
     {
     // ----- constructors --------------------------------------------------------------------------
 

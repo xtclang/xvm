@@ -181,7 +181,7 @@ class OrderedMapSlice<Key extends Orderable, Value>
         }
 
     @Override
-    @Lazy public/private Set<Key> keys.calc()
+    @Lazy public/private KeySet keys.calc()
         {
         return new KeySet();
         }
@@ -294,7 +294,7 @@ class OrderedMapSlice<Key extends Orderable, Value>
     // ----- Sliceable interface -------------------------------------------------------------------
 
     @Override
-    @Op("[..]") OrderedMap<Key, Value> slice(Range<Key> indexes)
+    @Op("[..]") OrderedMapSlice<Key, Value> slice(Range<Key> indexes)
         {
         // use the orderer instead of the range's own logic, since the custom key ordering
         // doesn't necessarily match the natural ordering used by the range
@@ -387,13 +387,13 @@ class OrderedMapSlice<Key extends Orderable, Value>
         }
 
     @Override
-    @Op("[[..]]") OrderedMap<Key, Value> sliceInclusive(Range<Index> indexes)
+    @Op("[[..]]") OrderedMapSlice<Key, Value> sliceInclusive(Range<Index> indexes)
         {
         return slice(indexes.ensureInclusive());
         }
 
     @Override
-    @Op("[[..)]") OrderedMap<Key, Value> sliceExclusive(Range<Index> indexes)
+    @Op("[[..)]") OrderedMapSlice<Key, Value> sliceExclusive(Range<Index> indexes)
         {
         return slice(indexes.ensureExclusive());
         }
@@ -411,8 +411,14 @@ class OrderedMapSlice<Key extends Orderable, Value>
      * A representation of all of the Keys in the Map.
      */
     protected class KeySet
-            implements Set<Key>
+            implements OrderedSet<Key>
         {
+        @Override
+        conditional Orderer ordered()
+            {
+            return this.OrderedMapSlice.ordered();
+            }
+
         @Override
         Int size.get()
             {
@@ -426,9 +432,71 @@ class OrderedMapSlice<Key extends Orderable, Value>
             }
 
         @Override
-        Iterator<Element> iterator()
+        conditional Key first()
+            {
+            return this.OrderedMapSlice.first();
+            }
+
+        @Override
+        conditional Key last()
+            {
+            return this.OrderedMapSlice.last();
+            }
+
+        @Override
+        conditional Key next(Key key)
+            {
+            return this.OrderedMapSlice.next(key);
+            }
+
+        @Override
+        conditional Key prev(Key key)
+            {
+            return this.OrderedMapSlice.prev(key);
+            }
+
+        @Override
+        conditional Key ceiling(Key key)
+            {
+            return this.OrderedMapSlice.ceiling(key);
+            }
+
+        @Override
+        conditional Key floor(Key key)
+            {
+            return this.OrderedMapSlice.floor(key);
+            }
+
+        @Override
+        Iterator<Key> iterator()
             {
             return new KeyIterator();
+            }
+
+        @Override
+        @Op("[..]") KeySet slice(Range<Key> keys)
+            {
+            return this.OrderedMapSlice.slice(keys).keys;
+            }
+
+        @Override
+        @Op("[[..]]") KeySet sliceInclusive(Range<Key> keys)
+            {
+            return this.OrderedMapSlice.sliceInclusive(keys).keys;
+            }
+
+        @Override
+        @Op("[[..)]") KeySet sliceExclusive(Range<Key> keys)
+            {
+            return this.OrderedMapSlice.sliceExclusive(keys).keys;
+            }
+
+        @Override
+        OrderedSet<Key> reify()
+            {
+            // TODO GG: assert Orderer orderer := ordered();
+            // TODO GG: Orderer orderer = this.OrderedMapSlice.compare;
+            return new SkiplistSet<Key>(size, this.OrderedMapSlice.compare).addAll(this);
             }
 
         /**

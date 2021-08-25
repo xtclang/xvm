@@ -127,7 +127,7 @@ class SkiplistMap<Key extends Orderable, Value>
         }
 
     @Override
-    @Lazy public/private Set<Key> keys.calc()
+    @Lazy public/private OrderedSet<Key> keys.calc()
         {
         return new KeySet();
         }
@@ -660,7 +660,7 @@ class SkiplistMap<Key extends Orderable, Value>
      */
     protected class KeySet
             extends CollectionImpl<Key>
-            implements Set<Key>
+            implements OrderedSet<Key>
         {
         @Override
         protected class IteratorImpl
@@ -678,7 +678,7 @@ class SkiplistMap<Key extends Orderable, Value>
             }
 
         @Override
-        conditional Orderer? ordered()
+        conditional Orderer ordered()
             {
             return True, this.SkiplistMap.compare;
             }
