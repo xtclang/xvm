@@ -102,7 +102,7 @@ service JsonValueStore<Value extends immutable Const>
     protected SkiplistMap<Int, Value> history = new SkiplistMap();
 
     /**
-     * A record of how all persistent transactions are layed out on disk.
+     * A record of how all persistent transactions are laid out on disk.
      */
     protected SkiplistMap<Int, Range<Int>> storageLayout = new SkiplistMap();
 
@@ -603,7 +603,7 @@ service JsonValueStore<Value extends immutable Const>
 
         history.put(closest, value);
         storageLayout.put(closest, txLoc);
-        this.storageOffset = jsonStr.size - 2; // append position is before the closing "\n]"
+        storageOffset = jsonStr.size - 2; // append position is before the closing "\n]"
         if (txCount > 0)
             {
             // there's extra stuff in the file that we should get rid of now
