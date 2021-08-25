@@ -2071,8 +2071,8 @@ public abstract class Component
                     throw new IllegalStateException();
                 }
 
-            // because some of the components in the graph that we would need to visit in order to
-            // answer the question about generic type parameters are not yet ready to answer those
+            // since some components in the graph that we would need to visit in order to answer the
+            // question about generic type parameters may not yet be ready to answer those
             // questions, we rely instead on a virtual child's knowledge of its parents' type
             // parameters to short-circuit that search; we know that the virtual child type can
             // answer the question precisely because it exists (they are created no earlier than a
@@ -2113,7 +2113,7 @@ public abstract class Component
                 }
             else
                 {
-                return typeContrib.resolveContributedName(sName, access, collector);
+                return typeContrib.resolveContributedName(sName, access, null, collector);
                 }
             }
 

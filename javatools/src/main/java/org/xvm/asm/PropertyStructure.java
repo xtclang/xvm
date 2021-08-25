@@ -618,7 +618,7 @@ public class PropertyStructure
         // "invisible" without the name qualification
 
         SimpleCollector  collectorTemp = new SimpleCollector(collector.getErrorListener());
-        ResolutionResult result        = getType().resolveContributedName(sName, access, collectorTemp);
+        ResolutionResult result        = getType().resolveContributedName(sName, access, null, collectorTemp);
         if (result == ResolutionResult.RESOLVED)
             {
             // we only allow static properties (constants) and singleton classes

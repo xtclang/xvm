@@ -833,13 +833,15 @@ public abstract class TypeConstant
      *
      * @param sName      the name to resolve
      * @param access     the required access
+     * @param idMethod   (optional) the method within which the name resolution is performed
      * @param collector  the collector to which the potential name matches will be reported
      *
      * @return the resolution result
      */
-    public ResolutionResult resolveContributedName(String sName, Access access, ResolutionCollector collector)
+    public ResolutionResult resolveContributedName(
+            String sName, Access access, MethodConstant idMethod, ResolutionCollector collector)
         {
-        return getUnderlyingType().resolveContributedName(sName, access, collector);
+        return getUnderlyingType().resolveContributedName(sName, access, idMethod, collector);
         }
 
     @Override

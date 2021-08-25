@@ -154,8 +154,7 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                         else
                             {
                             // the key did not exist in the readId transaction
-                            // TODO GG prev = Deleted;
-                            prev = Deletion.Deleted;
+                            prev = Deleted;
                             }
 
                         if (&prev != &latest)
@@ -489,9 +488,7 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
             {
             if (Value|Deletion value := tx.peekMods().get(key))
                 {
-                // return value != Deleted;   // TODO GG
-                // return &value != &Deleted; // TODO GG
-                return !value.is(Deletion);
+                return value != Deleted;
                 }
 
             txId = tx.readId;

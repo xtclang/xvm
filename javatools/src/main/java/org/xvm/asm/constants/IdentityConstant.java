@@ -152,7 +152,7 @@ public abstract class IdentityConstant
      * For example, Map.Entry is a nest mate of both HashMap and HashMap.EntrySet.
      *
      * @param idClass  the class to test nest the visibility from; note that it can represent
-     *                 a non virtual (e.g. anonymous) inner class
+     *                 a non-virtual (e.g. anonymous) inner class
      *
      * @return true if this class is a child "privately" visible from the specified class context
      */

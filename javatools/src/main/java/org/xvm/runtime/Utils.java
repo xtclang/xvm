@@ -675,7 +675,7 @@ public abstract class Utils
 
                     // create a pseudo frame to deal with the wait, but don't allow any other fiber
                     // to interleave until a response comes back (as in "forbidden" reentrancy)
-                    Frame frameWait = Utils.createWaitFrame(frame, cfResult, Op.A_BLOCK);
+                    Frame frameWait = createWaitFrame(frame, cfResult, Op.A_BLOCK);
                     frameWait.addContinuation(continuation);
 
                     return frame.call(frameWait);
@@ -725,7 +725,7 @@ public abstract class Utils
                         // the class must have a no-params constructor to call
                         MethodStructure constructor = clz.findConstructor(TypeConstant.NO_TYPES);
                         iResult = template.construct(frame, constructor,
-                                template.getCanonicalClass(), null, Utils.OBJECTS_NONE, Op.A_STACK);
+                                template.getCanonicalClass(), null, OBJECTS_NONE, Op.A_STACK);
                         }
                     break;
                     }
@@ -804,8 +804,7 @@ public abstract class Utils
             {
             // there must be an initializer
             MethodStructure methodInit = prop.getInitializer();
-            ObjectHandle[]  ahVar      =
-                Utils.ensureSize(Utils.OBJECTS_NONE, methodInit.getMaxVars());
+            ObjectHandle[]  ahVar      = ensureSize(OBJECTS_NONE, methodInit.getMaxVars());
 
             return frame.call1(methodInit, null, ahVar, Op.A_STACK);
             }
@@ -1704,7 +1703,7 @@ public abstract class Utils
         MethodStructure constructor = ANNOTATION_TEMPLATE_CONSTRUCT;
         ObjectHandle[]  ahArg = new ObjectHandle[constructor.getMaxVars()];
         ahArg[0] = hClass;
-        ahArg[1] = Utils.makeArgumentArrayHandle(frame.poolContext(), ahAnnoArg);
+        ahArg[1] = makeArgumentArrayHandle(frame.poolContext(), ahAnnoArg);
 
         ClassTemplate template = ANNOTATION_TEMPLATE_TEMPLATE;
         return template.construct(frame, constructor,

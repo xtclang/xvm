@@ -439,13 +439,14 @@ public class TerminalTypeConstant
         }
 
     @Override
-    public ResolutionResult resolveContributedName(String sName, Access access, ResolutionCollector collector)
+    public ResolutionResult resolveContributedName(
+           String sName, Access access, MethodConstant idMethod, ResolutionCollector collector)
         {
         if (!isSingleDefiningConstant())
             {
             // this can only happen if this type is a Typedef referring to a relational type
             TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
-            return constId.getReferredToType().resolveContributedName(sName, access, collector);
+            return constId.getReferredToType().resolveContributedName(sName, access, idMethod, collector);
             }
 
         Constant constant = getDefiningConstant();
@@ -464,20 +465,36 @@ public class TerminalTypeConstant
             case Package:
             case Class:
                 {
-                IdentityConstant constClz = (IdentityConstant) constant;
+                IdentityConstant idClz = (IdentityConstant) constant;
+                if (idMethod != null)
+                    {
+                    if (idClz.isNestMateOf(idMethod.getClassIdentity()))
+                        {
+                        access = Access.PRIVATE;
+                        }
+                    else
+                        {
+                        IdentityConstant idParent = idClz.getParentConstant();
+                        if (idParent instanceof MethodConstant && idParent.equals(idMethod))
+                            {
+                            // the class is defined inside of the method
+                            access = Access.PRIVATE;
+                            }
+                        }
+                    }
 
-                return constClz.getComponent().resolveName(sName, access, collector);
+                return idClz.getComponent().resolveName(sName, access, collector);
                 }
 
             case ThisClass:
             case ParentClass:
             case ChildClass:
                 return ((PseudoConstant) constant).getDeclarationLevelClass().getType().
-                        resolveContributedName(sName, access, collector);
+                        resolveContributedName(sName, access, idMethod, collector);
 
             case Typedef:
                 return ((TypedefConstant) constant).getReferredToType().
-                    resolveContributedName(sName, access, collector);
+                    resolveContributedName(sName, access, idMethod, collector);
 
             case UnresolvedName:
                 return ResolutionResult.POSSIBLE;

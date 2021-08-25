@@ -718,9 +718,10 @@ public class ParameterizedTypeConstant
         }
 
     @Override
-    public ResolutionResult resolveContributedName(String sName, Access access, ResolutionCollector collector)
+    public ResolutionResult resolveContributedName(
+            String sName, Access access, MethodConstant idMethod, ResolutionCollector collector)
         {
-        ResolutionResult result = super.resolveContributedName(sName, access, collector);
+        ResolutionResult result = super.resolveContributedName(sName, access, idMethod, collector);
         if (result == ResolutionResult.RESOLVED)
             {
             return result;
@@ -728,7 +729,7 @@ public class ParameterizedTypeConstant
 
         for (TypeConstant typeParam : m_atypeParams)
             {
-            ResolutionResult resultParam = typeParam.resolveContributedName(sName, access, collector);
+            ResolutionResult resultParam = typeParam.resolveContributedName(sName, access, idMethod, collector);
             if (resultParam == ResolutionResult.RESOLVED)
                 {
                 return resultParam;

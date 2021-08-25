@@ -231,16 +231,17 @@ public class UnionTypeConstant
         }
 
     @Override
-    public ResolutionResult resolveContributedName(String sName, Access access, ResolutionCollector collector)
+    public ResolutionResult resolveContributedName(
+            String sName, Access access, MethodConstant idMethod, ResolutionCollector collector)
         {
         // for the UnionType to contribute a name, either side needs to find it
-        ResolutionResult result1 = m_constType1.resolveContributedName(sName, access, collector);
+        ResolutionResult result1 = m_constType1.resolveContributedName(sName, access, idMethod, collector);
         if (result1 == ResolutionResult.RESOLVED)
             {
             return result1;
             }
 
-        ResolutionResult result2 = m_constType2.resolveContributedName(sName, access, collector);
+        ResolutionResult result2 = m_constType2.resolveContributedName(sName, access, idMethod, collector);
         if (result2 == ResolutionResult.RESOLVED)
             {
             return result2;

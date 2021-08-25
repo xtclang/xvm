@@ -889,11 +889,16 @@ public class Context
                 {
                 if (isReservedName(sName))
                     {
+                    MethodStructure  method = getMethod();
+                    IdentityConstant idCtx  = method == null
+                            ? getThisClass().getIdentityConstant()
+                            : method.getIdentityConstant();
+
                     tokName.log(errs, getSource(), Severity.ERROR,
                             sName.startsWith("this") ? Compiler.NO_THIS     :
                             sName.equals("super")    ? Compiler.NO_SUPER    :
                                                        Compiler.NAME_MISSING,
-                            sName, getMethod().getIdentityConstant().getValueString());
+                            sName, idCtx.getValueString());
 
                     // add the variable to the reserved names that are allowed, to avoid
                     // repeating the same error logging
@@ -1549,9 +1554,12 @@ public class Context
      */
     public int getStepsToOuterClass(ClassStructure clzParent)
         {
-        IdentityConstant idParent  = clzParent.getIdentityConstant();
-        Component        component = getMethod().getParent().getParent(); // namespace
         int              cSteps    = 0;
+        IdentityConstant idParent  = clzParent.getIdentityConstant();
+        MethodStructure  method    = getMethod();
+        Component        component = method == null
+                ? getThisClass()
+                : method.getParent().getParent();
 
         while (component != null)
             {
@@ -2526,30 +2534,13 @@ public class Context
             // inference; otherwise, the inference takes precedence
             if (!(arg instanceof TargetInfo))
                 {
-                SimpleCollector collector = new SimpleCollector(errs);
-                TypeConstant    typeLeft  = f_typeLeft;
-                Access          access    = typeLeft.getAccess();
+                SimpleCollector  collector = new SimpleCollector(errs);
+                TypeConstant     typeLeft  = f_typeLeft;
+                Access           access    = typeLeft.getAccess();
+                MethodStructure  method    = getMethod();
+                MethodConstant   idMethod  = method == null ? null : method.getIdentityConstant();
 
-                if (typeLeft.isExplicitClassIdentity(true))
-                    {
-                    IdentityConstant idLeft = (IdentityConstant) typeLeft.
-                            resolveAutoNarrowingBase().getDefiningConstant();
-                    if (idLeft.isNestMateOf(getThisClass().getIdentityConstant()))
-                        {
-                        access = Access.PRIVATE;
-                        }
-                    else
-                        {
-                        IdentityConstant idParent = idLeft.getParentConstant();
-                        if (idParent instanceof MethodConstant &&
-                                idParent.equals(getMethod().getIdentityConstant()))
-                            {
-                            // the class is defined inside of the method
-                            access = Access.PRIVATE;
-                            }
-                        }
-                    }
-                if (typeLeft.resolveContributedName(sName, access, collector) == ResolutionResult.RESOLVED)
+                if (typeLeft.resolveContributedName(sName, access, idMethod, collector) == ResolutionResult.RESOLVED)
                     {
                     // inference succeeded
                     return collector.getResolvedConstant();
