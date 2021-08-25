@@ -553,6 +553,7 @@ service JsonValueStore<Value extends immutable Const>
         assert !dataFile.exists;
 
         history.put(0, initial);
+        lastCommit = 0;
         }
 
     @Override
@@ -603,12 +604,16 @@ service JsonValueStore<Value extends immutable Const>
 
         history.put(closest, value);
         storageLayout.put(closest, txLoc);
-        storageOffset = jsonStr.size - 2; // append position is before the closing "\n]"
-        if (txCount > 0)
+        if (txCount > 1)
             {
             // there's extra stuff in the file that we should get rid of now
-            retainTx(new SkiplistSet<Int>(1).add(closest), force=True);
+            (jsonStr, storageLayout) = rebuildJson(jsonStr, storageLayout);
+            dataFile.contents = jsonStr.utf8();
+            updateWriteStats();
             }
+
+        storageOffset = jsonStr.size - 2; // append position is before the closing "\n]"
+        lastCommit    = closest;
         }
 
     @Override
@@ -738,6 +743,8 @@ service JsonValueStore<Value extends immutable Const>
             buf.append(json[txLoc]);
             Int endPos = buf.size;
             newLoc.put(txId, [startPos..endPos));
+
+            buf.append('}');
             }
 
         buf.append("\n]");
