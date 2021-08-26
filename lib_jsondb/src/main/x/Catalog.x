@@ -225,6 +225,15 @@ service Catalog<Schema extends RootSchema>
         }
 
     /**
+     * A JSON Mapping to use to serialize instances of SysInfo.
+     */
+    @Lazy Mapping<SysInfo> sysInfoMapping.calc()
+        {
+        return jsonSchema.ensureMapping(SysInfo);
+        // TODO GG it didn't like this: return jsonSchema.ensureMapping(Type<SysInfo>);
+        }
+
+    /**
      * True iff the database was opened in read-only mode.
      */
     public/private Boolean readOnly;
