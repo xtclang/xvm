@@ -81,8 +81,30 @@ const Path
                 construct Path(parent, Parent);
                 break;
 
+            case "":
+                throw new IllegalArgument("Name is required");
+
             default:
-                construct Path(parent, Name, name);
+                assert:arg !name.startsWith('/') as $"Name \"{name}\" does not specify a relative path";
+                String remain = name;
+                while (Int slash := remain.indexOf('/'))
+                    {
+                    String part = remain[0..slash);
+                    assert:arg part.size > 0 as "Name \"{name}\" contains empty path element";
+
+                    remain = remain[slash+1..remain.size);
+                    if (remain.size == 0)
+                        {
+                        // the name ended with '/', so we just accidentally took the last path part
+                        remain = part;
+                        }
+                    else
+                        {
+                        parent = new Path(parent, part);
+                        }
+                    }
+
+                construct Path(parent, Name, remain);
                 break;
             }
         }
