@@ -103,6 +103,14 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
 
     // ----- properties ----------------------------------------------------------------------------
 
+    /**
+     * The runtime state of the TxManager:
+     * * **Initial** - the TxManager has been newly created, but has not been used yet
+     * * **Enabled** - the TxManager has been [enabled](enable), and can process transactions
+     * * **Disabled** - the TxManager was previously enabled, but has been [disabled](disable), and
+     *   can not process transactions until it is re-enabled
+     * * **Closed** - the TxManager has been closed, and may not be used again
+     */
     enum Status {Initial, Enabled, Disabled, Closed}
 
     /**
@@ -136,8 +144,17 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         {
         Directory dataDir = catalog.dir;
         Directory sysDir  = dataDir.dirFor("sys").ensure();
-
         return sysDir.fileFor("txlog.json");
+        }
+
+    /**
+     * The transaction log file (sys/txlog.json).
+     */
+    @Lazy public/private File statusFile.calc()
+        {
+        Directory dataDir = catalog.dir;
+        Directory sysDir  = dataDir.dirFor("sys").ensure();
+        return sysDir.fileFor("txmgr.json");
         }
 
     /**
@@ -147,6 +164,16 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
 
     /**
      * The transaction id that was on disk from the last time that the database was closed down.
+     *
+     * There is a specific reasons why this value is kept, even though it may at first seem to be
+     * redundant with respect to the [lastCommitted] property: The [ObjectStore] instances are
+     * lazily initialized, and responsible for reading their own state from persistent storage, and
+     * that state could *theoretically* include transactions that occurred **after** the
+     * lastClosedId. In other words, when initializing, the ObjectStore should not retain its own
+     * latest transction, but rather whatever the *TxManager* defines as the latest.
+     *
+     * This is initialized to [NO_TX], which is an illegal transaction ID, to make it obvious that
+     * the transaction manager's state has not yet been loaded.
      */
     public/private Int lastClosedId = NO_TX;
 
@@ -161,10 +188,14 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      * since the count and the ids are ephemeral.
      *
      * An ID is calculated as the negative of the count; for example, the first transaction would
-     * increment the count to `1`, giving the transaction a "write tx id" of `-1`. The corresponding
-     * "read tx id" is not assigned until an operation within the transaction attempts to perform a
+     * increment the count to `1`, giving the transaction a "writeId" of `-1`. The corresponding
+     * "readId" is not assigned until an operation within the transaction attempts to perform a
      * read, at which point the transaction manager will provide the `lastPrepared` transaction as
-     * the "read tx id".
+     * the "readId".
+     *
+     * (Note that the second `writeId` will be `-5`, and not `-2`. The count is incremented by 1
+     * step, but writeIds are incremented by 4 steps, because each transaction goes through up to 4
+     * states from beginning to fully committed.)
      */
     public/private Int txCount = 0;
 
@@ -190,13 +221,14 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
 
     /**
      * The transactions that have begun, but have not yet committed or rolled back. The key is the
-     * client id.
+     * client id. Each client may have up to one "in flight" transaction at any given time.
      */
     protected/private Map<Int, TxRecord> byClientId = new HashMap();
 
     /**
      * The transactions that have begun, but have not yet committed or rolled back, keyed by the
-     * write transaction id.
+     * write transaction id. These are the same transactions as exist in the [byClientId] map, but
+     * indexed by writeId instead of by client id.
      */
     protected/private Map<Int, TxRecord> byWriteId = new HashMap();
 
@@ -204,7 +236,8 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      * A **count** of the transactions that have begun, but have not yet committed or rolled back,
      * keyed by the read transaction id. The transaction manager uses this information to determine
      * when a historical read transaction can be discarded by the ObjectStore instances; as long as
-     * a read transaction is in use by a write transaction, its information must be available.
+     * a read transaction is in use by a write transaction, its information must be retained and
+     * kept available to clients.
      */
     protected/private Map<Int, Int> byReadId = new HashMap();
 
@@ -230,7 +263,8 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
     protected/private Set<Int> asyncTriggers = [];
 
     /**
-     * A pool of artificial clients for processing triggers.
+     * A pool of artificial clients for processing both sync (validator/rectifier/distributor) and
+     * async triggers.
      */
     protected/private ArrayDeque<Client<Schema>> clientCache = new ArrayDeque();
 
@@ -290,8 +324,6 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             if (status == Initial)
                 {
                 // load the previously saved off transaction manager state from disk
-                // TODO lastClosedId lastPrepared lastCommitted
-
                 File file = logFile;
                 if (file.exists)
                     {
@@ -379,6 +411,9 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         status = Closed;
         }
 
+// TODO seal log file (boolean rotate)
+// TODO validate seal
+// TODO scan log file
 
     // ----- transactional ID helpers --------------------------------------------------------------
 
