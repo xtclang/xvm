@@ -997,6 +997,22 @@ TODO
             }
         buf.append("\n}\n]");
 
+        // append this information to the end of the database tx log, e.g.:
+        //     [
+        //     {
+        //     "_tx":1
+        //     "title":"hello",
+        //     "contacts":[{"k":1, "v":{Bob...}}, {"k":2, "v":{Sam...}}, {"k":7}],
+        //     ...
+        //     },
+        //     {
+        //     "_tx":2
+        //     "title":"goodbye",
+        //     "contacts":[{"k":1, "v":{Bob...}}, {"k":2, "v":{Sam...}}, {"k":7}],
+        //     ...
+        //     }
+        //     ]
+
         File file = logFile;
         if (file.exists)
             {
@@ -1016,24 +1032,6 @@ TODO
             file.contents = buf.toString().utf8();
             }
 
-
-// TODO write this information to the end of the database tx log, e.g. :
-// the "transaction log" just is these appended, e.g.
-//      [
-//      {
-//      "_id":1
-//      "title":"hello",
-//      "contacts":[{"key":1, "value":{Bob...}}, {"key":2, "value":{Sam...}}, {"key":7, "deleted":true}],
-//      ...
-//      },
-//      {
-//      "_id":2
-//      "title":"goodbye",
-//      "contacts":[{"key":1, "value":{Bob...}}, {"key":2, "value":{Sam...}}, {"key":7, "deleted":true}],
-//      ...
-//      }
-//      ]
-
         FutureVar<Tuple<>>? commitAll = Null;
         rec.status = Committing;
         for (ObjectStore store : stores)
@@ -1043,8 +1041,16 @@ TODO
             }
 
         assert commitAll != Null;
-        @Future Boolean completed = commitAll.transform((Tuple<> t) ->
+        @Future Boolean completed = commitAll.transformOrHandle((Tuple<>? t, Exception? e) ->
             {
+            if (e != Null)
+                {
+                // TODO CP: temporary workaround; need to add a log() method to Catalog
+                @Inject Console console;
+                console.println($"HeuristicException during commit caused by: {e}");
+                terminate(rec, RolledBack); // this should be HeuristicRollback
+                return False;
+                }
             terminate(rec, Committed);
             return True;
             });

@@ -474,7 +474,7 @@ service Client<Schema extends RootSchema>
             assert Transaction tx ?= this.tx;
             if (autocommit)
                 {
-                tx.commit();
+                assert tx.commit(); // REVIEW CP: what exception should be raised
                 }
             this.tx = Null;
             }

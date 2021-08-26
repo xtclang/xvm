@@ -625,7 +625,7 @@ service Client<Schema extends RootSchema>
             assert Transaction tx ?= this.tx;
             if (autocommit)
                 {
-                tx.commit();
+                assert tx.commit(); // see jsondb/Client.x
                 }
             this.tx = Null;
             }
