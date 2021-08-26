@@ -118,14 +118,28 @@ const ReflectionMapping<Serializable, StructType extends Struct>(
                 TODO
 
             case Immutable:
-                TODO
+                assert Type baseType := type.modifying();
+                if (val underlying := schema.findMapping(baseType.DataType))
+                    {
+                    return True, underlying.as(Mapping<SubType>);
+                    }
+                return False;
 
             case Access:
                 TODO
 
             case Class:
+                if (type.is(Type<Array>))
+                    {
+                    assert Type elementType := type.resolveFormalType("Element");
+                    if (val elementMapping := schema.findMapping(elementType.DataType))
+                        {
+                        return True, new ArrayMapping<elementType.DataType>(elementMapping).as(Mapping<SubType>);
+                        }
+                    return False;
+                }
+
                 assert val clazz := type.fromClass();
-                val structType = clazz.StructType;
 
                 if (clazz.is(Enumeration))
                     {
@@ -134,6 +148,8 @@ const ReflectionMapping<Serializable, StructType extends Struct>(
 
                 // TODO CP other singletons
                 // TODO CP disallow services
+
+                val structType = clazz.StructType;
 
                 PropertyMapping<structType.DataType>[] fields = new PropertyMapping[];
                 for (Property<structType.DataType> prop : structType.properties)
