@@ -832,15 +832,20 @@ public class DebugConsole
             return Handy.NO_ARGS;
             }
 
-        int               cVars     = frame.f_anNextVar[frame.m_iScope];
-        int               cchVarNum = numlen(cVars-1);
-        ArrayList<String> listVars  = new ArrayList<>(cVars + 1);
-        ArrayList<String> listVals  = new ArrayList<>(cVars + 1);
+        int               cVars    = frame.f_anNextVar[frame.m_iScope];
+        ArrayList<String> listVars = new ArrayList<>(cVars + 1);
+        ArrayList<String> listVals = new ArrayList<>(cVars + 1);
+        int               cchVarNum;
 
         int          index = 0;
         ObjectHandle hThis = frame.f_hThis;
-        if (hThis != null)
+        if (hThis == null)
             {
+            cchVarNum = numlen(cVars-1);
+            }
+        else
+            {
+            cchVarNum = numlen(cVars);
             addVal(listVars, listVals, "this", hThis, index++, cMax, cchVarNum);
             }
 
