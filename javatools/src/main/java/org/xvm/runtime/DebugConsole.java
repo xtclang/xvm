@@ -452,14 +452,28 @@ public class DebugConsole
                         break;
 
                     case "D":
-                        if (cArgs == 1)
+                        if (cArgs >= 1)
                             {
                             String[] asVars = m_asVars;
                             int iVar = parseNonNegative(asParts[1]);
                             if (iVar >= 0 && iVar < asVars.length)
                                 {
-                                ObjectHandle  hVar = getVar(asVars[iVar]);
-                                StringBuilder sb   = new StringBuilder();
+                                ObjectHandle hVar = getVar(asVars[iVar]);
+                                if (cArgs >= 2)
+                                    {
+                                    String sProp = asParts[2];
+                                    try
+                                        {
+                                        hVar = ((GenericHandle) hVar).getField(sProp);
+                                        }
+                                    catch (Throwable e)
+                                        {
+                                        writer.println("Invalid property: " + sProp);
+                                        continue NextCommand;
+                                        }
+                                    }
+
+                                StringBuilder sb = new StringBuilder();
 
                                 renderVar(hVar, false, sb, "   +");
                                 writer.println(sb);
@@ -469,7 +483,7 @@ public class DebugConsole
                         break;
 
                     case "DS":
-                        if (cArgs == 1)
+                        if (cArgs >= 1)
                             {
                             String[] asVars = m_asVars;
                             int iVar = parseNonNegative(asParts[1]);
@@ -479,28 +493,29 @@ public class DebugConsole
                                 if (hVar == null)
                                     {
                                     writer.println("<unassigned>");
-                                    continue NextCommand;
                                     }
-
-                                switch (Utils.callToString(frame, hVar))
+                                else
                                     {
-                                    case Op.R_NEXT:
-                                        writer.println(((StringHandle) frame.popStack()).getStringValue());
-                                        m_stepMode = StepMode.None;
-                                        continue NextCommand;
-
-                                    case Op.R_CALL:
-                                        frame.m_frameNext.addContinuation(frameCaller ->
+                                    if (cArgs >= 2)
+                                        {
+                                        String sProp = asParts[2];
+                                        try
                                             {
-                                            writer.println(((StringHandle) frameCaller.popStack()).getStringValue());
-                                            return enterCommand(frameCaller, iPC, false);
-                                            });
-                                        m_stepMode = StepMode.NaturalCall;
-                                        return Op.R_CALL;
+                                            hVar = ((GenericHandle) hVar).getField(sProp);
+                                            }
+                                        catch (Throwable e)
+                                            {
+                                            writer.println("Invalid property: " + sProp);
+                                            continue NextCommand;
+                                            }
+                                        }
 
-                                    default:
-                                        throw new IllegalStateException();
+                                    if (callToString(frame, hVar, writer))
+                                        {
+                                        return Op.R_CALL;
+                                        }
                                     }
+                                continue NextCommand;
                                 }
                             }
                         break;
@@ -518,6 +533,32 @@ public class DebugConsole
         frame.f_context.setDebuggerActive(
             m_setLineBreaks != null || m_setThrowBreaks != null || m_stepMode != StepMode.None);
         return iPC + 1;
+        }
+
+    /**
+     * Call toString() helper.
+     */
+    private boolean callToString(Frame frame, ObjectHandle hVar, PrintWriter writer)
+        {
+        switch (Utils.callToString(frame, hVar))
+            {
+            case Op.R_NEXT:
+                writer.println(((StringHandle) frame.popStack()).getStringValue());
+                m_stepMode = StepMode.None;
+                return false;
+
+            case Op.R_CALL:
+                frame.m_frameNext.addContinuation(frameCaller ->
+                    {
+                    writer.println(((StringHandle) frameCaller.popStack()).getStringValue());
+                    return enterCommand(frameCaller, m_iPC, false);
+                    });
+                m_stepMode = StepMode.NaturalCall;
+                return true;
+
+            default:
+                throw new IllegalStateException();
+            }
         }
 
     private BreakPoint makeBreakPoint(Frame frame, int iPC)
