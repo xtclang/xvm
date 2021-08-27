@@ -330,9 +330,10 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                     // +++ HACK HACK
                     String content = ecstasy.lang.src.Source.loadText(file);
 
-                    assert Int blockStart := content.lastIndexOf('{');
-                    assert Int idStart := content.indexOf(':', blockStart);
-                    assert Int idEnd   := content.indexOf(',', ++idStart);
+                    assert Int txStart := content.lastIndexOf("\"_tx\":");
+
+                    Int idStart = txStart + 6; // "_tx": length + 1
+                    assert Int idEnd := content.indexOf(',', idStart);
                     String idString = content.slice([idStart .. idEnd));
 
                     Int id = new IntLiteral(idString).toInt64();

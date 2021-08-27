@@ -7,6 +7,8 @@ import json.Parser;
 
 import model.DBObjectInfo;
 
+import TxManager.NO_TX;
+
 
 /**
  * The disk storage implementation for a database "single value".
@@ -111,8 +113,6 @@ service JsonValueStore<Value extends immutable Const>
      * (Initialized to an obviously illegal value.)
      */
     protected Int storageOffset = Int.minvalue;
-
-    import TxManager.NO_TX;
 
     /**
      * The ID of the latest known commit for this ObjectStore.
@@ -264,7 +264,7 @@ service JsonValueStore<Value extends immutable Const>
 
         String json = tx.worker.writeUsing(valueMapping, tx.value);
         tx.json   = json;
-        tx.sealed = true;
+        tx.sealed = True;
         return json;
         }
 

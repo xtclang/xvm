@@ -3,6 +3,8 @@ import json.Mapping;
 
 import model.DBObjectInfo;
 
+import TxManager.NO_TX;
+
 
 /**
  * Provides a key/value storage service for JSON formatted data on disk.
@@ -10,10 +12,13 @@ import model.DBObjectInfo;
  * The disk format follows this style:
  *
  *     [
- *     {"tx":14, [{"d":{...}}, {"k":{...}, "v":{...}}]},
+ *     {"tx":14, [{"k":{...}}, {"k":{...}, "v":{...}}]},
  *     {"tx":17, [{"k":{...}, "v":{...}}, {"k":{...}, "v":{...}}]},
- *     {"tx":18, [{"k":{...}, "v":{...}}, {"k":{...}, "v":{...}}, {"d":{...}}]}
+ *     {"tx":18, [{"k":{...}, "v":{...}}, {"k":{...}, "v":{...}}, {"k":{...}}]}
  *     ]
+ *
+ * where a "k" (key) without a corresponding "v" (value) indicates a deletion and the "[...]" part
+ * is what sealPrepare() will have returned.
  */
 service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
         extends ObjectStore
@@ -62,7 +67,7 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
     protected class Changes(Int writeId, Int readId)
         {
         /**
-         * A map of inserted and updated key/value pairs, keyed by the internal URI form.
+         * A map of inserted and updated key/value pairs.
          */
         OrderedMap<Key, Value|Deletion>? mods;
 
@@ -87,6 +92,13 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                 return map;
                 };
             }
+
+        /*
+         * When the transaction is sealed (or after it is sealed, but before it commits), the
+         * changes to the value in the transaction are rendered for the transaction log, and for
+         * storage on disk.
+         */
+        String? json;
         }
 
     @Override
@@ -101,6 +113,11 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
     protected SkiplistMap<Key, SkiplistMap<Int, Value|Deletion>> history = new SkiplistMap();
 
     /**
+     * The append offset, measured in Chars, within the each data file, keyed by the Key's URI form.
+     */
+    protected Map<String, Int> storageOffset = new HashMap();
+
+    /**
      * Cached map sizes, keyed by transaction id.
      */
     protected SkiplistMap<Int, Int> sizeByTx = new SkiplistMap();
@@ -113,336 +130,18 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
      */
     protected SkiplistMap<Int, OrderedMap<Key, Value|Deletion>> modsByTx = new SkiplistMap();
 
-
-    // ----- ObjectStore transaction handling ------------------------------------------------------
-
-    @Override
-    PrepareResult prepare(Int writeId, Int prepareId)
-        {
-        // the transaction can be prepared if (a) no transaction has modified this value after the
-        // read id, or (b) the "current" value is equal to the read id transaction's value
-        assert Changes tx := checkTx(writeId);
-        if (tx.peekMods().empty)
-            {
-            inFlight.remove(writeId);
-            return CommittedNoChanges;
-            }
-
-        // obtain the transaction modifications (note: we already verified that modifications exist)
-        OrderedMap<Key, Value|Deletion> mods = tx.mods ?: assert;
-
-        // first, we need to verify that there are no conflicts, before we attempt to move the data
-        // into the "prepareId" slot in the history
-        Int readId = tx.readId;
-        if (readId != prepareId - 1)
-            {
-            // interleaving transactions have occurred
-            for ((Key key, Value|Deletion value) : mods)
-                {
-                if (SkiplistMap<Int, Value|Deletion> mapByTx := history.get(key))
-                    {
-                    assert Int latestTx := mapByTx.last(), latestTx < prepareId;
-                    if (latestTx > readId)
-                        {
-                        assert Value|Deletion latest := mapByTx.get(latestTx);
-
-                        Value|Deletion prev;
-                        if (Int prevTx := mapByTx.floor(readId))
-                            {
-                            assert prev := mapByTx.get(prevTx);
-                            }
-                        else
-                            {
-                            // the key did not exist in the readId transaction
-                            prev = Deleted;
-                            }
-
-                        if (&prev != &latest)
-                            {
-                            // the state that this transaction assumes as its starting point was
-                            // altered, so the transaction must roll back
-                            inFlight.remove(writeId);
-                            return FailedRolledBack;
-                            }
-                        }
-                    }
-                }
-            }
-
-        // now that we have verified that there are no conflicts, the changes need to be "re-homed"
-        // into the prepareId transaction in the history, leaving the writeId empty
-        Boolean changed = False;
-        Int     size    = sizeAt(prepareId-1);
-        for ((Key key, Value|Deletion value) : mods)
-            {
-            if (SkiplistMap<Int, Value|Deletion> mapByTx := history.get(key))
-                {
-                assert Int            latestTx := mapByTx.last();
-                assert Value|Deletion latest   := mapByTx.get(latestTx);
-
-                switch (latest.is(Deletion), value.is(Deletion))
-                    {
-                    case (False, False):
-                        if (&value != &latest)
-                            {
-                            mapByTx.put(prepareId, value);
-                            changed = True;
-                            }
-                        break;
-
-                    case (False, True):
-                        mapByTx.put(prepareId, value);
-                        changed = True;
-                        ++size;
-                        break;
-
-                    case (True, False):
-                        mapByTx.put(prepareId, value);
-                        changed = True;
-                        --size;
-                        break;
-
-                    case (True, True):
-                        // technically, this should not be possible, but we're deleting something
-                        // that doesn't exist, so the deletion modification has no effect
-                        mods.remove(key);
-                        break;
-                    }
-                }
-            else if (value.is(Deletion))
-                {
-                // technically, this should not be possible, but we're deleting something that
-                // doesn't exist in the history, so the deletion modification has no effect
-                mods.remove(key);
-                }
-            else
-                {
-                mapByTx = new SkiplistMap();
-                mapByTx.put(prepareId, value);
-                history.put(key, mapByTx);
-                changed = True;
-                ++size;
-                }
-            }
-
-        if (!changed)
-            {
-            inFlight.remove(writeId);
-            return CommittedNoChanges;
-            }
-
-        // store off transaction's mods and resulting size
-        assert !mods.empty, size >= 0;
-        modsByTx.put(prepareId, mods);
-        sizeByTx.put(prepareId, size);
-
-        // re-do the write transaction to point to the prepared transaction
-        tx.readId   = prepareId;
-        tx.prepared = True;
-        tx.mods     = Null;
-        return Prepared;
-        }
-
-    @Override
-    MergeResult mergePrepare(Int writeId, Int prepareId, Boolean seal = False)
-        {
-        MergeResult result = NoMerge;
-
-        if (Changes tx := peekTx(writeId))
-            {
-            assert !tx.sealed;
-
-            val mods = tx.mods;
-            if (mods != Null)
-                {
-                for ((Key key, Value|Deletion value) : mods)
-                    {
-                    if (Value prev := latestValue(key, prepareId-1), &value == &prev)
-                        {
-                        // this part of the transaction is un-doing itself
-                        assert val mapByTx := history.get(key);
-                        mapByTx.remove(prepareId);
-                        continue;
-                        }
-
-                    val mapByTx = history.computeIfAbsent(key, () -> new SkiplistMap());
-                    mapByTx.put(prepareId, value);
-                    }
-
-                // REVIEW it is not possible to easily determine a result of CommittedNoChanges
-                result = Merged;
-                }
-
-            tx.readId   = prepareId;// slide the readId forward to the point that we just prepared
-            tx.prepared = True;     // remember that the changed the readId to the prepareId
-            tx.mods     = Null;     // the "changes" no longer differs from the historical record
-            tx.sealed   = seal;
-            }
-
-        return result;
-        }
-
-    @Override
-    String sealPrepare(Int writeId)
-        {
-        TODO
-        }
-
-    @Override
-    void commit(Int[] writeIds)
-        {
-        TODO
-        }
-
-    @Override
-    void rollback(Int writeId)
-        {
-        if (Changes tx := peekTx(writeId))
-            {
-            if (tx.prepared)
-                {
-                Int prepareId = tx.readId;
-
-                // the transaction is already sprinkled all over the history
-                assert OrderedMap<Key, Value|Deletion> mods := modsByTx.get(prepareId);
-                for (Key key : mods)
-                    {
-                    if (val byTx := history.get(key))
-                        {
-                        byTx.remove(prepareId);
-                        }
-                    }
-
-                modsByTx.remove(prepareId);
-                sizeByTx.remove(prepareId);
-                }
-
-            inFlight.remove(writeId);
-            }
-        }
-
-    @Override
-    void retainTx(OrderedSet<Int> inUseTxIds, Boolean force = False)
-        {
-        TODO
-        }
-
-
-    // ----- internal ------------------------------------------------------------------------------
+    /**
+     * The ID of the latest known commit for this ObjectStore.
+     */
+    public/protected Int lastCommit = NO_TX;
 
     /**
-     * Obtain the update-to-date value from the transaction.
-     *
-     * @param key  the key in the map to obtain the value for
-     * @param tx   the transaction's Changes record
-     *
-     * @return True if the key has a value
-     * @return the current value
+     * True iff there are transactions on disk that could now be safely deleted.
      */
-    protected conditional Value currentValue(Key key, Changes tx)
-        {
-        if (Value|Deletion value := tx.peekMods().get(key))
-            {
-            return value.is(Deletion)
-                    ? False
-                    : (True, value);
-            }
-
-        return latestValue(key, tx.readId);
-        }
-
-    /**
-     * Obtain the original value from when the transaction began.
-     *
-     * @param key     the key in the map to obtain the value for
-     * @param readId  the transaction id to read from
-     *
-     * @return True if the key has a value as of the specified readId transaction
-     * @return the previous value
-     */
-    protected conditional Value latestValue(Key key, Int readId)
-        {
-        if (val mapByTx := history.get(key), readId := mapByTx.floor(readId))
-            {
-            assert Value|Deletion value := mapByTx.get(readId);
-            return value.is(Deletion)
-                    ? False
-                    : (True, value);
-            }
-
-        return False;
-        }
-
-    /**
-     * Obtain the latest committed value.
-     *
-     * @param key  the key in the map to obtain the value for
-     *
-     * @return True if the key has a value
-     * @return the latest value
-     */
-    protected conditional Value latestValue(Key key)
-        {
-        if (val mapByTx := history.get(key))
-            {
-            assert Int readId := mapByTx.last();
-            assert Value|Deletion value := mapByTx.get(readId);
-            return value.is(Deletion)
-                    ? False
-                    : (True, value);
-            }
-
-        return False;
-        }
+    public/protected Boolean cleanupPending = False;
 
 
-    // ----- ObjectStore life cycle ----------------------------------------------------------------
-
-    @Override
-    void initializeEmpty()
-        {
-        assert model == Empty;
-        sizeByTx.put(0, 0);
-        }
-
-    @Override
-    void loadInitial()
-        {
-        TODO
-        }
-
-    @Override
-    void unload()
-        {
-        TODO
-        }
-
-
-    // ----- ObjectStore IO handling ---------------------------------------------------------------
-
-    @Override
-    Boolean quickScan()
-        {
-        if (super() && model != Empty)
-            {
-            StorageModel quantity = switch (filesUsed)
-                {
-                case 0x00: assert;
-                case 0x0001..0x03FF: Small;
-                case 0x0400..0xFFFF: Medium;
-                default: Large;
-                };
-
-            StorageModel weight = bytesUsed <= 0x03FFFF ? Small : Medium;
-
-            // combine the two measure into the model to actually use
-            model = quantity.maxOf(weight);
-            }
-
-        return True;
-        }
-
-    // ----- Map operations support ----------------------------------------------------------------
+    // ----- storage API exposed to the client -----------------------------------------------------
 
     @Override
     Int sizeAt(Int txId)
@@ -711,6 +410,369 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
     void delete(Int txId, Key key)
         {
         storeImpl(txId, key, Deletion.Deleted);
+        }
+
+
+    // ----- transaction API exposed to TxManager --------------------------------------------------
+
+    @Override
+    PrepareResult prepare(Int writeId, Int prepareId)
+        {
+        // the transaction can be prepared if (a) no transaction has modified this value after the
+        // read id, or (b) the "current" value is equal to the read id transaction's value
+        assert Changes tx := checkTx(writeId);
+        if (tx.peekMods().empty)
+            {
+            inFlight.remove(writeId);
+            return CommittedNoChanges;
+            }
+
+        // obtain the transaction modifications (note: we already verified that modifications exist)
+        OrderedMap<Key, Value|Deletion> mods = tx.mods ?: assert;
+
+        // first, we need to verify that there are no conflicts, before we attempt to move the data
+        // into the "prepareId" slot in the history
+        Int readId = tx.readId;
+        if (readId != prepareId - 1)
+            {
+            // interleaving transactions have occurred
+            for ((Key key, Value|Deletion value) : mods)
+                {
+                if (SkiplistMap<Int, Value|Deletion> mapByTx := history.get(key))
+                    {
+                    assert Int latestTx := mapByTx.last(), latestTx < prepareId;
+                    if (latestTx > readId)
+                        {
+                        assert Value|Deletion latest := mapByTx.get(latestTx);
+
+                        Value|Deletion prev;
+                        if (Int prevTx := mapByTx.floor(readId))
+                            {
+                            assert prev := mapByTx.get(prevTx);
+                            }
+                        else
+                            {
+                            // the key did not exist in the readId transaction
+                            prev = Deleted;
+                            }
+
+                        if (&prev != &latest)
+                            {
+                            // the state that this transaction assumes as its starting point was
+                            // altered, so the transaction must roll back
+                            inFlight.remove(writeId);
+                            return FailedRolledBack;
+                            }
+                        }
+                    }
+                }
+            }
+
+        // now that we have verified that there are no conflicts, the changes need to be "re-homed"
+        // into the prepareId transaction in the history, leaving the writeId empty
+        Boolean changed = False;
+        Int     size    = sizeAt(prepareId-1);
+        for ((Key key, Value|Deletion value) : mods)
+            {
+            if (SkiplistMap<Int, Value|Deletion> mapByTx := history.get(key))
+                {
+                assert Int            latestTx := mapByTx.last();
+                assert Value|Deletion latest   := mapByTx.get(latestTx);
+
+                switch (latest.is(Deletion), value.is(Deletion))
+                    {
+                    case (False, False):
+                        if (&value != &latest)
+                            {
+                            mapByTx.put(prepareId, value);
+                            changed = True;
+                            }
+                        break;
+
+                    case (False, True):
+                        mapByTx.put(prepareId, value);
+                        changed = True;
+                        ++size;
+                        break;
+
+                    case (True, False):
+                        mapByTx.put(prepareId, value);
+                        changed = True;
+                        --size;
+                        break;
+
+                    case (True, True):
+                        // technically, this should not be possible, but we're deleting something
+                        // that doesn't exist, so the deletion modification has no effect
+                        mods.remove(key);
+                        break;
+                    }
+                }
+            else if (value.is(Deletion))
+                {
+                // technically, this should not be possible, but we're deleting something that
+                // doesn't exist in the history, so the deletion modification has no effect
+                mods.remove(key);
+                }
+            else
+                {
+                mapByTx = new SkiplistMap();
+                mapByTx.put(prepareId, value);
+                history.put(key, mapByTx);
+                changed = True;
+                ++size;
+                }
+            }
+
+        if (!changed)
+            {
+            inFlight.remove(writeId);
+            return CommittedNoChanges;
+            }
+
+        // store off transaction's mods and resulting size
+        assert !mods.empty, size >= 0;
+        modsByTx.put(prepareId, mods);
+        sizeByTx.put(prepareId, size);
+
+        // re-do the write transaction to point to the prepared transaction
+        tx.readId   = prepareId;
+        tx.prepared = True;
+        tx.mods     = Null;
+        return Prepared;
+        }
+
+    @Override
+    MergeResult mergePrepare(Int writeId, Int prepareId, Boolean seal = False)
+        {
+        MergeResult result = NoMerge;
+
+        if (Changes tx := peekTx(writeId))
+            {
+            assert !tx.sealed;
+
+            val mods = tx.mods;
+            if (mods != Null)
+                {
+                for ((Key key, Value|Deletion value) : mods)
+                    {
+                    if (Value prev := latestValue(key, prepareId-1), &value == &prev)
+                        {
+                        // this part of the transaction is un-doing itself
+                        assert val mapByTx := history.get(key);
+                        mapByTx.remove(prepareId);
+                        continue;
+                        }
+
+                    val mapByTx = history.computeIfAbsent(key, () -> new SkiplistMap());
+                    mapByTx.put(prepareId, value);
+                    }
+
+                // REVIEW it is not possible to easily determine a result of CommittedNoChanges
+                result = Merged;
+                }
+
+            tx.readId   = prepareId;// slide the readId forward to the point that we just prepared
+            tx.prepared = True;     // remember that the changed the readId to the prepareId
+            tx.mods     = Null;     // the "changes" no longer differs from the historical record
+            tx.sealed   = seal;
+            }
+
+        return result;
+        }
+
+    @Override
+    String sealPrepare(Int writeId)
+        {
+        assert Changes tx := checkTx(writeId), tx.prepared;
+        if (tx.sealed)
+            {
+            return tx.json ?: assert;
+            }
+
+        assert Map<Key, Value|Deletion> mods := modsByTx.get(tx.readId);
+
+        StringBuffer buf = new StringBuffer();
+        buf.add('[');
+
+        val worker = tx.worker;
+        loop:
+        for ((Key key, Value|Deletion value) : mods)
+            {
+            if (!loop.first)
+                {
+                buf.add(',');
+                }
+
+            buf.append("{\"k\":")
+               .append(worker.writeUsing(keyMapping, key));
+
+            if (!value.is(Deletion))
+                {
+                buf.append(", \"v\":")
+                   .append(worker.writeUsing(valueMapping, value));
+                }
+            buf.add('}');
+            }
+        buf.add(']');
+
+        String json = buf.toString();
+
+        tx.json   = json;
+        tx.sealed = True;
+        return json;
+        }
+
+    @Override
+    void commit(Int[] writeIds)
+        {
+        TODO
+        }
+
+    @Override
+    void rollback(Int writeId)
+        {
+        if (Changes tx := peekTx(writeId))
+            {
+            if (tx.prepared)
+                {
+                Int prepareId = tx.readId;
+
+                // the transaction is already sprinkled all over the history
+                assert OrderedMap<Key, Value|Deletion> mods := modsByTx.get(prepareId);
+                for (Key key : mods)
+                    {
+                    if (val byTx := history.get(key))
+                        {
+                        byTx.remove(prepareId);
+                        }
+                    }
+
+                modsByTx.remove(prepareId);
+                sizeByTx.remove(prepareId);
+                }
+
+            inFlight.remove(writeId);
+            }
+        }
+
+    @Override
+    void retainTx(OrderedSet<Int> inUseTxIds, Boolean force = False)
+        {
+        TODO
+        }
+
+
+    // ----- internal ------------------------------------------------------------------------------
+
+    /**
+     * Obtain the update-to-date value from the transaction.
+     *
+     * @param key  the key in the map to obtain the value for
+     * @param tx   the transaction's Changes record
+     *
+     * @return True if the key has a value
+     * @return the current value
+     */
+    protected conditional Value currentValue(Key key, Changes tx)
+        {
+        if (Value|Deletion value := tx.peekMods().get(key))
+            {
+            return value.is(Deletion)
+                    ? False
+                    : (True, value);
+            }
+
+        return latestValue(key, tx.readId);
+        }
+
+    /**
+     * Obtain the original value from when the transaction began.
+     *
+     * @param key     the key in the map to obtain the value for
+     * @param readId  the transaction id to read from
+     *
+     * @return True if the key has a value as of the specified readId transaction
+     * @return the previous value
+     */
+    protected conditional Value latestValue(Key key, Int readId)
+        {
+        if (val mapByTx := history.get(key), readId := mapByTx.floor(readId))
+            {
+            assert Value|Deletion value := mapByTx.get(readId);
+            return value.is(Deletion)
+                    ? False
+                    : (True, value);
+            }
+
+        return False;
+        }
+
+    /**
+     * Obtain the latest committed value.
+     *
+     * @param key  the key in the map to obtain the value for
+     *
+     * @return True if the key has a value
+     * @return the latest value
+     */
+    protected conditional Value latestValue(Key key)
+        {
+        if (val mapByTx := history.get(key))
+            {
+            assert Int readId := mapByTx.last();
+            assert Value|Deletion value := mapByTx.get(readId);
+            return value.is(Deletion)
+                    ? False
+                    : (True, value);
+            }
+
+        return False;
+        }
+
+
+    // ----- IO operations -------------------------------------------------------------------------
+
+    @Override
+    void initializeEmpty()
+        {
+        assert model == Empty;
+        sizeByTx.put(0, 0);
+        lastCommit = 0;
+        }
+
+    @Override
+    void loadInitial()
+        {
+        TODO
+        }
+
+    @Override
+    void unload()
+        {
+        TODO
+        }
+
+    @Override
+    Boolean quickScan()
+        {
+        if (super() && model != Empty)
+            {
+            StorageModel quantity = switch (filesUsed)
+                {
+                case 0x00: assert;
+                case 0x0001..0x03FF: Small;
+                case 0x0400..0xFFFF: Medium;
+                default: Large;
+                };
+
+            StorageModel weight = bytesUsed <= 0x03FFFF ? Small : Medium;
+
+            // combine the two measure into the model to actually use
+            model = quantity.maxOf(weight);
+            }
+
+        return True;
         }
 
     // REVIEW something like this? -> protected Boolean storeImpl(Int txId, Key key, Value|Deletion value, Boolean blind)
