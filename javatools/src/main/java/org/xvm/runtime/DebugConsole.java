@@ -14,6 +14,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 
+import java.util.prefs.Preferences;
+
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
@@ -40,6 +42,7 @@ public class DebugConsole
     {
     private DebugConsole()
         {
+        loadBreakpoints();
         }
 
     @Override
@@ -171,7 +174,7 @@ public class DebugConsole
                 sCommand = sCommand.trim();
                 if (sCommand.length() == 0)
                     {
-                    continue;
+                    sCommand = "VD";
                     }
 
                 String sDedup;
@@ -239,6 +242,7 @@ public class DebugConsole
                                     m_fBreakOnAllThrows = false;
                                     m_setLineBreaks     = null;
                                     m_setThrowBreaks    = null;
+                                    saveBreakpoints();
                                     continue NextCommand;
                                     }
                                 // "B- 3"  (# is from the previously displayed list of breakpoints)
@@ -307,12 +311,14 @@ public class DebugConsole
                                         {
                                         Arrays.stream(aBP).forEach(BreakPoint::disable);
                                         m_fBreakOnAllThrows = false;
+                                        saveBreakpoints();
                                         }
                                     else
                                         {
                                         Arrays.stream(aBP).forEach(BreakPoint::enable);
                                         m_fBreakOnAllThrows =
                                             Arrays.stream(aBP).anyMatch(bp -> bp.className.equals("*"));
+                                        saveBreakpoints();
                                         }
                                     continue NextCommand;
                                     }
@@ -425,6 +431,7 @@ public class DebugConsole
                                     writer.println("Altering debugger text height from " + m_cHeight +
                                                    " to " + n + " lines.");
                                     m_cHeight = n;
+                                    prefs.putInt("screen-height", n);
                                     }
                                 else
                                     {
@@ -441,6 +448,7 @@ public class DebugConsole
                                     writer.println("Altering debugger text width from " + m_cWidth +
                                                    " to " + n + " characters.");
                                     m_cWidth = n;
+                                    prefs.putInt("screen-width", n);
                                     }
                                 else
                                     {
@@ -604,6 +612,8 @@ public class DebugConsole
             assert bp.isException();
             m_fBreakOnAllThrows = true;
             }
+
+        saveBreakpoints();
         }
 
     private void removeBP(BreakPoint bp)
@@ -635,6 +645,8 @@ public class DebugConsole
             assert bp.isException();
             m_fBreakOnAllThrows = false;
             }
+
+        saveBreakpoints();
         }
 
     private void toggleBP(BreakPoint bp)
@@ -657,6 +669,8 @@ public class DebugConsole
                 m_fBreakOnAllThrows = bp.isEnabled();
                 }
             }
+
+        saveBreakpoints();
         }
 
     private BreakPoint findBP(BreakPoint bp)
@@ -684,17 +698,86 @@ public class DebugConsole
         return nLine <= 0 ? null : new BreakPoint(sName, nLine);
         }
 
-    private static int parseNonNegative(String sNumber)
+    private void loadBreakpoints()
         {
-        try
-            {
-            return Integer.parseInt(sNumber);
-            }
-        catch (NumberFormatException e)
-            {
-            return -1;
-            }
+        m_setLineBreaks     = stringToBreakpoints(prefs.get("break-points", ""));
+        m_setThrowBreaks    = stringToBreakpoints(prefs.get("break-throws", ""));
+        m_fBreakOnAllThrows = prefs.getBoolean("break-any-exception", false);
         }
+
+    private void saveBreakpoints()
+        {
+        prefs.put("break-points", breakpointsToString(m_setLineBreaks));
+        prefs.put("break-throws", breakpointsToString(m_setThrowBreaks));
+        prefs.putBoolean("break-any-exception", m_fBreakOnAllThrows);
+        }
+
+    private Set<BreakPoint> stringToBreakpoints(String s)
+        {
+        if (s == null)
+            {
+            return null;
+            }
+
+        s = s.trim();
+        if (s.length() == 0)
+            {
+            return null;
+            }
+
+        Set<BreakPoint> setBP = new HashSet<>();
+        for (String sbp : Handy.parseDelimitedString(s, ','))
+            {
+            try
+                {
+                String[] settings = Handy.parseDelimitedString(s, ':');
+                String   sName   = settings[0];
+                int      nLine   = settings.length >= 2 && settings[1].length() > 0
+                        ? Integer.parseInt(settings[1])
+                        : -1;
+                BreakPoint bp = nLine >= 0
+                        ? new BreakPoint(sName, nLine)      // line #
+                        : new BreakPoint(sName);            // exception
+                if (settings.length >= 3 && settings[2].equals("off"))
+                    {
+                    bp.disable();
+                    }
+                setBP.add(bp);
+                }
+            catch (Exception e)
+                {
+                System.err.println("Exception parsing breakpoint \"" + sbp + "\": " + e);
+                }
+            }
+        return setBP;
+        }
+
+    private String breakpointsToString(Set<BreakPoint> set)
+        {
+        if (set == null || set.isEmpty())
+            {
+            return "";
+            }
+
+        StringBuilder sb = new StringBuilder();
+        boolean fFirst = true;
+        for (BreakPoint bp : set)
+            {
+            if (fFirst)
+                {
+                fFirst = false;
+                }
+            else
+                {
+                sb.append(',');
+                }
+            sb.append(bp.toPrefString());
+            }
+        return sb.toString();
+        }
+
+
+    // ----- rendering -----------------------------------------------------------------------------
 
     /**
      * @return a string for whatever the debugger is supposed to display
@@ -726,9 +809,9 @@ public class DebugConsole
         String   sVHeader  = "Variables and watches:";
         String[] asVars    = renderVars(m_cWidth - cchFrames - 2);
         int      cchVars   = Math.max(longestOf(asVars), sVHeader.length());
-        if (cchFrames + cchVars + 1 > m_cWidth)
+        if (cchFrames + cchVars + 3 > m_cWidth)
             {
-            int max = m_cWidth - 1;
+            int max = m_cWidth - 3;
             int half = max / 2;
             if (cchFrames <= half)
                 {
@@ -747,11 +830,11 @@ public class DebugConsole
 
         StringBuilder sb = new StringBuilder();
         sb.append(ljust(sFHeader, cchFrames))
-          .append('|')
+          .append(" | ")
           .append(sVHeader)
           .append('\n')
           .append(dup('-', cchFrames))
-          .append('|')
+          .append("-|-")
           .append(dup('-', cchVars));
 
         int    iFrame  = 0;
@@ -813,7 +896,7 @@ public class DebugConsole
                 sFrame = null;
                 }
 
-            sb.append('|');
+            sb.append(" | ");
 
             // render the var
             if (sVar == null)
@@ -1016,12 +1099,10 @@ public class DebugConsole
         TreeSet<BreakPoint> setBP = new TreeSet<>();
         if (m_setLineBreaks != null)
             {
-            assert !m_setLineBreaks.isEmpty();
             setBP.addAll(m_setLineBreaks);
             }
         if (m_setThrowBreaks != null)
             {
-            assert !m_setThrowBreaks.isEmpty();
             setBP.addAll(m_setThrowBreaks);
             }
 
@@ -1062,6 +1143,9 @@ public class DebugConsole
         sb.append("-------------------  ---------------------------------------------\n");
         sb.append("F <frame#>           Switch to the specified Frame number\n");
         sb.append("X <var#>             Expand (or contract) the specified variable number\n");
+        sb.append("E <expr>             Evaluate the specified expression\n");
+        sb.append("W <expr>             Add a \"watch\" for the specified expression\n");
+        sb.append("W- <var#>            Remove the specified watch\n");
         sb.append("D <var#>             Display the structure view of the specified variable number\n");
         sb.append("DS <var#>            Display the \"toString()\" value of the specified variable number\n");
         sb.append("\n");
@@ -1093,6 +1177,9 @@ public class DebugConsole
         sb.append("?                    Display this help message");
         return sb.toString();
         }
+
+
+    // ----- helpers -------------------------------------------------------------------------------
 
     private static int numlen(int n)
         {
@@ -1134,6 +1221,18 @@ public class DebugConsole
             sb.append(ch);
             }
         return sb.toString();
+        }
+
+    private static int parseNonNegative(String sNumber)
+        {
+        try
+            {
+            return Integer.parseInt(sNumber);
+            }
+        catch (NumberFormatException e)
+            {
+            return -1;
+            }
         }
 
 
@@ -1274,6 +1373,17 @@ public class DebugConsole
             return s;
             }
 
+        String toPrefString()
+            {
+            return (lineNumber < 0)
+                    ? disabled
+                            ? className + "::off"
+                            : className
+                    : disabled
+                            ? className + ":" + lineNumber + ":off"
+                            : className + ":" + lineNumber;
+            }
+
         public String  className;  // "*" means all exceptions
         public int     lineNumber; // -1 for exceptions
         public boolean disabled;
@@ -1283,6 +1393,11 @@ public class DebugConsole
     // ----- constants and data fields -------------------------------------------------------------
 
     public static final DebugConsole INSTANCE = new DebugConsole();
+
+    /**
+     * Persistent preference storage.
+     */
+    Preferences prefs = Preferences.userNodeForPackage(DebugConsole.class);
 
     /**
      * Current view mode.
@@ -1319,12 +1434,12 @@ public class DebugConsole
     /**
      * The debugger screen height (the limit for printing console output)..
      */
-    private int m_cHeight = 30;
+    private int m_cHeight = prefs.getInt("screen-height", 30);
 
     /**
      * The debugger screen width.
      */
-    private int m_cWidth = 120;
+    private int m_cWidth = prefs.getInt("screen-width", 120);
 
     /**
      * The set of breakpoints on line numbers.
