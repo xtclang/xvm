@@ -269,14 +269,15 @@ const String
      * @param that     the substring to search for
      * @param startAt  the first index to search from (optional)
      *
-     * @return a conditional return of the location of the index of the specified substring, or
-     *         False if the substring could not be found
+     * @return True iff this string contains the specified string, at or after the `startAt` index
+     * @return (conditional) the index at which the specified string was found
      */
-     conditional Int indexOf(String! that, Int startAt = 0)
+     conditional Int indexOf(String that, Int startAt = 0)
          {
-         // if we've already run out of space for that string to fit, then it can't be found
          Int thisLen = this.size;
          Int thatLen = that.size;
+
+         // there has to be enough room to fit "that"
          if (startAt > thisLen - thatLen)
              {
              return False;
@@ -300,17 +301,81 @@ const String
 
          // otherwise, brute force
          Char first = that[0];
-         NextTry: while (Int next := indexOf(first, startAt))
+         NextTry: while (Int index := indexOf(first, startAt))
              {
+             if (index > thisLen - thatLen)
+                 {
+                 return False;
+                 }
              for (Int of = 1; of < thatLen; ++of)
                  {
-                 if (this[next+of] != that[of])
+                 if (this[index+of] != that[of])
                      {
-                     startAt = next + 1;
+                     startAt = index + 1;
                      continue NextTry;
                      }
                  }
-             return True, next;
+             return True, index;
+             }
+
+         return False;
+         }
+
+    /**
+     * Look for the specified `that` starting at the specified index and searching backwards.
+     *
+     * @param that     the substring to search for
+     * @param startAt  the first index to search backwards from (optional)
+     *
+     * @return True iff this string contains the specified string, at or before the `startAt` index
+     * @return (conditional) the index at which the specified string was found
+     */
+     conditional Int lastIndexOf(String that, Int startAt = Int.maxvalue)
+         {
+         Int thisLen = this.size;
+         Int thatLen = that.size;
+
+         // there has to be enough room to fit "that"
+         if (startAt < thatLen)
+             {
+             return False;
+             }
+
+         // can't start beyond the end of the string
+         startAt = startAt.minOf(thisLen);
+
+         // break out the special conditions (for small search strings)
+         if (thatLen <= 1)
+             {
+             // assume that we can find the empty string wherever we look
+             if (thatLen == 0)
+                {
+                return True, startAt;
+                }
+
+             // for single-character strings, use the more efficient single-character search
+             return lastIndexOf(that[0], startAt);
+             }
+
+         // otherwise, brute force
+         Char first = that[0];
+         NextTry: while (Int index := lastIndexOf(first, startAt))
+             {
+             if (index > thisLen - thatLen)
+                 {
+                 startAt = index - 1;
+                 continue NextTry;
+                 }
+
+             for (Int of = 1; of < thatLen; ++of)
+                 {
+                 if (this[index+of] != that[of])
+                     {
+                     startAt = index - 1;
+                     continue NextTry;
+                     }
+                 }
+             return True, index;
              }
 
          return False;
