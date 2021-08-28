@@ -472,10 +472,10 @@ public class DebugConsole
                                 VarDisplay var = aVars[iVar];
                                 if (var.canExpand)
                                     {
-                                    Map<String, Integer> mapExpand = (Map<String, Integer>) frame.m_debug;
+                                    Map<String, Integer> mapExpand = (Map<String, Integer>) m_frameFocus.m_debug;
                                     if (mapExpand == null)
                                         {
-                                        frame.m_debug = mapExpand = new HashMap<>();
+                                        m_frameFocus.m_debug = mapExpand = new HashMap<>();
                                         }
 
                                     if (var.isArray)
