@@ -91,7 +91,7 @@ public class Frame
     private ObjectHandle            m_hStackTop;    // the top of the local stack
     private Deque<ObjectHandle>     m_stack;        // a remainder of the stack
 
-    public  Object                  m_debug;        // a field that the debugger can stash stuff in
+    public DebugConsole.DebugStash  m_debug;        // a field that the debugger can stash stuff in
 
     public static final int VAR_MASK        = 0x1;
     public static final int VAR_STANDARD    = 0x0;
@@ -1768,6 +1768,18 @@ public class Frame
         // type parameter's type must be of Type<DataType, OuterType>
         assert typeType.isTypeOfType() && typeType.getParamsCount() >= 1;
         return typeType.getParamType(0);
+        }
+
+    /**
+     * @return a stash for the debugger
+     */
+    public DebugConsole.DebugStash ensureDebugStash()
+        {
+        if (m_debug == null)
+            {
+            m_debug = new DebugConsole.DebugStash();
+            }
+        return m_debug;
         }
 
     /**

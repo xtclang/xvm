@@ -39,6 +39,9 @@ import org.xvm.util.Handy;
 
 /**
  * Debugger console.
+ *
+ * TODO Eval and Watch Eval implementations
+ * TODO show which variables changed when stepping
  */
 public class DebugConsole
         implements Debugger
@@ -465,52 +468,224 @@ public class DebugConsole
                     case "X":
                         if (cArgs >= 1)
                             {
-                            VarDisplay[] aVars = m_aVars;
-                            int iVar = parseNonNegative(asParts[1]);
-                            if (iVar >= 0 && iVar < aVars.length)
+                            VarDisplay[] aVars    = m_aVars;
+                            boolean      fRepaint = false;
+                            for (int i = 0; i < cArgs; ++i)
                                 {
-                                VarDisplay var = aVars[iVar];
-                                if (var.canExpand)
+                                int iVar = parseNonNegative(asParts[i+1]);
+                                if (iVar >= 0 && iVar < aVars.length)
                                     {
-                                    Map<String, Integer> mapExpand = (Map<String, Integer>) m_frameFocus.m_debug;
-                                    if (mapExpand == null)
+                                    VarDisplay var = aVars[iVar];
+                                    if (var.canExpand)
                                         {
-                                        m_frameFocus.m_debug = mapExpand = new HashMap<>();
-                                        }
-
-                                    if (var.isArray)
-                                        {
-                                        if (var.name.equals("..."))
+                                        Map<String, Integer> mapExpand = ensureExpandMap(iVar);
+                                        if (var.isArray)
                                             {
-                                            // find the parent array
-                                            int arrayLevel = var.indent - 1;
-                                            do
+                                            if (var.name.equals("..."))
                                                 {
-                                                var = aVars[--iVar];
-                                                }
-                                            while (var.indent > arrayLevel);
+                                                // find the parent array
+                                                int arrayLevel = var.indent - 1;
+                                                do
+                                                    {
+                                                    var = aVars[--iVar];
+                                                    }
+                                                while (var.indent > arrayLevel);
 
-                                            int cShow = mapExpand.getOrDefault(var.path, 0);
-                                            cShow = (cShow + 1) * 10;
-                                            mapExpand.put(var.path, cShow);
+                                                int cShow = mapExpand.getOrDefault(var.path, 0);
+                                                cShow = (cShow + 1) * 10;
+                                                mapExpand.put(var.path, cShow);
+                                                }
+                                            else
+                                                {
+                                                mapExpand.put(var.path, var.expanded ? 0 : 10);
+                                                }
                                             }
                                         else
                                             {
-                                            mapExpand.put(var.path, var.expanded ? 0 : 10);
+                                            mapExpand.put(var.path, var.expanded ? 0 : 1);
                                             }
+                                        fRepaint = true;
                                         }
                                     else
                                         {
-                                        mapExpand.put(var.path, var.expanded ? 0 : 1);
+                                        writer.println("Cannot expand or contract \"" + var.name + '\"');
                                         }
-                                    writer.println(renderDebugger());
                                     }
-                                else
+
+                                if (fRepaint)
                                     {
-                                    writer.println("Cannot expand or contract \"" + var.name + '\"');
+                                    writer.println(renderDebugger());
                                     }
                                 continue NextCommand;
                                 }
+                            }
+                        break;
+
+                    case "V":
+                        // TODO toggle between native vs. toString() (and possibly a third, type-specific format for some types)
+                        writer.println("View format has not been implemented.");
+                        continue NextCommand;
+
+                    case "E":
+                        // TODO eval <expr>
+                        writer.println("Eval has not been implemented.");
+                        continue NextCommand;
+
+                    case "WE":
+                        // TODO watch eval <expr>
+                        writer.println("Watch Eval has not been implemented.");
+                        continue NextCommand;
+
+                    case "WO":
+                        if (cArgs >= 1)
+                            {
+                            VarDisplay[] aVars    = m_aVars;
+                            boolean      fRepaint = false;
+                            for (int i = 0; i < cArgs; ++i)
+                                {
+                                int iVar = parseNonNegative(asParts[i+1]);
+                                if (iVar >= 0 && iVar < aVars.length)
+                                    {
+                                    // verify that the referent is available
+                                    VarDisplay var = aVars[iVar];
+                                    if (var.hVar == null)
+                                        {
+                                        writer.println("Var #" + iVar + " (\"" + var.name + "\") does not have a referent to Watch");
+                                        continue;
+                                        }
+
+                                    // verify that it is not already a watched object
+                                    Watch watch = var.watch;
+                                    if (watch != null && watch.form == Watch.OBJ)
+                                        {
+                                        writer.println("Var #" + iVar + " (\"" + var.name + "\") is already a Watched Object");
+                                        continue;
+                                        }
+
+                                    // create the watch
+                                    String sName = var.path;
+                                    if (sName.startsWith("watch:"))
+                                        {
+                                        sName = sName.substring("watch:".length());
+                                        }
+                                    watch = new Watch("watch:" + sName, sName, var.hVar);
+                                    getGlobalStash().ensureWatchList().add(watch);
+                                    fRepaint = true;
+                                    }
+                                else
+                                    {
+                                    writer.println("Var #" + iVar + " does not exist");
+                                    }
+                                }
+
+                            if (fRepaint)
+                                {
+                                writer.println(renderDebugger());
+                                }
+                            continue NextCommand;
+                            }
+                        break;
+
+                    case "WR":
+                        if (cArgs >= 1)
+                            {
+                            VarDisplay[] aVars    = m_aVars;
+                            boolean      fRepaint = false;
+                            for (int i = 0; i < cArgs; ++i)
+                                {
+                                int iVar = parseNonNegative(asParts[i+1]);
+                                if (iVar >= 0 && iVar < aVars.length)
+                                    {
+                                    // verify that it is not already a watch
+                                    VarDisplay var = aVars[iVar];
+                                    Watch watch = var.watch;
+                                    if (watch != null)
+                                        {
+                                        writer.println("Var #" + iVar + " (\"" + var.name + "\") is already a Watch");
+                                        continue;
+                                        }
+
+                                    // figure out if it is a variable, property, or element
+                                    boolean fGlobal;
+                                    if (var.indent == 0)
+                                        {
+                                        // it's a variable (since it's not a watch)
+                                        writer.println("Var #" + iVar + " (\"" + var.name + "\") is already displayed in the current fram");
+                                        continue;
+                                        }
+                                    else if (var.name.startsWith("["))
+                                        {
+                                        // it's an array element
+                                        VarDisplay parent = aVars[findParentNode(iVar)];
+                                        int        index  = Integer.valueOf(var.name.substring(1, var.name.length()-1));
+                                        watch   = new Watch("watch:" + var.path, var.path, parent.hVar, index);
+                                        fGlobal = false;
+                                        }
+                                    else if (var.name.startsWith("."))
+                                        {
+                                        // it's "...", i.e. the unexpanded portion of an array
+                                        writer.println("Var #" + iVar + " is not Watchable");
+                                        continue;
+                                        }
+                                    else
+                                        {
+                                        // it must be a property
+                                        VarDisplay parent = aVars[findParentNode(iVar)];
+                                        watch   = new Watch("watch:" + var.path, var.path, parent.hVar, var.name);
+                                        fGlobal = true;
+                                        }
+
+                                    (fGlobal ? getGlobalStash() : getFrameStash()).ensureWatchList().add(watch);
+                                    fRepaint = true;
+                                    }
+                                else
+                                    {
+                                    writer.println("Var #" + iVar + " does not exist");
+                                    }
+                                }
+
+                            if (fRepaint)
+                                {
+                                writer.println(renderDebugger());
+                                }
+                            continue NextCommand;
+                            }
+                        break;
+
+                    case "W-":
+                        if (cArgs >= 1)
+                            {
+                            VarDisplay[] aVars    = m_aVars;
+                            boolean      fRepaint = false;
+                            for (int i = 0; i < cArgs; ++i)
+                                {
+                                int iVar = parseNonNegative(asParts[i+1]);
+                                if (iVar >= 0 && iVar < aVars.length)
+                                    {
+                                    // verify that the var is a watch
+                                    VarDisplay var   = aVars[iVar];
+                                    Watch      watch = var.watch;
+                                    if (watch == null)
+                                        {
+                                        writer.println("Var #" + iVar + " (\"" + var.name + "\") is not a Watch");
+                                        continue;
+                                        }
+
+                                    getFrameStash().ensureWatchList().remove(watch);
+                                    getGlobalStash().ensureWatchList().remove(watch);
+                                    fRepaint = true;
+                                    }
+                                else
+                                    {
+                                    writer.println("Var #" + iVar + " does not exist");
+                                    }
+                                }
+
+                            if (fRepaint)
+                                {
+                                writer.println(renderDebugger());
+                                }
+                            continue NextCommand;
                             }
                         break;
 
@@ -622,6 +797,60 @@ public class DebugConsole
             default:
                 throw new IllegalStateException();
             }
+        }
+
+    /**
+     * @return the DebugState object for the currently displayed frame
+     */
+    private DebugStash getFrameStash()
+        {
+        return m_frameFocus.ensureDebugStash();
+        }
+
+    /**
+     * @return the DebugState object shared across all frames
+     */
+    private DebugStash getGlobalStash()
+        {
+        return m_debugState;
+        }
+
+    /**
+     * @param iVar  the var display index from the previous debugger rendering
+     *
+     * @return the display index for the "parent" var
+     */
+    private int findParentNode(int iVar)
+        {
+        // figure out if it the debug info is local or global state
+        VarDisplay var    = m_aVars[iVar];
+        int        indent = var.indent;
+        assert indent > 0;
+        do
+            {
+            var = m_aVars[--iVar];
+            }
+        while (var.indent >= indent);
+        return iVar;
+        }
+
+    /**
+     * @param iVar  the var display index from the previous debugger rendering
+     *
+     * @return the expand/contract settings map for the specified var
+     */
+    private Map<String, Integer> ensureExpandMap(int iVar)
+        {
+        // figure out if it the debug info is local or global state
+        VarDisplay var     = m_aVars[iVar];
+        boolean    fGlobal = false;
+        while (var.indent > 0)
+            {
+            var = m_aVars[--iVar];
+            }
+        return (var.watch != null && getGlobalStash().getWatchList().contains(var.watch)
+                ? getGlobalStash()
+                : getFrameStash() ).ensureExpandMap();
         }
 
     private BreakPoint makeBreakPoint(Frame frame, int iPC)
@@ -1005,22 +1234,32 @@ public class DebugConsole
 
     private String[] renderVars(int cMax)
         {
-        Frame frame = m_frameFocus;
-        if (frame.isNative())
+        ArrayList<VarDisplay> listVars = new ArrayList<>();
+        Map<String, Integer>  mapExpand;
+
+        Frame   frame    = m_frameFocus;
+        boolean fAnyVars = false;
+        int     iPass    = 0;
+        do
+            {
+            DebugStash stash = iPass == 0 ? getGlobalStash() : getFrameStash();
+            mapExpand = stash.getExpandMap();
+            for (Watch watch : stash.getWatchList())
+                {
+                ObjectHandle hVar = watch.produceHandle(frame, m_frame);
+                addVar(0, watch.path, watch.name, hVar, listVars, mapExpand);
+                fAnyVars = true;
+                }
+            }
+        while (++iPass < 2);
+
+        if (frame.isNative() && !fAnyVars)
             {
             return Handy.NO_ARGS;
             }
 
-        Map<String, Integer> mapExpand = Collections.emptyMap();
-        if (frame.m_debug != null)
-            {
-            mapExpand = (Map<String, Integer>) frame.m_debug;
-            }
-
-        int                   cVars    = frame.f_anNextVar[frame.m_iScope];
-        ArrayList<VarDisplay> listVars = new ArrayList<>(cVars + 1);
-
         ObjectHandle hThis = frame.f_hThis;
+        int          cVars = frame.f_anNextVar[frame.m_iScope];
         if (hThis != null)
             {
             addVar(0, "this", "this", hThis, listVars, mapExpand);
@@ -1035,7 +1274,6 @@ public class DebugConsole
                 addVar(0, sVar, sVar, frame.f_ahVar[i], listVars, mapExpand);
                 }
             }
-
 
         cVars   = listVars.size();
         m_aVars = listVars.toArray(new VarDisplay[0]);
@@ -1257,8 +1495,11 @@ public class DebugConsole
         sb.append("-------------------  ---------------------------------------------\n");
         sb.append("F <frame#>           Switch to the specified Frame number\n");
         sb.append("X <var#>             Expand (or contract) the specified variable number\n");
+        sb.append("V <var#>             Toggle the view mode (output format) for the specified variable number\n");
         sb.append("E <expr>             Evaluate the specified expression\n");
-        sb.append("W <expr>             Add a \"watch\" for the specified expression\n");
+        sb.append("WE <expr>            Add a \"watch\" for the specified expression\n");
+        sb.append("WO <var#>            Add a watch on the specified referent (the object itself)\n");
+        sb.append("WR <var#>            Add a watch on the specified reference (the property or variable)\n");
         sb.append("W- <var#>            Remove the specified watch\n");
         sb.append("D <var#>             Display the structure view of the specified variable number\n");
         sb.append("DS <var#>            Display the \"toString()\" value of the specified variable number\n");
@@ -1504,7 +1745,59 @@ public class DebugConsole
         }
 
 
-    // ----- inner class: BreakPoint ---------------------------------------------------------------
+    // ----- inner class: DebugStash ---------------------------------------------------------------
+
+    /**
+     * A stash object for the debugger, that can be stored (for example) inside of a frame.
+     */
+    static class DebugStash
+        {
+        /**
+         * @return read-only var-expand-map (never null)
+         */
+        Map<String, Integer> getExpandMap()
+            {
+            return m_mapExpand == null ? Collections.emptyMap() : m_mapExpand;
+            }
+
+        /**
+         * @return read/write var-expand-map (never null)
+         */
+        Map<String, Integer> ensureExpandMap()
+            {
+            if (m_mapExpand == null)
+                {
+                m_mapExpand = new HashMap<>();
+                }
+            return m_mapExpand;
+            }
+
+        /**
+         * @return read-only list of watches (never null)
+         */
+        List<Watch> getWatchList()
+            {
+            return m_listWatches == null ? Collections.emptyList() : m_listWatches;
+            }
+
+        /**
+         * @return read/write list of watches (never null)
+         */
+        ArrayList<Watch> ensureWatchList()
+            {
+            if (m_listWatches == null)
+                {
+                m_listWatches = new ArrayList<>();
+                }
+            return m_listWatches;
+            }
+
+        Map<String, Integer> m_mapExpand;
+        ArrayList<Watch>     m_listWatches;
+        }
+
+
+    // ----- inner class: VarDisplay ---------------------------------------------------------------
 
     static class VarDisplay
         {
@@ -1573,6 +1866,114 @@ public class DebugConsole
         long         size;
         boolean      canExpand;
         boolean      expanded;
+        Watch        watch;
+        }
+
+
+    // ----- inner class: Watch --------------------------------------------------------------------
+
+    static class Watch
+        {
+        /**
+         * Construct a watch on an object handle.
+         */
+        Watch(String       path,
+              String       name,
+              ObjectHandle hRef)
+            {
+            this.form = OBJ;
+            this.path = path;
+            this.name = name;
+            this.hVar = hRef;
+            }
+
+        /**
+         * Construct a watch on a property of an object handle.
+         */
+        Watch(String       path,
+              String       name,
+              ObjectHandle hObj,
+              String       sProp)
+            {
+            this.form = PROP;
+            this.path = path;
+            this.name = name;
+            this.hVar = hObj;
+            this.sVar = sProp;
+            }
+
+        /**
+         * Construct a watch on a variable in the frame.
+         */
+        Watch(String       path,
+              String       name,
+              String       sVar)
+            {
+            this.form = VAR;
+            this.path = path;
+            this.name = name;
+            this.sVar = sVar;
+            }
+
+        /**
+         * Construct a watch on an array index.
+         */
+        Watch(String       path,
+              String       name,
+              ObjectHandle hRef,
+              int          index)
+            {
+            this.form  = ELEM;
+            this.path  = path;
+            this.name  = name;
+            this.hVar  = hRef;
+            this.index = index;
+            }
+
+        ObjectHandle produceHandle(Frame frame, Frame anyFrame)
+            {
+            switch (form)
+                {
+                case EVAL:
+                    // TODO not yet implemented
+                    throw new UnsupportedOperationException();
+
+                case OBJ:
+                    return hVar;
+
+                case PROP:
+                    return ((GenericHandle) hVar).getField(sVar);
+
+                case VAR:
+                    // not currently used
+                    throw new UnsupportedOperationException();
+
+                case ELEM:
+                    long cElements = ((ArrayHandle) hVar).m_hDelegate.m_cSize;
+
+                    // REVIEW GG - I have no idea what I'm doing
+                    return cElements > 0 && index >= 0 && index < cElements &&
+                        ((xArray) hVar.getTemplate()).extractArrayValue(anyFrame, hVar, index, Op.A_STACK) == Op.R_NEXT
+                            ? anyFrame.popStack()
+                            : null;
+
+                default:
+                    return null;
+                }
+            }
+
+        static final int EVAL = 0;
+        static final int OBJ  = 1;
+        static final int PROP = 2;
+        static final int VAR  = 3;
+        static final int ELEM = 4;
+
+        int          form;
+        String       path;
+        String       name;
+        ObjectHandle hVar;
+        String       sVar;
+        int          index;
         }
 
 
@@ -1606,6 +2007,11 @@ public class DebugConsole
      * The selected frame (for showing variables).
      */
     private Frame m_frameFocus;
+
+    /**
+     * The "global" debug state (visible in any frame).
+     */
+    private DebugStash m_debugState = new DebugStash();
 
     /**
      * The displayed array of variable names.
