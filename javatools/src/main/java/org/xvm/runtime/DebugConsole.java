@@ -1060,7 +1060,11 @@ public class DebugConsole
             TypeComposition composition = hVar.getComposition();
             if (composition != null)
                 {
-                listFields = composition.getFieldNames();
+                try
+                    {
+                    listFields = composition.getFieldNames();
+                    }
+                catch (Exception e) {}
                 if (!listFields.isEmpty())
                     {
                     fCanExpand = true;
