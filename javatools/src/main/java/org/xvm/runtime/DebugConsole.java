@@ -785,7 +785,7 @@ public class DebugConsole
             {
             try
                 {
-                String[] settings = Handy.parseDelimitedString(s, ':');
+                String[] settings = Handy.parseDelimitedString(sbp, ':');
                 String   sName   = settings[0];
                 int      nLine   = settings.length >= 2 && settings[1].length() > 0
                         ? Integer.parseInt(settings[1])
