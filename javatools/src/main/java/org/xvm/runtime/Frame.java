@@ -91,6 +91,8 @@ public class Frame
     private ObjectHandle            m_hStackTop;    // the top of the local stack
     private Deque<ObjectHandle>     m_stack;        // a remainder of the stack
 
+    public  Object                  m_debug;        // a field that the debugger can stash stuff in
+
     public static final int VAR_MASK        = 0x1;
     public static final int VAR_STANDARD    = 0x0;
     public static final int VAR_DYNAMIC_REF = 0x1;

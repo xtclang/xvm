@@ -8,8 +8,10 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
@@ -25,6 +27,7 @@ import org.xvm.runtime.Frame.VarInfo;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 
+import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.runtime.template.collections.xArray.ArrayHandle;
@@ -459,14 +462,66 @@ public class DebugConsole
                             }
                         break;
 
+                    case "X":
+                        if (cArgs >= 1)
+                            {
+                            VarDisplay[] aVars = m_aVars;
+                            int iVar = parseNonNegative(asParts[1]);
+                            if (iVar >= 0 && iVar < aVars.length)
+                                {
+                                VarDisplay var = aVars[iVar];
+                                if (var.canExpand)
+                                    {
+                                    Map<String, Integer> mapExpand = (Map<String, Integer>) frame.m_debug;
+                                    if (mapExpand == null)
+                                        {
+                                        frame.m_debug = mapExpand = new HashMap<>();
+                                        }
+
+                                    if (var.isArray)
+                                        {
+                                        if (var.name.equals("..."))
+                                            {
+                                            // find the parent array
+                                            int arrayLevel = var.indent - 1;
+                                            do
+                                                {
+                                                var = aVars[--iVar];
+                                                }
+                                            while (var.indent > arrayLevel);
+
+                                            int cShow = mapExpand.getOrDefault(var.path, 0);
+                                            cShow = (cShow + 1) * 10;
+                                            mapExpand.put(var.path, cShow);
+                                            }
+                                        else
+                                            {
+                                            mapExpand.put(var.path, var.expanded ? 0 : 10);
+                                            }
+                                        }
+                                    else
+                                        {
+                                        mapExpand.put(var.path, var.expanded ? 0 : 1);
+                                        }
+                                    writer.println(renderDebugger());
+                                    }
+                                else
+                                    {
+                                    writer.println("Cannot expand or contract \"" + var.name + '\"');
+                                    }
+                                continue NextCommand;
+                                }
+                            }
+                        break;
+
                     case "D":
                         if (cArgs >= 1)
                             {
-                            String[] asVars = m_asVars;
+                            VarDisplay[] aVars = m_aVars;
                             int iVar = parseNonNegative(asParts[1]);
-                            if (iVar >= 0 && iVar < asVars.length)
+                            if (iVar >= 0 && iVar < aVars.length)
                                 {
-                                ObjectHandle hVar = getVar(asVars[iVar]);
+                                ObjectHandle hVar = aVars[iVar].hVar;
                                 if (cArgs >= 2)
                                     {
                                     String sProp = asParts[2];
@@ -493,11 +548,11 @@ public class DebugConsole
                     case "DS":
                         if (cArgs >= 1)
                             {
-                            String[] asVars = m_asVars;
+                            VarDisplay[] aVars = m_aVars;
                             int iVar = parseNonNegative(asParts[1]);
-                            if (iVar >= 0 && iVar < asVars.length)
+                            if (iVar >= 0 && iVar < aVars.length)
                                 {
-                                ObjectHandle hVar = getVar(asVars[iVar]);
+                                ObjectHandle hVar = aVars[iVar].hVar;
                                 if (hVar == null)
                                     {
                                     writer.println("<unassigned>");
@@ -956,21 +1011,19 @@ public class DebugConsole
             return Handy.NO_ARGS;
             }
 
-        int               cVars    = frame.f_anNextVar[frame.m_iScope];
-        ArrayList<String> listVars = new ArrayList<>(cVars + 1);
-        ArrayList<String> listVals = new ArrayList<>(cVars + 1);
-        int               cchVarNum;
-
-        int          index = 0;
-        ObjectHandle hThis = frame.f_hThis;
-        if (hThis == null)
+        Map<String, Integer> mapExpand = Collections.emptyMap();
+        if (frame.m_debug != null)
             {
-            cchVarNum = numlen(cVars-1);
+            mapExpand = (Map<String, Integer>) frame.m_debug;
             }
-        else
+
+        int                   cVars    = frame.f_anNextVar[frame.m_iScope];
+        ArrayList<VarDisplay> listVars = new ArrayList<>(cVars + 1);
+
+        ObjectHandle hThis = frame.f_hThis;
+        if (hThis != null)
             {
-            cchVarNum = numlen(cVars);
-            addVal(listVars, listVals, "this", hThis, index++, cMax, cchVarNum);
+            addVar(0, "this", "this", hThis, listVars, mapExpand);
             }
 
         for (int i = 0; i < cVars; i++)
@@ -979,34 +1032,91 @@ public class DebugConsole
             String  sVar = info == null ? "" : info.getName();
             if (!sVar.isEmpty())
                 {
-                addVal(listVars, listVals, sVar, frame.f_ahVar[i], index++, cMax, cchVarNum);
+                addVar(0, sVar, sVar, frame.f_ahVar[i], listVars, mapExpand);
                 }
             }
-        m_asVars = listVars.toArray(Handy.NO_ARGS);
-        return listVals.toArray(Handy.NO_ARGS);
+
+
+        cVars   = listVars.size();
+        m_aVars = listVars.toArray(new VarDisplay[0]);
+        String[] asVars    = new String[cVars];
+        int      cchVarNum = numlen(listVars.size());
+        for (int i = 0; i < cVars; ++i)
+            {
+            asVars[i] = m_aVars[i].render(i, cchVarNum);
+            }
+        return asVars;
         }
 
-    private void addVal(ArrayList<String> listVars, ArrayList<String> listVals,
-                        String sVar, ObjectHandle hValue, int iVar,
-                        int cMax, int cchVarNum)
+    private void addVar(int cIndent, String sPath, String sVar, ObjectHandle hVar,
+                        ArrayList<VarDisplay> listVars, Map<String, Integer> mapExpand)
         {
-        String sDescr = hValue == null ? "<not assigned>" : hValue.toString();
-        if (sDescr.indexOf('\n') >= 0)
+        boolean      fCanExpand = false;
+        boolean      fArray     = false;
+        long         cElements  = 0;
+        List<String> listFields = Collections.EMPTY_LIST;
+        if (hVar != null)
             {
-            sDescr = sDescr.replace('\n', ' ');
+            TypeComposition composition = hVar.getComposition();
+            if (composition != null)
+                {
+                listFields = composition.getFieldNames();
+                if (!listFields.isEmpty())
+                    {
+                    fCanExpand = true;
+                    }
+
+                if (hVar instanceof ArrayHandle)
+                    {
+                    fArray    = true;
+                    cElements = ((ArrayHandle) hVar).m_hDelegate.m_cSize;
+                    if (cElements > 0)
+                        {
+                        fCanExpand = true;
+                        }
+                    }
+                }
             }
 
-        int cDescrMax = cMax - cchVarNum - sVar.length() - 3;
-        if (sDescr.length() > cDescrMax)
-            {
-            sDescr = sDescr.substring(0, cDescrMax - 3) + "...";
-            }
+        boolean fExpanded = fCanExpand && !sVar.equals("...")
+                && mapExpand.getOrDefault(sPath, sPath.equals("this") ? 1 : 0) > 0;
 
-        listVars.add(sVar);
-        listVals.add(
-            rjust(Integer.toString(iVar), cchVarNum) +
-            "  " + sVar + '=' + sDescr
-            );
+        listVars.add(new VarDisplay(cIndent, sPath, sVar, hVar, fCanExpand, fExpanded));
+
+        if (fExpanded)
+            {
+            if (fArray)
+                {
+                int cMax = mapExpand.getOrDefault(sPath, 10);
+                for (int i = 0; i < cElements; ++i)
+                    {
+                    // can't show all the elements; provide a "+ ..." to further expand the array
+                    if (i >= cMax)
+                        {
+                        addVar(cIndent+1, sPath+"...", "...", hVar, listVars, mapExpand);
+                        break;
+                        }
+
+                    // REVIEW GG - I have no idea what I'm doing
+                    if (((xArray) hVar.getTemplate()).extractArrayValue(m_frame, hVar, i, Op.A_STACK) != Op.R_NEXT)
+                        {
+                        break;
+                        }
+
+                    ObjectHandle hElement = m_frame.popStack();
+                    String sElement = "[" + i + "]";
+                    addVar(cIndent+1, sPath+sElement, sElement, hElement, listVars, mapExpand);
+                    }
+                }
+            else
+                {
+                for (String sField : listFields)
+                    {
+                    ObjectHandle hField = ((GenericHandle) hVar).getField(sField);
+                    addVar(cIndent+1, sPath+'.'+sField, sField, hField, listVars, mapExpand);
+                    }
+                }
+            }
         }
 
     private ObjectHandle getVar(String sName)
@@ -1390,6 +1500,78 @@ public class DebugConsole
         }
 
 
+    // ----- inner class: BreakPoint ---------------------------------------------------------------
+
+    static class VarDisplay
+        {
+        VarDisplay(int          indent,
+                   String       path,
+                   String       name,
+                   ObjectHandle hVar,
+                   boolean      canExpand,
+                   boolean      expanded)
+            {
+            this.indent    = indent;
+            this.path      = path;
+            this.name      = name;
+            this.hVar      = hVar;
+            this.canExpand = canExpand;
+            this.expanded  = expanded;
+
+            isArray = hVar instanceof ArrayHandle;
+            if (isArray)
+                {
+                size = ((ArrayHandle) hVar).m_hDelegate.m_cSize;
+                }
+            }
+
+        String render(int nIndex, int cchIndex)
+            {
+            StringBuilder sb = new StringBuilder();
+            sb.append(rjust(String.valueOf(nIndex), cchIndex))
+              .append(dup(' ', indent*2 + 1))
+              .append(canExpand ? (expanded ? '-' : '+') : ' ')
+              .append(name);
+
+            if (!name.equals("..."))
+                {
+                if (isArray)
+                    {
+                    sb.append('[')
+                        .append(size)
+                        .append(']');
+                    }
+
+                if (canExpand || isArray)
+                    {
+                    sb.append(" : ");
+                    sb.append(hVar.getType().getValueString());
+                    }
+                else if (hVar == null)
+                    {
+                    sb.append(" = <unassigned>");
+                    }
+                else
+                    {
+                    sb.append(" = ")
+                      .append(hVar);
+                    }
+                }
+
+            return sb.toString();
+            }
+
+        int          indent;
+        String       path;
+        String       name;
+        ObjectHandle hVar;
+        boolean      isArray;
+        long         size;
+        boolean      canExpand;
+        boolean      expanded;
+        }
+
+
     // ----- constants and data fields -------------------------------------------------------------
 
     public static final DebugConsole INSTANCE = new DebugConsole();
@@ -1424,7 +1606,7 @@ public class DebugConsole
     /**
      * The displayed array of variable names.
      */
-    private String[] m_asVars;
+    private VarDisplay[] m_aVars;
 
     /**
      * The last debugged iPC.
