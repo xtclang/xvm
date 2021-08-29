@@ -1247,7 +1247,7 @@ public class DebugConsole
             for (Watch watch : stash.getWatchList())
                 {
                 ObjectHandle hVar = watch.produceHandle(frame, m_frame);
-                addVar(0, watch.path, watch.name, hVar, listVars, mapExpand);
+                addVar(0, watch.path, watch.name, hVar, listVars, mapExpand).watch = watch;
                 fAnyVars = true;
                 }
             }
@@ -1259,7 +1259,7 @@ public class DebugConsole
             }
 
         ObjectHandle hThis = frame.f_hThis;
-        int          cVars = frame.f_anNextVar[frame.m_iScope];
+        int          cVars = frame.f_anNextVar == null ? 0 : frame.f_anNextVar[frame.m_iScope];
         if (hThis != null)
             {
             addVar(0, "this", "this", hThis, listVars, mapExpand);
@@ -1286,7 +1286,7 @@ public class DebugConsole
         return asVars;
         }
 
-    private void addVar(int cIndent, String sPath, String sVar, ObjectHandle hVar,
+    private VarDisplay addVar(int cIndent, String sPath, String sVar, ObjectHandle hVar,
                         ArrayList<VarDisplay> listVars, Map<String, Integer> mapExpand)
         {
         boolean      fCanExpand = false;
@@ -1323,7 +1323,8 @@ public class DebugConsole
         boolean fExpanded = fCanExpand && !sVar.equals("...")
                 && mapExpand.getOrDefault(sPath, sPath.equals("this") ? 1 : 0) > 0;
 
-        listVars.add(new VarDisplay(cIndent, sPath, sVar, hVar, fCanExpand, fExpanded));
+        VarDisplay result = new VarDisplay(cIndent, sPath, sVar, hVar, fCanExpand, fExpanded);
+        listVars.add(result);
 
         if (fExpanded)
             {
@@ -1359,6 +1360,8 @@ public class DebugConsole
                     }
                 }
             }
+
+        return result;
         }
 
     private ObjectHandle getVar(String sName)
