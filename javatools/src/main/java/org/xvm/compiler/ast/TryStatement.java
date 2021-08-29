@@ -413,7 +413,7 @@ public class TryStatement
             // GUARD
             // # if (x.is(Closeable)) { x.close(); }
             // JMP_NTYPE skip_close
-            // NVOK_00 x Closeable.close
+            // NVOK_10 x Closeable.close
             // skip_close: GUARD_E
             // CATCH Exception e_close
             // # if e == null throw e_close
@@ -425,7 +425,7 @@ public class TryStatement
             TypeConstant   typeCloseable = pool.typeCloseable();
             MethodConstant methodClose   = typeCloseable.ensureTypeInfo(errs)
                     .findMethods("close", 1, MethodKind.Method).iterator().next();
-            for (int i = 0, c = resources.size(); i < c; ++i)
+            for (int i = resources.size() - 1; i >= 0; --i)
                 {
                 code.add(aFinallyClose[i]);
                 Register regException = code.lastRegister();
