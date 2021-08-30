@@ -299,13 +299,15 @@ public class PropertyComposition
     @Override
     public List<String> getFieldNames()
         {
-        throw new UnsupportedOperationException();
+        // strictly speaking, the list should include the non-top-level fields that are kept in
+        // the parent's structure, but those are NestedIdentities, not Strings
+        return f_clzRef.getFieldNames();
         }
 
     @Override
     public StringHandle[] getFieldNameArray()
         {
-        throw new UnsupportedOperationException();
+        return f_clzRef.getFieldNameArray();
         }
 
     @Override

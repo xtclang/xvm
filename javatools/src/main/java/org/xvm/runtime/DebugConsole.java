@@ -317,15 +317,14 @@ public class DebugConsole
                                         {
                                         Arrays.stream(aBP).forEach(BreakPoint::disable);
                                         m_fBreakOnAllThrows = false;
-                                        saveBreakpoints();
                                         }
                                     else
                                         {
                                         Arrays.stream(aBP).forEach(BreakPoint::enable);
                                         m_fBreakOnAllThrows =
                                             Arrays.stream(aBP).anyMatch(bp -> bp.className.equals("*"));
-                                        saveBreakpoints();
                                         }
+                                    saveBreakpoints();
                                     continue NextCommand;
                                     }
                                 // "BT 3"  (# is from the previously displayed list of breakpoints)
@@ -610,7 +609,7 @@ public class DebugConsole
                                     if (var.indent == 0)
                                         {
                                         // it's a variable (since it's not a watch)
-                                        writer.println("Var #" + iVar + " (\"" + var.name + "\") is already displayed in the current fram");
+                                        writer.println("Var #" + iVar + " (\"" + var.name + "\") is already displayed in the current frame");
                                         continue;
                                         }
                                     else if (var.name.startsWith("["))
@@ -822,7 +821,7 @@ public class DebugConsole
      */
     private int findParentNode(int iVar)
         {
-        // figure out if it the debug info is local or global state
+        // figure out if the debug info is local or global state
         VarDisplay var    = m_aVars[iVar];
         int        indent = var.indent;
         assert indent > 0;
@@ -841,9 +840,8 @@ public class DebugConsole
      */
     private Map<String, Integer> ensureExpandMap(int iVar)
         {
-        // figure out if it the debug info is local or global state
-        VarDisplay var     = m_aVars[iVar];
-        boolean    fGlobal = false;
+        // figure out if the debug info is local or global state
+        VarDisplay var = m_aVars[iVar];
         while (var.indent > 0)
             {
             var = m_aVars[--iVar];
@@ -1237,7 +1235,6 @@ public class DebugConsole
         ArrayList<VarDisplay> listVars = new ArrayList<>();
         Map<String, Integer>  mapExpand;
 
-        Frame   frame    = m_frameFocus;
         boolean fAnyVars = false;
         int     iPass    = 0;
         do
@@ -1246,13 +1243,14 @@ public class DebugConsole
             mapExpand = stash.getExpandMap();
             for (Watch watch : stash.getWatchList())
                 {
-                ObjectHandle hVar = watch.produceHandle(frame, m_frame);
+                ObjectHandle hVar = watch.produceHandle(m_frame);
                 addVar(0, watch.path, watch.name, hVar, listVars, mapExpand).watch = watch;
                 fAnyVars = true;
                 }
             }
         while (++iPass < 2);
 
+        Frame  frame = m_frameFocus;
         if (frame.isNative() && !fAnyVars)
             {
             return Handy.NO_ARGS;
@@ -1298,11 +1296,7 @@ public class DebugConsole
             TypeComposition composition = hVar.getComposition();
             if (composition != null)
                 {
-                try
-                    {
-                    listFields = composition.getFieldNames();
-                    }
-                catch (Exception e) {}
+                listFields = composition.getFieldNames();
                 if (!listFields.isEmpty())
                     {
                     fCanExpand = true;
@@ -1340,7 +1334,7 @@ public class DebugConsole
                         break;
                         }
 
-                    // REVIEW GG - I have no idea what I'm doing
+                    // extractArrayValue returns only R_NEXT or R_EXCEPTION (out of bounds)
                     if (((xArray) hVar.getTemplate()).extractArrayValue(m_frame, hVar, i, Op.A_STACK) != Op.R_NEXT)
                         {
                         break;
@@ -1751,7 +1745,7 @@ public class DebugConsole
     // ----- inner class: DebugStash ---------------------------------------------------------------
 
     /**
-     * A stash object for the debugger, that can be stored (for example) inside of a frame.
+     * A stash object for the debugger, that can be stored (for example) inside a frame.
      */
     static class DebugStash
         {
@@ -1933,7 +1927,7 @@ public class DebugConsole
             this.index = index;
             }
 
-        ObjectHandle produceHandle(Frame frame, Frame anyFrame)
+        ObjectHandle produceHandle(Frame frame)
             {
             switch (form)
                 {
@@ -1954,10 +1948,10 @@ public class DebugConsole
                 case ELEM:
                     long cElements = ((ArrayHandle) hVar).m_hDelegate.m_cSize;
 
-                    // REVIEW GG - I have no idea what I'm doing
+                    // extractArrayValue returns only R_NEXT or R_EXCEPTION (out of bounds)
                     return cElements > 0 && index >= 0 && index < cElements &&
-                        ((xArray) hVar.getTemplate()).extractArrayValue(anyFrame, hVar, index, Op.A_STACK) == Op.R_NEXT
-                            ? anyFrame.popStack()
+                        ((xArray) hVar.getTemplate()).extractArrayValue(frame, hVar, index, Op.A_STACK) == Op.R_NEXT
+                            ? frame.popStack()
                             : null;
 
                 default:
@@ -2027,7 +2021,7 @@ public class DebugConsole
     private int m_iPC;
 
     /**
-     * The debugger screen height (the limit for printing console output)..
+     * The debugger screen height (the limit for printing console output).
      */
     private int m_cHeight = prefs.getInt("screen-height", 30);
 
