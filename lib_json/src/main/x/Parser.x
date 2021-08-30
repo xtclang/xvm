@@ -933,8 +933,6 @@ class Parser
          */
         protected function void()? notifyClosed;
 
-// TODO mark/restore
-
         @Override
         void skip(Token[]? skipped = Null)
             {
@@ -951,7 +949,7 @@ class Parser
         @Override
         Doc parseDoc()
             {
-            assert !closed;
+            checkEof();
             Doc doc = raw.parseDoc();
             checkDelimiter();
             return doc;
@@ -960,6 +958,7 @@ class Parser
         @Override
         (Token first, Token last) skipDoc(Token[]? skipped = Null)
             {
+            checkEof();
             (Token first, Token last) = raw.skipDoc(skipped);
             checkDelimiter();
             return first, last;
@@ -968,6 +967,7 @@ class Parser
         @Override
         Array<Doc> parseArray()
             {
+            checkEof();
             Array<Doc> array = raw.parseArray();
             checkDelimiter();
             return array;
@@ -976,6 +976,7 @@ class Parser
         @Override
         (Token first, Token last) skipArray(Token[]? skipped = Null)
             {
+            checkEof();
             (Token first, Token last) = raw.skipArray(skipped);
             checkDelimiter();
             return first, last;
@@ -984,7 +985,7 @@ class Parser
         @Override
         conditional ArrayParser matchArray()
             {
-            return match(ArrayEnter)
+            return !eof && match(ArrayEnter)
                     ? (True, new ArrayParser(raw, checkDelimiter))
                     : False;
             }
@@ -992,6 +993,7 @@ class Parser
         @Override
         ArrayParser expectArray()
             {
+            checkEof();
             expect(ArrayEnter);
             return new ArrayParser(raw, checkDelimiter);
             }
@@ -999,6 +1001,7 @@ class Parser
         @Override
         Map<String, Doc> parseObject()
             {
+            checkEof();
             Map<String, Doc> map = raw.parseObject();
             checkDelimiter();
             return map;
@@ -1007,6 +1010,7 @@ class Parser
         @Override
         (Token first, Token last) skipObject(Token[]? skipped = Null)
             {
+            checkEof();
             (Token first, Token last) = raw.skipObject(skipped);
             checkDelimiter();
             return first, last;
@@ -1015,7 +1019,7 @@ class Parser
         @Override
         conditional ObjectParser matchObject()
             {
-            return match(ObjectEnter)
+            return !eof && match(ObjectEnter)
                     ? (True, new ObjectParser(raw, checkDelimiter))
                     : False;
             }
@@ -1023,6 +1027,7 @@ class Parser
         @Override
         ObjectParser expectObject()
             {
+            checkEof();
             expect(ObjectEnter);
             return new ObjectParser(raw, checkDelimiter);
             }
@@ -1052,6 +1057,18 @@ class Parser
                     closed = True;
                     }
                 }
+            }
+
+        protected Boolean checkEof()
+            {
+            assert !closed as "NestedParser has already been closed";
+
+            if (eof)
+                {
+                throw new EndOfFile();
+                }
+
+            return True;
             }
 
         /**
@@ -1215,13 +1232,18 @@ class Parser
          */
         conditional Token matchKey(String? key = Null)
             {
-            assert isKeyNext as "JSON parsing error: attempt to match a key while  Key \"{key}\" expected, but \"{token.value}\" encountered.";
-
-            Token keyToken = peek();
-            if (keyToken.id == StrVal && key? == keyToken.value.as(String) : True)
+            if (!eof)
                 {
-                skipDoc();
-                return True, keyToken;
+                assert isKeyNext as `|JSON parsing error: attempt to match a key while  Key\
+                                     | \"{key}\" expected, but \"{token.value}\" encountered.
+                                    ;
+
+                Token keyToken = peek();
+                if (keyToken.id == StrVal && key? == keyToken.value.as(String) : True)
+                    {
+                    skipDoc();
+                    return True, keyToken;
+                    }
                 }
 
             return False;
