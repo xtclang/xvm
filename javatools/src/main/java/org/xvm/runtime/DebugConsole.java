@@ -1089,8 +1089,10 @@ public class DebugConsole
         int      cchFrames = Math.max(longestOf(asFrames), sFHeader.length());
 
         String   sVHeader  = "Variables and watches:";
-        String[] asVars    = renderVars(m_cWidth - cchFrames - 2);
+        String[] asVars    = renderVars();
         int      cchVars   = Math.max(longestOf(asVars), sVHeader.length());
+        int      cMax      = m_cWidth - cchFrames - 2;
+
         if (cchFrames + cchVars + 3 > m_cWidth)
             {
             int max = m_cWidth - 3;
@@ -1147,6 +1149,11 @@ public class DebugConsole
                 if (iVar < cVars)
                     {
                     sVar = asVars[iVar++];
+                    if (sVar.length() >= cMax)
+                        {
+                        sVar = sVar.substring(0, cMax - 4) + "...";
+                        }
+                    sVar = sVar.replace('\n', ' ');
                     }
                 }
             else
@@ -1230,7 +1237,7 @@ public class DebugConsole
         return asFrames;
         }
 
-    private String[] renderVars(int cMax)
+    private String[] renderVars()
         {
         ArrayList<VarDisplay> listVars = new ArrayList<>();
         Map<String, Integer>  mapExpand;
