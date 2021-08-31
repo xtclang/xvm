@@ -2,33 +2,63 @@ module TestSimple.test.org
     {
     package json import json.xtclang.org;
 
+    import ecstasy.io.ByteArrayInputStream;
+    import ecstasy.io.ByteArrayOutputStream;
     import ecstasy.io.CharArrayReader;
-    import json.*;
+    import ecstasy.io.DataInputStream;
+    import ecstasy.io.InputStream;
+    import ecstasy.io.JavaDataInput;
+    import ecstasy.io.ObjectInput;
+    import ecstasy.io.ObjectOutput;
+    import ecstasy.io.PackedDataInput;
+    import ecstasy.io.PackedDataOutput;
+    import ecstasy.io.Reader;
+    import ecstasy.io.TextPosition;
+    import ecstasy.io.Writer;
+    import ecstasy.io.UTF8Reader;
+
+    import json.Doc;
+    import json.ElementInput;
+    import json.ElementOutput;
+    import json.FieldInput;
+    import json.FieldOutput;
+    import json.Lexer;
+    import json.Lexer.Token;
+    import json.Mapping;
+    import json.ObjectInputStream;
+    import json.ObjectInputStream.ElementInputStream;
+    import json.ObjectInputStream.FieldInputStream;
+    import json.ObjectOutputStream;
+    import json.ObjectOutputStream.ElementOutputStream;
+    import json.Parser;
+    import json.Printer;
+    import json.Schema;
 
     @Inject Console console;
 
     void run()
         {
-        Element[] els = new Element[];
-        els.add(new Element("A"));
-        els.add(new Element("B"));
+        Range<Int> r = 1..4;
 
-        Data d = new Data("a", [0, 1, 2], els);
-        console.println(d);
+        assert:debug;
+
+        Type<Range<Int>> type = &r.actualType;
+        assert Mapping mapping := Schema.DEFAULT.mappingByType.values.any(m -> m.is(json.mapping.RangeMapping));
+        Type typeDataType = type.DataType;
+        Type mappingSerializable = mapping.Serializable;
+        Boolean isA1 = (type.DataType.is(Type<mapping.Serializable>));
+        Boolean isA2 = (Int.PublicType.is(Type<Orderable.PublicType>));
+        Boolean isA3 = (Range<Int>.PublicType.is(Type<Range>));
+        Boolean isA4 = (Range<Int>.PublicType.is(Type<Range<Orderable>>));
 
         Schema schema = Schema.DEFAULT;
+        StringBuffer writer = new StringBuffer();
+        ObjectOutputStream  o_out = schema.createObjectOutput(writer).as(ObjectOutputStream);
+        ElementOutputStream e_out = o_out.createElementOutput();
 
-        StringBuffer buf = new StringBuffer();
-        schema.createObjectOutput(buf).write(d);
+        e_out.addObject(r);
 
-        String s = buf.toString();
-        console.println($"written out={s}");
-
-        Data d2 = schema.createObjectInput(new CharArrayReader(s)).read<Data>();
-        console.println($"read back in={d2}");
-
+        String s = writer.toString();
+        console.println($"result={s}");
         }
-
-    const Data(String s, Int[] ints, Element[] els);
-    const Element(String s);
     }
