@@ -66,11 +66,7 @@ const RangeMapping<Element extends Orderable>(Mapping<Element> underlying)
                 val narrowedUnderlying := schema.findMapping(SubType.Element),
                 &narrowedUnderlying != &underlying)
             {
-            // TODO GG: the code below doesn't work as expected
-            // return True, new RangeMapping<SubType.Element>(narrowedUnderlying).as(Mapping<SubType>);
-
-            Type<Orderable> typeEl = SubType.Element;
-            return True, new RangeMapping<typeEl.DataType>(narrowedUnderlying).as(Mapping<SubType>);
+            return True, new RangeMapping<SubType.Element>(narrowedUnderlying).as(Mapping<SubType>);
             }
         return False;
         }

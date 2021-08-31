@@ -129,7 +129,7 @@ public class FormalTypeChildConstant
         FormalConstant idParent   = (FormalConstant) getParentConstant();
         TypeConstant   typeParent = idParent.resolve(resolver);
 
-        if (typeParent == null)
+        if (typeParent == null || typeParent.isFormalType())
             {
             return null;
             }
