@@ -170,7 +170,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      * lazily initialized, and responsible for reading their own state from persistent storage, and
      * that state could *theoretically* include transactions that occurred **after** the
      * lastClosedId. In other words, when initializing, the ObjectStore should not retain its own
-     * latest transction, but rather whatever the *TxManager* defines as the latest.
+     * latest transaction, but rather whatever the *TxManager* defines as the latest.
      *
      * This is initialized to [NO_TX], which is an illegal transaction ID, to make it obvious that
      * the transaction manager's state has not yet been loaded.
@@ -427,7 +427,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      */
     static Boolean isReadTx(Int txId)
         {
-        return txId > 0;
+        return txId >= 0;
         }
 
     /**
@@ -507,7 +507,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      *
      * The transaction manager assigns a "write" temporary transaction id that the transaction will
      * use for all of its mutating operations (the "write TxId"). A "read" transaction id is
-     * assigned the first time that the transaction attemptsm to read data. The read TxId ensures
+     * assigned the first time that the transaction attempts to read data. The read TxId ensures
      * that the client obtains a stable, transactional view of the underlying database, even as
      * other transactions from other clients may continue to be committed. All reads within that
      * transaction will be satisfied by the database using the version of the data specified by the
@@ -846,7 +846,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             }
 
         // TODO see all the TODO in validate
-        // TODO seal each objectstore after it rectifies
+        // TODO seal each object store after it rectifies
         TODO
 
         // TODO (somewhere else) is-readonly has to eval to true for all object store instances other than the one inside the for loop
@@ -869,7 +869,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         // TODO after weeding out any stores that have been enlisted but have no changes, seal all of the already-enlisted stores
         // TODO see all the TODO in validate
         TODO
-        // TODO seal each objectstore after all of them have finished distributing (second for loop)
+        // TODO seal each object store after all of them have finished distributing (second for loop)
         }
 
     /**
