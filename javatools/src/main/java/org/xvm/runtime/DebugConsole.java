@@ -847,6 +847,7 @@ public class DebugConsole
             var = m_aVars[--iVar];
             }
         return (var.watch != null && getGlobalStash().getWatchList().contains(var.watch)
+            || var.path.equals("this")
                 ? getGlobalStash()
                 : getFrameStash() ).ensureExpandMap();
         }
@@ -1267,7 +1268,7 @@ public class DebugConsole
         int          cVars = frame.f_anNextVar == null ? 0 : frame.f_anNextVar[frame.m_iScope];
         if (hThis != null)
             {
-            addVar(0, "this", "this", hThis, listVars, mapExpand);
+            addVar(0, "this", "this", hThis, listVars, getGlobalStash().getExpandMap());
             }
 
         for (int i = 0; i < cVars; i++)
@@ -1322,7 +1323,7 @@ public class DebugConsole
             }
 
         boolean fExpanded = fCanExpand && !sVar.equals("...")
-                && mapExpand.getOrDefault(sPath, sPath.equals("this") ? 1 : 0) > 0;
+                && mapExpand.getOrDefault(sPath, 0) > 0;
 
         VarDisplay result = new VarDisplay(cIndent, sPath, sVar, hVar, fCanExpand, fExpanded);
         listVars.add(result);
