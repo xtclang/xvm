@@ -303,10 +303,12 @@ service JsonValueStore<Value extends immutable Const>
                 {
                 assert tx.prepared, tx.sealed, String json ?= tx.json;
 
+                Int prepareId = tx.readId;
+
                 // build the String that will be appended to the disk file
                 // format is "{"tx":14, "value":{...}},"; comma is first (since we are appending)
                 buf.append(",\n{\"tx\":")
-                   .append(tx.readId)
+                   .append(prepareId)
                    .append(", \"value\":");
 
                 Int start = buf.size;
@@ -316,7 +318,7 @@ service JsonValueStore<Value extends immutable Const>
                 buf.add('}');
 
                 // remember the id of the last transaction that we process here
-                lastCommitId = tx.readId;
+                lastCommitId = prepareId;
 
                 // remember the transaction location
                 storageLayout.put(lastCommitId, [offset+start .. offset+end));
@@ -579,7 +581,7 @@ service JsonValueStore<Value extends immutable Const>
             while (!arrayParser.eof)
                 {
                 ++txCount;
-                using (val objectParser = arrayParser.expectObject())
+                 using (val objectParser = arrayParser.expectObject())
                     {
                     objectParser.expectKey("tx");
                     Int txId = objectParser.expectInt();

@@ -192,6 +192,8 @@ service Client<Schema extends RootSchema>
      */
     TxContext ensureTransaction()
         {
+        private TxContext ctx = new TxContext();
+
         checkRead();
 
         var     tx         = this.tx;
@@ -205,8 +207,7 @@ service Client<Schema extends RootSchema>
             autocommit = True;
             }
 
-        private TxContext ctx = new TxContext();
-        ctx.init(tx, autocommit);
+        ctx.enter(autocommit);
         return ctx;
         }
 
@@ -449,34 +450,43 @@ service Client<Schema extends RootSchema>
     // ----- TxContext -----------------------------------------------------------------------------
 
     /**
-     * The TxContext simplifies transaction management on an operation-by-operation basis.
+     * The TxContext simplifies "autocommit" transaction management on an operation-by-operation basis.
      */
     protected class TxContext
             implements Closeable
         {
-        (Transaction + Schema)? tx;
-        Boolean                 autocommit;
+        private Boolean autocommit;
+        private Int     depth;
 
-        void init(Transaction + Schema tx, Boolean autocommit)
+        void enter(Boolean autocommit)
             {
-            assert this.tx == Null;
-            this.tx = tx;
-            this.autocommit = autocommit;
+            if (depth++ == 0)
+                {
+                this.autocommit = autocommit;
+                }
             }
 
         Int id.get()
             {
-            return tx?.id_ : assert;
+            return outer.tx?.id_ : assert;
             }
 
         @Override void close(Exception? e = Null)
             {
-            assert Transaction tx ?= this.tx;
-            if (autocommit)
+            assert depth > 0;
+            assert Transaction tx ?= outer.tx;
+
+            if (--depth == 0 && autocommit)
                 {
-                assert tx.commit(); // REVIEW CP: what exception should be raised
+                if (e == Null)
+                    {
+                    assert tx.commit() as "Failed to auto-commit the transaction";
+                    }
+                else
+                    {
+                    tx.rollback();
+                    }
                 }
-            this.tx = Null;
             }
         }
 

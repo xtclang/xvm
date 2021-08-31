@@ -19,38 +19,47 @@ module AddressBookApp
     {
     package db import AddressBookDB;
 
+    import db.Connection;
+    import db.Contacts;
+    import db.Contact;
+    import db.Phone;
+
     void run()
         {
         @Inject Console console;
         @Inject Clock clock;
-        @Inject db.Connection dbc;
+        @Inject Connection dbc;
 
         console.println($"actualType=({&dbc.actualType})\n");
 
-//        db.Contacts contacts = dbc.contacts;
-//
-//        db.Contact george = new db.Contact("George", "Washington");
-//        db.Contact john   = new db.Contact("John", "Adams");
-//
-//        contacts.put(george.rolodexName, george);
-//        contacts.addContact(john);
-//
-        dbc.title.set($"My Contacts as of {clock.now.time.minute}");
+        Contacts contacts = dbc.contacts;
+
+        Contact george = new Contact("George", "Washington");
+        Contact john   = new Contact("John", "Adams");
+
+        if (contacts.size > 0)
+            {
+            contacts.remove(george.rolodexName);
+            contacts.remove(john.rolodexName);
+            }
+        contacts.put(george.rolodexName, george);
+        contacts.addContact(john);
+
+        dbc.title.set($"My Contacts as of {clock.now.time}");
         dbc.requestCount.adjustBy(2);
 
-//
-//        using (val tx = dbc.createTransaction())
-//            {
-//            tx.contacts.addPhone(george.rolodexName, new db.Phone(Work, "202-555-0000"));
-//            tx.contacts.addPhone(george.rolodexName, new db.Phone(Home, "202-555-0001"));
-//            tx.requestCount.adjustBy(1);
-//            }
-//
+        using (val tx = dbc.createTransaction())
+            {
+            tx.contacts.addPhone(george.rolodexName, new Phone(Work, "202-555-0000"));
+            tx.contacts.addPhone(john.rolodexName, new Phone(Home, "202-555-0001"));
+            tx.requestCount.adjustBy(1);
+            }
+
         console.println(dbc.title.get());
-//        for (db.Contact contact : contacts.values)
-//            {
-//            console.println(contact);
-//            }
+        for (Contact contact : contacts.values)
+            {
+            console.println(contact);
+            }
         console.println($"Count: {dbc.requestCount.get()}");
         }
     }

@@ -1,5 +1,8 @@
 import json.Doc;
 import json.Mapping;
+import json.Lexer.Token;
+import json.ObjectInputStream;
+import json.Parser;
 
 import model.DBObjectInfo;
 
@@ -12,9 +15,9 @@ import TxManager.NO_TX;
  * The disk format follows this style:
  *
  *     [
- *     {"tx":14, [{"k":{...}}, {"k":{...}, "v":{...}}]},
- *     {"tx":17, [{"k":{...}, "v":{...}}, {"k":{...}, "v":{...}}]},
- *     {"tx":18, [{"k":{...}, "v":{...}}, {"k":{...}, "v":{...}}, {"k":{...}}]}
+ *     {"tx":14, "c":[{"k":{...}}, {"k":{...}, "v":{...}}]},
+ *     {"tx":17, "c":[{"k":{...}, "v":{...}}, {"k":{...}, "v":{...}}]},
+ *     {"tx":18, "c":[{"k":{...}, "v":{...}}, {"k":{...}, "v":{...}}, {"k":{...}}]}
  *     ]
  *
  * where a "k" (key) without a corresponding "v" (value) indicates a deletion and the "[...]" part
@@ -35,12 +38,18 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
         {
         construct ObjectStore(catalog, info, errs);
 
+        this.jsonSchema   = catalog.jsonSchema;
         this.keyMapping   = keyMapping;
         this.valueMapping = valueMapping;
         }
 
 
     // ----- properties ----------------------------------------------------------------------------
+
+    /**
+     * A cached reference to the JSON schema.
+     */
+    public/protected json.Schema jsonSchema;
 
     /**
      * The JSON Mapping for the keys in the Map.
@@ -95,10 +104,9 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
 
         /*
          * When the transaction is sealed (or after it is sealed, but before it commits), the
-         * changes to the value in the transaction are rendered for the transaction log, and for
-         * storage on disk.
+         * changes in the transaction are rendered for the transaction log, and for storage on disk.
          */
-        String? json;
+        Map<Key, String>? jsonEntries;
         }
 
     @Override
@@ -111,6 +119,18 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
      * TODO if the value for a key is stable, replace the nested SkiplistMap with a single Value?
      */
     protected SkiplistMap<Key, SkiplistMap<Int, Value|Deletion>> history = new SkiplistMap();
+
+    /**
+     * A record of how all persistent transactions are laid out on disk.
+     */
+    protected SkiplistMap<Int, Range<Int>> storageLayout = new SkiplistMap();
+
+    /**
+     * The files names used to store the data for the keys. For Large model, this map will be
+     * actively purged, retaining only most recently/frequently used keys. For all other models, it
+     * contains all existing keys (lazily added).
+     */
+    protected Map<Key, String> fileNames = new HashMap();
 
     /**
      * The append offset, measured in Chars, within the each data file, keyed by the Key's URI form.
@@ -172,7 +192,7 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
         assert isReadTx(txId);
         if (model != Empty, Int closestTxId := sizeByTx.floor(txId))
             {
-            assert Int size := sizeByTx.get(txId);
+            assert Int size := sizeByTx.get(closestTxId);
             return size;
             }
 
@@ -584,28 +604,44 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
     @Override
     String sealPrepare(Int writeId)
         {
+        private String buildJsonTx(Map<Key, String> jsonEntries)
+            {
+            StringBuffer buf = new StringBuffer();
+            buf.add('[');
+            loop:
+            for (String jsonEntry : jsonEntries.values)
+                {
+                if (!loop.first)
+                    {
+                    ", ".appendTo(buf);
+                    }
+                buf.append(jsonEntry);
+                }
+            buf.add(']');
+            return buf.toString();
+            }
+
         assert Changes tx := checkTx(writeId), tx.prepared;
         if (tx.sealed)
             {
-            return tx.json ?: assert;
+            return buildJsonTx(tx.jsonEntries ?: assert);
             }
 
         assert Map<Key, Value|Deletion> mods := modsByTx.get(tx.readId);
 
-        StringBuffer buf = new StringBuffer();
-        buf.add('[');
+        HashMap<Key, String> jsonEntries = new HashMap();
+        val                  worker      = tx.worker;
 
-        val worker = tx.worker;
-        loop:
         for ((Key key, Value|Deletion value) : mods)
             {
-            if (!loop.first)
-                {
-                buf.add(',');
-                }
+            StringBuffer buf = new StringBuffer();
 
-            buf.append("{\"k\":")
-               .append(worker.writeUsing(keyMapping, key));
+            String jsonK = worker.writeUsing(keyMapping, key);
+
+            buf.append("{\"k\":").append(jsonK);
+
+            // cache the data file while we have the json string handy
+            nameForKey(key, jsonK);
 
             if (!value.is(Deletion))
                 {
@@ -613,20 +649,123 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                    .append(worker.writeUsing(valueMapping, value));
                 }
             buf.add('}');
+
+            jsonEntries.put(key, buf.toString());
             }
-        buf.add(']');
 
-        String json = buf.toString();
+        tx.jsonEntries = jsonEntries;
+        tx.sealed      = True;
 
-        tx.json   = json;
-        tx.sealed = True;
-        return json;
+        return buildJsonTx(jsonEntries);
         }
 
     @Override
     void commit(Int[] writeIds)
         {
-        TODO
+        assert !writeIds.empty;
+
+        Int offset;
+        if (cleanupPending)
+            {
+            TODO
+            }
+        else
+            {
+            // offset = storageOffset.getOrDefault(key, Int.minvalue);
+            }
+
+        Int lastCommitId = NO_TX;
+
+        Map<String, StringBuffer> buffers = new HashMap();
+        for (Int writeId : writeIds)
+            {
+            // because the same array of writeIds are sent to all of the potentially enlisted
+            // ObjectStore instances, it is possible that this ObjectStore has no changes for this
+            // transaction
+            if (Changes tx := peekTx(writeId))
+                {
+                assert tx.prepared, tx.sealed, Map<Key, String> jsonEntries ?= tx.jsonEntries;
+
+                Int prepareId = tx.readId;
+
+                for ((Key key, String jsonEntry) : jsonEntries)
+                    {
+                    StringBuffer buf = buffers.computeIfAbsent(nameForKey(key, ""),
+                            () -> new StringBuffer());
+
+                    // build the String that will be appended to the disk file
+                    // format is "{"tx":14, "c":[{"k":{...}}, "v":{...}}, ...],"; comma is first (since we are appending)
+                    if (buf.size == 0)
+                        {
+                        buf.append(",\n{\"tx\":")
+                           .append(prepareId)
+                           .append(", \"c\":[");
+                        }
+                    else
+                        {
+                        buf.append(", ");
+                        }
+                    buf.append(jsonEntry);
+
+                    // remember the id of the last transaction that we process here
+                    lastCommitId = prepareId;
+
+                    // remember the transaction location
+//                     storageLayout.put(prepareId, [offset+start .. offset+end));
+                    }
+                }
+            }
+
+        if (lastCommitId != NO_TX || cleanupPending)
+            {
+            for ((String fileName, StringBuffer buf) : buffers)
+                {
+                // update where we will append the next record to, in terms of Chars (not bytes), so
+                // that subsequent storageLayout information can be determined without expanding the
+                // contents of the UTF-8 encoded file into Chars to calculate the "append location"
+    //            this.storageOffset += buf.size;
+
+                // the JSON for entries data is inside an array, so "close" the array
+                buf.append("]}\n]");
+
+                File file = dataDir.fileFor(fileName);
+
+                // write the changes to disk
+                if (file.exists && !cleanupPending)
+                    {
+                    Int length = file.size;
+
+                    // TODO right now this assumes that no manual edits have occurred; must cache "last
+                    //      update timestamp" and rebuild file if someone else changed it
+                    assert length >= 6;
+
+                    file.truncate(length-2)
+                        .append(buf.toString().utf8());
+                    }
+                else
+                    {
+                    // replace the opening "," with an array begin "["
+                    buf[0]         = '[';
+                    file.contents  = buf.toString().utf8();
+                    filesUsed++;
+                    }
+
+                // update the stats
+                bytesUsed    += buf.size;
+                lastModified = file.modified;
+                }
+
+            cleanupPending = False;
+
+            // remember which is the "current" value
+            lastCommit = lastCommitId;
+
+            // discard the transactional records
+            for (Int writeId : writeIds)
+                {
+                inFlight.remove(writeId);
+                }
+            }
         }
 
     @Override
@@ -730,6 +869,38 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
         return False;
         }
 
+    /**
+     * Get the file used to store data for the specified key.
+     */
+    protected String nameForKey(Key key, String keyJson)
+        {
+        return fileNames.computeIfAbsent(key, () ->
+            {
+            return $"{computeURI(key, keyJson)}.json";
+            });
+
+        private String computeURI(Key key, String keyJson)
+            {
+            String name;
+            if (key.is(Number))
+                {
+                return key.toString();
+                }
+
+            if (key.is(String))
+                {
+                name = key;
+                }
+            else
+                {
+                name = $"{&key.actualType}_{key.hashCode()}";
+                }
+
+            // TODO remove illegal chars
+            return name.slice([0 .. name.size.minOf(40)));
+            }
+        }
+
 
     // ----- IO operations -------------------------------------------------------------------------
 
@@ -744,7 +915,113 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
     @Override
     void loadInitial()
         {
-        TODO
+        Int desired = txManager.lastClosedId;
+        assert desired != NO_TX && desired > 0;
+
+        Int           closest   = NO_TX;
+        Map<Key, Int> closestTx = new HashMap();
+        Int           fileCount = 0;
+        Int           dupeCount = 0; // number of duplicate entries
+        for (File file : dataDir.files())
+            {
+            Byte[]               bytes      = file.contents;
+            String               jsonStr    = bytes.unpackString();
+            Parser               fileParser = new Parser(jsonStr.toReader());
+            Map<Key, Range<Int>> valueLoc   = new HashMap();
+
+            using (val arrayParser = fileParser.expectArray())
+                {
+                while (!arrayParser.eof)
+                    {
+                    using (val txParser = arrayParser.expectObject())
+                        {
+                        txParser.expectKey("tx");
+
+                        Int txId = txParser.expectInt();
+                        if (txId <= desired)
+                            {
+                            txParser.expectKey("c");
+
+                            using (val changeArrayParser = txParser.expectArray())
+                                {
+                                while (!changeArrayParser.eof)
+                                    {
+                                    using (val changeParser = changeArrayParser.expectObject())
+                                        {
+                                        Key key;
+
+                                        changeParser.expectKey("k");
+                                        using (ObjectInputStream stream =
+                                                new ObjectInputStream(jsonSchema, changeParser))
+                                            {
+                                            key = keyMapping.read(stream.ensureElementInput());
+                                            }
+
+                                        if (Int keyTx := closestTx.get(key))
+                                            {
+                                            dupeCount++;
+                                            if (txId < keyTx)
+                                                {
+                                                // out of order transaction record; ignore
+                                                continue;
+                                                }
+                                            }
+
+                                        closestTx.put(key, txId);
+                                        closest = closest.maxOf(txId);
+
+                                        if (changeParser.matchKey("v"))
+                                            {
+                                            // TODO: use the "skipped" array instead
+                                            (Token first, Token last) = changeParser.skipDoc();
+                                            valueLoc.put(key, [first.start.offset .. last.end.offset));
+                                            }
+                                        else
+                                            {
+                                            valueLoc.remove(key);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+            for ((Key key, Range<Int> loc) : valueLoc)
+                {
+                Value  value;
+                String jsonRecord = jsonStr.slice(loc);
+                using (ObjectInputStream stream = new ObjectInputStream(jsonSchema, jsonRecord.toReader()))
+                    {
+                    value = valueMapping.read(stream.ensureElementInput());
+                    }
+
+                SkiplistMap<Int, Value|Deletion> historyValue = new SkiplistMap();
+                historyValue.put(desired, value);
+                history.put(key, historyValue);
+//                storageLayout.put(desired, txLoc);
+                }
+
+            sizeByTx.process(desired, entry ->
+                {
+                entry.value = entry.exists
+                        ? valueLoc.size + entry.value
+                        : valueLoc.size;
+                return Null;
+                });
+            fileCount++;
+            }
+
+        if (dupeCount > 10)
+            {
+            // there's extra stuff in the file that we should get rid of now
+//            (jsonStr, storageLayout) = rebuildJson(jsonStr, storageLayout);
+//            dataFile.contents = jsonStr.utf8();
+//            updateWriteStats();
+            }
+
+        lastCommit = desired;
         }
 
     @Override
