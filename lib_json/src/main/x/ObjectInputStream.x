@@ -853,16 +853,19 @@ class ObjectInputStream(Schema schema, Parser parser)
         @Override
         Doc metadataFor(String attribute)
             {
-            if (schema.enableMetadata && schema.isMetadata(attribute),
-                    Token[]? tokens := seek(attribute, skip=schema.randomAccess && !peekingAhead))
+            if (schema.enableMetadata && schema.isMetadata(attribute))
                 {
-                if (tokens == Null)
+                prepareRead();
+                if (Token[]? tokens := seek(attribute, skip=schema.randomAccess && !peekingAhead))
                     {
-                    // the attribute name was found, but it has not yet been read
-                    tokens = skipAndStore(attribute);
-                    }
+                    if (tokens == Null)
+                        {
+                        // the attribute name was found, but it has not yet been read
+                        tokens = skipAndStore(attribute);
+                        }
 
-                return docFromTokens(tokens);
+                    return docFromTokens(tokens);
+                    }
                 }
 
             return Null;
@@ -877,6 +880,7 @@ class ObjectInputStream(Schema schema, Parser parser)
         @Override
         conditional String nextName()
             {
+            prepareRead();
             String? name = this.name;
             return name == Null
                     ? False
@@ -886,6 +890,7 @@ class ObjectInputStream(Schema schema, Parser parser)
         @Override
         conditional Boolean contains(String name)
             {
+            prepareRead();
             if (name == this.name?)
                 {
                 return True, parser.peek().id != NoVal;
@@ -936,6 +941,7 @@ class ObjectInputStream(Schema schema, Parser parser)
         @Override
         Doc readDoc(String name, Doc defaultValue = Null)
             {
+            prepareRead();
             if (Token[]? tokens := seek(name, take=True))
                 {
                 if (tokens == Null)
