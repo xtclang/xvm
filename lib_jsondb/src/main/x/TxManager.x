@@ -1,6 +1,14 @@
 import collections.ArrayDeque;
 import collections.SparseIntSet;
 
+import json.ElementOutput;
+import json.Mapping;
+import json.ObjectInputStream;
+import json.ObjectOutputStream;
+import json.Parser;
+
+import model.SysInfo;
+
 import oodb.RootSchema;
 import oodb.Transaction.TxInfo;
 
@@ -39,6 +47,24 @@ import Catalog.BuiltIn;
  * The transaction manager could easily become a bottleneck in a highly concurrent system, so it
  * conducts its work via asynchronous calls as much as possible, usually by delegating work to
  * [Client] and [ObjectStore] instances.
+ *
+ * There are three file categories managed by the TxManager:
+ *
+ * * The `txmgr.json` file records the last known "check point" of the transaction manager, which
+ *   is when the transaction manager was last enabled, disabled, or when the transaction log last
+ *   rolled (the then-current `txlog.json` log file grew too large, so it was made an archive and a
+ *   new one was started). It contains its a record of its then-current status, (size, timestamp,
+ *   and transaction range, ending with the then-latest commit id) of the `txlog.json` log file, and
+ *   a record of all known log archives, including the file name, size, timestamp, and transaction
+ *   range for each.
+ *
+ * * The `txlog.json` file is the current transaction log. It is an array of entries, most of which
+ *   are likely to be transaction entries, plus a few transaction manager-related entries, such
+ *   as (i) log created (the first entry in the log), (2) log archived (the last entry in the log),
+ *   (3) TxManager enabled, (4) TxManager disabled.
+ *
+ * * The log archives are copies of the previous `txlog.json` files, from when those files passed a
+ *   certain size threshold. They are named `txlog_<datetime>.json`
  */
 service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         implements Closeable
@@ -103,6 +129,8 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
 
     // ----- properties ----------------------------------------------------------------------------
 
+    @Inject Clock clock;
+
     /**
      * The runtime state of the TxManager:
      * * **Initial** - the TxManager has been newly created, but has not been used yet
@@ -138,13 +166,21 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
     private ObjectStore?[] sysStores = new ObjectStore[];
 
     /**
+     * The system directory (./sys).
+     */
+    @Lazy public/private Directory sysDir.calc()
+        {
+        Directory root = catalog.dir;
+        return root.store.dirFor(root.path + "sys");
+        }
+
+    /**
      * The transaction log file (sys/txlog.json).
      */
     @Lazy public/private File logFile.calc()
         {
-        Directory dataDir = catalog.dir;
-        Directory sysDir  = dataDir.dirFor("sys").ensure();
-        return sysDir.fileFor("txlog.json");
+        Directory root = catalog.dir;
+        return root.store.fileFor(root.path + "sys" + "txlog.json");
         }
 
     /**
@@ -152,30 +188,51 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      */
     @Lazy public/private File statusFile.calc()
         {
-        Directory dataDir = catalog.dir;
-        Directory sysDir  = dataDir.dirFor("sys").ensure();
-        return sysDir.fileFor("txmgr.json");
+        Directory root = catalog.dir;
+        return root.store.fileFor(root.path + "sys" + "txmgr.json");
         }
+
+    /**
+     * A snapshot of information about a transactional log file.
+     */
+    static const LogFileInfo(String name, Range<Int> txIds, Int size, DateTime timestamp);
+
+    /**
+     * A JSON Mapping to use to serialize instances of LogFileInfo.
+     */
+    @Lazy protected Mapping<LogFileInfo> logFileInfoMapping.calc()
+        {
+        return jsonSchema.ensureMapping(LogFileInfo);
+        }
+
+    /**
+     * A JSON Mapping to use to serialize instances of LogFileInfo.
+     */
+    @Lazy protected Mapping<LogFileInfo[]> logFileInfoArrayMapping.calc()
+        {
+        return jsonSchema.ensureMapping(LogFileInfo[]);
+        }
+
+    /**
+     * A record of all of the existent rolled-over log files.
+     */
+    protected/private LogFileInfo[] logInfos = new LogFileInfo[];
+
+    /**
+     * The maximum size log to store in any one log file.
+     * TODO soft-code?
+     */
+    protected Int maxLogSize = 10000; // TODO 1 << 20; // 1MB
+
+    /**
+     * The JSON Schema to use (for system classes).
+     */
+    protected/private json.Schema jsonSchema = json.Schema.DEFAULT; // TODO use a specific schema constructed for the jsonDB
 
     /**
      * An illegal transaction ID used to indicate that no ID has been assigned yet.
      */
     static Int NO_TX = Int.minvalue;
-
-    /**
-     * The transaction id that was on disk from the last time that the database was closed down.
-     *
-     * There is a specific reasons why this value is kept, even though it may at first seem to be
-     * redundant with respect to the [lastCommitted] property: The [ObjectStore] instances are
-     * lazily initialized, and responsible for reading their own state from persistent storage, and
-     * that state could *theoretically* include transactions that occurred **after** the
-     * lastClosedId. In other words, when initializing, the ObjectStore should not retain its own
-     * latest transaction, but rather whatever the *TxManager* defines as the latest.
-     *
-     * This is initialized to [NO_TX], which is an illegal transaction ID, to make it obvious that
-     * the transaction manager's state has not yet been loaded.
-     */
-    public/private Int lastClosedId = NO_TX;
 
     /**
      * The count of transactions (referred to as "write transactions") that this transaction manager
@@ -318,35 +375,18 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
     void enable()
         {
         assert status == Initial || status == Disabled;
-
         using (val cs = new CriticalSection(Exclusive))
             {
             if (status == Initial)
                 {
-                // load the previously saved off transaction manager state from disk
-                File file = logFile;
-                if (file.exists)
+                if (!(statusFile.exists ? openLog() : createLog()))
                     {
-                    // +++ HACK HACK
-                    String content = ecstasy.lang.src.Source.loadText(file);
-
-                    assert Int txStart := content.lastIndexOf("\"_tx\":");
-
-                    Int idStart = txStart + 6; // "_tx": length + 1
-                    assert Int idEnd := content.indexOf(',', idStart);
-                    String idString = content.slice([idStart .. idEnd));
-
-                    Int id = new IntLiteral(idString).toInt64();
-                    lastClosedId  = id;
-                    lastPrepared  = id;
-                    lastCommitted = id;
+                    assert recoverLog();
                     }
                 }
 
             status = Enabled;
             }
-
-        // REVIEW: should we "quickScan" the transaction log here?
         }
 
     /**
@@ -391,6 +431,8 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
 
                     // abort everything that is left over
                     // TODO
+
+                    closeLog();
                     }
                 throw failure?;
                 return;
@@ -412,9 +454,327 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         status = Closed;
         }
 
-// TODO seal log file (boolean rotate)
-// TODO validate seal
-// TODO scan log file
+
+    // ----- file management  ----------------------------------------------------------------------
+
+    /**
+     * Read the TxManager status file.
+     *
+     * @return the array of LogFileInfo records from the status file, from oldest to newest
+     */
+    protected conditional LogFileInfo[] readStatus()
+        {
+        if (!statusFile.exists)
+            {
+            return False;
+            }
+
+        // TODO try...catch and log errors from the following steps?
+
+        String            json   = statusFile.contents.unpackString();
+        ObjectInputStream stream = new ObjectInputStream(jsonSchema, json.toReader());
+        LogFileInfo[]     infos  = logFileInfoArrayMapping.read(stream.ensureElementInput());
+        return True, infos;
+        }
+
+    /**
+     * Read the TxManager status file.
+     *
+     * @return the array of LogFileInfo records from the status file, from oldest to newest
+     */
+    protected void writeStatus()
+        {
+        // render all of the LogFileInfo records as JSON, but put each on its own line
+        StringBuffer buf = new StringBuffer();
+        using (ObjectOutputStream stream = new ObjectOutputStream(jsonSchema, buf))
+            {
+            Loop: for (LogFileInfo info : logInfos)
+                {
+                using (ElementOutput out = stream.createElementOutput())
+                    {
+                    buf.append(",\n");
+                    logFileInfoMapping.write(out, info);
+                    }
+                }
+            }
+
+        // wrap it as a JSON array and write it out
+        buf[0] = '[';
+        buf.append("\n]");
+        statusFile.contents = buf.toString().utf8();
+        }
+
+    /**
+     * Create the transaction log.
+     *
+     * @return True if the transaction log did not exist, and now it does
+     */
+    protected Boolean createLog()
+        {
+        // neither the log nor the status file should exist
+        if (logFile.exists || statusFile.exists)
+            {
+            return False;
+            }
+
+        assert lastCommitted == 0;
+        assert logInfos.empty;
+
+        // create the log with an entry in it denoting the time the log was created
+        logFile.parent?.ensure();
+        initLogFile();
+
+        logInfos.add(new LogFileInfo(logFile.name, 0..0, logFile.size, logFile.modified));
+        writeStatus();
+
+        return True;
+        }
+
+    /**
+     * Initialize the "current" transaction log file.
+     */
+    protected void initLogFile()
+        {
+        logFile.contents = $|[
+                            |\{"status":"created", "timestamp":"{clock.now.toString(True)}", "prev-tx":{lastCommitted}}
+                            |]
+                            .utf8();
+        }
+
+    /**
+     * Open the transaction log.
+     *
+     * @return True if the transaction log did exist, and was successfully opened
+     */
+    protected Boolean openLog()
+        {
+        // need to have both the log and the status file
+        // load the status file to get a last-known snapshot of the log files
+        if (logFile.exists, statusFile.exists, LogFileInfo[] logInfos := readStatus(),
+                !logInfos.empty)
+            {
+            // if the current log file is as-expected, then assume that we're good to go
+            LogFileInfo current = logInfos[logInfos.size-1];
+            if (current.size == logFile.size && current.timestamp == logFile.modified)
+                {
+                // append the "we're open" message to the log
+                addLogEntry($|\{"status":"opened", "timestamp":"{clock.now.toString(True)}"}
+                           );
+
+                this.logInfos      = logInfos;
+                this.lastCommitted = current.txIds.effectiveUpperBound;
+                this.lastPrepared  = this.lastCommitted;
+
+                return True;
+                }
+            }
+
+        return False;
+        }
+
+    /**
+     * Make a "best attempt" to automatically recover the transaction log.
+     *
+     * @return True if the transaction log did exist, and was successfully opened
+     */
+    protected Boolean recoverLog()
+        {
+        // givens:
+        // - there might be a readable status file (but it might be out of date)
+        // - there might be one or more log files in the rotation
+        // the idea is simple:
+        // - collect all of the recoverable info in the status file
+        // - collect all of the potential log files
+        // - scan each log file for first..last and purge info (to get latest purge tx level)
+        // - purge
+        // - rebuild the status file from that info
+
+        // now actually look at the log files on disk
+        // TODO File[] findLogFiles()
+
+        // TODO
+        return False;
+        }
+
+    /**
+     * Determine if the passed file is a log file.
+     *
+     * @param file  a possible log file
+     *
+     * @return the DateTime that the LogFile was rotated, or Null if it is the current log file
+     */
+    static conditional DateTime? isLogFile(File file)
+        {
+        String name = file.name;
+        if (name == "txlog.json")
+            {
+            return True, Null;
+            }
+
+        if (name.startsWith("txlog_") && name.endsWith(".json"))
+            {
+            String timestamp = name[6..name.size-5);
+            try
+                {
+                return True, new DateTime(timestamp);
+                }
+            catch (Exception e) {}
+            }
+
+        return False;
+        }
+
+    /**
+     * Compare two log files for order.
+     *
+     * @param file1  the first log file
+     * @param file2  the second log file
+     *
+     * @return the order to sort the two files into
+     */
+    static Ordered orderLogFiles(File file1, File file2)
+        {
+        assert DateTime? dt1 := isLogFile(file1);
+        assert DateTime? dt2 := isLogFile(file2);
+
+        // sort the null datetime to the end, because it represents the "current" log file
+        return dt1? <=> dt2? : switch (dt1, dt2)
+            {
+            case (Null, Null): Equal;
+            case (Null, _): Greater;
+            case (_, Null): Lesser;
+            default: assert;
+            };
+        }
+
+    /**
+     * Find all of the log files.
+     *
+     * @return an array of log files, sorted from oldest to current
+     */
+    protected File[] findLogs()
+        {
+        return sysDir.files()
+                .filter(f -> isLogFile(f))
+                .sort(orderLogFiles)
+                .toArray();
+        }
+
+    /**
+     * Obtain corresponding LogFileInfo objects for each of the specified log files.
+     *
+     * @param logFiles an array of log files
+     *
+     * @return an array of [LogFileInfo]
+     */
+    protected LogFileInfo[] loadLogs(File[] logFiles)
+        {
+        return logFiles.map(f -> loadLog(f), new LogFileInfo[]).as(LogFileInfo[]);
+        }
+
+    /**
+     * Obtain the LogFileInfo for the specified log file.
+     *
+     * @param logFile a log file
+     *
+     * @return the [LogFileInfo] for the file
+     */
+    protected LogFileInfo loadLog(File logFile)
+        {
+        String json = logFile.contents.unpackString();
+
+        Int first = -1;
+        Int last  = -1;
+        using (Parser logParser = new Parser(json.toReader()))
+            {
+            using (val arrayParser = logParser.expectArray())
+                {
+                while (!arrayParser.eof)
+                    {
+                    using (val objectParser = arrayParser.expectObject())
+                        {
+                        if (objectParser.matchKey("tx")
+                                || objectParser.matchKey("status") && objectParser.findKey("prev-tx"))
+                            {
+                            Int txId = objectParser.expectInt();
+                            if (txId > last)
+                                {
+                                if (first < 0)
+                                    {
+                                    first = txId;
+                                    }
+                                last = txId;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+        assert first >= 0 as $"Log file \"{logFile.name}\" is missing required header information";
+        return new LogFileInfo(logFile.name, first..last, logFile.size, logFile.modified);
+        }
+
+    /**
+     * Append a log entry to the log file.
+     *
+     * @param entry  a JSON object, rendered as a string, to append to the log
+     */
+    protected void addLogEntry(String entry)
+        {
+        Int length = logFile.size;
+        logFile.truncate(length-2)
+               .append($",\n{entry}\n]".utf8());
+        }
+
+    /**
+     * Move the current log to an archived state, and create a new, empty log.
+     */
+    protected void rotateLog()
+        {
+        assert !logInfos.empty;
+
+        String timestamp = clock.now.toString(True);
+        addLogEntry($|\{"status":"archived", "timestamp":"{timestamp}"}
+                   );
+
+        String rotatedName = $"txlog_{timestamp}.json";
+        assert File rotatedFile := logFile.renameTo(rotatedName);
+
+        LogFileInfo previousInfo = logInfos[logInfos.size-1];
+        LogFileInfo rotatedInfo  = new LogFileInfo(rotatedName,
+                previousInfo.txIds.first..lastCommitted, rotatedFile.size, rotatedFile.modified);
+
+        initLogFile();
+        LogFileInfo currentInfo = new LogFileInfo("txlog.json", [lastCommitted+1..lastCommitted+1),
+                logFile.size, logFile.modified);
+
+        logInfos[logInfos.size-1] = rotatedInfo;
+        logInfos += currentInfo;
+        writeStatus();
+        }
+
+    /**
+     * Mark the transaction log as being closed.
+     */
+    protected void closeLog()
+        {
+        addLogEntry($|\{"status":"closed", "timestamp":"{clock.now.toString(True)}"}
+                   );
+
+        // update the "current log file" status record
+        LogFileInfo oldInfo = logInfos[logInfos.size-1];
+        assert oldInfo.name == logFile.name;
+        Range<Int> txIds = oldInfo.txIds;
+        if (lastCommitted > txIds.effectiveUpperBound)
+            {
+            txIds = txIds.effectiveLowerBound .. lastCommitted;
+            }
+        LogFileInfo newInfo = new LogFileInfo(logFile.name, txIds, logFile.size, logFile.modified);
+        logInfos[logInfos.size-1] = newInfo;
+        writeStatus();
+        }
+
 
     // ----- transactional ID helpers --------------------------------------------------------------
 
@@ -980,12 +1340,13 @@ TODO
             }
 
         // bundle the results of "sealPrepare()" into a buffer
-        Int          writeId = rec.writeId;
-        StringBuffer buf     = new StringBuffer();
+        Int          writeId  = rec.writeId;
+        Int          commitId = rec.prepareId;
+        StringBuffer buf      = new StringBuffer();
 
         buf.append(",\n{")
            .append("\n\"_tx\":")
-           .append(rec.prepareId);
+           .append(commitId);
         Loop: for (ObjectStore store : stores)
             {
             String json = store.sealPrepare(writeId);
@@ -1014,23 +1375,21 @@ TODO
         //     }
         //     ]
 
-        File file = logFile;
-        if (file.exists)
-            {
-            Int length = file.size;
+        File file   = logFile;
+        Int  length = file.size;
+        assert length >= 20;        // log file is never empty!
 
-            // TODO right now this assumes that no manual edits have occurred; must cache "last
-            //      update timestamp" and rebuild file if someone else changed it (see ValueStore.commit)
-            assert length >= 6;
+        // TODO right now this assumes that no manual edits have occurred; must cache "last
+        //      update timestamp" and rebuild file if someone else changed it (see ValueStore.commit)
+        file.truncate(length-2)
+            .append(buf.toString().utf8());
 
-            file.truncate(length-2)
-                .append(buf.toString().utf8());
-            }
-        else
+        assert commitId == lastCommitted + 1;
+        lastCommitted = commitId;
+
+        if (length > maxLogSize)
             {
-            // replace the opening "," with an array begin "["
-            buf[0] = '[';
-            file.contents = buf.toString().utf8();
+            rotateLog();
             }
 
         FutureVar<Tuple<>>? commitAll = Null;

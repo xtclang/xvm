@@ -569,7 +569,7 @@ service JsonValueStore<Value extends immutable Const>
 
         Int         closest = NO_TX;
         Range<Int>  txLoc   = -1..0; // some illegal value
-        Int         desired = txManager.lastClosedId;
+        Int         desired = txManager.lastCommitted;
         assert desired != NO_TX && desired > 0;
 
         Byte[] bytes      = file.contents;

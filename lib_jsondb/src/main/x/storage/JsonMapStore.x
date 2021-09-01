@@ -923,7 +923,7 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
     @Override
     void loadInitial()
         {
-        Int desired = txManager.lastClosedId;
+        Int desired = txManager.lastCommitted;
         assert desired != NO_TX && desired > 0;
 
         Int           closest   = NO_TX;
