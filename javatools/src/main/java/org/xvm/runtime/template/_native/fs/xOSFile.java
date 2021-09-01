@@ -113,10 +113,9 @@ public class xOSFile
         switch (sPropName)
             {
             case "contents":
-                try
+                Path path = hFile.f_path;
+                try (FileOutputStream out = new FileOutputStream(path.toFile()))
                     {
-                    Path             path = hFile.f_path;
-                    FileOutputStream out  = new FileOutputStream(path.toFile());
                     out.write(xByteArray.getBytes((ArrayHandle) hValue));
                     }
                 catch (IOException e)
@@ -138,10 +137,9 @@ public class xOSFile
             {
             case "appendImpl": // void appendImpl(Byte[] contents)
                 {
-                Path path = hFile.f_path;
-                try
+                Path             path = hFile.f_path;
+                try (FileOutputStream out = new FileOutputStream(path.toFile(), /*append*/ true))
                     {
-                    FileOutputStream out = new FileOutputStream(path.toFile(), /*append*/ true);
                     out.write(xByteArray.getBytes((ArrayHandle) hArg));
                     }
                 catch (IOException e)
