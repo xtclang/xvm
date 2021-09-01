@@ -61,4 +61,18 @@ module TestSimple.test.org
         String s = writer.toString();
         console.println($"result={s}");
         }
+
+    static Ordered orderLogFiles(File file1, File file2, DateTime? dt1, DateTime? dt2)
+        {
+//        assert DateTime? dt1 := isLogFile(file1);
+//        assert DateTime? dt2 := isLogFile(file2);
+
+        // sort the null datetime to the end, because it represents the "current" log file
+        return dt1? <=> dt2? : switch (dt1, dt2)
+            {
+            case (Null, _): Greater;
+            case (_, Null): Lesser;
+            default       : Equal;
+            };
+        }
     }

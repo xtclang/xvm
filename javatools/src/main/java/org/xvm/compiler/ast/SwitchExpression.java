@@ -334,7 +334,8 @@ public class SwitchExpression
     @Override
     public boolean isCompletable()
         {
-        return !m_casemgr.isConditionAborting();
+        // until we validate, assume completable
+        return m_casemgr == null || !m_casemgr.isConditionAborting();
         }
 
 
