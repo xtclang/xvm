@@ -5,6 +5,8 @@ import ecstasy.fs.FileStore;
 import ecstasy.fs.FileWatcher;
 import ecstasy.fs.Path;
 
+import ecstasy.io.IOException;
+
 /**
  * Native OS FileNode implementation.
  */
@@ -78,7 +80,19 @@ const OSFileNode
         }
 
     @Override
-    conditional FileNode renameTo(String name);
+    conditional FileNode renameTo(String name)
+        {
+        Path src = path;
+        Path dst = new Path(src.parent?, name) : new Path(name);
+        try
+            {
+            return True, store.copyOrMove(src, src.toString(), dst, dst.toString(), move=True);
+            }
+        catch (IOException e)
+            {
+            return False;
+            }
+        }
 
     @Override
     Int size.get() { TODO("native"); }

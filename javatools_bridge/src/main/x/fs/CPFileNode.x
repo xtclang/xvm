@@ -94,7 +94,7 @@ const CPFileNode(Object cookie, CPFileStore? fileStore, Path path, DateTime crea
     @Override
     conditional FileNode renameTo(String name)
         {
-        throw new AccessDenied();
+        return False;
         }
 
     @Override

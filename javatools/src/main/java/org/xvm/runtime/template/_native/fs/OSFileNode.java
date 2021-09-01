@@ -152,7 +152,7 @@ public abstract class OSFileNode
         // TODO: consider translating IOExceptions into corresponding natural exceptions
 
         // strip the exception name from the exception class and prepend to the message
-        Class clzException = e.getClass();
+        Class<? extends IOException> clzException = e.getClass();
         String sException  = clzException == IOException.class
                 ? ""
                 : clzException.getSimpleName().replace("Exception", "") + ": ";

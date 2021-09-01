@@ -123,10 +123,8 @@ interface FileNode
      *
      * @param name  the new name for the file-node
      *
-     * @return the new FileNode, iff the file-node existed and the rename was successful
-     *
-     * @throws AccessDenied       if permission to rename the file has not been granted
-     * @throws FileAlreadyExists  if a file-node already exists with the new name
+     * @return True iff the rename was successful
+     * @return (conditional) the new FileNode
      */
     conditional FileNode renameTo(String name);
 

@@ -137,7 +137,7 @@ public class xOSFile
             {
             case "appendImpl": // void appendImpl(Byte[] contents)
                 {
-                Path             path = hFile.f_path;
+                Path path = hFile.f_path;
                 try (FileOutputStream out = new FileOutputStream(path.toFile(), /*append*/ true))
                     {
                     out.write(xByteArray.getBytes((ArrayHandle) hArg));
@@ -152,10 +152,10 @@ public class xOSFile
 
             case "truncateImpl": // void truncateImpl(Int newSize)
                 {
-                Path path   = hFile.f_path;
-                File file   = path.toFile();
-                long cOld   = file.length();
-                long cNew   = ((ObjectHandle.JavaLong) hArg).getValue();
+                Path path = hFile.f_path;
+                File file = path.toFile();
+                long cOld = file.length();
+                long cNew = ((ObjectHandle.JavaLong) hArg).getValue();
                 if (cNew > cOld || cNew < 0)
                     {
                     return frame.raiseException(xException.outOfBounds(frame, cNew, cOld));
