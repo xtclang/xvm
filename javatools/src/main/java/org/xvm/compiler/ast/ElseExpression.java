@@ -84,7 +84,11 @@ public class ElseExpression
     @Override
     protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
         {
+        ctx = ctx.enterIf().enterFork(true);
+
         Expression expr1New = expr1.validateMulti(ctx, atypeRequired, errs);
+
+        ctx = ctx.exit();
 
         if (expr1New == null)
             {
@@ -104,11 +108,11 @@ public class ElseExpression
             atype2Req = atypeRequired;
             }
 
-        // TODO CP: this is a temporary solution; simply ignore the impact of the "else"
-        Context    ctx2     = ctx.enter();
-        Expression expr2New = expr2.validateMulti(ctx2, atype2Req, errs);
+        ctx = ctx.enterFork(false);
 
-        ctx2.discard();
+        Expression expr2New = expr2.validateMulti(ctx, atype2Req, errs);
+
+        ctx = ctx.exit().exit();
 
         if (expr2New == null)
             {
