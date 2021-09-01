@@ -544,7 +544,15 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                 }
             }
 
-        if (!changed)
+        if (changed)
+            {
+            // TODO CP: when is it a "safe" time to transition from Small to Medium model, etc.
+            if (model == Empty)
+                {
+                model = Small;
+                }
+            }
+        else
             {
             inFlight.remove(writeId);
             return CommittedNoChanges;
