@@ -35,9 +35,9 @@ public interface Debugger
      * @param frame  the current frame
      * @param hEx    the exception handler
      *
-     * @return Op.R_EXCEPTION if the exception needs to be processed naturally or the iPC for the
-     *         next op, Op.R_NEXT or Op.R_CALL values if the exception was caused by the debugger
-     *         itself and has been handled
+     * @return Op.R_CALL if the debugger made a natural call, Op.R_EXCEPTION if the exception needs
+     *         to be processed naturally ano longer has to be stopped at, or Op.R_NEXT if this
+     *         exception needs to be continued to be traced (until caught)
      */
     int checkBreakPoint(Frame frame, ObjectHandle.ExceptionHandle hEx);
     }

@@ -112,13 +112,26 @@ public class DebugConsole
                 frame.m_hException = null;
                 return enterCommand(frame, m_iPC, false);
                 }
-            }
-        else if (m_fBreakOnAllThrows ||
-                 m_setThrowBreaks != null && m_setThrowBreaks.stream().anyMatch(bp -> bp.matches(hEx)))
-            {
-            enterCommand(frame, -1, true);
+            // keep following the exception
+            return Op.R_NEXT;
             }
 
+        if (m_fBreakOnAllThrows ||
+                 m_setThrowBreaks != null && m_setThrowBreaks.stream().anyMatch(bp -> bp.matches(hEx)))
+            {
+            if (enterCommand(frame, Op.R_EXCEPTION, true) == Op.R_CALL)
+                {
+                // natural call by the debugger
+                return Op.R_CALL;
+                }
+            if (m_stepMode != StepMode.None)
+                {
+                // one of the "step" commands, keep following the exception
+                return Op.R_NEXT;
+                }
+            }
+
+        // unwind the exception naturally without stopping in the debugger
         return Op.R_EXCEPTION;
         }
 
@@ -174,7 +187,7 @@ public class DebugConsole
                     {
                     // we don't have a console; ignore
                     writer.println();
-                    return iPC + 1;
+                    return iPC >= 0 ? iPC + 1 : iPC;
                     }
 
                 sCommand = sCommand.trim();
@@ -295,19 +308,21 @@ public class DebugConsole
                         switch (cArgs)
                             {
                             case 0:
-                                {
-                                BreakPoint bp       = makeBreakPoint(frame, iPC);
-                                BreakPoint bpExists = findBP(bp);
-                                if (bpExists == null)
+                                if (iPC >= 0)
                                     {
-                                    addBP(bp);
+                                    BreakPoint bp       = makeBreakPoint(frame, iPC);
+                                    BreakPoint bpExists = findBP(bp);
+                                    if (bpExists == null)
+                                        {
+                                        addBP(bp);
+                                        }
+                                    else
+                                        {
+                                        toggleBP(bpExists);
+                                        }
+                                    continue NextCommand;
                                     }
-                                else
-                                    {
-                                    toggleBP(bpExists);
-                                    }
-                                continue NextCommand;
-                                }
+                                 break; // invalid command
 
                             case 1:
                                 if (asParts[1].equals("*"))
@@ -769,7 +784,7 @@ public class DebugConsole
 
         frame.f_context.setDebuggerActive(
             m_setLineBreaks != null || m_setThrowBreaks != null || m_stepMode != StepMode.None);
-        return iPC + 1;
+        return iPC >= 0 ? iPC + 1 : iPC;
         }
 
     /**
@@ -1264,13 +1279,19 @@ public class DebugConsole
             return Handy.NO_ARGS;
             }
 
+        ExceptionHandle hException = frame.m_hException;
+        if (hException != null)
+            {
+            addVar(0, "throw", "exception", hException, listVars, mapExpand);
+            }
+
         ObjectHandle hThis = frame.f_hThis;
-        int          cVars = frame.f_anNextVar == null ? 0 : frame.f_anNextVar[frame.m_iScope];
         if (hThis != null)
             {
             addVar(0, "this", "this", hThis, listVars, getGlobalStash().getExpandMap());
             }
 
+        int cVars = frame.f_anNextVar == null ? 0 : frame.f_anNextVar[frame.m_iScope];
         for (int i = 0; i < cVars; i++)
             {
             VarInfo info = frame.getVarInfo(i);
@@ -1905,19 +1926,6 @@ public class DebugConsole
             this.name = name;
             this.hVar = hObj;
             this.sVar = sProp;
-            }
-
-        /**
-         * Construct a watch on a variable in the frame.
-         */
-        Watch(String       path,
-              String       name,
-              String       sVar)
-            {
-            this.form = VAR;
-            this.path = path;
-            this.name = name;
-            this.sVar = sVar;
             }
 
         /**

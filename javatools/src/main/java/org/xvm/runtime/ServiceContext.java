@@ -678,17 +678,32 @@ public class ServiceContext
                     ExceptionHandle hException = frame.m_hException;
                     assert hException != null;
 
+                    boolean fDebugger = isDebuggerActive();
+
                     while (true)
                         {
-                        if (isDebuggerActive())
+                        if (fDebugger)
                             {
                             iPC = getDebugger().checkBreakPoint(frame, hException);
-                            if (iPC != Op.R_EXCEPTION)
+                            switch (iPC)
                                 {
-                                // handled exception; go to the handler
-                                m_frameCurrent = frame;
-                                aOp = frame.f_aOp;
-                                break;
+                                case Op.R_NEXT:
+                                    break;
+
+                                case Op.R_CALL:
+                                    // the debugger made a natural call
+                                    m_frameCurrent = frame.m_frameNext;
+                                    frame.m_frameNext = null;
+                                    frame = m_frameCurrent;
+
+                                    aOp = frame.f_aOp;
+                                    iPC = 0;
+                                    continue nextOp;
+
+                                case Op.R_EXCEPTION:
+                                    // unwind the exception without stopping in the debugger
+                                    fDebugger = false;
+                                    break;
                                 }
                             }
 
@@ -706,6 +721,7 @@ public class ServiceContext
                         if (frameCaller != null)
                             {
                             frame = frameCaller;
+                            frame.raiseException(hException);
                             continue;
                             }
 
@@ -1879,7 +1895,7 @@ public class ServiceContext
     private final Map<Op, EnumMap> f_mapOpInfo = new HashMap<>();
 
     /**
-     * A wake up scheduler to process registered timeouts.
+     * A wake-up scheduler to process registered timeouts.
      */
     private final WakeUpScheduler f_wakeUpScheduler = new WakeUpScheduler();
     }
