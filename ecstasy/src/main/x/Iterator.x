@@ -273,15 +273,15 @@ interface Iterator<Element>
      *
      * @return an array containing the elements of this iterator
      */
-    Element[] toArray()
+    Element[] toArray(Array.Mutability? mutability = Null)
         {
+        Element[] elements;
+
         if (knownEmpty())
             {
-            return [];
+            elements = [];
             }
-
-        Element[] elements;
-        if (Int size := knownSize())
+        else if (Int size := knownSize())
             {
             elements = new Array<Element>(size, _ -> {assert Element el := next(); return el;});
             }
@@ -294,7 +294,9 @@ interface Iterator<Element>
                 }
             }
 
-        return elements;
+        return mutability == Null
+                ? elements
+                : elements.toArray(mutability, True);
         }
 
 
@@ -455,7 +457,7 @@ interface Iterator<Element>
      *
      * @return a new iterator representing the same elements from this iterator in a sorted order
      */
-    Iterator! sort(Orderer? order = Null)
+    Iterator! sorted(Orderer? order = Null)
         {
         if (order == Null)
             {

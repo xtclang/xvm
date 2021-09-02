@@ -31,12 +31,11 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
 
     construct(Catalog          catalog,
               DBObjectInfo     info,
-              Appender<String> errs,
               Mapping<Key>     keyMapping,
               Mapping<Value>   valueMapping,
               )
         {
-        construct ObjectStore(catalog, info, errs);
+        construct ObjectStore(catalog, info);
 
         this.jsonSchema   = catalog.jsonSchema;
         this.keyMapping   = keyMapping;

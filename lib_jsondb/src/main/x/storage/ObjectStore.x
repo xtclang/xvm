@@ -34,7 +34,7 @@ import json.Doc;
  *
  * TODO background maintenance
  */
-service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
+service ObjectStore(Catalog catalog, DBObjectInfo info)
         implements Hashable
         implements Closeable
     {
@@ -77,12 +77,6 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
         {
         return info.category;
         }
-
-    /**
-     * An error log that was provided to this storage when it was created, for the purpose of
-     * logging detailed error information encountered in the course of operation.
-     */
-    public/protected Appender<String> errs;
 
     /**
      * The current [Status] of this ObjectStore.
@@ -719,11 +713,7 @@ service ObjectStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
      */
     void log(String err)
         {
-        try
-            {
-            errs.add(err);
-            }
-        catch (Exception e) {}
+        catalog.log^(err);
         }
 
 

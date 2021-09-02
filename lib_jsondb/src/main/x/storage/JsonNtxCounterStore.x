@@ -5,8 +5,8 @@ import json.Parser;
 /**
  * Provides the low-level I/O for a non-transactional (i.e. extra-transactional) counter.
  */
-service JsonNtxCounterStore(Catalog catalog, DBObjectInfo info, Appender<String> errs)
-        extends ObjectStore(catalog, info, errs)
+service JsonNtxCounterStore(Catalog catalog, DBObjectInfo info)
+        extends ObjectStore(catalog, info)
         implements CounterStore
     {
     Int current;

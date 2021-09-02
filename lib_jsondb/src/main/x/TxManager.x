@@ -195,7 +195,19 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
     /**
      * A snapshot of information about a transactional log file.
      */
-    static const LogFileInfo(String name, Range<Int> txIds, Int size, DateTime timestamp);
+    static const LogFileInfo(String name, Range<Int> txIds, Int size, DateTime timestamp)
+        {
+        LogFileInfo with(String?     name      = Null,
+                         Range<Int>? txIds     = Null,
+                         Int?        size      = Null,
+                         DateTime?   timestamp = Null)
+            {
+            return new LogFileInfo(name       ?: this.name,
+                                   txIds      ?: this.txIds,
+                                   size       ?: this.size,
+                                   timestamp  ?: this.timestamp);
+            }
+        }
 
     /**
      * A JSON Mapping to use to serialize instances of LogFileInfo.
@@ -460,7 +472,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
     /**
      * Read the TxManager status file.
      *
-     * @return the array of LogFileInfo records from the status file, from oldest to newest
+     * @return the mutable array of LogFileInfo records from the status file, from oldest to newest
      */
     protected conditional LogFileInfo[] readStatus()
         {
@@ -469,12 +481,18 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             return False;
             }
 
-        // TODO try...catch and log errors from the following steps?
-
-        String            json   = statusFile.contents.unpackString();
-        ObjectInputStream stream = new ObjectInputStream(jsonSchema, json.toReader());
-        LogFileInfo[]     infos  = logFileInfoArrayMapping.read(stream.ensureElementInput());
-        return True, infos;
+        try
+            {
+            String            json   = statusFile.contents.unpackString();
+            ObjectInputStream stream = new ObjectInputStream(jsonSchema, json.toReader());
+            LogFileInfo[]     infos  = logFileInfoArrayMapping.read(stream.ensureElementInput());
+            return True, infos.toArray(Mutable, True);
+            }
+        catch (Exception e)
+            {
+            log($"Exception reading TxManager status file: {e}");
+            return False;
+            }
         }
 
     /**
@@ -579,21 +597,192 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      */
     protected Boolean recoverLog()
         {
-        // givens:
-        // - there might be a readable status file (but it might be out of date)
-        // - there might be one or more log files in the rotation
-        // the idea is simple:
-        // - collect all of the recoverable info in the status file
-        // - collect all of the potential log files
-        // - scan each log file for first..last and purge info (to get latest purge tx level)
-        // - purge
-        // - rebuild the status file from that info
+        // start by trying to read the status file
+        LogFileInfo[] logInfos;
+        Int           lastTx  = -1;
+        if (logInfos := readStatus())
+            {
+            // validate the LogFileInfo entries; assume that older files may have been deleted, and
+            // that the latest size/timestamp for the current logFile may not have been recorded
+            Int firstIndex = 0;
+            Loop: for (LogFileInfo oldInfo : logInfos)
+                {
+                File infoFile = sysDir.fileFor(oldInfo.name);
+                if (infoFile.exists)
+                    {
+                    LogFileInfo newInfo;
+                    try
+                        {
+                        newInfo = loadLog(infoFile);
+                        }
+                    catch (Exception e)
+                        {
+                        log($|TxManager was unable to load the log file {logFile} due to an\
+                             | exception; abandoning automatic recovery; exception: {e}
+                           );
+                        return False;
+                        }
 
-        // now actually look at the log files on disk
-        // TODO File[] findLogFiles()
+                    if (newInfo.txIds.size > 0)
+                        {
+                        Int firstSegmentTx = newInfo.txIds.effectiveFirst;
+                        Int lastSegmentTx  = newInfo.txIds.effectiveUpperBound;
+assert:debug;
+                        if (lastTx < 0 || firstSegmentTx == lastTx+1
+                                && (newInfo.txIds.size == 0 || lastSegmentTx > lastTx))
+                            {
+                            if (newInfo.txIds.size > 0)
+                                {
+                                lastTx = lastSegmentTx;
+                                }
+                            }
+                        else
+                            {
+                            log($|TxManager log files {logInfos[Loop.count-1].name} and {newInfo.name} do\
+                                 | not hold contiguous transaction ranges; abandoning automatic recovery
+                               );
+                            return False;
+                            }
+                        }
+                    logInfos[Loop.count] = newInfo;
+                    }
+                else
+                    {
+                    if (Loop.count == firstIndex)
+                        {
+                        if (infoFile.name == logFile.name)
+                            {
+                            log($|TxManager automatic recovery was unable to load the current\
+                                 | segment of the transaction log, because it does not exist;\
+                                 | an empty file will be created automatically
+                               );
+                            }
+                        else
+                            {
+                            log($|TxManager was unable to load a historical segment of the\
+                                 | transaction log from file {infoFile}, because the file does not\
+                                 | exist; the missing information is assumed to have been archived\
+                                 | or purged; recovery will continue
+                               );
+                            }
 
-        // TODO
-        return False;
+                        ++firstIndex;
+                        }
+                    else if (oldInfo.txIds.size > 0)
+                        {
+                        log($|TxManager was unable to load the log file {infoFile}, because the file\
+                             | does not exist; abandoning automatic recovery
+                           );
+                        return False;
+                        }
+                    else
+                        {
+                        log($|TxManager was unable to load the log file {infoFile}, because the\
+                             | file does not exist; however, it contained no transactional records,\
+                             | so recovery will continue
+                           );
+                        }
+                    }
+                }
+
+            if (firstIndex > 0)
+                {
+// TODO GG slice of size zero e.g. [x..x) should return empty array, but blows with exception:
+//java.lang.IllegalArgumentException: 1 > 0
+//	at java.base/java.util.Arrays.copyOfRange(Arrays.java:3990)
+//	at java.base/java.util.Arrays.copyOfRange(Arrays.java:3950)
+//	at org.xvm.runtime.template._native.collections.arrays.xRTDelegate.createCopyImpl(xRTDelegate.java:577)
+//	at org.xvm.runtime.template._native.collections.arrays.xRTSlicingDelegate.createCopyImpl(xRTSlicingDelegate.java:106)
+//	at org.xvm.runtime.template._native.collections.arrays.xRTDelegate.createCopy(xRTDelegate.java:493)
+//	at org.xvm.runtime.template._native.collections.arrays.xRTDelegate.invokeNative1(xRTDelegate.java:247)
+//	at org.xvm.runtime.CallChain.invoke(CallChain.java:138)
+//	at org.xvm.asm.op.Invoke_11.complete(Invoke_11.java:112)
+//	at org.xvm.asm.op.Invoke_11.resolveArg(Invoke_11.java:105)
+//	at org.xvm.asm.op.Invoke_11.process(Invoke_11.java:92)
+//	at org.xvm.runtime.ServiceContext.execute(ServiceContext.java:584)
+                logInfos = firstIndex == logInfos.size
+                        ? logInfos.clear()
+                        : logInfos.slice([firstIndex..logInfos.size)).reify(Mutable);
+                }
+            }
+        else
+            {
+            log("TxManager status file was not recoverable");
+
+            // scan the directory for log files
+            File[] logFiles = findLogs();
+            if (logFiles.empty)
+                {
+                log("TxManager failed to locate any log files to recover; abandoning automatic recovery");
+                return False;
+                }
+
+            // parse and order the log files
+            logInfos = loadLogs(logFiles);
+
+            // verify that the transactions are ordered and contiguous
+            Loop: for (LogFileInfo info : logInfos)
+                {
+                if (lastTx >= 0)
+                    {
+                    if (lastTx == info.txIds.effectiveFirst-1)
+                        {
+                        if (info.txIds.size > 0)
+                            {
+                            lastTx = info.txIds.effectiveUpperBound;
+                            }
+                        }
+                    else
+                        {
+                        log($|TxManager log files {logInfos[Loop.count-1].name} and {info.name} do\
+                             | not hold contiguous transaction ranges; abandoning automatic recovery
+                           );
+                        return False;
+                        }
+                    }
+                else
+                    {
+                    lastTx = info.txIds.effectiveUpperBound;
+                    assert lastTx >= 0;
+                    }
+                }
+            }
+
+        // create the "current" log file, if one does not exist
+        if (logFile.exists)
+            {
+            // append a recovery message to the log
+            addLogEntry($|\{"status":"recovered", "timestamp":"{clock.now.toString(True)}"}
+                       );
+            logInfos[logInfos.size-1] = logInfos[logInfos.size-1].with(size=logFile.size,
+                                                                       timestamp=logFile.modified);
+            }
+        else
+            {
+            log("TxManager current segment of transaction log is missing, so one will be created");
+            String timestamp = clock.now.toString(True);
+            logFile.contents = $|[
+                                |\{"status":"created", "timestamp":"{timestamp}", "prev-tx":{lastTx}},
+                                |\{"status":"recovered", "timestamp":"{timestamp}"}
+                                |]
+                                .utf8();
+            LogFileInfo info = new LogFileInfo(logFile.name, [lastTx+1..lastTx+1), logFile.size, logFile.modified);
+            if (logInfos[logInfos.size-1].name == logFile.name)
+                {
+                logInfos[logInfos.size-1] = info;
+                }
+            else
+                {
+                logInfos += info;
+                }
+            }
+
+        // rebuild the status file
+        this.logInfos = logInfos;
+        writeStatus();
+
+        log("TxManager automatic recovery completed");
+        return openLog();
         }
 
     /**
@@ -650,14 +839,14 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
     /**
      * Find all of the log files.
      *
-     * @return an array of log files, sorted from oldest to current
+     * @return a mutable array of log files, sorted from oldest to current
      */
     protected File[] findLogs()
         {
         return sysDir.files()
-                .filter(f -> isLogFile(f))
-                .sort(orderLogFiles)
-                .toArray();
+                .filter(f -> isLogFile(f) ? True : False) // TODO GG
+                .sorted(orderLogFiles)
+                .toArray(Mutable);
         }
 
     /**
@@ -665,11 +854,11 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      *
      * @param logFiles an array of log files
      *
-     * @return an array of [LogFileInfo]
+     * @return a mutable array of [LogFileInfo]
      */
     protected LogFileInfo[] loadLogs(File[] logFiles)
         {
-        return logFiles.map(f -> loadLog(f), new LogFileInfo[]).as(LogFileInfo[]);
+        return logFiles.map(f -> loadLog(f), new LogFileInfo[]).as(LogFileInfo[]).toArray(Mutable, True);
         }
 
     /**
@@ -693,18 +882,27 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                     {
                     using (val objectParser = arrayParser.expectObject())
                         {
-                        if (objectParser.matchKey("tx")
-                                || objectParser.matchKey("status") && objectParser.findKey("prev-tx"))
+                        Int txId;
+                        if (objectParser.matchKey("_tx"))
                             {
-                            Int txId = objectParser.expectInt();
-                            if (txId > last)
+                            txId = objectParser.expectInt();
+                            }
+                        else if (objectParser.matchKey("status") && objectParser.findKey("prev-tx"))
+                            {
+                            txId = objectParser.expectInt() + 1;
+                            }
+                        else
+                            {
+                            continue;
+                            }
+
+                        if (txId > last)
+                            {
+                            if (first < 0)
                                 {
-                                if (first < 0)
-                                    {
-                                    first = txId;
-                                    }
-                                last = txId;
+                                first = txId;
                                 }
+                            last = txId;
                             }
                         }
                     }
@@ -746,7 +944,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 previousInfo.txIds.first..lastCommitted, rotatedFile.size, rotatedFile.modified);
 
         initLogFile();
-        LogFileInfo currentInfo = new LogFileInfo("txlog.json", [lastCommitted+1..lastCommitted+1),
+        LogFileInfo currentInfo = new LogFileInfo(logFile.name, [lastCommitted+1..lastCommitted+1),
                 logFile.size, logFile.modified);
 
         logInfos[logInfos.size-1] = rotatedInfo;
@@ -1018,6 +1216,16 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
 
 
     // ----- internal --------------------------------------------------------------------
+
+    /**
+     * Log a message to the system log.
+     *
+     * @param msg  the message to log
+     */
+    protected void log(String msg)
+        {
+        catalog.log^(msg);
+        }
 
     /**
      * Generate a write transaction ID.
@@ -1405,9 +1613,7 @@ TODO
             {
             if (e != Null)
                 {
-                // TODO CP: temporary workaround; need to add a log() method to Catalog
-                @Inject Console console;
-                console.println($"HeuristicException during commit caused by: {e}");
+                log($"HeuristicException during commit caused by: {e}");
                 terminate(rec, RolledBack); // this should be HeuristicRollback
                 return False;
                 }

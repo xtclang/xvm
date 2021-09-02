@@ -284,11 +284,6 @@ service Catalog<Schema extends RootSchema>
         }
 
     /**
-     * An error and message log for the database.
-     */
-    Appender<String> log = new String[]; // TODO
-
-    /**
      * The existing client representations for this `Catalog` object. Each client may have a single
      * Connection representation, and each Connection may have a single Transaction representation.
      */
@@ -318,6 +313,16 @@ service Catalog<Schema extends RootSchema>
 
 
     // ----- support ----------------------------------------------------------------------------
+
+    /**
+     * An error and message log for the database.
+     */
+    void log(String msg)
+        {
+        // TODO
+        @Inject Console console;
+        console.println($"*** {msg}");
+        }
 
     /**
      * Obtain the DBObjectInfo for the specified id.
@@ -415,7 +420,7 @@ service Catalog<Schema extends RootSchema>
             return switch (BuiltIn.byId(id))
                 {
                 case Root:
-                case Sys:          new SchemaStore(this, info, log);
+                case Sys:          new SchemaStore(this, info);
 //                case Info:         TODO
 // TODO the following 3 maps might end up being custom, hard-wired, read-only implementations
 //                case Users:        new JsonMapStore<String, DBUser>(this, info, log);
@@ -444,7 +449,7 @@ service Catalog<Schema extends RootSchema>
                     TODO
 
                 case DBMap:
-                    return createMapStore(info, log);
+                    return createMapStore(info);
 
                 case DBList:
                     TODO
@@ -456,10 +461,10 @@ service Catalog<Schema extends RootSchema>
                     TODO
 
                 case DBCounter:
-                    return createCounterStore(info, log);
+                    return createCounterStore(info);
 
                 case DBValue:
-                    return createValueStore(info, log);
+                    return createValueStore(info);
 
                 case DBFunction:
                     TODO
@@ -467,31 +472,31 @@ service Catalog<Schema extends RootSchema>
             }
         }
 
-    private ObjectStore createMapStore(DBObjectInfo info, Appender<String> log)
+    private ObjectStore createMapStore(DBObjectInfo info)
         {
         assert Type keyType := info.typeParams.get("Key"),
                     keyType.is(Type<immutable Const>);
         assert Type valType := info.typeParams.get("Value"),
                     valType.is(Type<immutable Const>);
 
-        return new JsonMapStore<keyType.DataType, valType.DataType>(this, info, log,
+        return new JsonMapStore<keyType.DataType, valType.DataType>(this, info,
                 jsonSchema.ensureMapping(keyType).as(Mapping<keyType.DataType>),
                 jsonSchema.ensureMapping(valType).as(Mapping<valType.DataType>));
         }
 
-    private ObjectStore createCounterStore(DBObjectInfo info, Appender<String> log)
+    private ObjectStore createCounterStore(DBObjectInfo info)
         {
         return info.transactional
-                ? new JsonCounterStore(this, info, log)
-                : new JsonNtxCounterStore(this, info, log);
+                ? new JsonCounterStore(this, info)
+                : new JsonNtxCounterStore(this, info);
         }
 
-    private ObjectStore createValueStore(DBObjectInfo info, Appender<String> log)
+    private ObjectStore createValueStore(DBObjectInfo info)
         {
         assert Type valueType := info.typeParams.get("Value"),
                     valueType.is(Type<immutable Const>);
 
-        return new JsonValueStore<valueType.DataType>(this, info, log,
+        return new JsonValueStore<valueType.DataType>(this, info,
                 jsonSchema.ensureMapping(valueType).as(Mapping<valueType.DataType>),
                 info.initial.as(valueType.DataType));
         }
@@ -576,11 +581,11 @@ service Catalog<Schema extends RootSchema>
                                 continue;
                                 }
 
-                            log.add($"During recovery, corruption was detected in \"{info.path}\"");
+                            log($"During recovery, corruption was detected in \"{info.path}\"");
                             }
                         catch (Exception e)
                             {
-                            log.add($"During recovery, an error occurred in the deepScan() of \"{info.path}\": {e}");
+                            log($"During recovery, an error occurred in the deepScan() of \"{info.path}\": {e}");
                             }
 
                         repair += store;
@@ -602,15 +607,15 @@ service Catalog<Schema extends RootSchema>
                     // repair the storage
                     if (store.deepScan(fix=True))
                         {
-                        log.add($"Successfully recovered \"{store.info.path}\"");
+                        log($"Successfully recovered \"{store.info.path}\"");
                         continue;
                         }
 
-                    log.add($"During recovery, unable to fix \"{store.info.path}\"");
+                    log($"During recovery, unable to fix \"{store.info.path}\"");
                     }
                 catch (Exception e)
                     {
-                    log.add($"During recovery, unable to fix \"{store.info.path}\" due to an error: {e}");
+                    log($"During recovery, unable to fix \"{store.info.path}\" due to an error: {e}");
                     }
 
                 error = True;

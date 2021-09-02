@@ -267,7 +267,7 @@ module TestArray
 
                 case 7:
                     console.println("\n   --> sort test");
-                    iter = iter.sort();
+                    iter = iter.sorted();
                     break;
 
                 case 8:

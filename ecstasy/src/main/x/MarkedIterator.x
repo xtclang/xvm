@@ -158,7 +158,7 @@ class MarkedIterator<Element>(Iterator<Element> that)
     // ----- delegations ---------------------------------------------------------------------------
 
     @Override
-    Element[] toArray()
+    Element[] toArray(Array.Mutability? mutability = Null)
         {
         Element[] result;
         Element[] additional = that.toArray();
@@ -171,7 +171,7 @@ class MarkedIterator<Element>(Iterator<Element> that)
                 {
                 if (position > 0)
                     {
-                    result = buffer[position..buffer.size).addAll(additional);
+                    result = buffer[position..buffer.size).reify(mutability).addAll(additional);
                     buffer.clear();
                     position = 0;
                     }
@@ -196,10 +196,10 @@ class MarkedIterator<Element>(Iterator<Element> that)
             position = last + 1;
             result = first > last
                     ? []
-                    : buffer[first..last];
+                    : buffer[first..last].reify(mutability);
             }
 
-        return result;
+        return result.toArray(mutability, True);
         }
 
     @Override

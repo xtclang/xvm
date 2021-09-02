@@ -13,10 +13,9 @@ service SchemaStore
     {
     construct(Catalog          catalog,
               DBObjectInfo     info,
-              Appender<String> errs,
              )
         {
-        construct ObjectStore(catalog, info, errs);
+        construct ObjectStore(catalog, info);
         }
 
     @Override
