@@ -31,6 +31,9 @@
 # Logs and databases #
 ######################
 *.log
+*.out
+*.tmp
+*.temp
 *.sql
 *.sqlite
 
