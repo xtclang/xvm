@@ -1086,7 +1086,7 @@ class ObjectInputStream(Schema schema, Parser parser)
                 {
                 skipped = new ListMap<String, Token[]>();
                 }
-            skipped?.put(current, tokens); // TODO GG: why do we need ?
+            skipped?.put(current, tokens);
             return tokens;
             }
 
