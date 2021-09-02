@@ -120,6 +120,8 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                     .map(info -> info.id, new SparseIntSet())
                     .as(Set<Int>);
             }
+
+        internalJsonSchema = catalog.internalJsonSchema;
         }
     finally
         {
@@ -214,7 +216,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      */
     @Lazy protected Mapping<LogFileInfo> logFileInfoMapping.calc()
         {
-        return jsonSchema.ensureMapping(LogFileInfo);
+        return internalJsonSchema.ensureMapping(LogFileInfo);
         }
 
     /**
@@ -222,7 +224,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      */
     @Lazy protected Mapping<LogFileInfo[]> logFileInfoArrayMapping.calc()
         {
-        return jsonSchema.ensureMapping(LogFileInfo[]);
+        return internalJsonSchema.ensureMapping(LogFileInfo[]);
         }
 
     /**
@@ -232,14 +234,15 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
 
     /**
      * The maximum size log to store in any one log file.
-     * TODO soft-code?
+     * TODO this setting should be configurable (need a "Prefs" API)
      */
-    protected Int maxLogSize = 10000; // TODO 1 << 20; // 1MB
+    // TODO protected Int maxLogSize = 1 << 20; // 1MB
+    protected Int maxLogSize = 1000;
 
     /**
      * The JSON Schema to use (for system classes).
      */
-    protected/private json.Schema jsonSchema = json.Schema.DEFAULT; // TODO use a specific schema constructed for the jsonDB
+    protected/private json.Schema internalJsonSchema;
 
     /**
      * An illegal transaction ID used to indicate that no ID has been assigned yet.
@@ -484,7 +487,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         try
             {
             String            json   = statusFile.contents.unpackString();
-            ObjectInputStream stream = new ObjectInputStream(jsonSchema, json.toReader());
+            ObjectInputStream stream = new ObjectInputStream(internalJsonSchema, json.toReader());
             LogFileInfo[]     infos  = logFileInfoArrayMapping.read(stream.ensureElementInput());
             return True, infos.toArray(Mutable, True);
             }
@@ -504,7 +507,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         {
         // render all of the LogFileInfo records as JSON, but put each on its own line
         StringBuffer buf = new StringBuffer();
-        using (ObjectOutputStream stream = new ObjectOutputStream(jsonSchema, buf))
+        using (ObjectOutputStream stream = new ObjectOutputStream(internalJsonSchema, buf))
             {
             Loop: for (LogFileInfo info : logInfos)
                 {
@@ -1171,14 +1174,15 @@ assert:debug;
      */
     Int enlist(ObjectStore store, Int txId)
         {
-        // an enlist cannot occur while disabling the transaction manager, or once it has disabled
-        checkEnabled();
-
         assert isWriteTx(txId), TxRecord tx := byWriteId.get(txId);
 
         Int readId = tx.readId;
         if (readId == NO_TX)
             {
+            // an enlist into a nascent transaction cannot occur while disabling the transaction
+            // manager, or once it has disabled
+            checkEnabled();
+
             // this is the first ObjectStore enlisting for this transaction, so create a mutable
             // set to hold all the enlisting ObjectStores, as they each enlist
             assert tx.enlisted.empty;
@@ -1193,7 +1197,20 @@ assert:debug;
             tx.readId = readId;
             }
 
-        assert tx.status == InFlight && !tx.enlisted.contains(store);
+        assert !tx.enlisted.contains(store);
+        switch (tx.status)
+            {
+            case InFlight:
+                checkEnabled();
+                break;
+
+            case Distributing:
+                break;
+
+            default:
+                assert as "Attempt to enlist into a transaction whose status is {tx.status} is forbidden";
+            }
+
         tx.enlisted.add(store);
         return readId;
         }
@@ -1209,7 +1226,6 @@ assert:debug;
      */
     Client.Worker workerFor(Int txId)
         {
-        checkEnabled();
         assert TxRecord tx := byWriteId.get(txId);
         return tx.clientTx.outer.worker;
         }

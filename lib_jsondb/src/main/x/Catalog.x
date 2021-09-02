@@ -225,11 +225,23 @@ service Catalog<Schema extends RootSchema>
         }
 
     /**
+     * The JSON Schema to use for the various classes in the database implementation itself.
+     */
+    @Lazy json.Schema internalJsonSchema.calc()
+        {
+        return new json.Schema(
+            enableReflection = True,
+            enableMetadata   = True,
+            randomAccess     = True,
+            );
+        }
+
+    /**
      * A JSON Mapping to use to serialize instances of SysInfo.
      */
     @Lazy Mapping<SysInfo> sysInfoMapping.calc()
         {
-        return jsonSchema.ensureMapping(SysInfo);
+        return internalJsonSchema.ensureMapping(SysInfo);
         // TODO GG it didn't like this: return jsonSchema.ensureMapping(Type<SysInfo>);
         }
 
