@@ -188,13 +188,21 @@ service Client<Schema extends RootSchema>
      * Obtain the current transaction, creating one if necessary, and wrapping it in a transactional
      * context.
      *
+     * @param dbo  pass the DBObject instance if it is possible that it is non-transactional
+     *
      * @return the transactional context object
      */
-    TxContext ensureTransaction()
+    TxContext ensureTransaction(DBObject? dbo = Null)
         {
         private TxContext ctx = new TxContext();
+        private TxContext ntx = new NtxContext();
 
         checkRead();
+
+        if (!dbo?.transactional)
+            {
+            return ntx;
+            }
 
         var     tx         = this.tx;
         Boolean autocommit = False;
@@ -487,6 +495,29 @@ service Client<Schema extends RootSchema>
                     tx.rollback();
                     }
                 }
+            }
+        }
+
+    /**
+     * The non-transactional TxContext.
+     */
+    protected class NtxContext
+            extends TxContext
+        {
+        @Override
+        void enter(Boolean autocommit)
+            {
+            }
+
+        @Override
+        Int id.get()
+            {
+            return NO_TX;
+            }
+
+        @Override
+        void close(Exception? e = Null)
+            {
             }
         }
 
@@ -936,11 +967,58 @@ service Client<Schema extends RootSchema>
             }
 
         @Override
+        Int next(Int count = 1)
+            {
+            using (val tx = ensureTransaction(this))
+                {
+                return store_.adjust(tx.id, count);
+                }
+            }
+
+        @Override
         void adjustBy(Int value)
             {
-            using (val tx = ensureTransaction())
+            using (val tx = ensureTransaction(this))
                 {
-                store_.adjust(tx.id, value);
+                store_.adjustBlind(tx.id, value);
+                }
+            }
+
+        @Override
+        Int preIncrement()
+            {
+            using (val tx = ensureTransaction(this))
+                {
+                (_, Int after) = store_.adjust(tx.id, 1);
+                return after;
+                }
+            }
+
+        @Override
+        Int preDecrement()
+            {
+            using (val tx = ensureTransaction(this))
+                {
+                (_, Int after) = store_.adjust(tx.id, -1);
+                return after;
+                }
+            }
+
+        @Override
+        Int postIncrement()
+            {
+            using (val tx = ensureTransaction(this))
+                {
+                return store_.adjust(tx.id, 1);
+                }
+            }
+
+        @Override
+        Int postDecrement()
+            {
+            using (val tx = ensureTransaction(this))
+                {
+                return store_.adjust(tx.id, -1);
                 }
             }
         }
