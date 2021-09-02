@@ -855,7 +855,6 @@ class ObjectInputStream(Schema schema, Parser parser)
             {
             if (schema.enableMetadata && schema.isMetadata(attribute))
                 {
-                prepareRead();
                 if (Token[]? tokens := seek(attribute, skip=schema.randomAccess && !peekingAhead))
                     {
                     if (tokens == Null)
@@ -1051,11 +1050,16 @@ class ObjectInputStream(Schema schema, Parser parser)
             if (skip)
                 {
                 Boolean collect = schema.randomAccess;
-                for (String? current = this.name; current != Null; current = this.name)
+                Loop: for (String? current = this.name; current != Null; current = this.name)
                     {
                     if (current == name)
                         {
                         return True, Null;
+                        }
+
+                    if (Loop.first)
+                        {
+                        prepareRead();
                         }
 
                     if (collect)
@@ -1082,7 +1086,7 @@ class ObjectInputStream(Schema schema, Parser parser)
                 {
                 skipped = new ListMap<String, Token[]>();
                 }
-            skipped?.put(current, tokens);
+            skipped?.put(current, tokens); // TODO GG: why do we need ?
             return tokens;
             }
 
@@ -1136,7 +1140,10 @@ class ObjectInputStream(Schema schema, Parser parser)
                     {
                     if (parser.peek().id == ObjectEnter)
                         {
-                        return openObject(peekAhead=True).metadataFor(attribute);
+                        using (val in = openObject(peekAhead=True))
+                            {
+                            return in.metadataFor(attribute);
+                            }
                         }
                     }
                 else if (current.is(FieldInputStream)
