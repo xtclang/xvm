@@ -374,7 +374,7 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
             checkWrite();
 
             return True, inFlight.computeIfAbsent(txId,
-                    () -> new Changes(txId, txManager.enlist(this, txId)));
+                    () -> new Changes(txId, txManager.enlist(this.id, txId)));
             }
         else if (writing)
             {

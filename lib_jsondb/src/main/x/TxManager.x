@@ -1,4 +1,5 @@
 import collections.ArrayDeque;
+import collections.CircularArray;
 import collections.SparseIntSet;
 
 import json.ElementOutput;
@@ -177,7 +178,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      * This data structure is lazily populated as necessary from the [Catalog], which is responsible
      * for creating and holding the references to each [ObjectStore].
      */
-    private ObjectStore?[] appStores = new ObjectStore[];
+    private ObjectStore?[] appStores = new ObjectStore?[];
 
     /**
      * The ObjectStore for each DBObject in the system schema.
@@ -185,7 +186,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      * This data structure is lazily populated as necessary from the [Catalog], which is responsible
      * for creating and holding the references to each [ObjectStore].
      */
-    private ObjectStore?[] sysStores = new ObjectStore[];
+    private ObjectStore?[] sysStores = new ObjectStore?[];
 
     /**
      * The system directory (./sys).
@@ -371,9 +372,10 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
     protected/private Int currentlyCommitting = 0;
 
     /**
-     * A record of a pending operation, with its deferred result.
+     * The count of transactions, if any, that are in the process of terminating after a request
+     * has been made to disable the TxManager.
      */
-    class Pending(Int txId, TxRecord rec, Future<Boolean> result);
+    protected/private Int remainingTerminating = 0;
 
     /**
      * A queue of transactions that are waiting for the "green light" to start preparing. While this
@@ -388,7 +390,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      * creates a future and places it into the queue for processing once all of the transactions
      * ahead of it have prepared.
      */
-    protected/private ArrayDeque<Pending> pendingPrepare = new ArrayDeque();
+    protected/private CircularArray<TxRecord> pendingPrepare = new CircularArray();
 
     /**
      * A queue of transactions that are have prepared but have not yet been committed to disk. There
@@ -397,7 +399,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      * inherently more efficient than conducting I/O on behalf of each individual transaction in
      * sequence.
      */
-    protected/private ArrayDeque<Pending> pendingCommit = new ArrayDeque();
+    protected/private CircularArray<TxRecord> pendingCommit = new CircularArray();
 
 
     // ----- lifecycle management ------------------------------------------------------------------
@@ -406,21 +408,37 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      * Allow the transaction manager to accept work from clients.
      *
      * This method is intended to only be used by the [Catalog].
+     *
+     * @return True iff the TxManager was successfully enabled
      */
-    void enable()
+    Boolean enable()
         {
-        assert status == Initial || status == Disabled;
-        using (val cs = new CriticalSection(Exclusive))
+        switch (status)
             {
-            if (status == Initial)
-                {
-                if (!(statusFile.exists ? openLog() : createLog()))
+            case Initial:
+                using (new CriticalSection(Exclusive))
                     {
-                    assert recoverLog();
+                    if ((statusFile.exists ? openLog() : createLog()) || recoverLog())
+                        {
+                        status = Enabled;
+                        return True;
+                        }
                     }
-                }
+                return False;
 
-            status = Enabled;
+            case Enabled:
+                return True;
+
+            case Disabled:
+                if (remainingTerminating == 0 && (openLog() || recoverLog()))
+                    {
+                    status = Enabled;
+                    return True;
+                    }
+                return False;
+
+            case Closed:
+                return False;
             }
         }
 
@@ -445,36 +463,109 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      *
      * @param abort  pass True to abort everything that can still be aborted in order to disable as
      *               quickly as possible with minimal risk of failure
+     *
+     * @return True iff the TxManager was successfully disabled
      */
-    void disable(Boolean abort = False)
+    Boolean disable(Boolean abort = False)
         {
         switch (status)
             {
             case Initial:
                 status = Disabled;
-                return;
+                return True;
 
             case Enabled:
-                Exception? failure = Null;
-                using (val cs = new CriticalSection(Exclusive))
+                using (new CriticalSection(Exclusive))
                     {
-                    if (!abort)
+                    @Future Boolean result;
+
+                    // count down the remaining number of transactions to clean up, but start with
+                    // an extra one, to prevent the shut-down from "completing" while we're still
+                    // inside the loop below
+                    assert remainingTerminating == 0;
+                    remainingTerminating = 1;
+
+                    Loop: for (TxRecord tx : byWriteId.values)
                         {
-                        // commit everything that has already prepared
-                        // TODO attempt to commit any prepared transactions
+                        switch (tx.status)
+                            {
+                            case InFlight:
+                            case Enqueued:
+                            case Preparing:
+                            case Validating:
+                            case Rectifying:
+                            case Distributing:
+                                rollback(tx);
+                                break;
+
+                            case Prepared:
+                                if (abort)
+                                    {
+                                    rollback(tx);
+                                    }
+                                else
+                                    {
+                                    commit(tx);
+                                    }
+                                break;
+
+                            case Committing:
+                            case RollingBack:
+                                // already in progress to being "done"; no means to front-run it, so
+                                // it must be allowed to complete
+                                break;
+
+                            case Committed:
+                            case RolledBack:
+                                // already "done"
+                                continue Loop;
+                            }
+
+                        if (Future<Boolean> pending ?= tx.pending)
+                            {
+                            ++remainingTerminating;
+                            pending.whenComplete((_, e) ->
+                                {
+                                if (e != Null)
+                                    {
+                                    log($|Exception occurred while terminating transaction\
+                                         | {tx.writeId} ({tx.txInfo} for client {tx.clientId}): {e}
+                                       );
+                                    }
+
+                                if (--remainingTerminating <= 0)
+                                    {
+                                    result = True;
+                                    }
+                                });
+                            }
                         }
 
-                    // abort everything that is left over
-                    // TODO
+                    // when all of the transactions have terminated, clean up the TxManager state
+                    &result.thenDo(() ->
+                        {
+                        // TODO
+                        closeLog();
+                        });
 
-                    closeLog();
+                    status = Disabled;
+
+                    // remove the "extra" one from the remaining count, and see if we're already
+                    // done shutting down
+                    if (--remainingTerminating <= 0)
+                        {
+                        // either there was nothing to close down, or it already finished before we
+                        // could return the future that would close the log
+                        result = True;
+                        }
+
+                    // still some futures that need to finish before the log gets closed
+                    return result;
                     }
-                throw failure?;
-                return;
 
             case Disabled:
             case Closed:
-                return;
+                return True;
             }
         }
 
@@ -650,7 +741,6 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                         {
                         Int firstSegmentTx = newInfo.txIds.effectiveFirst;
                         Int lastSegmentTx  = newInfo.txIds.effectiveUpperBound;
-assert:debug;
                         if (lastTx < 0 || firstSegmentTx == lastTx+1
                                 && (newInfo.txIds.size == 0 || lastSegmentTx > lastTx))
                             {
@@ -1192,7 +1282,7 @@ assert:debug;
      * @throws IllegalState if the transaction state does not allow an ObjectStore to be enlisted,
      *         for example during rollback processing, or after a commit/rollback completes
      */
-    Int enlist(ObjectStore store, Int txId)
+    Int enlist(Int storeId, Int txId)
         {
         assert isWriteTx(txId), TxRecord tx := byWriteId.get(txId);
 
@@ -1206,7 +1296,7 @@ assert:debug;
             // this is the first ObjectStore enlisting for this transaction, so create a mutable
             // set to hold all the enlisting ObjectStores, as they each enlist
             assert tx.enlisted.empty;
-            tx.enlisted = new HashSet<ObjectStore>();
+            tx.enlisted = new SparseIntSet();
 
             // use the last successfully prepared transaction id as the basis for reading within
             // this transaction; this reduces the potential for roll-back, since prepared
@@ -1217,7 +1307,7 @@ assert:debug;
             tx.readId = readId;
             }
 
-        assert !tx.enlisted.contains(store);
+        assert !tx.enlisted.contains(storeId);
         switch (tx.status)
             {
             case InFlight:
@@ -1231,7 +1321,7 @@ assert:debug;
                 assert as "Attempt to enlist into a transaction whose status is {tx.status} is forbidden";
             }
 
-        tx.enlisted.add(store);
+        tx.enlisted.add(storeId);
         return readId;
         }
 
@@ -1261,6 +1351,41 @@ assert:debug;
     protected void log(String msg)
         {
         catalog.log^(msg);
+        }
+
+    /**
+     * Obtain the DBObjectInfo for the specified id.
+     *
+     * @param id  the internal object id
+     *
+     * @return the DBObjectInfo for the specified id
+     */
+    ObjectStore storeFor(Int id)
+        {
+        ObjectStore?[] stores = appStores;
+        Int            index  = id;
+        if (id < 0)
+            {
+            stores = sysStores;
+            index  = Catalog.BuiltIn.byId(id).ordinal;
+            }
+
+        Int size = stores.size;
+        if (index < size)
+            {
+            return stores[index]?;
+            }
+
+        ObjectStore store = catalog.storeFor(id);
+
+        // save off the ObjectStore (lazy cache)
+        if (index > stores.size)
+            {
+            stores.fill(Null, stores.size..index);
+            }
+        stores[index] = store;
+
+        return store;
         }
 
     /**
@@ -1314,9 +1439,9 @@ assert:debug;
      */
     protected Boolean prepare(TxRecord rec)
         {
-        Int              writeId = rec.writeId;
-        Set<ObjectStore> stores  = rec.enlisted;
-        if (stores.empty)
+        Int      writeId  = rec.writeId;
+        Set<Int> storeIds = rec.enlisted;
+        if (storeIds.empty)
             {
             // an empty transaction is considered committed
             assert rec.readId == NO_TX || isWriteTx(rec.readId);
@@ -1332,8 +1457,10 @@ assert:debug;
         FutureVar<Boolean>? preparedAll = Null;
         rec.status    = Preparing;
         rec.prepareId = prepareId;
-        for (ObjectStore store : stores)
+        for (Int storeId : storeIds)
             {
+            ObjectStore store = storeFor(storeId);
+
             // we cannot predict the order of asynchronous execution, so it is quite possible that
             // we find out that the transaction must be rolled back while we are still busy here
             // trying to get the various ObjectStore instances to prepare what changes they have
@@ -1351,12 +1478,12 @@ assert:debug;
                 switch (pr)
                     {
                     case FailedRolledBack:
-                        stores.remove(store);
+                        storeIds.remove(storeId);
                         abort = True;
                         return False;
 
                     case CommittedNoChanges:
-                        stores.remove(store);
+                        storeIds.remove(storeId);
                         return True;
 
                     case Prepared:
@@ -1371,7 +1498,7 @@ assert:debug;
         @Future Boolean result = preparedAll.whenComplete((v, e) ->
             {
             // check for successful prepare, and whether anything is left enlisted
-            switch (v, stores.empty)
+            switch (v, storeIds.empty)
                 {
                 case (False, False):
                     // failed; remaining stores need to be rolled back
@@ -1576,8 +1703,8 @@ TODO
      */
     protected Boolean commit(TxRecord rec)
         {
-        Set<ObjectStore> stores = rec.enlisted;
-        if (stores.empty)
+        Set<Int> storeIds = rec.enlisted;
+        if (storeIds.empty)
             {
             terminate(rec, Committed);
             return True;
@@ -1594,9 +1721,10 @@ TODO
            .append(clock.now.toString(True))
            .add('\"');
 
-        Loop: for (ObjectStore store : stores)
+        Loop: for (Int storeId : storeIds)
             {
-            String json = store.sealPrepare(writeId);
+            ObjectStore store = storeFor(storeId);
+            String      json  = store.sealPrepare(writeId);
 
             buf.append(", \"")
                .append(store.info.path.toString().substring(1))
@@ -1626,9 +1754,9 @@ TODO
 
         FutureVar<Tuple<>>? commitAll = Null;
         rec.status = Committing;
-        for (ObjectStore store : stores)
+        for (Int storeId : storeIds)
             {
-            @Future Tuple<> commitOne = store.commit(writeId);
+            @Future Tuple<> commitOne = storeFor(storeId).commit(writeId);
             commitAll = commitAll?.and(&commitOne, (_, _) -> Tuple:()) : &commitOne;
             }
 
@@ -1656,19 +1784,31 @@ TODO
      */
     protected Boolean rollback(TxRecord rec)
         {
-        Set<ObjectStore> stores = rec.enlisted;
-        if (stores.empty)
+        Set<Int> storeIds = rec.enlisted;
+        if (storeIds.empty)
             {
             terminate(rec, RolledBack);
             return True;
             }
 
+        switch (rec.status)
+            {
+            case Committing:               // TODO TODO TODO wtf?!
+            case Committed:
+                return False;
+
+            case RollingBack:              // TODO TODO TODO wtf?!
+
+            case RolledBack:
+                return True;
+            }
+
         Int                 writeId     = rec.writeId;
         FutureVar<Tuple<>>? rollbackAll = Null;
         rec.status = RollingBack;
-        for (ObjectStore store : stores)
+        for (Int storeId : storeIds)
             {
-            @Future Tuple<> rollbackOne = store.rollback(writeId);
+            @Future Tuple<> rollbackOne = storeFor(storeId).rollback(writeId);
             rollbackAll = rollbackAll?.and(&rollbackOne, (_, _) -> Tuple:()) : &rollbackOne;
             }
 
@@ -1708,23 +1848,25 @@ TODO
             Int                 writeId,
             Int                 readId    = NO_TX,
             Int                 prepareId = NO_TX,
-            Set<ObjectStore>    enlisted  = [],         // TODO set of ids
-            Set<ObjectStore>    triggered = [],         // TODO set of ids
-            Status              status    = InFlight)
+            Set<Int>            enlisted  = [],
+            Set<Int>            triggered = [],
+            Status              status    = InFlight,
+            Future<Boolean>?    pending   = Null,
+            )
         {
         /**
          * Enlist a transactional resource.
          *
          * @param store  the resource to enlist
          */
-        void enlist(ObjectStore store)
+        void enlist(Int storeId)
             {
-            if (enlisted.is(immutable Object))
+            if (enlisted.empty && enlisted.is(immutable Object))
                 {
-                enlisted = new HashSet(enlisted);
+                enlisted = new SparseIntSet();
                 }
 
-            enlisted.add(store);
+            enlisted.add(storeId);
             }
 
         @RO Boolean readOnly.get()
@@ -1738,37 +1880,51 @@ TODO
          *
          * @param store  the resource to enlist
          */
-        void trigger(ObjectStore store)
+        void trigger(Int storeId)
             {
-            if (triggered.is(immutable Object))
+            if (triggered.empty && triggered.is(immutable Object))
                 {
-                triggered = new HashSet(triggered);
+                triggered = new SparseIntSet();
                 }
 
-            assert triggered.addIfAbsent(store);
+            triggered.add(storeId);
             }
 
         /**
-         * @return the ObjectStores **in a predictable order** that need to have triggers evaluated
+         * @return the ObjectStore ids **in a predictable order** that need to have triggers
+         *         evaluated
          */
-        Iterable<ObjectStore> takeTriggered()
+        Iterable<Int> takeTriggered()
             {
             if (triggered.empty)
                 {
                 return [];
                 }
 
-            val result = triggered.sorted((os1, os2) -> os1.id <=> os2.id);
+            val result = triggered.toArray();
             triggered = [];
             return result;
             }
 
         /**
          * Transaction status.
+         *
+         * * InFlight - the transaction is "open", and still accepting client operations
+         * * Enqueued - the transaction is waiting for its turn to prepare
+         * * Preparing - the transaction has begun the "prepare" process
+         * * Validating - the transaction has begun the "validate" process
+         * * Rectifying - the transaction has begun the "rectify" process
+         * * Distributing - the transaction has begun the "distribute" process
+         * * Prepared - the transaction has completed the prepare/validate/rectify/distribute steps
+         * * Committing - the transaction has begun the commit process
+         * * Committed - the transaction has successfully committed
+         * * RollingBack - the transaction has begun the rollback process
+         * * RolledBack - the transaction has successfully rolled back
          */
         enum Status
             {
             InFlight,
+            Enqueued,
             Preparing,
             Validating,
             Rectifying,
