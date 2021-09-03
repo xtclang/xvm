@@ -207,7 +207,7 @@ public class xFutureVar
      */
     protected int invokeThenDo(Frame frame, FutureHandle hThis, FunctionHandle hRun, int iReturn)
         {
-        CompletableFuture<ObjectHandle> cf = hThis.m_future;
+        CompletableFuture<ObjectHandle> cf = hThis.ensureFuture();
 
         if (cf.isDone())
             {
@@ -264,7 +264,7 @@ public class xFutureVar
      */
     protected int invokePassTo(Frame frame, FutureHandle hThis, FunctionHandle hConsume, int iReturn)
         {
-        CompletableFuture<ObjectHandle> cf = hThis.m_future;
+        CompletableFuture<ObjectHandle> cf = hThis.ensureFuture();
 
         if (cf.isDone())
             {
@@ -324,7 +324,7 @@ public class xFutureVar
     protected int invokeTransform(Frame frame, FutureHandle hThis, TypeHandle hNewType,
                                   FunctionHandle hConvert, int iReturn)
         {
-        CompletableFuture<ObjectHandle> cf       = hThis.m_future;
+        CompletableFuture<ObjectHandle> cf       = hThis.ensureFuture();
         TypeComposition                 clzTrans = frame.ensureClass(hNewType.getDataType());
 
         if (cf.isDone())
@@ -385,7 +385,7 @@ public class xFutureVar
      */
     protected int invokeHandle(Frame frame, FutureHandle hThis, FunctionHandle hConvert, int iReturn)
         {
-        CompletableFuture<ObjectHandle> cf        = hThis.m_future;
+        CompletableFuture<ObjectHandle> cf        = hThis.ensureFuture();
         TypeComposition                 clzHandle = hThis.getComposition();
 
         if (cf.isDone())
@@ -451,7 +451,7 @@ public class xFutureVar
     protected int invokeTransformOrHandle(Frame frame, FutureHandle hThis, TypeHandle hNewType,
                                           FunctionHandle hConvert, int iReturn)
         {
-        CompletableFuture<ObjectHandle> cf       = hThis.m_future;
+        CompletableFuture<ObjectHandle> cf       = hThis.ensureFuture();
         TypeComposition                 clzTrans = frame.ensureClass(hNewType.getDataType());
 
         if (cf.isDone())
@@ -501,8 +501,8 @@ public class xFutureVar
                                   TypeHandle hOtherType, TypeHandle hNewType,
                                   FutureHandle hThat, FunctionHandle hCombine, int iReturn)
         {
-        CompletableFuture<ObjectHandle> cfThis = hThis.m_future;
-        CompletableFuture<ObjectHandle> cfThat = hThat.m_future;
+        CompletableFuture<ObjectHandle> cfThis = hThis.ensureFuture();
+        CompletableFuture<ObjectHandle> cfThat = hThat.ensureFuture();
         TypeComposition                 clzAnd = frame.ensureClass(hNewType.getDataType());
 
         if (cfThis.isDone() && cfThat.isDone())
@@ -579,8 +579,8 @@ public class xFutureVar
      */
     protected int invokeOrFuture(Frame frame, FutureHandle hThis, FutureHandle hThat, int iReturn)
         {
-        CompletableFuture<ObjectHandle> cfThis = hThis.m_future;
-        CompletableFuture<ObjectHandle> cfThat = hThat.m_future;
+        CompletableFuture<ObjectHandle> cfThis = hThis.ensureFuture();
+        CompletableFuture<ObjectHandle> cfThat = hThat.ensureFuture();
 
         if (cfThis.isDone())
             {
@@ -602,7 +602,7 @@ public class xFutureVar
      */
     protected int invokeWhenComplete(Frame frame, FutureHandle hThis, FunctionHandle hNotify, int iReturn)
         {
-        CompletableFuture<ObjectHandle> cf = hThis.m_future;
+        CompletableFuture<ObjectHandle> cf = hThis.ensureFuture();
 
         if (cf.isDone())
             {
@@ -881,6 +881,16 @@ public class xFutureVar
             super(clazz, sName);
 
             m_future = future;
+            }
+
+        public CompletableFuture<ObjectHandle> ensureFuture()
+            {
+            CompletableFuture<ObjectHandle> cf = m_future;
+            if (cf == null)
+                {
+                cf = m_future = new CompletableFuture<>();
+                }
+            return cf;
             }
 
         @Override
