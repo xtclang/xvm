@@ -534,21 +534,29 @@ public class NameExpression
     @Override
     public TypeConstant getImplicitType(Context ctx)
         {
-        if (isValidated())
-            {
-            return getType();
-            }
+        return isValidated()
+                ? getType()
+                : getImplicitType(ctx, null, ErrorListener.BLACKHOLE);
+        }
 
-        Argument arg = resolveRawArgument(ctx, true, ErrorListener.BLACKHOLE);
-        if (arg == null)
-            {
-            // we need the "raw argument" to determine the type from
-            return null;
-            }
+    /**
+     * Determine the type that this expression will resolve to, if it is given some inference
+     * information.
+     *
+     * @param ctx          the compiler context
+     * @param typeDesired  the (optional) type to attempt to fulfill during translation
+     * @param errs         the error list to log errors to
+     *
+     * @return the resolved type or null if it cannot be resolved
+     */
+    public TypeConstant getImplicitType(Context ctx, TypeConstant typeDesired, ErrorListener errs)
+        {
+        Argument arg = resolveRawArgument(ctx, true, errs);
 
-        // figure out how we would translate the raw argument to a finished (RVal) argument
-        return planCodeGen(ctx, arg,
-                getImplicitTrailingTypeParameters(ctx), null, ErrorListener.BLACKHOLE);
+        // we need the "raw argument" to determine the actual type
+        return arg == null
+                ? null
+                : planCodeGen(ctx, arg, getImplicitTrailingTypeParameters(ctx), typeDesired, errs);
         }
 
     @Override
@@ -564,15 +572,7 @@ public class NameExpression
             errs = ErrorListener.BLACKHOLE;
             }
 
-        Argument arg = resolveRawArgument(ctx, true, errs);
-        if (arg == null)
-            {
-            return TypeFit.NoFit;
-            }
-
-        TypeConstant typeActual = planCodeGen(ctx, arg,
-                getImplicitTrailingTypeParameters(ctx), typeRequired, errs);
-        return calcFit(ctx, typeActual, typeRequired);
+        return calcFit(ctx, getImplicitType(ctx, typeRequired, errs), typeRequired);
         }
 
     @Override
@@ -2037,12 +2037,8 @@ public class NameExpression
      *
      * @return the type of the expression
      */
-    protected TypeConstant planCodeGen(
-            Context         ctx,
-            Argument        argRaw,
-            TypeConstant[]  aTypeParams,
-            TypeConstant    typeDesired,
-            ErrorListener   errs)
+    protected TypeConstant planCodeGen(Context ctx, Argument argRaw,
+            TypeConstant[]  aTypeParams, TypeConstant typeDesired, ErrorListener errs)
         {
         assert ctx != null && argRaw != null;
         ConstantPool pool           = pool();
@@ -2157,7 +2153,7 @@ public class NameExpression
                 boolean fCouldBeSingleton = !isIdentityMode(ctx, false);
                 boolean fSingletonDesired = typeDesired != null && constant.getType().isA(typeDesired);
                 boolean fClassDesired     = typeDesired != null && typeDesired.isA(pool.typeClass());
-                boolean fTypeDesired      = typeDesired != null && typeDesired.isA(pool.typeType());
+                boolean fTypeDesired      = typeDesired != null && typeDesired.isTypeOfType();
                 boolean fHasTypeParams    = aTypeParams != null;
                 if (fCouldBeSingleton && (fSingletonDesired
                         || (!fClassDesired && !fTypeDesired && !fHasTypeParams)))
@@ -2223,7 +2219,7 @@ public class NameExpression
                             }
                         }
 
-                    if (typeDesired != null && typeDesired.isA(pool.typeType()))
+                    if (fTypeDesired)
                         {
                         m_plan = Plan.TypeOfClass;
                         return type.getType();

@@ -633,7 +633,7 @@ public class InvocationExpression
             else
                 {
                 TypeConstant typeParam = exprType.getImplicitType(ctx);
-                if (typeParam == null || !typeParam.isA(pool().typeType()))
+                if (typeParam == null || !typeParam.isTypeOfType())
                     {
                     return null;
                     }

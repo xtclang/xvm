@@ -242,7 +242,6 @@ service Catalog<Schema extends RootSchema>
     @Lazy Mapping<SysInfo> sysInfoMapping.calc()
         {
         return internalJsonSchema.ensureMapping(SysInfo);
-        // TODO GG it didn't like this: return jsonSchema.ensureMapping(Type<SysInfo>);
         }
 
     /**

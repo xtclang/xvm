@@ -171,7 +171,7 @@ public class xRTType
             ConstantPool pool = frame.poolContext();
 
             TypeConstant typeTarget = (TypeConstant) constant;
-            assert typeTarget.isA(pool.typeType());
+            assert typeTarget.isTypeOfType();
 
             TypeConstant typeData = typeTarget.getParamType(0).
                     resolveGenerics(pool, frame.getGenericsResolver());

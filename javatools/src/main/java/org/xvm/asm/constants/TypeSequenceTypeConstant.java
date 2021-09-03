@@ -268,7 +268,7 @@ public class TypeSequenceTypeConstant
                 {
                 for (int i = 0, c = typeLeft.getParamsCount(); i < c; i++)
                     {
-                    if (!typeLeft.getParamType(i).isA(pool.typeType()))
+                    if (!typeLeft.getParamType(i).isTypeOfType())
                         {
                         return Relation.INCOMPATIBLE;
                         }

@@ -1295,6 +1295,12 @@ public abstract class AstNode
                     }
                 else if (typeParam != null && !errsTemp.hasSeriousErrors())
                     {
+                    if (exprArg instanceof NameExpression)
+                        {
+                        typeExpr = ((NameExpression) exprArg).
+                            getImplicitType(ctx, typeParam, ErrorListener.BLACKHOLE);
+                        }
+
                     log(errsTemp, Severity.ERROR, Compiler.INCOMPATIBLE_PARAMETER_TYPE,
                             sigMethod.getName(),
                             typeParam.getValueString(),
