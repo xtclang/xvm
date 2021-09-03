@@ -232,7 +232,7 @@ service Catalog<Schema extends RootSchema>
         return new json.Schema(
             enableReflection = True,
             enableMetadata   = True,
-            randomAccess     = True,
+            randomAccess     = True,     // TODO test without this (fails)
             );
         }
 

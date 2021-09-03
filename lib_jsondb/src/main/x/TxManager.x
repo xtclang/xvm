@@ -65,6 +65,26 @@ import Catalog.BuiltIn;
  *
  * * The log archives are copies of the previous `txlog.json` files, from when those files passed a
  *   certain size threshold. They are named `txlog_<datetime>.json`
+ *
+ * An example of the transaction file format:
+ *
+ *    append this information to the end of the database tx log, e.g.:
+ *        [
+ *        {"_op":"created", "_ts":"2021-09-02T22:55:54.257Z", "_prev_tx":23},
+ *        {"_tx":1, "_ts":"2021-09-02T22:55:54.672Z", "title":"My Contacts"},
+ *        {"_tx":2, "_ts":"2021-09-02T22:55:55.272Z", "contacts":[{"k":"Washington, George",
+ *          "v":{"firstName":"George","lastName":"Washington","emails":[],"phones":[]}}]
+ *        {"_op":"closed", "_ts":"2021-09-02T22:55:55.272Z"}
+ *        ]
+ *
+ * The use of leading underscores allows the paths of the various DBObjects (e.g. "title",
+ * "contacts") to be used as keys, without the potential for conflicting with the keys used by the
+ * TxManager itself:
+ *
+ * * `_tx` - the transaction id
+ * * `_ts` - the timestamp
+ * * `_op` - other non-transactional operation record
+ * * `_prev_tx` - the last transaction from the previous transaction log segment (previous file)
  */
 service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         implements Closeable
@@ -557,7 +577,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
     protected void initLogFile()
         {
         logFile.contents = $|[
-                            |\{"status":"created", "timestamp":"{clock.now.toString(True)}", "prev-tx":{lastCommitted}}
+                            |\{"_op":"created", "_ts":"{clock.now.toString(True)}", "_prev_tx":{lastCommitted}}
                             |]
                             .utf8();
         }
@@ -579,7 +599,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             if (current.size == logFile.size && current.timestamp == logFile.modified)
                 {
                 // append the "we're open" message to the log
-                addLogEntry($|\{"status":"opened", "timestamp":"{clock.now.toString(True)}"}
+                addLogEntry($|\{"_op":"opened", "_ts":"{clock.now.toString(True)}"}
                            );
 
                 this.logInfos      = logInfos;
@@ -755,7 +775,7 @@ assert:debug;
         if (logFile.exists)
             {
             // append a recovery message to the log
-            addLogEntry($|\{"status":"recovered", "timestamp":"{clock.now.toString(True)}"}
+            addLogEntry($|\{"_op":"recovered", "_ts":"{clock.now.toString(True)}"}
                        );
             logInfos[logInfos.size-1] = logInfos[logInfos.size-1].with(size=logFile.size,
                                                                        timestamp=logFile.modified);
@@ -765,8 +785,8 @@ assert:debug;
             log("TxManager current segment of transaction log is missing, so one will be created");
             String timestamp = clock.now.toString(True);
             logFile.contents = $|[
-                                |\{"status":"created", "timestamp":"{timestamp}", "prev-tx":{lastTx}},
-                                |\{"status":"recovered", "timestamp":"{timestamp}"}
+                                |\{"_op":"created", "_ts":"{timestamp}", "_prev_tx":{lastTx}},
+                                |\{"_op":"recovered", "_ts":"{timestamp}"}
                                 |]
                                 .utf8();
             LogFileInfo info = new LogFileInfo(logFile.name, [lastTx+1..lastTx+1), logFile.size, logFile.modified);
@@ -890,7 +910,7 @@ assert:debug;
                             {
                             txId = objectParser.expectInt();
                             }
-                        else if (objectParser.matchKey("status") && objectParser.findKey("prev-tx"))
+                        else if (objectParser.matchKey("_op") && objectParser.findKey("_prev_tx"))
                             {
                             txId = objectParser.expectInt() + 1;
                             }
@@ -936,7 +956,7 @@ assert:debug;
         assert !logInfos.empty;
 
         String timestamp = clock.now.toString(True);
-        addLogEntry($|\{"status":"archived", "timestamp":"{timestamp}"}
+        addLogEntry($|\{"_op":"archived", "_ts":"{timestamp}"}
                    );
 
         String rotatedName = $"txlog_{timestamp}.json";
@@ -960,7 +980,7 @@ assert:debug;
      */
     protected void closeLog()
         {
-        addLogEntry($|\{"status":"closed", "timestamp":"{clock.now.toString(True)}"}
+        addLogEntry($|\{"_op":"closed", "_ts":"{clock.now.toString(True)}"}
                    );
 
         // update the "current log file" status record
@@ -1568,36 +1588,23 @@ TODO
         Int          commitId = rec.prepareId;
         StringBuffer buf      = new StringBuffer();
 
-        buf.append(",\n{")
-           .append("\n\"_tx\":")
-           .append(commitId);
+        buf.append(",\n{\"_tx\":")
+           .append(commitId)
+           .append(", \"_ts\":\"")
+           .append(clock.now.toString(True))
+           .add('\"');
+
         Loop: for (ObjectStore store : stores)
             {
             String json = store.sealPrepare(writeId);
 
-            buf.add(',')
-               .append("\n\"")
-               .append(store.info.name)
+            buf.append(", \"")
+               .append(store.info.path.toString().substring(1))
                .append("\":")
                .append(json);
             }
-        buf.append("\n}\n]");
 
-        // append this information to the end of the database tx log, e.g.:
-        //     [
-        //     {
-        //     "_tx":1
-        //     "title":"hello",
-        //     "contacts":[{"k":1, "v":{Bob...}}, {"k":2, "v":{Sam...}}, {"k":7}],
-        //     ...
-        //     },
-        //     {
-        //     "_tx":2
-        //     "title":"goodbye",
-        //     "contacts":[{"k":1, "v":{Bob...}}, {"k":2, "v":{Sam...}}, {"k":7}],
-        //     ...
-        //     }
-        //     ]
+        buf.append("}\n]");
 
         File file   = logFile;
         Int  length = file.size;
@@ -1605,6 +1612,7 @@ TODO
 
         // TODO right now this assumes that no manual edits have occurred; must cache "last
         //      update timestamp" and rebuild file if someone else changed it (see ValueStore.commit)
+
         file.truncate(length-2)
             .append(buf.toString().utf8());
 
