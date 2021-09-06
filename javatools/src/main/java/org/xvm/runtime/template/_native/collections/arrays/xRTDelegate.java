@@ -574,7 +574,8 @@ public class xRTDelegate
             return hDelegate;
             }
 
-        ObjectHandle[] ahValue = Arrays.copyOfRange(hDelegate.m_ahValue, (int) ofStart, (int) cSize);
+        ObjectHandle[] ahValue = Arrays.copyOfRange(hDelegate.m_ahValue,
+                                    (int) ofStart, (int) (ofStart + cSize));
         if (fReverse)
             {
             ahValue = reverse(ahValue, (int) cSize);

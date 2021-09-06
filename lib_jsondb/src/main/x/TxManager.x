@@ -798,21 +798,8 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                     }
                 }
 
-            if (firstIndex > 0)
+             if (firstIndex > 0)
                 {
-// TODO GG slice of size zero e.g. [x..x) should return empty array, but blows with exception:
-//java.lang.IllegalArgumentException: 1 > 0
-//	at java.base/java.util.Arrays.copyOfRange(Arrays.java:3990)
-//	at java.base/java.util.Arrays.copyOfRange(Arrays.java:3950)
-//	at org.xvm.runtime.template._native.collections.arrays.xRTDelegate.createCopyImpl(xRTDelegate.java:577)
-//	at org.xvm.runtime.template._native.collections.arrays.xRTSlicingDelegate.createCopyImpl(xRTSlicingDelegate.java:106)
-//	at org.xvm.runtime.template._native.collections.arrays.xRTDelegate.createCopy(xRTDelegate.java:493)
-//	at org.xvm.runtime.template._native.collections.arrays.xRTDelegate.invokeNative1(xRTDelegate.java:247)
-//	at org.xvm.runtime.CallChain.invoke(CallChain.java:138)
-//	at org.xvm.asm.op.Invoke_11.complete(Invoke_11.java:112)
-//	at org.xvm.asm.op.Invoke_11.resolveArg(Invoke_11.java:105)
-//	at org.xvm.asm.op.Invoke_11.process(Invoke_11.java:92)
-//	at org.xvm.runtime.ServiceContext.execute(ServiceContext.java:584)
                 logInfos = firstIndex == logInfos.size
                         ? logInfos.clear()
                         : logInfos.slice([firstIndex..logInfos.size)).reify(Mutable);
