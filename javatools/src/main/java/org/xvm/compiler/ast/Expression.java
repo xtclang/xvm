@@ -815,8 +815,13 @@ public abstract class Expression
                             }
                         else
                             {
-                            idConv         = null;
+                            if (fCloneActual)
+                                {
+                                atypeActual  = atypeActual.clone();
+                                fCloneActual = false;
+                                }
                             atypeActual[i] = constConv.getType().freeze();
+                            idConv         = null;
                             }
                         aconstVal[i] = constConv;
                         }

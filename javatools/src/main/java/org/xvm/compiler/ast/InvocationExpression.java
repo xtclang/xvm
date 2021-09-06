@@ -576,7 +576,7 @@ public class InvocationExpression
         else
             {
             typeFn      = null;
-            atypeReturn = atypeRequired == null ? TypeConstant.NO_TYPES : atypeRequired;
+            atypeReturn = atypeRequired == null ? TypeConstant.NO_TYPES : atypeRequired.clone();
             }
 
         int     cRequired  = atypeReturn.length;
@@ -592,8 +592,7 @@ public class InvocationExpression
             // the only case when we have fewer types than required is a conditional return
             if (cRequired == cRedundant + 1 && atypeRequired[0].isA(pool.typeBoolean()))
                 {
-                fCond       = true;
-                atypeReturn = atypeRequired.clone();
+                fCond = true;
                 }
             else
                 {

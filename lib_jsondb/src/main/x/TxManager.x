@@ -957,7 +957,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
     protected File[] findLogs()
         {
         return sysDir.files()
-                .filter(f -> isLogFile(f) ? True : False) // TODO GG
+                .filter(f -> isLogFile(f))
                 .sorted(orderLogFiles)
                 .toArray(Mutable);
         }

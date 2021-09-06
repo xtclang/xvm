@@ -356,7 +356,7 @@ public class ReturnStatement
 
                 case 1:
                     {
-                    // we need to get all the arguments the expression can provide. but
+                    // we need to get all the arguments the expression can provide, but
                     // return only as many as the caller expects
                     Expression expr   = listExprs.get(0);
                     boolean    fCheck = fConditional && !expr.isConditionalResult();

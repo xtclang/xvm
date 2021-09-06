@@ -467,6 +467,7 @@ public class LambdaExpression
 
         if (typeRequired != null)
             {
+            typeRequired = typeRequired.resolveTypedefs();
             if (typeRequired instanceof IntersectionTypeConstant)
                 {
                 Set<TypeConstant> setFunctions = ((IntersectionTypeConstant) typeRequired).
@@ -575,15 +576,22 @@ public class LambdaExpression
         else
             {
             atypeRets   = m_collector.inferMulti(atypeReqReturns);
-            fCond       = m_collector.isConditional();
+            fCond       = cReqReturns > 1 && m_collector.isConditional();
             m_collector = null;
 
             if (atypeRets == null)
                 {
-                atypeRets = cReqReturns == 0
-                        ? TypeConstant.NO_TYPES
-                        : atypeReqReturns;
-                fit = TypeFit.NoFit;
+                atypeRets = cReqReturns == 0 ? TypeConstant.NO_TYPES : atypeReqReturns;
+                fit       = TypeFit.NoFit;
+                }
+            else
+                {
+                int cReturns = atypeRets.length;
+                if (cReturns > cReqReturns)
+                    {
+                    // the lambda has more return values that the caller needs; adjust it
+                    atypeRets = Arrays.copyOfRange(atypeRets, 0, cReqReturns);
+                    }
                 }
             }
 
