@@ -716,6 +716,14 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
         catalog.log^(err);
         }
 
+    /**
+     * Update the access statistics.
+     */
+    void updateReadStats()
+        {
+        @Inject Clock clock;
+        lastAccessed = clock.now;
+        }
 
     // ----- Hashable funky interface --------------------------------------------------------------
 

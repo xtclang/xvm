@@ -654,18 +654,24 @@ service JsonValueStore<Value extends immutable Const>
                             Boolean valid = True;
                             if (!isReadTx(txId))
                                 {
-                                log($"During deepScan() of DBValue \"{info.path}\", encountered the illegal transaction ID {txId}");
+                                log($|During deepScan() of DBValue "{info.path}", encountered the \
+                                     |illegal transaction ID {txId}
+                                     );
                                 valid = False;
                                 }
                             // verify that the id is unique
                             else if (byTx.contains(txId))
                                 {
-                                log($"During deepScan() of DBValue \"{info.path}\", encountered a duplicate transaction ID {txId}");
+                                log($|During deepScan() of DBValue "{info.path}", encountered a \
+                                     |duplicate transaction ID {txId}
+                                     );
                                 }
                             // verify that the id occurs in ascending order
                             else if (txId <= prevId)
                                 {
-                                log($"During deepScan() of DBValue \"{info.path}\", encountered an out-of-order transaction ID {txId}");
+                                log($|During deepScan() of DBValue "{info.path}", encountered an \
+                                     |out-of-order transaction ID {txId}
+                                     );
                                 }
                             else
                                 {
@@ -700,7 +706,9 @@ service JsonValueStore<Value extends immutable Const>
                     if (dataFile.exists)
                         {
                         dataFile.delete();
-                        log($"During deepScan() of DBValue \"{info.path}\", no data could be recovered, and the data file was deleted.");
+                        log($|During deepScan() of DBValue "{info.path}", no data could be recovered,\
+                             | and the data file was deleted.
+                             );
                         }
                     }
                 else
@@ -709,7 +717,9 @@ service JsonValueStore<Value extends immutable Const>
                     String jsonFix = rebuildJson(jsonStr, byTx);
                     dataFile.contents = jsonFix.utf8();
                     updateWriteStats();
-                    log($"During deepScan() of DBValue \"{info.path}\", {byTx.size} transactions were recovered.");
+                    log($|During deepScan() of DBValue "{info.path}", {byTx.size} transactions were\
+                         | recovered.
+                         );
                     }
 
                 updateWriteStats();
@@ -750,15 +760,6 @@ service JsonValueStore<Value extends immutable Const>
 
         buf.append("\n]");
         return buf.toString(), newLoc;
-        }
-
-    /**
-     * Update the access statistics.
-     */
-    void updateReadStats()
-        {
-        @Inject Clock clock;
-        lastAccessed = clock.now;
         }
 
     /**
