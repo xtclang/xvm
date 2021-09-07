@@ -2665,7 +2665,7 @@ public class Context
                 assert reg != null;
                 ensureFormalMap().putIfAbsent(sName, reg);
                 }
-            else if (type.containsGenericType(false))
+            else if (type.containsGenericType(true))
                 {
                 Set<PropertyConstant> setIds = new HashSet<>();
                 type.collectGenericNames(true, setIds);
@@ -2678,7 +2678,7 @@ public class Context
                     ensureFormalMap().putIfAbsent(sName, info);
                     }
                 }
-            else if (type.containsTypeParameter(false))
+            else if (type.containsTypeParameter(true))
                 {
                 // TODO: enhance "collectGenericNames" or add "collectTypeParameters" API
                 }
