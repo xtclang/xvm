@@ -1205,6 +1205,11 @@ public class Parser
                     type = parseTypeExpression();
                     }
 
+                if (type instanceof BadTypeExpression)
+                    {
+                    log(Severity.ERROR, NO_TYPE_FOUND, lStartPos, m_token.getStartPosition());
+                    }
+
                 // it's a constant, property, or method
                 Token name = expect(Id.IDENTIFIER);
                 if (peek().getId() == Id.COMP_LT || peek().getId() == Id.L_PAREN)
