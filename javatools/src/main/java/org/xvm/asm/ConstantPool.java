@@ -1632,6 +1632,20 @@ public class ConstantPool
         }
 
     /**
+     * Obtain a TypeConstant for a {@code @Future Var<Referent>} type.
+     *
+     * @param typeReferent  the element type of the Range
+     *
+     * @return the Range type
+     */
+    public TypeConstant ensureFutureType(TypeConstant typeReferent)
+        {
+        Annotation   annoFuture = ensureAnnotation(clzFuture());
+        TypeConstant typeVar    = ensureClassTypeConstant(clzVar(), null, typeReferent);
+        return ensureAnnotatedTypeConstant(typeVar, annoFuture);
+        }
+
+    /**
      * Obtain a TypeConstant for a Range.
      *
      * @param typeElement  the element type of the Range

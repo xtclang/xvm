@@ -17,10 +17,12 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.JumpFalse;
 import org.xvm.asm.op.Label;
+import org.xvm.asm.op.Move;
 import org.xvm.asm.op.Return_0;
 import org.xvm.asm.op.Return_1;
 import org.xvm.asm.op.Return_N;
 import org.xvm.asm.op.Return_T;
+import org.xvm.asm.op.Var_D;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
@@ -221,15 +223,17 @@ public class ReturnStatement
                 ctx = ctx.enterInferring(typeRequired);
                 }
 
-            // several possibilities:
-            // 1) most likely the expression matches the return types for the method
-            if (cRets < 0 || exprOld.testFitMulti(ctx, aRetTypes, null).isFit())
+            // let's test several possibilities:
+            do
                 {
-                exprNew = exprOld.validateMulti(ctx, aRetTypes, errs);
-                }
-            else
-                {
-                // 2) it could be a conditional false
+                // - most likely the expression matches the return types for the method
+                if (cRets < 0 || exprOld.testFitMulti(ctx, aRetTypes, null).isFit())
+                    {
+                    exprNew = exprOld.validateMulti(ctx, aRetTypes, errs);
+                    break;
+                    }
+
+                // - it could be a conditional false
                 if (fConditional && exprOld.testFit(ctx, pool.typeFalse(), null).isFit())
                     {
                     exprNew = exprOld.validate(ctx, pool.typeFalse(), errs);
@@ -239,25 +243,36 @@ public class ReturnStatement
                         log(errs, Severity.ERROR, Compiler.CONSTANT_REQUIRED);
                         fValid = false;
                         }
+                    break;
                     }
-                else
+
+                // - it could be a Future return
+                if (cRets == 1)
                     {
-                    // 3) it could be a tuple return
-                    TypeConstant typeTuple = pool.ensureTupleType(aRetTypes);
-                    if (exprOld.testFit(ctx, typeTuple, null).isFit())
+                    TypeConstant typeFuture = pool.ensureFutureType(aRetTypes[0]);
+                    if (exprOld.testFit(ctx, typeFuture, null).isFit())
                         {
-                        exprNew = exprOld.validate(ctx, typeTuple, errs);
-                        m_fTupleReturn = true;
-                        }
-                    // 4) otherwise it's most probably an error and the validation will log it
-                    //   (except cases when testFit() implementation doesn't fully match the "validate"
-                    //    logic or somehow has more information to operate on, such as type inference)
-                    else
-                        {
-                        exprNew = exprOld.validateMulti(ctx, aRetTypes, errs);
+                        exprNew = exprOld.validate(ctx, typeFuture, errs);
+                        m_fFutureReturn = true;
+                        break;
                         }
                     }
+
+                // - it could be a tuple return
+                TypeConstant typeTuple = pool.ensureTupleType(aRetTypes);
+                if (exprOld.testFit(ctx, typeTuple, null).isFit())
+                    {
+                    exprNew = exprOld.validate(ctx, typeTuple, errs);
+                    m_fTupleReturn = true;
+                    break;
+                    }
+
+                // - otherwise it's most probably an error and the validation will log it
+                //   (except cases when testFit() implementation doesn't fully match the "validate"
+                //    logic or somehow has more information to operate on, such as type inference)
+                exprNew = exprOld.validateMulti(ctx, aRetTypes, errs);
                 }
+            while (false);
 
             if (typeRequired != null)
                 {
@@ -370,8 +385,23 @@ public class ReturnStatement
                             break;
 
                         case 1:
-                            code.add(new Return_1(aArgs[0]));
+                            {
+                            Argument argRet = aArgs[0];
+                            if (m_fFutureReturn)
+                                {
+                                // create an intermediate dynamic var
+                                code.add(new Var_D(pool().ensureFutureType(argRet.getType())));
+
+                                Argument argFuture = code.lastRegister();
+                                code.add(new Move(argRet, argFuture));
+                                code.add(new Return_1(argFuture));
+                                }
+                            else
+                                {
+                                code.add(new Return_1(argRet));
+                                }
                             break;
+                            }
 
                         default:
                             if (cArgs > 1)
@@ -507,6 +537,7 @@ public class ReturnStatement
 
     protected transient boolean m_fConditionalTernary;
     protected transient boolean m_fTupleReturn;
+    protected transient boolean m_fFutureReturn;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(ReturnStatement.class, "exprs");
     }

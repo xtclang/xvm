@@ -310,7 +310,7 @@ public class xFutureVar
                                   FunctionHandle hConvert, int iReturn)
         {
         CompletableFuture<ObjectHandle> cfThis   = hThis.getFuture();
-        TypeComposition                 clzTrans = frame.ensureClass(hNewType.getDataType());
+        TypeComposition                 clzTrans = ensureComposition(hNewType.getDataType());
 
         if (cfThis.isDone())
             {
@@ -437,7 +437,7 @@ public class xFutureVar
                                           FunctionHandle hConvert, int iReturn)
         {
         CompletableFuture<ObjectHandle> cfThis   = hThis.getFuture();
-        TypeComposition                 clzTrans = frame.ensureClass(hNewType.getDataType());
+        TypeComposition                 clzTrans = ensureComposition(hNewType.getDataType());
 
         if (cfThis.isDone())
             {
@@ -488,7 +488,7 @@ public class xFutureVar
         {
         CompletableFuture<ObjectHandle> cfThis = hThis.getFuture();
         CompletableFuture<ObjectHandle> cfThat = hThat.getFuture();
-        TypeComposition                 clzAnd = frame.ensureClass(hNewType.getDataType());
+        TypeComposition                 clzAnd = ensureComposition(hNewType.getDataType());
 
         if (cfThis.isDone() && cfThat.isDone())
             {
@@ -824,6 +824,15 @@ public class xFutureVar
                 }
             throw new UnsupportedOperationException("Unexpected exception", eOrig);
             }
+        }
+
+    /**
+     * @return a TypeComposition for a FutureVar of a given referent type
+     */
+    private TypeComposition ensureComposition(TypeConstant typeReferent)
+        {
+        // TODO consider caching the results, similarly to xArray
+        return ensureClass(typeReferent.getConstantPool().ensureFutureType(typeReferent));
         }
 
 
