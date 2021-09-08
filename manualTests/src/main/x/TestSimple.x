@@ -23,7 +23,27 @@ module TestSimple.test.org
             result = result.transform(ok -> ok && stage("validators"));
             result = result.transform(ok -> ok && stage("rectifiers"));
 
-            result.thenDo(() -> commitAsync());
+            commitAsync^().handle(e ->
+                {
+                console.println($"Exception occurred during commitAsync {e}");
+                return Tuple:();
+                });
+
+//            Tuple x = commitAsync^();
+//            &x.handle(e ->
+//                {
+//                console.println($"Exception occurred during commitAsync {e}");
+//                });
+//
+//            return result.thenDo(() ->
+//                {
+//                commitAsync^().handle(e ->
+//                    {
+//                    console.println($"Exception occurred during commitAsync {e}");
+//                    return Tuple:();
+//                    });
+//                });
+//
             return result;
             }
 
@@ -47,13 +67,11 @@ module TestSimple.test.org
             return result;
             }
 
-        Boolean commitAsync()
+        void commitAsync()
             {
             console.println($"Committing");
 
             stage("committing");
-
-            return True;
             }
         }
 

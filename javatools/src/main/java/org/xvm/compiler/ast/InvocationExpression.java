@@ -1153,10 +1153,18 @@ public class InvocationExpression
                 //      svc.f^().whenComplete(handler);
                 // this expression will produce the result as "@Future Var<T>"
                 m_fAutoFuture = true;
-                atypeResult   = atypeResult.clone(); // don't mess up the actual types
-                for (int i = 0, c = atypeResult.length; i < c; i++)
+                if (atypeResult.length > 0)
                     {
-                    atypeResult[i] = pool.ensureFutureVar(atypeResult[i]);
+                    atypeResult   = atypeResult.clone(); // don't mess up the actual types
+                    for (int i = 0, c = atypeResult.length; i < c; i++)
+                        {
+                        atypeResult[i] = pool.ensureFutureVar(atypeResult[i]);
+                        }
+                    }
+                else
+                    {
+                    // @Future<Void>
+                    atypeResult = new TypeConstant[] {pool.ensureFutureVar(pool.typeTuple0())};
                     }
                 }
             }
