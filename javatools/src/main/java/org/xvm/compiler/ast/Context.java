@@ -189,16 +189,6 @@ public class Context
         }
 
     /**
-     * Used in the validation phase to track scopes.
-     * <p/>
-     * Note: This can only be used during the validate() stage.
-     */
-    public Context enterBlackhole()
-        {
-        return new BlackholeContext(this);
-        }
-
-    /**
      * Create a nested "if" of this context.
      * <p/>
      * Note: This can only be used during the validate() stage.
@@ -440,8 +430,7 @@ public class Context
                     }
                 }
 
-            // collect all of the other pending modifications that will be promoted to the outer
-            // context
+            // collect all other pending modifications that will be promoted to the outer context
             for (String sName : ctxInner.getDefiniteAssignments().keySet())
                 {
                 if (!mapMods.containsKey(sName) && !ctxInner.isVarDeclaredInThisScope(sName))
@@ -1691,49 +1680,10 @@ public class Context
         }
 
 
-    // ----- inner class: BlackholeContext ---------------------------------------------------------
-
-    /**
-     * A context that can be used to validate without allowing any mutating operations to leak
-     * through to the underlying context.
-     */
-    protected static class BlackholeContext
-            extends Context
-        {
-        /**
-         * Construct a BlackholeContext around an actual context.
-         *
-         * @param ctxOuter  the actual context
-         */
-        public BlackholeContext(Context ctxOuter)
-            {
-            super(ctxOuter, false);
-            }
-
-        @Override
-        public Context exit()
-            {
-            // no-op (don't push data up to outer scope)
-            return getOuterContext();
-            }
-
-        @Override
-        public Map<String, Assignment> prepareJump(Context ctxDest)
-            {
-            return Collections.EMPTY_MAP;
-            }
-
-        @Override
-        protected Assignment promote(String sName, Assignment asnInner, Assignment asnOuter)
-            {
-            throw new IllegalStateException();
-            }
-        }
-
     // ----- inner class: IfContext ----------------------------------------------------------------
 
     /**
-     * A custom context implementation to provide type-narrowing as a natural side-effect of an
+     * A custom context implementation to provide type-narrowing as a natural side effect of an
      * "if" or a "ternary" block with a terminating branch.
      */
     static class IfContext
@@ -2284,7 +2234,7 @@ public class Context
         protected Assignment promote(String sName, Assignment asnInner, Assignment asnOuter)
             {
             // the "when false" portion of this context replaces the "when false" portion of the
-            // outer context;  the "when true" portion of this context is combined with the the
+            // outer context;  the "when true" portion of this context is combined with the
             // "when true" portion of the outer context
             Assignment asnTrue = Assignment.join(asnOuter.whenTrue(), asnInner.whenTrue());
             Assignment asnJoin = Assignment.join(asnInner.whenFalse(), asnTrue);
@@ -2684,6 +2634,12 @@ public class Context
                 }
             }
 
+        @Override
+        protected void collectVariables(Set<String> setVars)
+            {
+            // there's no visibility across LambdaContext or AnonymousInnerClassContext
+            }
+
         /**
          * @return a map of variable name to a Boolean representing if the capture is read-only
          *         (false) or read/write (true)
@@ -2696,11 +2652,11 @@ public class Context
             }
 
         /**
-         * Obtain the map of names to registers, if it has been built.
+         * Obtain the map of names to the registers, if it has been built.
          * <p/>
          * Note: built by exit()
          *
-         * @return a non-null map of variable name to Register for all of variables to capture
+         * @return a non-null map of the variable name to a Register for all variables to capture
          */
         public Map<String, Register> ensureRegisterMap()
             {

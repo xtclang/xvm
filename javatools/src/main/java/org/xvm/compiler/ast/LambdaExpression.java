@@ -47,6 +47,7 @@ import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
 import org.xvm.compiler.ast.Context.CaptureContext;
+import org.xvm.compiler.ast.LabeledStatement.LabelVar;
 import org.xvm.compiler.ast.StatementBlock.TargetInfo;
 
 import org.xvm.util.Handy;
@@ -748,10 +749,10 @@ public class LambdaExpression
             }
 
         // use a black-hole context (to avoid damaging the original)
-        ctx       = ctx.enterBlackhole();
-        ctx       = enterCapture(ctx, blockTemp, atypeParams, asParams);
-        blockTemp = (StatementBlock) blockTemp.validate(ctx, errs);
-        ctx       = ctx.exit();
+        Context ctxTemp = ctx.enter();
+        ctxTemp   = enterCapture(ctxTemp, blockTemp, atypeParams, asParams);
+        blockTemp = (StatementBlock) blockTemp.validate(ctxTemp, errs);
+        ctxTemp.discard();
 
         try
             {
@@ -1081,6 +1082,12 @@ public class LambdaExpression
                     Register     regCapture     = mapRegisters.get(sCapture);
                     TypeConstant typeCapture    = regCapture.getType();
                     boolean      fImplicitDeref = false;
+
+                    if (regCapture instanceof LabelVar)
+                        {
+                        log(errs, Severity.ERROR, Compiler.NOT_IMPLEMENTED,
+                                "Label capturing (\"" + sCapture + "\")");
+                        }
 
                     if (entry.getValue())
                         {
