@@ -352,10 +352,7 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
 
     static function Boolean(Int)     isReadTx        = TxManager.isReadTx;
     static function Boolean(Int)     isWriteTx       = TxManager.isWriteTx;
-    static function Int(Int)         writeTxCounter  = TxManager.writeTxCounter;
     static function TxType(Int)      txType          = TxManager.txType;
-    static function Int(Int)         generateWriteId = TxManager.generateWriteId;
-    static function Int(Int, TxType) generateTxId    = TxManager.generateTxId;
 
     /**
      * Validate the transaction, and obtain the transactional information for the specified id.

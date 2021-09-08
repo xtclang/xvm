@@ -546,12 +546,13 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
 
                         if (doCommit)
                             {
+// TODO here the prepareId would be readId + 1
                             assert rec.prepareId != NO_TX && commitOrder.putIfAbsent(rec.prepareId, rec);
                             }
 
                         if (doRollback)
                             {
-                            rollback(rec);
+                            rec.rollback();
                             }
                         }
 
@@ -631,88 +632,6 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             }
 
         status = Closed;
-        }
-
-
-    // ----- transactional ID helpers --------------------------------------------------------------
-
-    /**
-     * Determine if the specified txId indicates a read ID, versus a write ID.
-     *
-     * @param txId  a transaction identity
-     *
-     * @return True iff the txId is in the range reserved for read transaction IDs
-     */
-    static Boolean isReadTx(Int txId)
-        {
-        return txId >= 0;
-        }
-
-    /**
-     * Determine if the specified txId indicates a write ID, versus a read ID.
-     *
-     * @param txId  a transaction identity
-     *
-     * @return True iff the txId is in the range reserved for write transaction IDs
-     */
-    static Boolean isWriteTx(Int txId)
-        {
-        return txId < 0;
-        }
-
-    /**
-     * Obtain the transaction counter that was used to create the specified writeId.
-     *
-     * @param writeId  a transaction ID of type `WriteId`, `Validating`, `Rectifying`, or
-     *                 `Distributing`
-     *
-     * @return the original transaction counter
-     */
-    static Int writeTxCounter(Int writeId)
-        {
-        assert isWriteTx(writeId);
-        return -writeId >>> 2;
-        }
-
-    /**
-     * Categories of transaction IDs.
-     */
-    enum TxType {ReadOnly, Open, Validating, Rectifying, Distributing}
-
-    /**
-     * Determine the category of the transaction ID.
-     *
-     * @param txId  any transaction ID
-     *
-     * @return the TxType for the specified transaction ID
-     */
-    static TxType txType(Int txId)
-        {
-        return txId >= 0
-                ? ReadOnly
-                : TxType.values[1 + (-txId & 0b11)];
-        }
-
-    /**
-     * Given a transaction counter, produce a transaction ID of type `WriteId`.
-     *
-     * @param counter  the transaction counter
-     *
-     * @return the writeId for the transaction counter
-     */
-    static Int generateWriteId(Int counter)
-        {
-        assert counter >= 1;
-        return -(counter<<2);
-        }
-
-    /**
-     * Given a transaction `writeId`, generate a transaction id for the specified phase
-     */
-    static Int generateTxId(Int txId, TxType txType)
-        {
-        assert isWriteTx(txId), txType != ReadOnly;
-        return -((-txId & ~0b11) | txType.ordinal - 1);
         }
 
 
@@ -814,31 +733,27 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             return result;
             }
 
-        currentlyPreparing = writeId;
-        rec.status         = Enqueued;
+        currentlyPreparing = writeId;   // prevent concurrent transaction prepare
+        rec.status         = Enqueued;  // prevent further client changes to the transaction
 
-        Boolean prepareResult = prepare^(rec);
+        Boolean prepareResult = rec.prepare^();
         FutureVar<Boolean> result = &prepareResult;
 
         if (!validators.empty)
             {
-            // TODO result = result.then(&validate(rec))
             result = result.transform(ok -> ok && rec.validate());
             }
 
         if (!rectifiers.empty)
             {
-            // TODO result = result.then(&rectify(rec))
             result = result.transform(ok -> ok && rec.rectify());
             }
 
         if (!distributors.empty)
             {
-            // TODO result = result.then(&distribute(rec))
             result = result.transform(ok -> ok && rec.distribute());
             }
 
-        // TODO result = result.then(&seal(rec))
         result = result.transform(ok -> ok && rec.seal())
                        .handle(e ->
                             {
@@ -863,17 +778,17 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 {
                 try
                     {
-                    return commit(rec);
+                    return rec.commit();
                     }
                 catch (Exception e)
                     {
-                    log($"Failed to commit transaction {rec.idString}");
+                    log($"Exception occurred while committing transaction {rec.idString}: {e}");
                     }
                 }
 
             try
                 {
-                rollback(rec);
+                rec.rollback();
                 }
             catch (Exception e)
                 {
@@ -884,382 +799,6 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
 
             return rec.status == Committed;
             });
-        }
-
-    /**
-     * Attempt to roll back an in-flight transaction.
-     *
-     * This method is intended to only be used by the [Client].
-     *
-     * @param writeId  the "write" transaction id previously returned from [begin]
-     *
-     * @return True iff the Transaction was rolled back
-     */
-    void rollback(Int writeId)
-        {
-        checkEnabled();
-
-        // validate the transaction
-        assert TxRecord rec := byWriteId.get(writeId) as $"Missing TxRecord for txid={writeId}";
-        assert rec.status == InFlight;
-
-        rollback(rec);
-        }
-
-
-    // ----- internal: TxRecord --------------------------------------------------------------------
-
-    /**
-     * This is the information that the TxManager maintains about each in flight transaction.
-     */
-    protected class TxRecord(
-            Client.Transaction  clientTx,
-            TxInfo              txInfo,
-            Int                 clientId,
-            Int                 writeId,
-            Int                 readId     = NO_TX,     // TODO double-check this (combine with prepareId?)
-            Int                 prepareId  = NO_TX,     // TODO double-check this (combine with readId?)
-            Map<Int, String?>   sealById   = Map:[],
-            Set<Int>            triggered  = [],
-            Status              status     = InFlight,
-            Future<Boolean>?    pending    = Null,
-            function void()?    terminated = Null,
-            )
-        {
-        /**
-         * TODO
-         */
-        Int readId.set(Int newId)
-            {
-            Int oldId = get();
-            if (newId != oldId)
-                {
-                if (oldId != NO_TX)
-                    {
-                    byReadId.process(oldId, entry ->
-                        {
-                        if (entry.exists && --entry.value <= 0)
-                            {
-                            entry.delete();
-                            }
-                        return True;
-                        });
-                    }
-
-                if (newId != NO_TX)
-                    {
-                    byReadId.process(newId, entry ->
-                        {
-                        if (entry.exists)
-                            {
-                            ++entry.value;
-                            }
-                        else
-                            {
-                            entry.value = 1;
-                            }
-                        return True;
-                        });
-                    }
-
-                super(newId);
-                }
-            }
-
-        /**
-         * The set of enlisted stores.
-         */
-        Set<Int> enlisted.get()
-            {
-            return sealById.keys;
-            }
-
-        /**
-         * Enlist a transactional resource.
-         *
-         * @param store  the resource to enlist
-         */
-        void enlist(Int storeId)
-            {
-            if (sealById.empty && sealById.is(immutable Object))
-                {
-                sealById = new SkiplistMap();
-                }
-
-            sealById.put(storeId, Null);
-            }
-
-        /**
-         * A string describing the transaction's identity.
-         */
-        String idString.get()
-            {
-            return $"{writeId} ({txInfo} for client {clientId})";
-            }
-
-        /**
-         * TODO
-         */
-        @RO Boolean readOnly.get()
-            {
-            return txInfo.readOnly;
-            }
-
-// TODO review the purpose of this
-//        /**
-//         * Mark a transactional resource as being triggered.
-//         *
-//         * @param store  the resource to enlist
-//         */
-//        void trigger(Int storeId)
-//            {
-//            if (triggered.empty && triggered.is(immutable Object))
-//                {
-//                triggered = new SparseIntSet();
-//                }
-//
-//            triggered.add(storeId);
-//            }
-//
-//        /**
-//         * @return the ObjectStore ids **in a predictable order** that need to have triggers
-//         *         evaluated
-//         */
-//        Iterable<Int> takeTriggered()
-//            {
-//            if (triggered.empty)
-//                {
-//                return [];
-//                }
-//
-//            val result = triggered.toArray();
-//            triggered = [];
-//            return result;
-//            }
-
-        /**
-         * Evaluate all of the validators that have been triggered by this transaction.
-         *
-         * @return True iff the Transaction was successfully validated
-         */
-        protected Boolean validate()
-            {
-            if (validators.empty)
-                {
-                return True;
-                }
-
-            // TODO allocateClient()
-            // TODO fake create transaction with writeId - 1 (so -17 becomes -18)
-            // TODO for each enlisted storage
-                {
-                // TODO future call method on Client (that doesn't exist yet) called "run validators" and pass the [] of validators for the specific storage
-                }
-            // TODO return future result
-            TODO
-
-            // TODO (somewhere else) is-readonly has to eval to true for -18
-            }
-
-        /**
-         * Evaluate all of the rectifiers that have been triggered by this transaction.
-         *
-         * @return True iff the Transaction was successfully rectified
-         */
-        protected Boolean rectify()
-            {
-            if (rectifiers.empty)
-                {
-                return True;
-                }
-
-            // TODO see all the TODO in validate
-            // TODO seal each object store after it rectifies
-            TODO
-
-            // TODO (somewhere else) is-readonly has to eval to true for all object store instances other than the one inside the for loop
-            }
-
-        /**
-         * Evaluate all of the distributors that have been triggered by this transaction.
-         *
-         * @return True iff the Transaction was successfully distributed
-         */
-        protected Boolean distribute()
-            {
-            if (distributors.empty)
-                {
-                return True;
-                }
-
-            // TODO while loop?
-
-            // TODO after weeding out any stores that have been enlisted but have no changes, seal all of the already-enlisted stores
-            // TODO see all the TODO in validate
-            TODO
-            // TODO seal each object store after all of them have finished distributing (second for loop)
-            }
-
-        /**
-         * Seal the transaction, which generates the pieces of data that will go into the
-         * transaction log, and prevents further changes to the transaction.
-         *
-         * @return True iff the Transaction was successfully sealed
-         */
-        protected Boolean seal()
-            {
-            switch (status)
-                {
-                case Prepared:
-                case Validated:
-                case Rectified:
-                case Distributed:
-                    checkEnabled();
-                    status = Sealing;
-                    break;
-
-                case Committed:
-                    // assume that the transaction already short-circuited to a committed state
-                    assert enlisted.empty;
-                    return True;
-
-                case RollingBack:
-                case RolledBack:
-                    // assume that another fiber had a reason to roll back the transaction
-                    return False;
-
-                default:
-                    throw new IllegalState("Unexpected status for transaction {rec.idString}: {rec.status}");
-                }
-
-            assert !enlisted.empty;
-
-            for (val entry : sealById.entries)
-                {
-                Int     storeId = entry.key;
-                String? seal    = entry.value;
-                if (seal == Null)
-                    {
-                    entry.value = storeFor(storeId).sealPrepare(writeId);
-                    }
-                }
-
-            status = Sealed;
-            return True;
-            }
-
-        /**
-         * Add a callback that will be invoked when the transaction terminates.
-         *
-         * @param callback  the function to call
-         */
-        void addTermination(function void() callback)
-            {
-            function void()? callback2 = terminated;
-            terminated = callback2 == Null
-                    ? callback
-                    : () ->
-                        {
-                        try
-                            {
-                            callback();
-                            }
-                        catch (Exception e)
-                            {
-                            log($"Exception in termination callback: {e}");
-                            }
-
-                        try
-                            {
-                            callback2();
-                            }
-                        catch (Exception e)
-                            {
-                            log($"Exception in termination callback: {e}");
-                            }
-                        };
-            }
-
-        /**
-         * Finish the transaction.
-         *
-         * @param status  the terminal status of the transaction
-         */
-        protected void terminate(Status status)
-            {
-            assert status == Committed || status == RolledBack;
-            this.status = status;
-
-            byWriteId.remove(writeId);
-            byClientId.remove(clientId);
-
-            if (function void() notify ?= terminated)
-                {
-                terminated = Null;
-                notify();
-                }
-
-            // clearing the readId will unregister it from the count byReadId
-            readId = NO_TX;
-            }
-
-        /**
-         * Transaction status.
-         *
-         * * InFlight - the transaction is "open", and still accepting client operations
-         * * Enqueued - the transaction is waiting for its turn to prepare
-         * * Preparing - the transaction has begun the "prepare" process
-         * * Validating - the transaction has begun the "validate" process
-         * * Rectifying - the transaction has begun the "rectify" process
-         * * Distributing - the transaction has begun the "distribute" process
-         * * Prepared - the transaction has completed the prepare/validate/rectify/distribute steps
-         * * Committing - the transaction has begun the commit process
-         * * Committed - the transaction has successfully committed
-         * * RollingBack - the transaction has begun the rollback process
-         * * RolledBack - the transaction has successfully rolled back
-         */
-        enum Status
-            {
-            InFlight,
-            Enqueued,
-            Preparing,
-            Prepared,
-            Validating,
-            Validated,
-            Rectifying,
-            Rectified,
-            Distributing,
-            Distributed,
-            Sealing,
-            Sealed,
-            Committing,
-            Committed,
-            RollingBack,
-            RolledBack,
-            }
-        }
-
-
-    // ----- internal transaction handling ---------------------------------------------------------
-
-    /**
-     * Generate a write transaction ID.
-     *
-     * @return the new write id
-     */
-    protected Int genWriteId()
-        {
-        return generateWriteId(++txCount);
-        }
-
-    /**
-     * Generate the next "prepare" transaction ID. Note that until a transaction finishes TODO
-     *
-     * @return the new prepare id
-     */
-    protected Int genPrepareId()
-        {
-        return lastPrepared + 1;
         }
 
     /**
@@ -1276,7 +815,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             }
 
         // transactions that are have prepared but have not yet been committed to disk
-        CircularArray<TxRecord> pendingCommit = new CircularArray();
+        TxRecord[] pendingCommit = new TxRecord[];
 
         while (TxRecord rec := pendingPrepare.first())
             {
@@ -1292,7 +831,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
 
             assert FutureVar<Boolean> result ?= rec.pending;
 
-            if (!prepare(rec)
+            if (!rec.prepare()
                     && (validators  .empty || rec.validate  ())
                     && (rectifiers  .empty || rec.rectify   ())
                     && (distributors.empty || rec.distribute())
@@ -1302,7 +841,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 }
             else
                 {
-                rollback(rec);
+                rec.rollback();
                 }
 
             if (writeId == stopAfterId)
@@ -1310,17 +849,22 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 break;
                 }
             }
+
+        // release the "prepare pipeline" so another fiber can do prepares
         currentlyPreparing = NO_TX;
 
-        if (!pendingCommit.empty)
+        try
             {
-            TxRecord[] recs = pendingCommit.toArray();
-            pendingCommit.clear();
-            if (!commit(recs))
+            if (!pendingCommit.empty && !commit(pendingCommit))
                 {
-                // TODO log and stuff
-                TODO
+                log($"Unable to successfully commit a batch of transactions: {pendingCommit}");
+                panic();
                 }
+            }
+        catch (Exception e)
+            {
+            log($"An error occurred committing a batch of transactions: {e}");
+            panic();
             }
 
         // if this was only processing up to "stopAfterId", then more transactions may have shown
@@ -1329,125 +873,6 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             {
             this:service.callLater(processBacklog);
             }
-        }
-
-    /**
-     * Attempt to prepare an in-flight transaction.
-     *
-     * @param rec  the TxRecord representing the transaction to prepare
-     *
-     * @return True iff the Transaction was successfully prepared
-     */
-    protected Boolean prepare(TxRecord rec)
-        {
-        Int      writeId  = rec.writeId;
-        Set<Int> storeIds = rec.enlisted;
-        if (storeIds.empty)
-            {
-            // an empty transaction is considered committed
-            rec.terminate(Committed);
-            return True;
-            }
-
-        // TODO: add ourselves to the pendingPrepare queue; proceed only if it was empty
-
-        // prepare phase
-        Int                 prepareId   = genPrepareId();
-        Boolean             abort       = False;
-        FutureVar<Boolean>? preparedAll = Null;
-        rec.status    = Preparing;
-        rec.prepareId = prepareId;
-        for (Int storeId : storeIds)
-            {
-            ObjectStore store = storeFor(storeId);
-
-            // we cannot predict the order of asynchronous execution, so it is quite possible that
-            // we find out that the transaction must be rolled back while we are still busy here
-            // trying to get the various ObjectStore instances to prepare what changes they have
-            if (abort)
-                {
-                // this will eventually resolve to False, since something has failed and caused the
-                // transaction to roll back (which rollback may still be occurring asynchronously)
-                break;
-                }
-
-            import ObjectStore.PrepareResult;
-            @Future PrepareResult result      = store.prepare(writeId, prepareId);
-            @Future Boolean       preparedOne = &result.transform(pr ->
-                {
-                switch (pr)
-                    {
-                    case FailedRolledBack:
-                        storeIds.remove(storeId);
-                        abort = True;
-                        return False;
-
-                    case CommittedNoChanges:
-                        storeIds.remove(storeId);
-                        return True;
-
-                    case Prepared:
-                        return True;
-                    }
-                });
-
-            preparedAll = preparedAll?.and(&preparedOne, (f1, f2) -> f1 & f2) : &preparedOne;
-            }
-
-        assert preparedAll != Null;
-        @Future Boolean result = preparedAll.whenComplete((v, e) ->
-            {
-            // check for successful prepare, and whether anything is left enlisted
-            switch (v, storeIds.empty)
-                {
-                case (False, False):
-                    // failed; remaining stores need to be rolled back
-                    rollback(rec);
-                    break;
-
-                case (False, True ):
-                    // failed; already rolled back
-                    rec.terminate(RolledBack);
-                    break;
-
-                case (True , False):
-                    // there might still be triggers to process as part of the prepare, but the
-                    // "client" portion of the prepare has completed
-                    if (rec.triggered.empty)
-                        {
-                        // no triggers; prepare is completed
-                        lastPrepared = rec.prepareId; // TODO: remember to add the same logic to the trigger processing completion
-                        rec.status = Prepared;
-                        }
-                    break;
-
-                case (True , True ):
-                    // succeeded; already committed
-                    rec.terminate(Committed);
-                    break;
-                }
-            });
-
-        return result;
-        }
-
-    /**
-     * Attempt to commit a fully prepared transaction.
-     *
-     * @param rec  the TxRecord representing the transaction to finish committing
-     *
-     * @return True iff the Transaction was successfully committed
-     */
-    protected Boolean commit(TxRecord rec)
-        {
-        Set<Int> storeIds = rec.enlisted;
-        if (storeIds.empty)
-            {
-            rec.terminate(Committed);
-            return True;
-            }
-
-        return commit([rec]);
         }
 
     /**
@@ -1566,68 +991,818 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
     /**
      * Attempt to roll back an in-flight transaction.
      *
-     * @param rec  the TxRecord representing the transaction to roll back
+     * This method is intended to only be used by the [Client].
+     *
+     * @param writeId  the "write" transaction id previously returned from [begin]
      *
      * @return True iff the Transaction was rolled back
      */
-    protected Boolean rollback(TxRecord rec)
+    void rollback(Int writeId)
         {
-        switch (rec.status)
+        checkEnabled();
+
+        // validate the transaction
+        assert TxRecord rec := byWriteId.get(writeId) as $"Missing TxRecord for txid={writeId}";
+        assert rec.status == InFlight;
+
+        rec.rollback();
+        }
+
+
+    // ----- transactional ID helpers --------------------------------------------------------------
+
+    /**
+     * Determine if the specified txId indicates a read ID, versus a write ID.
+     *
+     * @param txId  a transaction identity
+     *
+     * @return True iff the txId is in the range reserved for read transaction IDs
+     */
+    static Boolean isReadTx(Int txId)
+        {
+        return txId >= 0;
+        }
+
+    /**
+     * Determine if the specified txId indicates a write ID, versus a read ID.
+     *
+     * @param txId  a transaction identity
+     *
+     * @return True iff the txId is in the range reserved for write transaction IDs
+     */
+    static Boolean isWriteTx(Int txId)
+        {
+        return txId < 0;
+        }
+
+    /**
+     * Categories of transaction IDs.
+     */
+    enum TxType {ReadOnly, Open, Validating, Rectifying, Distributing}
+
+    /**
+     * Determine the category of the transaction ID.
+     *
+     * @param txId  any transaction ID
+     *
+     * @return the TxType for the specified transaction ID
+     */
+    static TxType txType(Int txId)
+        {
+        return txId >= 0
+                ? ReadOnly
+                : TxType.values[1 + (-txId & 0b11)];
+        }
+
+    /**
+     * Obtain the transaction counter that was used to create the specified writeId.
+     *
+     * @param writeId  a transaction ID of type `WriteId`, `Validating`, `Rectifying`, or
+     *                 `Distributing`
+     *
+     * @return the original transaction counter
+     */
+    protected static Int writeTxCounter(Int writeId)
+        {
+        assert isWriteTx(writeId);
+        return -writeId >>> 2;
+        }
+
+    /**
+     * Given a transaction counter, produce a transaction ID of type `WriteId`.
+     *
+     * @param counter  the transaction counter
+     *
+     * @return the writeId for the transaction counter
+     */
+    protected static Int generateWriteId(Int counter)
+        {
+        assert counter >= 1;
+        return -(counter<<2);
+        }
+
+    /**
+     * Given a transaction `writeId`, generate a transaction id for the specified phase
+     */
+    protected static Int generateTxId(Int txId, TxType txType)
+        {
+        if (isReadTx(txId))
             {
-            case InFlight:
-            case Enqueued:
-            case Preparing:
-            case Prepared:
-            case Validating:
-            case Validated:
-            case Rectifying:
-            case Rectified:
-            case Distributing:
-            case Distributed:
-            case Sealing:
-            case Sealed:
-                break;
-
-            case RollingBack:
-            case Committing:
-                @Future Boolean result;
-                rec.addTermination(() -> {result=rec.status==RolledBack;});
-                return result;
-
-            case Committed:
-                return False;
-
-            case RolledBack:
-                return True;
-
-            default:assert;
+            assert txType == ReadOnly;
+            return txId;
             }
 
-        rec.status = RollingBack;
-        try
+        assert isWriteTx(txId);
+        return -((-txId & ~0b11) | txType.ordinal - 1);
+        }
+
+    /**
+     * Generate a write transaction ID.
+     *
+     * @return the new write id
+     */
+    protected Int genWriteId()
+        {
+        return generateWriteId(++txCount);
+        }
+
+    /**
+     * Generate the next "prepare" transaction ID. Note that until a transaction finishes TODO
+     *
+     * @return the new prepare id
+     */
+    protected Int genPrepareId()
+        {
+        return lastPrepared + 1;
+        }
+
+
+    // ----- internal: TxRecord --------------------------------------------------------------------
+
+    /**
+     * This is the information that the TxManager maintains about each in flight transaction.
+     */
+    protected class TxRecord
+        {
+        /**
+         * Construct a TxRecord.
+         */
+        construct(Client.Transaction  clientTx,
+                  TxInfo              txInfo,
+                  Int                 clientId,
+                  Int                 writeId,
+                 )
             {
-            Set<Int> storeIds = rec.enlisted;
-            Int      writeId = rec.writeId;
-            for (Int storeId : storeIds)
+            this.clientTx = clientTx;
+            this.txInfo   = txInfo;
+            this.writeId  = writeId;
+            this.clientId = clientId;
+            this.readId   = NO_TX;
+            }
+
+        /**
+         * Transaction status.
+         *
+         * * InFlight - the transaction is "open", and still accepting client operations
+         * * Enqueued - the transaction is beginning to prepare, or waiting for its turn to prepare
+         * * Preparing - the transaction has begun the "prepare" step
+         * * Prepared - the transaction has completed the "prepare" step
+         * * Validating - the transaction has begun the "validate" step
+         * * Validated - the transaction has completed the "validate" step
+         * * Rectifying - the transaction has begun the "rectify" step
+         * * Rectified - the transaction has completed the "rectify" step
+         * * Distributing - the transaction has begun the "distribute" step
+         * * Distributed - the transaction has completed the "distribute" step
+         * * Committing - the transaction has begun the final commit process
+         * * Committed - the transaction has successfully committed
+         * * RollingBack - the transaction has begun the rollback process
+         * * RolledBack - the transaction has successfully rolled back
+         */
+        enum Status
+            {
+            InFlight,
+            Enqueued,
+            Preparing,
+            Prepared,
+            Validating,
+            Validated,
+            Rectifying,
+            Rectified,
+            Distributing,
+            Distributed,
+            Sealing,
+            Sealed,
+            Committing,
+            Committed,
+            RollingBack,
+            RolledBack,
+            }
+
+        /**
+         * The transactional status.
+         */
+        Status status = InFlight;
+
+        /**
+         * The actual Client Transaction object that "fronts" this transaction.
+         */
+        Client.Transaction clientTx;
+
+        /**
+         * The TxInfo record for the transaction.
+         */
+        TxInfo txInfo;
+
+        /**
+         * The internal id that uniquely identifies the client.
+         */
+        Int clientId;
+
+        /**
+         * The transaction id while it is in-flight, also called its "writeId".
+         */
+        Int writeId;
+
+        /**
+         * The underlying "read" transaction ID.
+         */
+        Int readId.set(Int newId)
+            {
+            Int oldId = get();
+            if (newId != oldId)
                 {
-                Tuple<> result = storeFor(storeId).rollback^(writeId);
-                &result.handle(e ->
+                if (oldId != NO_TX)
                     {
-                    log($"Exception occurred while rolling back transaction {rec.idString} in store {storeId}: {e}");
-                    return Tuple:();  // TODO GG this should not be needed, right?
-                    });
+                    byReadId.process(oldId, entry ->
+                        {
+                        if (entry.exists && --entry.value <= 0)
+                            {
+                            entry.delete();
+                            }
+                        return True;
+                        });
+                    }
+
+                if (newId != NO_TX)
+                    {
+                    byReadId.process(newId, entry ->
+                        {
+                        if (entry.exists)
+                            {
+                            ++entry.value;
+                            }
+                        else
+                            {
+                            entry.value = 1;
+                            }
+                        return True;
+                        });
+                    }
+
+                super(newId);
+                }
+            }
+
+        /**
+         * The ID that the transaction is planning to commit to.
+         */
+        Int prepareId.get()
+            {
+            switch (status)
+                {
+                case Preparing:
+                case Prepared:
+                case Validating:
+                case Validated:
+                case Rectifying:
+                case Rectified:
+                case Distributing:
+                case Distributed:
+                case Sealing:
+                case Sealed:
+                case Committing:
+                case Committed:
+                    // prepare is re-homed "on top of" the previously committed (or previously
+                    // prepared) transaction
+                    return readId + 1;
+
+                case InFlight:
+                case Enqueued:
+                case RollingBack:
+                case RolledBack:
+                default:
+                    return NO_TX;
+                }
+            }
+
+        /**
+         * This is the Client object that is used to do all of the validate/rectify/distribute work.
+         */
+        Client<Schema>? prepareClient = Null;
+
+        /**
+         * TODO
+         */
+        Map<Int, String?>   sealById   = Map:[];
+
+        /**
+         * TODO
+         */
+        Set<Int>            triggered  = [];
+
+        /**
+         * The future result for a pending operation on the transaction, if there is a pending
+         * operation.
+         */
+        Future<Boolean>? pending = Null;
+
+        /**
+         * Notification function to call when the transaction terminates.
+         */
+        function void()? terminated = Null;
+
+        /**
+         * The set of enlisted stores.
+         */
+        Set<Int> enlisted.get()
+            {
+            return sealById.keys;
+            }
+
+        /**
+         * Enlist a transactional resource.
+         *
+         * @param store  the resource to enlist
+         */
+        void enlist(Int storeId)
+            {
+            if (sealById.empty && sealById.is(immutable Object))
+                {
+                sealById = new SkiplistMap();
                 }
 
+            sealById.put(storeId, Null);
+            }
+
+        /**
+         * A string describing the transaction's identity.
+         */
+        String idString.get()
+            {
+            return $"{writeId} ({txInfo} for client {clientId})";
+            }
+
+        /**
+         * TODO
+         */
+        @RO Boolean readOnly.get()
+            {
+            return txInfo.readOnly;
+            }
+
+// TODO review the purpose of this
+//        /**
+//         * Mark a transactional resource as being triggered.
+//         *
+//         * @param store  the resource to enlist
+//         */
+//        void trigger(Int storeId)
+//            {
+//            if (triggered.empty && triggered.is(immutable Object))
+//                {
+//                triggered = new SparseIntSet();
+//                }
+//
+//            triggered.add(storeId);
+//            }
+//
+//        /**
+//         * @return the ObjectStore ids **in a predictable order** that need to have triggers
+//         *         evaluated
+//         */
+//        Iterable<Int> takeTriggered()
+//            {
+//            if (triggered.empty)
+//                {
+//                return [];
+//                }
+//
+//            val result = triggered.toArray();
+//            triggered = [];
+//            return result;
+//            }
+
+        /**
+         * Attempt to prepare the transaction.
+         *
+         * @return True iff the Transaction was successfully prepared
+         */
+        protected Boolean prepare()
+            {
+            checkEnabled();
+            assert status == Enqueued && currentlyPreparing == writeId;
+
+            status = Preparing;
+
+            Set<Int> storeIds = enlisted;
+            if (storeIds.empty)
+                {
+                // an empty transaction is considered committed
+                terminate(Committed);
+                return True;
+                }
+
+            // TODO: add ourselves to the pendingPrepare queue; proceed only if it was empty
+
+            // prepare phase
+            Boolean             abort       = False;
+            FutureVar<Boolean>? preparedAll = Null;
+            Int                 prepareId   = genPrepareId();
+            for (Int storeId : storeIds)
+                {
+                ObjectStore store = storeFor(storeId);
+
+                // we cannot predict the order of asynchronous execution, so it is quite possible that
+                // we find out that the transaction must be rolled back while we are still busy here
+                // trying to get the various ObjectStore instances to prepare what changes they have
+                if (abort)
+                    {
+                    // this will eventually resolve to False, since something has failed and caused the
+                    // transaction to roll back (which rollback may still be occurring asynchronously)
+                    break;
+                    }
+
+                import ObjectStore.PrepareResult;
+                PrepareResult   prepareResult = store.prepare^(writeId, prepareId);
+                Future<Boolean> preparedOne   = &prepareResult.transform(pr ->
+                    {
+                    switch (pr)
+                        {
+                        case FailedRolledBack:
+                            storeIds.remove(storeId);
+                            abort = True;
+                            return False;
+
+                        case CommittedNoChanges:
+                            storeIds.remove(storeId);
+                            return True;
+
+                        case Prepared:
+                            return True;
+                        }
+                    });
+
+                preparedAll = preparedAll?.and(preparedOne, (ok1, ok2) -> ok1 & ok2) : preparedOne;
+                }
+
+            assert preparedAll != Null;
+            return preparedAll.whenComplete^((v, e) ->
+                {
+                // check for successful prepare, and whether anything is left enlisted
+                switch (v, storeIds.empty)
+                    {
+                    default:
+                    case (False, False):
+                        // failed; remaining stores need to be rolled back
+                        rollback();
+                        break;
+
+                    case (False, True ):
+                        // failed; already rolled back
+                        terminate(RolledBack);
+                        break;
+
+                    case (True , False):
+                        status = Prepared;
+                        break;
+
+                    case (True , True ):
+                        // succeeded; already committed
+                        terminate(Committed);
+                        break;
+                    }
+                });
+            }
+
+        /**
+         * Evaluate all of the validators that have been triggered by this transaction.
+         *
+         * @return True iff the Transaction was successfully validated
+         */
+        protected Boolean validate()
+            {
+            switch (status)
+                {
+                case Prepared:
+                    checkEnabled();
+                    assert currentlyPreparing == writeId;
+                    status = Validating;
+                    break;
+
+                case Committed:
+                    // assume that the transaction already short-circuited to a committed state
+                    assert enlisted.empty;
+                    return True;
+
+                case RollingBack:
+                case RolledBack:
+                    // assume that another fiber had a reason to roll back the transaction
+                    return False;
+
+                default:
+                    throw new IllegalState("Unexpected status for transaction {rec.idString}: {rec.status}");
+                }
+
+            if (validators.empty)
+                {
+                status = Validated;
+                return True;
+                }
+
+            Int validateId = generateTxId(writeId, Validating);
+            val client     = allocateClient();
+
+            // TODO allocateClient()
+            // TODO fake create transaction with writeId - 1 (so -17 becomes -18)
+            // TODO for each enlisted storage
+                {
+                // TODO future call method on Client (that doesn't exist yet) called "run validators" and pass the [] of validators for the specific storage
+                }
+            // TODO return future result
+            TODO
+
+            // TODO (somewhere else) is-readonly has to eval to true for -18
+
+            status = Validated;
             return True;
             }
-        catch (Exception e)
+
+        /**
+         * Evaluate all of the rectifiers that have been triggered by this transaction.
+         *
+         * @return True iff the Transaction was successfully rectified
+         */
+        protected Boolean rectify()
             {
-            log($"Exception occurred while rolling back transaction {rec.idString}: {e}");
-            return False;
+            switch (status)
+                {
+                case Prepared:
+                case Validated:
+                    checkEnabled();
+                    assert currentlyPreparing == writeId;
+                    status = Rectifying;
+                    break;
+
+                case Committed:
+                    // assume that the transaction already short-circuited to a committed state
+                    assert enlisted.empty;
+                    return True;
+
+                case RollingBack:
+                case RolledBack:
+                    // assume that another fiber had a reason to roll back the transaction
+                    return False;
+
+                default:
+                    throw new IllegalState("Unexpected status for transaction {rec.idString}: {rec.status}");
+                }
+
+            if (rectifiers.empty)
+                {
+                status = Rectified;
+                return True;
+                }
+
+            // TODO see all the TODO in validate
+            // TODO seal each object store after it rectifies
+            TODO
+
+            // TODO (somewhere else) is-readonly has to eval to true for all object store instances other than the one inside the for loop
+
+            status = Rectified;
+            return True;
             }
-        finally
+
+        /**
+         * Evaluate all of the distributors that have been triggered by this transaction.
+         *
+         * @return True iff the Transaction was successfully distributed
+         */
+        protected Boolean distribute()
             {
-            rec.terminate(RolledBack);
+            switch (status)
+                {
+                case Prepared:
+                case Validated:
+                case Rectified:
+                    checkEnabled();
+                    assert currentlyPreparing == writeId;
+                    status = Distributing;
+                    break;
+
+                case Committed:
+                    // assume that the transaction already short-circuited to a committed state
+                    assert enlisted.empty;
+                    return True;
+
+                case RollingBack:
+                case RolledBack:
+                    // assume that another fiber had a reason to roll back the transaction
+                    return False;
+
+                default:
+                    throw new IllegalState("Unexpected status for transaction {rec.idString}: {rec.status}");
+                }
+
+            if (distributors.empty)
+                {
+                status = Distributed;
+                return True;
+                }
+
+            // TODO while loop?
+
+            // TODO after weeding out any stores that have been enlisted but have no changes, seal all of the already-enlisted stores
+            // TODO see all the TODO in validate
+            TODO
+            // TODO seal each object store after all of them have finished distributing (second for loop)
+
+            status = Distributed;
+            return True;
+            }
+
+        /**
+         * Seal the transaction, which generates the pieces of data that will go into the
+         * transaction log, and prevents further changes to the transaction.
+         *
+         * @return True iff the Transaction was successfully sealed
+         */
+        protected Boolean seal()
+            {
+            switch (status)
+                {
+                case Prepared:
+                case Validated:
+                case Rectified:
+                case Distributed:
+                    checkEnabled();
+                    assert currentlyPreparing == writeId;
+                    status = Sealing;
+                    break;
+
+                case Committed:
+                    // assume that the transaction already short-circuited to a committed state
+                    assert enlisted.empty;
+                    return True;
+
+                case RollingBack:
+                case RolledBack:
+                    // assume that another fiber had a reason to roll back the transaction
+                    return False;
+
+                default:
+                    throw new IllegalState("Unexpected status for transaction {rec.idString}: {rec.status}");
+                }
+
+            // if there were nothing enlisted, we would have already short-circuited all of this
+            assert !enlisted.empty;
+
+            for (val entry : sealById.entries)
+                {
+                Int     storeId = entry.key;
+                String? seal    = entry.value;
+                if (seal == Null)
+                    {
+                    entry.value = storeFor(storeId).sealPrepare(writeId);
+                    }
+                }
+
+            lastPrepared = prepareId;
+            status       = Sealed;
+            return True;
+            }
+
+        /**
+         * Attempt to commit a fully prepared transaction.
+         *
+         * @return True iff the Transaction was successfully committed
+         */
+        protected Boolean commit()
+            {
+            Set<Int> storeIds = enlisted;
+            if (storeIds.empty)
+                {
+                terminate(Committed);
+                return True;
+                }
+
+            // TODO
+            return this.TxManager.commit([this]);
+            }
+
+        /**
+         * Attempt to roll back a transaction.
+         *
+         * @return True iff the Transaction was rolled back
+         */
+        protected Boolean rollback()
+            {
+            switch (status)
+                {
+                case InFlight:
+                case Enqueued:
+                case Preparing:
+                case Prepared:
+                case Validating:
+                case Validated:
+                case Rectifying:
+                case Rectified:
+                case Distributing:
+                case Distributed:
+                case Sealing:
+                case Sealed:
+                    break;
+
+                case RollingBack:
+                case Committing:
+                    @Future Boolean result;
+                    addTermination(() -> {result=status==RolledBack;});
+                    return result;
+
+                case Committed:
+                    return False;
+
+                case RolledBack:
+                    return True;
+
+                default:assert;
+                }
+
+            status = RollingBack;
+            try
+                {
+                for (Int storeId : enlisted)
+                    {
+                    Tuple<> result = storeFor(storeId).rollback^(writeId);
+                    &result.handle(e ->
+                        {
+                        log($"Exception occurred while rolling back transaction {idString} in store {storeId}: {e}");
+                        return Tuple:();  // TODO GG this should not be needed, right?
+                        });
+                    }
+
+                return True;
+                }
+            catch (Exception e)
+                {
+                log($"Exception occurred while rolling back transaction {idString}: {e}");
+                return False;
+                }
+            finally
+                {
+                terminate(RolledBack);
+                }
+            }
+
+        /**
+         * Add a callback that will be invoked when the transaction terminates.
+         *
+         * @param callback  the function to call
+         */
+        void addTermination(function void() callback)
+            {
+            function void()? callback2 = terminated;
+            terminated = callback2 == Null
+                    ? callback
+                    : () ->
+                        {
+                        try
+                            {
+                            callback();
+                            }
+                        catch (Exception e)
+                            {
+                            log($"Exception in termination callback: {e}");
+                            }
+
+                        try
+                            {
+                            callback2();
+                            }
+                        catch (Exception e)
+                            {
+                            log($"Exception in termination callback: {e}");
+                            }
+                        };
+            }
+
+        /**
+         * Finish the transaction.
+         *
+         * @param status  the terminal status of the transaction
+         */
+        protected void terminate(Status status)
+            {
+            assert status == Committed || status == RolledBack;
+            this.status = status;
+
+            byWriteId.remove(writeId);
+            byClientId.remove(clientId);
+
+            if (prepareClient != Null)
+                {
+                recycleClient(prepareClient?);
+                prepareClient == Null;
+                }
+
+            if (function void() notify ?= terminated)
+                {
+                terminated = Null;
+                notify();
+                }
+
+            // clearing the readId will unregister it from the count byReadId
+            readId = NO_TX;
             }
         }
 
@@ -1653,6 +1828,8 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      */
     Int enlist(Int storeId, Int txId)
         {
+// TODO CP switch on status to make sure inflight=ok enqueued/preparing etc. not ok, rectifying ok only if writeId is the right status, etc.
+
         assert isWriteTx(txId), TxRecord tx := byWriteId.get(txId);
 
         Int readId = tx.readId;
@@ -2212,6 +2389,15 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
     protected void log(String msg)
         {
         catalog.log^(msg);
+        }
+
+    /**
+     * Calmly respond to an irrecoverable disaster.
+     */
+    protected void panic()
+        {
+        // TODO halt the db before anything gets corrupted
+        log("TxManager PANIC!!!");
         }
 
     /**
