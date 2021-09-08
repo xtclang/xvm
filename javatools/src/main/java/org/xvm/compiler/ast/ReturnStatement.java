@@ -249,7 +249,7 @@ public class ReturnStatement
                 // - it could be a Future return
                 if (cRets == 1)
                     {
-                    TypeConstant typeFuture = pool.ensureFutureType(aRetTypes[0]);
+                    TypeConstant typeFuture = pool.ensureFutureVar(aRetTypes[0]);
                     if (exprOld.testFit(ctx, typeFuture, null).isFit())
                         {
                         exprNew = exprOld.validate(ctx, typeFuture, errs);
@@ -390,7 +390,7 @@ public class ReturnStatement
                             if (m_fFutureReturn)
                                 {
                                 // create an intermediate dynamic var
-                                code.add(new Var_D(pool().ensureFutureType(argRet.getType())));
+                                code.add(new Var_D(pool().ensureFutureVar(argRet.getType())));
 
                                 Argument argFuture = code.lastRegister();
                                 code.add(new Move(argRet, argFuture));
