@@ -1137,7 +1137,10 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             this.txInfo   = txInfo;
             this.writeId  = writeId;
             this.clientId = clientId;
-            this.readId   = NO_TX;
+
+            // TODO GG
+            this.tempId   = NO_TX;
+            // this.readId   = NO_TX;
             }
 
         /**
@@ -1206,42 +1209,55 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         /**
          * The underlying "read" transaction ID.
          */
-        Int readId.set(Int newId)
+        Int readId
             {
-            Int oldId = get();
-            if (newId != oldId)
+            // TODO GG remove
+            @Override
+            Int get()
                 {
-                if (oldId != NO_TX)
-                    {
-                    byReadId.process(oldId, entry ->
-                        {
-                        if (entry.exists && --entry.value <= 0)
-                            {
-                            entry.delete();
-                            }
-                        return True;
-                        });
-                    }
+                return tempId;
+                }
 
-                if (newId != NO_TX)
+            @Override
+            void set(Int newId)
+                {
+                Int oldId = tempId; // TODO GG get();
+                if (newId != oldId)
                     {
-                    byReadId.process(newId, entry ->
+                    if (oldId != NO_TX)
                         {
-                        if (entry.exists)
+                        byReadId.process(oldId, entry ->
                             {
-                            ++entry.value;
-                            }
-                        else
-                            {
-                            entry.value = 1;
-                            }
-                        return True;
-                        });
-                    }
+                            if (entry.exists && --entry.value <= 0)
+                                {
+                                entry.delete();
+                                }
+                            return True;
+                            });
+                        }
 
-                super(newId);
+                    if (newId != NO_TX)
+                        {
+                        byReadId.process(newId, entry ->
+                            {
+                            if (entry.exists)
+                                {
+                                ++entry.value;
+                                }
+                            else
+                                {
+                                entry.value = 1;
+                                }
+                            return True;
+                            });
+                        }
+
+                    // TODO GG super(newId);
+                    tempId = newId;
+                    }
                 }
             }
+        private Int tempId; // TODO GG remove
 
         /**
          * The ID that the transaction is planning to commit to.
