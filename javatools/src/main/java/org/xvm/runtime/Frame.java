@@ -1941,13 +1941,19 @@ public class Frame
                     break;
                     }
 
-                frame = fiberCaller.getFrame();
-
                 stackFrame.boundary = true;
 
+                frame = fiberCaller.getFrame();
                 if (frame != null)
                     {
-                    frame = frame.findCallerFrame(fiber.f_iCallerId);
+                    if (fiberCaller.isWaiting())
+                        {
+                        frame = frame.f_framePrev;
+                        }
+                    else
+                        {
+                        frame = frame.findCallerFrame(fiber.f_iCallerId);
+                        }
                     }
                 if (frame == null)
                     {
@@ -2001,7 +2007,15 @@ public class Frame
 
                 if (frame != null)
                     {
-                    frame = frame.findCallerFrame(fiber.f_iCallerId);
+                    if (fiberCaller.isWaiting())
+                        {
+                        frame = frame.f_framePrev;
+                        iPC   = frame.m_iPC;
+                        }
+                    else
+                        {
+                        frame = frame.findCallerFrame(fiber.f_iCallerId);
+                        }
                     }
                 if (frame == null)
                     {

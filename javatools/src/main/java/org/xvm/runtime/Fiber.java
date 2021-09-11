@@ -195,11 +195,19 @@ public class Fiber
         }
 
     /*
-     * The fiber is not ready for execution if it is waiting, not responded and not timed-out.
+     * @return true iff the fiber is ready for execution (e.g. not waiting, responded or timed-out)
      */
     public boolean isReady()
         {
         return m_status != FiberStatus.Waiting || m_fResponded || isTimedOut();
+        }
+
+    /*
+     * @return true iff the fiber is waiting
+     */
+    public boolean isWaiting()
+        {
+        return m_status == FiberStatus.Waiting;
         }
 
     /**
