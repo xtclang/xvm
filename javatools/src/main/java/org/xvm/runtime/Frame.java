@@ -1058,6 +1058,11 @@ public class Frame
         int iResult;
         if (fDynamic)
             {
+            if (iReturn == Op.A_IGNORE_ASYNC)
+                {
+                return Op.R_RETURN;
+                }
+
             if (framePrev.isDynamicVar(iReturn))
                 {
                 // dynamic -> dynamic
