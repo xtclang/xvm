@@ -418,7 +418,13 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
     enum PrepareResult {FailedRolledBack, CommittedNoChanges, Prepared}
 
     /**
-     * Prepare the specified transaction.
+     * Prepare the specified transaction. The transaction has accumulated data under the `writeId`,
+     * which will be moved (if the prepare succeeds) into the `prepareId`, which is technically in
+     * the `readId` range of transaction identifiers (because, once committed, that transaction id
+     * will be usable as a `readId`). There is a third, implicit transaction ID, which is the "new"
+     * `readId` for the transaction; the new `readId` is the transaction that immediately precedes
+     * the `prepareId`, and that is the transaction against which the prepare processing works to
+     * check that no changes have occurred in the meantime that would invalidate the transaction.
      *
      * If the the result of the `prepare()` operation is `FailedRolledBack` or `CommittedNoChanges`,
      * then the `ObjectStore` will have forgotten its `Changes` (the `writeId`) by the time that
