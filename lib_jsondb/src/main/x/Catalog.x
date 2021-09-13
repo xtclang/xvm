@@ -358,11 +358,11 @@ service Catalog<Schema extends RootSchema>
         }
 
     /**
-     * Obtain the DBObjectInfo for the specified id.
+     * Obtain the ObjectStore for the specified id.
      *
      * @param id  the internal object id
      *
-     * @return the DBObjectInfo for the specified id
+     * @return the ObjectStore for the specified id
      */
     ObjectStore storeFor(Int id)
         {
