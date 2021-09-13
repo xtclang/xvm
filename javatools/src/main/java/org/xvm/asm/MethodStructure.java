@@ -1297,7 +1297,7 @@ public class MethodStructure
             }
 
         Op[] aOp = code.m_aop;
-        if (aOp == null)
+        if (aOp == null || iPC >= aOp.length)
             {
             return 0;
             }

@@ -1965,7 +1965,7 @@ public class Frame
                     // the caller's fiber has moved away from the calling frame;
                     // simply show the calling function
                     MethodStructure fnCaller = fiber.f_fnCaller;
-                    listFrames.add(new StackFrame(null, fnCaller, 0));
+                    listFrames.add(new StackFrame(null, fnCaller, -1));
                     break;
                     }
                 fiber = fiberCaller;
