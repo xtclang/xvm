@@ -7,11 +7,15 @@ import java.io.IOException;
 
 import org.xvm.asm.Constants.Access;
 
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.SignatureConstant;
 
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.PropertyComposition;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TypeComposition;
 
@@ -145,9 +149,23 @@ public abstract class OpInvocable extends Op
             return chain;
             }
 
-        Object nid = idMethod.resolveNestedIdentity(frame.poolContext(), frame.getGenericsResolver());
+        PropertyConstant idProp = clazz instanceof PropertyComposition
+                ? null
+                : checkPropertyAccessor(idMethod);
+        if (idProp == null)
+            {
+            Object nid = idMethod.resolveNestedIdentity(
+                            frame.poolContext(), frame.getGenericsResolver());
 
-        chain = clazz.getMethodCallChain(nid);
+            chain = clazz.getMethodCallChain(nid);
+            }
+        else
+            {
+            chain = idMethod.getName().equals("get")
+                    ? clazz.getPropertyGetterChain(idProp)
+                    : clazz.getPropertySetterChain(idProp);
+            }
+
         if (chain.getDepth() == 0)
             {
             return new CallChain.ExceptionChain(idMethod, hTarget.getType());
@@ -204,6 +222,37 @@ public abstract class OpInvocable extends Op
                 frame.introduceMethodReturnVar(anRet[i], m_nMethodId, i);
                 }
             }
+        }
+
+    /**
+     * Check if the specified method represents a property accessor.
+     *
+     * @param idMethod  the method constant
+     *
+     * @return the corresponding PropertyConstant or null
+     */
+    private PropertyConstant checkPropertyAccessor(MethodConstant idMethod)
+        {
+        IdentityConstant idParent = idMethod.getNamespace();
+        if (idParent instanceof PropertyConstant)
+            {
+            PropertyConstant  idProp = (PropertyConstant) idParent;
+            SignatureConstant sig    = idMethod.getSignature();
+            String            sName  = sig.getName();
+
+            if (sName.equals("get") && sig.getParamCount() == 0 && sig.getReturnCount() == 1 &&
+                    sig.getRawReturns()[0].isA(idProp.getType()))
+                {
+                return idProp;
+                }
+
+            if (sName.equals("set") && sig.getParamCount() == 1 && sig.getReturnCount() == 0 &&
+                    sig.getRawParams()[0].isA(idProp.getType()))
+                {
+                return idProp;
+                }
+            }
+        return null;
         }
 
     @Override

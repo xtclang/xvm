@@ -9,6 +9,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 
+import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
 import org.xvm.asm.constants.MethodBody;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
@@ -217,13 +218,17 @@ public class PropertyComposition
             nid ->
                 {
                 PropertyConstant idBase   = f_infoProp.getIdentity();
-                MethodConstant   idNested = (MethodConstant) idBase.appendNestedIdentity(
-                                                idBase.getConstantPool(), nid);
+                MethodConstant   idNested = (MethodConstant)
+                    (nid instanceof NestedIdentity &&
+                        ((NestedIdentity) nid).getIdentityConstant().getNestedDepth() > idBase.getNestedDepth()
+                        ? ((NestedIdentity) nid).getIdentityConstant()
+                        : idBase.appendNestedIdentity(idBase.getConstantPool(), nid));
+
                 TypeInfo   infoParent = getParentInfo();
                 MethodInfo info       = infoParent.getMethodByNestedId(idNested.getNestedIdentity());
                 return info == null
-                    ? f_clzRef.getMethodCallChain(nid)
-                    : new CallChain(info.ensureOptimizedMethodChain(infoParent));
+                        ? f_clzRef.getMethodCallChain(nid)
+                        : new CallChain(info.ensureOptimizedMethodChain(infoParent));
                 });
         }
 
@@ -243,7 +248,7 @@ public class PropertyComposition
                 MethodBody[] chain = getParentInfo().getOptimizedGetChain(idNested);
                 return chain == null
                         ? f_clzRef.getPropertyGetterChain(id)
-                        : new CallChain(chain);
+                        : CallChain.createPropertyCallChain(chain);
                 });
         }
 

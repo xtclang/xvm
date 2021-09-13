@@ -24,8 +24,8 @@ import static org.xvm.util.Handy.startList;
 
 
 /**
- * Represents all of the information about a method (or function). For methods, this includes a
- * method chain, which is a sequence of method bodies representing implementations of the method.
+ * Represents all the information about a method (or function). For methods, this includes a method
+ * chain, which is a sequence of method bodies representing implementations of the method.
  */
 public class MethodInfo
         implements Constants
@@ -177,7 +177,7 @@ public class MethodInfo
                         }
 
                     // we found a duplicate, so we can ignore it (it'll get added when we add
-                    // all of the bodies from this)
+                    // all the bodies from this)
                     if (cBase == 1)
                         {
                         // the duplicate was the only body at the base

@@ -343,7 +343,7 @@ public class ClassComposition
                 MethodBody[] chain = f_typeInception.ensureTypeInfo().getOptimizedGetChain(id);
                 return chain == null
                         ? null
-                        : new CallChain(chain);
+                        : CallChain.createPropertyCallChain(chain);
                 });
         }
 
@@ -356,7 +356,7 @@ public class ClassComposition
                 MethodBody[] chain = f_typeInception.ensureTypeInfo().getOptimizedSetChain(id);
                 return chain == null
                         ? null
-                        : new CallChain(chain);
+                        : CallChain.createPropertyCallChain(chain);
                 });
         }
 

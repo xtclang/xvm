@@ -1142,10 +1142,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             this.txInfo   = txInfo;
             this.writeId  = writeId;
             this.clientId = clientId;
-
-            // TODO GG
-            this.tempId   = NO_TX;
-            // this.readId   = NO_TX;
+            this.readId   = NO_TX;
             }
 
         /**
@@ -1216,17 +1213,10 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
          */
         Int readId
             {
-            // TODO GG remove
-            @Override
-            Int get()
-                {
-                return tempId;
-                }
-
             @Override
             void set(Int newId)
                 {
-                Int oldId = tempId; // TODO GG get();
+                Int oldId = get();
                 if (newId != oldId)
                     {
                     if (oldId != NO_TX)
@@ -1257,12 +1247,10 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                             });
                         }
 
-                    // TODO GG super(newId);
-                    tempId = newId;
+                    super(newId);
                     }
                 }
             }
-        private Int tempId; // TODO GG remove
 
         /**
          * The ID that the transaction is planning to commit to.

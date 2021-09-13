@@ -21,7 +21,7 @@ import org.xvm.runtime.template._native.reflect.xRTFunction;
 public class CallChain
     {
     // an array of method bodies
-    private final MethodBody[] f_aMethods;
+    protected final MethodBody[] f_aMethods;
 
     // Construct the CallChain
     public CallChain(MethodBody[] aMethods)
@@ -370,6 +370,49 @@ public class CallChain
             }
         }
 
+    public static CallChain createPropertyCallChain(MethodBody[] aMethods)
+        {
+        return aMethods.length == 1 && aMethods[0].getImplementation() == Implementation.Field
+                ? new FieldAccessChain(aMethods)
+                : new CallChain(aMethods);
+        }
+
+
+    // ----- CallChain subclasses ------------------------------------------------------------------
+
+    /**
+     * A CallChain representing an excpetion.
+     */
+    public static class FieldAccessChain
+            extends CallChain
+        {
+        public FieldAccessChain(MethodBody[] aMethods)
+            {
+            super(aMethods);
+
+            assert isField();
+            }
+
+        @Override
+        public int invoke(Frame frame, ObjectHandle hTarget, int iReturn)
+            {
+            return hTarget.getTemplate().getFieldValue(frame, hTarget,
+                f_aMethods[0].getPropertyConstant(), iReturn);
+            }
+
+        @Override
+        public int invoke(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
+            {
+            assert ahArg.length > 1 && iReturn == Op.A_IGNORE;
+
+            return hTarget.getTemplate().setFieldValue(frame, hTarget,
+                f_aMethods[0].getPropertyConstant(), ahArg[0]);
+            }
+        }
+
+    /**
+     * A CallChain representing an exception.
+     */
     public static class ExceptionChain
             extends CallChain
         {

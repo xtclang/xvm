@@ -851,7 +851,7 @@ public class TypeInfo
         }
 
     /**
-     * @return all of the properties for this type, indexed by their "flattened" property constant
+     * @return all the properties for this type, indexed by their "flattened" property constant
      */
     public Map<PropertyConstant, PropertyInfo> getProperties()
         {
@@ -867,7 +867,7 @@ public class TypeInfo
         }
 
     /**
-     * @return all of the properties for this type that can be identified by a simple name, indexed
+     * @return all the properties for this type that can be identified by a simple name, indexed
      *         by that name
      */
     public Map<String, PropertyInfo> ensurePropertiesByName()
@@ -966,7 +966,7 @@ public class TypeInfo
         }
 
     /**
-     * Obtain all of the properties declared within the specified method.
+     * Obtain all the properties declared within the specified method.
      *
      * @param idMethod  the identity of the method that may contain properties
      *
@@ -1227,7 +1227,7 @@ public class TypeInfo
         }
 
     /**
-     * @return all of the non-scoped methods for this type
+     * @return all the non-scoped methods for this type
      */
     public Map<MethodConstant, MethodInfo> getMethods()
         {
@@ -1243,7 +1243,7 @@ public class TypeInfo
         }
 
     /**
-     * @return all of the methods for this type that can be identified by just a signature, indexed
+     * @return all the methods for this type that can be identified by just a signature, indexed
      *         by that signature
      */
     public Map<SignatureConstant, MethodInfo> ensureMethodsBySignature()
@@ -1763,7 +1763,7 @@ public class TypeInfo
         }
 
     /**
-     * Obtain all of the methods that are annotated with "@Op".
+     * Obtain all the methods that are annotated with "@Op".
      *
      * @return a set of zero or more method constants
      */
@@ -1792,7 +1792,7 @@ public class TypeInfo
         }
 
     /**
-     * Obtain all of the matching op methods for the specified name and/or the operator string, that
+     * Obtain all the matching op methods for the specified name and/or the operator string, that
      * take the specified number of params.
      *
      * @param sName    the default op name, such as "add" (optional)
@@ -1871,7 +1871,7 @@ public class TypeInfo
         }
 
     /**
-     * Obtain all of the matching methods for the specified name and the number of parameters.
+     * Obtain all the matching methods for the specified name and the number of parameters.
      * <p/>
      * Note: the returned method constants could be synthetic and with auto-narrowing resolved.
      *
@@ -1961,7 +1961,7 @@ public class TypeInfo
         }
 
     /**
-     * Obtain all methods with specified name and the number of parameters inside of the container
+     * Obtain all methods with specified name and the number of parameters inside the container
      * property or method.
      *
      * @param idContainer  the id of the container property ir method
@@ -2058,7 +2058,7 @@ public class TypeInfo
         }
 
     /**
-     * Obtain all of the auto conversion methods found on this type.
+     * Obtain all the auto conversion methods found on this type.
      *
      * @return a set of zero or more method constants
      */
@@ -2624,7 +2624,7 @@ public class TypeInfo
      * The virtual methods of the type, keyed by nested identity. Methods nested immediately under
      * a class are identified by their signature, while methods nested further below the class are
      * identified by a NestedIdentity object. In either case, the key can be obtained by calling
-     * calling {@link PropertyConstant#getNestedIdentity()} or
+     * {@link PropertyConstant#getNestedIdentity()} or
      * {@link IdentityConstant#resolveNestedIdentity(ConstantPool, GenericTypeResolver)}.
      */
     private final Map<Object, MethodInfo> f_mapVirtMethods;

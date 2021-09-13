@@ -3235,20 +3235,52 @@ public abstract class TypeConstant
                 }
             }
 
-        // the custom logic will get overlaid later by layerOnMethods(); in the case of a native
-        // getter for otherwise natural classes, it needs to be added (ensured) at this point so
-        // that it will get picked up in that layer-on processing
+        // the custom logic will get overlaid later by layerOnMethods(); the base accessors need to
+        // be added at this point so that they will get picked up in that layer-on processing
         if (struct.getFormat() != Component.Format.INTERFACE)
             {
             PropertyStructure prop = (PropertyStructure) idProp.getComponent();
-            if (prop != null && prop.isNative())
+            if (prop != null)
                 {
                 MethodConstant idGet   = info.getGetterId();
-                MethodBody     bodyGet = new MethodBody(idGet, idGet.getSignature(), Implementation.Native);
-                MethodInfo     infoGet = new MethodInfo(bodyGet);
+                MethodConstant idSet   = info.getSetterId();
+                MethodInfo     infoGet = mapMethods.get(idGet);
+                MethodInfo     infoSet = mapMethods.get(idSet);
+
+                if (prop.isNative())
+                    {
+                    // replace the entire chain with a native body
+                    infoGet = new MethodInfo(
+                        new MethodBody(idGet, idGet.getSignature(), Implementation.Native));
+                    if (infoSet != null)
+                        {
+                        infoSet = new MethodInfo(
+                            new MethodBody(idSet, idSet.getSignature(), Implementation.Native));
+                        }
+                    }
+                else
+                    {
+                    // layer on "implicit" property accessors on top of the base chains;
+                    // if explicit accessors exist, they will be placed on top later
+                    assert infoGet != null;
+
+                    infoGet = infoGet.layerOn(new MethodInfo(new MethodBody(
+                            idGet, idGet.getSignature(), Implementation.Implicit)), false, errs);
+
+                    if (infoSet != null)
+                        {
+                        infoSet = infoSet.layerOn(new MethodInfo(new MethodBody(
+                                idSet, idSet.getSignature(), Implementation.Implicit)), false, errs);
+                        }
+                    }
 
                 mapMethods.put(idGet, infoGet);
-                mapVirtMethods.put(idGet.resolveNestedIdentity(pool, this), infoGet);
+                mapVirtMethods.put(idGet.resolveNestedIdentity(pool, null), infoGet);
+                if (infoSet != null)
+                    {
+                    mapMethods.put(idSet, infoSet);
+                    mapVirtMethods.put(idSet.resolveNestedIdentity(pool, null), infoSet);
+                    }
                 }
             }
 

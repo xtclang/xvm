@@ -4,96 +4,81 @@ module TestSimple.test.org
 
     void run()
         {
-        console.println();
-
-        Manager mgr = new Manager();
-        Boolean result = mgr.commit();
-        console.println($"commit={result}");
+        Test t = new Test2();
+        t.value = 1;
+        t.value1 = 2;
+        t.value2 = 1;
+        Int i = t.value;
+        console.println(i);
         }
 
-    service Manager
+    class Test2
+            extends Test
         {
-        Store[] stores = new Store[5](i -> new Store(i));
-
-        Boolean commit()
+        @Override
+        Int value
             {
-            Boolean prepareResult = stage^("prepare");
-            FutureVar<Boolean> result = &prepareResult;
-
-            result = result.transform(ok -> ok && stage("validators"));
-            result = result.transform(ok -> ok && stage("rectifiers"));
-
-            commitAsync^().handle(e ->
+            @Override
+            Int get()
                 {
-                console.println($"Exception occurred during commitAsync {e}");
-                return Tuple:();
-                });
-
-//            Tuple x = commitAsync^();
-//            &x.handle(e ->
-//                {
-//                console.println($"Exception occurred during commitAsync {e}");
-//                });
-//
-//            return result.thenDo(() ->
-//                {
-//                commitAsync^().handle(e ->
-//                    {
-//                    console.println($"Exception occurred during commitAsync {e}");
-//                    return Tuple:();
-//                    });
-//                });
-//
-            return result;
+                console.println("In Test2");
+                return super();
+                }
             }
+        }
 
-        Boolean stage(String step)
+    class Test
+        {
+        Int value
             {
-            @Future Boolean result;
-
-            Int count = stores.size;
-            for (Store store : stores)
+            @Override
+            Int get()
                 {
-                Boolean partial = store.process^(step);
-                &partial.thenDo(() ->
-                    {
-                    if (--count == 0)
-                        {
-                        result = True;
-                        }
-                    });
+                Int n = calc();
+                return n + super();
                 }
 
-            return result;
-            }
-
-        void commitAsync()
-            {
-            console.println($"Committing");
-
-            stage("committing");
-            }
-        }
-
-    service Store(Int storeId)
-        {
-        Boolean process(String step)
-            {
-            @Inject Timer timer;
-            @Inject Random rnd;
-
-            console.println($"Started {step} on store {storeId}");
-
-            @Future Boolean result;
-
-            Duration delay = Duration.ofMillis(rnd.int(500) + 10);
-            timer.schedule(delay, () ->
+            Int calc()
                 {
-                console.println($"Finished {step} on store {storeId} after {delay.milliseconds}ms");
-                result=True;
-                });
+                return 42;
+                }
 
-            return result;
+            @Override
+            void set(Int n)
+                {
+                Int old = get(); // used to blow
+                assert n != old;
+                super(n);
+                }
+            }
+
+        @Lazy
+        Int value1
+            {
+            @Override
+            Int calc()
+                {
+                return 42;
+                }
+
+            @Override
+            void set(Int n)
+                {
+                if (assigned)
+                    {
+                    Int old = get(); // used to blow
+                    assert n != old;
+                    }
+                super(n);
+                }
+            }
+
+        Int value2.set(Int n)
+            {
+            Int old = get();  // used to blow
+            assert n != old;
+            super(n);
+            console.println($"n={n} old={old}");
             }
         }
     }
