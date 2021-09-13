@@ -8,6 +8,7 @@ import json.ObjectInputStream;
 import json.ObjectOutputStream;
 import json.Parser;
 
+import model.DBObjectInfo;
 import model.SysInfo;
 
 import oodb.RootSchema;
@@ -170,6 +171,11 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      * the terminal points of the life cycle, and thus (in theory) better assertions.
      */
     public/private Status status = Initial;
+
+    /**
+     * The lazily cached DBObjectInfo for each user defined DBObject in the `Catalog`.
+     */
+    private DBObjectInfo?[] infos = new DBObjectInfo?[];
 
     /**
      * The ObjectStore for each user defined DBObject in the `Catalog`. These provide the I/O for
@@ -895,7 +901,6 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             switch (rec.status)
                 {
                 case Sealed:
-                    checkEnabled();
                     rec.status = Committing;
                     break;
 
@@ -1297,14 +1302,14 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         Client<Schema>? prepareClient = Null;
 
         /**
-         * TODO
+         * The "seal" for each modified ObjectStore, keyed by ObjectStore id.
          */
-        Map<Int, String?>   sealById   = Map:[];
+        Map<Int, String?> sealById   = Map:[];
 
         /**
          * TODO
          */
-        Set<Int>            triggered  = [];
+        Set<Int> triggered  = [];
 
         /**
          * The future result for a pending operation on the transaction, if there is a pending
@@ -1657,7 +1662,8 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                     return False;
 
                 default:
-                    throw new IllegalState("Unexpected status for transaction {rec.idString}: {rec.status}");
+                    // throw new IllegalState("Unexpected status for transaction {rec.idString}: {rec.status}"); // TODO GG what is "rec"?!? how did this compile?
+                    throw new IllegalState("Unexpected status for transaction {idString}: {status}");
                 }
 
             // if there were nothing enlisted, we would have already short-circuited all of this
@@ -1685,15 +1691,120 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
          */
         protected Boolean commit()
             {
-            Set<Int> storeIds = enlisted;
-            if (storeIds.empty)
+            switch (status)
                 {
-                terminate(Committed);
-                return True;
+                case Sealed:
+                    // this status is the necessary and exact pre-condition for commit
+                    break;
+
+                case Committing:
+                    @Future Boolean result;
+                    addTermination(() -> {result=status==Committed;});
+                    return result;
+
+                case Committed:
+                    return True;
+
+                case RollingBack:
+                case RolledBack:
+                    return False;
+
+                default:
+                    assert as $"Unexpected status: {status}";
                 }
 
-            // TODO
-            return this.TxManager.commit([this]);
+            Int commitId = prepareId;
+            switch (commitId <=> lastCommitted + 1)
+                {
+                case Lesser:
+                    log($"Attempting to commit transaction {commitId}, but transaction {lastCommitted} was already commited");
+                    panic();
+                    assert;
+
+                case Equal:
+                    // this is the next transaction in line
+                    status = Committing;
+                    break;
+
+                case Greater:
+                    log($"Attempting to commit transaction {commitId}, but the last transaction committed was {lastCommitted}");
+                    if (TxRecord prevTx := byWriteId.values.any(tx -> tx.prepareId+1 == commitId))
+                        {
+                        @Future Boolean result;
+                        prevTx.addTermination(() -> {result=this.commit();});
+                        return result;
+                        }
+                    else
+                        {
+                        log($"Unable to locate pending commit transaction {commitId-1}");
+                        panic();
+                        assert;
+                        }
+                }
+
+            if (enlisted.empty)
+                {
+                // we should not have gotten this far, if nothing is enlisted; the transaction
+                // should have already been "pretend-committed" if it had nothing enlisted; now
+                // we have no choice but to go through with it, and file an "empty transaction",
+                // because otherwise there will be a gap in the numbering
+                log($"Error: An empty transaction transaction {idString} was sealed");
+                }
+
+            // bundle the results of "sealPrepare()" into a transaction log entry
+            StringBuffer buf = new StringBuffer();
+            buf.append(",\n{\"_tx\":")
+               .append(commitId)
+               .append(", \"_ts\":\"")
+               .append(clock.now.toString(True))
+               .add('\"');
+
+            Loop: for ((Int storeId, String? json) : sealById)
+                {
+                assert storeId > 0 && json != Null;
+
+                buf.append(", \"")
+                   .append(infoFor(storeId).path.toString().substring(1))   // skip the leading '/'
+                   .append("\":")
+                   .append(json);
+                }
+
+            buf.append("}\n]");
+
+            File file   = logFile;
+            Int  length = file.size;
+            assert length >= 20;        // log file is never empty!
+
+            // TODO right now this assumes that no manual edits have occurred; must cache "last
+            //      update timestamp" and rebuild file if someone else changed it (see ValueStore.commit)
+
+            file.truncate(length-2)
+                .append(buf.toString().utf8());
+
+            if (length > maxLogSize)
+                {
+                rotateLog();
+                }
+
+            FutureVar<Tuple<>>? commitAll = Null;
+            for (Int storeId : enlisted)
+                {
+                Tuple<> commitOne = storeFor(storeId).commit^(writeId);
+                commitAll = commitAll?.and(&commitOne, (t, _) -> t) : &commitOne; // TODO GG wide ass -> Tuple:()
+                }
+            assert commitAll != Null;
+            commitAll.whenComplete((t, e) ->
+                {
+                if (e != Null)
+                    {
+                    log($"Heuristic Commit Exception: During commit of {idString}: {e}");
+                    panic();
+                    }
+                });
+
+            lastCommitted = commitId;
+            terminate(Committed);
+            return True;
             }
 
         /**
@@ -2423,7 +2534,40 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      *
      * @return the DBObjectInfo for the specified id
      */
-    ObjectStore storeFor(Int id)
+    protected DBObjectInfo infoFor(Int id)
+        {
+        if (id < 0)
+            {
+            // these are non-transactional, so there is no expectation that this will ever occur
+            return Catalog.BuiltIn.byId(id).info;
+            }
+
+        Int size = infos.size;
+        if (id < size)
+            {
+            return infos[id]?;
+            }
+
+        DBObjectInfo info = catalog.infoFor(id);
+
+        // save off the ObjectStore (lazy cache)
+        if (id > infos.size)
+            {
+            infos.fill(Null, infos.size..id);
+            }
+        infos[id] = info;
+
+        return info;
+        }
+
+    /**
+     * Obtain the DBObjectInfo for the specified id.
+     *
+     * @param id  the internal object id
+     *
+     * @return the ObjectStore for the specified id
+     */
+    protected ObjectStore storeFor(Int id)
         {
         ObjectStore?[] stores = appStores;
         Int            index  = id;
