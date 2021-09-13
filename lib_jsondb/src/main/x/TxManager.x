@@ -575,6 +575,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                             }
                         }
 
+                    closeLog();
                     status = Disabled;
 
                     if (finalTermination())
@@ -617,7 +618,6 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             byReadId.clear();
             pendingPrepare.clear();
             currentlyPreparing = NO_TX;
-            closeLog();
             }
 
         // only after having done the reset (on the last one) do we decrement the remaining count,
@@ -1769,11 +1769,6 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             file.truncate(length-2)
                 .append(buf.toString().utf8());
 
-            if (length > maxLogSize)
-                {
-                rotateLog();
-                }
-
             FutureVar<Tuple<>>? commitAll = Null;
             for (Int storeId : enlisted)
                 {
@@ -1792,6 +1787,12 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
 
             lastCommitted = commitId;
             terminate(Committed);
+
+            if (length > maxLogSize)
+                {
+                rotateLog();
+                }
+
             return True;
             }
 
@@ -2076,7 +2077,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         logFile.parent?.ensure();
         initLogFile();
 
-        logInfos.add(new LogFileInfo(logFile.name, 0..0, logFile.size, logFile.modified));
+        logInfos.add(new LogFileInfo(logFile.name, [1..1), logFile.size, logFile.modified));
         writeStatus();
 
         return True;
