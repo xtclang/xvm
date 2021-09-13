@@ -233,20 +233,17 @@ public class xString
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
         }
 
-    // ----- IndexSupport -----
+    // ----- IndexSupport --------------------------------------------------------------------------
 
     @Override
     public int extractArrayValue(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
         {
         char[] ach = ((StringHandle) hTarget).getValue();
-        try
-            {
-            return frame.assignValue(iReturn, xChar.makeHandle(ach[(int) lIndex]));
-            }
-        catch (ArrayIndexOutOfBoundsException e)
-            {
-            return frame.raiseException(xException.outOfBounds(frame, lIndex, ach.length));
-            }
+        int    nIx = (int) lIndex;
+
+        return nIx < 0 || nIx >= ach.length
+                ? frame.raiseException(xException.outOfBounds(frame, lIndex, ach.length))
+                : frame.assignValue(iReturn, xChar.makeHandle(ach[nIx]));
         }
 
     @Override

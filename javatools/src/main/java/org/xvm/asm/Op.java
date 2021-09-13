@@ -371,14 +371,8 @@ public abstract class Op
      */
     protected Op calcRelativeOp(Op[] aop, int of)
         {
-        try
-            {
-            return aop[getAddress() + of];
-            }
-        catch (ArrayIndexOutOfBoundsException e)
-            {
-            return aop[aop.length - 1];
-            }
+        int nAddr = getAddress() + of;
+        return nAddr < aop.length ? aop[nAddr] : aop[aop.length - 1];
         }
 
     /**

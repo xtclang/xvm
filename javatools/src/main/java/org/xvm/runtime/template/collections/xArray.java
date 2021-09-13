@@ -675,26 +675,18 @@ public class xArray
             return frame.raiseException(xException.outOfBounds(frame, ixUpper, cSize));
             }
 
-        try
-            {
-            DelegateHandle hSlice = ((xRTDelegate) template).
+        DelegateHandle hSlice = ((xRTDelegate) template).
                 slice(hDelegate, ixLower, ixUpper - ixLower + 1, fReverse);
-            if (hSlice != hDelegate)
-                {
-                Mutability mutability = hArray.m_mutability;
-                if (mutability == Mutability.Mutable)
-                    {
-                    mutability = Mutability.Fixed;
-                    }
-                hArray = new ArrayHandle(hArray.getComposition(), hSlice, mutability);
-                }
-            return frame.assignValue(iReturn, hArray);
-            }
-        catch (ArrayIndexOutOfBoundsException e)
+        if (hSlice != hDelegate)
             {
-            return frame.raiseException(xException.outOfBounds(frame,
-                ixLower < 0 || ixLower >= cSize ? ixLower : ixUpper, cSize));
+            Mutability mutability = hArray.m_mutability;
+            if (mutability == Mutability.Mutable)
+                {
+                mutability = Mutability.Fixed;
+                }
+            hArray = new ArrayHandle(hArray.getComposition(), hSlice, mutability);
             }
+        return frame.assignValue(iReturn, hArray);
         }
 
     /**
