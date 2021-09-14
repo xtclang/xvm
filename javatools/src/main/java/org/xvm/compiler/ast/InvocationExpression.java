@@ -413,19 +413,28 @@ public class InvocationExpression
                 MethodConstant      idMethod    = (MethodConstant) argMethod;
                 MethodStructure     method      = m_method;
                 int                 cTypeParams = method.getTypeParamCount();
+                int                 cReturns    = method.getReturnCount();
                 GenericTypeResolver resolver    = null;
 
                 if (cTypeParams > 0)
                     {
                     // resolve the type parameters against all the arg types we know by now
                     resolver = makeTypeParameterResolver(ctx, method,
-                            m_fCall  || atypeReturn == null
+                            m_fCall || cReturns == 0
                                 ? atypeReturn
                                 : pool.extractFunctionReturns(atypeReturn[0]));
                     }
 
                 if (m_fCall)
                     {
+                    if (cReturns == 0)
+                        {
+                        // we allow a void method's return into an empty Tuple
+                        return atypeReturn.length == 1 && isVoid(atypeReturn)
+                                ? atypeReturn
+                                : TypeConstant.NO_TYPES;
+                        }
+
                     if (method.isFunction() || method.isConstructor())
                         {
                         return resolveTypes(resolver, idMethod.getSignature().getRawReturns());
@@ -843,6 +852,7 @@ public class InvocationExpression
                 TypeConstant[]  atypeParams = idMethod.getRawParams();
                 int             cTypeParams = method.getTypeParamCount();
                 int             cParams     = method.getVisibleParamCount();
+                int             cReturns    = atypeReturn == null ? 0 : atypeReturn.length;
 
                 if (cTypeParams > 0)
                     {
@@ -855,7 +865,7 @@ public class InvocationExpression
                         System.arraycopy(atypeParams, cTypeParams, atype, 0, cParams);
 
                         GenericTypeResolver resolver = makeTypeParameterResolver(ctx, method,
-                                fCall || atypeReturn == null || atypeReturn.length == 0
+                                fCall || cReturns == 0
                                     ? atypeReturn
                                     : pool.extractFunctionReturns(atypeReturn[0]));
                         atypeParams = resolveTypes(resolver, atype);
@@ -883,11 +893,11 @@ public class InvocationExpression
                 if (cTypeParams > 0)
                     {
                     // re-resolve against the validated types
-                        mapTypeParams = method.resolveTypeParameters(atypeArgs,
-                                fCall || atypeReturn == null || atypeReturn.length == 0
-                                    ? atypeReturn
-                                    : pool.extractFunctionReturns(atypeReturn[0]),
-                                false);
+                    mapTypeParams = method.resolveTypeParameters(atypeArgs,
+                            fCall || cReturns == 0
+                                ? atypeReturn
+                                : pool.extractFunctionReturns(atypeReturn[0]),
+                            false);
                     if (mapTypeParams.size() < cTypeParams)
                         {
                         log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNRESOLVABLE,
@@ -956,12 +966,16 @@ public class InvocationExpression
                             return null;
                             }
                         }
-                    else if (atypeReturn != null)
+                    else if (cReturns > 0)
                         {
                         // check for Tuple conversion for the return value; we know that the
                         // method should fit, so the only thing to figure out is whether
                         // "packing" to a Tuple is necessary
-                        if (calculateReturnFit(sigMethod, fCall, atypeReturn, ctx.getThisType(),
+                        if (isVoid(atypeReturn))
+                            {
+                            atypeResult = atypeReturn;
+                            }
+                        else if (calculateReturnFit(sigMethod, fCall, atypeReturn, ctx.getThisType(),
                                 ErrorListener.BLACKHOLE).isPacking())
                             {
                             atypeResult = new TypeConstant[]{pool.ensureTupleType(atypeResult)};
@@ -2318,7 +2332,7 @@ public class InvocationExpression
                     {
                     if (fConstruct)
                         {
-                        // this can only be a "construct X(..)" call coming from "this:struct"
+                        // this can only be a "construct X(...)" call coming from "this:struct"
                         // context
                         ClassStructure clzThis = ctx.getThisClass();
                         Contribution   contrib = clzThis.findContribution(idLeft);

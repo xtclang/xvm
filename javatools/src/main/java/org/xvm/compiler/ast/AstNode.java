@@ -1195,8 +1195,9 @@ public abstract class AstNode
             int cMethodRets = method.getReturnCount();
             if (cReturns > cMethodRets)
                 {
-                // the only allowed mismatch is a void method's return into a Tuple
-                if (cMethodRets != 0 || cReturns != 1 && !atypeReturn[0].isTuple())
+                // the only allowed mismatch is a void method's return into an empty Tuple
+                boolean fTuple = cReturns == 1 && isVoid(atypeReturn);
+                if (cMethodRets != 0 || !fTuple)
                     {
                     log(errsTemp, Severity.ERROR, Compiler.RETURN_WRONG_COUNT, cReturns, cMethodRets);
                     errsKeep = errsTemp;
@@ -1594,18 +1595,14 @@ public abstract class AstNode
             // - a "void" method return is allowed to be assigned to an empty Tuple
             //    void f() {...}
             //    Tuple v = f();
-            if (fCall && cMethodReturns == 0 && cReturns == 1
-                    && atypeReturn[0].isTuple()
-                    && atypeReturn[0].getParamsCount() == 0)
+            if (fCall && cMethodReturns == 0 && cReturns == 1 && isVoid(atypeReturn))
                 {
                 return TypeFit.Pack;
                 }
-            else
-                {
-                log(errs, Severity.ERROR, Compiler.INCOMPATIBLE_RETURN_COUNT,
-                       sName, String.valueOf(cReturns), String.valueOf(cMethodReturns));
-                return TypeFit.NoFit;
-                }
+
+            log(errs, Severity.ERROR, Compiler.INCOMPATIBLE_RETURN_COUNT,
+                   sName, String.valueOf(cReturns), String.valueOf(cMethodReturns));
+            return TypeFit.NoFit;
             }
 
         if (cMethodReturns > cReturns)
@@ -1676,7 +1673,7 @@ public abstract class AstNode
         {
         for (TypeConstant type : atype)
             {
-            if (!type.equals(pool().typeTuple0()))
+            if (!type.isTuple() || type.getParamsCount() > 0)
                 {
                 return false;
                 }
