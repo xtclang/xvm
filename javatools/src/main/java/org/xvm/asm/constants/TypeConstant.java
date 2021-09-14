@@ -1200,19 +1200,21 @@ public abstract class TypeConstant
             return true;
             }
 
-        // we allow a comparison of "immutable T" with "T"
-        if (typeThat.isImmutabilitySpecified())
+        // we allow comparison of "immutable T" with "T"
+        if (typeThis.isImmutabilitySpecified() ^ typeThat.isImmutabilitySpecified())
             {
-            return typeThis.supportsEquals(typeThat.removeImmutable(), false);
+            return typeThis.isImmutabilitySpecified()
+                    ? typeThis.removeImmutable().supportsEquals(typeThat, fThatIsConstant)
+                    : typeThis.supportsEquals(typeThat.removeImmutable(), false);
             }
 
-        // and we allow a comparison of "T:access" with "T"
-        if (typeThat.isAccessSpecified())
+        // and we allow comparison of "T:access" with "T"
+        if (typeThat.isAccessSpecified() || typeThis.isAccessSpecified())
             {
-            return typeThis.supportsEquals(typeThat.removeAccess(), false);
+            return typeThis.removeAccess().supportsEquals(typeThat.removeAccess(), fThatIsConstant);
             }
 
-        // we also allow a comparison of a nullable type to the base type; for example:
+        // we also allow comparison of a nullable type with the base type; for example:
         // String? s1 = ...
         // String  s2 = ...
         // if (s1 == s2) // is allowed despite the types are not equal
@@ -1255,6 +1257,20 @@ public abstract class TypeConstant
         if (typeThat.isA(typeThis) && (fThatIsConstant || typeThis.isA(typeThat)))
             {
             return findFunctionInfo(getConstantPool().sigCompare()) != null;
+            }
+
+        // we allow comparison of "immutable T" with "T"
+        if (typeThis.isImmutabilitySpecified() ^ typeThat.isImmutabilitySpecified())
+            {
+            return typeThis.isImmutabilitySpecified()
+                    ? typeThis.removeImmutable().supportsCompare(typeThat, fThatIsConstant)
+                    : typeThis.supportsCompare(typeThat.removeImmutable(), false);
+            }
+
+        // and we allow comparison of "T:access" with "T"
+        if (typeThat.isAccessSpecified() || typeThis.isAccessSpecified())
+            {
+            return typeThis.removeAccess().supportsCompare(typeThat.removeAccess(), fThatIsConstant);
             }
 
         return false;
