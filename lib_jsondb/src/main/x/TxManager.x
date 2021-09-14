@@ -264,7 +264,12 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      * TODO this setting should be configurable (need a "Prefs" API)
      */
     // TODO protected Int maxLogSize = 1 << 20; // 1MB
-    protected Int maxLogSize = 1000;
+    protected Int maxLogSize = 4000;
+
+    /**
+     * Previous modified date/time of the log.
+     */
+    protected DateTime expectedLogTimestamp = EPOCH;
 
     /**
      * The JSON Schema to use (for system classes).
@@ -552,7 +557,6 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
 
                         if (doCommit)
                             {
-// TODO here the prepareId would be readId + 1
                             assert rec.prepareId != NO_TX && commitOrder.putIfAbsent(rec.prepareId, rec);
                             }
 
@@ -831,13 +835,11 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
 
             if (rec.status != Enqueued)
                 {
-                // someo other fiber has already done something with the transaction
+                // some other fiber has already done something with the transaction
                 continue;
                 }
 
-            assert FutureVar<Boolean> result ?= rec.pending;
-
-            if (!rec.prepare()
+            if (rec.prepare()
                     && (validators  .empty || rec.validate  ())
                     && (rectifiers  .empty || rec.rectify   ())
                     && (distributors.empty || rec.distribute())
@@ -859,18 +861,21 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         // release the "prepare pipeline" so another fiber can do prepares
         currentlyPreparing = NO_TX;
 
-        try
+        if (!pendingCommit.empty)
             {
-            if (!pendingCommit.empty && !commit(pendingCommit))
+            try
                 {
-                log($"Unable to successfully commit a batch of transactions: {pendingCommit}");
+                if (!commit(pendingCommit))
+                    {
+                    log($"Unable to successfully commit a batch of transactions: {pendingCommit}");
+                    panic();
+                    }
+                }
+            catch (Exception e)
+                {
+                log($"An error occurred committing a batch of transactions: {e}");
                 panic();
                 }
-            }
-        catch (Exception e)
-            {
-            log($"An error occurred committing a batch of transactions: {e}");
-            panic();
             }
 
         // if this was only processing up to "stopAfterId", then more transactions may have shown
@@ -916,7 +921,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                     continue NextTx;
 
                 default:
-                    throw new IllegalState("Unexpected status for transaction {rec.idString}: {rec.status}");
+                    throw new IllegalState($"Unexpected status for transaction {rec.idString}: {rec.status}");
                 }
 
             Set<Int> storeIds = rec.enlisted;
@@ -948,21 +953,12 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 }
 
             buf.append("}\n]");
-
-            File file   = logFile;
-            Int  length = file.size;
-            assert length >= 20;        // log file is never empty!
-
-            // TODO right now this assumes that no manual edits have occurred; must cache "last
-            //      update timestamp" and rebuild file if someone else changed it (see ValueStore.commit)
-
-            file.truncate(length-2)
-                .append(buf.toString().utf8());
+            appendLog(buf);
 
             assert commitId == lastCommitted + 1;
             lastCommitted = commitId;
 
-            if (length > maxLogSize)
+            if (logFile.size > maxLogSize)
                 {
                 rotateLog();
                 }
@@ -1499,7 +1495,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                     return False;
 
                 default:
-                    throw new IllegalState("Unexpected status for transaction {rec.idString}: {rec.status}");
+                    throw new IllegalState($"Unexpected status for transaction {idString}: {status}");
                 }
 
             if (validators.empty)
@@ -1553,7 +1549,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                     return False;
 
                 default:
-                    throw new IllegalState("Unexpected status for transaction {rec.idString}: {rec.status}");
+                    throw new IllegalState($"Unexpected status for transaction {idString}: {status}");
                 }
 
             if (rectifiers.empty)
@@ -1600,7 +1596,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                     return False;
 
                 default:
-                    throw new IllegalState("Unexpected status for transaction {rec.idString}: {rec.status}");
+                    throw new IllegalState($"Unexpected status for transaction {idString}: {status}");
                 }
 
             if (distributors.empty)
@@ -1635,14 +1631,19 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 case Rectified:
                 case Distributed:
                     checkEnabled();
+
+                    // this has to be the transaction that is currently preparing
                     assert currentlyPreparing == writeId;
+
+                    // if there were nothing enlisted, this would have already "committed"
+                    assert !enlisted.empty;
+
                     status = Sealing;
                     break;
 
                 case Committed:
                     // assume that the transaction already short-circuited to a committed state
-                    assert enlisted.empty;
-                    return True;
+                    return False;
 
                 case RollingBack:
                 case RolledBack:
@@ -1650,12 +1651,8 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                     return False;
 
                 default:
-                    // throw new IllegalState("Unexpected status for transaction {rec.idString}: {rec.status}"); // TODO GG what is "rec"?!? how did this compile?
-                    throw new IllegalState("Unexpected status for transaction {idString}: {status}");
+                    throw new IllegalState($"Unexpected status for transaction {idString}: {status}");
                 }
-
-            // if there were nothing enlisted, we would have already short-circuited all of this
-            assert !enlisted.empty;
 
             for (val entry : sealById.entries)
                 {
@@ -1705,7 +1702,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             switch (commitId <=> lastCommitted + 1)
                 {
                 case Lesser:
-                    log($"Attempting to commit transaction {commitId}, but transaction {lastCommitted} was already commited");
+                    log($"Attempting to commit transaction {commitId}, but transaction {lastCommitted} was already committed");
                     panic();
                     assert;
 
@@ -1758,16 +1755,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 }
 
             buf.append("}\n]");
-
-            File file   = logFile;
-            Int  length = file.size;
-            assert length >= 20;        // log file is never empty!
-
-            // TODO right now this assumes that no manual edits have occurred; must cache "last
-            //      update timestamp" and rebuild file if someone else changed it (see ValueStore.commit)
-
-            file.truncate(length-2)
-                .append(buf.toString().utf8());
+            appendLog(buf);
 
             FutureVar<Tuple<>>? commitAll = Null;
             for (Int storeId : enlisted)
@@ -1788,7 +1776,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             lastCommitted = commitId;
             terminate(Committed);
 
-            if (length > maxLogSize)
+            if (logFile.size > maxLogSize)
                 {
                 rotateLog();
                 }
@@ -1902,6 +1890,12 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             assert status == Committed || status == RolledBack;
             this.status = status;
 
+            if (FutureVar<Boolean> pending ?= this.pending)
+                {
+                pending.complete(status == Committed);
+                this.pending = Null;
+                }
+
             byWriteId.remove(writeId);
             byClientId.remove(clientId);
 
@@ -1979,7 +1973,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 break;
 
             default:
-                assert as "Attempt to enlist into a transaction whose status is {tx.status} is forbidden";
+                assert as $"Attempt to enlist into a transaction whose status is {tx.status} is forbidden";
             }
 
         tx.enlist(storeId);
@@ -2092,6 +2086,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                             |\{"_op":"created", "_ts":"{clock.now.toString(True)}", "_prev_tx":{lastCommitted}}
                             |]
                             .utf8();
+        logUpdated();
         }
 
     /**
@@ -2110,6 +2105,9 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             LogFileInfo current = logInfos[logInfos.size-1];
             if (current.size == logFile.size && current.timestamp == logFile.modified)
                 {
+                // remember the timestamp on the log, as if we just updated it
+                logUpdated();
+
                 // append the "we're open" message to the log
                 addLogEntry($|\{"_op":"opened", "_ts":"{clock.now.toString(True)}"}
                            );
@@ -2441,9 +2439,50 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      */
     protected void addLogEntry(String entry)
         {
-        Int length = logFile.size;
-        logFile.truncate(length-2)
-               .append($",\n{entry}\n]".utf8());
+        StringBuffer buf = new StringBuffer();
+        buf.append(",\n")
+           .append(entry)
+           .append("\n]");
+        appendLog(buf);
+        }
+
+    /**
+     * Append a buffer to the log file.
+     *
+     * @param buf  the buffer containing the text to append to the log
+     */
+    protected void appendLog(StringBuffer buf)
+        {
+        validateLog();
+
+        File file   = logFile;
+        Int  length = file.size;
+        assert length >= 20;        // log file is never empty!
+
+        file.truncate(length-2)
+            .append(buf.toString().utf8());
+
+        logUpdated();
+        }
+
+    /**
+     * Make sure that the log is safe to append to.
+     */
+    protected void validateLog()
+        {
+        if (expectedLogTimestamp != logFile.modified)
+            {
+            log($"Log file {logFile.name} appears to have been modified externally; the expected timestamp was {expectedLogTimestamp} (TODO)");
+            // TODO this is where the log file is "rebuilt automatically" like in the log recovery stage
+            }
+        }
+
+    /**
+     * Record the timestamp on the log after it was updated.
+     */
+    protected void logUpdated()
+        {
+        expectedLogTimestamp = logFile.modified;
         }
 
     /**
