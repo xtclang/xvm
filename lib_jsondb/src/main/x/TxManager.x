@@ -1716,10 +1716,12 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 // first, seal everything that may need distribution (so we don't accidentally
                 // overwrite any DBObjects that were already modified, and so we don't cascade
                 // forever)
-                for (Int storeId : mayNeedDistribution)
+                sealById.processAll(mayNeedDistribution, entry ->
                     {
-                    sealById.getOrCompute(storeId, () -> storeFor(storeId).sealPrepare(writeId));
-                    }
+                    assert entry.exists;
+                    entry.value ?:= storeFor(entry.key).sealPrepare(writeId);
+                    return True;
+                    });
 
                 // now distribute the changes
                 for (Int storeId : mayNeedDistribution)
