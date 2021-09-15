@@ -52,6 +52,7 @@ module %appName%_imdb
                 implements %appSchema%_
             {
 %PropertyGetters%
+%SchemaMethods%
             }
 
         @Override
@@ -60,6 +61,8 @@ module %appName%_imdb
             switch (id)
                 {
 %CustomInstantiations%
+                default:
+                    break;
                 }
 
             return super(id);

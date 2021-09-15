@@ -89,6 +89,7 @@ module %appName%_jsondb
                 implements %appSchema%_
             {
 %PropertyGetters%
+%SchemaMethods%
             }
 
         @Override
@@ -97,6 +98,8 @@ module %appName%_jsondb
             switch (id)
                 {
 %CustomInstantiations%
+                default:
+                    break;
                 }
 
             return super(id);

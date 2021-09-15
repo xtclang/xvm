@@ -271,90 +271,7 @@ class DbHost
                 continue;
                 }
 
-            String customMethods     = "";
-            String customInvocations = "";
-
-            for (MultiMethodTemplate multimethod : classTemplate.multimethods)
-                {
-                String methodName = multimethod.name;
-                for (MethodTemplate method : multimethod.children())
-                    {
-                    if (!method.isConstructor && !method.isStatic && method.access == Public)
-                        {
-                        ParameterTemplate[] params  = method.parameters;
-                        ParameterTemplate[] returns = method.returns;
-
-                        String retType = switch (returns.size)
-                                {
-                                case 0 : "void";
-                                case 1 : displayName(returns[0].type, appName);
-                                default: $"({{for (val r : returns) {$.addAll(displayName(r.type, appName)); $.add(',');} }})";
-
-// TODO CP: the equivalent multi-line doesn't parse
-//                                default: $|({{for (val r : returns)
-//                                          |    {
-//                                          |    $.addAll(displayName(r.type, appName));
-//                                          |    $.add(',');
-//                                          |    }
-//                                          |}})
-//                                          ;
-                                };
-
-                        String argDecl     = "";
-                        String args        = "";
-                        String argTypes    = "";
-                        String tupleValues = "";
-                        switch (params.size)
-                            {
-                            case 0:
-                                break;
-
-                            case 1:
-                                args        = params[0].name? : assert;
-                                argTypes    = displayName(params[0].type, appName);
-                                argDecl     = $"{argTypes} {args}";
-                                tupleValues = "args[0]";
-                                break;
-
-                            default:
-                                Loop:
-                                for (ParameterTemplate param : params)
-                                    {
-                                    String name = param.name? : assert;
-                                    String type = displayName(param.type, appName);
-
-                                    if (!Loop.first)
-                                        {
-                                        argDecl     += ", ";
-                                        args        += ", ";
-                                        argTypes    += ", ";
-                                        tupleValues += ", ";
-                                        }
-                                    argDecl     += $"{type} {name}";
-                                    args        += name;
-                                    argTypes    += type;
-                                    tupleValues += $"args[{Loop.count}]";
-                                    }
-                                break;
-                            }
-
-                        customMethods += customMethodTemplate
-                                            .replace("%appName%", appName)
-                                            .replace("%name%"   , methodName)
-                                            .replace("%retType%", retType)
-                                            .replace("%argDecl%", argDecl)
-                                            .replace("%args%"   , args)
-                                            ;
-
-                        customInvocations += customInvocationTemplate
-                                            .replace("%name%"        , methodName)
-                                            .replace("%argTypes%"    , argTypes)
-                                            .replace("%arg%"         , args)
-                                            .replace("%tupleValues%" , tupleValues)
-                                            ;
-                        }
-                    }
-                }
+            (String customMethods, String customInvocations) = createMethods(appName, classTemplate);
 
             customInstantiations += customInstantiationTemplate
                                     .replace("%appName%"          , appName)
@@ -375,12 +292,15 @@ class DbHost
                                     ;
             }
 
+        String schemaMethods = createMethods(appName, appSchemaTemplate);
+
         String moduleSource = moduleSourceTemplate
                                 .replace("%appName%"             , appName)
                                 .replace("%appSchema%"           , appSchema)
                                 .replace("%PropertyInfos%"       , propertyInfos)
                                 .replace("%PropertyTypes%"       , propertyTypes)
                                 .replace("%PropertyGetters%"     , propertyGetters)
+                                .replace("%SchemaMethods%"       , schemaMethods)
                                 .replace("%CustomInstantiations%", customInstantiations)
                                 .replace("%CustomDeclarations%"  , customDeclarations)
                                 ;
@@ -390,6 +310,95 @@ class DbHost
         return True;
         }
 
+    (String customMethods, String customInvocations) createMethods(String appName, ClassTemplate classTemplate)
+        {
+        String customMethods     = "";
+        String customInvocations = "";
+
+        for (MultiMethodTemplate multimethod : classTemplate.multimethods)
+            {
+            String methodName = multimethod.name;
+            for (MethodTemplate method : multimethod.children())
+                {
+                if (!method.isConstructor && !method.isStatic && method.access == Public)
+                    {
+                    ParameterTemplate[] params  = method.parameters;
+                    ParameterTemplate[] returns = method.returns;
+
+                    String retType = switch (returns.size)
+                            {
+                            case 0 : "void";
+                            case 1 : displayName(returns[0].type, appName);
+                            default: $"({{for (val r : returns) {$.addAll(displayName(r.type, appName)); $.add(',');} }})";
+
+// TODO CP: the equivalent multi-line doesn't parse
+//                                default: $|({{for (val r : returns)
+//                                          |    {
+//                                          |    $.addAll(displayName(r.type, appName));
+//                                          |    $.add(',');
+//                                          |    }
+//                                          |}})
+//                                          ;
+                            };
+
+                    String argDecl     = "";
+                    String args        = "";
+                    String argTypes    = "";
+                    String tupleValues = "";
+                    switch (params.size)
+                        {
+                        case 0:
+                            break;
+
+                        case 1:
+                            args        = params[0].name? : assert;
+                            argTypes    = displayName(params[0].type, appName);
+                            argDecl     = $"{argTypes} {args}";
+                            tupleValues = "args[0]";
+                            break;
+
+                        default:
+                            Loop:
+                            for (ParameterTemplate param : params)
+                                {
+                                String name = param.name? : assert;
+                                String type = displayName(param.type, appName);
+
+                                if (!Loop.first)
+                                    {
+                                    argDecl     += ", ";
+                                    args        += ", ";
+                                    argTypes    += ", ";
+                                    tupleValues += ", ";
+                                    }
+                                argDecl     += $"{type} {name}";
+                                args        += name;
+                                argTypes    += type;
+                                tupleValues += $"args[{Loop.count}]";
+                                }
+                            break;
+                        }
+
+                    customMethods += customMethodTemplate
+                                        .replace("%appName%", appName)
+                                        .replace("%name%"   , methodName)
+                                        .replace("%retType%", retType)
+                                        .replace("%argDecl%", argDecl)
+                                        .replace("%args%"   , args)
+                                        ;
+
+                    customInvocations += customInvocationTemplate
+                                        .replace("%name%"        , methodName)
+                                        .replace("%argTypes%"    , argTypes)
+                                        .replace("%arg%"         , args)
+                                        .replace("%tupleValues%" , tupleValues)
+                                        ;
+                    }
+                }
+            }
+
+        return customMethods, customInvocations;
+        }
 
     // ----- common helper methods -----------------------------------------------------------------
 
@@ -465,12 +474,21 @@ class DbHost
 
         if (TypeTemplate[] typeParams := type.parameterized())
             {
-            name += '<';
+            StringBuffer buf = new StringBuffer(name.size * typeParams.size);
+            buf.append(name)
+               .add('<');
+
+            loop:
             for (TypeTemplate typeParam : typeParams)
                 {
-                name += displayName(typeParam, appName);
+                if (!loop.first)
+                    {
+                    buf.append(", ");
+                    }
+                buf.append(displayName(typeParam, appName));
                 }
-            name += '>';
+            buf.add('>');
+            name = buf.toString();
             }
         return name;
         }
