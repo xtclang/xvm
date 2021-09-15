@@ -1,4 +1,5 @@
 import Catalog.Status;
+import TxManager.NO_TX;
 
 import model.DBObjectInfo;
 
@@ -232,6 +233,12 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
      */
     @Unassigned protected SkiplistMap<Int, Changes> inFlight;
 
+    /**
+     * The currently-preparing transaction ID that is processing one of the validating, rectifying,
+     * or distributing phases.
+     */
+    protected Int triggerWriteId = NO_TX;
+
 
     // ----- life cycle ----------------------------------------------------------------------------
 
@@ -348,11 +355,11 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
 
     // ----- transaction handling ------------------------------------------------------------------
 
-    import TxManager.TxType;
-
-    static function Boolean(Int)     isReadTx        = TxManager.isReadTx;
-    static function Boolean(Int)     isWriteTx       = TxManager.isWriteTx;
-    static function TxType(Int)      txType          = TxManager.txType;
+    import TxManager.TxCat;
+    static function Boolean(Int) isReadTx   = TxManager.isReadTx;
+    static function Boolean(Int) isWriteTx  = TxManager.isWriteTx;
+    static function TxCat(Int)   txCat      = TxManager.txCat;
+    static function Int(Int)     writeIdFor = TxManager.writeIdFor;
 
     /**
      * Validate the transaction, and obtain the transactional information for the specified id.
@@ -368,19 +375,48 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
         {
         if (isWriteTx(txId))
             {
-            checkWrite();
+            if (writing)
+                {
+                checkWrite();
+                switch (TxCat category = txCat(txId)) // TODO GG why doesn't "val" work here? (in place of "TxCat")
+                    {
+                    case ReadOnly:
+                        assert as $"Modification of {info.idString} in a read-only transaction is prohibited";
 
-            return True, inFlight.computeIfAbsent(txId,
-                    () -> new Changes(txId, txManager.enlist(this.id, txId)));
-            }
-        else if (writing)
-            {
-            throw new IllegalState($"An attempt to modify data within a read-only transaction ({txId}).");
+                    case Open:
+                        break;
+
+                    case Validating:
+                        assert as $"Modification of {info.idString} by a Validator is prohibited";
+
+                    case Rectifying:
+                        assert txId == triggerWriteId as $"Modification of a {info.idString} by a different DBObject's Rectifier is prohibited";
+                        break;
+
+                    case Distributing:
+                        assert txId != triggerWriteId as $"Modification of {info.idString} by its Distributor is prohibited";
+                        break;
+
+                    default:
+                        assert as $"Unexpected Transaction category: {category}";
+                    }
+                }
+            else
+                {
+                checkRead();
+                }
+
+            Int     writeId = writeIdFor(txId);
+            Changes changes = inFlight.computeIfAbsent(writeId,
+                    () -> new Changes(writeId, txManager.enlist(this.id, txId)));
+            assert !(changes.sealed && writing) as $"Modification of the already-sealed {info.idString} is prohibited";
+            return True, changes;
             }
         else
             {
             assert isReadTx(txId);
             checkRead();
+            assert !writing as $"Modification of {info.idString} within a read-only transaction ({txId}) is prohibited";
             return False;
             }
         }
@@ -389,15 +425,14 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
      * Validate that the transaction ID is a write ID, and see if a transaction exists for that
      * write ID on this ObjectStore.
      *
-     * @param writeId  the transaction id
+     * @param txId  the transaction id
      *
      * @return True if the transaction exists on this ObjectStore
      * @return (conditional) the Changes record for the transaction
      */
-    conditional Changes peekTx(Int writeId)
+    conditional Changes peekTx(Int txId)
         {
-        assert isWriteTx(writeId);
-        return inFlight.get(writeId);
+        return inFlight.get(writeIdFor(txId));
         }
 
     /**
@@ -447,18 +482,46 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
         }
 
     /**
-     * Possible outcomes from a [prepare] call:
+     * Indicates that this ObjectStore is going to receive validation/rectification/distribution
+     * operations.
      *
-     * * `NoMerge` indicates that there were no changes to merge.
+     * @param txId  the transaction ID that indications which of validation, rectification, and
+     *              distribution is the trigger type that is going to be occurring
+     */
+    void triggerBegin(Int txId)
+        {
+        assert isWriteTx(txId) && triggerWriteId == NO_TX;
+        triggerWriteId = txId;
+        }
+
+    /**
+     * Indicates that the previously indicated validation/rectification/distribution phase has
+     * completed for this ObjectStore.
      *
-     * * `CommittedNoChanges` indicates that there were changes to merge, but the result of merging
-     *   those changes undid the previously prepared changes for this one ObjectStore, because the
-     *   merged changes perfectly negated the previously prepared changes.
+     * @param writeId  the transaction ID that was previously passed to [triggerBegin]
+     */
+    void triggerEnd(Int txId)
+        {
+        assert isWriteTx(txId) && triggerWriteId == txId;
+        triggerWriteId = NO_TX;
+        }
+
+    /**
+     * Possible outcomes from a [mergePrepare] call:
+     *
+     * * `CommittedNoChanges` indicates that the result of the [mergePrepare] is that the
+     *   transaction contains no changes, and has been forgotten by the ObjectStore. This can occur
+     *   if there were changes to merge, but the result of merging those changes undid the
+     *   previously prepared changes for this one ObjectStore, because the merged changes perfectly
+     *   negated the previously prepared changes.
+     *
+     * * `NoMerge` indicates that there were no new changes to merge, but that there is still
+     *   a transaction record for `prepareId` being held by the ObjectStore.
      *
      * * `Merged` indicates that there were changes to merge, and they were successfully merged into
      *   the `prepareId` transaction.
      */
-    enum MergeResult {NoMerge, CommittedNoChanges, Merged}
+    enum MergeResult {CommittedNoChanges, NoMerge, Merged}
 
     /**
      * Move changes from the specified `writeId` transaction into its corresponding `readId`
@@ -469,12 +532,10 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
      *                   changes
      * @param prepareId  the "read" transaction id that the prepared data will be moved to in
      *                   preparation for a commit
-     * @param seal       (optional) True indicates that, after the merge is complete, this
-     *                   ObjectStore must reject any additional changes to the specified transaction
      *
      * @return a [MergeResult] indicating the result of the `mergePrepare()` operation
      */
-    MergeResult mergePrepare(Int writeId, Int prepareId, Boolean seal = False)
+    MergeResult mergePrepare(Int writeId, Int prepareId)
         {
         TODO
         }

@@ -17,6 +17,7 @@ import oodb.Transaction.TxInfo;
 import storage.ObjectStore;
 
 import Catalog.BuiltIn;
+import ObjectStore.MergeResult;
 
 
 /**
@@ -705,7 +706,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         checkEnabled();
 
         // validate the transaction
-        assert TxRecord rec := byWriteId.get(writeId) as $"Missing TxRecord for txid={writeId}";
+        TxRecord rec = txFor(writeId);
         assert rec.status == InFlight;
 
         Boolean occupied   = currentlyPreparing != NO_TX;
@@ -953,7 +954,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 }
 
             buf.append("}\n]");
-            appendLog(buf);
+            appendLog(buf.toString());
 
             assert commitId == lastCommitted + 1;
             lastCommitted = commitId;
@@ -1003,14 +1004,45 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         checkEnabled();
 
         // validate the transaction
-        assert TxRecord rec := byWriteId.get(writeId) as $"Missing TxRecord for txid={writeId}";
-        assert rec.status == InFlight;
+        TxCat type = txCat(writeId);
+        if (type == ReadOnly)
+            {
+            return;
+            }
 
+        TxRecord rec = txFor(writeId);
+        assert rec.status == InFlight;
         rec.rollback();
         }
 
 
     // ----- transactional ID helpers --------------------------------------------------------------
+
+    /**
+    * Obtain the readId for the specified transaction.
+    *
+    * @param writeId  the transaction id (the "writeId")
+    *
+    * @return the corresponding readId
+    */
+    Int readIdFor(Int txId)
+        {
+        return txFor(txId).readId;
+        }
+
+    /**
+    * Obtain the `Open` (not `Validating`, `Rectifying`, or `Distributing`) writeId for the
+    * specified transaction ID.
+    *
+    * @param txId  the transaction id (in the "writeId" range)
+    *
+    * @return the corresponding writeId
+    */
+    static Int writeIdFor(Int txId)
+        {
+        assert isWriteTx(txId);
+        return -(-txId & ~0b11);
+        }
 
     /**
      * Determine if the specified txId indicates a read ID, versus a write ID.
@@ -1033,26 +1065,26 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      */
     static Boolean isWriteTx(Int txId)
         {
-        return txId < 0;
+        return NO_TX < txId < 0;
         }
 
     /**
      * Categories of transaction IDs.
      */
-    enum TxType {ReadOnly, Open, Validating, Rectifying, Distributing}
+    enum TxCat {ReadOnly, Open, Validating, Rectifying, Distributing}
 
     /**
      * Determine the category of the transaction ID.
      *
      * @param txId  any transaction ID
      *
-     * @return the TxType for the specified transaction ID
+     * @return the TxCat for the specified transaction ID
      */
-    static TxType txType(Int txId)
+    static TxCat txCat(Int txId)
         {
         return txId >= 0
                 ? ReadOnly
-                : TxType.values[1 + (-txId & 0b11)];
+                : TxCat.values[1 + (-txId & 0b11)];
         }
 
     /**
@@ -1085,16 +1117,16 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
     /**
      * Given a transaction `writeId`, generate a transaction id for the specified phase
      */
-    protected static Int generateTxId(Int txId, TxType txType)
+    protected static Int generateTxId(Int txId, TxCat txCat)
         {
         if (isReadTx(txId))
             {
-            assert txType == ReadOnly;
+            assert txCat == ReadOnly;
             return txId;
             }
 
         assert isWriteTx(txId);
-        return -((-txId & ~0b11) | txType.ordinal - 1);
+        return -((-txId & ~0b11) | txCat.ordinal - 1);
         }
 
     /**
@@ -1119,6 +1151,20 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
 
 
     // ----- internal: TxRecord --------------------------------------------------------------------
+
+    /**
+     * Look up the specified TxRecord.
+     *
+     * @param txId  the transaction writeId
+     *
+     * @return the TxRecord for the transaction
+     */
+    TxRecord txFor(Int txId)
+        {
+        return txCat(txId) == ReadOnly
+                ? assert as $"Transaction {txId} is a ReadOnly transaction"
+                : byWriteId[writeIdFor(txId)] ?: assert as $"Missing TxRecord for txid={txId}";
+        }
 
     /**
      * This is the information that the TxManager maintains about each in flight transaction.
@@ -1286,14 +1332,49 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         Client<Schema>? prepareClient = Null;
 
         /**
-         * The "seal" for each modified ObjectStore, keyed by ObjectStore id.
+         * Obtain a Client to handle the specified phase of the prepare process.
+         *
+         * @param txCat  one of Validating, Rectifying, Distributing
+         *
+         * @return the client to use
          */
-        Map<Int, String?> sealById   = Map:[];
+        Client<Schema> ensureClient(TxCat txCat)
+            {
+            assert txCat != Open && txCat != ReadOnly;
+
+            Client<Schema>? client = prepareClient;
+            if (client == Null)
+                {
+                client = allocateClient();
+                prepareClient = client;
+                }
+
+            client.representTransaction(generateTxId(writeId, txCat));
+            return client;
+            }
 
         /**
-         * TODO
+         * Release the previously obtained Client, if any.
          */
-        Set<Int> triggered  = [];
+        void releaseClient()
+            {
+            if (Client<Schema> client ?= prepareClient)
+                {
+                prepareClient = Null;
+                client.stopRepresentingTransaction();
+                recycleClient(client);
+                }
+            }
+
+        /**
+         * The "seal" for each modified ObjectStore, keyed by ObjectStore id.
+         */
+        Map<Int, String?> sealById = Map:[];
+
+        /**
+         * During prepare processing, this is used to hold the store IDs that enlist during a step.
+         */
+        Set<Int> newlyEnlisted = [];
 
         /**
          * The future result for a pending operation on the transaction, if there is a pending
@@ -1307,6 +1388,37 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         function void()? terminated = Null;
 
         /**
+         * Enlist a transactional resource.
+         *
+         * @param store  the resource to enlist
+         */
+        void enlist(Int storeId)
+            {
+            switch (status)
+                {
+                case Validating:
+                case Rectifying:
+                case Distributing:
+                    if (newlyEnlisted.empty)
+                        {
+                        newlyEnlisted = new SparseIntSet();
+                        }
+                    newlyEnlisted.add(storeId);
+                    continue;
+                case InFlight:
+                    if (sealById.empty && sealById.is(immutable Object))
+                        {
+                        sealById = new SkiplistMap();
+                        }
+                    assert sealById.putIfAbsent(storeId, Null);
+                    break;
+
+                default:
+                    assert as $"Attempt to enlist ObjectStore ID {storeId} into a {status} transaction";
+                }
+            }
+
+        /**
          * The set of enlisted stores.
          */
         Set<Int> enlisted.get()
@@ -1315,18 +1427,14 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             }
 
         /**
-         * Enlist a transactional resource.
-         *
-         * @param store  the resource to enlist
+         * @return the ObjectStore ids **in a predictable order** that were enlisted in one of the
+         *         Validating/Rectifying/Distributing phases, and since the last call to this method
          */
-        void enlist(Int storeId)
+        Set<Int> takeNewlyEnlisted()
             {
-            if (sealById.empty && sealById.is(immutable Object))
-                {
-                sealById = new SkiplistMap();
-                }
-
-            sealById.put(storeId, Null);
+            Set<Int> result = newlyEnlisted;
+            newlyEnlisted = [];
+            return result;
             }
 
         /**
@@ -1338,44 +1446,12 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             }
 
         /**
-         * TODO
+         * True if the transaction is known to be read-only.
          */
         @RO Boolean readOnly.get()
             {
             return txInfo.readOnly;
             }
-
-// TODO review the purpose of this
-//        /**
-//         * Mark a transactional resource as being triggered.
-//         *
-//         * @param store  the resource to enlist
-//         */
-//        void trigger(Int storeId)
-//            {
-//            if (triggered.empty && triggered.is(immutable Object))
-//                {
-//                triggered = new SparseIntSet();
-//                }
-//
-//            triggered.add(storeId);
-//            }
-//
-//        /**
-//         * @return the ObjectStore ids **in a predictable order** that need to have triggers
-//         *         evaluated
-//         */
-//        Iterable<Int> takeTriggered()
-//            {
-//            if (triggered.empty)
-//                {
-//                return [];
-//                }
-//
-//            val result = triggered.toArray();
-//            triggered = [];
-//            return result;
-//            }
 
         /**
          * Attempt to prepare the transaction.
@@ -1480,14 +1556,14 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 {
                 case Prepared:
                     checkEnabled();
-                    assert currentlyPreparing == writeId;
+                    assert currentlyPreparing == writeId && !enlisted.empty;
                     status = Validating;
                     break;
 
                 case Committed:
                     // assume that the transaction already short-circuited to a committed state
                     assert enlisted.empty;
-                    return True;
+                    return False;
 
                 case RollingBack:
                 case RolledBack:
@@ -1504,19 +1580,22 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 return True;
                 }
 
-            Int validateId = generateTxId(writeId, Validating);
-            val client     = allocateClient();
-
-            // TODO allocateClient()
-            // TODO fake create transaction with writeId - 1 (so -17 becomes -18)
-            // TODO for each enlisted storage
+            Client<Schema> client = ensureClient(Validating);
+            for (Int storeId : enlisted)
                 {
-                // TODO future call method on Client (that doesn't exist yet) called "run validators" and pass the [] of validators for the specific storage
+                if (validators.contains(storeId) && !client.validateDBObject(storeId))
+                    {
+                    return False;
+                    }
                 }
-            // TODO return future result
-            TODO
 
-            // TODO (somewhere else) is-readonly has to eval to true for -18
+            // sweep any newly enlisted stores (no changes were permitted in this phase)
+            for (Int storeId : takeNewlyEnlisted())
+                {
+                // changes are not permitted to occur during the validate phase
+                assert storeFor(storeId).mergePrepare(writeId, prepareId) == CommittedNoChanges;
+                sealById.remove(storeId);
+                }
 
             status = Validated;
             return True;
@@ -1541,7 +1620,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 case Committed:
                     // assume that the transaction already short-circuited to a committed state
                     assert enlisted.empty;
-                    return True;
+                    return False;
 
                 case RollingBack:
                 case RolledBack:
@@ -1558,11 +1637,32 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 return True;
                 }
 
-            // TODO see all the TODO in validate
-            // TODO seal each object store after it rectifies
-            TODO
+            Client<Schema> client = ensureClient(Rectifying);
+            for (Int storeId : enlisted)
+                {
+                if (rectifiers.contains(storeId) && !client.rectifyDBObject(storeId))
+                    {
+                    return False;
+                    }
+                }
 
-            // TODO (somewhere else) is-readonly has to eval to true for all object store instances other than the one inside the for loop
+            // sweep any newly enlisted stores (changes may have occurred in this phase)
+            for (Int storeId : takeNewlyEnlisted())
+                {
+                ObjectStore store  = storeFor(storeId);
+                MergeResult result = store.mergePrepare(writeId, prepareId);
+                switch (result)
+                    {
+                    case CommittedNoChanges:
+                        sealById.remove(storeId);
+                        break;
+
+                    case NoMerge:
+                    case Merged:
+                        sealById.put(storeId, store.sealPrepare(writeId));
+                        break;
+                    }
+                }
 
             status = Rectified;
             return True;
@@ -1605,12 +1705,45 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 return True;
                 }
 
-            // TODO while loop?
+            // distribution is a potentially-cascading process, so start by assuming that everything
+            // already modified in the transaction needs to be distributed, and then having done so,
+            // assume anything changed by that round of distribution will then need to be
+            // distributed as well; repeat until done
+            Client<Schema> client = ensureClient(Distributing);
+            Set<Int> mayNeedDistribution = enlisted;
+            while (!mayNeedDistribution.empty)
+                {
+                // first, seal everything that may need distribution (so we don't accidentally
+                // overwrite any DBObjects that were already modified, and so we don't cascade
+                // forever)
+                for (Int storeId : mayNeedDistribution)
+                    {
+                    sealById.getOrCompute(storeId, () -> storeFor(storeId).sealPrepare(writeId));
+                    }
 
-            // TODO after weeding out any stores that have been enlisted but have no changes, seal all of the already-enlisted stores
-            // TODO see all the TODO in validate
-            TODO
-            // TODO seal each object store after all of them have finished distributing (second for loop)
+                // now distribute the changes
+                for (Int storeId : mayNeedDistribution)
+                    {
+                    if (distributors.contains(storeId) && !client.distributeDBObject(storeId))
+                        {
+                        return False;
+                        }
+                    }
+
+                // now collect the newly enlisted (and possibly modified) set of stores
+                mayNeedDistribution = takeNewlyEnlisted();
+
+                // sweep any newly enlisted stores (get rid of the ones with no changes)
+                for (Int storeId : mayNeedDistribution)
+                    {
+                    ObjectStore store  = storeFor(storeId);
+                    if (store.mergePrepare(writeId, prepareId) == CommittedNoChanges)
+                        {
+                        sealById.remove(storeId);
+                        mayNeedDistribution.remove(storeId);
+                        }
+                    }
+                }
 
             status = Distributed;
             return True;
@@ -1653,6 +1786,9 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 default:
                     throw new IllegalState($"Unexpected status for transaction {idString}: {status}");
                 }
+
+            // now past all of the prepare stages that need an internal client
+            releaseClient();
 
             for (val entry : sealById.entries)
                 {
@@ -1755,7 +1891,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 }
 
             buf.append("}\n]");
-            appendLog(buf);
+            appendLog(buf.toString());
 
             FutureVar<Tuple<>>? commitAll = Null;
             for (Int storeId : enlisted)
@@ -1831,7 +1967,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                     &result.handle(e ->
                         {
                         log($"Exception occurred while rolling back transaction {idString} in store {storeId}: {e}");
-                        return Tuple:();  // TODO GG this should not be needed, right?
+                        return Tuple:();
                         });
                     }
 
@@ -1899,11 +2035,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             byWriteId.remove(writeId);
             byClientId.remove(clientId);
 
-            if (prepareClient != Null)
-                {
-                recycleClient(prepareClient?);
-                prepareClient == Null;
-                }
+            releaseClient();
 
             if (function void() notify ?= terminated)
                 {
@@ -1938,9 +2070,10 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      */
     Int enlist(Int storeId, Int txId)
         {
-// TODO CP switch on status to make sure inflight=ok enqueued/preparing etc. not ok, rectifying ok only if writeId is the right status, etc.
+        assert isWriteTx(txId);
+        checkEnabled();
 
-        assert isWriteTx(txId), TxRecord tx := byWriteId.get(txId);
+        TxRecord tx = txFor(txId);
 
         Int readId = tx.readId;
         if (readId == NO_TX)
@@ -1962,13 +2095,11 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             tx.readId = readId;
             }
 
-        assert !tx.enlisted.contains(storeId);
         switch (tx.status)
             {
             case InFlight:
-                checkEnabled();
-                break;
-
+            case Validating:
+            case Rectifying:
             case Distributing:
                 break;
 
@@ -1976,7 +2107,9 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 assert as $"Attempt to enlist into a transaction whose status is {tx.status} is forbidden";
             }
 
+        assert !tx.enlisted.contains(storeId); // TODO is this redundant?
         tx.enlist(storeId);
+
         return readId;
         }
 
@@ -2439,11 +2572,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      */
     protected void addLogEntry(String entry)
         {
-        StringBuffer buf = new StringBuffer();
-        buf.append(",\n")
-           .append(entry)
-           .append("\n]");
-        appendLog(buf);
+        appendLog($",\n{entry}\n]");
         }
 
     /**
@@ -2451,7 +2580,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      *
      * @param buf  the buffer containing the text to append to the log
      */
-    protected void appendLog(StringBuffer buf)
+    protected void appendLog(String s)
         {
         validateLog();
 
@@ -2460,7 +2589,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         assert length >= 20;        // log file is never empty!
 
         file.truncate(length-2)
-            .append(buf.toString().utf8());
+            .append(s.utf8());
 
         logUpdated();
         }
@@ -2630,7 +2759,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      *
      * @return an "internal" Client object
      */
-    protected Client<Schema> allocateClient()
+    Client<Schema> allocateClient()
         {
         return clientCache.takeOrCompute(() -> catalog.createClient(system=True));
         }
@@ -2640,7 +2769,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      *
      * @param client  an "internal" Client object previously obtained from [allocateClient]
      */
-    protected void recycleClient(Client<Schema> client)
+    void recycleClient(Client<Schema> client)
         {
         return clientCache.reversed.add(client);
         }

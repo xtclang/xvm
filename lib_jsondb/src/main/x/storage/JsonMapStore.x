@@ -69,7 +69,7 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
     /**
      * Used as a "singleton" empty map.
      */
-    protected immutable Map<Key, Value|Deletion> NoChanges = Map<>:[];
+    protected immutable OrderedMap<Key, Value|Deletion> NoChanges = new SkiplistMap<Key, Value|Deletion>().makeImmutable();
 
     @Override
     protected class Changes(Int writeId, Int readId)
@@ -83,7 +83,7 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
          * @return a map used to view previously collected modifications, but not intended to be
          *         modified by the caller
          */
-        Map<Key, Value|Deletion> peekMods()
+        OrderedMap<Key, Value|Deletion> peekMods()
             {
             return mods ?: NoChanges;
             }
@@ -574,39 +574,68 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
         }
 
     @Override
-    MergeResult mergePrepare(Int writeId, Int prepareId, Boolean seal = False)
+    MergeResult mergePrepare(Int txId, Int prepareId)
         {
-        MergeResult result = NoMerge;
+        MergeResult result;
 
+        Int writeId = writeIdFor(txId);
         if (Changes tx := peekTx(writeId))
             {
-            assert !tx.sealed;
+            OrderedMap<Key, Value|Deletion> oldMods = modsByTx.getOrDefault(prepareId, NoChanges);
+            OrderedMap<Key, Value|Deletion> newMods = tx.peekMods();
 
-            val mods = tx.mods;
-            if (mods != Null)
+            switch (!oldMods.empty, !newMods.empty)
                 {
-                for ((Key key, Value|Deletion value) : mods)
-                    {
-                    if (Value prev := latestValue(key, prepareId-1), &value == &prev)
+                case (False, False):
+                    result = CommittedNoChanges;
+                    break;
+
+                case (True, False):
+                    result = NoMerge;
+                    break;
+
+                case (False, True):
+                    oldMods = new SkiplistMap<Key, Value|Deletion>();
+                    modsByTx.put(prepareId, oldMods);
+                    continue;
+                case (True, True):
+                    assert !tx.sealed;
+
+                    // TODO GG or CP this is supposed to update both modsByTx and sizeByTx for prepareId
+                    for ((Key key, Value|Deletion value) : newMods)
                         {
-                        // this part of the transaction is un-doing itself
-                        assert History valueHistory := history.get(key);
-                        valueHistory.remove(prepareId);
-                        continue;
+                        if (Value prev := latestValue(key, prepareId-1), &value == &prev)
+                            {
+                            // this part of the transaction is un-doing itself
+                            assert History valueHistory := history.get(key);
+                            valueHistory.remove(prepareId);
+                            continue;
+                            }
+
+                        History valueHistory = history.computeIfAbsent(key, () -> new SkiplistMap());
+                        valueHistory.put(prepareId, value);
                         }
 
-                    History valueHistory = history.computeIfAbsent(key, () -> new SkiplistMap());
-                    valueHistory.put(prepareId, value);
-                    }
-
-                // REVIEW it is not possible to easily determine a result of CommittedNoChanges
-                result = Merged;
+                    result = Merged; // TOOD GG or CP determine when this should be CommittedNoChanges
+                    break;
                 }
 
             tx.readId   = prepareId;// slide the readId forward to the point that we just prepared
             tx.prepared = True;     // remember that the changed the readId to the prepareId
             tx.mods     = Null;     // the "changes" no longer differs from the historical record
-            tx.sealed   = seal;
+
+            if (result == CommittedNoChanges)
+                {
+                inFlight.remove(writeId);
+                sizeByTx.remove(prepareId);
+                modsByTx.remove(prepareId);
+                }
+            }
+        else
+            {
+            assert !modsByTx.contains(prepareId) && !sizeByTx.contains(prepareId);
+            // REVIEW should this even be possible? maybe just assert?
+            result = CommittedNoChanges;
             }
 
         return result;

@@ -219,13 +219,16 @@ service JsonValueStore<Value extends immutable Const>
         }
 
     @Override
-    MergeResult mergePrepare(Int writeId, Int prepareId, Boolean seal = False)
+    MergeResult mergePrepare(Int writeId, Int prepareId)
         {
-        MergeResult result = NoMerge;
+        MergeResult result = CommittedNoChanges;
+        String?     record = Null;
 
         if (Changes tx := peekTx(writeId))
             {
             assert !tx.sealed;
+
+            result = NoMerge;
             if (tx.modified)
                 {
                 Value prev = latestValue(prepareId-1);
@@ -246,7 +249,6 @@ service JsonValueStore<Value extends immutable Const>
             tx.readId   = prepareId;// slide the readId forward to the point that we just prepared
             tx.prepared = True;     // remember that the changed the readId to the prepareId
             tx.modified = False;    // the "changes" no longer differs from the historical record
-            tx.sealed   = seal;
             }
 
         return result;

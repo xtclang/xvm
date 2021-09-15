@@ -30,23 +30,25 @@ module AddressBookApp
         @Inject Clock clock;
         @Inject Connection dbc;
 
-        console.println($"actualType=({&dbc.actualType})\n");
-
         Contacts contacts = dbc.contacts;
 
         Contact george = new Contact("George", "Washington");
         Contact john   = new Contact("John", "Adams");
 
-        if (contacts.size > 0)
+        using (val tx = dbc.createTransaction())
             {
-            contacts.remove(george.rolodexName);
-            contacts.remove(john.rolodexName);
-            }
-        contacts.put(george.rolodexName, george);
-        contacts.addContact(john);
+            if (contacts.size > 0)
+                {
+                contacts.remove(george.rolodexName);
+                contacts.remove(john.rolodexName);
+                }
 
-        dbc.title.set($"My Contacts as of {clock.now.time}");
-        dbc.requestCount.adjustBy(2);
+            contacts.put(george.rolodexName, george);
+            contacts.addContact(john);
+
+            dbc.title.set($"My Contacts as of {clock.now.time}");
+            dbc.requestCount.adjustBy(2);
+            }
 
         using (val tx = dbc.createTransaction())
             {
@@ -55,11 +57,14 @@ module AddressBookApp
             tx.requestCount.adjustBy(1);
             }
 
-        console.println(dbc.title.get());
-        for (Contact contact : contacts.values)
+        using (val tx = dbc.createTransaction())
             {
-            console.println(contact);
+            console.println(dbc.title.get());
+            for (Contact contact : contacts.values)
+                {
+                console.println(contact);
+                }
+            console.println($"Count: {dbc.requestCount.get()}");
             }
-        console.println($"Count: {dbc.requestCount.get()}");
         }
     }

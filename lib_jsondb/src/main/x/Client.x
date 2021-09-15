@@ -101,7 +101,7 @@ service Client<Schema extends RootSchema>
      * The transaction manager for this `Catalog` object. The transaction manager provides a
      * sequential ordered (non-concurrent) application of potentially concurrent transactions.
      */
-    public/private TxManager txManager;
+    public/private TxManager<Schema> txManager;
 
     /**
      * A cached reference to the JSON schema.
@@ -117,6 +117,11 @@ service Client<Schema extends RootSchema>
      * The id assigned to this Client service.
      */
     public/private Int id;
+
+    /**
+     * A read-only client that provides the "before transaction" view.
+     */
+    protected/private Client<Schema>? preTxView;
 
     /**
      * The DBUser represented by this Client service.
@@ -157,6 +162,16 @@ service Client<Schema extends RootSchema>
 
 
     // ----- support -------------------------------------------------------------------------------
+
+    /**
+     * Log a message to the system log.
+     *
+     * @param msg  the message to log
+     */
+    protected void log(String msg)
+        {
+        catalog.log^(msg);
+        }
 
     /**
      * Verify that the client connection is open and can be used for reading data.
@@ -231,14 +246,14 @@ service Client<Schema extends RootSchema>
      * For the transaction manager's internal clients that emulate various stages in a transaction,
      * this sets the current transaction id for the client.
      *
-     * @param readId  the transaction id to use as a read level
+     * @param txId  the transaction id to use as a read level
      */
     void representTransaction(Int txId)
         {
         assert internal;
 
         // update the readOnly property of the Client based on the requested transaction ID
-        readOnly = switch(TxManager.txType(txId))
+        readOnly = switch(TxManager.txCat(txId))
             {
             case ReadOnly    : True;
             case Open        : False;
@@ -251,10 +266,106 @@ service Client<Schema extends RootSchema>
         static TxInfo rwInfo = new TxInfo(name="internal", readOnly=False);
         static TxInfo roInfo = new TxInfo(name="internal", readOnly=True );
 
-        // create a transaction to represent the requested transaction ID
-        DBObjectInfo dboInfo = infoFor(0); // the root schema
-        TxInfo       txInfo  = readOnly ? roInfo : rwInfo;
-        tx = new Transaction(dboInfo, txInfo, txId).as(Transaction + Schema);
+        TxInfo txInfo = readOnly ? roInfo : rwInfo;
+        if (tx == Null)
+            {
+            // create a transaction to represent the requested transaction ID
+            DBObjectInfo dboInfo = infoFor(0); // the root schema
+            tx = new Transaction(dboInfo, txInfo, txId).as(Transaction + Schema);
+            }
+        else
+            {
+            tx?.represent_(txInfo, txId);
+            }
+        }
+
+    /**
+     * @return the internal Client that represents the version of the database before this
+     *         transaction made changes
+     */
+    Client<Schema> ensurePreTxClient()
+        {
+        Client<Schema> client;
+        if (client ?= preTxView)
+            {
+            return client;
+            }
+
+        assert internal;
+
+        client = txManager.allocateClient();
+        client.representTransaction(txManager.readIdFor(tx?.id_ : assert));
+        preTxView = client;
+        return client;
+        }
+
+    /**
+     * Perform all configured validation checks on the specified DBObject.
+     *
+     * @param dboId  the id of the DBObject to process the validations for
+     *
+     * @return True if the validation succeeded
+     */
+    Boolean validateDBObject(Int dboId)
+        {
+        assert internal;
+
+        ObjectStore store = storeFor(dboId);
+        store.triggerBegin(tx?.id_ : assert);
+        try
+            {
+            return implFor(dboId).validate_();
+            }
+        finally
+            {
+            store.triggerEnd(tx?.id_ : assert);
+            }
+        }
+
+    /**
+     * Perform all configured data rectification steps on the specified DBObject.
+     *
+     * @param dboId  the id of the DBObject to process the rectifications for
+     *
+     * @return True if the rectification succeeded
+     */
+    Boolean rectifyDBObject(Int dboId)
+        {
+        assert internal;
+
+        ObjectStore store = storeFor(dboId);
+        store.triggerBegin(tx?.id_ : assert);
+        try
+            {
+            return implFor(dboId).rectify_();
+            }
+        finally
+            {
+            store.triggerEnd(tx?.id_ : assert);
+            }
+        }
+
+    /**
+     * Perform all configured data distributions steps on the specified DBObject.
+     *
+     * @param dboId  the id of the DBObject to process the data distribution for
+     *
+     * @return True if the data distribution succeeded
+     */
+    Boolean distributeDBObject(Int dboId)
+        {
+        assert internal;
+
+        ObjectStore store = storeFor(dboId);
+        store.triggerBegin(tx?.id_ : assert);
+        try
+            {
+            return implFor(dboId).distribute_();
+            }
+        finally
+            {
+            store.triggerEnd(tx?.id_ : assert);
+            }
         }
 
     /**
@@ -262,14 +373,20 @@ service Client<Schema extends RootSchema>
      * this terminates the representation of a previously-specified transaction, allowing the client
      * to be safely returned to a pool for later re-use.
      */
-    void stopRepresentingTransaction(Int txId)
+    void stopRepresentingTransaction()
         {
         assert internal;
         if (Transaction tx ?= this.tx)
             {
-            assert tx.id_ == txId;
             this.tx = Null;
             tx.id_  = NO_TX;
+            }
+
+        if (val client ?= preTxView)
+            {
+            client.stopRepresentingTransaction();
+            txManager.recycleClient(client);
+            preTxView = Null;
             }
         }
 
@@ -593,6 +710,110 @@ service Client<Schema extends RootSchema>
                     }
                 };
             }
+
+        /**
+         * Perform all configured validation checks on this DBObject.
+         *
+         * @return True if the validation succeeded
+         */
+        Boolean validate_()
+            {
+            TxChange change = new TxChange_(); // TODO CP cache?
+
+            for (val validator : info_.validators)
+                {
+                try
+                    {
+                    if (!validator.validate(change))
+                        {
+                        return False;
+                        }
+                    }
+                catch (Exception e)
+                    {
+                    this.Client.log($"An exception occurred while evaluating Validator \"{&validator.actualClass.displayName}\": {e}");
+                    return False;
+                    }
+                }
+
+            return True;
+            }
+
+        /**
+         * Perform all configured rectification on this DBObject.
+         *
+         * @return True if the rectifiers succeeded
+         */
+        Boolean rectify_()
+            {
+            TxChange change = new TxChange_();
+
+            for (val rectifier : info_.rectifiers)
+                {
+                try
+                    {
+                    if (!rectifier.rectify(change))
+                        {
+                        return False;
+                        }
+                    }
+                catch (Exception e)
+                    {
+                    this.Client.log($"An exception occurred while processing Rectifier \"{&rectifier.actualClass.displayName}\": {e}");
+                    return False;
+                    }
+                }
+
+            return True;
+            }
+
+        /**
+         * Perform all configured distribution operations for this DBObject.
+         *
+         * @return True if the distribution succeeded
+         */
+        Boolean distribute_()
+            {
+            TxChange change = new TxChange_();
+
+            for (val distributor : info_.distributors)
+                {
+                try
+                    {
+                    if (!distributor.process(change))
+                        {
+                        return False;
+                        }
+                    }
+                catch (Exception e)
+                    {
+                    this.Client.log($"An exception occurred while processing Distributor \"{&distributor.actualClass.displayName}\": {e}");
+                    return False;
+                    }
+                }
+
+            return True;
+            }
+
+        /**
+         * An implementation of the "before tx" and "after tx" views of the transactional changes
+         * to the enclosing DBObject.
+         */
+        class TxChange_
+                implements TxChange
+            {
+            @Override
+            @Lazy DBObject pre.calc()
+                {
+                return ensurePreTxClient().implFor(info_.id);
+                }
+
+            @Override
+            DBObject post.get()
+                {
+                return outer;
+                }
+            }
         }
 
 
@@ -804,6 +1025,18 @@ service Client<Schema extends RootSchema>
             }
 
         /**
+         * Alter the prepare-stage transaction to represent a new stage of the prepare process.
+         *
+         * @param txInfo
+         * @param id
+         */
+        void represent_(TxInfo txInfo, Int id)
+            {
+            this.txInfo = txInfo;
+            this.id_    = id;
+            }
+
+        /**
          * The transaction ID assigned to this transaction by the TxManager.
          *
          * Internally, this ID is known as the transaction's "write id", but here on the client,
@@ -846,7 +1079,7 @@ service Client<Schema extends RootSchema>
 
             // a transaction with a NO_TX id or a ReadId hasn't done anything to commit
             Boolean success = True;
-            if (TxManager.txType(id_) == Open)
+            if (TxManager.txCat(id_) == Open)
                 {
                 // it's important to prevent re-entrancy from the outside while this logical thread
                 // of execution is wending its way through the transaction manager and the various
@@ -869,19 +1102,12 @@ service Client<Schema extends RootSchema>
         void rollback()
             {
             Transaction? that = outer.tx;
-            if (that == Null)
-                {
-                throw new IllegalState(`|Attempt to roll back a previously closed transaction;\
-                                        | no current transaction.
-                                      );
-                }
-
-            if (&this != &that)
-                {
-                throw new IllegalState(`|Attempt to roll back a previously closed transaction;\
-                                        | a different transaction is in progress.
-                                      );
-                }
+            assert that != Null
+                as "Attempt to roll back a previously closed transaction; no current transaction.";
+            assert &this == &that
+                as" Attempt to roll back a previously closed transaction; a different transaction is in progress.";
+            assert !internal
+                as "Illegal rollback request during the prepare phase.";
 
             // (see implementation notes from commit() above)
 

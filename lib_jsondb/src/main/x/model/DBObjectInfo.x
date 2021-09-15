@@ -36,6 +36,15 @@ const DBObjectInfo(
     enum LifeCycle {Current, Deprecated, Removed}
 
     /**
+     * A useful "name" for the DBObject.
+     */
+    String idString.get()
+        {
+        String pathStr = path.toString();
+        return pathStr.size > 1 ? pathStr.substring(1) : pathStr;
+        }
+
+    /**
      * Verify that the DBObjectInfo is valid.
      *
      * @return True if the check passes
