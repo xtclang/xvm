@@ -9,8 +9,8 @@ import oodb.DBUser;
 /**
  * Host for imdb-based DB module.
  */
-class ImdbHost
-        extends DbHost
+class ImdbHost(String dbModuleName)
+        extends DbHost(dbModuleName)
     {
     // ---- run-time support -----------------------------------------------------------------------
 

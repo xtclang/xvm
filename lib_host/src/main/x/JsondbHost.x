@@ -9,8 +9,8 @@ import oodb.DBUser;
 /**
  * Host for jsondb-based DB module.
  */
-class JsondbHost
-        extends DbHost
+class JsondbHost(String dbModuleName)
+        extends DbHost(dbModuleName)
     {
     // ---- run-time support -----------------------------------------------------------------------
 
@@ -35,7 +35,7 @@ class JsondbHost
             }
 
         // +++ TODO temporary for testing
-        dataDir = curDir.dirFor("build/data").ensure();
+        dataDir = curDir.dirFor($"build/{dbModuleName}_data").ensure();
 
         Catalog catalog = meta.createCatalog(dataDir, False);
         try

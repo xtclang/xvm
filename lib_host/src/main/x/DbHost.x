@@ -22,9 +22,14 @@ import oodb.DBObject.DBCategory;
  * An abstract host for a DB module.
  */
 @Abstract
-class DbHost
+class DbHost(String dbModuleName)
     {
     // ---- run-time support -----------------------------------------------------------------------
+
+    /**
+     * The hosted module name.
+     */
+    public/private String dbModuleName;
 
     /**
      * The Container that hosts the DB module.
@@ -48,6 +53,9 @@ class DbHost
 
     // ---- load-time support ----------------------------------------------------------------------
 
+    /**
+     * The host name (json, imdb, etc).
+     */
     @Abstract
     @RO String hostName;
 
@@ -75,16 +83,15 @@ class DbHost
     /**
      * Generate all the necessary classes to use a DB modules.
      *
-     * @param repository    the repository to load necessary modules from
-     * @param dbModuleName  the name of the hosted DB module
-     * @param buildDir      the directory to place all generated artifacts to
-     * @param errors        the error log
+     * @param repository  the repository to load necessary modules from
+     * @param buildDir    the directory to place all generated artifacts to
+     * @param errors      the error log
      *
      * @return True iff the module template was successfully created
      * @return the generated module (optional)
      */
     conditional ModuleTemplate generateDBModule(
-            ModuleRepository repository, String dbModuleName, Directory buildDir, Log errors)
+            ModuleRepository repository, Directory buildDir, Log errors)
         {
         ModuleTemplate dbModule   = repository.getResolvedModule(dbModuleName);
         String         hostedName = $"{dbModuleName}_{hostName}";

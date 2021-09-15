@@ -121,8 +121,8 @@ module host.xtclang.org
             DbHost         dbHost;
             ModuleTemplate dbModuleTemplate;
 
-            if (dbHost           := createDBHost(errors),
-                dbModuleTemplate := dbHost.generateDBModule(repository, dbModuleName, buildDir, errors)) {}
+            if (dbHost           := createDBHost(dbModuleName, errors),
+                dbModuleTemplate := dbHost.generateDBModule(repository, buildDir, errors)) {}
             else
                 {
                 console.println($"Failed to create a host for : {dbModuleName}");
@@ -222,17 +222,17 @@ module host.xtclang.org
     /**
      * Create a DbHost.
      */
-    conditional DbHost createDBHost(Log errors)
+    conditional DbHost createDBHost(String dbModuleName, Log errors)
         {
         @Inject Map<String, String> properties;
 
         switch (String impl = properties.getOrDefault("db.impl", "imdb"))
             {
             case "imdb":
-                return True, new ImdbHost();
+                return True, new ImdbHost(dbModuleName);
 
             case "json":
-                return True, new JsondbHost();
+                return True, new JsondbHost(dbModuleName);
 
             default:
                 errors.add($"Error: Unknown db implementation: {impl}");
