@@ -15,12 +15,12 @@ service JsonCounterStore(Catalog catalog, DBObjectInfo info)
     protected class Changes(Int writeId, Int readId)
         {
         /**
-         * Tracks whether the transaction read the `Int` value.
+         * Tracks whether the transaction had to read the value.
          */
         Boolean didPeek;
 
         /**
-         * Tracks whether the transaction modified the value.
+         * Tracks whether the transaction adjusted the value (with or without reading it).
          */
         Boolean didAdjust;
 
@@ -76,8 +76,9 @@ service JsonCounterStore(Catalog catalog, DBObjectInfo info)
     @Override
     PrepareResult prepare(Int writeId, Int prepareId)
         {
+        // optimize for blind updates
         assert Changes tx := checkTx(writeId);
-        if ((tx.modified || tx.didAdjust) && !tx.didPeek)
+        if (!tx.didPeek && (tx.modified || tx.didAdjust))
             {
             assert Int latestId := history.last();
             assert Int prev     := history.get(latestId);
