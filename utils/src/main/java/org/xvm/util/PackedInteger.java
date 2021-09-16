@@ -1126,6 +1126,7 @@ public class PackedInteger
      * The PackedInteger for the value <tt>-1</tt>.
      */
     public static final PackedInteger NEG_ONE    = valueOf(-1L);
+
     /**
      * Smallest 1-byte (8-bit) signed integer value.
      */
@@ -1198,4 +1199,78 @@ public class PackedInteger
      * Largest 32-byte (256-bit) unsigned integer value.
      */
     public static final PackedInteger UINT32_MAX = new PackedInteger(new BigInteger("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", 16));
+
+    /**
+     * Decimal "Kilo".
+     */
+    public static final PackedInteger KB = valueOf(1000);
+    /**
+     * Binary "Kilo".
+     */
+    public static final PackedInteger KI = valueOf(1024);
+    /**
+     * Decimal "Kilo".
+     */
+    public static final PackedInteger MB = valueOf(1000 * 1000);
+    /**
+     * Binary "Kilo".
+     */
+    public static final PackedInteger MI = valueOf(1024 * 1024);
+    /**
+     * Decimal "Kilo".
+     */
+    public static final PackedInteger GB = valueOf(1000 * 1000 * 1000);
+    /**
+     * Binary "Kilo".
+     */
+    public static final PackedInteger GI = valueOf(1024 * 1024 * 1024);
+    /**
+     * Decimal "Kilo".
+     */
+    public static final PackedInteger TB = valueOf(1000L * 1000 * 1000 * 1000);
+    /**
+     * Binary "Kilo".
+     */
+    public static final PackedInteger TI = valueOf(1024L * 1024 * 1024 * 1024);
+    /**
+     * Decimal "Kilo".
+     */
+    public static final PackedInteger PB = valueOf(1000L * 1000 * 1000 * 1000 * 1000);
+    /**
+     * Binary "Kilo".
+     */
+    public static final PackedInteger PI = valueOf(1024L * 1024 * 1024 * 1024 * 1024);
+    /**
+     * Decimal "Kilo".
+     */
+    public static final PackedInteger EB = valueOf(1000L * 1000 * 1000 * 1000 * 1000 * 1000);
+    /**
+     * Binary "Kilo".
+     */
+    public static final PackedInteger EI = valueOf(1024L * 1024 * 1024 * 1024 * 1024 * 1024);
+    /**
+     * Decimal "Kilo".
+     */
+    public static final PackedInteger ZB = EB.mul(KB);
+    /**
+     * Binary "Kilo".
+     */
+    public static final PackedInteger ZI = EI.mul(KI);
+    /**
+     * Decimal "Kilo".
+     */
+    public static final PackedInteger YB = ZB.mul(KB);
+    /**
+     * Binary "Kilo".
+     */
+    public static final PackedInteger YI = ZI.mul(KI);
+
+    /**
+     * The decimal (1000x) factors.
+     */
+    public static final PackedInteger[] xB_FACTORS = {KB, MB, GB, TB, PB, EB, ZB, YB, };
+    /**
+     * The binary (1024x) factors.
+     */
+    public static final PackedInteger[] xI_FACTORS = {KI, MI, GI, TI, PI, EI, ZI, YI, };
     }

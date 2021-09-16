@@ -1556,6 +1556,10 @@ public class Lexer
     /**
      * The next character must begin an integer literal. Parse it and return it as a PackedInteger.
      *
+     * @param otherResults  either null, or an array of up to two "int" elemnents, to allow for
+     *                      multiple "out" values from this method, the first of which is the radix
+     *                      and the second is the sign (<tt>-1</tt> or <tt>+1</tt>)
+     *
      * @return a PackedInteger
      */
     protected PackedInteger eatIntegerLiteral(int[] otherResults)
@@ -1613,7 +1617,98 @@ public class Lexer
                 }
             }
 
-        return eatDigits(fNeg, radix, null);
+        PackedInteger pi = eatDigits(fNeg, radix, null);
+
+        PossibleSuffix: if (radix == 10 && source.hasNext())
+            {
+            // allow KI/KB, MI/MB, GI/GB TI/TB, PI/PB, EI/EB, ZI/ZB, YI/YB
+            int iMul;
+            switch (nextChar())
+                {
+                case 'K': case 'k':
+                    iMul = 0;
+                    break;
+
+                case 'M': case 'm':
+                    iMul = 1;
+                    break;
+
+                case 'G': case 'g':
+                    iMul = 2;
+                    break;
+
+                case 'T': case 't':
+                    iMul = 3;
+                    break;
+
+                case 'P': case 'p':
+                    iMul = 4;
+                    break;
+
+                case 'E': case 'e':
+                    iMul = 5;
+                    break;
+
+                case 'Z': case 'z':
+                    iMul = 6;
+                    break;
+
+                case 'Y': case 'y':
+                    iMul = 7;
+                    break;
+
+                default:
+                    source.rewind();
+                    break PossibleSuffix;
+                }
+
+            if (source.hasNext())
+                {
+                PackedInteger[] factors;
+                switch (nextChar())
+                    {
+                    case 'B': case 'b':
+                        factors = PackedInteger.xB_FACTORS;
+                        break;
+
+                    case 'I': case 'i':
+                        if (source.hasNext())
+                            {
+                            char optionalB = source.next();
+                            if (!(optionalB == 'B' || optionalB == 'b'))
+                                {
+                                source.rewind();
+                                }
+                            }
+                        factors = PackedInteger.xI_FACTORS;
+                        break;
+
+                    case '+': case '-':
+                    case '0': case '1': case '2': case '3': case '4':
+                    case '5': case '6': case '7': case '8': case '9':
+                        if (iMul == 4 || iMul == 5)
+                            {
+                            // the "P" or the "E" is for an exponent
+                            source.rewind();
+                            source.rewind();
+                            break PossibleSuffix;
+                            }
+                    default:
+                        source.rewind();
+                        factors = PackedInteger.xB_FACTORS;
+                        break;
+                    }
+
+                pi = pi.mul(factors[iMul]);
+                }
+            else
+                {
+                source.rewind();
+                break PossibleSuffix;
+                }
+            }
+
+        return pi;
         }
 
     protected boolean isNextCharDigit(int radix)
