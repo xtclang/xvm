@@ -135,6 +135,36 @@ public abstract class XvmStructure
         }
 
     /**
+     * Return the name of the source file that this structure origines from.
+     *
+     * @return the file name
+     */
+    public String getSourceFileName()
+        {
+        XvmStructure child = this;
+        while (child != null)
+            {
+            XvmStructure parent = child.getContaining();
+            if (parent instanceof Component)
+                {
+                Component componentParent = (Component) parent;
+                Component.Format formatParent = componentParent.getFormat();
+                if (formatParent == Component.Format.MODULE)
+                    {
+                    return componentParent.getSimpleName() + ".x";
+                    }
+                else if (formatParent == Component.Format.PACKAGE && child instanceof Component)
+                    {
+                    return ((Component) child).getSimpleName() + ".x";
+                    }
+                }
+            child = parent;
+            }
+
+        return "<unknown>";
+        }
+
+    /**
      * Get a reference to the ConstantPool that is shared by all of the XvmStructures within the
      * same FileStructure.
      *
