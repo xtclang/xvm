@@ -23,14 +23,14 @@ service JsonNtxCounterStore(Catalog catalog, DBObjectInfo info)
     @Override
     Int load(Int txId)
         {
-        assert ready();
+        checkRead();
         return current;
         }
 
     @Override
     void store(Int txId, Int value)
         {
-        assert ready();
+        checkRead();
         current = value;
         dataFile.contents = value.toString().utf8();
         }

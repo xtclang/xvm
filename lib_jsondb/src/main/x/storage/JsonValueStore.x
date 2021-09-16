@@ -157,7 +157,7 @@ service JsonValueStore<Value extends immutable Const>
     @Override
     void store(Int txId, Value value)
         {
-        assert Changes tx := checkTx(txId, writing=True), !tx.sealed;
+        assert Changes tx := checkTx(txId, writing=True);
         tx.value    = value;
         tx.modified = True;
         }
