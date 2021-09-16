@@ -1,6 +1,7 @@
 package org.xvm.runtime;
 
 
+import java.io.File;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -1835,25 +1836,29 @@ public class Frame
             else
                 {
                 buildShortName(function.getIdentityConstant(), sb, false);
-                sb.append(':');
-                }
+                sb.append('(')
+                    .append(function.getSourceFileName())
+                    .append(':');
 
-            if (function != null && iPC >= 0)
-                {
-                int nLine = 0;
-                if (function != null)
+                if (iPC >= 0)
                     {
-                    nLine = function.calculateLineNumber(iPC);
-                    }
+                    int nLine = 0;
+                    if (function != null)
+                        {
+                        nLine = function.calculateLineNumber(iPC);
+                        }
 
-                if (nLine > 0)
-                    {
-                    sb.append(nLine);
-                    }
-                else
-                    {
-                    sb.append("iPC=")
-                      .append(iPC);
+                    if (nLine > 0)
+                        {
+                        sb.append(nLine);
+                        }
+                    else
+                        {
+                        sb.append("iPC=")
+                            .append(iPC);
+                        }
+
+                    sb.append(')');
                     }
                 }
 
@@ -1895,20 +1900,12 @@ public class Frame
                     return true;
 
                 case Property:
-                    if (buildShortName(id.getParentConstant(), sb, false))
-                        {
-                        sb.append('.');
-                        }
-                    sb.append(id.getName());
-                    return true;
-
                 case Method:
                     if (buildShortName(id.getParentConstant(), sb, false))
                         {
                         sb.append('.');
                         }
-                    sb.append(id.getName())
-                      .append("()");
+                    sb.append(id.getName());
                     return true;
 
                 default:
