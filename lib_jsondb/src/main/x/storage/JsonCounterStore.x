@@ -3,7 +3,8 @@ import model.DBObjectInfo;
 import json.mapping.IntNumberMapping;
 
 /**
- * Provides the low-level I/O for a non-transactional (i.e. extra-transactional) counter.
+ * Provides the low-level I/O for a transactional counter, with optimizations for blind adjustments
+ * in concurrent transactions.
  */
 service JsonCounterStore(Catalog catalog, DBObjectInfo info)
         extends JsonValueStore<Int>(catalog, info, JSON_MAPPING, 0)
