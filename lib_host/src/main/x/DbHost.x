@@ -241,9 +241,13 @@ class DbHost(String dbModuleName)
                     break;
 
                 case DBLog:
+                    assert TypeTemplate elementType := typeTemplate.resolveFormalType("Element");
+
+                    String elementTypeName = displayName(elementType, appName);
+
                     propertyStoreType  = "{hostName}_.storage.LogStore";
-                    propertyBaseType   = "DBLogImpl";
-                    propertyTypeParams = "";
+                    propertyBaseType   = $"DBLogImpl<{elementTypeName}>";
+                    propertyTypeParams = $"\"Element\"={elementTypeName}";
 
                     if (AnnotationTemplate annotation := findAnnotation(property, "oodb.NoTx"))
                         {

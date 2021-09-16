@@ -32,6 +32,26 @@ module oodb.xtclang.org
         }
 
     /**
+     * Used for specifying the expiry policy for a DBLog.
+     *
+     * @param expiry  the duration of time to hold the log information for
+     */
+    mixin AutoExpire(Duration expiry)
+            into Property<DBLog>
+        {
+        }
+
+    /**
+     * Used for specifying the truncation policy for a DBLog.
+     *
+     * @param sizeLimit  the size limit in bytes
+     */
+    mixin AutoTruncate(Int sizeLimit)
+            into Property<DBLog>
+        {
+        }
+
+    /**
      * Check to see if any of the database object name rules is broken by the specified name, and
      * if so, provide an explanation of the broken rule.
      *

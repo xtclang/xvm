@@ -25,6 +25,8 @@ import oodb.model.DBUser as DBUserImpl;
 import storage.JsonCounterStore;
 import storage.JsonMapStore;
 import storage.JsonNtxCounterStore;
+import storage.JsonNtxLogStore;
+import storage.JsonLogStore;
 import storage.JsonValueStore;
 import storage.ObjectStore;
 import storage.SchemaStore;
@@ -468,14 +470,14 @@ service Catalog<Schema extends RootSchema>
                 case DBQueue:
                     TODO
 
-                case DBLog:
-                    TODO
-
                 case DBCounter:
                     return createCounterStore(info);
 
                 case DBValue:
                     return createValueStore(info);
+
+                case DBLog:
+                    return createLogStore(info);
 
                 case DBFunction:
                     TODO
@@ -510,6 +512,20 @@ service Catalog<Schema extends RootSchema>
         return new JsonValueStore<valueType.DataType>(this, info,
                 jsonSchema.ensureMapping(valueType).as(Mapping<valueType.DataType>),
                 info.initial.as(valueType.DataType));
+        }
+
+    private ObjectStore createLogStore(DBObjectInfo info)
+        {
+        assert Type elementType := info.typeParams.get("Element"),
+                    elementType.is(Type<immutable Const>);
+
+        // TODO GG: cannot use this common part in the constructors below
+        Mapping<elementType.DataType> elementMapping =
+                jsonSchema.ensureMapping(elementType).as(Mapping<elementType.DataType>);
+
+        return info.transactional
+                ? new JsonLogStore<elementType.DataType>(this, info, jsonSchema.ensureMapping(elementType).as(Mapping<elementType.DataType>))
+                : new JsonNtxLogStore<elementType.DataType>(this, info, jsonSchema.ensureMapping(elementType).as(Mapping<elementType.DataType>));
         }
 
 

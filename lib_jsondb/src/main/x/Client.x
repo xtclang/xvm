@@ -26,9 +26,10 @@ import oodb.Transaction.TxInfo;
 
 import model.DBObjectInfo;
 
+import storage.CounterStore;
+import storage.LogStore;
 import storage.MapStore;
 import storage.ObjectStore;
-import storage.CounterStore;
 import storage.ValueStore;
 
 import Catalog.BuiltIn;
@@ -479,7 +480,7 @@ service Client<Schema extends RootSchema>
             case DBMap:      createDBMapImpl(info, storeFor(id).as(MapStore));
             case DBList:     TODO
             case DBQueue:    TODO
-            case DBLog:      TODO
+            case DBLog:      createDBLogImpl  (info, storeFor(id).as(LogStore));
             case DBCounter:  new DBCounterImpl(info, storeFor(id).as(CounterStore));
             case DBValue:    createDBValueImpl(info, storeFor(id).as(ValueStore));
             case DBFunction: TODO
@@ -494,6 +495,14 @@ service Client<Schema extends RootSchema>
                     valType.is(Type<immutable Const>);
 
         return new DBMapImpl<keyType.DataType, valType.DataType>(info, store);
+        }
+
+    private DBLogImpl createDBLogImpl(DBObjectInfo info, LogStore store)
+        {
+        assert Type elementType := info.typeParams.get("Element"),
+                    elementType.is(Type<immutable Const>);
+
+        return new DBLogImpl<elementType.DataType>(info, store);
         }
 
     private DBValueImpl createDBValueImpl(DBObjectInfo info, ValueStore store)
@@ -1149,7 +1158,7 @@ service Client<Schema extends RootSchema>
     // ----- DBValue ---------------------------------------------------------------------------
 
     /**
-     * The DBValue DBObject implementation.
+     * The DBValue implementation.
      */
     class DBValueImpl<Value extends immutable Const>(DBObjectInfo info_, ValueStore<Value> store_)
             extends DBObjectImpl(info_)
@@ -1253,7 +1262,7 @@ service Client<Schema extends RootSchema>
     // ----- DBMap ---------------------------------------------------------------------------------
 
     /**
-     * The DBMap DBObject implementation.
+     * The DBMap implementation.
      */
     class DBMapImpl<Key extends immutable Const, Value extends immutable Const>
             (DBObjectInfo info_, MapStore<Key, Value> store_)
@@ -1470,6 +1479,35 @@ service Client<Schema extends RootSchema>
                 outer.remove(key);
                 return this;
                 }
+            }
+        }
+
+
+    // ----- DBLog ---------------------------------------------------------------------------
+
+    /**
+     * The DBLog implementation.
+     */
+    class DBLogImpl<Value extends immutable Const>(DBObjectInfo info_, LogStore<Value> store_)
+            extends DBObjectImpl(info_)
+            implements DBLog<Value>
+        {
+        protected LogStore<Value> store_;
+
+        @Override
+        Boolean transactional.get()
+            {
+            return info_.transactional;
+            }
+
+        @Override
+        DBLogImpl add(Value value)
+            {
+            using (val tx = ensureTransaction())
+                {
+                store_.append(tx.id, value);
+                }
+            return this;
             }
         }
     }
