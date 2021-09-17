@@ -55,6 +55,31 @@ import org.xvm.util.Severity;
  * <li><tt>COMP_ORD:   "<=><tt>"</tt> - </li>
  * </ul>
  *
+ * There are special cases when the left side of a Comparison is itself a similar Comparison:
+ *
+ * <pre><code>
+ *     if (a == b == c) {...}
+ *     if (a != b != c) {...}
+ *     if (a < b <= c) {...}
+ *     if (a > b >= c) {...}
+ * </code></pre>
+ *
+ * <ul><li>The first compares a to b, and if equal, then compares b to c, and if equals, the result
+ *         is True; otherwise the result is False.
+ * </li><li>The second compares a to b, and if not equal, then compares a to c, and if not equal,
+ *          then compares b to c, and if not equal, the result it True; otherwise the result is
+ *          False.
+ * </li><li>The third compares a to b, and if a is less than b, then it compares b to c, and if b is
+ *          less than or equal to c, then the result is True; otherwise the result is False.
+ * </li><li>The last compares a to b, and if a is greater than b, then it compares b to c, and if b
+ *          is greater than or equal to c, then the result is True; otherwise the result is False.
+ * </li></ul>
+ *
+ * In all examples, the expressions a, b, and c will not be evaluated more than once.
+ *
+ * The parser will not allow "==" and "!=" to be mixed. The parser will allow "<" and "<=" to be
+ * mixed, and ">" and ">=" to be mixed, but will not allow "<"/"<=" and ">"/">=" to be mixed.
+ *
  * @see TypeConstant#supportsEquals
  * @see TypeConstant#supportsCompare
  * @see TypeConstant#callEquals
