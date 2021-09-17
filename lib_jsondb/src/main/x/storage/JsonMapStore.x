@@ -515,13 +515,13 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                     case (False, True):
                         valueHistory.put(prepareId, value);
                         changed = True;
-                        ++size;
+                        --size;
                         break;
 
                     case (True, False):
                         valueHistory.put(prepareId, value);
                         changed = True;
-                        --size;
+                        ++size;
                         break;
 
                     case (True, True):
@@ -955,6 +955,7 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
         Map<Key, Int>    closestTx  = new HashMap();
         Map<String, Int> dupeCounts = new HashMap(); // number of duplicate entries per file
         Int              totalBytes = 0;
+        Int              totalFiles = 0;
 
         for (File file : dataDir.files())
             {
@@ -965,6 +966,7 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
             Map<Key, Range<Int>> valueLoc   = new HashMap();
             Map<Key, Range<Int>> entryLoc   = new HashMap();
 
+            totalFiles++;
             totalBytes += bytes.size;
 
             using (val arrayParser = fileParser.expectArray())
@@ -1061,21 +1063,29 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                 Byte[] bytesOld = file.contents;
                 String jsonStr  = bytesOld.unpackString();
 
-                assert FileLayout  fileLayout := storageLayout.get(desired);
-                assert EntryLayout layout     := fileLayout.get(fileName);
+                assert FileLayout fileLayout := storageLayout.get(desired);
+                if (EntryLayout layout := fileLayout.get(fileName))
+                    {
+                    // there may be extra stuff in some files that we should get rid of now
+                    (jsonStr, layout) = rebuildJson(desired, jsonStr, layout);
 
-                // there's extra stuff in some files that we should get rid of now
-                (jsonStr, layout) = rebuildJson(desired, jsonStr, layout);
+                    Byte[] bytesNew = jsonStr.utf8();
+                    file.contents = bytesNew;
 
-                Byte[] bytesNew = jsonStr.utf8();
-                file.contents = bytesNew;
-
-                fileLayout.put(fileName, layout);
-                this.bytesUsed += bytesNew.size - bytesOld.size;
+                    fileLayout.put(fileName, layout);
+                    this.bytesUsed += bytesNew.size - bytesOld.size;
+                    }
+                else
+                    {
+                    // the DBMap has been removed
+                    file.delete();
+                    totalFiles--;
+                    this.bytesUsed -= bytesOld.size;
+                    }
                 }
             }
 
-        filesUsed  = storageLayout.size;
+        filesUsed  = totalFiles;
         lastCommit = desired;
         }
 

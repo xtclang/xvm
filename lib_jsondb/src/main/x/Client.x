@@ -1169,7 +1169,7 @@ service Client<Schema extends RootSchema>
         @Override
         Value get()
             {
-            using (val tx = ensureTransaction())
+            using (val tx = ensureTransaction(this))
                 {
                 return store_.load(tx.id);
                 }
@@ -1178,7 +1178,7 @@ service Client<Schema extends RootSchema>
         @Override
         void set(Value value)
             {
-            using (val tx = ensureTransaction())
+            using (val tx = ensureTransaction(this))
                 {
                 store_.store(tx.id, value);
                 }
@@ -1503,7 +1503,7 @@ service Client<Schema extends RootSchema>
         @Override
         DBLogImpl add(Value value)
             {
-            using (val tx = ensureTransaction())
+            using (val tx = ensureTransaction(this))
                 {
                 store_.append(tx.id, value);
                 }
