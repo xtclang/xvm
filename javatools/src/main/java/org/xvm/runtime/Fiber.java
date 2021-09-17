@@ -219,6 +219,22 @@ public class Fiber
         }
 
     /**
+     * @return the caller fiber if it exists and is traceable from this fiber's context
+     */
+    public Fiber traceCaller()
+        {
+        Fiber fiberCaller = f_fiberCaller;
+
+        if (fiberCaller != null &&
+            fiberCaller.f_context.f_container != f_context.f_container)
+            {
+            // TODO check the container relationship?
+            }
+
+        return fiberCaller;
+        }
+
+    /**
      * Check whether we can proceed with the frame execution.
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION} or

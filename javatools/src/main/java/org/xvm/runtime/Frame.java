@@ -1920,7 +1920,7 @@ public class Frame
         Fiber fiber = frame.f_fiber;
         int   iPC   = m_iPC;
 
-        if (f_fiber.getStatus() != Fiber.FiberStatus.Running)
+        if (fiber.getStatus() != Fiber.FiberStatus.Running)
             {
             // the exception was caused by the previous op-code
             iPC--;
@@ -1936,9 +1936,8 @@ public class Frame
             frame = frame.f_framePrev;
             if (frame == null)
                 {
-                Fiber fiberCaller = fiber.f_fiberCaller;
-                if (fiberCaller == null ||
-                    fiberCaller.f_context.f_container != fiber.f_context.f_container)
+                Fiber fiberCaller = fiber.traceCaller();
+                if (fiberCaller == null)
                     {
                     break;
                     }
@@ -1996,9 +1995,8 @@ public class Frame
             frame = frame.f_framePrev;
             if (frame == null)
                 {
-                Fiber fiberCaller = fiber.f_fiberCaller;
-                if (fiberCaller == null ||
-                        fiberCaller.f_context.f_container != fiber.f_context.f_container)
+                Fiber fiberCaller = fiber.traceCaller();
+                if (fiberCaller == null)
                     {
                     break;
                     }
