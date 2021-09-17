@@ -1837,29 +1837,23 @@ public class Frame
                 {
                 buildShortName(function.getIdentityConstant(), sb, false);
                 sb.append('(')
-                    .append(function.getSourceFileName())
-                    .append(':');
+                  .append(function.getContainingClass().getSourceFileName());
 
                 if (iPC >= 0)
                     {
-                    int nLine = 0;
-                    if (function != null)
-                        {
-                        nLine = function.calculateLineNumber(iPC);
-                        }
-
+                    int nLine = function.calculateLineNumber(iPC);
                     if (nLine > 0)
                         {
-                        sb.append(nLine);
+                        sb.append(':').append(nLine);
                         }
                     else
                         {
-                        sb.append("iPC=")
-                            .append(iPC);
+                        sb.append(" iPC=")
+                          .append(iPC);
                         }
 
-                    sb.append(')');
                     }
+                sb.append(')');
                 }
 
             return sb.toString();

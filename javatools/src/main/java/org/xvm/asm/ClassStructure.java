@@ -1037,6 +1037,36 @@ public class ClassStructure
         return Collections.EMPTY_LIST;
         }
 
+    /**
+     * Return the name of the source file that this class originates from.
+     *
+     * @return the file name
+     */
+    public String getSourceFileName()
+        {
+        switch (getFormat())
+            {
+            case MODULE:
+            case PACKAGE:
+                // TODO: this needs an improvement...
+                return getSimpleName() + ".x";
+
+            default:
+                {
+                ClassStructure clzContainer = getContainingClass();
+                switch (clzContainer.getFormat())
+                    {
+                    case MODULE:
+                    case PACKAGE:
+                        return getSimpleName() + ".x";
+
+                    default:
+                        return clzContainer.getSourceFileName();
+                    }
+                }
+            }
+        }
+
 
     // ----- component methods ---------------------------------------------------------------------
 
