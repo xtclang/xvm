@@ -300,13 +300,14 @@ public class ServiceContext
 
     /**
      * Ensure this service is scheduled for processing.
+     *
+     * @param fAsync  if true, avoid the in-line optimization for the request execution
      */
-    protected void ensureScheduled()
+    protected void ensureScheduled(boolean fAsync)
         {
         if (tryAcquireSchedulingLock())
             {
-            // try to complete processing locally if possible
-            execute();
+            execute(!fAsync);
             }
         // else; already scheduled
         }
@@ -314,9 +315,9 @@ public class ServiceContext
     /**
      * Execute any outstanding work for this service.
      */
-    public void execute()
+    public void execute(boolean fAllowInlineExecution)
         {
-        if (drainWork())
+        if (fAllowInlineExecution && drainWork())
             {
             if (getStatus() == ServiceStatus.Terminated)
                 {
@@ -391,14 +392,15 @@ public class ServiceContext
     /**
      * Add a message to the service request queue.
      *
-     * @param msg  the request message
+     * @param msg     the request message
+     * @param fAsync  if true, avoid the in-line optimization for the request execution
      *
      * @return true if the service has become "overwhelmed" - too many outstanding messages
      */
-    public boolean addRequest(Message msg)
+    public boolean addRequest(Message msg, boolean fAsync)
         {
         f_queueMsg.add(msg);
-        ensureScheduled();
+        ensureScheduled(fAsync);
         return isOverwhelmed();
         }
 
@@ -411,14 +413,14 @@ public class ServiceContext
         }
 
     /**
-     * Add a message to the service request queue.
+     * Add a message to the service response queue.
      *
      * @param response  the response message
      */
     public void respond(Response response)
         {
         f_queueResponse.add(response);
-        ensureScheduled();
+        ensureScheduled(true);
         }
 
     protected void processResponses()
@@ -1045,7 +1047,7 @@ public class ServiceContext
         CompletableFuture<ObjectHandle> future = new CompletableFuture<>();
 
         // TODO: should we reject (throw) if the service overwhelmed?
-        addRequest(new CallLaterRequest(frameCaller, hFunction, ahArg, cReturns, future));
+        addRequest(new CallLaterRequest(frameCaller, hFunction, ahArg, cReturns, future), true);
 
         return future;
         }
@@ -1064,7 +1066,7 @@ public class ServiceContext
 
         CompletableFuture<ObjectHandle> future = request.f_future;
 
-        addRequest(request);
+        addRequest(request, frameCaller.isDynamicVar(iReturn));
 
         frameCaller.f_fiber.registerRequest(future);
 
@@ -1115,23 +1117,25 @@ public class ServiceContext
             }
 
         boolean fAsync;
+        boolean fHandleExceptions;
         int     cReturns;
         switch (iReturn)
             {
             case Op.A_IGNORE_ASYNC:
                 assert !fTuple;
-                fAsync   = true;
+                fAsync   = fHandleExceptions = true;
                 cReturns = 0;
                 break;
 
             case Op.A_IGNORE:
                 assert !fTuple;
-                fAsync   = false;
+                fAsync   = fHandleExceptions = false;
                 cReturns = 0;
                 break;
 
             default:
-                fAsync   = false;
+                fAsync            = frameCaller.isDynamicVar(iReturn);
+                fHandleExceptions = false;
                 cReturns = fTuple ? -1 : 1;
                 break;
             }
@@ -1165,10 +1169,10 @@ public class ServiceContext
         OpRequest                       request = new OpRequest(frameCaller, opCall, cReturns);
         CompletableFuture<ObjectHandle> future  = request.f_future;
 
-        boolean fOverwhelmed = addRequest(request);
+        boolean fOverwhelmed = addRequest(request, fAsync);
 
         Fiber fiber = frameCaller.f_fiber;
-        if (fAsync)
+        if (fHandleExceptions)
             {
             // in the case of an ignored return and underwhelmed queue - fire and forget
             if (!fOverwhelmed)
@@ -1227,7 +1231,7 @@ public class ServiceContext
         OpRequest                         request = new OpRequest(frameCaller, opCall, cReturns);
         CompletableFuture<ObjectHandle[]> future  = request.f_future;
 
-        boolean fOverwhelmed = addRequest(request);
+        boolean fOverwhelmed = addRequest(request, false);
 
         Fiber fiber = frameCaller.f_fiber;
         if (cReturns == 0)
@@ -1351,7 +1355,7 @@ public class ServiceContext
 
         OpRequest request = new OpRequest(frameCaller, opInit, 1);
 
-        addRequest(request);
+        addRequest(request, false);
 
         return request.f_future;
         }
@@ -1737,7 +1741,7 @@ public class ServiceContext
                 {
                 public void run()
                     {
-                    ensureScheduled();
+                    ensureScheduled(false);
                     }
                 };
 

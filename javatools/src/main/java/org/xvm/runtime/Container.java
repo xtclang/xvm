@@ -134,7 +134,7 @@ public abstract class Container
             {
             try
                 {
-                service.execute();
+                service.execute(true);
                 }
             catch (Throwable e)
                 {
