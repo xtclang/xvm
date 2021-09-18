@@ -22,6 +22,7 @@ import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
 import org.xvm.asm.constants.IntersectionTypeConstant;
+import org.xvm.asm.constants.LiteralConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.ModuleConstant;
@@ -51,6 +52,7 @@ import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.reflect.xRef.RefHandle;
 
+import org.xvm.util.Handy;
 import org.xvm.util.ListMap;
 
 import static org.xvm.util.Handy.readIndex;
@@ -83,6 +85,76 @@ public class ClassStructure
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    /**
+     * @return the literal constant indicating the source path, or Null
+     */
+    public LiteralConstant getSourcePath()
+        {
+        if (m_constPath != null)
+            {
+            return m_constPath;
+            }
+
+        if (getFormat() == Format.MODULE)
+            {
+            return null;
+            }
+
+        Component outer = getParent();
+        while (!(outer instanceof ClassStructure))
+            {
+            outer = outer.getParent();
+            }
+        return ((ClassStructure) outer).getSourcePath();
+        }
+
+    /**
+     * Specify the source path.
+     *
+     * @param constPath  the literal constant indicating the source path, or Null
+     */
+    public void setSourcePath(LiteralConstant constPath)
+        {
+        m_constPath = constPath;
+        markModified();
+        }
+
+    /**
+     * Return the simple name of the source file that this class originates from.
+     *
+     * @return the file name
+     */
+    public String getSourceFileName()
+        {
+        LiteralConstant constPath = getSourcePath();
+        if (constPath != null)
+            {
+            String sPath = constPath.getValue();
+            int of = sPath.lastIndexOf('/');
+            return of >= 0 ? sPath.substring(of+1) : sPath;
+            }
+
+        // best guess: walk up to the first "top level" class
+        ClassStructure clzTopLevel = this;
+        while (clzTopLevel.isInnerClass())
+            {
+            clzTopLevel = clzTopLevel.getOuter();
+            }
+
+        // assume the implied class name
+        switch (clzTopLevel.getFormat())
+            {
+            case MODULE:
+                return "module.x";
+
+            case PACKAGE:
+                return "package.x";
+
+            default:
+                return clzTopLevel.getSimpleName() + ".x";
+            }
+        }
 
     /**
      * @return true iff this class is a singleton
@@ -1035,36 +1107,6 @@ public class ClassStructure
                 }
             }
         return Collections.EMPTY_LIST;
-        }
-
-    /**
-     * Return the name of the source file that this class originates from.
-     *
-     * @return the file name
-     */
-    public String getSourceFileName()
-        {
-        switch (getFormat())
-            {
-            case MODULE:
-            case PACKAGE:
-                // TODO: this needs an improvement...
-                return getSimpleName() + ".x";
-
-            default:
-                {
-                ClassStructure clzContainer = getContainingClass();
-                switch (clzContainer.getFormat())
-                    {
-                    case MODULE:
-                    case PACKAGE:
-                        return getSimpleName() + ".x";
-
-                    default:
-                        return clzContainer.getSourceFileName();
-                    }
-                }
-            }
         }
 
 
@@ -3643,6 +3685,7 @@ public class ClassStructure
 
         // read in the type parameters
         m_mapParams = disassembleTypeParams(in);
+        m_constPath = (LiteralConstant) getConstantPool().getConstant(readIndex(in));
         }
 
     @Override
@@ -3668,6 +3711,7 @@ public class ClassStructure
 
         // register the type parameters
         m_mapParams = registerTypeParams(m_mapParams);
+        m_constPath = (LiteralConstant) pool.register(m_constPath);
 
         // invalidate cached types
         m_typeCanonical = null;
@@ -3682,6 +3726,7 @@ public class ClassStructure
 
         // write out the type parameters
         assembleTypeParams(m_mapParams, out);
+        writePackedLong(out, Constant.indexOf(m_constPath));
         }
 
     @Override
@@ -3724,6 +3769,9 @@ public class ClassStructure
                 }
             sb.append('>');
             }
+
+        sb.append(", source-path=")
+          .append(m_constPath == null ? "none" : m_constPath.getValueString());
 
         return sb.toString();
         }
@@ -3901,8 +3949,9 @@ public class ClassStructure
         int cThisParams   = mapThisParams == null ? 0 : mapThisParams.size();
         int cThatParams   = mapThatParams == null ? 0 : mapThatParams.size();
 
-        return cThisParams == cThatParams &&
-            (cThisParams == 0 || mapThisParams.equals(mapThatParams));
+        return cThisParams == cThatParams
+            && (cThisParams == 0 || mapThisParams.equals(mapThatParams))
+            && Handy.equals(this.m_constPath, that.m_constPath);
         }
 
 
@@ -3982,6 +4031,11 @@ public class ClassStructure
      * type constraint for the parameter.
      */
     private ListMap<StringConstant, TypeConstant> m_mapParams;
+
+    /**
+     * The file name that indicates the location from which this class was compiled.
+     */
+    private LiteralConstant m_constPath;
 
     /**
      * Cached formal type.

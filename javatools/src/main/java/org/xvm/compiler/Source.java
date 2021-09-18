@@ -274,21 +274,17 @@ public class Source
         }
 
     /**
-     * @return the "resources" directory, if one exists
+     * @return the child directory under the top directory, if it exists
      */
     private File getSubDir(String sChild)
         {
         File file = getTopDir();
         if (file != null)
             {
-//            file = file.getParentFile();
-            if (file != null)
+            file = new File(file, sChild);
+            if (file.exists() && file.isDirectory())
                 {
-                file = new File(file, sChild);
-                if (file.exists() && file.isDirectory())
-                    {
-                    return file;
-                    }
+                return file;
                 }
             }
         return null;

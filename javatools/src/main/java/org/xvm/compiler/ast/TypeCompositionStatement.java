@@ -1,6 +1,7 @@
 package org.xvm.compiler.ast;
 
 
+import java.io.File;
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
@@ -19,6 +20,7 @@ import org.xvm.asm.Component.Composition;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.Format;
 import org.xvm.asm.ComponentBifurcator;
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
 import org.xvm.asm.Constants.Access;
@@ -573,6 +575,66 @@ public class TypeCompositionStatement
         if (doc != null)
             {
             component.setDocumentation(extractDocumentation(doc));
+            }
+
+        // source file path
+        FindSource: if (source != null)
+            {
+            String sFile = source.getFileName();
+            if (sFile != null)
+                {
+                sFile = sFile.replace(File.separatorChar, '/');
+                AstNode nodeModule = this;
+                while (nodeModule != null)
+                    {
+                    if (nodeModule instanceof TypeCompositionStatement
+                            && ((TypeCompositionStatement) nodeModule).category.getId() == Id.MODULE)
+                        {
+                        break;
+                        }
+                    nodeModule = nodeModule.getParent();
+                    }
+                if (nodeModule == null)
+                    {
+                    break FindSource;
+                    }
+
+                TypeCompositionStatement stmtModule = (TypeCompositionStatement) nodeModule;
+                if (this == stmtModule)
+                    {
+                    int of = sFile.lastIndexOf('/');
+                    sFile = sFile.substring(of+1);
+                    }
+                else
+                    {
+                    Source sourceModule = stmtModule.getSource();
+                    String sModuleFile  = sourceModule == null ? null : sourceModule.getFileName();
+                    if (sModuleFile == null)
+                        {
+                        break FindSource;
+                        }
+
+                    sModuleFile = sModuleFile.replace(File.separatorChar, '/');
+                    if (sFile.equals(sModuleFile))
+                        {
+                        break FindSource;
+                        }
+
+                    int of = sModuleFile.lastIndexOf('/');
+                    if (of < 0)
+                        {
+                        break FindSource;
+                        }
+
+                    if (sFile.length() > of
+                            && sFile.substring(0, of).equals(sModuleFile.substring(0, of)))
+                        {
+                        sFile = sFile.substring(of+1);
+                        }
+                    }
+
+                component.setSourcePath(pool.ensureLiteralConstant(Constant.Format.Path, sFile));
+                }
             }
 
         // the "global" namespace is composed of the union of the top-level namespace and the "inner"
