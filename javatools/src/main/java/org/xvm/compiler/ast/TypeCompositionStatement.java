@@ -577,64 +577,60 @@ public class TypeCompositionStatement
             component.setDocumentation(extractDocumentation(doc));
             }
 
-        // source file path
+        // calculate the source file path for the component
         FindSource: if (source != null)
             {
-            String sFile = source.getFileName();
-            if (sFile != null)
+            // original file name must be available
+            String sOrig = source.getFileName();
+            if (sOrig == null)
                 {
-                sFile = sFile.replace(File.separatorChar, '/');
-                AstNode nodeModule = this;
-                while (nodeModule != null)
+                break FindSource;
+                }
+
+            // module must be available
+            AstNode nodeModule = this;
+            while (nodeModule != null)
+                {
+                if (nodeModule instanceof TypeCompositionStatement
+                        && ((TypeCompositionStatement) nodeModule).category.getId() == Id.MODULE)
                     {
-                    if (nodeModule instanceof TypeCompositionStatement
-                            && ((TypeCompositionStatement) nodeModule).category.getId() == Id.MODULE)
-                        {
-                        break;
-                        }
-                    nodeModule = nodeModule.getParent();
+                    break;
                     }
-                if (nodeModule == null)
+                nodeModule = nodeModule.getParent();
+                }
+            if (nodeModule == null)
+                {
+                break FindSource;
+                }
+
+            TypeCompositionStatement stmtModule = (TypeCompositionStatement) nodeModule;
+            String                   sFile      = sOrig.replace(File.separatorChar, '/');
+            if (this == stmtModule)
+                {
+                // this statement is the module statement, so this file name also is used to
+                // configure the root directory from which the module source code originated
+                int ofFile = sFile.lastIndexOf('/') + 1;
+
+                String sDir = sOrig.substring(0, ofFile);
+                ((ModuleStructure) component).setSourceDir(
+                        pool.ensureLiteralConstant(Constant.Format.Path, sDir));
+
+                sFile = sFile.substring(ofFile);
+                }
+            else
+                {
+                // get the root directory of the source tree; the file name must be under that
+                // directory
+                String sDir = ((ModuleStructure) stmtModule.getComponent()).getSourceDir().getValue();
+                if (sDir == null || !sOrig.startsWith(sDir))
                     {
                     break FindSource;
                     }
 
-                TypeCompositionStatement stmtModule = (TypeCompositionStatement) nodeModule;
-                if (this == stmtModule)
-                    {
-                    int of = sFile.lastIndexOf('/');
-                    sFile = sFile.substring(of+1);
-                    }
-                else
-                    {
-                    Source sourceModule = stmtModule.getSource();
-                    String sModuleFile  = sourceModule == null ? null : sourceModule.getFileName();
-                    if (sModuleFile == null)
-                        {
-                        break FindSource;
-                        }
-
-                    sModuleFile = sModuleFile.replace(File.separatorChar, '/');
-                    if (sFile.equals(sModuleFile))
-                        {
-                        break FindSource;
-                        }
-
-                    int of = sModuleFile.lastIndexOf('/');
-                    if (of < 0)
-                        {
-                        break FindSource;
-                        }
-
-                    if (sFile.length() > of
-                            && sFile.substring(0, of).equals(sModuleFile.substring(0, of)))
-                        {
-                        sFile = sFile.substring(of+1);
-                        }
-                    }
-
-                component.setSourcePath(pool.ensureLiteralConstant(Constant.Format.Path, sFile));
+                sFile = sFile.substring(sDir.length());
                 }
+
+            component.setSourcePath(pool.ensureLiteralConstant(Constant.Format.Path, sFile));
             }
 
         // the "global" namespace is composed of the union of the top-level namespace and the "inner"

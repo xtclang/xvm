@@ -12,11 +12,13 @@ import java.util.List;
 import java.util.Map;
 
 import org.xvm.asm.constants.ConditionalConstant;
+import org.xvm.asm.constants.LiteralConstant;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.VersionConstant;
 
 import org.xvm.util.Handy;
 
+import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
 
@@ -118,6 +120,50 @@ public class ModuleStructure
             default:
                 throw new IllegalStateException();
             }
+        }
+
+    /**
+     * Determine the directory path that contains the module. The path is in the format of the
+     * machine that compiled the module; in other words, it might look like "c:\dev\prj\", or it
+     * might look like "/development/prj/", or any other valid format.
+     *
+     * @return the literal constant indicating the source directory, or null
+     */
+    public LiteralConstant getSourceDir()
+        {
+        return m_constDir;
+        }
+
+    /**
+     * Specify the source directory.
+     *
+     * @param constDir  the literal constant indicating the source directory, or null
+     */
+    public void setSourceDir(LiteralConstant constDir)
+        {
+        m_constDir = constDir;
+        markModified();
+        }
+
+    /**
+     * Determine the date/time that the module was created.
+     *
+     * @return the literal constant indicating the compilation timestamp, or null
+     */
+    public LiteralConstant getTimestamp()
+        {
+        return m_constTimestamp;
+        }
+
+    /**
+     * Specify the date/time that the module was created.
+     *
+     * @param constTimestamp  the literal constant indicating the compile date/time, or null
+     */
+    public void setTimestamp(LiteralConstant constTimestamp)
+        {
+        m_constTimestamp = constTimestamp;
+        markModified();
         }
 
     /**
@@ -375,6 +421,9 @@ public class ModuleStructure
                 version = (VersionConstant) pool.getConstant(readMagnitude(in));
                 }
             }
+
+        m_constDir       = (LiteralConstant) getConstantPool().getConstant(readIndex(in));
+        m_constTimestamp = (LiteralConstant) getConstantPool().getConstant(readIndex(in));
         }
 
     @Override
@@ -398,6 +447,9 @@ public class ModuleStructure
             {
             version = (VersionConstant) pool.register(version);
             }
+
+        m_constDir       = (LiteralConstant) pool.register(m_constDir);
+        m_constTimestamp = (LiteralConstant) pool.register(m_constTimestamp);
         }
 
     @Override
@@ -439,6 +491,9 @@ public class ModuleStructure
                 writePackedLong(out, version.getPosition());
                 }
             }
+
+        writePackedLong(out, Constant.indexOf(m_constDir));
+        writePackedLong(out, Constant.indexOf(m_constTimestamp));
         }
 
     @Override
@@ -498,6 +553,11 @@ public class ModuleStructure
                 }
             }
 
+        sb.append(", source-dir=")
+          .append(m_constDir == null ? "none" : m_constDir.getValueString())
+          .append(", timestamp=")
+          .append(m_constDir == null ? "none" : m_constTimestamp.getValueString());
+
         return sb.toString();
         }
 
@@ -521,7 +581,8 @@ public class ModuleStructure
         ModuleStructure that = (ModuleStructure) obj;
         return this.moduletype == that.moduletype
                 && Handy.equals(this.vtreeImportAllowVers, that.vtreeImportAllowVers)
-                && Handy.equals(this.listImportPreferVers, that.listImportPreferVers);
+                && Handy.equals(this.listImportPreferVers, that.listImportPreferVers)
+                && Handy.equals(this.m_constDir, that.m_constDir);
         }
 
 
@@ -571,6 +632,18 @@ public class ModuleStructure
 
 
     // ----- fields --------------------------------------------------------------------------------
+
+    /**
+     * The directory path that contains the module, or null. The path is in the format of the
+     * machine that compiled the module; in other words, it might look like "c:\dev\prj\", or it
+     * might look like "/development/prj/", or any other valid format.
+     */
+    private LiteralConstant m_constDir;
+
+    /**
+     * The date/time that the module was created, or null.
+     */
+    private LiteralConstant m_constTimestamp;
 
     /**
      * Module type.

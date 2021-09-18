@@ -4033,7 +4033,9 @@ public class ClassStructure
     private ListMap<StringConstant, TypeConstant> m_mapParams;
 
     /**
-     * The file name that indicates the location from which this class was compiled.
+     * The file name that indicates the location from which this class was compiled. This file name
+     * is in network format ('/'-delimited) and relative to the directory which contains the module.
+     * @see ModuleStructure#getSourceDir()
      */
     private LiteralConstant m_constPath;
 

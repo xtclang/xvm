@@ -13,6 +13,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 
+import java.time.Instant;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -61,6 +63,7 @@ public class FileStructure
         // create and register the main module
         ConstantPool    pool   = new ConstantPool(this);
         ModuleStructure module = new ModuleStructure(this, pool.ensureModuleConstant(sModule));
+        module.setTimestamp(pool.ensureDateTimeConstant(Instant.now()));
 
         if (!addChild(module))
             {
