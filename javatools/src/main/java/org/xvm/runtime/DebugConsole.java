@@ -61,8 +61,11 @@ public class DebugConsole
         m_stepMode = StepMode.StepInto;
         }
 
+    /**
+     * For now, by making this method synchronized we stop all services while debugger is active.
+     */
     @Override
-    public int checkBreakPoint(Frame frame, int iPC)
+    public synchronized int checkBreakPoint(Frame frame, int iPC)
         {
         boolean fDebug;
         switch (m_stepMode)
