@@ -645,6 +645,24 @@ public class Handy
         }
 
     /**
+     * Create a string containing the specified number of the specified character.
+     *
+     * @param ch   the character to duplicate
+     * @param cch  the size of the resulting string
+     *
+     * @return a string containing the specified number of the specified character
+     */
+    public static String dup(char ch, int cch)
+        {
+        StringBuilder sb = new StringBuilder(cch);
+        while (cch-- > 0)
+            {
+            sb.append(ch);
+            }
+        return sb.toString();
+        }
+
+    /**
      * Indent each line of the passed text by prepending the specified
      * indentation String.
      *
@@ -682,7 +700,7 @@ public class Handy
         if (ofLine < cchOld)
             {
             sb.append(sIndent)
-                    .append(sText, ofLine, cchOld);
+              .append(sText, ofLine, cchOld);
             }
 
         return sb.toString();
