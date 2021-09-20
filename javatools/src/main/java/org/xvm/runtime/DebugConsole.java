@@ -52,11 +52,12 @@ public class DebugConsole
         }
 
     @Override
-    public void activate(ServiceContext ctx)
+    public void activate(Frame frame)
         {
-        ctx.setDebuggerActive(true);
+        frame.f_context.setDebuggerActive(true);
 
         // stop at the first possibility
+        m_frame    = frame;
         m_stepMode = StepMode.StepInto;
         }
 
@@ -80,7 +81,8 @@ public class DebugConsole
                 break;
 
             case StepInto:
-                fDebug = true;
+                fDebug = m_frame.f_fiber.isAssociated(frame.f_fiber) ||
+                           frame.f_fiber.isAssociated(m_frame.f_fiber);
                 break;
 
             case StepLine:

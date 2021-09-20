@@ -8,9 +8,9 @@ public interface Debugger
     /**
      * Activate the debugger.
      *
-     * @param ctx  the current service context
+     * @param ctx  the current frame
      */
-    void activate(ServiceContext ctx);
+    void activate(Frame ctx);
 
     /**
      * Check for a breakpoint at the specified frame and program counter.
