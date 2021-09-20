@@ -167,15 +167,23 @@ public class ReturnStatement
                     {
                     if (cExprs == 1)
                         {
-                        // allow the (strange) use of T0D0, the (strange) return of a void expression
+                        // allow the (strange) use of T0D0, the return of a void expression
                         // or an invocation that is not void
                         Expression expr = listExprs.get(0);
                         if (expr.isCompletable() && !expr.isVoid() &&
                                 !(expr instanceof InvocationExpression))
                             {
-                            // it was supposed to be a void return
-                            log(errs, Severity.ERROR, Compiler.RETURN_VOID);
-                            fValid = false;
+                            // it is supposed to be a void return; allow a Future<Tuple>
+                            if (expr instanceof NameExpression &&
+                                    ((NameExpression) expr).isDynamicVar() && expr.getType().isTuple())
+                                {
+                                m_fFutureReturn = true;
+                                }
+                            else
+                                {
+                                log(errs, Severity.ERROR, Compiler.RETURN_VOID);
+                                fValid = false;
+                                }
                             }
                         }
                     else
@@ -342,6 +350,7 @@ public class ReturnStatement
 
         // first determine what the method declaration indicates the return value is (none, one,
         // or multi)
+        ConstantPool     pool      = pool();
         TypeConstant[]   atypeRets = container.getReturnTypes();
         int              cRets     = atypeRets == null ? 0 : atypeRets.length;
         List<Expression> listExprs = this.exprs;
@@ -381,7 +390,14 @@ public class ReturnStatement
                     switch (cRets)
                         {
                         case 0:
-                            code.add(new Return_0());
+                            if (m_fFutureReturn)
+                                {
+                                code.add(new Return_1(aArgs[0]));
+                                }
+                            else
+                                {
+                                code.add(new Return_0());
+                                }
                             break;
 
                         case 1:
@@ -390,7 +406,7 @@ public class ReturnStatement
                             if (m_fFutureReturn)
                                 {
                                 // create an intermediate dynamic var
-                                code.add(new Var_D(pool().ensureFutureVar(argRet.getType())));
+                                code.add(new Var_D(pool.ensureFutureVar(argRet.getType())));
 
                                 Argument argFuture = code.lastRegister();
                                 code.add(new Move(argRet, argFuture));
@@ -425,7 +441,7 @@ public class ReturnStatement
                                 if (fCheck)
                                     {
                                     code.add(labelFalse);
-                                    code.add(new Return_1(pool().valFalse()));
+                                    code.add(new Return_1(pool.valFalse()));
                                     }
                                 }
                             else
@@ -470,7 +486,7 @@ public class ReturnStatement
                     if (fCheck)
                         {
                         code.add(labelFalse);
-                        code.add(new Return_1(pool().valFalse()));
+                        code.add(new Return_1(pool.valFalse()));
                         }
                     break;
                     }

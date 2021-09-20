@@ -10,39 +10,34 @@ module BankStressTest
 
     void run()
         {
-        assert:debug;
-        Duration openFor  = Duration.ofMinutes(15);
+        // assert:debug;
+        Duration openFor  = Duration.ofSeconds(300);
         Branch[] branches = new Branch[BRANCHES](i -> new Branch(i.toUInt64()));
         for (Branch branch : branches)
             {
             branch.doBusiness^(openFor);
             }
-        wait(branches, openFor + Duration.ofSeconds(30)); // give them extra time to close naturally
+        wait(branches, openFor + Duration.ofSeconds(5)); // give them extra time to close naturally
         }
 
-    Boolean wait(Branch[] branches, Duration duration)
+    void wait(Branch[] branches, Duration duration)
         {
         @Inject Timer timer;
 
-        // @Future Tuple<> result; // TODO GG: not allowed to return into void
-        @Future Boolean result;
-        FutureVar<Boolean> resultVar = &result; // TODO GG: moving this below line "result=True" screws up the compiler
+        @Future Tuple<> result;
 
         // schedule a "forced shutdown"
         timer.schedule(duration, () ->
             {
-            @Inject Connection bank;
-
             if (!&result.assigned)
                 {
+                @Inject Connection bank;
                 bank.log.add("Shutting down the test");
-
-                // result=Tuple:();
-                result=True;
+                result=Tuple:();
                 }
             });
 
-        private void checkOpen(Branch[] branches, Timer timer, FutureVar<Boolean> result)
+        private void checkOpen(Branch[] branches, Timer timer, FutureVar<Tuple> result)
             {
             for (Branch branch : branches)
                 {
@@ -53,15 +48,17 @@ module BankStressTest
                     return;
                     }
 
-                @Inject Connection bank;
-                bank.log.add("All branches have closed");
-                result.set(True);
-                }
+                if (!result.assigned)
+                    {
+                    @Inject Connection bank;
+                    bank.log.add("All branches have closed");
+                    result.set(Tuple:());
+                    }
+               }
             }
 
-        // TODO GG: timer.schedule(Duration.ofSeconds(10), &checkOpen(branches, timer, &result));
         // schedule a periodic check
-        timer.schedule(Duration.ofSeconds(10), &checkOpen(branches, timer, resultVar));
+        timer.schedule(Duration.ofSeconds(10), &checkOpen(branches, timer, &result));
         return result;
         }
 
@@ -77,8 +74,8 @@ module BankStressTest
             {
             Int      tryCount = 0;
             Int      txCount  = 0;
-            DateTime open     = clock.now;
-            DateTime close    = open + duration;
+            DateTime start    = clock.now;
+            DateTime close    = start + duration;
             Random   rnd      = new ecstasy.numbers.PseudoRandom(branchId);
 
             status = Open;
@@ -89,12 +86,15 @@ module BankStressTest
                 {
                 if (++tryCount % 100 == 0)
                     {
-                    if (clock.now < close)
+                    DateTime now = clock.now;
+                    if (now < close)
                         {
                         bank.log.add(
                             $|Branch {branchId} performed {txCount} transactions in \
-                             |{(clock.now - open).seconds} seconds
+                             |{(now - start).seconds} seconds
                              );
+                        txCount = 0;
+                        start   = now;
                         }
                     else
                         {
@@ -136,7 +136,7 @@ module BankStressTest
                                 }
                             break;
 
-                        case 50..95:
+                        case 50..98:
                             op = "Transfer";
                             Int acctIdTo = rnd.int(MAX_ACCOUNTS);
                             if (acctIdTo != acctId,
@@ -148,7 +148,7 @@ module BankStressTest
                                 }
                             break;
 
-                        default:
+                        case 99:
                             op = "Audit";
                             bank.log.add($"Audited amount: {Bank.format(bank.audit())}");
                             break;
