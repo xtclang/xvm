@@ -1093,7 +1093,7 @@ public class ServiceContext
 
             public String toString()
                 {
-                return "ConstructRequest";
+                return "Construct: " + constructor.getContainingClass().getName();
                 }
             };
 
@@ -1162,7 +1162,7 @@ public class ServiceContext
 
             public String toString()
                 {
-                return "Invoke1Request";
+                return "Invoke1: " + hFunction.getName();
                 }
             };
 
@@ -1224,7 +1224,7 @@ public class ServiceContext
 
             public String toString()
                 {
-                return "InvokeNRequest";
+                return "InvokeN: " + hFunction.getName();
                 }
             };
 
@@ -1282,7 +1282,7 @@ public class ServiceContext
 
             public String toString()
                 {
-                return "Property01_Op";
+                return "PropertyGet: " + idProp.getName();
                 }
             };
 
@@ -1326,7 +1326,7 @@ public class ServiceContext
 
             public String toString()
                 {
-                return "Property10_Op";
+                return "PropertySet: " + idProp.getName();
                 }
             };
 
@@ -1639,7 +1639,7 @@ public class ServiceContext
 
                 public String toString()
                     {
-                    return "CallLaterRequest";
+                    return "CallLaterRequest: " + f_hFunction.getName();
                     }
                 };
 

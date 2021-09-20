@@ -204,15 +204,11 @@ public class FiberQueue
 
                     case Prioritized:
                         {
-                        // give priority to already existing thread of execution
+                        // don't allow a new fiber if it has a common origin with any waiting fiber
                         Fiber fiberCaller = frame.f_fiber.f_fiberCaller;
-                        if (fiberCaller != null)
+                        if (fiberCaller != null && isAssociatedWaiting(fiberCaller))
                             {
-                            ServiceContext ctxCaller = fiberCaller.f_context;
-                            if (isAssociatedWaiting(ctxCaller))
-                                {
-                                return -1;
-                                }
+                            return -1;
                             }
                         // break through
                         }
@@ -224,11 +220,11 @@ public class FiberQueue
         }
 
     /**
-     * @return true iff there are any waiting frames associated with the specified context
+     * @return true iff there are any waiting frames associated with the specified fiber
      */
-    private boolean isAssociatedWaiting(ServiceContext context)
+    private boolean isAssociatedWaiting(Fiber fiberCaller)
         {
-        return getFirstAssociatedIndex(FiberStatus.Waiting, context) != -1;
+        return getFirstAssociatedIndex(FiberStatus.Waiting, fiberCaller) != -1;
         }
 
     /**
@@ -237,12 +233,12 @@ public class FiberQueue
      * NOTE: a waiting frame with a native stack frame is exempt from association rules since all
      *       the natural execution has completed.
      *
-     * @param status   the status to check for
-     * @param context  the service context to check association with (null for "any")
+     * @param status       the status to check for
+     * @param fiberCaller  the fiber to check association with (null for "any")
      *
      * @return the first matching index or -1
      */
-    private int getFirstAssociatedIndex(FiberStatus status, ServiceContext context)
+    private int getFirstAssociatedIndex(FiberStatus status, Fiber fiberCaller)
         {
         Frame[] aFrame  = m_aFrame;
         int     cFrames = aFrame.length;
@@ -264,13 +260,7 @@ public class FiberQueue
                         continue;
                         }
 
-                    if (context == null)
-                        {
-                        return ix;
-                        }
-
-                    Fiber fiberCaller = fiber.f_fiberCaller;
-                    if (fiberCaller != null && fiberCaller.isAssociated(context))
+                    if (fiberCaller == null || fiber.isAssociated(fiberCaller))
                         {
                         return ix;
                         }

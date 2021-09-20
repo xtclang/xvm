@@ -2036,6 +2036,11 @@ public class Frame
             if (framePrev == null)
                 {
                 sb.append('<').append(ctx.f_sName).append('>');
+                if (iPC < 0 && aOp != null && aOp.length > 0)
+                    {
+                    sb.append(' ')
+                      .append(aOp[0]);
+                    }
                 }
             else
                 {
@@ -2077,7 +2082,7 @@ public class Frame
     @Override
     public String toString()
         {
-        return formatFrameDetails(f_context, f_function, -1, null, f_framePrev);
+        return formatFrameDetails(f_context, f_function, -1, f_aOp, f_framePrev);
         }
 
     // try-catch support

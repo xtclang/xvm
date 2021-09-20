@@ -112,12 +112,36 @@ public class Fiber
         }
 
     /**
-     * @return true iff the fiber chain points back to the specified service
+     * @return true iff this fiber chain points back to the specified service
      */
     public boolean isAssociated(ServiceContext context)
         {
         return f_context == context ||
                f_fiberCaller != null && f_fiberCaller.isAssociated(context);
+        }
+
+    /**
+     * @return true iff this fiber chain has a common origin with the specified fiber
+     */
+    public boolean isAssociated(Fiber fiber)
+        {
+        Fiber fiberThis = this;
+        Fiber fiberThat = fiber;
+
+        if (fiberThis.f_context == fiberThat.f_context)
+            {
+            return fiberThis == fiberThat;
+            }
+
+        Fiber fiberCaller = fiberThis.f_fiberCaller;
+        if (fiberCaller == null)
+            {
+            return false;
+            }
+
+        // by switching the target to "that" we alternate the descending checks:
+        // (f1 ~ f2) --> (f2.prev ~ f1) --> (f1.prev ~ f2.prev) --> ...
+        return fiberThat.isAssociated(fiberCaller);
         }
 
     public long getId()
