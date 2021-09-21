@@ -408,6 +408,11 @@ public class MethodDeclarationStatement
                     method = container.createMethod(false, Access.PRIVATE, null,
                             aReturns, "finally", aParams, true, false);
 
+                    if (body != null)
+                        {
+                        body.donateSource(method);
+                        }
+
                     MethodStructure methodConstruct = (MethodStructure) m_stmtComplement.getComponent();
                     if (methodConstruct != null && method != null)
                         {
@@ -444,6 +449,11 @@ public class MethodDeclarationStatement
                                 method.setConstructFinally(methodFinally);
                                 }
                             }
+                        }
+
+                    if (body != null)
+                        {
+                        body.donateSource(method);
                         }
                     }
 
@@ -555,6 +565,10 @@ public class MethodDeclarationStatement
                     MethodStructure method = container.createMethod(
                             false, methodSuper.getAccess(), annos, aReturns, sName, aParams,
                             body != null, usesSuper());
+                    if (body != null)
+                        {
+                        body.donateSource(method);
+                        }
                     setComponent(method);
                     }
                 }

@@ -1,7 +1,6 @@
 package org.xvm.runtime;
 
 
-import java.io.File;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -9,6 +8,7 @@ import java.util.List;
 
 import java.util.concurrent.CompletableFuture;
 
+import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
@@ -1836,8 +1836,10 @@ public class Frame
             else
                 {
                 buildShortName(function.getIdentityConstant(), sb, false);
-                sb.append('(')
-                  .append(function.getContainingClass().getSourceFileName());
+                sb.append('(');
+
+                ClassStructure clz = function.getContainingClass();
+                sb.append(clz == null ? "???" : clz.getSourceFileName());
 
                 if (iPC >= 0)
                     {

@@ -46,6 +46,7 @@ import org.xvm.compiler.ast.Expression.TypeFit;
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
+import static org.xvm.util.Handy.dup;
 import static org.xvm.util.Handy.indentLines;
 
 
@@ -349,6 +350,28 @@ public abstract class AstNode
      * @return the Source position of the end of the AstNode
      */
     public abstract long getEndPosition();
+
+    /**
+     * Populate the MethodStructure with the source code from this AST node.
+     *
+     * @param method  the MethodStructure to donate the source code to
+     */
+    void donateSource(MethodStructure method)
+        {
+        if (method != null)
+            {
+            long   lStart = getStartPosition();
+            long   lEnd   = getEndPosition();
+            String sSrc   = getSource().toString(lStart, lEnd);
+            int    iLine  = Source.calculateLine(lStart);
+            int    of     = Source.calculateOffset(lStart);
+            if (of > 0)
+                {
+                sSrc = dup(' ', of) + sSrc;
+                }
+            method.configureSource(sSrc, iLine);
+            }
+        }
 
     /**
      * @return true iff this node holds a component

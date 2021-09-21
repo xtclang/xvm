@@ -44,8 +44,10 @@ import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.indentLines;
+import static org.xvm.util.Handy.parseDelimitedString;
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.readMagnitude;
+import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
 
 
@@ -628,6 +630,71 @@ public class MethodStructure
     public Constant[] getLocalConstants()
         {
         return m_aconstLocal;
+        }
+
+    /**
+     * @return the text that was used to compile this method, or null if the source is not available
+     */
+    public String getSourceText()
+        {
+        return m_source == null
+                ? null
+                : m_source.getText();
+        }
+
+    /**
+     * @return the line number (0 based index) that the source code was from in the file, or 0
+     */
+    public int getSourceLineNumber()
+        {
+        return m_source == null
+                ? 0
+                : m_source.getLineNumber();
+        }
+
+    /**
+     * @return the number of source code lines, or 0
+     */
+    public int getSourceLineCount()
+        {
+        return m_source == null
+                ? 0
+                : m_source.getLineCount();
+        }
+
+    /**
+     * Provide the source code that the method is being compiled from.
+     *
+     * @param sSrc        the source code
+     * @param iFirstLine  the location (0-based line number) within the containing file of the
+     *                    source code
+     */
+    public void configureSource(String sSrc, int iFirstLine)
+        {
+        if (sSrc == null)
+            {
+            m_source = null;
+            }
+        else
+            {
+            m_source = new Source(iFirstLine, sSrc);
+            }
+        }
+
+    /**
+     * Obtain the specified lines of source code, if they are available.
+     *
+     * @param iFirst  the first line to get
+     * @param cLines  the number of lines to get
+     * @param fTrim   true to uniformly trim the left edge of the source
+     *
+     * @return up to the requested number of source code lines, or null
+     */
+    public String[] getSourceLines(int iFirst, int cLines, boolean fTrim)
+        {
+        return m_source == null
+                ? null
+                : m_source.renderLines(iFirst, cLines, fTrim);
         }
 
 
@@ -1632,6 +1699,9 @@ public class MethodStructure
 
         assert cConsts == 0 || cbOps > 0;
 
+        Source source = new Source();
+        source.disassemble(in);
+
         m_aAnnotations   = aAnnos;
         m_aReturns       = aReturns;
         m_cTypeParams    = cTypeParams;
@@ -1640,6 +1710,7 @@ public class MethodStructure
         m_aconstLocal    = aconst;
         m_abOps          = abOps;
         m_FHasCode       = abOps != null;
+        m_source         = source.isPresent() ? source : null;
         }
 
     @Override
@@ -1688,6 +1759,11 @@ public class MethodStructure
         else if (m_code != null)
             {
             m_code.registerConstants();
+            }
+
+        if (m_source != null)
+            {
+            m_source.registerConstants(pool);
             }
         }
 
@@ -1749,6 +1825,8 @@ public class MethodStructure
             {
             out.write(abOps);
             }
+
+        (m_source == null ? new Source() : m_source).assemble(out);
         }
 
     @Override
@@ -1787,6 +1865,18 @@ public class MethodStructure
           .append(m_cTypeParams)
           .append(", ")
           .append(super.getDescription());
+
+        boolean fSrc = m_source != null && m_source.isPresent();
+        sb.append(", hasSource=")
+          .append(fSrc);
+
+        if (fSrc)
+            {
+            sb.append(", line-number=")
+              .append(m_source.getLineNumber())
+              .append(", line-count=")
+              .append(m_source.getLineCount());
+            }
 
         return sb.toString();
         }
@@ -2534,6 +2624,325 @@ public class MethodStructure
         }
 
 
+    // ----- inner class: Source -------------------------------------------------------------------
+
+    /**
+     * The Source class represents the source code that was used to compile the method code.
+     */
+    protected class Source
+        {
+        // ----- constructors -----------------------------------------------------------------
+
+        /**
+         * Deserialization constructor.
+         */
+        protected Source()
+            {
+            }
+
+        /**
+         * Construct a Source object.
+         *
+         * @param iLine  the line number (0-based) at which the source begins
+         * @param sSrc   the source code
+         */
+        protected Source(int iLine, String sSrc)
+            {
+            m_iFirstLine = iLine;
+            m_sSrc       = sSrc;
+            }
+
+        // ----- fields -----------------------------------------------------------------------
+
+        /**
+         * @return true if there is source code
+         */
+        public boolean isPresent()
+            {
+            return m_sSrc != null || m_aconstSrc != null;
+            }
+
+        /**
+         * @return the line number that the source begins at
+         */
+        public String getText()
+            {
+            if (m_sSrc == null)
+                {
+                inflate();
+                }
+
+            return m_sSrc;
+            }
+
+        /**
+         * @return the line number that the source begins at
+         */
+        public int getLineNumber()
+            {
+            return m_iFirstLine;
+            }
+
+        /**
+         * @return the number of lines of source
+         */
+        public int getLineCount()
+            {
+            normalize();
+            return m_aconstSrc == null ? 0 : m_aconstSrc.length;
+            }
+
+        /**
+         * Obtain the specified lines of source code, if they are available.
+         *
+         * @param iFirst  the first line to get
+         * @param cLines  the number of lines to get
+         * @param fTrim   true to uniformly trim the left edge of the source
+         *
+         * @return up to the requested number of source code lines, or null
+         */
+        public String[] renderLines(int iFirst, int cLines, boolean fTrim)
+            {
+            normalize();
+            if (m_aconstSrc == null || iFirst < m_iFirstLine || iFirst >= m_iFirstLine + m_aconstSrc.length)
+                {
+                return null;
+                }
+
+            iFirst -= m_iFirstLine;
+            if (iFirst + cLines > m_aconstSrc.length)
+                {
+                cLines = m_aconstSrc.length;
+                }
+            int iLast = iFirst + cLines - 1;
+
+            int cTrim = 0;
+            if (fTrim)
+                {
+                cTrim = m_anIndents[iFirst];
+                for (int iLine = iFirst + 1; iLine <= iLast && cTrim != 0; ++iLine)
+                    {
+                    int nIndent = m_anIndents[iLine];
+                    if (cTrim < 0 && nIndent < 0)
+                        {
+                        if (cTrim < nIndent)
+                            {
+                            cTrim = nIndent;
+                            }
+                        }
+                    else if (cTrim > 0 && nIndent > 0)
+                        {
+                        if (cTrim > nIndent)
+                            {
+                            cTrim = nIndent;
+                            }
+                        }
+                    else
+                        {
+                        cTrim = 0;
+                        }
+                    }
+                }
+
+            String[] asLine = new String[cLines];
+            for (int iLine = iFirst; iLine <= iLast; ++iLine)
+                {
+                StringConstant constLine = m_aconstSrc[iLine];
+                if (constLine == null)
+                    {
+                    asLine[iLine-iFirst] = "";
+                    }
+                else
+                    {
+                    int nIndent = m_anIndents[iLine] - cTrim;
+                    if (nIndent != 0)
+                        {
+                        StringBuilder sb = new StringBuilder();
+
+                        char ch = nIndent < 0 ? '\t' : ' ';
+                        for (int i = 0, c = nIndent < 0 ? -nIndent : nIndent; i < c; ++i)
+                            {
+                            sb.append(ch);
+                            }
+
+                        sb.append(constLine.getValue());
+                        asLine[iLine-iFirst] = sb.toString();
+                        }
+                    else
+                        {
+                        asLine[iLine-iFirst] = constLine.getValue();
+                        }
+                    }
+                }
+
+            return asLine;
+            }
+
+        /**
+         * Make sure that the source is "chopped up" in the manner that it gets stored in the
+         * MethodStructure binary.
+         */
+        protected void normalize()
+            {
+            if (m_aconstSrc == null && m_sSrc != null)
+                {
+                String[]         asLine     = parseDelimitedString(m_sSrc, '\n');
+                int              cLines     = asLine.length;
+                StringConstant[] aconstLine = new StringConstant[cLines];
+                int[]            anIndent   = new int[cLines];
+                ConstantPool     pool       = getConstantPool();
+                for (int iLine = 0; iLine < cLines; ++iLine)
+                    {
+                    String sLine = asLine[iLine];
+                    int    ofEnd = sLine.length();
+                    while (ofEnd > 0 && Character.isWhitespace(sLine.charAt(ofEnd-1)))
+                        {
+                        --ofEnd;
+                        }
+
+                    if (ofEnd > 0)
+                        {
+                        int  ofBegin = 0;
+                        char chBegin = sLine.charAt(ofBegin);
+                        if (chBegin == ' ' || chBegin == '\t')
+                            {
+                            ++ofBegin;
+                            while (sLine.charAt(ofBegin) == chBegin)
+                                {
+                                ++ofBegin;
+                                }
+                            }
+
+                        aconstLine[iLine] = pool.ensureStringConstant(sLine.substring(ofBegin, ofEnd));
+                        anIndent  [iLine] = chBegin == '\t' ? -ofBegin : ofBegin;
+                        }
+                    }
+
+                m_aconstSrc = aconstLine;
+                m_anIndents = anIndent;
+                }
+            }
+
+        /**
+         * Make sure that the source is "glued together" into a big string.
+         */
+        protected void inflate()
+            {
+            if (m_sSrc == null && m_aconstSrc != null)
+                {
+                StringBuilder sb = new StringBuilder();
+                for (int iLine = 0, cLines = m_aconstSrc.length; iLine < cLines; ++iLine)
+                    {
+                    if (iLine > 0)
+                        {
+                        sb.append('\n');
+                        }
+
+                    int nIndent = m_anIndents[iLine];
+                    if (nIndent != 0)
+                        {
+                        char ch = nIndent < 0 ? '\t' : ' ';
+                        for (int i = 0, c = nIndent < 0 ? -nIndent : nIndent; i < c; ++i)
+                            {
+                            sb.append(ch);
+                            }
+                        }
+
+                    StringConstant constLine = m_aconstSrc[iLine];
+                    if (constLine != null)
+                        {
+                        sb.append(constLine.getValue());
+                        }
+                    }
+                m_sSrc = sb.toString();
+                }
+            }
+
+        protected void disassemble(DataInput in)
+                throws IOException
+            {
+            int cLines = readPackedInt(in);
+            if (cLines > 0)
+                {
+                StringConstant[] aconstSrc = new StringConstant[cLines];
+                int[]            anIndents = new int[cLines];
+
+                m_iFirstLine = readPackedInt(in);
+
+                ConstantPool pool = getConstantPool();
+                for (int i = 0; i < cLines; ++i)
+                    {
+                    anIndents[i] = readPackedInt(in);
+                    aconstSrc[i] = (StringConstant) pool.getConstant(readIndex(in));
+                    }
+
+                m_aconstSrc = aconstSrc;
+                m_anIndents = anIndents;
+                }
+            }
+
+        protected void registerConstants(ConstantPool pool)
+            {
+            normalize();
+            if (m_aconstSrc != null)
+                {
+                int cLines = m_aconstSrc.length;
+                for (int i = 0; i < cLines; ++i)
+                    {
+                    m_aconstSrc[i] = (StringConstant) pool.register(m_aconstSrc[i]);
+                    }
+                }
+            }
+
+        protected void assemble(DataOutput out)
+                throws IOException
+            {
+            normalize();
+            if (m_aconstSrc == null)
+                {
+                writePackedLong(out, 0);
+                }
+            else
+                {
+                int cLines = m_aconstSrc.length;
+                writePackedLong(out, cLines);
+                if (cLines > 0)
+                    {
+                    writePackedLong(out, m_iFirstLine);
+                    for (int i = 0; i < cLines; ++i)
+                        {
+                        writePackedLong(out, m_anIndents[i]);
+                        writePackedLong(out, Constant.indexOf(m_aconstSrc[i]));
+                        }
+                    }
+                }
+            }
+
+        // ----- fields -----------------------------------------------------------------------
+
+        /**
+         * The index of the first source line.
+         */
+        private int m_iFirstLine;
+
+        /**
+         * The source code.
+         */
+        private String m_sSrc;
+
+        /**
+         * Each source line.
+         */
+        private StringConstant[] m_aconstSrc;
+
+        /**
+         * For each source line, this array holds the number of spaces (positive) or tabs (negative)
+         * to prepend.
+         */
+        private int[] m_anIndents;
+        }
+
+
     // ----- fields --------------------------------------------------------------------------------
 
     /**
@@ -2629,4 +3038,9 @@ public class MethodStructure
      * construct function that has a finally.
      */
     private transient MethodStructure m_structFinally;
+
+    /**
+     * The source code of the method.
+     */
+    private Source m_source;
     }

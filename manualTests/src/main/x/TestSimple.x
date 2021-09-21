@@ -4,24 +4,44 @@ module TestSimple.test.org
 
     void run()
         {
-        console.println("Started");
-        wait(Duration.ofSeconds(4));
-        console.println("Finished");
+        assert:debug;
+
+        function void() f = () ->
+            {
+            new C();
+            };
+
+        f();
         }
 
-    void wait(Duration duration)
+    class C
         {
-        @Inject Timer timer;
-
-        @Future Tuple<> result;
-        timer.schedule(duration, () ->
+        construct()
             {
-            if (!&result.assigned)
-                {
-                console.println("Shutting down the test");
-                result=Tuple:();
-                }
-            });
-        return result;
+            x = "construct";
+            }
+        finally
+            {
+            x = "finally";
+            }
+
+        assert()
+            {
+            x = "assert";
+            }
+
+        String x;
+
+        Int y =
+            {
+            console.println("y.default");
+            return 7;
+            };
+
+        @Lazy Boolean z.calc()
+            {
+            console.println("z.calc");
+            return True;
+            }
         }
     }

@@ -34,7 +34,9 @@ import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 
 import org.xvm.runtime.template._native.xTerminalConsole;
 
-import org.xvm.util.Handy;
+import static org.xvm.util.Handy.dup;
+import static org.xvm.util.Handy.parseDelimitedString;
+import static org.xvm.util.Handy.NO_ARGS;
 
 
 /**
@@ -207,7 +209,7 @@ public class DebugConsole
                     sCommand = sDedup;
                     }
 
-                String[] asParts = Handy.parseDelimitedString(sCommand, ' ');
+                String[] asParts = parseDelimitedString(sCommand, ' ');
                 int      cArgs   = asParts.length - 1;
                 if (cArgs < 0)
                     {
@@ -1029,11 +1031,11 @@ public class DebugConsole
             }
 
         Set<BreakPoint> setBP = new HashSet<>();
-        for (String sbp : Handy.parseDelimitedString(s, ','))
+        for (String sbp : parseDelimitedString(s, ','))
             {
             try
                 {
-                String[] settings = Handy.parseDelimitedString(sbp, ':');
+                String[] settings = parseDelimitedString(sbp, ':');
                 String   sName   = settings[0];
                 int      nLine   = settings.length >= 2 && settings[1].length() > 0
                         ? Integer.parseInt(settings[1])
@@ -1105,6 +1107,8 @@ public class DebugConsole
 
     private String renderDebugger()
         {
+        StringBuilder sb = new StringBuilder();
+
         String   sFHeader  = "Call stack frames:";
         String[] asFrames  = renderFrames();
         int      cchFrames = Math.max(longestOf(asFrames), sFHeader.length());
@@ -1133,7 +1137,83 @@ public class DebugConsole
                 }
             }
 
-        StringBuilder sb = new StringBuilder();
+        if (m_cHeight > 0 && m_frameFocus != null && m_frameFocus.f_function != null)
+            {
+            MethodStructure method   = m_frameFocus.f_function;
+            boolean         fPrinted = false;
+
+            int iFirst = 0;
+            int cLines = 0;
+            int nLine  = method.calculateLineNumber(m_frameFocus.m_iPC); // 1-based
+            if (nLine > 0)
+                {
+                // default to showing the entire method
+                iFirst = method.getSourceLineNumber();
+                cLines = method.getSourceLineCount();
+                if (cLines > m_cHeight)
+                    {
+                    // need to show just a portion; nLine is the current (1-based) line of code that
+                    // the execution is at, so we want to show it in the middle
+                    int iDesiredFirst = nLine - (m_cHeight / 2);
+                    if (iDesiredFirst > iFirst)
+                        {
+                        int iLast         = iFirst + cLines - 1;
+                        int iDesiredLast  = iDesiredFirst + m_cHeight - 1;
+                        if (iDesiredLast > iLast)
+                            {
+                            iFirst = iLast - m_cHeight + 1;
+                            }
+                        else
+                            {
+                            iFirst = iDesiredFirst;
+                            }
+                        }
+                    cLines = m_cHeight;
+                    }
+
+                String[] asLine = method.getSourceLines(iFirst, cLines, true);
+                if (asLine != null)
+                    {
+                        cLines  = asLine.length;
+                    int iLast   = iFirst + cLines - 1;
+                    int cchNum  = numlen(iLast);
+                    int cchLine = m_cWidth - cchNum - 2;
+
+                    for (int iLine = 0; iLine < cLines; ++iLine)
+                        {
+                        int nLineNumber = iFirst + iLine + 1;
+                        sb.append(nLineNumber == nLine ? '>' : ' ')     // TODO show breakpoints as well
+                          .append(rjust(String.valueOf(nLineNumber), cchNum));
+
+                        String sLine = asLine[iLine];
+                        if (sLine != null)
+                            {
+                            if (sLine.length() > cchLine)
+                                {
+                                sLine = sLine.substring(0, cchLine);
+                                }
+
+                            sb.append(' ')
+                              .append(sLine);
+                            }
+
+                        sb.append('\n');
+                        }
+
+                    fPrinted = true;
+                    }
+                }
+
+            if (!fPrinted)
+                {
+                // TODO show assembly instead?
+                sb.append("(No source available)");
+                }
+
+            sb.append(dup('-', m_cWidth))
+              .append('\n');
+            }
+
         sb.append(ljust(sFHeader, cchFrames))
           .append(" | ")
           .append(sVHeader)
@@ -1281,7 +1361,7 @@ public class DebugConsole
         Frame  frame = m_frameFocus;
         if (frame.isNative() && !fAnyVars)
             {
-            return Handy.NO_ARGS;
+            return NO_ARGS;
             }
 
         ExceptionHandle hException = frame.m_hException;
@@ -1597,16 +1677,6 @@ public class DebugConsole
             s = sb.append(s).toString();
             }
         return s;
-        }
-
-    private static String dup(char ch, int cch)
-        {
-        StringBuilder sb = new StringBuilder(cch);
-        for (int i = 0; i < cch; ++i)
-            {
-            sb.append(ch);
-            }
-        return sb.toString();
         }
 
     private static int parseNonNegative(String sNumber)

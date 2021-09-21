@@ -616,11 +616,13 @@ public class PropertyDeclarationStatement
      */
     private MethodStructure createInitializer()
         {
-        PropertyStructure prop = (PropertyStructure) getComponent();
-        return prop.createMethod(isStatic(), Access.PRIVATE,
+        PropertyStructure prop   = (PropertyStructure) getComponent();
+        MethodStructure   method = prop.createMethod(isStatic(), Access.PRIVATE,
                 org.xvm.asm.Annotation.NO_ANNOTATIONS,
                 new Parameter[] {new Parameter(pool(), prop.getType(), null, null, true, 0, false)},
                 "=", Parameter.NO_PARAMS, true, false);
+        donateSource(method);
+        return method;
         }
 
     /**
