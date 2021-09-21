@@ -3114,21 +3114,22 @@ public class ClassStructure
      * Note: the resulting method will be marked as abstract if there are no properties
      *       to initialize.
      *
+     * @param pool        the ConstantPool to use
      * @param typeStruct  the type, for which a default constructor is to be created
      * @param mapFields   the field infos keyed by properties nids
      *
      * @return the [synthetic] MethodStructure for the corresponding default constructor
      */
-    public MethodStructure createInitializer(TypeConstant typeStruct, Map<Object, FieldInfo> mapFields)
+    public MethodStructure createInitializer(ConstantPool pool, TypeConstant typeStruct,
+                                             Map<Object, FieldInfo> mapFields)
         {
-        ConstantPool pool   = typeStruct.getConstantPool();
-        int          nFlags = Format.METHOD.ordinal() | Access.PUBLIC.FLAGS;
+        int nFlags = Format.METHOD.ordinal() | Access.PUBLIC.FLAGS;
 
-        // create an orphaned transient MethodStructure (using the target's pool)
+        // create a transient MethodStructure (without an intermediate MultiMethodStructure)
         MethodConstant idMethod = pool.ensureMethodConstant(
                 getIdentityConstant(), "default", TypeConstant.NO_TYPES, TypeConstant.NO_TYPES);
 
-        MethodStructure method = new MethodStructure(pool, nFlags, idMethod, null,
+        MethodStructure method = new MethodStructure(this, nFlags, idMethod, null,
                 Annotation.NO_ANNOTATIONS, Parameter.NO_PARAMS, Parameter.NO_PARAMS, true, false);
 
         MethodStructure.Code code = method.createCode();
@@ -3188,7 +3189,7 @@ public class ClassStructure
             if (clzRef != null)
                 {
                 // this is a ref; recurse
-                MethodStructure methodInitRef = clzRef.ensureAutoInitializer();
+                MethodStructure methodInitRef = clzRef.ensureAutoInitializer(pool);
                 code.add(new Op()
                     {
                     @Override
@@ -3223,7 +3224,7 @@ public class ClassStructure
             {
             code.add(new Return_0());
 
-            code.registerConstants();
+            code.registerConstants(pool);
             }
         else
             {
@@ -3301,7 +3302,7 @@ public class ClassStructure
                 code.add(new Return_0());
                 }
 
-            code.registerConstants();
+            code.registerConstants(pool);
             }
         return methodDelegate;
         }
@@ -3476,7 +3477,7 @@ public class ClassStructure
                     }
                 }
 
-            code.registerConstants();
+            code.registerConstants(pool);
             }
         return methodDelegate;
         }
@@ -3645,7 +3646,7 @@ public class ClassStructure
 
                 if (fRegisterConstants)
                     {
-                    code.registerConstants();
+                    code.registerConstants(pool);
                     }
 
                 MethodStructure methEstimate = findMethod("estimateStringLength", 0);
@@ -3667,7 +3668,7 @@ public class ClassStructure
 
                     if (fRegisterConstants)
                         {
-                        code.registerConstants();
+                        code.registerConstants(pool);
                         }
                     }
                 }

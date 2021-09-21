@@ -1,6 +1,7 @@
 package org.xvm.runtime;
 
 
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 
@@ -108,7 +109,7 @@ public class ProxyComposition
         }
 
     @Override
-    public MethodStructure ensureAutoInitializer()
+    public MethodStructure ensureAutoInitializer(ConstantPool pool)
         {
         throw new UnsupportedOperationException();
         }

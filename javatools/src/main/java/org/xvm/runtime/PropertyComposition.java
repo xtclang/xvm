@@ -6,6 +6,7 @@ import java.util.Set;
 
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 
@@ -152,9 +153,9 @@ public class PropertyComposition
         }
 
     @Override
-    public MethodStructure ensureAutoInitializer()
+    public MethodStructure ensureAutoInitializer(ConstantPool pool)
         {
-        return f_clzRef.ensureAutoInitializer();
+        return f_clzRef.ensureAutoInitializer(pool);
         }
 
     @Override

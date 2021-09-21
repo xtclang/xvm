@@ -815,7 +815,7 @@ public class xRef
          */
         public int initializeCustomFields(Frame frame)
             {
-            MethodStructure methodInit = getComposition().ensureAutoInitializer();
+            MethodStructure methodInit = getComposition().ensureAutoInitializer(frame.poolContext());
             if (methodInit == null)
                 {
                 return Op.R_NEXT;

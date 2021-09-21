@@ -4,6 +4,7 @@ package org.xvm.runtime;
 import java.util.List;
 import java.util.Set;
 
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 
 import org.xvm.asm.constants.PropertyConstant;
@@ -49,9 +50,9 @@ abstract public class DelegatingComposition
         }
 
     @Override
-    public MethodStructure ensureAutoInitializer()
+    public MethodStructure ensureAutoInitializer(ConstantPool pool)
         {
-        return f_clzOrigin.ensureAutoInitializer();
+        return f_clzOrigin.ensureAutoInitializer(pool);
         }
 
     @Override

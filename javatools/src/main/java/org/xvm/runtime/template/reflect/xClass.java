@@ -280,7 +280,7 @@ public class xClass
 
         TypeComposition clz      = f_templates.resolveClass(typePublic);
         ObjectHandle    hStruct  = template.createStruct(frame, clz);
-        MethodStructure methodAI = clz.ensureAutoInitializer();
+        MethodStructure methodAI = clz.ensureAutoInitializer(frame.poolContext());
         if (methodAI != null)
             {
             switch (frame.call1(methodAI, hStruct, Utils.OBJECTS_NONE, Op.A_IGNORE))

@@ -32,7 +32,7 @@ public class SynInit
     public int process(Frame frame, int iPC)
         {
         ObjectHandle    hStruct  = frame.getThis();
-        MethodStructure methodAI = hStruct.getComposition().ensureAutoInitializer();
+        MethodStructure methodAI = hStruct.getComposition().ensureAutoInitializer(frame.poolContext());
 
         return methodAI == null
                 ? iPC + 1

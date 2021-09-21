@@ -904,7 +904,7 @@ public class MethodStructure
                 }
             else
                 {
-                code.ensureAssembled();
+                code.ensureAssembled(ConstantPool.getCurrentPool());
                 assert m_cScopes > 0;
                 }
             }
@@ -1758,7 +1758,7 @@ public class MethodStructure
             }
         else if (m_code != null)
             {
-            m_code.registerConstants();
+            m_code.registerConstants(pool);
             }
 
         if (m_source != null)
@@ -1798,7 +1798,7 @@ public class MethodStructure
             {
             try
                 {
-                m_code.ensureAssembled();
+                m_code.ensureAssembled(getConstantPool());
                 }
             catch (UnsupportedOperationException e)
                 {
@@ -2117,7 +2117,7 @@ public class MethodStructure
          */
         public Op[] getAssembledOps()
             {
-            ensureAssembled();
+            ensureAssembled(ConstantPool.getCurrentPool());
             return m_aop;
             }
 
@@ -2308,12 +2308,12 @@ public class MethodStructure
                 }
             }
 
-        protected ConstantRegistry ensureConstantRegistry()
+        protected ConstantRegistry ensureConstantRegistry(ConstantPool pool)
             {
             ConstantRegistry registry;
             if (f_method.m_abOps == null)
                 {
-                f_method.m_registry = registry = new ConstantRegistry(f_method.getConstantPool());
+                f_method.m_registry = registry = new ConstantRegistry(pool);
 
                 Op[] aop = ensureOps();
                 for (Op op : aop)
@@ -2416,7 +2416,7 @@ public class MethodStructure
          * Address and simulate ops, eliminate dead code and after that register the ops with a
          * method constant registry.
          */
-        protected void registerConstants()
+        protected void registerConstants(ConstantPool pool)
             {
             if (f_method.m_abOps == null)
                 {
@@ -2430,7 +2430,7 @@ public class MethodStructure
                 // note that the last call to eliminateRedundantCode() did not modify the code, so
                 // each op will already have been stamped with the correct address and scope depth
 
-                ensureConstantRegistry();
+                ensureConstantRegistry(pool);
                 }
             }
 
@@ -2532,12 +2532,12 @@ public class MethodStructure
             f_method.m_cScopes = scope.getMaxDepth();
             }
 
-        protected synchronized void ensureAssembled()
+        protected synchronized void ensureAssembled(ConstantPool pool)
             {
             if (f_method.m_abOps == null)
                 {
                 // populate the local constant registry
-                ConstantRegistry registry = ensureConstantRegistry();
+                ConstantRegistry registry = ensureConstantRegistry(pool);
 
                 // assemble the ops into bytes
                 ByteArrayOutputStream outBytes = new ByteArrayOutputStream();

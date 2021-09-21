@@ -1838,8 +1838,7 @@ public class Frame
                 buildShortName(function.getIdentityConstant(), sb, false);
                 sb.append('(');
 
-                ClassStructure clz = function.getContainingClass();
-                sb.append(clz == null ? "???" : clz.getSourceFileName());
+                sb.append(function.getContainingClass().getSourceFileName());
 
                 if (iPC >= 0)
                     {

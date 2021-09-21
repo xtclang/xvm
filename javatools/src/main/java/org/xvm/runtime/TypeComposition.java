@@ -4,6 +4,7 @@ package org.xvm.runtime;
 import java.util.List;
 import java.util.Set;
 
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
@@ -99,9 +100,11 @@ public interface TypeComposition
      * Retrieve an auto-generated default initializer for struct instances of this class. Return
      * null if there are no fields to initialize.
      *
+     * @param pool  the ConstantPool to use
+     *
      * @return the auto-generated method structure with necessary initialization code or null
      */
-    MethodStructure ensureAutoInitializer();
+    MethodStructure ensureAutoInitializer(ConstantPool pool);
 
     /**
      * Create entries for all fields. Non-inflated fields will have null values; inflated
