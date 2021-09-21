@@ -1058,29 +1058,30 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
             for (String fileName : dupeCounts.keys)
                 {
                 File file = dataDir.fileFor(fileName);
-                assert file.exists;
-
-                Byte[] bytesOld = file.contents;
-                String jsonStr  = bytesOld.unpackUtf8();
-
-                assert FileLayout fileLayout := storageLayout.get(desired);
-                if (EntryLayout layout := fileLayout.get(fileName))
+                if (file.exists)
                     {
-                    // there may be extra stuff in some files that we should get rid of now
-                    (jsonStr, layout) = rebuildJson(desired, jsonStr, layout);
+                    Byte[] bytesOld = file.contents;
+                    String jsonStr  = bytesOld.unpackUtf8();
 
-                    Byte[] bytesNew = jsonStr.utf8();
-                    file.contents = bytesNew;
+                    if (FileLayout  fileLayout := storageLayout.get(desired),
+                        EntryLayout layout     := fileLayout.get(fileName))
+                        {
+                        // there may be extra stuff in some files that we should get rid of now
+                        (jsonStr, layout) = rebuildJson(desired, jsonStr, layout);
 
-                    fileLayout.put(fileName, layout);
-                    this.bytesUsed += bytesNew.size - bytesOld.size;
-                    }
-                else
-                    {
-                    // the DBMap has been removed
-                    file.delete();
-                    totalFiles--;
-                    this.bytesUsed -= bytesOld.size;
+                        Byte[] bytesNew = jsonStr.utf8();
+                        file.contents = bytesNew;
+
+                        fileLayout.put(fileName, layout);
+                        this.bytesUsed += bytesNew.size - bytesOld.size;
+                        }
+                    else
+                        {
+                        // the DBMap has been removed
+                        file.delete();
+                        totalFiles--;
+                        this.bytesUsed -= bytesOld.size;
+                        }
                     }
                 }
             }
