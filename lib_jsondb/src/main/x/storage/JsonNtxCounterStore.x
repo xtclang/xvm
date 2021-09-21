@@ -54,7 +54,7 @@ service JsonNtxCounterStore(Catalog catalog, DBObjectInfo info)
         Int     assumeValue = 0;
         try
             {
-            Parser parser = new Parser(dataFile.contents.unpackString().toReader());
+            Parser parser = new Parser(dataFile.contents.unpackUtf8().toReader());
             assumeValue = parser.expectInt();
             assert !parser.next();
             corrupted = False;
@@ -86,7 +86,7 @@ service JsonNtxCounterStore(Catalog catalog, DBObjectInfo info)
         {
         assert dataFile.exists;
 
-        Parser parser = new Parser(dataFile.contents.unpackString().toReader());
+        Parser parser = new Parser(dataFile.contents.unpackUtf8().toReader());
         current = parser.expectInt();
         assert !parser.next();
         }

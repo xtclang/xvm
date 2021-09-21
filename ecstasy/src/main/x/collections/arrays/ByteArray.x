@@ -108,7 +108,7 @@ mixin ByteArray<Element extends Byte>
      *
      * @throws IllegalUTF  if the UTF-8 data was not valid
      */
-    String unpackString()
+    String unpackUtf8()
         {
         Int byteCount = this.size;
         if (byteCount == 0)
@@ -133,7 +133,7 @@ mixin ByteArray<Element extends Byte>
      *
      * Note that this requires an exact count of **characters** to be passed. If the number of
      * bytes is known, but not the number of characters, then slice this byte array to obtain
-     * just the slice that contains the UTF-8 data, and use the no-parameter [unpackString()]
+     * just the slice that contains the UTF-8 data, and use the no-parameter [unpackUtf8()]
      * method to convert it to a String.
      *
      * @param index      the byte offset of the UTF-8 data within the byte array
@@ -145,7 +145,7 @@ mixin ByteArray<Element extends Byte>
      *
      * @throws IllegalUTF  if the UTF-8 data was not valid
      */
-    (String string, Int newIndex) unpackString(Int index, Int charCount)
+    (String string, Int newIndex) unpackUtf8(Int index, Int charCount)
         {
         if (charCount == 0)
             {

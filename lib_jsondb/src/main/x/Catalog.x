@@ -939,7 +939,7 @@ service Catalog<Schema extends RootSchema>
             try
                 {
                 Byte[] oldBytes = lockFile.contents;
-                String text     = oldBytes.unpackString();
+                String text     = oldBytes.unpackUtf8();
                 msg = $"{msg}; Catalog timestamp={timestamp}; lock file contains: {text}";
                 }
             catch (Exception e)

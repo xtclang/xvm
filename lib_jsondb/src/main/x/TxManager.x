@@ -2147,7 +2147,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
 
         try
             {
-            String            json   = statusFile.contents.unpackString();
+            String            json   = statusFile.contents.unpackUtf8();
             ObjectInputStream stream = new ObjectInputStream(internalJsonSchema, json.toReader());
             LogFileInfo[]     infos  = logFileInfoArrayMapping.read(stream.ensureElementInput());
             return True, infos.toArray(Mutable, True);
@@ -2524,7 +2524,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      */
     protected LogFileInfo loadLog(File logFile)
         {
-        String json = logFile.contents.unpackString();
+        String json = logFile.contents.unpackUtf8();
 
         Int first = -1;
         Int last  = -1;

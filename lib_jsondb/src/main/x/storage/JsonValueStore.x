@@ -279,7 +279,7 @@ service JsonValueStore<Value extends immutable Const>
         if (cleanupPending)
             {
             // rebuild the contents of the file, keeping only the transactions that we need
-            (String json, storageLayout) = rebuildJson(dataFile.contents.unpackString(), storageLayout);
+            (String json, storageLayout) = rebuildJson(dataFile.contents.unpackUtf8(), storageLayout);
 
             // we don't want the closing "\n]"
             offset = json.size-2;
@@ -489,7 +489,7 @@ service JsonValueStore<Value extends immutable Const>
             {
             if (force)
                 {
-                (String json, storageLayout) = rebuildJson(dataFile.contents.unpackString(), storageLayout);
+                (String json, storageLayout) = rebuildJson(dataFile.contents.unpackUtf8(), storageLayout);
                 this.storageOffset += json.size - 2; // appends will occur before the closing "\n]"
                 dataFile.contents = json.utf8();
                 cleanupPending = False;
@@ -574,7 +574,7 @@ service JsonValueStore<Value extends immutable Const>
         assert desired != NO_TX && desired > 0;
 
         Byte[] bytes      = file.contents;
-        String jsonStr    = bytes.unpackString();
+        String jsonStr    = bytes.unpackUtf8();
         Parser fileParser = new Parser(jsonStr.toReader());
         Int    txCount    = 0;
         using (val arrayParser = fileParser.expectArray())
@@ -639,7 +639,7 @@ service JsonValueStore<Value extends immutable Const>
         String jsonStr = "";
         try
             {
-            jsonStr = dataFile.contents.unpackString();
+            jsonStr = dataFile.contents.unpackUtf8();
             using (val fileParser = new Parser(jsonStr.toReader()))
                 {
                 using (val arrayParser = fileParser.expectArray())

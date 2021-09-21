@@ -961,7 +961,7 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
             {
             String               fileName   = file.name;
             Byte[]               bytes      = file.contents;
-            String               jsonStr    = bytes.unpackString();
+            String               jsonStr    = bytes.unpackUtf8();
             Parser               fileParser = new Parser(jsonStr.toReader());
             Map<Key, Range<Int>> valueLoc   = new HashMap();
             Map<Key, Range<Int>> entryLoc   = new HashMap();
@@ -1061,7 +1061,7 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                 assert file.exists;
 
                 Byte[] bytesOld = file.contents;
-                String jsonStr  = bytesOld.unpackString();
+                String jsonStr  = bytesOld.unpackUtf8();
 
                 assert FileLayout fileLayout := storageLayout.get(desired);
                 if (EntryLayout layout := fileLayout.get(fileName))
