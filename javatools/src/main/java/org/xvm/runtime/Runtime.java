@@ -1,6 +1,9 @@
 package org.xvm.runtime;
 
 
+import java.util.Queue;
+
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -80,6 +83,11 @@ public class Runtime
      * The executor.
      */
     public final ThreadPoolExecutor f_daemons;
+
+    /**
+     * The set of containers.
+     */
+    public final Queue<Container> f_containers = new ConcurrentLinkedQueue();
 
     /**
      * A service id producer.

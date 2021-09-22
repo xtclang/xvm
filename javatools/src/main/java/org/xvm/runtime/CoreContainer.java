@@ -57,7 +57,7 @@ public class CoreContainer
     public CoreContainer(Runtime runtime, TemplateRegistry templates, CoreConstHeap heapCore,
                          ModuleConstant idModule)
         {
-        super(runtime, templates, heapCore, idModule);
+        super(runtime, null, templates, heapCore, idModule);
         }
 
     public void start()
@@ -69,7 +69,7 @@ public class CoreContainer
 
         ensureServiceContext();
 
-        ConstantPool pool = m_idModule.getConstantPool();
+        ConstantPool pool = f_idModule.getConstantPool();
         try (var x = ConstantPool.withPool(pool))
             {
             initResources(pool);
@@ -78,22 +78,22 @@ public class CoreContainer
 
     public void invoke0(String sMethodName, ObjectHandle... ahArg)
         {
-        try (var x = ConstantPool.withPool(m_idModule.getConstantPool()))
+        try (var x = ConstantPool.withPool(f_idModule.getConstantPool()))
             {
             MethodConstant idMethod = findModuleMethod(sMethodName, ahArg);
             if (idMethod == null)
                 {
-                System.err.println("Missing: " +  sMethodName + " method for " + m_idModule.getValueString());
+                System.err.println("Missing: " +  sMethodName + " method for " + f_idModule.getValueString());
                 return;
                 }
 
-            TypeConstant    typeModule = m_idModule.getType();
+            TypeConstant    typeModule = f_idModule.getType();
             TypeComposition clzModule  = f_templates.resolveClass(typeModule);
             CallChain       chain      = clzModule.getMethodCallChain(idMethod.getSignature());
 
             FunctionHandle hInstantiateModuleAndRun = new NativeFunctionHandle((frame, ah, iReturn) ->
                 {
-                ObjectHandle hModule = frame.getConstHandle(m_idModule);
+                ObjectHandle hModule = frame.getConstHandle(f_idModule);
 
                 return Op.isDeferred(hModule)
                         ? hModule.proceed(frame, frameCaller ->
@@ -105,7 +105,7 @@ public class CoreContainer
             }
         catch (Exception e)
             {
-            throw new RuntimeException("failed to run: " + m_idModule, e);
+            throw new RuntimeException("failed to run: " + f_idModule, e);
             }
         }
 
@@ -594,7 +594,7 @@ public class CoreContainer
     /**
      * Fictional container (-1), whose only purpose is to serve as an owner of native injections.
      */
-    static Container NATIVE_CONTAINER = new Container(null, null, null, null)
+    static Container NATIVE_CONTAINER = new Container(null, null, null, null, null)
         {
         @Override
         public String toString()

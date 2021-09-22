@@ -137,8 +137,8 @@ public class xContainerLinker
                     return frame.raiseException("ResourceProvider must be a service");
                     }
 
-                SimpleContainer container =
-                        new SimpleContainer(frame.f_context, moduleApp.getIdentityConstant());
+                SimpleContainer container = new SimpleContainer(
+                    frame.f_context.f_container, frame.f_context, moduleApp.getIdentityConstant());
 
                 return new CollectResources(container, hProvider, aiReturn).doNext(frame);
                 }

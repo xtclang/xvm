@@ -50,13 +50,19 @@ import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 public abstract class Container
         implements LinkerContext
     {
-    protected Container(Runtime runtime, TemplateRegistry templates, ConstHeap heap,
-                        ModuleConstant idModule)
+    protected Container(Runtime runtime, Container containerParent,
+                        TemplateRegistry templates, ConstHeap heap, ModuleConstant idModule)
         {
         f_runtime   = runtime;
+        f_parent    = containerParent;
         f_templates = templates;
         f_heap      = heap;
-        m_idModule  = idModule;
+        f_idModule = idModule;
+
+        if (runtime != null)
+            {
+            runtime.f_containers.add(this);
+            }
         }
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -74,7 +80,7 @@ public abstract class Container
      */
     public ModuleConstant getModule()
         {
-        return m_idModule;
+        return f_idModule;
         }
 
 
@@ -88,11 +94,11 @@ public abstract class Container
         ServiceContext ctx = m_contextMain;
         if (ctx == null)
             {
-            ConstantPool pool = m_idModule.getConstantPool();
+            ConstantPool pool = f_idModule.getConstantPool();
 
             try (var x = ConstantPool.withPool(pool))
                 {
-                m_contextMain = ctx = createServiceContext(m_idModule.getName());
+                m_contextMain = ctx = createServiceContext(f_idModule.getName());
                 xService.INSTANCE.createServiceHandle(ctx,
                     xService.INSTANCE.getCanonicalClass(),
                     xService.INSTANCE.getCanonicalType());
@@ -110,7 +116,7 @@ public abstract class Container
      */
     public ServiceContext createServiceContext(String sName)
         {
-        ServiceContext service = new ServiceContext(this, m_idModule.getConstantPool(),
+        ServiceContext service = new ServiceContext(this, f_idModule.getConstantPool(),
                 sName, f_runtime.f_idProducer.getAndIncrement());
         f_setServices.add(service);
         return service;
@@ -158,7 +164,12 @@ public abstract class Container
         {
         f_setServices.remove(service);
 
-        // TODO: should we don something if nothing left?
+        if (f_setServices.isEmpty())
+            {
+            f_runtime.f_containers.remove(this);
+            }
+
+        // TODO: should we do something else if nothing left?
         }
 
     /**
@@ -406,7 +417,7 @@ public abstract class Container
     @Override
     public boolean isPresent(IdentityConstant constId)
         {
-        if (constId.getModuleConstant().equals(m_idModule))
+        if (constId.getModuleConstant().equals(f_idModule))
             {
             // part of the Ecstasy module
             // TODO
@@ -436,7 +447,7 @@ public abstract class Container
     @Override
     public String toString()
         {
-        return "Container: " + m_idModule.getName();
+        return "Container: " + f_idModule.getName();
         }
 
 
@@ -447,9 +458,14 @@ public abstract class Container
     public final ConstHeap        f_heap;
 
     /**
+     * The parent container.
+     */
+    public final Container f_parent;
+
+    /**
      * The main module id.
      */
-    protected ModuleConstant m_idModule;
+    protected final ModuleConstant f_idModule;
 
     /**
      * The service context for the container itself.
