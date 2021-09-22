@@ -22,9 +22,9 @@ public class SimpleContainer
      * @param context   the parent container's context
      * @param idModule  the module id
      */
-    public SimpleContainer(ServiceContext context, ModuleConstant idModule)
+    public SimpleContainer(Container containerParent, ServiceContext context, ModuleConstant idModule)
         {
-        super(context.getRuntime(), context.f_templates,
+        super(containerParent.f_runtime, containerParent, context.f_templates,
               new ContainerHeap(context.f_container.f_heap), idModule);
         }
 
