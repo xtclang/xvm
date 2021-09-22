@@ -153,6 +153,14 @@ public class ServiceContext
         }
 
     /**
+     * @return the set of Fibers for this context
+     */
+    public Set<Fiber> getFibers()
+        {
+        return f_setFibers;
+        }
+
+    /**
      * @return the ServiceContext associated with the current Java thread
      */
     public static ServiceContext getCurrentContext()

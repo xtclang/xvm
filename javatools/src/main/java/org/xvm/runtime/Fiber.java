@@ -205,7 +205,7 @@ public class Fiber
             default:
             case InitialNew:
             case InitialAssociated:
-                throw new IllegalArgumentException();
+                return null;
 
             case Running:
                 return f_context.getCurrentFrame();

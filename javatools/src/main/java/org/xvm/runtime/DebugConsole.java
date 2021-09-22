@@ -388,26 +388,22 @@ public class DebugConsole
                         break;
 
                     case "F":
-                        if (cArgs == 0)
+                        int iFrame = cArgs == 0 ? 0 : parseNonNegative(asParts[1]);
+                        Frame.StackFrame[] aFrames = m_aFrames;
+                        int                cFrames = aFrames == null ? 0 : aFrames.length;
+                        if (iFrame >= 0 && iFrame < cFrames)
                             {
-                            writer.println(renderDebugger());
-                            continue NextCommand;
+                            m_frameFocus = aFrames[iFrame].frame;
                             }
 
-                        if (cArgs == 1)
+                        if (m_viewMode == ViewMode.Services && m_frameFocus != null)
                             {
-                            Frame.StackFrame[] aFrames = m_aFrames;
-                            int                cFrames = aFrames == null ? 0 : aFrames.length;
-                            int                iFrame  = parseNonNegative(asParts[1]);
-                            if (iFrame >= 0 && iFrame < cFrames)
-                                {
-                                m_frameFocus = aFrames[iFrame].frame;
-                                }
-                            m_nViewMode = 0;
-                            writer.println(renderDebugger());
-                            continue NextCommand;
+                            m_frame = m_frameFocus;
                             }
-                        break;
+                        m_viewMode = ViewMode.Frames;
+
+                        writer.println(renderDebugger());
+                        continue NextCommand;
 
                     case "?": case "H": case "HELP":
                         writer.println(renderHelp());
@@ -433,13 +429,18 @@ public class DebugConsole
                         break NextCommand;
 
                     case "VC":
-                        m_nViewMode = 1;
+                        m_viewMode = ViewMode.Console;
                         writer.println(renderConsole());
                         continue NextCommand;
 
                     case "VD":
-                        m_nViewMode = 0;
+                        m_viewMode = ViewMode.Frames;
                         writer.println(renderDebugger());
+                        continue NextCommand;
+
+                    case "VF":
+                        m_viewMode = ViewMode.Services;
+                        writer.println(renderServices());
                         continue NextCommand;
 
                     case "VS":
@@ -1089,11 +1090,12 @@ public class DebugConsole
      */
     private String renderDisplay()
         {
-        switch (m_nViewMode)
+        switch (m_viewMode)
             {
-            case 0: return renderDebugger();
-            case 1: return renderConsole();
-            default: return "unknown view mode #" + m_nViewMode;
+            case Frames: return renderDebugger();
+            case Console: return renderConsole();
+            case Services: return renderServices();
+            default: return "unknown view mode " + m_viewMode;
             }
         }
 
@@ -1472,26 +1474,6 @@ public class DebugConsole
         return result;
         }
 
-    private ObjectHandle getVar(String sName)
-        {
-        Frame frame = m_frameFocus;
-        if (sName.equals("this"))
-            {
-            return frame.f_hThis;
-            }
-
-        int cVars = frame.f_anNextVar[frame.m_iScope];
-        for (int i = 0; i < cVars; i++)
-            {
-            VarInfo info = frame.getVarInfo(i);
-            if (info != null && info.getName().equals(sName))
-                {
-                return frame.f_ahVar[i];
-                }
-            }
-        return null;
-        }
-
     private void renderVar(ObjectHandle hVal, boolean fField, StringBuilder sb, String sTab)
         {
         if (hVal == null)
@@ -1598,7 +1580,73 @@ public class DebugConsole
         return sb.toString();
         }
 
-    String renderHelp()
+    private String renderServices()
+        {
+        List<Frame.StackFrame> listFrames = new ArrayList<>();
+        int                    ixFrame    = 0;
+
+        StringBuilder sb = new StringBuilder();
+        for (Container container : m_frame.f_context.getRuntime().f_containers)
+            {
+            // for now, let's show all the containers, rather than the current one
+            if (sb.length() == 0)
+                {
+                sb.append("\n\n");
+                }
+            sb.append("+container ")
+              .append(container.f_idModule);
+
+            if (container.f_parent != null)
+                {
+                sb.append(" parent=")
+                  .append(container.f_parent.f_idModule);
+                }
+
+            for (ServiceContext ctx : container.f_setServices)
+                {
+                sb.append("\n    Service \"")
+                  .append(ctx.f_sName)
+                  .append("\" (id=")
+                  .append(ctx.f_nId)
+                  .append("); status=")
+                  .append(ctx.getStatus());
+
+                for (Fiber fiber : ctx.getFibers())
+                    {
+                    sb.append('\n');
+
+                    Frame frame = fiber.getFrame();
+                    if (frame == null)
+                        {
+                        sb.append(dup(' ', 8));
+                        }
+                    else
+                        {
+                        sb.append(frame == m_frame ? '>' : ' ');
+                        sb.append(ljust(String.valueOf(ixFrame++), 7));
+                        }
+
+                    sb.append("Fiber ")
+                        .append(fiber.getId())
+                        .append(": ")
+                        .append(fiber.getStatus());
+
+                    if (frame != null)
+                        {
+                        Frame.StackFrame stackFrame = new Frame.StackFrame(frame);
+                        listFrames.add(stackFrame);
+
+                        sb.append(" @")
+                          .append(stackFrame);
+                        }
+                    }
+                }
+            }
+        m_aFrames = listFrames.toArray(new Frame.StackFrame[0]);
+        return sb.toString();
+        }
+
+    private String renderHelp()
         {
         StringBuilder sb = new StringBuilder();
         sb.append("\n");
@@ -1639,6 +1687,7 @@ public class DebugConsole
         sb.append("\n");
         sb.append("VC                   View Console\n");
         sb.append("VD                   View Debugger\n");
+        sb.append("VF                   View Services and Fibers\n");
         sb.append("VS <width> <height>  Set view width and optional height for debugger and console views\n");
         sb.append("?                    Display this help message");
         return sb.toString();
@@ -2076,10 +2125,9 @@ public class DebugConsole
 
     /**
      * Current view mode.
-     * 0=frames & variables
-     * 1=console
      */
-    private int m_nViewMode = 0;
+    enum ViewMode {Frames, Console, Services}
+    private ViewMode m_viewMode = ViewMode.Frames;
 
     /**
      * The order that the frames were last listed in.

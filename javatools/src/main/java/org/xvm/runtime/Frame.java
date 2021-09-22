@@ -8,7 +8,6 @@ import java.util.List;
 
 import java.util.concurrent.CompletableFuture;
 
-import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
@@ -1807,6 +1806,11 @@ public class Frame
 
     public static class StackFrame
         {
+        public StackFrame(Frame frame)
+            {
+            this(frame, frame.f_function, frame.m_iPC);
+            }
+
         public StackFrame(Frame frame, MethodStructure function, int iPC)
             {
             this.frame    = frame;
@@ -1832,6 +1836,11 @@ public class Frame
                 {
                 sb.append("Service ")
                   .append(frame.f_context.f_sName);
+                if (frame.f_aOp != null)
+                    {
+                    sb.append(' ')
+                      .append(frame.f_aOp[0]);
+                    }
                 }
             else
                 {
