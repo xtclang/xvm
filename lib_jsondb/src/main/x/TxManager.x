@@ -881,7 +881,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
 
         // if this was only processing up to "stopAfterId", then more transactions may have shown
         // up since then, and they need to be processed (but not by this fiber)
-        if (!pendingPrepare.empty)
+        if (stopAfterId != Null && !pendingPrepare.empty)
             {
             this:service.callLater(processBacklog);
             }
