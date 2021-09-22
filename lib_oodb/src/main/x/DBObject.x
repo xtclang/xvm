@@ -416,10 +416,25 @@ interface DBObject
             }
 
         /**
+         * The maximum number of times to attempt to execute the trigger, before abandoning.
+         */
+        @RO Int maxRetries = 3;
+
+        /**
          * Execute the AsyncTrigger functionality. This method may modify the database.
          *
          * @param change  the change that the AsyncTrigger is firing in response to
          */
         void process(TxChange change);
+
+        /**
+         * This method is invoked when the trigger execution has failed, and the database has given
+         * up automatically retrying the trigger. If the `TxChange` information is important to
+         * retain for later processing, then this method should add it to a queue for later
+         * reliable processing, or to an error queue for diagnosis.
+         *
+         * @param change  the change that the AsyncTrigger is firing in response to
+         */
+        void abandon(TxChange change);
         }
     }
