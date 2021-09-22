@@ -264,8 +264,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      * The maximum size log to store in any one log file.
      * TODO this setting should be configurable (need a "Prefs" API)
      */
-    // TODO protected Int maxLogSize = 1 << 20; // 1MB
-    protected Int maxLogSize = 4000;
+    protected Int maxLogSize = 100K;
 
     /**
      * Previous modified date/time of the log.
@@ -670,12 +669,13 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      * throughput, latency, and resource constraints.
      *
      * @param tx        the Client Transaction to assign TxIds for
+     * @param worker    the Client Worker service to offload expensive CPU tasks onto
      * @param systemTx  indicates that the transaction is being conducted by the database system
      *                  itself, and not by an application "client"
      *
      * @return  the "write" transaction ID to use
      */
-    Int begin(Client.Transaction tx, Boolean systemTx = False)
+    Int begin(Client.Transaction tx, Client.Worker worker, Boolean systemTx = False)
         {
         checkEnabled();
 
@@ -683,7 +683,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         assert !byClientId.contains(clientId);
 
         Int      writeId = genWriteId();
-        TxRecord rec     = new TxRecord(tx, tx.txInfo, clientId, writeId);
+        TxRecord rec     = new TxRecord(tx, tx.txInfo, clientId, worker, writeId);
 
         byClientId.put(clientId, rec);
         byWriteId .put(writeId , rec);
@@ -973,7 +973,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 }
 
             assert commitAll != Null;
-            @Future Boolean completed = commitAll.transformOrHandle((Tuple<>? t, Exception? e) ->
+            return commitAll.transformOrHandle((Tuple<>? t, Exception? e) ->
                 {
                 if (e != Null)
                     {
@@ -984,7 +984,6 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 rec.terminate(Committed);
                 return True;
                 });
-            return completed;
             }
 
         return success;
@@ -1177,13 +1176,15 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         construct(Client.Transaction  clientTx,
                   TxInfo              txInfo,
                   Int                 clientId,
+                  Client.Worker       worker,
                   Int                 writeId,
                  )
             {
             this.clientTx = clientTx;
             this.txInfo   = txInfo;
-            this.writeId  = writeId;
             this.clientId = clientId;
+            this.worker   = worker;
+            this.writeId  = writeId;
             this.readId   = NO_TX;
             }
 
@@ -1244,6 +1245,12 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
          * The internal id that uniquely identifies the client.
          */
         Int clientId;
+
+        /**
+         * The Client-provided Worker service, to prevent consuming either the TxManager cycles or
+         * cycles of the various ObjectStore.
+         */
+        Client.Worker worker;
 
         /**
          * The transaction id while it is in-flight, also called its "writeId".
@@ -2127,7 +2134,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
     Client.Worker workerFor(Int txId)
         {
         assert TxRecord tx := byWriteId.get(txId);
-        return tx.clientTx.outer.worker;
+        return tx.worker;
         }
 
 

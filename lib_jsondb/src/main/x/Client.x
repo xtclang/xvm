@@ -87,7 +87,7 @@ service Client<Schema extends RootSchema>
         // that is required to carry out that operation
         reentrancy = Exclusive;
         conn       = new Connection(infoFor(0)).as(Connection + Schema);
-        worker     = new Worker();
+        worker     = new Worker(jsonSchema);
         }
 
 
@@ -555,12 +555,14 @@ service Client<Schema extends RootSchema>
     // ----- Worker --------------------------------------------------------------------------------
 
     /**
-     * The Worker virtual service child class exists to allow work to be delegated explicitly to
-     * this service in order to be executed. This allows CPU-intensive (expensive) work to be dumped
-     * back onto the Client instead of letting that work fall onto more critical services, such AS
-     * the various `ObjectStore` services.
+     * The Worker service exists to allow work to be delegated explicitly back to the Container that
+     * the Client is running within.
+     *
+     * This allows CPU-intensive (expensive) work to be dumped back onto the Client instead of
+     * letting that work fall onto more critical services, such AS the various `ObjectStore`
+     * services.
      */
-    class Worker
+    static service Worker(json.Schema jsonSchema)
         {
         /**
          * Deserialize a value from a JSON string.
@@ -1112,7 +1114,7 @@ service Client<Schema extends RootSchema>
             }
         finally
             {
-            id_ = id ?: txManager.begin(this, readOnly || txInfo.readOnly);
+            id_ = id ?: txManager.begin(this, worker, readOnly || txInfo.readOnly);
             }
 
         /**
