@@ -680,7 +680,7 @@ public class Compiler
      */
     public static final String CONDITIONAL_NOT_ALLOWED            = "COMPILER-23";
     /**
-     * Cannot find a module.
+     * Cannot find a module {0}.
      */
     public static final String MODULE_MISSING                     = "COMPILER-24";
     /**

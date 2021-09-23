@@ -763,6 +763,12 @@ public class NameResolver
                         component = module.isFingerprint()
                                 ? module.getFingerprintOrigin()
                                 : module;
+                        if (component == null)
+                            {
+                            m_node.log(m_errs, Severity.ERROR, Compiler.MODULE_MISSING, module.getName());
+                            m_stage = Stage.ERROR;
+                            return ResolutionResult.ERROR;
+                            }
                         id = component.getIdentityConstant();
                         }
                     break;
