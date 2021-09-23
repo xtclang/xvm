@@ -964,7 +964,8 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             }
 
         // direct the ObjectStores to write, and clean up the transactions
-        Future<Boolean>? finalResult = Null;
+        @Future Boolean initialResult = success;
+        Future<Boolean> finalResult   = &initialResult;
         NextTx: for (TxRecord rec : processed)
             {
             Set<Int> storeIds = rec.enlisted;
@@ -983,7 +984,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 }
             assert storeAll != Null;
 
-            @Future Boolean partialResult = storeAll.transformOrHandle((Tuple<>? t, Exception? e) ->
+            Future<Boolean> incrementalResult = storeAll.transformOrHandle((t, e) ->
                 {
                 Boolean localSuccess = True;
 
@@ -1005,12 +1006,12 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                     localSuccess = False;
                     }
 
-                return success && localSuccess;
+                return localSuccess;
                 });
-            finalResult = finalResult?.and(&partialResult, (ok1, ok2) -> ok1 & ok2) : &partialResult;
+            finalResult = finalResult.and(incrementalResult, (ok1, ok2) -> ok1 & ok2);
             }
 
-        return finalResult ?: success;
+        return finalResult;
         }
 
     /**
