@@ -942,7 +942,6 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                     throw new IllegalState($"Unexpected status for transaction {rec.idString}: {rec.status}");
                 }
 
-            buf.append(",\n");
             rec.addSeal(buf);
             lastAdded  = rec.prepareId;
             processed += rec;
@@ -1910,7 +1909,6 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
 
             // bundle the results of "sealPrepare()" into a transaction log entry
             StringBuffer buf = new StringBuffer();
-            buf.append(",\n");
             addSeal(buf);
             buf.append("\n]");
             appendLog(buf.toString());
