@@ -825,8 +825,10 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             return;
             }
 
-        // transactions that are have prepared but have not yet been committed to disk
-        TxRecord[] pendingCommit = new TxRecord[];
+        // transactions that are have prepared but have not yet been committed to disk (or that
+        // failed to prepare and need to be rolled back)
+        TxRecord[] pendingCommit   = new TxRecord[];
+        TxRecord[] pendingRollback = new TxRecord[];
 
         while (TxRecord rec := pendingPrepare.first())
             {
@@ -840,19 +842,24 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 continue;
                 }
 
-            if (rec.prepare()
-                    && (validators  .empty || rec.validate  ())
-                    && (rectifiers  .empty || rec.rectify   ())
-                    && (distributors.empty || rec.distribute())
-                    && rec.seal())
+            Boolean successfullyPrepared = False;
+            try
                 {
-                pendingCommit.add(rec);
+                successfullyPrepared = rec.prepare()
+                        && (validators  .empty || rec.validate  ())
+                        && (rectifiers  .empty || rec.rectify   ())
+                        && (distributors.empty || rec.distribute())
+                        && rec.seal();
                 }
-            else
+            catch (Exception e)
                 {
-                rec.rollback();
+                log($"Exception occurred while preparing transaction {rec.idString}: {e}");
                 }
 
+            (successfullyPrepared ? pendingCommit : pendingRollback).add(rec);
+
+            // the backlog processing may be limited, such that it only processes up to a specified
+            // transaction
             if (writeId == stopAfterId)
                 {
                 break;
@@ -879,6 +886,11 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 }
             }
 
+        for (TxRecord rec : pendingRollback)
+            {
+            rec.rollback();
+            }
+
         // if this was only processing up to "stopAfterId", then more transactions may have shown
         // up since then, and they need to be processed (but not by this fiber)
         if (stopAfterId != Null && !pendingPrepare.empty)
@@ -900,10 +912,15 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
 
         Boolean success = True;
 
-        StringBuffer buf      = new StringBuffer();
-        Int[]        writeIds = new Int[recs.size];
+        // bundle the results of "sealPrepare()" into a buffer
+        StringBuffer buf       = new StringBuffer();
+        Int[]        writeIds  = new Int[recs.size];
+        Int          lastAdded = NO_TX;
+        TxRecord[]   processed = new TxRecord[];
         NextTx: for (TxRecord rec : recs)
             {
+            assert rec.prepareId > lastAdded;
+
             switch (rec.status)
                 {
                 case Sealed:
@@ -925,69 +942,77 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                     throw new IllegalState($"Unexpected status for transaction {rec.idString}: {rec.status}");
                 }
 
+            buf.append(",\n");
+            rec.addSeal(buf);
+            lastAdded  = rec.prepareId;
+            processed += rec;
+            }
+
+        if (processed.empty)
+            {
+            return success;
+            }
+
+        // append all of the commits to the log
+        buf.append("\n]");
+        appendLog(buf.toString());
+        assert lastCommitted < lastAdded;
+        lastCommitted = lastAdded;
+
+        if (logFile.size > maxLogSize)
+            {
+            rotateLog();
+            }
+
+        // direct the ObjectStores to write, and clean up the transactions
+        Future<Boolean>? finalResult = Null;
+        NextTx: for (TxRecord rec : processed)
+            {
             Set<Int> storeIds = rec.enlisted;
             if (storeIds.empty)
                 {
                 rec.terminate(Committed);
-                }
-            assert !storeIds.empty;
-
-            // bundle the results of "sealPrepare()" into a buffer
-            Int          writeId  = rec.writeId;
-            Int          commitId = rec.prepareId;
-
-            buf.append(",\n{\"_tx\":")
-               .append(commitId)
-               .append(", \"_ts\":\"")
-               .append(clock.now.toString(True))
-               .add('\"');
-
-            Loop: for (Int storeId : storeIds)
-                {
-                ObjectStore store = storeFor(storeId);
-                String      json  = store.sealPrepare(writeId);
-
-                buf.append(", \"")
-                   .append(store.info.path.toString().substring(1))
-                   .append("\":")
-                   .append(json);
+                continue;
                 }
 
-            buf.append("}\n]");
-            appendLog(buf.toString());
-
-            assert commitId == lastCommitted + 1;
-            lastCommitted = commitId;
-
-            if (logFile.size > maxLogSize)
-                {
-                rotateLog();
-                }
-
-            FutureVar<Tuple<>>? commitAll = Null;
-            rec.status = Committing;
+            Future<Tuple<>>? storeAll = Null;
+            Int              writeId  = rec.writeId;
             for (Int storeId : storeIds)
                 {
-                @Future Tuple<> commitOne = storeFor(storeId).commit(writeId);
-                commitAll = commitAll?.and(&commitOne, (t, _) -> t) : &commitOne; // TODO GG wide ass -> Tuple:()
-                // commitAll = commitAll?.and(&commitOne, (_, _) -> Tuple:()) : &commitOne;
+                @Future Tuple<> storeOne = storeFor(storeId).commit(writeId);
+                storeAll = storeAll?.and(&storeOne, (t, _) -> t) : &storeOne; // TODO GG wide ass -> Tuple:()
                 }
+            assert storeAll != Null;
 
-            assert commitAll != Null;
-            return commitAll.transformOrHandle((Tuple<>? t, Exception? e) ->
+            @Future Boolean partialResult = storeAll.transformOrHandle((Tuple<>? t, Exception? e) ->
                 {
+                Boolean localSuccess = True;
+
                 if (e != Null)
                     {
                     log($"HeuristicException during commit caused by: {e}");
-                    rec.terminate(RolledBack); // this should be HeuristicRollback
-                    return False;
+                    // REVIEW should this panic() right here?
+                    localSuccess = False;
                     }
-                rec.terminate(Committed);
-                return True;
+
+                try
+                    {
+                    rec.terminate(Committed);
+                    }
+                catch (Exception e2)
+                    {
+                    log($"Exception while terminating transaction {rec.idString}: {e2}");
+                    // REVIEW should this panic() right here?
+                    localSuccess = False;
+                    }
+
+                return success && localSuccess;
                 });
+            finalResult = finalResult?.and(&partialResult, (ok1, ok2) -> ok1 & ok2) : &partialResult;
             }
 
-        return success;
+        assert finalResult != Null;
+        return finalResult;
         }
 
     /**
@@ -1137,16 +1162,6 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
     protected Int genWriteId()
         {
         return generateWriteId(++txCount);
-        }
-
-    /**
-     * Generate the next "prepare" transaction ID. Note that until a transaction finishes TODO
-     *
-     * @return the new prepare id
-     */
-    protected Int genPrepareId()
-        {
-        return lastPrepared + 1;
         }
 
 
@@ -1300,6 +1315,18 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                     super(newId);
                     }
                 }
+            }
+
+        /**
+         * Generate the next "prepare" transaction ID. This alters the transaction's read-id, by
+         * "sliding it up" to the latest prepare.
+         *
+         * @return the new prepare id
+         */
+        Int selectPrepareId()
+            {
+            readId = lastPrepared;
+            return prepareId;
             }
 
         /**
@@ -1481,12 +1508,11 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 return True;
                 }
 
-            // TODO: add ourselves to the pendingPrepare queue; proceed only if it was empty
-
             // prepare phase
             Boolean             abort       = False;
             FutureVar<Boolean>? preparedAll = Null;
-            Int                 prepareId   = genPrepareId();
+
+            Int destinationId = selectPrepareId();
             for (Int storeId : storeIds)
                 {
                 ObjectStore store = storeFor(storeId);
@@ -1502,7 +1528,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                     }
 
                 import ObjectStore.PrepareResult;
-                PrepareResult   prepareResult = store.prepare^(writeId, prepareId);
+                PrepareResult   prepareResult = store.prepare^(writeId, destinationId);
                 Future<Boolean> preparedOne   = &prepareResult.transform(pr ->
                     {
                     switch (pr)
@@ -1884,24 +1910,11 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
 
             // bundle the results of "sealPrepare()" into a transaction log entry
             StringBuffer buf = new StringBuffer();
-            buf.append(",\n{\"_tx\":")
-               .append(commitId)
-               .append(", \"_ts\":\"")
-               .append(clock.now.toString(True))
-               .add('\"');
-
-            Loop: for ((Int storeId, String? json) : sealById)
-                {
-                assert storeId > 0 && json != Null;
-
-                buf.append(", \"")
-                   .append(infoFor(storeId).path.toString().substring(1))   // skip the leading '/'
-                   .append("\":")
-                   .append(json);
-                }
-
-            buf.append("}\n]");
+            buf.append(",\n");
+            addSeal(buf);
+            buf.append("\n]");
             appendLog(buf.toString());
+            lastCommitted = commitId;
 
             FutureVar<Tuple<>>? commitAll = Null;
             for (Int storeId : enlisted)
@@ -1919,7 +1932,6 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                     }
                 });
 
-            lastCommitted = commitId;
             terminate(Committed);
 
             if (logFile.size > maxLogSize)
@@ -1928,6 +1940,34 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 }
 
             return True;
+            }
+
+        /**
+         * Add the transaction record to the passed buffer.
+         *
+         * @param buf  the buffer to append to
+         *
+         * @return the passed buffer
+         */
+        protected StringBuffer addSeal(StringBuffer buf)
+            {
+            buf.append(",\n{\"_tx\":")
+               .append(prepareId)
+               .append(", \"_ts\":\"")
+               .append(clock.now.toString(True))
+               .add('\"');
+
+            Loop: for ((Int storeId, String? json) : sealById)
+                {
+                assert storeId > 0 && json != Null;
+
+                buf.append(", \"")
+                   .append(infoFor(storeId).path.toString().substring(1))   // skip the leading '/'
+                   .append("\":")
+                   .append(json);
+                }
+
+            return buf.append('}');
             }
 
         /**
