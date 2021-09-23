@@ -396,12 +396,6 @@ public class DebugConsole
                             m_frameFocus = aFrames[iFrame].frame;
                             }
 
-                        if (m_viewMode == ViewMode.Services && m_frameFocus != null)
-                            {
-                            m_frame = m_frameFocus;
-                            }
-                        m_viewMode = ViewMode.Frames;
-
                         writer.println(renderDebugger());
                         continue NextCommand;
 
@@ -1313,7 +1307,8 @@ public class DebugConsole
      */
     private String[] renderFrames()
         {
-        Frame.StackFrame[] aFrames = m_frame.getStackFrameArray();
+        Frame              frameTop = m_viewMode == ViewMode.Services ? m_frameFocus : m_frame;
+        Frame.StackFrame[] aFrames = frameTop.getStackFrameArray();
         Frame frameNewTop =   aFrames == null ||   aFrames.length < 1 ? null :   aFrames[0].frame;
         Frame frameOldTop = m_aFrames == null || m_aFrames.length < 1 ? null : m_aFrames[0].frame;
         m_aFrames = aFrames;
@@ -1360,7 +1355,7 @@ public class DebugConsole
             }
         while (++iPass < 2);
 
-        Frame  frame = m_frameFocus;
+        Frame frame = m_frameFocus;
         if (frame.isNative() && !fAnyVars)
             {
             return NO_ARGS;
@@ -1376,6 +1371,12 @@ public class DebugConsole
         if (hThis != null)
             {
             addVar(0, "this", "this", hThis, listVars, getGlobalStash().getExpandMap());
+            }
+
+        if (hThis.getComposition().getFieldPosition(GenericHandle.OUTER) != -1)
+            {
+            ObjectHandle hOuter = ((GenericHandle) hThis).getField(GenericHandle.OUTER);
+            addVar(0, "outer", "outer", hOuter, listVars, mapExpand);
             }
 
         int cVars = frame.f_anNextVar == null ? 0 : frame.f_anNextVar[frame.m_iScope];
@@ -1589,7 +1590,7 @@ public class DebugConsole
         for (Container container : m_frame.f_context.getRuntime().f_containers)
             {
             // for now, let's show all the containers, rather than the current one
-            if (sb.length() == 0)
+            if (sb.length() > 0)
                 {
                 sb.append("\n\n");
                 }
@@ -1616,6 +1617,16 @@ public class DebugConsole
                     sb.append('\n');
 
                     Frame frame = fiber.getFrame();
+                    if (frame == null)
+                        {
+                        // fiber is in the "initial" state; show the caller's frame
+                        Fiber fiberCaller = fiber.f_fiberCaller;
+                        if (fiberCaller != null)
+                            {
+                            frame = fiberCaller.getFrame();
+                            }
+                        }
+
                     if (frame == null)
                         {
                         sb.append(dup(' ', 8));

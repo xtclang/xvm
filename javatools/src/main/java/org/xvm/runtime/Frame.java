@@ -1834,8 +1834,12 @@ public class Frame
 
             if (function == null)
                 {
-                sb.append("Service ")
-                  .append(frame.f_context.f_sName);
+                ServiceContext ctx = frame.f_context;
+                sb.append("Service #")
+                  .append(ctx.f_nId)
+                  .append(' ')
+                  .append(ctx.f_sName);
+
                 if (frame.f_aOp != null)
                     {
                     sb.append(' ')
