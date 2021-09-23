@@ -1010,8 +1010,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             finalResult = finalResult?.and(&partialResult, (ok1, ok2) -> ok1 & ok2) : &partialResult;
             }
 
-        assert finalResult != Null;
-        return finalResult;
+        return finalResult ?: success;
         }
 
     /**
