@@ -1171,8 +1171,7 @@ public class DebugConsole
                 if (asLine != null)
                     {
                         cLines  = asLine.length;
-                    int iLast   = iFirst + cLines - 1;
-                    int cchNum  = numlen(iLast);
+                    int cchNum  = numlen(iFirst + cLines);
                     int cchLine = m_cWidth - cchNum - 2;
 
                     for (int iLine = 0; iLine < cLines; ++iLine)

@@ -2080,13 +2080,15 @@ public class Frame
 
             if (nLine > 0)
                 {
-                sb.append(" (line=").append(nLine);
+                sb.append(" (")
+                  .append(function.getContainingClass().getSourceFileName())
+                  .append(':').append(nLine);
                 }
             else
                 {
-                sb.append(" (iPC=").append(iPC);
+                sb.append(" (iPC=").append(iPC)
+                  .append(", op=").append(aOp[iPC].getClass().getSimpleName());
                 }
-            sb.append(", op=").append(aOp[iPC].getClass().getSimpleName());
             sb.append(')');
             }
 
