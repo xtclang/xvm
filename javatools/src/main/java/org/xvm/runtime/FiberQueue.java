@@ -172,15 +172,22 @@ public class FiberQueue
             return -2;
             }
 
-        switch (frame.f_fiber.getStatus())
+        Fiber fiber = frame.f_fiber;
+        switch (fiber.getStatus())
             {
             default:
                 throw new IllegalStateException();
 
             case Waiting:
-                return frame.f_fiber.isReady() ? 2 : -1;
+                return fiber.isReady() ? 2 : -1;
 
             case InitialAssociated:
+                if (frame.f_context.getReentrancy() == ServiceContext.Reentrancy.Forbidden)
+                    {
+                    // no more than one fiber is allowed
+                    return m_cSize == 1 ? 0 : -1;
+                    }
+                // fall through
             case Yielded:
                 return 1;
 
@@ -193,19 +200,14 @@ public class FiberQueue
                 switch (frame.f_context.getReentrancy())
                     {
                     default:
-                    case Forbidden:
-                        // no more than one fiber is allowed
+                    case Forbidden: // no more than one fiber is allowed ever
+                    case Exclusive: // no more than one fiber is allowed unless it's associated
                         return m_cSize == 1 ? 0 : -1;
-
-                    case Exclusive:
-                        // don't allow a new fiber unless it belongs to already existing thread of
-                        // execution or the only one
-                        return isAssociatedWaiting(null) ? -1 : 0;
 
                     case Prioritized:
                         {
-                        // don't allow a new fiber if it has a common origin with any waiting fiber
-                        Fiber fiberCaller = frame.f_fiber.f_fiberCaller;
+                        // don't allow a new fiber if another one with a common caller is waiting
+                        Fiber fiberCaller = fiber.f_fiberCaller;
                         if (fiberCaller != null && isAssociatedWaiting(fiberCaller))
                             {
                             return -1;
@@ -220,25 +222,20 @@ public class FiberQueue
         }
 
     /**
+     * Check if there is any "waiting" frame that originates from the specified fiber.
+     *
+     * The scenario we are trying to cover is:
+     * - a method running on service S1 has made two async calls into service S2:
+     *      s2.f1^();
+     *      s2.f2^();
+     * - service S2 (with Prioritized reentrancy) started executing method "f1" and blocked
+     *   on another service call
+     * - a new fiber running "f2" should not be allowed to run until "f1" is done or "almost" done
+     *   (waiting in a native frame)
+     *
      * @return true iff there are any waiting frames associated with the specified fiber
      */
     private boolean isAssociatedWaiting(Fiber fiberCaller)
-        {
-        return getFirstAssociatedIndex(FiberStatus.Waiting, fiberCaller) != -1;
-        }
-
-    /**
-     * Get the index of the first frame of the specified status associated with the specified context.
-     *
-     * NOTE: a waiting frame with a native stack frame is exempt from association rules since all
-     *       the natural execution has completed.
-     *
-     * @param status       the status to check for
-     * @param fiberCaller  the fiber to check association with (null for "any")
-     *
-     * @return the first matching index or -1
-     */
-    private int getFirstAssociatedIndex(FiberStatus status, Fiber fiberCaller)
         {
         Frame[] aFrame  = m_aFrame;
         int     cFrames = aFrame.length;
@@ -252,22 +249,22 @@ public class FiberQueue
             if (frame != null)
                 {
                 Fiber fiber = frame.f_fiber;
-                if (fiber.getStatus() == status)
+                if (fiber.getStatus() == FiberStatus.Waiting)
                     {
-                    if (status == FiberStatus.Waiting && frame.isNativeStack())
+                    if (frame.isNativeStack())
                         {
                         // waiting native stack is exempt
                         continue;
                         }
 
-                    if (fiberCaller == null || fiber.isAssociated(fiberCaller))
+                    if (fiberCaller == fiber.f_fiberCaller)
                         {
-                        return ix;
+                        return true;
                         }
                     }
                 }
             }
-        return -1;
+        return false;
         }
 
     private Frame remove(int ix)

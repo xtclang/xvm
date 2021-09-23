@@ -11,10 +11,10 @@ import org.xvm.asm.Op;
 import org.xvm.asm.constants.SignatureConstant;
 
 import org.xvm.runtime.CallChain;
+import org.xvm.runtime.Fiber;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
-import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 
@@ -58,7 +58,7 @@ public class xLazyVar
             case "assigned":
                 if (!hThis.isAssigned() && hThis.isPropertyOnImmutable())
                     {
-                    hThis.registerAssign(frame.f_context);
+                    hThis.registerAssign(frame.f_fiber);
                     }
                 break;
             }
@@ -123,7 +123,7 @@ public class xLazyVar
         {
         synchronized (hLazy)
             {
-            boolean fAllowDupe = hLazy.unregisterAssign(frame.f_context);
+            boolean fAllowDupe = hLazy.unregisterAssign(frame.f_fiber);
             if (hLazy.isAssigned())
                 {
                 return fAllowDupe
@@ -153,7 +153,7 @@ public class xLazyVar
          * arbitrarily checks the "assigned" property on a lazy property ref, but takes no other
          * action.
          */
-        protected Set<ServiceContext> m_setInitContext;
+        protected Set<Fiber> m_setInitFiber;
 
         protected LazyVarHandle(TypeComposition clazz, String sName)
             {
@@ -170,37 +170,37 @@ public class xLazyVar
             }
 
         /**
-         * Register the specified service as "allowed to assign".
+         * Register the specified fiber as "allowed to assign".
          */
-        synchronized protected void registerAssign(ServiceContext ctx)
+        synchronized protected void registerAssign(Fiber fiber)
             {
-            Set<ServiceContext> setInit = m_setInitContext;
+            Set<Fiber> setInit = m_setInitFiber;
             if (setInit == null)
                 {
-                m_setInitContext = setInit = new HashSet<>();
+                m_setInitFiber = setInit = new HashSet<>();
                 }
-            setInit.add(ctx);
+            setInit.add(fiber);
             }
 
         /**
-         * Unregister the specified service from "allowed to assign" set.
+         * Unregister the specified fiber from "allowed to assign" set.
          *
          * This method must be called while holding synchronization on the var.
          *
          * @return true iff the specified service has been told that this var is unassigned and
          *              therefore is allowed to set it
          */
-        protected boolean unregisterAssign(ServiceContext ctx)
+        protected boolean unregisterAssign(Fiber fiber)
             {
-            boolean             fAllow  = false;
-            Set<ServiceContext> setInit = m_setInitContext;
+            boolean    fAllow  = false;
+            Set<Fiber> setInit = m_setInitFiber;
             if (setInit != null)
                 {
-                fAllow = setInit.remove(ctx);
+                fAllow = setInit.remove(fiber);
 
                 if (setInit.isEmpty())
                     {
-                    m_setInitContext = null;
+                    m_setInitFiber = null;
                     }
                 }
             return fAllow;
