@@ -5,13 +5,13 @@ module BankStressTest
     import Bank.Account;
     import Bank.Connection;
 
-    static Int BRANCHES     = 1;
-    static Int MAX_ACCOUNTS = 10;
+    static Int BRANCHES     = 8;
+    static Int MAX_ACCOUNTS = 100;
 
     void run()
         {
-        // assert:debug;
-        Duration openFor  = Duration.ofSeconds(300);
+        assert:debug;
+        Duration openFor  = Duration.ofSeconds(30000);
         Branch[] branches = new Branch[BRANCHES](i -> new Branch(i.toUInt64()));
         for (Branch branch : branches)
             {
@@ -106,33 +106,33 @@ module BankStressTest
                 try
                     {
                     Int acctId = rnd.int(MAX_ACCOUNTS);
-                    switch (rnd.int(100))
+                    switch (rnd.int(200))
                         {
-                        case 0..4:
+                        case 0..1:
                             op = "OpenAccount";
                             if (!bank.accounts.contains(acctId))
                                 {
-                                bank.openAccount(acctId, 256_00);
                                 txCount++;
+                                bank.openAccount(acctId, 256_00);
                                 }
                             break;
 
-                        case 5..9:
+                        case 2..3:
                             op = "CloseAccount";
                             if (bank.accounts.contains(acctId))
                                 {
-                                bank.closeAccount(acctId);
                                 txCount++;
+                                bank.closeAccount(acctId);
                                 }
                             break;
 
-                        case 10..49:
+                        case 4..49:
                             op = "Deposit or Withdrawal";
                             if (Account acc := bank.accounts.get(acctId))
                                 {
+                                txCount++;
                                 Int amount = rnd.boolean() ? acc.balance/2 : -acc.balance/2;
                                 bank.depositOrWithdraw(acctId, amount);
-                                txCount++;
                                 }
                             break;
 
@@ -143,13 +143,14 @@ module BankStressTest
                                     Account accFrom := bank.accounts.get(acctId),
                                     bank.accounts.contains(acctIdTo))
                                 {
-                                bank.transfer(acctId, acctIdTo, accFrom.balance / 2);
                                 txCount++;
+                                bank.transfer(acctId, acctIdTo, accFrom.balance / 2);
                                 }
                             break;
 
                         case 99:
                             op = "Audit";
+                            txCount++;
                             bank.log.add($"Audited amount: {Bank.format(bank.audit())}");
                             break;
                         }
