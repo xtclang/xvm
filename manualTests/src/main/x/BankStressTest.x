@@ -106,7 +106,7 @@ module BankStressTest
                 try
                     {
                     Int acctId = rnd.int(MAX_ACCOUNTS);
-                    switch (rnd.int(200))
+                    switch (rnd.int(100))
                         {
                         case 0..1:
                             op = "OpenAccount";
