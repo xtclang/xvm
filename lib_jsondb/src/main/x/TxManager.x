@@ -1552,7 +1552,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 }
 
             assert preparedAll != Null;
-            return preparedAll.whenComplete^((v, e) ->
+            return preparedAll.whenComplete((v, e) ->
                 {
                 // check for successful prepare, and whether anything is left enlisted
                 switch (v, storeIds.empty)
