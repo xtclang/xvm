@@ -16,14 +16,12 @@ interface Matrix<Element>
     /**
      * Obtain the value of the specified element of the matrix.
      */
-    @Op("[]")
-    Element getElement(Int col, Int row);
+    @Op("[]") Element getElement(Int col, Int row);
 
     /**
      * Modify the value in the specified element of the matrix.
      */
-    @Op("[]=")
-    void setElement(Int col, Int row, Element value)
+    @Op("[]=") void setElement(Int col, Int row, Element value)
         {
         throw new ReadOnly();
         }
@@ -31,14 +29,12 @@ interface Matrix<Element>
     /**
      * Obtain a column vector from the matrix.
      */
-    @Op("[_,?]")
-    Element[] getCol(Int col);
+    @Op("[_,?]") Element[] getCol(Int col);
 
     /**
      * Modify the specified column vector in the matrix.
      */
-    @Op("[_,?]=")
-    void setCol(Int col, Element[] vector)
+    @Op("[_,?]=") void setCol(Int col, Element[] vector)
         {
         throw new ReadOnly();
         }
@@ -46,14 +42,12 @@ interface Matrix<Element>
     /**
      * Obtain a row vector from the matrix.
      */
-    @Op("[?,_]")
-    Element[] getRow(Int row);
+    @Op("[?,_]") Element[] getRow(Int row);
 
     /**
      * Modify the specified row vector in the matrix.
      */
-    @Op("[?,_]=")
-    void setRow(Int row, Element[] vector)
+    @Op("[?,_]=") void setRow(Int row, Element[] vector)
         {
         throw new ReadOnly();
         }
