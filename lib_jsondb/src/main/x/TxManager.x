@@ -869,6 +869,14 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         // release the "prepare pipeline" so another fiber can do prepares
         currentlyPreparing = NO_TX;
 
+        // if this was only processing up to "stopAfterId", then more transactions may have shown
+        // up since then, and they need to be processed (but not by this fiber)
+        if (stopAfterId != Null && !pendingPrepare.empty)
+            {
+            this:service.callLater(processBacklog);
+            }
+
+        // first, process the important stuff (the pending commits)
         if (!pendingCommit.empty)
             {
             try
@@ -886,16 +894,10 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 }
             }
 
+        // lastly, process the pending rollbacks
         for (TxRecord rec : pendingRollback)
             {
             rec.rollback();
-            }
-
-        // if this was only processing up to "stopAfterId", then more transactions may have shown
-        // up since then, and they need to be processed (but not by this fiber)
-        if (stopAfterId != Null && !pendingPrepare.empty)
-            {
-            this:service.callLater(processBacklog);
             }
         }
 
