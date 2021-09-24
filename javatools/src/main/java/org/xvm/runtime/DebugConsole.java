@@ -1370,12 +1370,12 @@ public class DebugConsole
         if (hThis != null)
             {
             addVar(0, "this", "this", hThis, listVars, getGlobalStash().getExpandMap());
-            }
 
-        if (hThis.getComposition().getFieldPosition(GenericHandle.OUTER) != -1)
-            {
-            ObjectHandle hOuter = ((GenericHandle) hThis).getField(GenericHandle.OUTER);
-            addVar(0, "outer", "outer", hOuter, listVars, mapExpand);
+            if (hThis.getComposition().getFieldPosition(GenericHandle.OUTER) != -1)
+                {
+                ObjectHandle hOuter = ((GenericHandle) hThis).getField(GenericHandle.OUTER);
+                addVar(0, "outer", "outer", hOuter, listVars, mapExpand);
+                }
             }
 
         int cVars = frame.f_anNextVar == null ? 0 : frame.f_anNextVar[frame.m_iScope];

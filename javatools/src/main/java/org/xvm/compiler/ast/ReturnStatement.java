@@ -406,7 +406,7 @@ public class ReturnStatement
                             if (m_fFutureReturn)
                                 {
                                 // create an intermediate dynamic var
-                                code.add(new Var_D(pool.ensureFutureVar(argRet.getType())));
+                                code.add(new Var_D(pool.ensureFutureVar(argRet.getType().getParamType(0))));
 
                                 Argument argFuture = code.lastRegister();
                                 code.add(new Move(argRet, argFuture));
