@@ -432,9 +432,8 @@ class CircularArray<Element>
                     if (prevHead == head && prevTail-1 == tail)
                         {
                         prevTail = tail;
-                        --index;
                         }
-                    else if (prevHead+1 == head && prevTail == tail)
+                    else if (prevHead+1 == head && prevTail == tail && index >= head)
                         {
                         prevHead = head;
                         }
@@ -446,7 +445,7 @@ class CircularArray<Element>
 
                 if (index < tail)
                     {
-                    return True, this.CircularArray[index++];
+                    return True, this.CircularArray[index++ - head];
                     }
                 return False;
                 }
