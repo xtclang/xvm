@@ -621,7 +621,16 @@ public class xFutureVar
                         frame.f_context.postRequest(frame, hNotify, combineResult(hR, ex), 0);
 
                 cfWhen.whenComplete((hVoid, exWhen) ->
-                        hWhen.assign(hR, (WrapperException) exWhen));
+                    {
+                    if (exWhen == null && ex == null)
+                        {
+                        hWhen.assign(hR, null);
+                        }
+                    else
+                        {
+                        hWhen.assign(null, (WrapperException) (exWhen == null ? ex : exWhen));
+                        }
+                    });
                 });
             return frame.assignValue(iReturn, hWhen);
             }
@@ -905,6 +914,7 @@ public class xFutureVar
 
             if (ex == null)
                 {
+                assert hValue != null;
                 cf.complete(hValue);
                 return Op.R_NEXT;
                 }

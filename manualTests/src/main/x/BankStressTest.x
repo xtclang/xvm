@@ -157,7 +157,7 @@ module BankStressTest
                     }
                 catch (Exception e)
                     {
-                    bank.log.add($"{op} failed at {branchId}: {e}");
+                    bank.log.add($"{op} failed at {branchId}: {e.text}");
                     if (op == "Audit")
                         {
                         break business;
