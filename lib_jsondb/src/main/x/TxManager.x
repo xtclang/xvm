@@ -2096,6 +2096,60 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             // clearing the readId will unregister it from the count byReadId
             readId = NO_TX;
             }
+
+        @Override
+        String toString()
+            {
+            StringBuffer buf = new StringBuffer();
+            buf.append("TxRecord(writeId=")
+               .append(writeId)
+               .append(", clientId=")
+               .append(clientId)
+               .append(", Status=")
+               .append(status);
+
+            if (!txInfo.nondescript)
+                {
+                buf.append(", txInfo=")
+                   .append(txInfo);
+                }
+
+            if (!sealById.empty)
+                {
+                buf.append(", enlisted={");
+                Loop: for ((Int storeId, String? seal) : sealById)
+                    {
+                    if (!Loop.first)
+                        {
+                        buf.append(", ");
+                        }
+
+                    buf.append(storeId);
+                    if (seal != Null)
+                        {
+                        buf.append('*');
+                        }
+                    }
+                }
+
+            if (!newlyEnlisted.empty)
+                {
+                buf.append(", newlyEnlisted=")
+                   .append(newlyEnlisted);
+                }
+
+            if (prepareClient != Null)
+                {
+                buf.append(", hasClient");
+                }
+
+            if (terminated != Null)
+                {
+                buf.append(", hasTermination");
+                }
+
+            return buf.append(')').toString();
+            }
         }
 
 

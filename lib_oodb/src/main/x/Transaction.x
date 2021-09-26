@@ -35,7 +35,64 @@ interface Transaction<Schema extends RootSchema>
                         UInt?                  id          = Null,
                         DBTransaction.Priority priority    = Normal,
                         Int                    retryCount  = 0,
-                        Boolean                readOnly    = False);
+                        Boolean                readOnly    = False)
+        {
+        /**
+         * True iff the TxInfo doesn't specify any non-default information.
+         */
+        Boolean nondescript.get()
+            {
+            return timeout    == Null
+                && name       == Null
+                && id         == Null
+                && priority   == Normal
+                && retryCount == 0
+                && readOnly   == False;
+            }
+
+        @Override
+        String toString()
+            {
+            StringBuffer buf = new StringBuffer().append("TxInfo(");
+
+            if (timeout != null)
+                {
+                buf.append("timeout=")
+                   .append(timeout)
+                   .append(", ");
+                }
+
+            if (name != null)
+                {
+                buf.append("name=")
+                   .append(name)
+                   .append(", ");
+                }
+
+            if (id != null)
+                {
+                buf.append("id=")
+                   .append(id)
+                   .append(", ");
+                }
+
+            buf.append("priority=")
+               .append(priority);
+
+            if (retryCount != 0)
+                {
+                buf.append(", retryCount=")
+                   .append(retryCount);
+                }
+
+            if (readOnly)
+                {
+                buf.append(", readOnly");
+                }
+
+            return buf.append(')').toString();
+            }
+        }
 
     /**
      * The transaction parameters used to create this Transaction object.
