@@ -4,44 +4,16 @@ module TestSimple.test.org
 
     void run()
         {
-        assert:debug;
+        Int tx = 0;
 
-        function void() f = () ->
+        while (tx < 4)
             {
-            new C();
-            };
+            for (Int i : [1 .. 2])
+                {
+                tx++;
+                }
 
-        f();
-        }
-
-    class C
-        {
-        construct()
-            {
-            x = "construct";
-            }
-        finally
-            {
-            x = "finally";
-            }
-
-        assert()
-            {
-            x = "assert";
-            }
-
-        String x;
-
-        Int y =
-            {
-            console.println("y.default");
-            return 7;
-            };
-
-        @Lazy Boolean z.calc()
-            {
-            console.println("z.calc");
-            return True;
+            console.println(tx); // this used to be an illegal assign warning
             }
         }
     }
