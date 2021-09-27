@@ -3,6 +3,7 @@ package org.xvm.runtime.template.annotations;
 
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 
 import org.xvm.asm.Annotation;
@@ -233,11 +234,11 @@ public class xFutureVar
                             frame.f_context.postRequest(frame, hRun, Utils.OBJECTS_NONE, 0);
 
                     cfThen.whenComplete((hVoid, exThen) ->
-                            hThen.assign(hR, (WrapperException) exThen));
+                            hThen.assign(hR, translate(exThen)));
                     }
                 else
                     {
-                    hThen.assign(null, (WrapperException) ex);
+                    hThen.assign(null, translate(ex));
                     }
                 });
             return frame.assignValue(iReturn, hThen);
@@ -292,11 +293,11 @@ public class xFutureVar
                             frame.f_context.postRequest(frame, hConsume, new ObjectHandle[] {hR}, 0);
 
                     cfPass.whenComplete((hVoid, exPass) ->
-                            hPass.assign(hR, (WrapperException) exPass));
+                            hPass.assign(hR, translate(exPass)));
                     }
                 else
                     {
-                    hPass.assign(null, (WrapperException) ex);
+                    hPass.assign(null, translate(ex));
                     }
                 });
             return frame.assignValue(iReturn, hPass);
@@ -354,11 +355,11 @@ public class xFutureVar
                             frame.f_context.postRequest(frame, hConvert, new ObjectHandle[] {hR}, 1);
 
                     cfTrans.whenComplete((hNew, exTrans) ->
-                            hTrans.assign(hNew, (WrapperException) exTrans));
+                            hTrans.assign(hNew, translate(exTrans)));
                     }
                 else
                     {
-                    hTrans.assign(null, (WrapperException) ex);
+                    hTrans.assign(null, translate(ex));
                     }
                 });
             return frame.assignValue(iReturn, hTrans);
@@ -417,12 +418,12 @@ public class xFutureVar
                     }
                 else
                     {
-                    ExceptionHandle hEx = ((WrapperException) ex).getExceptionHandle();
+                    ExceptionHandle hEx = translate(ex).getExceptionHandle();
                     CompletableFuture<ObjectHandle> cfTrans =
                             frame.f_context.postRequest(frame, hConvert, new ObjectHandle[] {hEx}, 1);
 
                     cfTrans.whenComplete((hNew, exTrans) ->
-                            hHandle.assign(hNew, (WrapperException) exTrans));
+                            hHandle.assign(hNew, translate(exTrans)));
                     }
                 });
             return frame.assignValue(iReturn, hHandle);
@@ -472,7 +473,7 @@ public class xFutureVar
                         frame.f_context.postRequest(frame, hConvert, combineResult(hR, ex), 1);
 
                 cfTrans.whenComplete((hNew, exTrans) ->
-                        hTrans.assign(hNew, (WrapperException) exTrans));
+                        hTrans.assign(hNew, translate(exTrans)));
                 });
             return frame.assignValue(iReturn, hTrans);
             }
@@ -542,17 +543,18 @@ public class xFutureVar
                     catch (Throwable e)
                         {
                         // must not happen
+                        assert false;
                         }
 
                     CompletableFuture<ObjectHandle> cfAnd =
                             frame.f_context.postRequest(frame, hCombine, ahArg, 1);
 
                     cfAnd.whenComplete((hNew, exTrans) ->
-                            hAnd.assign(hNew, (WrapperException) exTrans));
+                            hAnd.assign(hNew, translate(exTrans)));
                     }
                 else
                     {
-                    hAnd.assign(null, (WrapperException) ex);
+                    hAnd.assign(null, translate(ex));
                     }
                 });
             return frame.assignValue(iReturn, hAnd);
@@ -628,7 +630,7 @@ public class xFutureVar
                         }
                     else
                         {
-                        hWhen.assign(null, (WrapperException) (exWhen == null ? ex : exWhen));
+                        hWhen.assign(null, translate(exWhen == null ? ex : exWhen));
                         }
                     });
                 });
@@ -654,21 +656,8 @@ public class xFutureVar
             }
         catch (Throwable e)
             {
-            ExceptionHandle hException;
-            if (e instanceof ExecutionException)
-                {
-                hException = ((WrapperException) e.getCause()).getExceptionHandle();
-                }
-            else if (e instanceof CancellationException)
-                {
-                hException = xException.makeHandle(frame, "cancelled");
-                }
-            else
-                {
-                hException = xException.makeHandle(frame, "interrupted");
-                }
             ahR[0] = xNullable.NULL;
-            ahR[1] = hException;
+            ahR[1] = translate(e).getExceptionHandle();
             }
         return ahR;
         }
@@ -689,7 +678,7 @@ public class xFutureVar
                 : hResult;
         ahArg[1] = exception == null
                 ? xNullable.NULL
-                : ((WrapperException) exception).getExceptionHandle();
+                : translate(exception).getExceptionHandle();
         return ahArg;
         }
 
@@ -820,18 +809,9 @@ public class xFutureVar
                 ? Op.R_NEXT
                 : frame.assignValue(iReturn, hValue);
             }
-        catch (InterruptedException e)
+        catch (Throwable e)
             {
-            throw new UnsupportedOperationException("TODO");
-            }
-        catch (ExecutionException e)
-            {
-            Throwable eOrig = e.getCause();
-            if (eOrig instanceof WrapperException)
-                {
-                return frame.raiseException((WrapperException) eOrig);
-                }
-            throw new UnsupportedOperationException("Unexpected exception", eOrig);
+            return frame.raiseException(translate(e));
             }
         }
 
@@ -844,6 +824,35 @@ public class xFutureVar
         return ensureClass(typeReferent.getConstantPool().ensureFutureVar(typeReferent));
         }
 
+    /**
+     * Translate a Throwable into a WrapperExcpeption.
+     */
+    private static WrapperException translate(Throwable e)
+        {
+        if (e == null)
+            {
+            return null;
+            }
+        if (e instanceof WrapperException)
+            {
+            return (WrapperException) e;
+            }
+        if (e instanceof ExecutionException ||
+            e instanceof CompletionException)
+            {
+            return translate(e.getCause());
+            }
+        if (e instanceof CancellationException)
+            {
+            return xException.makeHandle(null, "cancelled").getException();
+            }
+        if (e instanceof InterruptedException)
+            {
+            return xException.makeHandle(null, "interrupted").getException();
+            }
+
+        throw new UnsupportedOperationException("Unexpected exception", e);
+        }
 
     // ----- ObjectHandle --------------------------------------------------------------------------
 
@@ -892,12 +901,7 @@ public class xFutureVar
                     }
                 catch (Exception e)
                     {
-                    Throwable eOrig = e.getCause();
-                    if (eOrig instanceof WrapperException)
-                        {
-                        return ((WrapperException) eOrig).getExceptionHandle();
-                        }
-                    throw new UnsupportedOperationException("Unexpected exception", e);
+                    return translate(e).getExceptionHandle();
                     }
                 }
             return null;
