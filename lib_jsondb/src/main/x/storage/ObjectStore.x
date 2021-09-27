@@ -407,8 +407,13 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
                 }
 
             Int     writeId = writeIdFor(txId);
-            Changes changes = inFlight.computeIfAbsent(writeId,
-                    () -> new Changes(writeId, txManager.enlist(this.id, txId)));
+            Changes changes = inFlight.computeIfAbsent(writeId, () ->
+                                {
+                                using (new CriticalSection(Exclusive))
+                                    {
+                                    return new Changes(writeId, txManager.enlist(this.id, txId));
+                                    }
+                                });
             assert !(changes.sealed && writing) as $"Modification of the already-sealed {info.idString} is prohibited";
             return True, changes;
             }
