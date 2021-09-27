@@ -382,40 +382,46 @@ service Catalog<Schema extends RootSchema>
             return stores[index]?;
             }
 
-        ObjectStore store = createStore(id);
-
-        // whatever state the Catalog is in, the ObjectStore has to be "caught up" to that state
-        switch (status)
+        using (new CriticalSection(Exclusive))
             {
-            case Closed:
-                break;
+            // create the ObjectStore
+            ObjectStore store = createStore(id);
 
-            case Recovering:
-                if (!store.recover())
-                    {
-                    throw new IllegalState($"Failed to recover \"{store.info.name}\" store at {store.path}");
-                    }
-                break;
+            // whatever state the Catalog is in, the ObjectStore has to be "caught up" to that state
+            switch (status)
+                {
+                case Closed:
+                    break;
 
-            case Configuring:
-                TODO
+                case Recovering:
+                    if (!store.recover())
+                        {
+                        throw new IllegalState($"Failed to recover \"{store.info.name}\" store at {store.path}");
+                        }
+                    break;
 
-            case Running:
-                if (!store.open())
-                    {
-                    throw new IllegalState($"Failed to open \"{store.info.name}\" store at {store.path}");
-                    }
-                break;
+                case Configuring:
+                    TODO
+
+                case Running:
+                    if (!store.open())
+                        {
+                        throw new IllegalState($"Failed to open \"{store.info.name}\" store at {store.path}");
+                        }
+                    break;
+                }
+
+            // make room for caching the ObjectStore
+            if (index > stores.size)
+                {
+                stores.fill(Null, stores.size..index);
+                }
+
+            // save off the ObjectStore (lazy cache)
+            stores[index] = store;
+
+            return store;
             }
-
-        // save off the ObjectStore (lazy cache)
-        if (index > stores.size)
-            {
-            stores.fill(Null, stores.size..index);
-            }
-        stores[index] = store;
-
-        return store;
         }
 
     /**
@@ -455,7 +461,6 @@ service Catalog<Schema extends RootSchema>
             }
         else
             {
-            Tuple params = (this, info, log);
             switch (info.category)
                 {
                 case DBSchema:
