@@ -5,13 +5,13 @@ module BankStressTest
     import Bank.Account;
     import Bank.Connection;
 
-    static Int BRANCHES     = 8;
+    static Int BRANCHES     = 24;
     static Int MAX_ACCOUNTS = 100;
 
     void run()
         {
         assert:debug;
-        Duration openFor  = Duration.ofSeconds(30000);
+        Duration openFor  = Duration.ofSeconds(3600);
         Branch[] branches = new Branch[BRANCHES](i -> new Branch(i.toUInt64()));
         for (Branch branch : branches)
             {
@@ -90,7 +90,7 @@ module BankStressTest
                     if (now < close)
                         {
                         bank.log.add(
-                            $|Branch {branchId} performed {txCount} transactions in \
+                            $|Branch {branchId} performed {tryCount + txCount} transactions in \
                              |{(now - start).seconds} seconds
                              );
                         txCount = 0;
