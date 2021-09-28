@@ -73,7 +73,7 @@ service JsonValueStore<Value extends immutable Const>
      * An internal, mutable record of Changes for a specific transaction.
      */
     @Override
-    protected class Changes(Int writeId, Int readId)
+    protected class Changes(Int writeId, Future<Int> pendingReadId)
         {
         /**
          * Set to True when the transaction contains possible changes related to this ObjectStore.

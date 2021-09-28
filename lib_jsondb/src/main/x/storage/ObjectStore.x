@@ -192,8 +192,15 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
     /**
      * An internal, mutable record of Changes for a specific transaction.
      */
-    protected class Changes(Int writeId, Int readId)
+    protected class Changes(Int writeId, Future<Int> pendingReadId)
         {
+        construct(Int writeId, Future<Int> pendingReadId)
+            {
+            this.writeId       = writeId;
+            this.readId        = NO_TX;
+            this.pendingReadId = pendingReadId;
+            }
+
         /**
          * This txId, the "write" txId.
          */
@@ -204,7 +211,30 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
          * a "write" id, which will occur during the prepare phase when a Rectifier or Distributor
          * is being executed, and the thus-far-prepared transaction is visible by the read id.)
          */
-        Int readId;
+        Int readId
+            {
+            Int get()
+                {
+                Int id = super();
+                if (id == NO_TX)
+                    {
+                    id = pendingReadId?.get() : assert;
+                    set(id);
+                    }
+                return id;
+                }
+
+            void set(Int id)
+                {
+                super(id);
+                if (id != NO_TX)
+                    {
+                    pendingReadId = Null;
+                    }
+                }
+            }
+
+        Future<Int>? pendingReadId;
 
         /**
          * The worker to dump CPU intensive serialization and deserialization work onto.
@@ -429,30 +459,20 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
                 }
 
             Int     writeId = writeIdFor(txId);
-            Changes changes = inFlight.computeIfAbsent(writeId, () ->
-                                {
-                                using (new CriticalSection(Exclusive))
-                                    {
-                                    return new Changes(writeId, txManager.enlist(this.id, txId));
-                                    }
-                                });
-            assert !(changes.sealed && writing) as $"Modification of the already-sealed {info.idString} is prohibited";
-
-// TODO GG why doesn't this work?
-//            Int     writeId = writeIdFor(txId);
-//            Changes changes;
-//            if (changes := inFlight.get(writeId))
-//                {
-//                assert:debug changes.readId != NO_TX;
-//                assert !(changes.sealed && writing)
-//                        as $"Modification of the already-sealed {info.idString} is prohibited";
-//                }
-//            else
-//                {
-//                changes = new Changes(writeId, NO_TX);
-//                inFlight.put(writeId, changes);
-//                changes.readId = txManager.enlist(this.id, txId);
-//                }
+            Changes changes;
+            if (changes := inFlight.get(writeId))
+                {
+                assert !(changes.sealed && writing)
+                        as $"Modification of the already-sealed {info.idString} is prohibited";
+                }
+            else
+                {
+                // TODO GG can't assign a future result to a Future
+                // changes.pendingReadId = txManager.enlist^(this.id, txId);
+                Int readId = txManager.enlist^(this.id, txId);
+                changes = new Changes(writeId, &readId);
+                inFlight.put(writeId, changes);
+                }
 
             return True, changes;
             }

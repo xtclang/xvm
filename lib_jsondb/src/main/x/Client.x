@@ -1255,8 +1255,7 @@ service Client<Schema extends RootSchema>
             {
             using (val tx = ensureTransaction(this))
                 {
-                Value value = store_.load(tx.id);
-                return value;
+                return store_.load(tx.id);
                 }
             }
 
@@ -1291,8 +1290,7 @@ service Client<Schema extends RootSchema>
             {
             using (val tx = ensureTransaction(this))
                 {
-                Int n = store_.adjust(tx.id, count);
-                return n;
+                return store_.adjust(tx.id, count);
                 }
             }
 
@@ -1330,8 +1328,7 @@ service Client<Schema extends RootSchema>
             {
             using (val tx = ensureTransaction(this))
                 {
-                Int n = store_.adjust(tx.id, 1);
-                return n;
+                return store_.adjust(tx.id, 1);
                 }
             }
 
@@ -1340,8 +1337,7 @@ service Client<Schema extends RootSchema>
             {
             using (val tx = ensureTransaction(this))
                 {
-                Int n = store_.adjust(tx.id, -1);
-                return n;
+                return store_.adjust(tx.id, -1);
                 }
             }
         }
@@ -1365,8 +1361,7 @@ service Client<Schema extends RootSchema>
             {
             using (val tx = ensureTransaction())
                 {
-                Int size = store_.sizeAt(tx.id);
-                return size;
+                return store_.sizeAt(tx.id);;
                 }
             }
 
@@ -1375,8 +1370,7 @@ service Client<Schema extends RootSchema>
             {
             using (val tx = ensureTransaction())
                 {
-                Boolean empty = store_.emptyAt(tx.id);
-                return empty;
+                return store_.emptyAt(tx.id);
                 }
             }
 
@@ -1385,8 +1379,7 @@ service Client<Schema extends RootSchema>
             {
             using (val tx = ensureTransaction())
                 {
-                Boolean present = store_.existsAt(tx.id, key);
-                return present;
+                return store_.existsAt(tx.id, key);
                 }
             }
 
@@ -1395,11 +1388,7 @@ service Client<Schema extends RootSchema>
             {
             using (val tx = ensureTransaction())
                 {
-                if (Value value := store_.load(tx.id, key))
-                    {
-                    return True, value;
-                    }
-                return False;
+                return store_.load(tx.id, key);
                 }
             }
 
