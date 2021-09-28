@@ -447,7 +447,8 @@ class SkiplistMap<Key extends Orderable, Value>
             private @Lazy Iterator<Element> emptyIterator.calc()
                 {
                 assert empty;
-                return new Iterator<Element>()
+                static class EmptyIterator<Element>
+                        implements Iterator<Element>
                     {
                     @Override
                     conditional Element next()
@@ -466,7 +467,8 @@ class SkiplistMap<Key extends Orderable, Value>
                         {
                         return True, 0;
                         }
-                    }.makeImmutable();
+                    }
+                return new EmptyIterator<Element>().makeImmutable();
                 }
             }
 
