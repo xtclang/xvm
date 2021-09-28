@@ -437,7 +437,6 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
                                     }
                                 });
             assert !(changes.sealed && writing) as $"Modification of the already-sealed {info.idString} is prohibited";
-            return True, changes;
 
 // TODO GG why doesn't this work?
 //            Int     writeId = writeIdFor(txId);
@@ -454,8 +453,8 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
 //                inFlight.put(writeId, changes);
 //                changes.readId = txManager.enlist(this.id, txId);
 //                }
-//
-//            return True, changes;
+
+            return True, changes;
             }
         else
             {
