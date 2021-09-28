@@ -225,6 +225,28 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
          * Set to True when the transaction has been sealed, disallowing further changes.
          */
         Boolean sealed;
+
+        @Override
+        String toString()
+            {
+            StringBuffer buf = new StringBuffer();
+            buf.append("Changes(writeId=")
+               .append(writeId)
+               .append(", readId=")
+               .append(readId);
+
+            if (prepared)
+                {
+                buf.append(", prepared");
+                }
+
+            if (sealed)
+                {
+                buf.append(", sealed");
+                }
+
+            return buf.toString();
+            }
         }
 
     /**
@@ -416,12 +438,32 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
                                 });
             assert !(changes.sealed && writing) as $"Modification of the already-sealed {info.idString} is prohibited";
             return True, changes;
+
+// TODO GG why doesn't this work?
+//            Int     writeId = writeIdFor(txId);
+//            Changes changes;
+//            if (changes := inFlight.get(writeId))
+//                {
+//                assert:debug changes.readId != NO_TX;
+//                assert !(changes.sealed && writing)
+//                        as $"Modification of the already-sealed {info.idString} is prohibited";
+//                }
+//            else
+//                {
+//                changes = new Changes(writeId, NO_TX);
+//                inFlight.put(writeId, changes);
+//                changes.readId = txManager.enlist(this.id, txId);
+//                }
+//
+//            return True, changes;
             }
         else
             {
             assert isReadTx(txId);
             checkRead();
-            assert !writing as $"Modification of {info.idString} within a read-only transaction ({txId}) is prohibited";
+            assert !writing as $|Modification of {info.idString}\
+                                | within a read-only transaction ({txId}) is prohibited
+                                ;
             return False;
             }
         }
