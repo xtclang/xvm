@@ -1306,17 +1306,17 @@ public class DebugConsole
      */
     private String[] renderFrames()
         {
-        Frame              frameTop = m_viewMode == ViewMode.Services ? m_frameFocus : m_frame;
+        Frame frameFocus = m_frameFocus == null ? m_frame : m_frameFocus;
+        Frame frameTop   = m_viewMode == ViewMode.Services ? frameFocus : m_frame;
+
         Frame.StackFrame[] aFrames = frameTop.getStackFrameArray();
         Frame frameNewTop =   aFrames == null ||   aFrames.length < 1 ? null :   aFrames[0].frame;
         Frame frameOldTop = m_aFrames == null || m_aFrames.length < 1 ? null : m_aFrames[0].frame;
         m_aFrames = aFrames;
 
-        Frame frameFocus = m_frameFocus;
-        if (frameOldTop != frameNewTop)
+        if (m_frameFocus == null || frameOldTop != frameNewTop)
             {
-            frameFocus = frameNewTop;
-            m_frameFocus = frameFocus;
+            m_frameFocus = frameFocus = frameNewTop;
             }
 
         int      cFrames     = aFrames.length;
