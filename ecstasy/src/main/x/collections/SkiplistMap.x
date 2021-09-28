@@ -176,7 +176,7 @@ class SkiplistMap<Key extends Orderable, Value>
             else
                 {
                 // flip a coin to figure out how much "height" the new node will have
-                @Inject Random rnd;
+                private Random rnd = new numbers.PseudoRandom();
                 height = nodes.maxHeight.minOf(rnd.int().trailingZeroCount+1);
 
                 // create the new node
