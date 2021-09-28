@@ -1361,7 +1361,7 @@ service Client<Schema extends RootSchema>
             {
             using (val tx = ensureTransaction())
                 {
-                return store_.sizeAt(tx.id);;
+                return store_.sizeAt(tx.id);
                 }
             }
 
