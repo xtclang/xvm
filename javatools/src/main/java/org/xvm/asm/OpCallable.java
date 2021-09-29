@@ -227,6 +227,10 @@ public abstract class OpCallable extends Op
             TypeInfo   infoTarget = clzChild.getFormalType().ensureTypeInfo();
             MethodInfo info       = infoTarget.getMethodBySignature(
                 constructor.getIdentityConstant().getSignature());
+            if (info == null)
+                {
+                return null;
+                }
             constructor = info.getTopmostMethodStructure(infoTarget);
             }
 

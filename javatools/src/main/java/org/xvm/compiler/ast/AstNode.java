@@ -1191,7 +1191,7 @@ public abstract class AstNode
             ErrorListener           errs)
         {
         ConstantPool  pool     = pool();
-        int           cArgs    = listExprArgs == null ? 0 : listExprArgs.size();
+        int           cExprs   = listExprArgs == null ? 0 : listExprArgs.size();
         int           cReturns = atypeReturn  == null ? 0 : atypeReturn.length;
         int           cNamed   = mapNamedExpr.size();
         ErrorListener errsTemp = errs.branch();
@@ -1208,9 +1208,9 @@ public abstract class AstNode
             int cDefaults   = method.getDefaultParamCount();
             int cRequired   = cVisible - cDefaults;
 
-            if (cArgs > cVisible || fCall && cArgs < cRequired)
+            if (cExprs > cVisible || fCall && cExprs < cRequired)
                 {
-                log(errsTemp, Severity.ERROR, Compiler.ARGUMENT_WRONG_COUNT, cRequired, cArgs);
+                log(errsTemp, Severity.ERROR, Compiler.ARGUMENT_WRONG_COUNT, cRequired, cExprs);
                 errsKeep = errsTemp;
                 continue;
                 }
@@ -1228,24 +1228,26 @@ public abstract class AstNode
                     }
                 }
 
-            if (cNamed > 0)
+            List<Expression> listArgs = listExprArgs;
+            int              cArgs    = cExprs;
+            if (cArgs > 0 && cNamed > 0)
                 {
                 // insert the named expressions to the list of expressions in the correct position
-                listExprArgs = rearrangeNamedArgs(method, listExprArgs, mapNamedExpr, errsTemp);
-                if (listExprArgs == null)
+                listArgs = rearrangeNamedArgs(method, listArgs, mapNamedExpr, errsTemp);
+                if (listArgs == null)
                     {
                     // invalid name encountered
                     errsKeep = errsTemp;
                     continue;
                     }
-                cArgs = listExprArgs.size();
+                cArgs = listArgs.size();
 
                 if (fCall)
                     {
                     // make sure all the required args are present
                     for (int i = 0; i < cRequired; i++)
                         {
-                        if (listExprArgs.get(i) instanceof NonBindingExpression)
+                        if (listArgs.get(i) instanceof NonBindingExpression)
                             {
                             continue NextMethod;
                             }
@@ -1256,7 +1258,7 @@ public abstract class AstNode
             TypeConstant[] atypeArgs = new TypeConstant[cArgs];
             for (int i = 0; i < cArgs; i++)
                 {
-                Expression exprArg = listExprArgs.get(i);
+                Expression exprArg = listArgs.get(i);
 
                 atypeArgs[i] = exprArg.isValidated()
                                 ? exprArg.getType()
@@ -1282,7 +1284,7 @@ public abstract class AstNode
             TypeFit        fit        = TypeFit.Fit;
             for (int i = 0; i < cArgs; ++i)
                 {
-                Expression   exprArg   = listExprArgs.get(i);
+                Expression   exprArg   = listArgs.get(i);
                 TypeConstant typeParam = atypeParam[cTypeParams + i];
                 TypeConstant typeArg   = atypeArgs[i];
 
