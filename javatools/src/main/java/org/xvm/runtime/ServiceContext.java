@@ -580,7 +580,7 @@ public class ServiceContext
                 {
                 frame.m_iPC = iPC;
 
-                if (++cOps > 100)
+                if (++cOps > 1_000_000)
                     {
                     if (frame.f_nDepth > 100)
                         {
