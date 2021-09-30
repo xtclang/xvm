@@ -70,4 +70,18 @@ public class Construct_0
 
         return frame.call1(constructor, hStruct, ahVar, A_IGNORE);
         }
+
+    /**
+     * @return true iff this op calls into a no-op constructor
+     */
+    public boolean isNoOp(Constant[] aconst)
+        {
+        MethodConstant idConstructor = (MethodConstant) m_argFunction;
+        if (idConstructor == null)
+            {
+            idConstructor = (MethodConstant) aconst[CONSTANT_OFFSET - m_nFunctionId];
+            }
+        MethodStructure constructor  = (MethodStructure) idConstructor.getComponent();
+        return constructor != null && constructor.isNoOp();
+        }
     }

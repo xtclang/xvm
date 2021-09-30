@@ -30,6 +30,7 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.Op.ConstantRegistry;
 import org.xvm.asm.Op.Prefix;
+import org.xvm.asm.op.Construct_0;
 import org.xvm.asm.op.Nop;
 import org.xvm.asm.op.Var_DN;
 
@@ -2145,9 +2146,14 @@ public class MethodStructure
                     return aOp[0].getOpCode() == Op.OP_RETURN_0;
 
                 case 2:
-                    return aOp[0] instanceof Nop &&
-                           aOp[1].getOpCode() == Op.OP_RETURN_0;
-
+                    if (aOp[1].getOpCode() == Op.OP_RETURN_0)
+                        {
+                        Op op0 = aOp[0];
+                        return op0 instanceof Nop
+                            || op0 instanceof Construct_0
+                                && ((Construct_0) op0).isNoOp(f_method.getLocalConstants());
+                        }
+                    // fall through
                 default:
                     return false;
                 }
