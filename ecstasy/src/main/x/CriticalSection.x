@@ -47,9 +47,6 @@ const CriticalSection
         {
         assert reentrancy == Exclusive || reentrancy == Forbidden;
 
-        @Inject Clock clock;
-        this.startTime = clock.now;
-
         // store off the previous reentrancy setting; it will be replaced by this CriticalSection,
         // and restored when this CriticalSection is closed
         previousReentrancy = this:service.reentrancy;
@@ -68,11 +65,6 @@ const CriticalSection
         }
 
     /**
-     * The timer selected by the runtime to measure CriticalSection duration.
-     */
-    @Inject Timer timer;
-
-    /**
      * The service `Reentrancy` setting that this CriticalSection replaced, if any.
      */
     Service.Reentrancy reentrancy;
@@ -86,19 +78,6 @@ const CriticalSection
      * The CriticalSection that this CriticalSection replaced, if any.
      */
     CriticalSection? previousCriticalSection;
-
-    /**
-     * The time at which this CriticalSection began.
-     */
-    DateTime startTime;
-
-    /**
-     * The duration of this CriticalSection.
-     */
-    Duration duration.get()
-        {
-        return timer.elapsed;
-        }
 
     /**
      * Determine whether this CriticalSection is the active CriticalSection for the current service.
