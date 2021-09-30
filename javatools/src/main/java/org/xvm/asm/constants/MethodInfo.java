@@ -513,6 +513,24 @@ public class MethodInfo
             return this;
             }
 
+        return markImplicit();
+        }
+
+    /**
+     * @return the MethodInfo that marks this constructor as "implicit"
+     */
+    public MethodInfo markImplicitConstructor()
+        {
+        assert isConstructor();
+
+        return markImplicit();
+        }
+
+    /**
+     * Mark all method implementations as "implicit".
+     */
+    private MethodInfo markImplicit()
+        {
         MethodBody[] aBodyOld = m_aBody;
         int          cBodies  = aBodyOld.length;
         MethodBody[] aBodyNew = new MethodBody[cBodies];
@@ -648,6 +666,12 @@ public class MethodInfo
             switch (body.getImplementation())
                 {
                 case Implicit:
+                    if (isConstructor())
+                        {
+                        // constructors can only be marked as implicit on virtual child classes
+                        // by TypeConstant#layerOnMethods (see an extended explanation there)
+                        return false;
+                        }
                 case Declared:
                     break;
 

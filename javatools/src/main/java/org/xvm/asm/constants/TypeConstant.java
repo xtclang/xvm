@@ -3656,44 +3656,64 @@ public abstract class TypeConstant
                     else
                         {
                         // In general constructors are not virtual, unless a class or mixin
-                        // implements an interface that declares a virtual constructor.
-                        // When a real constructor matches a virtual one, the "virtual origin"
+                        // implements an interface that declares a virtual constructor or the class
+                        // is a virtual child.
+                        //
+                        // We keep constructors in the map of methods only for"self" and not
+                        // any "super" contributions, except for: i) virtual constructors that are
+                        // retained "as is" to enforce the corresponding constructor contracts or
+                        // ii) virtual child constructors, that are then marked as "implicit".
+                        //
+                        // When a real constructor matches a virtual one (i), the "virtual origin"
                         // information is retained on the non-virtual (real) constructor.
-                        // We keep constructors in the map of methods only for "self" and not
-                        // any "super" contributions, except for virtual constructors that are
-                        // retained to enforce the corresponding constructor contracts.
+                        //
+                        // When a real constructor on a virtual child matches an implicit one (ii),
+                        // the "implicit" origin is removed. Otherwise, the constructors marked as
+                        // implicit remain as a part of the TypeInfo and are exempt from "isAbstract"
+                        // computation logic (see MethodInfo#isAbstract)
                         fKeep = fSelf || methodContrib.isVirtualConstructor();
 
                         List<MethodConstant> listMatches =
-                                collectVirtualConstructors(methodContrib, mapMethods);
-
-                        switch (listMatches.size())
+                                collectConstructors(methodContrib, mapMethods);
+                        if (!listMatches.isEmpty())
                             {
-                            case 0:
-                                break;
-
-                            case 1:
+                            MethodInfo ctorBase = null;
+                            for (MethodConstant idBase : listMatches)
                                 {
-                                MethodConstant idBase     = listMatches.get(0);
-                                MethodInfo     methodBase = mapMethods.get(idBase);
-
-                                methodContrib = methodBase.layerOnVirtualConstructor(methodContrib);
-                                fKeep         = true;
-
-                                if (!idBase.equals(idContrib))
+                                MethodInfo ctor = mapMethods.get(idBase);
+                                if (ctor.isVirtualConstructor())
                                     {
-                                    Object nidBase  = idBase.resolveNestedIdentity(pool, this);
-                                    mapNarrowedNids = addNarrowingNid(mapNarrowedNids, nidBase, nidContrib);
-                                    }
-                                break;
-                                }
+                                    if (ctorBase != null)
+                                        {
+                                        log(errs, Severity.ERROR, VE_METHOD_NARROWING_AMBIGUOUS,
+                                                typeContrib.getValueString(),
+                                                idContrib.getValueString(),
+                                                listMatches.get(0).getValueString());
+                                        break;
+                                        }
 
-                            default:
-                                log(errs, Severity.ERROR, VE_METHOD_NARROWING_AMBIGUOUS,
-                                        typeContrib.getValueString(),
-                                        idContrib.getValueString(),
-                                        listMatches.get(0).getValueString());
-                                break;
+                                    methodContrib = ctor.layerOnVirtualConstructor(methodContrib);
+                                    ctorBase      = ctor;
+                                    fKeep         = true;
+
+                                    if (!idBase.equals(idContrib))
+                                        {
+                                        Object nidBase  = idBase.resolveNestedIdentity(pool, this);
+                                        mapNarrowedNids = addNarrowingNid(mapNarrowedNids, nidBase, nidContrib);
+                                        }
+                                    }
+                                else if (isVirtualChild() && fSelf &&
+                                        ctor.getHead().getImplementation() == Implementation.Implicit)
+                                    {
+                                    mapMethods.remove(idBase);
+                                    }
+                                }
+                            }
+
+                        if (isVirtualChild() && !fSelf)
+                            {
+                            methodContrib = methodContrib.markImplicitConstructor();
+                            fKeep         = true;
                             }
                         }
                     }
@@ -4164,9 +4184,9 @@ public abstract class TypeConstant
      * @param infoConstruct  the contributing constructor at the "sub" level
      * @param mapMethods     the map of all super methods
 
-     * @return a list of all matching virtual constructors
+     * @return a list of all matching constructors
      */
-    protected List<MethodConstant> collectVirtualConstructors(
+    protected List<MethodConstant> collectConstructors(
                 MethodInfo                      infoConstruct,
                 Map<MethodConstant, MethodInfo> mapMethods)
         {
@@ -4186,8 +4206,7 @@ public abstract class TypeConstant
             MethodInfo        infoCandidate = entry.getValue();
             SignatureConstant sigCandidate  = infoCandidate.getSignature(); // resolved
 
-            if (sigCandidate.getName().equals(sigSub.getName()) &&
-                    infoCandidate.isVirtualConstructor())
+            if (sigCandidate.getName().equals(sigSub.getName()))
                 {
                 if (sigSub.isSubstitutableFor(sigCandidate, this))
                     {
