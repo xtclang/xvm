@@ -731,6 +731,14 @@ public class ClassComposition
            }
 
         /**
+         * @return true iff the field is inflated
+         */
+        public boolean isInflated()
+            {
+            return f_clz != null;
+            }
+
+        /**
          * @return true iff the field is synthetic
          */
         public boolean isSynthetic()

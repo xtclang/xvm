@@ -3139,9 +3139,8 @@ public class ClassStructure
         TypeInfo infoType = typeStruct.ensureTypeInfo();
         for (Map.Entry<Object, FieldInfo> entry : mapFields.entrySet())
             {
-            Object          nid      = entry.getKey();
-            TypeComposition clzRef   = entry.getValue().getTypeComposition();
-            PropertyInfo    infoProp = infoType.findPropertyByNid(nid);
+            Object       nid      = entry.getKey();
+            PropertyInfo infoProp = infoType.findPropertyByNid(nid);
 
             if (infoProp == null || infoProp.isInjected())
                 {
@@ -3186,10 +3185,10 @@ public class ClassStructure
                     }
                 }
 
-            if (clzRef != null)
+            if (entry.getValue().isInflated())
                 {
-                // this is a ref; recurse
-                MethodStructure methodInitRef = clzRef.ensureAutoInitializer(pool);
+                // assign the ref's OUTER property; the auto-initializer will be called
+                // by the constructor (see ClassTemplate#proceedConstruction)
                 code.add(new Op()
                     {
                     @Override
@@ -3199,11 +3198,7 @@ public class ClassStructure
                         RefHandle     hRef    = (RefHandle) hStruct.getField(idField);
 
                         hRef.setField(GenericHandle.OUTER, hStruct);
-
-                        return methodInitRef == null
-                            ? iPC + 1
-                            : frame.call1(methodInitRef, hRef.ensureAccess(Access.STRUCT),
-                                    Utils.OBJECTS_NONE, A_IGNORE);
+                        return iPC + 1;
                         }
 
                     @Override

@@ -338,7 +338,7 @@ public abstract class ClassTemplate
     // ----- constructions  ------------------------------------------------------------------------
 
     /**
-     * Specifies whether or not this template uses a GenericHandle for its objects.
+     * Specifies whether this template uses a GenericHandle for its objects.
      */
     public boolean isGenericHandle()
         {
@@ -346,8 +346,8 @@ public abstract class ClassTemplate
         }
 
     /**
-     * Specifies whether or not this template represents a non-constant object that is allowed to
-     * be passed across service boundaries.
+     * Specifies whether this template represents a non-constant object that is allowed to be passed
+     * across service boundaries.
      */
     public boolean isService()
         {
@@ -1617,7 +1617,7 @@ public abstract class ClassTemplate
             return frame.assignValue(iReturn, xOrdered.EQUAL);
             }
 
-        // if there is an "compare" function, we need to call it
+        // if there is a "compare" function, we need to call it
         CallChain chain = clazz.getMethodCallChain(frame.poolContext().sigCompare());
         if (chain != null && !chain.isNative())
             {
@@ -2031,7 +2031,7 @@ public abstract class ClassTemplate
     // ----- toString() support --------------------------------------------------------------------
 
     /**
-     * Build a String handle for a human readable representation of the target handle.
+     * Build a String handle for a human-readable representation of the target handle.
      *
      * @param frame    the current frame
      * @param hTarget  the target
@@ -2237,11 +2237,11 @@ public abstract class ClassTemplate
         private final int             iReturn;
 
         // internal fields
-        private int          ixStep;
-        private Annotation[] aAnnoMixin; // annotation mixins to construct
-        private int          ixAnno;     // index of the next annotation mixin
-        private List<Frame>  listFinalizable;
-        private boolean      fAnonymous;
+        private final Annotation[] aAnnoMixin; // annotation mixins to construct
+        private final boolean      fAnonymous;
+        private int                ixAnno;     // index of the next annotation mixin
+        private List<Frame>        listFinalizable;
+        private int                ixStep;
 
         public Construct(MethodStructure constructor,
                          boolean         fInitStruct,
@@ -2275,7 +2275,7 @@ public abstract class ClassTemplate
             // -> indicates a call via continuation
             // => indicates a call via Construct op-code
             //
-            // the only exception of that flow is an anonymous class wrapper constructor that assigns
+            // the only exception to that flow is an anonymous class wrapper constructor that assigns
             // captured values to the anonymous class properties and needs to be called prior to
             // the class initializer; it also calls the default initializer internally
 
