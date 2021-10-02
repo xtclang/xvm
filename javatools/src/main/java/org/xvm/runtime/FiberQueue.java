@@ -185,7 +185,7 @@ public class FiberQueue
                 if (frame.f_context.getReentrancy() == ServiceContext.Reentrancy.Forbidden)
                     {
                     // no more than one fiber is allowed
-                    return m_cSize == 1 ? 0 : -1;
+                    return isAnyWaiting(null) ? -1 : 0;
                     }
                 // fall through
             case Yielded:
@@ -202,13 +202,13 @@ public class FiberQueue
                     default:
                     case Forbidden: // no more than one fiber is allowed ever
                     case Exclusive: // no more than one fiber is allowed unless it's associated
-                        return m_cSize == 1 ? 0 : -1;
+                        return isAnyWaiting(null) ? -1 : 0;
 
                     case Prioritized:
                         {
                         // don't allow a new fiber if another one with a common caller is waiting
                         Fiber fiberCaller = fiber.f_fiberCaller;
-                        if (fiberCaller != null && isAssociatedWaiting(fiberCaller))
+                        if (fiberCaller != null && isAnyWaiting(fiberCaller))
                             {
                             return -1;
                             }
@@ -233,9 +233,11 @@ public class FiberQueue
      * - a new fiber running "f2" should not be allowed to run until "f1" is done or "almost" done
      *   (waiting in a native frame)
      *
+     * @param fiberCaller  the originating fiber; pass null to check if *any* fiber is waiting
+     *
      * @return true iff there are any waiting frames associated with the specified fiber
      */
-    private boolean isAssociatedWaiting(Fiber fiberCaller)
+    private boolean isAnyWaiting(Fiber fiberCaller)
         {
         Frame[] aFrame  = m_aFrame;
         int     cFrames = aFrame.length;
@@ -257,7 +259,7 @@ public class FiberQueue
                         continue;
                         }
 
-                    if (fiberCaller == fiber.f_fiberCaller)
+                    if (fiberCaller == null || fiberCaller == fiber.f_fiberCaller)
                         {
                         return true;
                         }
