@@ -265,7 +265,13 @@ public class CaseManager<CookieType>
                     nodeNew = stmtCond.validate(ctx, errs);
                     if (nodeNew != null)
                         {
-                        atype = ((AssignmentStatement) nodeNew).getLValue().getLValueExpression().getTypes();
+                        AstNode nodeLVal = ((AssignmentStatement) nodeNew).getLValue();
+
+                        atype = nodeLVal instanceof VariableDeclarationStatement
+                                    ? new TypeConstant[]{((VariableDeclarationStatement) nodeLVal).getType()}
+                              : nodeLVal instanceof MultipleLValueStatement
+                                    ? ((MultipleLValueStatement) nodeLVal).getTypes()
+                                    : nodeLVal.getLValueExpression().getTypes();
                         }
                     }
                 else

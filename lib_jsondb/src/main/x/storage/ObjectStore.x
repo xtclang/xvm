@@ -430,7 +430,7 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
             if (writing)
                 {
                 checkWrite();
-                switch (TxCat category = txCat(txId)) // TODO GG why doesn't "val" work here? (in place of "TxCat")
+                switch (val category = txCat(txId))
                     {
                     case ReadOnly:
                         assert as $"Modification of {info.idString} in a read-only transaction is prohibited";

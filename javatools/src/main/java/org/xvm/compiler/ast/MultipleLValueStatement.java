@@ -58,6 +58,24 @@ public class MultipleLValueStatement
         return STMT_FIELDS;
         }
 
+    /**
+     * @return the types being assigned to
+     */
+    public TypeConstant[] getTypes()
+        {
+        List<AstNode>  listLVals = LVals;
+        int            cTypes    = listLVals.size();
+        TypeConstant[] aTypes    = new TypeConstant[cTypes];
+        for (int i = 0; i < cTypes; ++i)
+            {
+            AstNode nodeLVal = listLVals.get(i);
+            aTypes[i] = nodeLVal instanceof VariableDeclarationStatement
+                    ? ((VariableDeclarationStatement) nodeLVal).getType()
+                    : nodeLVal.getLValueExpression().getType();
+            }
+        return aTypes;
+        }
+
 
     // ----- LValue methods ------------------------------------------------------------------------
 
@@ -82,9 +100,10 @@ public class MultipleLValueStatement
         {
         assert aTypes != null && aTypes.length >= 1;
 
-        for (int i = 0, c = Math.min(aTypes.length, LVals.size()); i < c; ++i)
+        List<AstNode>  listLVals = LVals;
+        for (int i = 0, c = Math.min(aTypes.length, listLVals.size()); i < c; ++i)
             {
-            LVals.get(i).updateLValueFromRValueTypes(ctx, new TypeConstant[] {aTypes[i]});
+            listLVals.get(i).updateLValueFromRValueTypes(ctx, new TypeConstant[] {aTypes[i]});
             }
         }
 
