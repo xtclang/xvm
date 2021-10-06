@@ -514,9 +514,11 @@ service Catalog<Schema extends RootSchema>
         assert Type valueType := info.typeParams.get("Value"),
                     valueType.is(Type<immutable Const>);
 
+        assert Object initial := info.options.get("initial");
+
         return new JsonValueStore<valueType.DataType>(this, info,
                 jsonSchema.ensureMapping(valueType).as(Mapping<valueType.DataType>),
-                info.initial.as(valueType.DataType));
+                initial.as(valueType.DataType));
         }
 
     private ObjectStore createLogStore(DBObjectInfo info)

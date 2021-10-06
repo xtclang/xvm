@@ -205,7 +205,8 @@ static service Catalog
         assert Type valueType := info.typeParams.get("Value"),
                     valueType.is(Type<immutable Const>);
 
-        return new ValueStore<valueType.DataType>(info, log, info.initial.as(valueType.DataType));
+        assert Object initial := info.options.get("initial");
+        return new ValueStore<valueType.DataType>(info, log, initial.as(valueType.DataType));
         }
 
     /**

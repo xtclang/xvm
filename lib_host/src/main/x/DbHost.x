@@ -179,7 +179,7 @@ class DbHost(String dbModuleName)
             String propertyType  = displayName(typeTemplate, appName);
             String propertyId    = (++pid).toString();
             String transactional = "True";
-            String initialValue  = "Null";
+            String options       = "";
 
             String propertyTypeName = classTemplate.name.replace(".", "_");
             String propertyStoreType;
@@ -220,6 +220,7 @@ class DbHost(String dbModuleName)
                     propertyBaseType   = $"DBValueImpl<{valueTypeName}>";
                     propertyTypeParams = $"\"Value\"={valueTypeName}";
 
+                    String initialValue = "Null";
                     if (AnnotationTemplate annotation := findAnnotation(property, "oodb.Initial"))
                         {
                         initialValue = displayValue(annotation.arguments[0].value);
@@ -237,7 +238,7 @@ class DbHost(String dbModuleName)
                             return False;
                             }
                         }
-
+                    options = $"\"initial\"={initialValue}";
                     break;
 
                 case DBLog:
@@ -267,7 +268,7 @@ class DbHost(String dbModuleName)
                                 .replace("%propertyType%"      , propertyType)
                                 .replace("%propertyTypeParams%", propertyTypeParams)
                                 .replace("%transactional%"     , transactional)
-                                .replace("%initialValue%"      , initialValue)
+                                .replace("%options%"           , options)
                                 ;
 
             propertyGetters += propertyGetterTemplate

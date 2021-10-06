@@ -16,21 +16,21 @@ import oodb.DBObject.AsyncTrigger;
  * enumerated in the [concreteClasses] property.
  */
 const DBObjectInfo(
-        String               name,
-        Path                 path,
-        Category             category,
-        Int                  id,
-        Int                  parentId,
-        Int[]                childIds        = [],
-        Boolean              transactional   = True,
-        Validator[]          validators      = [],
-        Rectifier[]          rectifiers      = [],
-        Distributor[]        distributors    = [],
-        AsyncTrigger[]       asyncTriggers   = [],
-        Map<String, Type>    typeParams      = Map:[],
-        Map<String, Class[]> concreteClasses = Map:[],
-        LifeCycle            lifeCycle       = Current,
-        immutable Object     initial         = Null, // for now used only by DBValue
+        String                        name,
+        Path                          path,
+        Category                      category,
+        Int                           id,
+        Int                           parentId,
+        Int[]                         childIds        = [],
+        Boolean                       transactional   = True,
+        Validator[]                   validators      = [],
+        Rectifier[]                   rectifiers      = [],
+        Distributor[]                 distributors    = [],
+        AsyncTrigger[]                asyncTriggers   = [],
+        Map<String, Type>             typeParams      = Map:[],
+        Map<String, Class[]>          concreteClasses = Map:[],
+        LifeCycle                     lifeCycle       = Current,
+        Map<String, immutable Object> options         = Map:[],
         )
     {
     enum LifeCycle {Current, Deprecated, Removed}

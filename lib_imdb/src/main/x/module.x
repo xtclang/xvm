@@ -5,13 +5,13 @@ module imdb.xtclang.org
     import oodb.DBObject.DBCategory as Category;
 
     const DBObjectInfo(
-            String            id,
-            Category          category,
-            String            parentId      = "",
-            String[]          childIds      = [],
-            Boolean           transactional = True,
-            Map<String, Type> typeParams    = Map:[],
-            immutable Object  initial       = Null, // for now used only by DBValue
+            String                        id,
+            Category                      category,
+            String                        parentId      = "",
+            String[]                      childIds      = [],
+            Boolean                       transactional = True,
+            Map<String, Type>             typeParams    = Map:[],
+            Map<String, immutable Object> options       = Map:[],
             )
         {
         }
