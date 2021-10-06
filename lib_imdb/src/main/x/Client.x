@@ -62,8 +62,7 @@ service Client<Schema extends RootSchema>
         }
     finally
         {
-        reentrancy = Exclusive;
-        conn       = new Connection(storeFor("").as(SchemaStore)).as(Connection + Schema);
+        conn = new Connection(storeFor("").as(SchemaStore)).as(Connection + Schema);
         }
 
 

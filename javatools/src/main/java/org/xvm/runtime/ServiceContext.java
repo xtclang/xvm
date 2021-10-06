@@ -1851,7 +1851,7 @@ public class ServiceContext
      */
     public enum Reentrancy {Open, Prioritized, Exclusive, Forbidden}
 
-    private Reentrancy m_reentrancy = Reentrancy.Prioritized;
+    private Reentrancy m_reentrancy = Reentrancy.Exclusive;
 
     /**
      * The context scheduling "lock", atomic operations are performed via {@link #SCHEDULING_LOCK_HANDLE}.

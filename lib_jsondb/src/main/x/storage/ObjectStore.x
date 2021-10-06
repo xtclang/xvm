@@ -39,6 +39,16 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
         implements Hashable
         implements Closeable
     {
+    construct (Catalog catalog, DBObjectInfo info)
+        {
+        this.catalog = catalog;
+        this.info    = info;
+        }
+    finally
+        {
+        reentrancy = Prioritized;
+        }
+
     // ----- properties ----------------------------------------------------------------------------
 
     /**

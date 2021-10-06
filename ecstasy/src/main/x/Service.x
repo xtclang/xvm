@@ -275,7 +275,7 @@ interface Service
      * An attempt to set this from outside of the service when the service is processing will likely
      * result in an exception for the caller.
      */
-    Reentrancy reentrancy = Prioritized;
+    Reentrancy reentrancy = Exclusive;
 
     /**
      * The Timeout that was used when the service was invoked, if any. This is the timeout that this
