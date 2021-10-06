@@ -680,13 +680,34 @@ public class Context
      */
     protected Argument getVar(String sName, Token name, Branch branch, ErrorListener errs)
         {
+        return getVarImpl(sName, name, branch, Branch.Always, errs);
+        }
+
+    /**
+     * Internal implementation of getVar() that allows the lookup to be done with or without a
+     * token and uses the specified outer branch.
+     * <p/>
+     * Note: this implementation recurses into outer context getVar() and is not meant to be
+     *       overridden.
+     *
+     * @param sName       the name to look up
+     * @param name        the token to use for error reporting (optional)
+     * @param branch      the branch to look at
+     * @param branchOuter the branch to look at when recursing to the outer branch
+     * @param errs        the error list to use for error reporting (optional)
+     *
+     * @return the argument for the variable, or null
+     */
+    protected Argument getVarImpl(String sName, Token name, Branch branch, Branch branchOuter,
+                                  ErrorListener errs)
+        {
         Argument arg = getLocalVar(sName, branch);
         if (arg == null)
             {
             Context ctxOuter = getOuterContext();
             if (ctxOuter != null)
                 {
-                arg = ctxOuter.getVar(sName, name, Branch.Always, errs);
+                arg = ctxOuter.getVar(sName, name, branchOuter, errs);
                 }
             }
         // we need to call resolveRegisterType() even on registers that are local
@@ -2020,17 +2041,8 @@ public class Context
         @Override
         protected Argument getVar(String sName, Token name, Branch branch, ErrorListener errs)
             {
-            Argument arg = getLocalVar(sName, branch);
-            if (arg == null)
-                {
-                // we only use the parent's "true" branch
-                arg = getOuterContext().getVar(sName, name, Branch.of(m_fWhenTrue), errs);
-                }
-            if (arg instanceof Register)
-                {
-                arg = resolveRegisterType(branch, (Register) arg);
-                }
-            return arg;
+            // we only use the forked parent's branch
+            return getVarImpl(sName, name, branch, Branch.of(m_fWhenTrue), errs);
             }
 
         @Override
@@ -2113,17 +2125,8 @@ public class Context
         @Override
         protected Argument getVar(String sName, Token name, Branch branch, ErrorListener errs)
             {
-            Argument arg = getLocalVar(sName, branch);
-            if (arg == null)
-                {
-                // we only use the parent's "true" branch
-                arg = getOuterContext().getVar(sName, name, Branch.WhenTrue, errs);
-                }
-            if (arg instanceof Register)
-                {
-                arg = resolveRegisterType(branch, (Register) arg);
-                }
-            return arg;
+            // we only use the parent's "true" branch
+            return getVarImpl(sName, name, branch, Branch.WhenTrue, errs);
             }
 
         @Override
@@ -2244,17 +2247,8 @@ public class Context
         @Override
         protected Argument getVar(String sName, Token name, Branch branch, ErrorListener errs)
             {
-            Argument arg = getLocalVar(sName, branch);
-            if (arg == null)
-                {
-                // we only use the parent's "false" branch (logical short-circuit)
-                arg = getOuterContext().getVar(sName, name, Branch.WhenFalse, errs);
-                }
-            if (arg instanceof Register)
-                {
-                arg = resolveRegisterType(branch, (Register) arg);
-                }
-            return arg;
+            // we only use the parent's "false" branch (logical short-circuit)
+            return getVarImpl(sName, name, branch, Branch.WhenFalse, errs);
             }
 
         @Override
@@ -2358,16 +2352,7 @@ public class Context
         @Override
         protected Argument getVar(String sName, Token name, Branch branch, ErrorListener errs)
             {
-            Argument arg = getLocalVar(sName, branch);
-            if (arg == null)
-                {
-                arg = getOuterContext().getVar(sName, name, branch.complement(), errs);
-                }
-            if (arg instanceof Register)
-                {
-                arg = resolveRegisterType(branch, (Register) arg);
-                }
-            return arg;
+            return getVarImpl(sName, name, branch, branch.complement(), errs);
             }
 
         @Override
