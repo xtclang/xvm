@@ -56,11 +56,12 @@
  * * The runtime itself may provide events to the service, enqueuing them so that if the service is
  *   running, the event does not interrupt the execution. These events will be automatically
  *   processed by a service when it is not busy processing, such as when the current service
- *   invocation returns, calls {@link yield}, or even potentially when another service is invoked by
- *   this service. Runtime events may be processed even if the {@link reentrancy} setting is
- *   {@link Reentrancy.Forbidden}. Runtime events include only:
+ *   invocation returns, calls [yield], or even potentially when another service is invoked by
+ *   this service. Runtime events may be processed even if [reentrant] evaluates to `False`.
+ *   Runtime events include only:
+ * * * Future completion events, for previous asynchronous invocations initiated by this service.
  * * * Timeout notification for the currently executing service invocation, although the runtime
- *     may temporarily suppress these notifications within a {@link CriticalSection}.
+ *     may temporarily suppress these notifications within a [CriticalSection].
  * * * `@Soft` and `@Weak` reference-cleared notifications.
  */
 interface Service
@@ -249,33 +250,55 @@ interface Service
     @RO AsyncSection? asyncSection;
 
     /**
-     * Optional re-entrancy settings for a service:
+     * Indicates if this service is currently reentrant by another concurrent fiber, were the
+     * service to yield execution.
      *
-     * * Open: general re-entrancy is permitted, and requests are processed in a FIFO fashion.
-     * * Prioritized (default): general re-entrancy is permitted, but priority is given to the
-     *   conceptual thread(s) of execution that have already entered the service.
-     * * Exclusive: re-entrancy is only permitted for requests originating from the conceptual
-     *   thread of execution that has already entered the service (service A invoked service B
-     *   invokes service A).
-     * * Forbidden: absolutely no re-entrancy is allowed; a request must complete and return before
-     *   a new request can begin. This setting is dangerous because of its ability to easily create
-     *   deadlock situations, which will result in a Deadlock exception. Note that runtime events
-     *   can still be processed (e.g. by calling {@link yield}) even when reentrancy is Forbidden.
+     * This property evaluates to True iff each execution frame for the fiber is concurrent-safe
+     * (i.e. reentrancy-safe for new fibers), and no CriticalSection has been registered.
+     *
+     * Rules for determining the concurrent-safeness of an execution frame:
+     *
+     * * A class/property/method is said to be _explicitly unsafe_ iff the class/property/method is
+     *   `@Synchronized`.
+     *
+     * * A class/property/method is said to be _explicitly safe_ iff the class/property/method is
+     *   `@Concurrent`.
+     *
+     * * A class is considered _concurrent-safe_ iff (1) the class is not explicitly
+     *   unsafe, **and** (2) any of the following hold true:
+     *   1) the class is explicitly safe;
+     *   2) the class is of an immutable form (Module, Package, Const, Enum/Enum-Value);
+     *
+     * * An object is considered _concurrent-safe_ iff any of the following hold true:
+     *   1) the object's class is concurrent-safe
+     *   2) the object's class is not explicitly unsafe, **and** the object is immutable
+     *
+     * * A property is considered _concurrent-safe_ iff all of the following hold true:
+     *   1) the property is not explicitly unsafe
+     *   2) any of:
+     *      1) the property is explicitly safe
+     *      2) the property's parent class/property/method is concurrent-safe (and if the parent is
+     *         a class, then the corresponding runtime object instance, if one exists, must also be
+     *         concurrent-safe)
+     *
+     * * A method is considered _concurrent-safe_ iff all of the following hold true:
+     *   1) the method is not explicitly unsafe
+     *   2) any of:
+     *      1) the method is explicitly safe
+     *      2) the method is static (it is a function)
+     *      3) the method's parent class/property/method is concurrent-safe (and if the parent is a
+     *         class, then the corresponding runtime object instance, if one exists, must also be
+     *         concurrent-safe)
+     *
+     * * A frame **is** _concurrent-safe_, iff all of the following hold true:
+     *   1) The frame is for a method that **is** concurrent-safe
+     *   2) The calling frame on this fiber, if there is one, **is** concurrent-safe
+     *
+     * Note: The value of this property has no meaning outside of the service.
      */
-    enum Reentrancy {Open, Prioritized, Exclusive, Forbidden}
-
-    /**
-     * The re-entrancy setting for this service.
-     *
-     * This method is intended primarily to be used from within the service, so that the running
-     * code can control the conditions on which it can be arbitrarily interleaved with other threads
-     * of execution in the event that an opportunity arises to process requests from the service's
-     * backlog.
-     *
-     * An attempt to set this from outside of the service when the service is processing will likely
-     * result in an exception for the caller.
-     */
-    Reentrancy reentrancy = Exclusive;
+    @RO @Concurrent Boolean reentrant;
+    enum Reentrancy {Open, Prioritized, Exclusive, Forbidden}       // TODO GG remove
+    Reentrancy reentrancy = Exclusive;                              // TODO GG remove
 
     /**
      * The Timeout that was used when the service was invoked, if any. This is the timeout that this
@@ -283,7 +306,7 @@ interface Service
      *
      * The default value for the _incomingTimeout_ is determined based on the remaining timeout
      * value of the calling execution thread (a.k.a. fiber) and could be changed via the
-     * {@link #registerTimeout} method.
+     * [registerTimeout] method.
      */
     @RO Timeout? incomingTimeout;
 
@@ -291,17 +314,17 @@ interface Service
      * The current Timeout that will be used by the service when it invokes other services.
      *
      * By default, this is the same as the incoming Timeout, but can be overridden by registering
-     * a new Timeout via the {@link #registerTimeout} method.
+     * a new Timeout via the [registerTimeout] method.
      */
     @RO Timeout? timeout;
 
     /**
      * Allow the runtime to process pending runtime notifications for this service, or other service
-     * requests in the service's backlog -- if the setting of {@link reentrancy} allows it.
+     * requests in the service's backlog -- iff [reentrant] is `True`.
      *
      * A caller should generally *not* yield in a loop or for an extended period of time in order to
-     * wait for some event to occur; instead, the caller should use a {@link FutureVar} to request
-     * a continuation on completion of a call to another service, or a {@link Timer} to request a
+     * wait for some event to occur; instead, the caller should use a [FutureVar] to request
+     * a continuation on completion of a call to another service, or a [Timer] to request a
      * continuation at some specified later time.
      *
      * Limitations:
@@ -337,7 +360,7 @@ interface Service
     /**
      * Register a Timeout for the service, replacing any previously registered Timeout.
      *
-     * If the call is made from within this service, then it only affects the {@link #timeout}
+     * If the call is made from within this service, then it only affects the [timeout]
      * of the current execution thread (a.k.a. fiber). Otherwise, the timeout of the service
      * itself will be changed.
      */
