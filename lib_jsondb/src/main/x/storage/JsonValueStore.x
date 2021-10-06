@@ -23,7 +23,7 @@ import TxManager.NO_TX;
  *
  * where the "{...}" part is also what sealPrepare() will have returned.
  */
-service JsonValueStore<Value extends immutable Const>
+@Concurrent service JsonValueStore<Value extends immutable Const>
         extends ObjectStore
         implements ValueStore<Value>
     {
@@ -73,7 +73,7 @@ service JsonValueStore<Value extends immutable Const>
      * An internal, mutable record of Changes for a specific transaction.
      */
     @Override
-    protected class Changes(Int writeId, Future<Int> pendingReadId)
+    @Concurrent protected class Changes(Int writeId, Future<Int> pendingReadId)
         {
         /**
          * Set to True when the transaction contains possible changes related to this ObjectStore.

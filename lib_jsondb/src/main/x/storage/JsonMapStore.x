@@ -23,7 +23,7 @@ import TxManager.NO_TX;
  * where a "k" (key) without a corresponding "v" (value) indicates a deletion and the "[...]" part
  * is what sealPrepare() will have returned.
  */
-service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
+@Concurrent service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
         extends ObjectStore
         implements MapStore<Key, Value>
     {
@@ -72,7 +72,7 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
     protected immutable OrderedMap<Key, Value|Deletion> NoChanges = new SkiplistMap<Key, Value|Deletion>().makeImmutable();
 
     @Override
-    protected class Changes(Int writeId, Future<Int> pendingReadId)
+    @Concurrent protected class Changes(Int writeId, Future<Int> pendingReadId)
         {
         /**
          * A map of inserted and updated key/value pairs.

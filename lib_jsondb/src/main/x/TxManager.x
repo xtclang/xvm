@@ -89,7 +89,7 @@ import ObjectStore.MergeResult;
  * * `_op` - other non-transactional operation record
  * * `_prev_tx` - the last transaction from the previous transaction log segment (previous file)
  */
-service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
+@Concurrent service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         implements Closeable
     {
     construct(Catalog<Schema> catalog)
@@ -1185,7 +1185,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
     /**
      * This is the information that the TxManager maintains about each in flight transaction.
      */
-    protected class TxRecord
+    @Concurrent protected class TxRecord
         {
         /**
          * Construct a TxRecord.

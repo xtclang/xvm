@@ -6,7 +6,7 @@ import json.ObjectOutputStream;
 /**
  * Provides the low-level I/O for a transactional log.
  */
-service JsonLogStore<Element extends immutable Const>
+@Concurrent service JsonLogStore<Element extends immutable Const>
         extends ObjectStore(catalog, info)
         implements LogStore<Element>
     {
@@ -57,7 +57,7 @@ service JsonLogStore<Element extends immutable Const>
     // ----- storage API exposed to the client -----------------------------------------------------
 
     @Override
-    void append(Int txId, Element element)
+    void append(Int txId, Element element) // TODO this is all wrong (it's not transactional)
         {
         StringBuffer buf = new StringBuffer(64);
 

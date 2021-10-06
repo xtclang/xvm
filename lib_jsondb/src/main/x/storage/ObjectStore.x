@@ -35,7 +35,7 @@ import json.Doc;
  *
  * TODO background maintenance
  */
-service ObjectStore(Catalog catalog, DBObjectInfo info)
+@Concurrent service ObjectStore(Catalog catalog, DBObjectInfo info)
         implements Hashable
         implements Closeable
     {
@@ -202,7 +202,7 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
     /**
      * An internal, mutable record of Changes for a specific transaction.
      */
-    protected class Changes(Int writeId, Future<Int> pendingReadId)
+    @Concurrent protected class Changes(Int writeId, Future<Int> pendingReadId)
         {
         construct(Int writeId, Future<Int> pendingReadId)
             {
