@@ -386,6 +386,7 @@ public class AssignmentStatement
             }
 
         ConstantPool pool      = pool();
+        Context      ctxRValue = ctx;
         Context      ctxLValue = ctx;
 
         // a LValue represented by a statement indicates one or more variable declarations
@@ -394,11 +395,12 @@ public class AssignmentStatement
             assert nodeLeft instanceof VariableDeclarationStatement ||
                    nodeLeft instanceof MultipleLValueStatement;
 
-            ctxLValue = new LValueContext(ctx);
-            errs      = errs.branch();
+            LValueContext ctxLV = new LValueContext(ctx);
+
+            errs = errs.branch();
 
             Statement lvalueOld = (Statement) nodeLeft;
-            Statement lvalueNew = lvalueOld.validate(ctxLValue, errs);
+            Statement lvalueNew = lvalueOld.validate(ctxLV, errs);
 
             if (lvalueNew == null)
                 {
@@ -414,6 +416,11 @@ public class AssignmentStatement
                 fValid = false;
                 }
             errs = errs.merge();
+
+            // the validation of the VariableDeclarationStatement or MultipleLValueStatement above
+            // only dealt with the "type" portion of the statement; only now we are entering the
+            // l-value validation phase
+            ctxLValue = ctxLV.enterLValue();
             }
 
         // regardless of whether the LValue is a statement or expression, all L-Values must be able
@@ -452,7 +459,7 @@ public class AssignmentStatement
 
                 // allow the r-value to resolve names based on the l-value type's
                 // contributions
-                Context ctxInfer = ctx.enterInferring(atypeLeft[0]);
+                Context ctxInfer = ctxRValue.enterInferring(atypeLeft[0]);
 
                 TypeFit fit = rvalue.testFitMulti(ctxInfer, atypeTest, null);
 
@@ -507,7 +514,7 @@ public class AssignmentStatement
                         {
                         // allow the r-value to resolve names based on the l-value type's
                         // contributions
-                        ctx = ctx.enterInferring(typeLeft);
+                        ctxRValue = ctxRValue.enterInferring(typeLeft);
                         }
 
                     if (exprLeft instanceof NameExpression &&
@@ -515,16 +522,16 @@ public class AssignmentStatement
                         {
                         // test for a future assignment first
                         TypeConstant typeFuture = pool.ensureFutureVar(typeLeft);
-                        if (exprRight.testFit(ctx, typeFuture, null).isFit())
+                        if (exprRight.testFit(ctxRValue, typeFuture, null).isFit())
                             {
                             typeLeft = typeFuture;
                             }
                         }
-                    exprRightNew = exprRight.validate(ctx, typeLeft, errs);
+                    exprRightNew = exprRight.validate(ctxRValue, typeLeft, errs);
 
                     if (fInfer)
                         {
-                        ctx = ctx.exit();
+                        ctxRValue = ctxRValue.exit();
                         }
 
                     if (exprRight instanceof InvocationExpression &&
@@ -552,16 +559,16 @@ public class AssignmentStatement
                 else
                     {
                     // (LVal0, LVal1, ..., LValN) = RVal
-                    exprRightNew = exprRight.validateMulti(ctx, exprLeft.getTypes(), errs);
+                    exprRightNew = exprRight.validateMulti(ctxRValue, exprLeft.getTypes(), errs);
                     }
 
                 if (fValid)
                     {
-                    merge(ctx, ctxLValue);
+                    merge(ctxRValue, ctxLValue);
                     }
 
                 // prevent unnecessary errors and mark an unconditional assignment even if the validation failed
-                exprLeft.markAssignment(ctx, exprRightNew != null && exprRightNew.isConditionalResult(), errs);
+                exprLeft.markAssignment(ctxRValue, exprRightNew != null && exprRightNew.isConditionalResult(), errs);
                 if (exprRightNew != null)
                     {
                     atypeRight = exprRightNew.getTypes();
@@ -585,14 +592,14 @@ public class AssignmentStatement
                         typeReq = typeReq.ensureNullable();
                         }
 
-                    exprRightNew = exprRight.validate(ctx, typeReq, errs);
+                    exprRightNew = exprRight.validate(ctxRValue, typeReq, errs);
 
                     if (fValid)
                         {
-                        merge(ctx, ctxLValue);
+                        merge(ctxRValue, ctxLValue);
                         }
 
-                    exprLeft.markAssignment(ctx,
+                    exprLeft.markAssignment(ctxRValue,
                             !fConditional && exprRight != null && exprRight.isConditionalResult(), errs);
                     if (exprRightNew != null)
                         {
@@ -623,18 +630,18 @@ public class AssignmentStatement
                     atypeReq[0] = pool().typeBoolean();
                     System.arraycopy(atypeLVals, 0, atypeReq, 1, cLVals);
 
-                    exprRightNew = exprRight.validateMulti(ctx, atypeReq, errs);
+                    exprRightNew = exprRight.validateMulti(ctxRValue, atypeReq, errs);
 
                     if (fValid)
                         {
-                        merge(ctx, ctxLValue);
+                        merge(ctxRValue, ctxLValue);
                         }
 
                     // conditional expressions can update the LVal type from the RVal type, but the
                     // initial boolean is discarded
                     if (exprRightNew != null)
                         {
-                        exprLeft.markAssignment(ctx,
+                        exprLeft.markAssignment(ctxRValue,
                             fConditional && exprRight != null && exprRight.isConditionalResult(), errs);
 
                         if (fConditional)
@@ -669,11 +676,11 @@ public class AssignmentStatement
                     {
                     // allow the r-value to resolve names based on the l-value type's
                     // contributions
-                    ctx = ctx.enterInferring(typeLeft);
+                    ctxRValue = ctxRValue.enterInferring(typeLeft);
                     }
 
                 BiExpression exprFakeRValue    = createBiExpression(exprLeftCopy, op, exprRight);
-                Expression   exprFakeRValueNew = exprFakeRValue.validate(ctx, typeLeft, errs);
+                Expression   exprFakeRValueNew = exprFakeRValue.validate(ctxRValue, typeLeft, errs);
                 if (exprFakeRValueNew instanceof BiExpression)
                     {
                     exprRightNew = ((BiExpression) exprFakeRValueNew).getExpression2();
@@ -691,15 +698,15 @@ public class AssignmentStatement
 
                 if (fInfer)
                     {
-                    ctx = ctx.exit();
+                    ctxRValue = ctxRValue.exit();
                     }
 
                 if (fValid)
                     {
-                    merge(ctx, ctxLValue);
+                    merge(ctxRValue, ctxLValue);
                     }
 
-                exprLeft.markAssignment(ctx, false, errs);
+                exprLeft.markAssignment(ctxRValue, false, errs);
                 break;
                 }
             }
@@ -714,7 +721,7 @@ public class AssignmentStatement
 
             if (atypeRight != null)
                 {
-                nodeLeft.updateLValueFromRValueTypes(ctx, atypeRight);
+                nodeLeft.updateLValueFromRValueTypes(ctxRValue, atypeRight);
                 }
             }
 
@@ -970,8 +977,8 @@ public class AssignmentStatement
         @Override
         protected Argument resolveRegisterType(Branch branch, Register reg)
             {
-            // LValue relies only on the declared type; any inference could be reset
-            return reg.getOriginalRegister();
+            // LValue relies only on the declared type; any inference should be reset
+            return m_fInLValue ? reg.getOriginalRegister() : reg;
             }
 
         @Override
@@ -1001,6 +1008,20 @@ public class AssignmentStatement
                 }
             return super.exit();
             }
+
+        /**
+         * Mark this context as entering the l-value validation phase.
+         */
+        protected LValueContext enterLValue()
+            {
+            m_fInLValue = true;
+            return this;
+            }
+
+        /**
+         * Indicates whether the context has entered the l-value validation phase.
+         */
+        private boolean m_fInLValue;
         }
 
 

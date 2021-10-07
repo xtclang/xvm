@@ -526,15 +526,13 @@ service Catalog<Schema extends RootSchema>
         assert Type elementType := info.typeParams.get("Element"),
                     elementType.is(Type<immutable Const>);
 
-        // TODO GG: cannot use this common part in the constructors below
         Mapping<elementType.DataType> elementMapping =
                 jsonSchema.ensureMapping(elementType).as(Mapping<elementType.DataType>);
 
         return info.transactional
-                ? new JsonLogStore<elementType.DataType>(this, info, jsonSchema.ensureMapping(elementType).as(Mapping<elementType.DataType>))
-                : new JsonNtxLogStore<elementType.DataType>(this, info, jsonSchema.ensureMapping(elementType).as(Mapping<elementType.DataType>));
+                ? new JsonLogStore<elementType.DataType>(this, info, elementMapping)
+                : new JsonNtxLogStore<elementType.DataType>(this, info, elementMapping);
         }
-
 
 
     // ----- status management ---------------------------------------------------------------------
