@@ -40,7 +40,7 @@
  * The CriticalSection also keeps track of its {@link duration}, as a potential aid to both the
  * developer and the runtime.
  */
-const CriticalSection
+const CriticalSection // TODO GG delete
         implements Closeable
     {
     construct(Service.Reentrancy reentrancy = Forbidden)

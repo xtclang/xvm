@@ -239,10 +239,16 @@ interface Service
      */
     ContextToken? findContextToken(String name);
 
+// TODO GG remove
     /**
      * The current CriticalSection for the service, if any.
      */
     @RO CriticalSection? criticalSection;
+
+    /**
+     * The current SynchronizedSection for the service, if any.
+     */
+    @RO SynchronizedSection? synchronizedSection;
 
     /**
      * The current AsyncSection for the service, if any.
@@ -250,8 +256,10 @@ interface Service
     @RO AsyncSection? asyncSection;
 
     /**
-     * Indicates if this service is currently reentrant by another concurrent fiber, were the
-     * service to yield execution.
+     * Indicates the potential concurrency of execution for this service, at this moment.
+     * Specifically, this value indicates whether the service is able to execute another fiber
+     * concurrently, were the service to potentially yield execution as the result of invoking
+     * any other service at this point.
      *
      * This property evaluates to True iff each execution frame for the fiber is concurrent-safe
      * (i.e. reentrancy-safe for new fibers), and no CriticalSection has been registered.
@@ -296,7 +304,25 @@ interface Service
      *
      * Note: The value of this property has no meaning outside of the service.
      */
-    @RO @Concurrent Boolean reentrant;
+    @RO @Concurrent Synchronicity synchronicity;
+
+    /**
+     * A measure of service synchronicity:
+     *
+     * * Concurrent - **no** fiber within this service has either (a) entered and not exited a
+     *   [SynchronizedSection], or (b) invoked a method/function that is not _concurrent-safe_;
+     *   the service may schedule other fibers when the current fiber (if any) yields execution by
+     *   invoking any other service.
+     * * Synchronized - a fiber within this service **has** either (a) entered and not exited a
+     *   [SynchronizedSection], or (b) invoked a method/function that is not _concurrent-safe_;
+     *   the service may schedule other fibers when the current fiber (if any) yields execution by
+     *   invoking any other service, but those scheduled fibers will be permitted to invoke only
+     *   _concurrent-safe_ methods, and will be prevented from creating a [SynchronizedSection].
+     * * Critical - the current fiber has entered (and not exited) a [SynchronizedSection] with the
+     *   `critical` flag specified as True; the service will **not** schedule any other fiber.
+     */
+    enum Synchronicity {Concurrent, Synchronized, Critical}
+
     enum Reentrancy {Open, Prioritized, Exclusive, Forbidden}       // TODO GG remove
     Reentrancy reentrancy = Exclusive;                              // TODO GG remove
 
@@ -318,20 +344,20 @@ interface Service
      */
     @RO Timeout? timeout;
 
-    /**
-     * Allow the runtime to process pending runtime notifications for this service, or other service
-     * requests in the service's backlog -- iff [reentrant] is `True`.
-     *
-     * A caller should generally *not* yield in a loop or for an extended period of time in order to
-     * wait for some event to occur; instead, the caller should use a [FutureVar] to request
-     * a continuation on completion of a call to another service, or a [Timer] to request a
-     * continuation at some specified later time.
-     *
-     * Limitations:
-     * * `yield` has no effect on the backlog if reentrancy is set to Forbidden;
-     * * `yield` has no effect if it is invoked from outside of the service.
-     */
+// TODO GG remove
     void yield();
+
+    /**
+     * Allow the runtime to process pending runtime notifications for this service, including any
+     * notifications that pending futures have completed from asynchronous execution.
+     *
+     * This method will **not** yield execution to any other fiber.
+     *
+     * Calling this method from the outside of the service is not allowed.
+     *
+     * @return True iff at least one future has received a completion notification
+     */
+    Boolean hasFutureArrived();
 
     /**
      * Add a function-to-call to the service's backlog.
@@ -373,6 +399,14 @@ interface Service
      * Calling this method from the outside of the service is not allowed.
      */
     void registerCriticalSection(CriticalSection? criticalSection);
+
+    /**
+     * Register a SynchronizedSection for the service, replacing any previously registered
+     * SynchronizedSection.
+     *
+     * Calling this method from the outside of the service is not allowed.
+     */
+    void registerSynchronizedSection(SynchronizedSection? synchronizedSection);
 
     /**
      * Register a function to invoke when the service is shutting down. This notification is not

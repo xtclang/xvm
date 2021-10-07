@@ -9,7 +9,8 @@ import ecstasy.Cloneable;
 import ecstasy.Closeable;
 import ecstasy.ConcurrentModification;
 import ecstasy.Const;
-import ecstasy.CriticalSection;
+import ecstasy.CriticalSection; // TODO GG remove
+import ecstasy.SynchronizedSection;
 import ecstasy.Deadlock;
 import ecstasy.Enum;
 import ecstasy.Exception;

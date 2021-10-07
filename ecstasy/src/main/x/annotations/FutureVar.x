@@ -353,9 +353,15 @@ mixin FutureVar<Referent>
      */
     FutureVar waitForCompletion()
         {
-        while (completion == Pending)
+        if (completion == Pending)
             {
-            this:service.yield();
+// TODO GG
+//            @Future FutureVar<Referent> result;
+//            this.thenDo(() ->
+//                {
+//                result = this;
+//                });
+//            return result;
             }
 
         return this;
