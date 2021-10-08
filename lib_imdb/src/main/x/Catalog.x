@@ -177,15 +177,16 @@ static service Catalog
         {
         return switch (info.category)
             {
-            case DBSchema:   new SchemaStore(info, log);
-            case DBMap:      createMapStore(info, log);
-            case DBList:     TODO
-            case DBQueue:    TODO
-            case DBLog:      TODO
-            case DBCounter:  new CounterStore(info, log);
-            case DBValue:    createValueStore(info, log);
-            case DBFunction: TODO
-            default:         assert;
+            case DBSchema:    new SchemaStore(info, log);
+            case DBMap:       createMapStore(info, log);
+            case DBList:      TODO
+            case DBQueue:     TODO
+            case DBProcessor: TODO
+            case DBLog:       TODO
+            case DBCounter:   new CounterStore(info, log);
+            case DBValue:     createValueStore(info, log);
+            case DBFunction:  TODO
+            default:          assert;
             };
         }
 

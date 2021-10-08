@@ -111,6 +111,4 @@ interface DBMap<Key extends immutable Const, Value extends immutable Const>
             extends DBObject.Rectifier<TxChange> {}
     @Override static interface Distributor<TxChange extends DBMap.TxChange>
             extends DBObject.Distributor<TxChange> {}
-    @Override static interface AsyncTrigger<TxChange extends DBMap.TxChange>
-            extends DBObject.AsyncTrigger<TxChange> {}
     }

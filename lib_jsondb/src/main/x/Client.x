@@ -370,32 +370,6 @@ service Client<Schema extends RootSchema>
         }
 
     /**
-     * Select the AsyncTriggers to run after this transaction has completed, based on the
-     * changes to this DBObject.
-     *
-     * @param dboId  the id of the DBObject to select triggers for
-     *
-     * @return an array of Booleans, corresponding to the [DBObjectInfo.asyncTriggers] for the
-     *         specified dboId, indicating which AsyncTrigger objects should be executed
-     */
-    immutable Boolean[] selectDBObjectTriggers(Int dboId)
-        {
-        return implFor(dboId).selectTriggers_();
-        }
-
-    /**
-     * Execute the specified AsyncTrigger for this DBObject.
-     *
-     * @param dboId     the id of the DBObject to select triggers for
-     * @param iTrigger  an index into the [DBObjectInfo.asyncTriggers] array for this DBObject,
-     *                  indicating which AsyncTrigger to execute
-     */
-    void execDBObjectTrigger(Int dboId, Int iTrigger)
-        {
-        implFor(dboId).execTrigger_(iTrigger);
-        }
-
-    /**
      * For the transaction manager's internal clients that emulate various stages in a transaction,
      * this terminates the representation of a previously-specified transaction, allowing the client
      * to be safely returned to a pool for later re-use.
@@ -502,14 +476,15 @@ service Client<Schema extends RootSchema>
         DBObjectInfo info = infoFor(id);
         return switch (info.category)
             {
-            case DBSchema:   new DBSchemaImpl(info);
-            case DBMap:      createDBMapImpl(info, storeFor(id).as(MapStore));
-            case DBList:     TODO
-            case DBQueue:    TODO
-            case DBLog:      createDBLogImpl  (info, storeFor(id).as(LogStore));
-            case DBCounter:  new DBCounterImpl(info, storeFor(id).as(CounterStore));
-            case DBValue:    createDBValueImpl(info, storeFor(id).as(ValueStore));
-            case DBFunction: TODO
+            case DBSchema:    new DBSchemaImpl(info);
+            case DBMap:       createDBMapImpl(info, storeFor(id).as(MapStore));
+            case DBList:      TODO
+            case DBQueue:     TODO
+            case DBProcessor: TODO
+            case DBLog:       createDBLogImpl  (info, storeFor(id).as(LogStore));
+            case DBCounter:   new DBCounterImpl(info, storeFor(id).as(CounterStore));
+            case DBValue:     createDBValueImpl(info, storeFor(id).as(ValueStore));
+            case DBFunction:  TODO
             };
         }
 
@@ -830,62 +805,6 @@ service Client<Schema extends RootSchema>
                 }
 
             return True;
-            }
-
-        /**
-         * Select the AsyncTriggers to run after this transaction has completed, based on the
-         * changes to this DBObject.
-         *
-         * @return an array of Booleans, corresponding to the [DBObjectInfo.asyncTriggers] for this
-         *         DBObject, indicating which AsyncTrigger objects should be executed
-         */
-        immutable Boolean[] selectTriggers_()
-            {
-            TxChange change = new TxChange_();
-
-            AsyncTrigger[] available = info_.asyncTriggers;
-            Boolean[]      selected  = new Boolean[available.size](False);
-            Loop: for (val trigger : available)
-                {
-                try
-                    {
-                    if (trigger.appliesTo(change))
-                        {
-                        selected[Loop.count] = True;
-                        }
-                    }
-                catch (Exception e)
-                    {
-                    this.Client.log($|An exception occurred in DBObject {info_.idString} while\
-                                     | evaluating AsyncTrigger "{&trigger.actualClass.displayName}": {e}
-                                   );
-                    }
-                }
-
-            return selected.freeze(inPlace = True);
-            }
-
-        /**
-         * Execute the specified AsyncTrigger for this DBObject.
-         *
-         * @param iTrigger  an index into the [DBObjectInfo.asyncTriggers] array for this DBObject,
-         *                  indicating which AsyncTrigger to execute
-         */
-        void execTrigger_(Int iTrigger)
-            {
-            TxChange change = new TxChange_();
-
-            val trigger = info_.asyncTriggers[iTrigger];
-            try
-                {
-                trigger.process(change);
-                }
-            catch (Exception e)
-                {
-                this.Client.log($|An exception occurred in DBObject {info_.idString} while executing\
-                                 | AsyncTrigger "{&trigger.actualClass.displayName}": {e}
-                               );
-                }
             }
 
         /**

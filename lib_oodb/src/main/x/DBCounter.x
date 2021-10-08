@@ -242,6 +242,4 @@ interface DBCounter
             extends DBObject.Rectifier<TxChange> {}
     @Override static interface Distributor<TxChange extends DBCounter.TxChange>
             extends DBObject.Distributor<TxChange> {}
-    @Override static interface AsyncTrigger<TxChange extends DBCounter.TxChange>
-            extends DBObject.AsyncTrigger<TxChange> {}
     }

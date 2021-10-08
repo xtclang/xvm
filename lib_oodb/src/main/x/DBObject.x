@@ -32,7 +32,7 @@ interface DBObject
     /**
      * Categorizations of the various forms of `DBObject`s.
      */
-    enum DBCategory {DBSchema, DBMap, DBList, DBQueue, DBLog, DBCounter, DBValue, DBFunction}
+    enum DBCategory {DBSchema, DBMap, DBList, DBQueue, DBProcessor, DBLog, DBCounter, DBValue, DBFunction}
 
     /**
      * The category of this `DBObject`.
@@ -183,7 +183,7 @@ interface DBObject
      *        `DBLog` of the indicated `Element` type
      * @throws IllegalArgument if the specified name or path does not refer to a `DBObject`
      */
-    <Element> DBLog<Element> logOf(Path path)
+    <Element> DBLog<Element> logOf(Path path)   // TODO CP "for" instead of "of"???
         {
         if (DBObject dbo ?= dbObjectFor(path))
             {
@@ -302,8 +302,7 @@ interface DBObject
         @RO DBObject pre;
 
         /**
-         * The state of the `DBObject`, after this change was made. Note that, for an async trigger,
-         * the state of the database may have since changed from this "post" view.
+         * The state of the `DBObject`, after this change was made.
          *
          * The returned `DBObject` does not allow mutation.
          *
@@ -384,57 +383,5 @@ interface DBObject
          * @return True iff the change is valid; False will cause the transaction to roll back
          */
         Boolean process(TxChange change);
-        }
-
-    /**
-     * Represents an automatic response to a change that occurs when a transaction commits.
-     *
-     * Triggers can be pre-commit or post-commit. The pre-commit form should be used when a trigger
-     * has to _prevent_ a transaction, or if it is essential that the information (changes) from the
-     * transaction be hidden until after the trigger has executed. The post-commit ("async") form
-     * should generally be used in all other scenarios.
-     *
-     * The `Trigger` is a static interface, because it is expected to (generally) be implemented
-     * separately from the `DBObject` itself. For example, it is expected that a `DBObject`
-     * implementation will be provided by a database engine implementer, while the `Trigger` will be
-     * authored by the application developer.
-     */
-    static interface AsyncTrigger<TxChange extends DBObject.TxChange>
-        {
-        /**
-         * Determine if this AsyncTrigger applies to the specified change. This method must **not**
-         * attempt to modify the database. The use of this method by the database implementation is
-         * optional; the database engine may call [process] without first calling this method.
-         *
-         * @param change  the change being evaluated
-         *
-         * @return `True` iff the AsyncTrigger is interested in the specified change
-         */
-        Boolean appliesTo(TxChange change)
-            {
-            return True;
-            }
-
-        /**
-         * The maximum number of times to attempt to execute the trigger, before abandoning.
-         */
-        @RO Int maxRetries = 3;
-
-        /**
-         * Execute the AsyncTrigger functionality. This method may modify the database.
-         *
-         * @param change  the change that the AsyncTrigger is firing in response to
-         */
-        void process(TxChange change);
-
-        /**
-         * This method is invoked when the trigger execution has failed, and the database has given
-         * up automatically retrying the trigger. If the `TxChange` information is important to
-         * retain for later processing, then this method should add it to a queue for later
-         * reliable processing, or to an error queue for diagnosis.
-         *
-         * @param change  the change that the AsyncTrigger is firing in response to
-         */
-        void abandon(TxChange change);
         }
     }

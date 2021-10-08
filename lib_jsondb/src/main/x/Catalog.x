@@ -475,6 +475,9 @@ service Catalog<Schema extends RootSchema>
                 case DBQueue:
                     TODO
 
+                case DBProcessor:
+                    TODO
+
                 case DBCounter:
                     return createCounterStore(info);
 

@@ -2,6 +2,9 @@
  * The database interface for a queue of database keys or values of a specific type, based on the
  * standard `Queue` interface.
  *
+ * A DBQueue allows a database _application_ to manage the processing of the contents of the queue.
+ * For automated queue processing, managed by the database, use a [DBProcessor] instead.
+ *
  * A `DBQueue` is always transactional.
  */
 interface DBQueue<Element extends immutable Const>
@@ -32,7 +35,7 @@ interface DBQueue<Element extends immutable Const>
     @Override
     @RO DBCategory dbCategory.get()
         {
-        return DBSchema;
+        return DBQueue;
         }
 
 
@@ -92,6 +95,4 @@ interface DBQueue<Element extends immutable Const>
             extends DBObject.Rectifier<TxChange> {}
     @Override static interface Distributor<TxChange extends DBObject.TxChange>
             extends DBObject.Distributor<TxChange> {}
-    @Override static interface AsyncTrigger<TxChange extends DBObject.TxChange>
-            extends DBObject.AsyncTrigger<TxChange> {}
     }

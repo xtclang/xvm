@@ -226,14 +226,15 @@ service Client<Schema extends RootSchema>
         DBObjectInfo info = infoFor(id);
         return switch (info.category)
             {
-            case DBSchema:   new DBSchemaImpl(storeFor(id).as(SchemaStore));
-            case DBMap:      createMapImpl(info, storeFor(id).as(MapStore));
-            case DBList:     TODO
-            case DBQueue:    TODO
-            case DBLog:      TODO
-            case DBCounter:  new DBCounterImpl(storeFor(id).as(CounterStore));
-            case DBValue:    createValueImpl(info, storeFor(id).as(ValueStore));
-            case DBFunction: TODO
+            case DBSchema:    new DBSchemaImpl(storeFor(id).as(SchemaStore));
+            case DBMap:       createMapImpl(info, storeFor(id).as(MapStore));
+            case DBList:      TODO
+            case DBQueue:     TODO
+            case DBProcessor: TODO
+            case DBLog:       TODO
+            case DBCounter:   new DBCounterImpl(storeFor(id).as(CounterStore));
+            case DBValue:     createValueImpl(info, storeFor(id).as(ValueStore));
+            case DBFunction:  TODO
             };
         }
 

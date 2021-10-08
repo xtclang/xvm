@@ -84,6 +84,4 @@ interface DBValue<Value extends immutable Const>
             extends DBObject.Rectifier<TxChange> {}
     @Override static interface Distributor<TxChange extends DBValue.TxChange>
             extends DBObject.Distributor<TxChange> {}
-    @Override static interface AsyncTrigger<TxChange extends DBValue.TxChange>
-            extends DBObject.AsyncTrigger<TxChange> {}
     }

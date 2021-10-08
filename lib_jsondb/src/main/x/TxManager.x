@@ -97,11 +97,10 @@ import ObjectStore.MergeResult;
         this.catalog = catalog;
 
         // build the quick lookup information for the optional transactional "modifiers"
-        // (validators, rectifiers, distributors, and async triggers)
+        // (validators, rectifiers, and distributors)
         Boolean hasValidators    = catalog.metadata?.dbObjectInfos.any(info -> !info.validators   .empty) : False;
         Boolean hasRectifiers    = catalog.metadata?.dbObjectInfos.any(info -> !info.rectifiers   .empty) : False;
         Boolean hasDistributors  = catalog.metadata?.dbObjectInfos.any(info -> !info.distributors .empty) : False;
-        Boolean hasAsyncTriggers = catalog.metadata?.dbObjectInfos.any(info -> !info.asyncTriggers.empty) : False;
         Boolean hasSyncTriggers  = hasValidators |  hasRectifiers | hasDistributors;
 
         if (hasValidators)
@@ -130,18 +129,10 @@ import ObjectStore.MergeResult;
 
         if (hasSyncTriggers)
             {
-            asyncTriggers = new SparseIntSet()
+            syncTriggers = new SparseIntSet()
                     .addAll(validators)
                     .addAll(rectifiers)
                     .addAll(distributors);
-            }
-
-        if (hasAsyncTriggers)
-            {
-            syncTriggers = catalog.metadata?.dbObjectInfos
-                    .filter(info -> !info.asyncTriggers.empty)
-                    .map(info -> info.id, new SparseIntSet())
-                    .as(Set<Int>);
             }
 
         internalJsonSchema = catalog.internalJsonSchema;
@@ -288,7 +279,7 @@ import ObjectStore.MergeResult;
      * transaction. These values are not stored persistently; they only exist for the duration of an
      * in-flight transaction.
      *
-     * When a new transaction manager is instantiated, the counter always  starts over at zero,
+     * When a new transaction manager is instantiated, the counter always starts over at zero,
      * since the count and the ids are ephemeral.
      *
      * An ID is calculated as the negative of the count; for example, the first transaction would
@@ -361,14 +352,9 @@ import ObjectStore.MergeResult;
      * The set of ids of DBObjects that have validators, rectifiers, and/or distributors.
      */
     protected/private Set<Int> syncTriggers = [];
-    /**
-     * The set of ids of DBObjects that have asynchronous triggers.
-     */
-    protected/private Set<Int> asyncTriggers = [];
 
     /**
-     * A pool of artificial clients for processing both sync (validator/rectifier/distributor) and
-     * async triggers.
+     * A pool of artificial clients for processing triggers (validator/rectifier/distributor).
      */
     protected/private ArrayDeque<Client<Schema>> clientCache = new ArrayDeque();
 
@@ -2164,9 +2150,7 @@ import ObjectStore.MergeResult;
      * @param txId   the transaction ID that the client provided to the ObjectStore (the "write" id)
      *
      * @return the transaction id to use as the "read" transaction id; it identifies the transaction
-     *         that the specified "write" transaction id is based on; note that the read transaction
-     *         id will actually be a write transaction id while post-prepare triggers are being
-     *         executed
+     *         that the specified "write" transaction id is based on
      *
      * @throws ReadOnly  if the map does not allow or support the requested mutating operation
      * @throws IllegalState if the transaction state does not allow an ObjectStore to be enlisted,

@@ -24,7 +24,7 @@
  *   `n < -1`, since `-1` is used as an indicator value. Unlike positive TxId values, the magnitude
  *   of the negative TxId is not indicative of any particular order; it is simply a unique
  *   identifier. Each write-TxId has a corresponding read-TxId that serves as its base from which
- *   to overlay its changes; during the prepare phase, it isi possible for a write-TxId to have
+ *   to overlay its changes; during the prepare phase, it is possible for a write-TxId to have
  *   another write-TxId as its base, because trigger processing produces changes of its own.
  *
  * * A "prepare TxId" is when the changes corresponding to a particular "write TxId" are "flipped"

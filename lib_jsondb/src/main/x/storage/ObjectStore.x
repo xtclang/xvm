@@ -523,8 +523,7 @@ import json.Doc;
      * * Prepared indicates that there were changes, and they were successfully prepared; once
      *   the prepare stage has completed, changes are subject to Validator evaluation, then
      *   Rectifier evaluation, then Distributor evaluation (repeated until no further distribution
-     *   is triggered), and then finally the accrued changes (including a record of any triggered
-     *   AsyncTrigger objects) are committed.
+     *   is triggered), and then finally the accrued changes are committed.
      */
     enum PrepareResult {FailedRolledBack, CommittedNoChanges, Prepared}
 
