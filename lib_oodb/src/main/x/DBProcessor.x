@@ -1,5 +1,6 @@
 /**
- * The database interface for TODO.
+ * The database interface for scheduling work that will occur in one or more later database
+ * transactions.
  *
  * A `DBProcessor` is always transactional.
  */
