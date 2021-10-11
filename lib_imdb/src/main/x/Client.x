@@ -2,13 +2,13 @@ import ecstasy.collections.maps.KeySetBasedMap;
 import ecstasy.reflect.Annotation;
 
 import oodb.DBCounter;
-import oodb.DBFunction;
 import oodb.DBInfo;
-import oodb.DBInvoke;
 import oodb.DBList;
 import oodb.DBLog;
 import oodb.DBMap;
 import oodb.DBObject;
+import oodb.DBPending;
+import oodb.DBProcessor;
 import oodb.DBQueue;
 import oodb.DBSchema;
 import oodb.DBTransaction;
@@ -227,14 +227,13 @@ service Client<Schema extends RootSchema>
         return switch (info.category)
             {
             case DBSchema:    new DBSchemaImpl(storeFor(id).as(SchemaStore));
+            case DBCounter:   new DBCounterImpl(storeFor(id).as(CounterStore));
+            case DBValue:     createValueImpl(info, storeFor(id).as(ValueStore));
             case DBMap:       createMapImpl(info, storeFor(id).as(MapStore));
             case DBList:      TODO
             case DBQueue:     TODO
             case DBProcessor: TODO
             case DBLog:       TODO
-            case DBCounter:   new DBCounterImpl(storeFor(id).as(CounterStore));
-            case DBValue:     createValueImpl(info, storeFor(id).as(ValueStore));
-            case DBFunction:  TODO
             };
         }
 
@@ -395,30 +394,6 @@ service Client<Schema extends RootSchema>
             }
 
         @Override
-        @RO DBMap<String, DBMap> maps.get()
-            {
-            return implFor("sys/maps").as(DBMap<String, DBMap>);
-            }
-
-        @Override
-        @RO DBMap<String, DBQueue> queues.get()
-            {
-            return implFor("sys/queues").as(DBMap<String, DBQueue>);
-            }
-
-        @Override
-        @RO DBMap<String, DBList> lists.get()
-            {
-            return implFor("sys/lists").as(DBMap<String, DBList>);
-            }
-
-        @Override
-        @RO DBMap<String, DBLog> logs.get()
-            {
-            return implFor("sys/logs").as(DBMap<String, DBLog>);
-            }
-
-        @Override
         @RO DBMap<String, DBCounter> counters.get()
             {
             return implFor("sys/counters").as(DBMap<String, DBCounter>);
@@ -431,15 +406,39 @@ service Client<Schema extends RootSchema>
             }
 
         @Override
-        @RO DBMap<String, DBFunction> functions.get()
+        @RO DBMap<String, DBMap> maps.get()
             {
-            return implFor("sys/functions").as(DBMap<String, DBFunction>);
+            return implFor("sys/maps").as(DBMap<String, DBMap>);
             }
 
         @Override
-        @RO DBList<DBInvoke> pending.get()
+        @RO DBMap<String, DBList> lists.get()
             {
-            return implFor("sys/pending").as(DBList<DBInvoke>);
+            return implFor("sys/lists").as(DBMap<String, DBList>);
+            }
+
+        @Override
+        @RO DBMap<String, DBQueue> queues.get()
+            {
+            return implFor("sys/queues").as(DBMap<String, DBQueue>);
+            }
+
+        @Override
+        @RO DBMap<String, DBProcessor> processors.get()
+            {
+            return implFor("sys/processors").as(DBMap<String, DBProcessor>);
+            }
+
+        @Override
+        @RO DBMap<String, DBLog> logs.get()
+            {
+            return implFor("sys/logs").as(DBMap<String, DBLog>);
+            }
+
+        @Override
+        @RO DBList<DBPending> pending.get()
+            {
+            return implFor("sys/pending").as(DBList<DBPending>);
             }
 
         @Override

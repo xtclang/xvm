@@ -1,10 +1,10 @@
 import oodb.DBCounter;
-import oodb.DBFunction;
 import oodb.DBInfo;
 import oodb.DBList;
 import oodb.DBLog;
 import oodb.DBMap;
 import oodb.DBObject;
+import oodb.DBProcessor;
 import oodb.DBQueue;
 import oodb.DBSchema;
 import oodb.DBUser;
@@ -60,13 +60,13 @@ static service Catalog
         "sys/types"        = new DBObjectInfo("sys/types",        DBMap,   typeParams=Map:["Key"=String, "Value"=Type]),
         "sys/objects"      = new DBObjectInfo("sys/objects",      DBMap,   typeParams=Map:["Key"=String, "Value"=DBObject]),
         "sys/schemas"      = new DBObjectInfo("sys/schemas",      DBMap,   typeParams=Map:["Key"=String, "Value"=DBSchema]),
-        "sys/maps"         = new DBObjectInfo("sys/maps",         DBMap,   typeParams=Map:["Key"=String, "Value"=DBMap]),
-        "sys/queues"       = new DBObjectInfo("sys/queues",       DBMap,   typeParams=Map:["Key"=String, "Value"=DBQueue]),
-        "sys/lists"        = new DBObjectInfo("sys/lists",        DBMap,   typeParams=Map:["Key"=String, "Value"=DBList]),
-        "sys/logs"         = new DBObjectInfo("sys/logs",         DBMap,   typeParams=Map:["Key"=String, "Value"=DBLog]),
         "sys/counters"     = new DBObjectInfo("sys/counters",     DBMap,   typeParams=Map:["Key"=String, "Value"=DBCounter]),
         "sys/values"       = new DBObjectInfo("sys/values",       DBMap,   typeParams=Map:["Key"=String, "Value"=DBValue]),
-        "sys/functions"    = new DBObjectInfo("sys/functions",    DBMap,   typeParams=Map:["Key"=String, "Value"=DBFunction]),
+        "sys/maps"         = new DBObjectInfo("sys/maps",         DBMap,   typeParams=Map:["Key"=String, "Value"=DBMap]),
+        "sys/lists"        = new DBObjectInfo("sys/lists",        DBMap,   typeParams=Map:["Key"=String, "Value"=DBList]),
+        "sys/processors"   = new DBObjectInfo("sys/processors",   DBMap,   typeParams=Map:["Key"=String, "Value"=DBProcessor]),
+        "sys/queues"       = new DBObjectInfo("sys/queues",       DBMap,   typeParams=Map:["Key"=String, "Value"=DBQueue]),
+        "sys/logs"         = new DBObjectInfo("sys/logs",         DBMap,   typeParams=Map:["Key"=String, "Value"=DBLog]),
         "sys/pending"      = new DBObjectInfo("sys/pending",      DBList,  typeParams=Map:[]),
         "sys/transactions" = new DBObjectInfo("sys/transactions", DBLog,   typeParams=Map:[]),
         "sys/errors"       = new DBObjectInfo("sys/errors",       DBLog,   typeParams=Map:[]),
@@ -178,15 +178,13 @@ static service Catalog
         return switch (info.category)
             {
             case DBSchema:    new SchemaStore(info, log);
+            case DBCounter:   new CounterStore(info, log);
+            case DBValue:     createValueStore(info, log);
             case DBMap:       createMapStore(info, log);
             case DBList:      TODO
             case DBQueue:     TODO
             case DBProcessor: TODO
             case DBLog:       TODO
-            case DBCounter:   new CounterStore(info, log);
-            case DBValue:     createValueStore(info, log);
-            case DBFunction:  TODO
-            default:          assert;
             };
         }
 

@@ -137,24 +137,6 @@ const DBObjectInfo(
                     assert paramName == "Element";
                     break;
 
-                case DBFunction:
-                    // "ParamType[0]", "ReturnType[1]", etc. since there are `n` types
-                    String index;
-                    if (paramName.startsWith("ReturnType["))
-                        {
-                        assert paramName.endsWith(']');
-                        index = paramName["ReturnType[".size .. paramName.size-2];
-                        }
-                    else
-                        {
-                        assert paramName.startsWith("ParamType[") && paramName.endsWith(']');
-                        index = paramName["ParamType[".size .. paramName.size-2];
-                        }
-
-                    Int n = new IntLiteral(index).toInt64();
-                    assert n >= 0;
-                    break;
-
                 default:
                     throw new IllegalState($|{category} {name.quoted()} specifies a type parameter\
                                             | {paramName.quoted()}; no type parameters are supported

@@ -12,14 +12,14 @@
  * * `sys/types` - a [DBList] of all distinct `Type` objects that are supported by the Database
  * * `sys/objects` - a [DBMap] of path to [DBObject]
  * * `sys/schemas` - a [DBMap] of path to [DBSchema]
- * * `sys/maps` - a [DBMap] of path to [DBMap]
- * * `sys/queues` - a [DBMap] of path to [DBQueue]
- * * `sys/lists` - a [DBMap] of path to [DBList]
- * * `sys/logs` - a [DBMap] of path to [DBLog]
  * * `sys/counters` - a [DBMap] of path to [DBCounter]
  * * `sys/values` - a [DBMap] of path to [DBValue] DBObjects
- * * `sys/functions` - a [DBMap] of path to [DBFunction]
- * * `sys/pending` - a [DBList] ordered by scheduled invocation date/time of [DBInvoke] objects
+ * * `sys/maps` - a [DBMap] of path to [DBMap]
+ * * `sys/lists` - a [DBMap] of path to [DBList]
+ * * `sys/queues` - a [DBMap] of path to [DBQueue]
+ * * `sys/processors` - a [DBMap] of path to [DBProcessor]
+ * * `sys/logs` - a [DBMap] of path to [DBLog]
+ * * `sys/pending` - a [DBList] ordered by scheduled invocation date/time of [DBPending] objects
  * * `sys/transactions` - a [DBLog] of [Transaction] objects
  * * `sys/errors` - a [DBLog] of errors REVIEW String
  */
@@ -53,26 +53,6 @@ interface SystemSchema
     @RO DBMap<String, DBSchema> schemas;
 
     /**
-     * A [DBMap] of path to [DBMap].
-     */
-    @RO DBMap<String, DBMap> maps;
-
-    /**
-     * A [DBMap] of path to [DBQueue].
-     */
-    @RO DBMap<String, DBQueue> queues;
-
-    /**
-     * A [DBMap] of path to [DBList].
-     */
-    @RO DBMap<String, DBList> lists;
-
-    /**
-     * A [DBMap] of path to [DBLog].
-     */
-    @RO DBMap<String, DBLog> logs;
-
-    /**
      * A [DBMap] of path to [DBCounter].
      */
     @RO DBMap<String, DBCounter> counters;
@@ -83,15 +63,35 @@ interface SystemSchema
     @RO DBMap<String, DBValue> values;
 
     /**
-     * A [DBMap] of path to [DBFunction].
+     * A [DBMap] of path to [DBMap].
      */
-    @RO DBMap<String, DBFunction> functions;
+    @RO DBMap<String, DBMap> maps;
 
     /**
-     * A [DBList] ordered by scheduled invocation date/time of [DBInvoke] objects. Note that a
+     * A [DBMap] of path to [DBList].
+     */
+    @RO DBMap<String, DBList> lists;
+
+    /**
+     * A [DBMap] of path to [DBQueue].
+     */
+    @RO DBMap<String, DBQueue> queues;
+
+    /**
+     * A [DBMap] of path to [DBProcessor].
+     */
+    @RO DBMap<String, DBProcessor> processors;
+
+    /**
+     * A [DBMap] of path to [DBLog].
+     */
+    @RO DBMap<String, DBLog> logs;
+
+    /**
+     * A [DBList] ordered by scheduled invocation date/time of [DBPending] objects. Note that a
      * database may restrict access to the pending execution list for security reasons.
      */
-    @RO DBList<DBInvoke> pending;
+    @RO DBList<DBPending> pending;
 
     /**
      * A [DBLog] of [DBTransaction] objects. Note that a database may restrict access to the

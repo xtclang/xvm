@@ -594,13 +594,13 @@ class DbHost(String dbModuleName)
 
     static Map<DBCategory, TypeTemplate> DB_TEMPLATES = Map:
             [
-            DBMap       = oodb.DBMap     .baseTemplate.type,
-            DBList      = oodb.DBList    .baseTemplate.type,
-            DBQueue     = oodb.DBQueue   .baseTemplate.type,
-            DBLog       = oodb.DBLog     .baseTemplate.type,
-            DBCounter   = oodb.DBCounter .baseTemplate.type,
-            DBValue     = oodb.DBValue   .baseTemplate.type,
-            DBFunction  = oodb.DBFunction.baseTemplate.type,
-            DBSchema    = oodb.DBSchema  .baseTemplate.type
+            DBSchema    = oodb.DBSchema   .baseTemplate.type,
+            DBCounter   = oodb.DBCounter  .baseTemplate.type,
+            DBValue     = oodb.DBValue    .baseTemplate.type,
+            DBMap       = oodb.DBMap      .baseTemplate.type,
+            DBList      = oodb.DBList     .baseTemplate.type,
+            DBQueue     = oodb.DBQueue    .baseTemplate.type,
+            DBProcessor = oodb.DBProcessor.baseTemplate.type,
+            DBLog       = oodb.DBLog      .baseTemplate.type,
             ];
     }

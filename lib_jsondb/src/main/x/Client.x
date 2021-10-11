@@ -8,13 +8,13 @@ import json.ObjectInputStream;
 import json.ObjectOutputStream;
 
 import oodb.DBCounter;
-import oodb.DBFunction;
 import oodb.DBInfo;
-import oodb.DBInvoke;
 import oodb.DBList;
 import oodb.DBLog;
 import oodb.DBMap;
 import oodb.DBObject;
+import oodb.DBPending;
+import oodb.DBProcessor;
 import oodb.DBQueue;
 import oodb.DBSchema;
 import oodb.DBTransaction;
@@ -459,14 +459,14 @@ service Client<Schema extends RootSchema>
                 case Types:        TODO new DBMap<String, Type>();
                 case Objects:      TODO new DBMap<String, DBObject>();
                 case Schemas:      TODO new DBMap<String, DBSchema>();
-                case Maps:         TODO new DBMap<String, DBMap>();
-                case Queues:       TODO new DBMap<String, DBQueue>();
-                case Lists:        TODO new DBMap<String, DBList>();
-                case Logs:         TODO new DBMap<String, DBLog>();
                 case Counters:     TODO new DBMap<String, DBCounter>();
                 case Values:       TODO new DBMap<String, DBValue>();
-                case Functions:    TODO new DBMap<String, DBFunction>();
-                case Pending:      TODO new DBList<DBInvoke>();
+                case Maps:         TODO new DBMap<String, DBMap>();
+                case Lists:        TODO new DBMap<String, DBList>();
+                case Queues:       TODO new DBMap<String, DBQueue>();
+                case Processors:   TODO new DBMap<String, DBProcessor>();
+                case Logs:         TODO new DBMap<String, DBLog>();
+                case Pending:      TODO new DBList<DBPending>();
                 case Transactions: TODO new DBLog<DBTransaction>();
                 case Errors:       TODO new DBLog<String>();
                 default: assert;
@@ -477,14 +477,13 @@ service Client<Schema extends RootSchema>
         return switch (info.category)
             {
             case DBSchema:    new DBSchemaImpl(info);
+            case DBCounter:   new DBCounterImpl(info, storeFor(id).as(CounterStore));
+            case DBValue:     createDBValueImpl(info, storeFor(id).as(ValueStore));
             case DBMap:       createDBMapImpl(info, storeFor(id).as(MapStore));
             case DBList:      TODO
             case DBQueue:     TODO
             case DBProcessor: TODO
             case DBLog:       createDBLogImpl  (info, storeFor(id).as(LogStore));
-            case DBCounter:   new DBCounterImpl(info, storeFor(id).as(CounterStore));
-            case DBValue:     createDBValueImpl(info, storeFor(id).as(ValueStore));
-            case DBFunction:  TODO
             };
         }
 
@@ -905,30 +904,6 @@ service Client<Schema extends RootSchema>
             }
 
         @Override
-        @RO DBMap<String, DBMap> maps.get()
-            {
-            return implFor(BuiltIn.Maps.id).as(DBMap<String, DBMap>);
-            }
-
-        @Override
-        @RO DBMap<String, DBQueue> queues.get()
-            {
-            return implFor(BuiltIn.Queues.id).as(DBMap<String, DBQueue>);
-            }
-
-        @Override
-        @RO DBMap<String, DBList> lists.get()
-            {
-            return implFor(BuiltIn.Lists.id).as(DBMap<String, DBList>);
-            }
-
-        @Override
-        @RO DBMap<String, DBLog> logs.get()
-            {
-            return implFor(BuiltIn.Logs.id).as(DBMap<String, DBLog>);
-            }
-
-        @Override
         @RO DBMap<String, DBCounter> counters.get()
             {
             return implFor(BuiltIn.Counters.id).as(DBMap<String, DBCounter>);
@@ -941,15 +916,39 @@ service Client<Schema extends RootSchema>
             }
 
         @Override
-        @RO DBMap<String, DBFunction> functions.get()
+        @RO DBMap<String, DBMap> maps.get()
             {
-            return implFor(BuiltIn.Functions.id).as(DBMap<String, DBFunction>);
+            return implFor(BuiltIn.Maps.id).as(DBMap<String, DBMap>);
             }
 
         @Override
-        @RO DBList<DBInvoke> pending.get()
+        @RO DBMap<String, DBList> lists.get()
             {
-            return implFor(BuiltIn.Pending.id).as(DBList<DBInvoke>);
+            return implFor(BuiltIn.Lists.id).as(DBMap<String, DBList>);
+            }
+
+        @Override
+        @RO DBMap<String, DBQueue> queues.get()
+            {
+            return implFor(BuiltIn.Queues.id).as(DBMap<String, DBQueue>);
+            }
+
+        @Override
+        @RO DBMap<String, DBProcessor> processors.get()
+            {
+            return implFor(BuiltIn.Processors.id).as(DBMap<String, DBProcessor>);
+            }
+
+        @Override
+        @RO DBMap<String, DBLog> logs.get()
+            {
+            return implFor(BuiltIn.Logs.id).as(DBMap<String, DBLog>);
+            }
+
+        @Override
+        @RO DBList<DBPending> pending.get()
+            {
+            return implFor(BuiltIn.Pending.id).as(DBList<DBPending>);
             }
 
         @Override

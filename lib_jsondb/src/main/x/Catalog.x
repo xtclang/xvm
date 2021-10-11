@@ -5,13 +5,13 @@ import model.SysInfo;
 import json.Mapping;
 
 import oodb.DBCounter;
-import oodb.DBFunction;
 import oodb.DBInfo;
-import oodb.DBInvoke;
 import oodb.DBList;
 import oodb.DBLog;
 import oodb.DBMap;
 import oodb.DBObject;
+import oodb.DBPending;
+import oodb.DBProcessor;
 import oodb.DBQueue;
 import oodb.DBSchema;
 import oodb.DBTransaction;
@@ -105,14 +105,14 @@ service Catalog<Schema extends RootSchema>
         Types<DBMap<String, Type>>,
         Objects<DBMap<String, DBObject>>,
         Schemas<DBMap<String, DBSchema>>,
+        Counters<DBMap<String, DBCounter>>,
+        Values<DBMap<String, DBValue>>,
         Maps<DBMap<String, DBMap>>,
         Queues<DBMap<String, DBQueue>>,
         Lists<DBMap<String, DBList>>,
+        Processors<DBMap<String, DBProcessor>>,
         Logs<DBMap<String, DBLog>>,
-        Counters<DBMap<String, DBCounter>>,
-        Values<DBMap<String, DBValue>>,
-        Functions<DBMap<String, DBFunction>>,
-        Pending<DBList<DBInvoke>>,
+        Pending<DBList<DBPending>>,
         Transactions<DBLog<DBTransaction>>,
         Errors<DBLog<String>>,
         ;
@@ -162,13 +162,13 @@ service Catalog<Schema extends RootSchema>
             BuiltIn.Types.id,
             BuiltIn.Objects.id,
             BuiltIn.Schemas.id,
-            BuiltIn.Maps.id,
-            BuiltIn.Queues.id,
-            BuiltIn.Lists.id,
-            BuiltIn.Logs.id,
             BuiltIn.Counters.id,
             BuiltIn.Values.id,
-            BuiltIn.Functions.id,
+            BuiltIn.Maps.id,
+            BuiltIn.Lists.id,
+            BuiltIn.Queues.id,
+            BuiltIn.Processors.id,
+            BuiltIn.Logs.id,
             BuiltIn.Pending.id,
             BuiltIn.Transactions.id,
             BuiltIn.Errors.id,
@@ -179,14 +179,14 @@ service Catalog<Schema extends RootSchema>
         new DBObjectInfo("types",        Path:/sys/types,        DBMap,   BuiltIn.Types.id,        BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=Type]),
         new DBObjectInfo("objects",      Path:/sys/objects,      DBMap,   BuiltIn.Objects.id,      BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=DBObject]),
         new DBObjectInfo("schemas",      Path:/sys/schemas,      DBMap,   BuiltIn.Schemas.id,      BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=DBSchema]),
-        new DBObjectInfo("maps",         Path:/sys/maps,         DBMap,   BuiltIn.Maps.id,         BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=DBMap]),
-        new DBObjectInfo("queues",       Path:/sys/queues,       DBMap,   BuiltIn.Queues.id,       BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=DBQueue]),
-        new DBObjectInfo("lists",        Path:/sys/lists,        DBMap,   BuiltIn.Lists.id,        BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=DBList]),
-        new DBObjectInfo("logs",         Path:/sys/logs,         DBMap,   BuiltIn.Logs.id,         BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=DBLog]),
         new DBObjectInfo("counters",     Path:/sys/counters,     DBMap,   BuiltIn.Counters.id,     BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=DBCounter]),
         new DBObjectInfo("values",       Path:/sys/values,       DBMap,   BuiltIn.Values.id,       BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=DBValue]),
-        new DBObjectInfo("functions",    Path:/sys/functions,    DBMap,   BuiltIn.Functions.id,    BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=DBFunction]),
-        new DBObjectInfo("pending",      Path:/sys/pending,      DBList,  BuiltIn.Pending.id,      BuiltIn.Sys.id, typeParams=Map:["Element"=DBInvoke]),
+        new DBObjectInfo("maps",         Path:/sys/maps,         DBMap,   BuiltIn.Maps.id,         BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=DBMap]),
+        new DBObjectInfo("lists",        Path:/sys/lists,        DBMap,   BuiltIn.Lists.id,        BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=DBList]),
+        new DBObjectInfo("queues",       Path:/sys/queues,       DBMap,   BuiltIn.Queues.id,       BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=DBQueue]),
+        new DBObjectInfo("processors",   Path:/sys/processors,   DBMap,   BuiltIn.Processors.id,   BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=DBProcessor]),
+        new DBObjectInfo("logs",         Path:/sys/logs,         DBMap,   BuiltIn.Logs.id,         BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=DBLog]),
+        new DBObjectInfo("pending",      Path:/sys/pending,      DBList,  BuiltIn.Pending.id,      BuiltIn.Sys.id, typeParams=Map:["Element"=DBPending]),
         new DBObjectInfo("transactions", Path:/sys/transactions, DBLog,   BuiltIn.Transactions.id, BuiltIn.Sys.id, typeParams=Map:["Element"=DBTransaction]),
         new DBObjectInfo("errors",       Path:/sys/errors,       DBLog,   BuiltIn.Errors.id,       BuiltIn.Sys.id, typeParams=Map:["Element"=String]),
         ];
@@ -446,14 +446,14 @@ service Catalog<Schema extends RootSchema>
 //                case Types:        new JsonMapStore<String, Type>(this, info, log);
 //                case Objects:      new JsonMapStore<String, DBObject>(this, info, log);
 //                case Schemas:      TODO
-//                case Maps:         TODO
-//                case Queues:       TODO
-//                case Lists:        TODO
-//                case Logs:         TODO
 //                case Counters:     TODO
 //                case Values:       TODO
-//                case Functions:    TODO
-//                case Pending:      TODO new ListStore<DBInvoke>();
+//                case Maps:         TODO
+//                case Lists:        TODO
+//                case Queues:       TODO
+//                case Processors:   TODO
+//                case Logs:         TODO
+//                case Pending:      TODO new ListStore<DBPending>();
 //                case Transactions: TODO new LogStore<DBTransaction>();
 //                case Errors:       TODO new LogStore<String>();
                 default:           assert as $"unsupported id={id}, BuiltIn={BuiltIn.byId(id)}, info={info}";
@@ -465,6 +465,12 @@ service Catalog<Schema extends RootSchema>
                 {
                 case DBSchema:
                     TODO
+
+                case DBCounter:
+                    return createCounterStore(info);
+
+                case DBValue:
+                    return createValueStore(info);
 
                 case DBMap:
                     return createMapStore(info);
@@ -478,17 +484,8 @@ service Catalog<Schema extends RootSchema>
                 case DBProcessor:
                     TODO
 
-                case DBCounter:
-                    return createCounterStore(info);
-
-                case DBValue:
-                    return createValueStore(info);
-
                 case DBLog:
                     return createLogStore(info);
-
-                case DBFunction:
-                    TODO
                 }
             }
         }

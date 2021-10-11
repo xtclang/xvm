@@ -10,7 +10,7 @@ interface Transaction<Schema extends RootSchema>
         extends Closeable
     {
     /**
-     * The database connection. This property is only guaranteed to be available from within an
+     * The database connection. This property is only guaranteed to be available from within a
      * [pending] transaction.
      */
     @RO (Connection<Schema> + Schema) connection;

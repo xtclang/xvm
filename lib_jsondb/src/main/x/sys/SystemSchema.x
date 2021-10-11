@@ -1,16 +1,16 @@
-import oodb.DBValue;
-import oodb.DBInfo;
-import oodb.DBMap;
-import oodb.DBUser;
-import oodb.DBList;
-import oodb.DBSchema;
-import oodb.DBQueue;
-import oodb.DBLog;
 import oodb.DBCounter;
-import oodb.DBFunction;
-import oodb.DBInvoke;
-import oodb.DBTransaction;
+import oodb.DBInfo;
+import oodb.DBList;
+import oodb.DBLog;
+import oodb.DBMap;
 import oodb.DBObject;
+import oodb.DBPending;
+import oodb.DBProcessor;
+import oodb.DBQueue;
+import oodb.DBSchema;
+import oodb.DBTransaction;
+import oodb.DBUser;
+import oodb.DBValue;
 import oodb.RootSchema;
 
 /**
@@ -31,14 +31,14 @@ class SystemSchema
 //        types        = new DBMap<String, Type>() {};
 //        objects      = new DBMap<String, DBObject>() {};
 //        schemas      = new DBMap<String, DBSchema>() {};
-//        maps         = new DBMap<String, DBMap>() {};
-//        queues       = new DBMap<String, DBQueue>() {};
-//        lists        = new DBMap<String, DBList>() {};
-//        logs         = new DBMap<String, DBLog>() {};
 //        counters     = new DBMap<String, DBCounter>() {};
-//        singletons   = new DBMap<String, DBValue>() {};
-//        functions    = new DBMap<String, DBFunction>() {};
-//        pending      = new DBList<DBInvoke>() {};
+//        values       = new DBMap<String, DBValue>() {};
+//        maps         = new DBMap<String, DBMap>() {};
+//        lists        = new DBMap<String, DBList>() {};
+//        queues       = new DBMap<String, DBQueue>() {};
+//        processors   = new DBMap<String, DBProcessor>() {};
+//        logs         = new DBMap<String, DBLog>() {};
+//        pending      = new DBList<DBPending>() {};
 //        transactions = new DBLog<DBTransaction>() {};
 //        errors       = new DBLog<String>() {};
 
@@ -49,21 +49,22 @@ class SystemSchema
 //                "types"        = types,
 //                "objects"      = objects,
 //                "schemas"      = schemas,
-//                "maps"         = maps,
-//                "queues"       = queues,
-//                "lists"        = lists,
-//                "logs"         = logs,
 //                "counters"     = counters,
-//                "singletons"   = singletons,
-//                "functions"    = functions,
+//                "values"       = values,
+//                "maps"         = maps,
+//                "lists"        = lists,
+//                "queues"       = queues,
+//                "processors"   = processors,
+//                "logs"         = logs,
 //                "pending"      = pending,
-//                "transactions" = transactions
+//                "transactions" = transactions,
+//                "errors"       = errors,
                 ];
 
-//        ["info", "users", "types", "objects", "schemas", "maps", "queues", "lists", "logs",
-//                "counters", "singletons", "functions", "pending", "transactions"]
-//        [ info ,  users ,  types ,  objects ,  schemas ,  maps ,  queues ,  lists ,  logs ,
-//                counters ,  singletons ,  functions ,  pending ,  transactions ]
+//        ["info", "users", "types", "objects", "schemas", "counters", "values", "maps", "lists",
+//                "queues", "processors", "logs", "pending", "transactions", "errors",]
+//        [ info ,  users ,  types ,  objects ,  schemas ,  counters ,  values ,  maps ,  lists ,
+//                 queues ,  processors ,  logs ,  pending ,  transactions ,  errors ,]
 //
 //        dbChildren = new ListMap<String, DBObject>(
 //        );
@@ -86,21 +87,21 @@ class SystemSchema
 
     @Override public/private DBMap<String, DBSchema>    schemas;
 
-    @Override public/private DBMap<String, DBMap>       maps;
-
-    @Override public/private DBMap<String, DBQueue>     queues;
-
-    @Override public/private DBMap<String, DBList>      lists;
-
-    @Override public/private DBMap<String, DBLog>       logs;
-
     @Override public/private DBMap<String, DBCounter>   counters;
 
     @Override public/private DBMap<String, DBValue>     values;
 
-    @Override public/private DBMap<String, DBFunction>  functions;
+    @Override public/private DBMap<String, DBMap>       maps;
 
-    @Override public/private DBList<DBInvoke>           pending;
+    @Override public/private DBMap<String, DBList>      lists;
+
+    @Override public/private DBMap<String, DBQueue>     queues;
+
+    @Override public/private DBMap<String, DBProcessor> processors;
+
+    @Override public/private DBMap<String, DBLog>       logs;
+
+    @Override public/private DBList<DBPending>          pending;
 
     @Override public/private DBLog<DBTransaction>       transactions;
 

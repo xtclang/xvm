@@ -70,17 +70,6 @@ interface DBProcessor<Element extends immutable Const>
          * @return an interface that allows the work to be scheduled repeatedly, and prioritized
          */
         Repeatable after(Duration delay);
-
-        /**
-         * Schedule the work to occur on a daily basis, at the specified time.
-         *
-         * The database will attempt to process the work at that point in time, but may be forced
-         * to delay the processing based on various factors, including the load profile of the
-         * database.
-         *
-         * @return an interface that allows the work to be prioritized
-         */
-        Prioritizable every(Time timeOfDay);
         }
 
     /**
@@ -100,8 +89,25 @@ interface DBProcessor<Element extends immutable Const>
          * than the specified time
          *
          * @param interval  the period of time to repeat the processing at
+         * @param policy    the policy to use for scheduling a periodic process when the previous
+         *                  execution is still running
          */
         Prioritizable every(Duration interval, Policy policy=AllowOverlapping);
+
+        /**
+         * Schedule the work to occur on a daily basis, at the specified time.
+         *
+         * The database will attempt to process the work at that point in time, but may be forced
+         * to delay the processing based on various factors, including the load profile of the
+         * database.
+         *
+         * @param timeOfDay  the time to repeat the processing at every day
+         * @param policy     the policy to use for scheduling a periodic process when the previous
+         *                   execution is still running
+         *
+         * @return an interface that allows the work to be prioritized
+         */
+        Prioritizable dailyAt(Time timeOfDay, Policy policy=AllowOverlapping);
 
         /**
          * Indicates how the repeating period is calculated.
@@ -235,9 +241,9 @@ interface DBProcessor<Element extends immutable Const>
             {
             elementString = $"??? (Exception={e.text})";
             }
-        logOf<DBLog<String>>(Path:/sys/errors).add($|Failed to process {elementString}; abandoning\
-                                                    | after {timesAttempted} attempts
-                                                  );
+        dbLogFor<DBLog<String>>(Path:/sys/errors).add($|Failed to process {elementString};\
+                                                       | abandoning after {timesAttempted} attempts
+                                                     );
         return False;
         }
 

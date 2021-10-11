@@ -117,16 +117,4 @@ interface DBTransaction<Schema extends RootSchema>
      * value is the
      */
     @RO Map<String, DBObject.TxChange> contents;
-
-    /**
-     * Add a transaction _condition_ that indicates additional requirements that must be met for
-     * the transaction to be able to commit.
-     *
-     * @param condition  the condition that can be evaluated to determine if the transaction will be
-     *                   permitted to commit (`True` result) or forced to roll back (`False` result)
-     *
-     * @throws IllegalArgument  if a `function` is provided from which no corresponding [DBFunction]
-     *                          object can be inferred
-     */
-    void addCondition(Condition condition);
     }
