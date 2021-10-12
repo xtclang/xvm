@@ -35,20 +35,11 @@ import json.Doc;
  *
  * TODO background maintenance
  */
-@Concurrent service ObjectStore(Catalog catalog, DBObjectInfo info)
+@Concurrent
+service ObjectStore(Catalog catalog, DBObjectInfo info)
         implements Hashable
         implements Closeable
     {
-    construct (Catalog catalog, DBObjectInfo info)
-        {
-        this.catalog = catalog;
-        this.info    = info;
-        }
-    finally
-        {
-        reentrancy = Prioritized;
-        }
-
     // ----- properties ----------------------------------------------------------------------------
 
     /**
@@ -56,6 +47,12 @@ import json.Doc;
      * instantiation, and never changes.
      */
     public/private Catalog catalog;
+
+    /**
+     * The DBObjectInfo that identifies the configuration of this ObjectStore. The information is
+     * provided as part of instantiation, and never changes.
+     */
+    public/private DBObjectInfo info;
 
     /**
      * The transaction manager that this ObjectStore is being managed by. A reference to the
@@ -66,12 +63,6 @@ import json.Doc;
         {
         return catalog.txManager;
         }
-
-    /**
-     * The DBObjectInfo that identifies the configuration of this ObjectStore. The information is
-     * provided as part of instantiation, and never changes.
-     */
-    public/private DBObjectInfo info;
 
     /**
      * The id of the `DBObject` for which this storage exists.
@@ -317,7 +308,7 @@ import json.Doc;
         assert status == Closed as $"Illegal attempt to recover {info.name.quoted()} storage while {status}";
 
         status = Recovering;
-        using (new CriticalSection())
+        using (new SynchronizedSection(critical=True))
             {
             if (deepScan(True))
                 {
@@ -343,7 +334,7 @@ import json.Doc;
     Boolean open()
         {
         assert status == Closed as $"Illegal attempt to open {info.name.quoted()} storage while {status}";
-        using (new CriticalSection())
+        using (new SynchronizedSection(critical=True))
             {
             if (quickScan())
                 {
@@ -366,7 +357,7 @@ import json.Doc;
         {
         if (status == Running)
             {
-            using (new CriticalSection())
+            using (new SynchronizedSection(critical=True))
                 {
                 unload();
                 }
@@ -386,7 +377,7 @@ import json.Doc;
             case Recovering:
             case Configuring:
             case Closed:
-                using (new CriticalSection())
+                using (new SynchronizedSection(critical=True))
                     {
                     model        = Empty;
                     filesUsed    = 0;
@@ -804,7 +795,7 @@ import json.Doc;
         {
         if (!loaded)
             {
-            using (new CriticalSection())
+            using (new SynchronizedSection(critical=True))
                 {
                 if (model == Empty)
                     {

@@ -28,6 +28,7 @@ import org.xvm.asm.constants.TypeParameterConstant;
 
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+import org.xvm.runtime.ServiceContext.Synchronicity;
 import org.xvm.runtime.Utils.ContinuationChain;
 
 import org.xvm.runtime.template.xBoolean;
@@ -1708,6 +1709,80 @@ public class Frame
             }
         }
 
+    /**
+     * @return true iff this frame allows reentrancy
+     */
+    public boolean allowsReentrancy()
+        {
+        return getSynchronicity() == Synchronicity.Concurrent;
+        }
+
+    /**
+     * @return the current Synchronicity value for this frame
+     */
+    public Synchronicity getSynchronicity()
+        {
+        if (isNativeStack() && f_fiber.getStatus() == Fiber.FiberStatus.Waiting)
+            {
+            // native waiting stack indicates a terminating fiber waiting on a future result
+            return Synchronicity.Concurrent;
+            }
+
+        Synchronicity synchronicity = f_context.getSynchronicity();
+        switch (synchronicity)
+            {
+            case Concurrent:
+                return isConcurrentSafe()
+                    ? Synchronicity.Concurrent
+                    : Synchronicity.Synchronized;
+
+            case Synchronized:
+            case Critical:
+                return synchronicity;
+
+            default:
+                throw new IllegalStateException();
+            }
+        }
+
+    /**
+     * See documentation for the synchronicity property at Service.x.
+     *
+     * @return true iff this frame is reentrant (concurrent-safe)
+     */
+    protected boolean isConcurrentSafe()
+        {
+        Frame framePrev = f_framePrev;
+        if (framePrev == null)
+            {
+            // this could only be asked when the frame's fiber is waiting to be terminated
+            return true;
+            }
+
+        MethodStructure function = f_function;
+        if (function != null)
+            {
+            switch (function.getConcurrencySafery())
+                {
+                case Unsafe:
+                    return false;
+
+                case Instance:
+                    ObjectHandle hThis = f_hThis;
+                    if (hThis != null && hThis.isMutable())
+                        {
+                        return false;
+                        }
+                    break;
+
+                case Safe:
+                    break;
+                }
+            }
+
+        return framePrev.isConcurrentSafe();
+        }
+
 
     // ----- GenericTypeResolver interface ---------------------------------------------------------
 
@@ -2056,7 +2131,7 @@ public class Frame
             {
             if (framePrev == null)
                 {
-                sb.append('<').append(ctx.f_sName).append('>');
+                sb.append('^').append(ctx.f_sName);
                 if (iPC < 0 && aOp != null && aOp.length > 0)
                     {
                     sb.append(' ')
@@ -2085,16 +2160,15 @@ public class Frame
                 nLine = function.calculateLineNumber(iPC);
                 }
 
+            sb.append(" (");
             if (nLine > 0)
                 {
-                sb.append(" (")
-                  .append(function.getContainingClass().getSourceFileName())
+                sb.append(function.getContainingClass().getSourceFileName())
                   .append(':').append(nLine);
                 }
             else
                 {
-                sb.append(" (iPC=").append(iPC)
-                  .append(", op=").append(aOp[iPC].getClass().getSimpleName());
+                sb.append(aOp[iPC]);
                 }
             sb.append(')');
             }
@@ -2105,7 +2179,7 @@ public class Frame
     @Override
     public String toString()
         {
-        return formatFrameDetails(f_context, f_function, -1, f_aOp, f_framePrev);
+        return formatFrameDetails(f_context, f_function, m_iPC, f_aOp, f_framePrev);
         }
 
     // try-catch support
@@ -2123,7 +2197,7 @@ public class Frame
         abstract public int handleException(Frame frame, ExceptionHandle hException, int iGuard);
 
         /**
-         * Drop down to the scope of the exception/finally handler;
+         * Drop to the scope of the exception/finally handler;
          * perform an implicit "enter" with a variable introduction (exception or Null)
          */
         protected void introduceValue(Frame frame, int iGuard, ObjectHandle hValue, String sVarName)

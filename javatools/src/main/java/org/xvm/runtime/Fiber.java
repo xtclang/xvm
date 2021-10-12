@@ -74,8 +74,9 @@ public class Fiber
                 }
 
             // check if the fiber chain points back to the same service
-            // (clearly fiberCaller cannot belong to this service)
-            if (fiberCaller.isAssociated(context))
+            // (clearly fiberCaller should not belong to this service unless it's a PostRequest)
+            Fiber fiberPrev = fiberCaller.f_fiberCaller;
+            if (fiberPrev != null && fiberPrev.isAssociatedWaiting(context))
                 {
                 m_status = FiberStatus.InitialAssociated;
                 }
@@ -112,12 +113,18 @@ public class Fiber
         }
 
     /**
-     * @return true iff this fiber chain points back to the specified service
+     * @return true iff this fiber is waiting and points back to a waiting fiber on the
+     *         specified service
      */
-    public boolean isAssociated(ServiceContext context)
+    public boolean isAssociatedWaiting(ServiceContext context)
         {
+        if (m_status != FiberStatus.Waiting)
+            {
+            return false;
+            }
+
         return f_context == context ||
-               f_fiberCaller != null && f_fiberCaller.isAssociated(context);
+               f_fiberCaller != null && f_fiberCaller.isAssociatedWaiting(context);
         }
 
     /**
@@ -181,7 +188,6 @@ public class Fiber
 
             case Waiting:
             case Paused:
-            case Yielded:
                 long cNanos = System.nanoTime() - m_nanoStarted;
                 m_nanoStarted = 0;
                 f_context.m_cRuntimeNanos += cNanos;
@@ -212,7 +218,6 @@ public class Fiber
 
             case Waiting:
             case Paused:
-            case Yielded:
             case Terminating:
                 return m_frame;
             }
@@ -262,7 +267,7 @@ public class Fiber
      * Check whether we can proceed with the frame execution.
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION} or
-     *         or {@link Op#R_BLOCK} values
+     *         {@link Op#R_BLOCK} values
      */
     public int prepareRun(Frame frame)
         {
@@ -386,7 +391,7 @@ public class Fiber
      * return R_BLOCK value.
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION} or
-     *         or {@link Op#R_BLOCK} values
+     *         {@link Op#R_BLOCK} values
      */
     public int registerAsyncSection(Frame frame, ObjectHandle hSectionNew)
         {
@@ -610,12 +615,11 @@ public class Fiber
 
     enum FiberStatus
         {
-        InitialNew        (4), // a new fiber has not been scheduled for execution yet
-        InitialAssociated (4), // a fiber that is associated with another existing fiber, but
+        InitialNew        (3), // a new fiber has not been scheduled for execution yet
+        InitialAssociated (3), // a fiber that is associated with another existing fiber, but
                                // has not been scheduled for execution yet
-        Running           (5), // normal execution
-        Paused            (3), // the execution was paused by the scheduler
-        Yielded           (2), // the execution was explicitly yielded by the user code
+        Running           (4), // normal execution
+        Paused            (2), // the execution was paused by the scheduler
         Waiting           (1), // execution is blocked until the "waiting" futures are completed
         Terminating       (0); // the fiber has been terminated, but some requests are still pending
 

@@ -89,7 +89,8 @@ import ObjectStore.MergeResult;
  * * `_op` - other non-transactional operation record
  * * `_prev_tx` - the last transaction from the previous transaction log segment (previous file)
  */
-@Concurrent service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
+@Concurrent
+service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         implements Closeable
     {
     construct(Catalog<Schema> catalog)
@@ -136,10 +137,6 @@ import ObjectStore.MergeResult;
             }
 
         internalJsonSchema = catalog.internalJsonSchema;
-        }
-    finally
-        {
-        reentrancy = Open;
         }
 
 
@@ -399,7 +396,7 @@ import ObjectStore.MergeResult;
         switch (status)
             {
             case Initial:
-                using (new CriticalSection(Exclusive))
+                using (new SynchronizedSection())
                     {
                     if ((statusFile.exists ? openLog() : createLog()) || recoverLog())
                         {
@@ -413,7 +410,7 @@ import ObjectStore.MergeResult;
                 return True;
 
             case Disabled:
-                using (new CriticalSection(Exclusive))
+                using (new SynchronizedSection())
                     {
                     if (remainingTerminating == 0 && (openLog() || recoverLog()))
                         {
@@ -461,7 +458,7 @@ import ObjectStore.MergeResult;
                 return True;
 
             case Enabled:
-                using (new CriticalSection(Exclusive))
+                using (new SynchronizedSection())
                     {
                     @Future Boolean result;
 

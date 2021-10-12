@@ -1471,6 +1471,32 @@ public class MethodStructure
         }
 
     @Override
+    public ConcurrencySafety getConcurrencySafery()
+        {
+        if (m_safety != null)
+            {
+            return m_safety;
+            }
+
+        ConstantPool      pool = getConstantPool();
+        ConcurrencySafety safety;
+        if (findAnnotation(pool.clzSynchronized()) != null)
+            {
+            safety = ConcurrencySafety.Unsafe;
+            }
+        else if (isStatic() || findAnnotation(pool.clzConcurrent()) != null)
+            {
+            safety = ConcurrencySafety.Safe;
+            }
+        else
+            {
+            // skip MultiMethodStructure parent
+            safety = getParent().getParent().getConcurrencySafery();
+            }
+        return m_safety = safety;
+        }
+
+    @Override
     public boolean isAutoNarrowingAllowed()
         {
         if (isFunction())
@@ -3032,6 +3058,13 @@ public class MethodStructure
      * Cached information about whether this method uses its super.
      */
     private transient Boolean m_FUsesSuper;
+
+    /**
+     * Cached information about this method concurrency.
+     */
+    private transient ConcurrencySafety m_safety;
+
+    public enum ConcurrencySafety {Safe, Unsafe, Instance}
 
     /**
      * Cached information about whether any singleton constants used by this method have been

@@ -40,6 +40,9 @@ import org.xvm.asm.constants.UnionTypeConstant;
 import org.xvm.asm.constants.UnresolvedNameConstant;
 import org.xvm.asm.constants.UnresolvedTypeConstant;
 
+import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.MethodStructure.ConcurrencySafety;
+
 import org.xvm.asm.op.*;
 
 import org.xvm.compiler.Constants;
@@ -47,8 +50,6 @@ import org.xvm.compiler.Constants;
 import org.xvm.runtime.ClassComposition.FieldInfo;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
-import org.xvm.runtime.TypeComposition;
-import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.reflect.xRef.RefHandle;
 
@@ -201,20 +202,7 @@ public class ClassStructure
      */
     public boolean isExplicitlyAbstract()
         {
-        for (Contribution contrib : getContributionsAsList())
-            {
-            if (contrib.getComposition() == Composition.Annotation)
-                {
-                TypeConstant type = contrib.getTypeConstant();
-
-                if (type.isExplicitClassIdentity(false) &&
-                    type.getSingleUnderlyingClass(false).equals(getConstantPool().clzAbstract()))
-                    {
-                    return true;
-                    }
-                }
-            }
-        return false;
+        return containsAnnotation(getConstantPool().clzAbstract());
         }
 
     /**
@@ -224,6 +212,14 @@ public class ClassStructure
      */
     public boolean isExplicitlyOverride()
         {
+        return containsAnnotation(getConstantPool().clzOverride());
+        }
+
+    /**
+     * @return true iff this class is annotated by the specified annotation
+     */
+    protected boolean containsAnnotation(ClassConstant idAnno)
+        {
         for (Contribution contrib : getContributionsAsList())
             {
             if (contrib.getComposition() == Composition.Annotation)
@@ -231,7 +227,7 @@ public class ClassStructure
                 TypeConstant type = contrib.getTypeConstant();
 
                 if (type.isExplicitClassIdentity(false) &&
-                    type.getSingleUnderlyingClass(false).equals(getConstantPool().clzOverride()))
+                    type.getSingleUnderlyingClass(false).equals(idAnno))
                     {
                     return true;
                     }
@@ -1122,6 +1118,50 @@ public class ClassStructure
     public boolean isMethodContainer()
         {
         return true;
+        }
+
+    @Override
+    public ConcurrencySafety getConcurrencySafery()
+        {
+        if (m_safety != null)
+            {
+            return m_safety;
+            }
+
+        ConcurrencySafety safety;
+        switch (getFormat())
+            {
+            case MODULE:
+            case PACKAGE:
+            case CONST:
+            case ENUM:
+            case ENUMVALUE:
+                safety = ConcurrencySafety.Safe;
+                break;
+
+            case CLASS:
+            case INTERFACE:
+            case MIXIN:
+            case SERVICE:
+                ConstantPool pool = getConstantPool();
+                if (containsAnnotation(pool.clzSynchronized()))
+                    {
+                    safety = ConcurrencySafety.Unsafe;
+                    }
+                else if (containsAnnotation(pool.clzConcurrent()))
+                    {
+                    safety = ConcurrencySafety.Safe;
+                    }
+                else
+                    {
+                    safety = ConcurrencySafety.Instance;
+                    }
+                break;
+
+            default:
+                throw new IllegalStateException();
+            }
+        return m_safety = safety;
         }
 
     @Override
@@ -3070,7 +3110,7 @@ public class ClassStructure
                     // break through
                 case Incorporates:
                 case Extends:
-                    // the identity constant for those contribution is always a class
+                    // the identity constant for these contributions is always a class
                     assert typeContrib.isExplicitClassIdentity(true);
                     break;
 
@@ -3132,7 +3172,7 @@ public class ClassStructure
         MethodStructure method = new MethodStructure(this, nFlags, idMethod, null,
                 Annotation.NO_ANNOTATIONS, Parameter.NO_PARAMS, Parameter.NO_PARAMS, true, false);
 
-        MethodStructure.Code code = method.createCode();
+        Code code = method.createCode();
 
         assert typeStruct.getAccess() == Access.STRUCT;
 
@@ -3276,8 +3316,8 @@ public class ClassStructure
             methodDelegate = propHost.createMethod(false, prop.getAccess(), null,
                     aReturns, sigAccessor.getName(), aParams, true, false);
 
-            MethodStructure.Code code       = methodDelegate.createCode();
-            PropertyConstant     idDelegate = prop.getIdentityConstant();
+            Code             code       = methodDelegate.createCode();
+            PropertyConstant idDelegate = prop.getIdentityConstant();
 
             Register regTarget = new Register(propTarget.getType());
             code.add(new L_Get(propTarget.getIdentityConstant(), regTarget));
@@ -3330,13 +3370,13 @@ public class ClassStructure
             methodDelegate = createMethod(false, method.getAccess(), null,
                     aReturns, method.getName(), aParams, true, false);
 
-            MethodStructure.Code code       = methodDelegate.createCode();
-            MethodInfo           infoMethod = typeDelegate.ensureTypeInfo().getMethodBySignature(sig);
-            MethodConstant       idMethod   = infoMethod.getIdentity();
-            int                  cParams    = method.getParamCount();
-            int                  cReturns   = method.getReturnCount();
-            Register[]           aregParam  = cParams  == 0 ? null : new Register[cParams];
-            boolean              fAtomic    = infoDelegate.isAtomic();
+            Code           code       = methodDelegate.createCode();
+            MethodInfo     infoMethod = typeDelegate.ensureTypeInfo().getMethodBySignature(sig);
+            MethodConstant idMethod   = infoMethod.getIdentity();
+            int            cParams    = method.getParamCount();
+            int            cReturns   = method.getReturnCount();
+            Register[]     aregParam  = cParams  == 0 ? null : new Register[cParams];
+            boolean        fAtomic    = infoDelegate.isAtomic();
 
             for (int i = 0; i < cParams; i++)
                 {
@@ -3624,7 +3664,7 @@ public class ClassStructure
                         aRet, "appendTo", aParam, /*hasCode*/ true, /*usesSuper*/ false);
                 methAppendTo.markTransient();
 
-                MethodStructure.Code code = methAppendTo.ensureCode();
+                Code code = methAppendTo.ensureCode();
 
                 // Appender<Char> appendTo(Appender<Char> appender)
                 //    {
@@ -4044,4 +4084,9 @@ public class ClassStructure
      * Cached canonical type.
      */
     private transient TypeConstant m_typeCanonical;
+
+    /**
+     * Cached information about this class concurrency.
+     */
+    private transient ConcurrencySafety m_safety;
     }

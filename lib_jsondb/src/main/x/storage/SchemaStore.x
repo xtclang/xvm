@@ -8,7 +8,8 @@ import model.DBObjectInfo;
 /**
  * The disk storage implementation for a database schema.
  */
-@Concurrent service SchemaStore
+@Concurrent
+service SchemaStore
         extends ObjectStore
     {
     construct(Catalog          catalog,

@@ -37,6 +37,8 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.TypedefConstant;
 
+import org.xvm.asm.MethodStructure.ConcurrencySafety;
+
 import org.xvm.compiler.Constants;
 import org.xvm.compiler.Parser;
 import org.xvm.compiler.Source;
@@ -1103,6 +1105,16 @@ public abstract class Component
         }
 
     /**
+     * See documentation for the synchronicity property at Service.x.
+     *
+     * @return the safety value for this method, property or class
+     */
+    public ConcurrencySafety getConcurrencySafery()
+        {
+        return getParent().getConcurrencySafery();
+        }
+
+    /**
      * Create and register a ClassStructure with the specified class name.
      *
      * @param access  the accessibility of the class to create
@@ -1645,8 +1657,7 @@ public abstract class Component
     /**
      * @return the number of children
      */
-    public int
-    getChildrenCount()
+    public int getChildrenCount()
         {
         return m_childByName == null ? 0 : m_childByName.size();
         }

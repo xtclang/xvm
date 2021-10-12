@@ -19,7 +19,8 @@ import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
-import org.xvm.asm.constants.TypeInfo;
+
+import org.xvm.asm.MethodStructure.ConcurrencySafety;
 
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.writePackedLong;
@@ -176,6 +177,21 @@ public class PropertyStructure
         }
 
     /**
+     * @return true iff this property contains the specified property annotation
+     */
+    public boolean containsPropertyAnnotation(IdentityConstant idAnno)
+        {
+        for (Annotation anno : getPropertyAnnotations())
+            {
+            if (anno.getAnnotationClass().equals(idAnno))
+                {
+                return true;
+                }
+            }
+        return false;
+        }
+
+    /**
      * @return an array of all annotations that are <i>"{@code into Property}"</i> annotations
      */
     public Annotation[] getPropertyAnnotations()
@@ -195,7 +211,7 @@ public class PropertyStructure
      */
     public boolean isExplicitReadOnly()
         {
-        return TypeInfo.containsAnnotation(getPropertyAnnotations(), "RO");
+        return containsPropertyAnnotation(getConstantPool().clzRO());
         }
 
     /**
@@ -203,7 +219,7 @@ public class PropertyStructure
      */
     public boolean isExplicitOverride()
         {
-        return TypeInfo.containsAnnotation(getPropertyAnnotations(), "Override");
+        return containsPropertyAnnotation(getConstantPool().clzOverride());
         }
 
     /**
@@ -247,7 +263,7 @@ public class PropertyStructure
         }
 
     /**
-     * @return true iff this property contains the specified annotation
+     * @return true iff this property contains the specified Ref annotation
      */
     public boolean containsRefAnnotation(IdentityConstant idAnno)
         {
@@ -587,6 +603,23 @@ public class PropertyStructure
     public boolean isClassContainer()
         {
         return true;
+        }
+
+    @Override
+    public ConcurrencySafety getConcurrencySafery()
+        {
+        ConstantPool pool = getConstantPool();
+        if (containsPropertyAnnotation(pool.clzSynchronized()))
+            {
+            return ConcurrencySafety.Unsafe;
+            }
+
+        if (containsPropertyAnnotation(pool.clzConcurrent()))
+            {
+            return ConcurrencySafety.Safe;
+            }
+
+        return getParent().getConcurrencySafery();
         }
 
     @Override

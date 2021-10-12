@@ -382,7 +382,7 @@ service Catalog<Schema extends RootSchema>
             return stores[index]?;
             }
 
-        using (new CriticalSection(Exclusive))
+        using (new SynchronizedSection())
             {
             // create the ObjectStore
             ObjectStore store = createStore(id);
@@ -556,7 +556,7 @@ service Catalog<Schema extends RootSchema>
      */
     void create(String name)
         {
-        using (val cs = new CriticalSection(Exclusive))
+        using (new SynchronizedSection())
             {
             transition(Closed, Configuring, snapshot -> snapshot.empty);
 
@@ -573,7 +573,7 @@ service Catalog<Schema extends RootSchema>
      */
     void edit()
         {
-        using (val cs = new CriticalSection(Exclusive))
+        using (new SynchronizedSection())
             {
             transition([Closed, Recovering, Running], Configuring, snapshot -> !snapshot.empty && !snapshot.lockedOut);
 
@@ -589,7 +589,7 @@ service Catalog<Schema extends RootSchema>
      */
     void recover()
         {
-        using (val cs = new CriticalSection(Exclusive))
+        using (new SynchronizedSection())
             {
             transition(Closed, Recovering, snapshot -> !snapshot.empty || sysDir.exists, ignoreLock = True);
 
@@ -672,7 +672,7 @@ service Catalog<Schema extends RootSchema>
      */
     void open()
         {
-        using (val cs = new CriticalSection(Exclusive))
+        using (new SynchronizedSection())
             {
             transition([Closed, Recovering, Configuring], Running,
                     snapshot -> snapshot.owned || snapshot.unowned,
@@ -689,7 +689,7 @@ service Catalog<Schema extends RootSchema>
     @Override
     void close(Exception? cause = Null)
         {
-        using (val cs = new CriticalSection(Exclusive))
+        using (new SynchronizedSection())
             {
             switch (status)
                 {
@@ -719,7 +719,7 @@ service Catalog<Schema extends RootSchema>
      */
     void delete()
         {
-        using (val cs = new CriticalSection(Exclusive))
+        using (new SynchronizedSection())
             {
             transition([Closed, Configuring], Configuring, snapshot -> snapshot.owned || snapshot.unowned);
 

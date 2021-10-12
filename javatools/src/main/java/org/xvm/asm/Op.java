@@ -2071,15 +2071,10 @@ public abstract class Op
     public static final int R_BLOCK            = -8;
 
     /**
-     * Result from process() method: yield before executing the next op-code.
-     */
-    public static final int R_YIELD            = -9;
-
-    /**
      * Result from process() method: some registers are not ready for a read; block any other
      * fibers from execution and repeat the same op-code.
      */
-    public static final int R_PAUSE            = -10;
+    public static final int R_PAUSE            = -9;
 
 
     // ----- other constants -----------------------------------------------------------------------

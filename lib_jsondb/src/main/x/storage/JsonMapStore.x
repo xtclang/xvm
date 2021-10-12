@@ -23,7 +23,8 @@ import TxManager.NO_TX;
  * where a "k" (key) without a corresponding "v" (value) indicates a deletion and the "[...]" part
  * is what sealPrepare() will have returned.
  */
-@Concurrent service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
+@Concurrent
+service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
         extends ObjectStore
         implements MapStore<Key, Value>
     {

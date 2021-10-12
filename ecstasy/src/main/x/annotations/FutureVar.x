@@ -351,17 +351,22 @@ mixin FutureVar<Referent>
     /**
      * Wait for the completion of the future.
      */
+    @Concurrent
     FutureVar waitForCompletion()
         {
+        static Boolean waitFor(FutureVar future)
+            {
+            @Future Boolean done;
+            future.thenDo(() ->
+                {
+                done = True;
+                });
+            return done;
+            }
+
         if (completion == Pending)
             {
-// TODO GG
-//            @Future FutureVar<Referent> result;
-//            this.thenDo(() ->
-//                {
-//                result = this;
-//                });
-//            return result;
+            assert waitFor(this);
             }
 
         return this;

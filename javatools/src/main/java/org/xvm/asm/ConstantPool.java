@@ -2231,6 +2231,8 @@ public class ConstantPool
     public ClassConstant     clzInject()        {ClassConstant     c = m_clzInject;       if (c == null) {m_clzInject       = c = (ClassConstant) getImplicitlyImportedIdentity("Inject"          );} return c;}
     public ClassConstant     clzAbstract()      {ClassConstant     c = m_clzAbstract;     if (c == null) {m_clzAbstract     = c = (ClassConstant) getImplicitlyImportedIdentity("Abstract"        );} return c;}
     public ClassConstant     clzAtomic()        {ClassConstant     c = m_clzAtomic;       if (c == null) {m_clzAtomic       = c = (ClassConstant) getImplicitlyImportedIdentity("Atomic"          );} return c;}
+    public ClassConstant     clzConcurrent()    {ClassConstant     c = m_clzConcurrent;   if (c == null) {m_clzConcurrent   = c = (ClassConstant) getImplicitlyImportedIdentity("Concurrent"      );} return c;}
+    public ClassConstant     clzSynchronized()  {ClassConstant     c = m_clzSynchronized; if (c == null) {m_clzSynchronized = c = (ClassConstant) getImplicitlyImportedIdentity("Synchronized"    );} return c;}
     public ClassConstant     clzFuture()        {ClassConstant     c = m_clzFuture;       if (c == null) {m_clzFuture       = c = (ClassConstant) getImplicitlyImportedIdentity("Future"          );} return c;}
     public ClassConstant     clzOverride()      {ClassConstant     c = m_clzOverride;     if (c == null) {m_clzOverride     = c = (ClassConstant) getImplicitlyImportedIdentity("Override"        );} return c;}
     public ClassConstant     clzLazy()          {ClassConstant     c = m_clzLazy;         if (c == null) {m_clzLazy         = c = (ClassConstant) getImplicitlyImportedIdentity("Lazy"            );} return c;}
@@ -3023,6 +3025,8 @@ public class ConstantPool
         m_clzInject       = null;
         m_clzAbstract     = null;
         m_clzAtomic       = null;
+        m_clzConcurrent   = null;
+        m_clzSynchronized = null;
         m_clzFuture       = null;
         m_clzOverride     = null;
         m_clzLazy         = null;
@@ -3946,6 +3950,8 @@ public class ConstantPool
     private transient ClassConstant     m_clzInject;
     private transient ClassConstant     m_clzAbstract;
     private transient ClassConstant     m_clzAtomic;
+    private transient ClassConstant     m_clzConcurrent;
+    private transient ClassConstant     m_clzSynchronized;
     private transient ClassConstant     m_clzFuture;
     private transient ClassConstant     m_clzOverride;
     private transient ClassConstant     m_clzLazy;

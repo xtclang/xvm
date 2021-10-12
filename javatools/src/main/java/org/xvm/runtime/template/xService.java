@@ -21,7 +21,6 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.ServiceContext;
-import org.xvm.runtime.ServiceContext.Reentrancy;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
@@ -66,7 +65,7 @@ public class xService
     @Override
     public void initNative()
         {
-        REENTRANCY = (xEnum) f_templates.getTemplate("Service.Reentrancy");
+        SYNCHRONICITY = (xEnum) f_templates.getTemplate("Service.Synchronicity");
 
         // since Service is an interface, we cannot annotate the properties naturally and need to do
         // an ad-hoc check (the list is to be updated)
@@ -183,6 +182,13 @@ public class xService
                         ? frame.raiseException(xException.serviceTerminated(frame, f_sName))
                         : Op.R_NEXT;
 
+            case "registerContextToken":
+                if (frame.f_context != hService.f_context)
+                    {
+                    return frame.raiseException("Call out of context");
+                    }
+                return frame.raiseException("Not implemented");
+
             case "registerTimeout":
                 if (frame.f_context == hService.f_context)
                     {
@@ -194,20 +200,23 @@ public class xService
                     }
                 return Op.R_NEXT;
 
+            case "registerSynchronizedSection":
+                if (frame.f_context != hService.f_context)
+                    {
+                    return frame.raiseException("Call out of context");
+                    }
+                hService.f_context.setSynchronizedSection(hArg);
+                return Op.R_NEXT;
+
+            case "registerShuttingDownNotification":
+                return frame.raiseException("Not implemented");
+
             case "registerAsyncSection":
                 if (frame.f_context != hService.f_context)
                     {
                     return frame.raiseException("Call out of context");
                     }
                 return frame.f_fiber.registerAsyncSection(frame, hArg);
-
-            case "registerCriticalSection":
-                if (frame.f_context != hService.f_context)
-                    {
-                    return frame.raiseException("Call out of context");
-                    }
-                hService.f_context.setCriticalSection(hArg);
-                return Op.R_NEXT;
 
             case "registerUnhandledExceptionNotification":
                 hService.f_context.m_hExceptionHandler = (FunctionHandle) hArg;
@@ -229,11 +238,6 @@ public class xService
                 // this method is called by the ServiceControl; it doesn't even exist on the Service
                 assert frame.f_context == hService.f_context;
                 return hService.f_context.shutdown(frame);
-
-            case "yield":
-                return frame.f_context == hService.f_context
-                    ? Op.R_YIELD
-                    : Op.R_NEXT;
             }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
@@ -266,39 +270,25 @@ public class xService
                 return frame.assignValue(iReturn, hTimeout);
                 }
 
-            case "reentrancy":
-                {
-                EnumHandle hReentrancy = REENTRANCY.getEnumByName(
-                        hService.f_context.getReentrancy().name());
-                return Utils.assignInitializedEnum(frame, hReentrancy, iReturn);
-                }
-
             case "asyncSection":
                 return frame.assignValue(iReturn, frame.f_fiber.getAsyncSection());
 
-            case "criticalSection":
-                ObjectHandle hCriticalSection = hService.f_context.getCriticalSection();
+            case "synchronizedSection":
+                ObjectHandle hCriticalSection = hService.f_context.getSynchronizedSection();
                 return frame.assignValue(iReturn, hCriticalSection == null ? xNullable.NULL : hCriticalSection);
-            }
-        return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
-        }
 
-    @Override
-    public int invokeNativeSet(Frame frame, ObjectHandle hTarget, String sPropName, ObjectHandle hValue)
-        {
-        ServiceHandle hService = (ServiceHandle) hTarget;
-
-        switch (sPropName)
-            {
-            case "reentrancy":
+            case "synchronicity":
                 {
-                EnumHandle hReentrancy = (EnumHandle) hValue;
-
-                hService.f_context.setReentrancy(Reentrancy.valueOf(hReentrancy.getName()));
-                return Op.R_NEXT;
+                if (frame.f_context != hService.f_context)
+                    {
+                    return frame.raiseException("Call out of context");
+                    }
+                EnumHandle hSynchronicity = SYNCHRONICITY.getEnumByName(
+                        frame.getSynchronicity().name());
+                return Utils.assignInitializedEnum(frame, hSynchronicity, iReturn);
                 }
             }
-        return super.invokeNativeSet(frame, hTarget, sPropName, hValue);
+        return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
         }
 
     @Override
@@ -529,7 +519,7 @@ public class xService
     /**
      * Enum used by the native properties.
      */
-    protected static xEnum REENTRANCY;
+    protected static xEnum SYNCHRONICITY;
 
     /**
      * Names of atomic properties.

@@ -6,7 +6,8 @@ import json.ObjectOutputStream;
 /**
  * Provides the low-level I/O for a non-transactional (i.e. extra-transactional) log.
  */
-@Concurrent service JsonNtxLogStore<Element extends immutable Const>
+@Concurrent
+service JsonNtxLogStore<Element extends immutable Const>
         extends ObjectStore(catalog, info)
         implements LogStore<Element>
     {

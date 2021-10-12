@@ -23,7 +23,8 @@ import TxManager.NO_TX;
  *
  * where the "{...}" part is also what sealPrepare() will have returned.
  */
-@Concurrent service JsonValueStore<Value extends immutable Const>
+@Concurrent
+service JsonValueStore<Value extends immutable Const>
         extends ObjectStore
         implements ValueStore<Value>
     {

@@ -85,9 +85,8 @@ service Client<Schema extends RootSchema>
         // exclusive re-entrancy is critically important: it eliminates race conditions while any
         // operation (including a commit or rollback) is in flight, while still allowing re-entrancy
         // that is required to carry out that operation
-        reentrancy = Exclusive;
-        conn       = new Connection(infoFor(0)).as(Connection + Schema);
-        worker     = new Worker(jsonSchema);
+        conn   = new Connection(infoFor(0)).as(Connection + Schema);
+        worker = new Worker(jsonSchema);
         }
 
 
@@ -1097,7 +1096,7 @@ service Client<Schema extends RootSchema>
                 // ObjectStores that are enlisted in the transaction; the Exclusive (instead of
                 // Forbidden) mode is important, because work can still be delegated back to this
                 // Client's Worker instance by the enlisted ObjectStores
-                using (new CriticalSection(Exclusive))
+                using (new SynchronizedSection())
                     {
                     success = txManager.commit(id_);
                     }
@@ -1126,7 +1125,7 @@ service Client<Schema extends RootSchema>
 
             if (id_ != NO_TX)
                 {
-                using (new CriticalSection(Exclusive))
+                using (new SynchronizedSection())
                     {
                     txManager.rollback(id_);
                     }

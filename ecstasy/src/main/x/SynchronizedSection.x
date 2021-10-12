@@ -8,8 +8,7 @@
  * registers itself with the current service using the {@link Service.registerSynchronizedSection}
  * method. Employing either a `using` or `try`-with-resources block will automatically
  * unregister the SynchronizedSection at the conclusion of the block, restoring the previous
- * reentrancy setting for the service. When the SynchronizedSection unregisters itself, it will also
- * re-registers the previous SynchronizedSection that it replaced (if any).
+ * SynchronizedSection that it replaced (if any).
  *
  * SynchronizedSections _nest_. When a new SynchronizedSection is created, it configures itself to
  * allow no additional concurrency than that which is already in place for the service. This allows
@@ -41,7 +40,7 @@ const SynchronizedSection
         // restored when this SynchronizedSection is closed
         previousSynchronizedSection = this:service.synchronizedSection;
 
-        // store off the previous reentrancy setting; it will be replaced by this SynchronizedSection,
+        // store off the previous "critical" value; it will be replaced by this SynchronizedSection,
         // and restored when this SynchronizedSection is closed
         Boolean previousCritical = previousSynchronizedSection?.critical : False;
 

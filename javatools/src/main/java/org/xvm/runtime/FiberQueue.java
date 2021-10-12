@@ -72,42 +72,9 @@ public class FiberQueue
         }
 
     /**
-     * Retrieve the first frame that is ready, giving priority to "associated or yielded".
+     * Retrieve the first frame that is ready.
      */
-    public Frame getAssociatedOrYielded()
-        {
-        if (m_cSize == 0)
-            {
-            return null;
-            }
-
-        int cFrames = m_aFrame.length;
-        int ixHead  = m_ixHead;
-        int ixInit  = -1;
-        for (int i = 0; i < cFrames; i++)
-            {
-            int ix = (i + ixHead) % cFrames;
-
-            int iPriority = checkPriority(ix);
-            if (iPriority >= 1)
-                {
-                return remove(ix);
-                }
-            if (iPriority == 0 && ixInit == -1)
-                {
-                ixInit = ix;
-                }
-            }
-
-        return ixInit >= 0
-            ? remove(ixInit)
-            : null;
-        }
-
-    /**
-     * Retrieve the first frame that is ready (any priority).
-     */
-    public Frame getAnyReady()
+    public Frame getReady()
         {
         if (m_cSize == 0)
             {
@@ -126,11 +93,12 @@ public class FiberQueue
                 return remove(ix);
                 }
             }
+
         return null;
         }
 
     /**
-     * Retrieve any available frame (any priority, ready or not).
+     * Retrieve any available frame (ready or not).
      */
     public Frame getAny()
         {
@@ -151,6 +119,54 @@ public class FiberQueue
                 }
             }
         return null;
+        }
+
+    /**
+     * Report on the status of the fiber queue. Temporary: for debugging only.
+     */
+    public String report()
+        {
+        if (m_cSize == 0)
+            {
+            return "";
+            }
+
+        StringBuilder sb = new StringBuilder();
+        int cFrames = m_aFrame.length;
+        int ixHead  = m_ixHead;
+        for (int i = 0; i < cFrames; i++)
+            {
+            int ix = (i + ixHead) % cFrames;
+
+            int iPriority = checkPriority(ix);
+            if (iPriority == -1)
+                {
+                Frame frame = m_aFrame[ix];
+                if (sb.length() == 0)
+                    {
+                    sb.append(frame.f_context);
+                    }
+                sb.append("\nframe=")
+                  .append(frame);
+
+                Fiber fiber = frame.f_fiber;
+                switch (fiber.getStatus())
+                    {
+                    case Waiting:
+                        sb.append(" waiting");
+                        break;
+
+                    case InitialAssociated:
+                        sb.append(" associated");
+                        break;
+
+                    case InitialNew:
+                        sb.append(" new");
+                        break;
+                    }
+                }
+            }
+        return sb.toString();
         }
 
     /**
@@ -175,69 +191,41 @@ public class FiberQueue
         Fiber fiber = frame.f_fiber;
         switch (fiber.getStatus())
             {
-            default:
-                throw new IllegalStateException();
-
             case Waiting:
-                return fiber.isReady() ? 2 : -1;
+                if (fiber.isReady())
+                    {
+                    switch (frame.getSynchronicity())
+                        {
+                        case Concurrent:
+                        case Critical:
+                            return 2;
+
+                        case Synchronized:
+                            return isAnyNonConcurrentWaiting(ix, false) ? -1 : 2;
+                        }
+                    }
+                return -1;
 
             case InitialAssociated:
-                if (frame.f_context.getReentrancy() == ServiceContext.Reentrancy.Forbidden)
-                    {
-                    // no more than one fiber is allowed
-                    return isAnyWaiting(null) ? -1 : 0;
-                    }
-                // fall through
-            case Yielded:
-                return 1;
+                return isAnyNonConcurrentWaiting(ix, true) ? -1 : 1;
 
             case InitialNew:
-                {
-                // we can only allow it to proceed (at priority zero):
-                //  - in Exclusive mode - only if there are no waiting fibers;
-                //  - in Prioritized mode - only if there are no waiting fibers
-                //     associated with that same context
-                switch (frame.f_context.getReentrancy())
-                    {
-                    default:
-                    case Forbidden: // no more than one fiber is allowed ever
-                    case Exclusive: // no more than one fiber is allowed unless it's associated
-                        return isAnyWaiting(null) ? -1 : 0;
+                return isAnyNonConcurrentWaiting(ix, false) ? -1 : 0;
 
-                    case Prioritized:
-                        {
-                        // don't allow a new fiber if another one with a common caller is waiting
-                        Fiber fiberCaller = fiber.f_fiberCaller;
-                        if (fiberCaller != null && isAnyWaiting(fiberCaller))
-                            {
-                            return -1;
-                            }
-                        // break through
-                        }
-                    case Open:
-                        return 0;
-                    }
-                }
+            default:
+                throw new IllegalStateException();
             }
         }
 
     /**
-     * Check if there is any "waiting" frame that originates from the specified fiber.
+     * Check if there is any "waiting" frame that is not concurrent safe.
      *
-     * The scenario we are trying to cover is:
-     * - a method running on service S1 has made two async calls into service S2:
-     *      s2.f1^();
-     *      s2.f2^();
-     * - service S2 (with Prioritized reentrancy) started executing method "f1" and blocked
-     *   on another service call
-     * - a new fiber running "f2" should not be allowed to run until "f1" is done or "almost" done
-     *   (waiting in a native frame)
+     * @param ixIgnore            an index of a frame that should not be checked
+     * @param fAllowSynchronized  if true, allow synchronized (non-critical) waiting frames
      *
-     * @param fiberCaller  the originating fiber; pass null to check if *any* fiber is waiting
-     *
-     * @return true iff there are any waiting frames associated with the specified fiber
+     * @return true iff there are any non-concurrent waiting frames
      */
-    private boolean isAnyWaiting(Fiber fiberCaller)
+    private boolean isAnyNonConcurrentWaiting(int ixIgnore, boolean fAllowSynchronized)
         {
         Frame[] aFrame  = m_aFrame;
         int     cFrames = aFrame.length;
@@ -248,7 +236,7 @@ public class FiberQueue
             int   ix    = (ixHead + i) % cFrames;
             Frame frame = aFrame[ix];
 
-            if (frame != null)
+            if (ix != ixIgnore && frame != null)
                 {
                 Fiber fiber = frame.f_fiber;
                 if (fiber.getStatus() == FiberStatus.Waiting)
@@ -258,10 +246,19 @@ public class FiberQueue
                         // waiting native stack is exempt
                         continue;
                         }
-
-                    if (fiberCaller == null || fiberCaller == fiber.f_fiberCaller)
+                    switch (frame.getSynchronicity())
                         {
-                        return true;
+                        case Concurrent:
+                            continue;
+
+                        case Synchronized:
+                            if (fAllowSynchronized)
+                                {
+                                continue;
+                                }
+                            // fall through
+                        case Critical:
+                            return true;
                         }
                     }
                 }

@@ -61,7 +61,7 @@
  *   Runtime events include only:
  * * * Future completion events, for previous asynchronous invocations initiated by this service.
  * * * Timeout notification for the currently executing service invocation, although the runtime
- *     may temporarily suppress these notifications within a [CriticalSection].
+ *     may temporarily suppress these notifications within a [SynchronizedSection].
  * * * `@Soft` and `@Weak` reference-cleared notifications.
  */
 interface Service
@@ -239,12 +239,6 @@ interface Service
      */
     ContextToken? findContextToken(String name);
 
-// TODO GG remove
-    /**
-     * The current CriticalSection for the service, if any.
-     */
-    @RO CriticalSection? criticalSection;
-
     /**
      * The current SynchronizedSection for the service, if any.
      */
@@ -262,7 +256,7 @@ interface Service
      * any other service at this point.
      *
      * This property evaluates to True iff each execution frame for the fiber is concurrent-safe
-     * (i.e. reentrancy-safe for new fibers), and no CriticalSection has been registered.
+     * (i.e. reentrancy-safe for new fibers), and no SynchronizedSection has been registered.
      *
      * Rules for determining the concurrent-safeness of an execution frame:
      *
@@ -285,7 +279,7 @@ interface Service
      *   1) the property is not explicitly unsafe
      *   2) any of:
      *      1) the property is explicitly safe
-     *      2) the property's parent class/property/method is concurrent-safe (and if the parent is
+     *      2) the property's parent class/property/method is concurrent-safe (or if the parent is
      *         a class, then the corresponding runtime object instance, if one exists, must also be
      *         concurrent-safe)
      *
@@ -294,7 +288,7 @@ interface Service
      *   2) any of:
      *      1) the method is explicitly safe
      *      2) the method is static (it is a function)
-     *      3) the method's parent class/property/method is concurrent-safe (and if the parent is a
+     *      3) the method's parent class/property/method is concurrent-safe (or if the parent is a
      *         class, then the corresponding runtime object instance, if one exists, must also be
      *         concurrent-safe)
      *
@@ -323,9 +317,6 @@ interface Service
      */
     enum Synchronicity {Concurrent, Synchronized, Critical}
 
-    enum Reentrancy {Open, Prioritized, Exclusive, Forbidden}       // TODO GG remove
-    Reentrancy reentrancy = Exclusive;                              // TODO GG remove
-
     /**
      * The Timeout that was used when the service was invoked, if any. This is the timeout that this
      * service is subject to.
@@ -343,9 +334,6 @@ interface Service
      * a new Timeout via the [registerTimeout] method.
      */
     @RO Timeout? timeout;
-
-// TODO GG remove
-    void yield();
 
     /**
      * Allow the runtime to process pending runtime notifications for this service, including any
@@ -393,14 +381,6 @@ interface Service
      * itself will be changed.
      */
     void registerTimeout(Timeout? timeout);
-
-    /**
-     * Register a CriticalSection for the service, replacing any previously registered
-     * CriticalSection.
-     *
-     * Calling this method from the outside of the service is not allowed.
-     */
-    void registerCriticalSection(CriticalSection? criticalSection);
 
     /**
      * Register a SynchronizedSection for the service, replacing any previously registered

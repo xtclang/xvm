@@ -32,8 +32,10 @@ import org.xvm.asm.op.Return_0;
 import org.xvm.runtime.Fiber.FiberStatus;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle.WrapperException;
+import org.xvm.runtime.ObjectHandle.GenericHandle;
 
 import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xBoolean.BooleanHandle;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xService;
@@ -68,7 +70,6 @@ public class ServiceContext
         f_pool          = pool;
         f_queueMsg      = new ConcurrentLinkedQueue<>();
         f_queueResponse = new ConcurrentLinkedQueue<>();
-        m_hTimeout      = xNullable.NULL;
         }
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -95,8 +96,7 @@ public class ServiceContext
 
     public void setService(ServiceHandle hService)
         {
-        assert m_hService == null ||
-            m_hService.isStruct() && !hService.isStruct();
+        assert m_hService == null || m_hService.isStruct() && !hService.isStruct();
         m_hService = hService;
         }
 
@@ -127,21 +127,21 @@ public class ServiceContext
      *
      * @return the current CriticalSection? handle
      */
-    public ObjectHandle getCriticalSection()
+    public ObjectHandle getSynchronizedSection()
         {
-        return m_hCriticalSection;
+        return m_hSynchronizedSection;
         }
 
     /**
      * Supporting method for natural Service.registerCriticalSection() API.
      *
-     * @param hCriticalSection  the new CriticalSection? handle
+     * @param hSynchronizedSection  the new CriticalSection? handle
      */
-    public void setCriticalSection(ObjectHandle hCriticalSection)
+    public void setSynchronizedSection(ObjectHandle hSynchronizedSection)
         {
-        assert hCriticalSection != null;
+        assert hSynchronizedSection != null;
 
-        m_hCriticalSection = hCriticalSection;
+        m_hSynchronizedSection = hSynchronizedSection;
         }
 
     /**
@@ -169,19 +169,20 @@ public class ServiceContext
         }
 
     /**
-     * @return the reentrancy policy
+     * @return the current Synchronicity value for the service
      */
-    public Reentrancy getReentrancy()
+    public Synchronicity getSynchronicity()
         {
-        return m_reentrancy;
-        }
+        ObjectHandle hSection = m_hSynchronizedSection;
+        if (hSection == xNullable.NULL)
+            {
+            return Synchronicity.Concurrent;
+            }
 
-    /**
-     * Set the reentrancy policy.
-     */
-    public void setReentrancy(Reentrancy reentrancy)
-        {
-        m_reentrancy = reentrancy;
+        ObjectHandle hCritical = ((GenericHandle) hSection).getField("critical");
+        return ((BooleanHandle) hCritical).get()
+                ? Synchronicity.Critical
+                : Synchronicity.Synchronized;
         }
 
     /**
@@ -467,30 +468,11 @@ public class ServiceContext
         Frame frameCurrent = m_frameCurrent;
         if (frameCurrent != null)
             {
-            // resume the paused frame (could be forbidden reentrancy)
+            // resume the paused frame (could be critical synchronicity)
             return frameCurrent.f_fiber.isReady() ? frameCurrent : null;
             }
 
-        FiberQueue qSuspended = f_queueSuspended;
-        if (qSuspended.isEmpty())
-            {
-            // nothing to do
-            return null;
-            }
-
-        switch (m_reentrancy)
-            {
-            default:
-            case Forbidden:
-                throw new IllegalStateException(); // assert
-
-            case Exclusive:
-            case Prioritized:
-                return qSuspended.getAssociatedOrYielded();
-
-            case Open:
-                return qSuspended.getAnyReady();
-            }
+        return f_queueSuspended.getReady();
         }
 
     /**
@@ -511,8 +493,7 @@ public class ServiceContext
                 break;
 
             case Waiting:
-            case Yielded:
-                if (m_reentrancy == Reentrancy.Forbidden)
+                if (frame.getSynchronicity() == Synchronicity.Critical)
                     {
                     m_frameCurrent = frame;
                     }
@@ -772,11 +753,6 @@ public class ServiceContext
                     fiber.setStatus(FiberStatus.Waiting, cOps);
                     return frame;
 
-                case Op.R_YIELD:
-                    frame.m_iPC = iPCLast + 1;
-                    fiber.setStatus(FiberStatus.Yielded, cOps);
-                    return frame;
-
                 case Op.R_PAUSE:
                     frame.m_iPC = iPCLast;
                     fiber.setStatus(FiberStatus.Paused, cOps);
@@ -941,7 +917,6 @@ public class ServiceContext
             case InitialAssociated:
             case Running:
             case Paused:
-            case Yielded:
                 return ServiceStatus.Busy;
 
             case Waiting:
@@ -1040,7 +1015,7 @@ public class ServiceContext
      * The caller is responsible for handling any potential exceptions thrown by the called
      * function, which would be provided via the returned CompletableFuture.
      *
-     * @param frameCaller  (optional) the caller's frame
+     * @param frameCaller  (optional) the caller's frame TODO GG: remove; always null
      *
      * @return a CompletableFuture for the call or null if the service has terminated
      */
@@ -1144,7 +1119,7 @@ public class ServiceContext
             default:
                 fAsync            = frameCaller.isDynamicVar(iReturn);
                 fHandleExceptions = false;
-                cReturns = fTuple ? -1 : 1;
+                cReturns          = fTuple ? -1 : 1;
                 break;
             }
 
@@ -1804,12 +1779,12 @@ public class ServiceContext
     /**
      * The current Timeout that will be used by the service when it invokes other services.
      */
-    private ObjectHandle m_hTimeout;
+    private ObjectHandle m_hTimeout = xNullable.NULL;
 
     /**
      * The current CriticalSection for the service.
      */
-    private ObjectHandle m_hCriticalSection;
+    private ObjectHandle m_hSynchronizedSection = xNullable.NULL;
 
     /**
      * Metrics: the total time (in nanos) this service has been running.
@@ -1847,11 +1822,9 @@ public class ServiceContext
     private final FiberQueue f_queueSuspended = new FiberQueue();
 
     /**
-     * The reentrancy policy. Must be the same names as in natural Service.Reentrancy.
+     * The reentrancy policy. Must be the same names as in natural Service.Synchronicity.
      */
-    public enum Reentrancy {Open, Prioritized, Exclusive, Forbidden}
-
-    private Reentrancy m_reentrancy = Reentrancy.Exclusive;
+    public enum Synchronicity {Concurrent, Synchronized, Critical}
 
     /**
      * The context scheduling "lock", atomic operations are performed via {@link #SCHEDULING_LOCK_HANDLE}.
