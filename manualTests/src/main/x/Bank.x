@@ -82,7 +82,7 @@ module Bank
     static String format(Int amount)
         {
         (Int dollars, Int cents) = amount /% 100;
-        return $"${dollars}.{cents}";
+        return $"${dollars}.{cents.abs()}";
         }
 
     typedef (oodb.Connection<BankSchema> + BankSchema) Connection;
