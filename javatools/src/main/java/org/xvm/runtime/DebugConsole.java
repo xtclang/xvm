@@ -744,11 +744,7 @@ public class DebugConsole
                             if (iVar >= 0 && iVar < aVars.length)
                                 {
                                 ObjectHandle hVar = aVars[iVar].hVar;
-                                if (hVar == null)
-                                    {
-                                    writer.println("<unassigned>");
-                                    }
-                                else
+                                if (hVar != null)
                                     {
                                     if (cArgs >= 2)
                                         {
@@ -763,11 +759,15 @@ public class DebugConsole
                                             continue NextCommand;
                                             }
                                         }
+                                    }
 
-                                    if (callToString(frame, hVar, writer))
-                                        {
-                                        return Op.R_CALL;
-                                        }
+                                if (hVar == null)
+                                    {
+                                    writer.println("<unassigned>");
+                                    }
+                                else if (callToString(frame, hVar, writer))
+                                    {
+                                    return Op.R_CALL;
                                     }
                                 continue NextCommand;
                                 }
