@@ -21,8 +21,7 @@ const DBPending<Element extends immutable Const>
         {
         if (scheduledDaily != Null)
             {
-            // TODO GG Error: /Users/cameron/Development/xvm/lib_oodb/src/main/x/model/DBPending.x [25:39..25:42] COMPILER-43: Type mismatch: Null expected, Duration found. ("24h")
-            // assert repeatInterval == Null;
+            assert repeatInterval == Null;
             repeatInterval = Duration:24h;
             }
 

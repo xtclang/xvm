@@ -2876,8 +2876,9 @@ public class NameExpression
                             {
                             TypeConstant     typeTarget = info.getTargetType();
                             IdentityConstant idTarget   = typeTarget.getSingleUnderlyingClass(false);
+                            MethodStructure  method     = ctx.getMethod();
                             if (idTarget.equals(ctx.getThisClass().getIdentityConstant()) &&
-                                ctx.getMethod().isConstructor())
+                                    (method.isConstructor() || method.isValidator()))
                                 {
                                 // no property narrowing in the constructor
                                 }
@@ -2903,7 +2904,8 @@ public class NameExpression
                         }
                     else // allow narrowing for immutable properties
                         {
-                        if (ctx.getMethod().isConstructor())
+                        MethodStructure method = ctx.getMethod();
+                        if (method.isConstructor() || method.isValidator())
                             {
                             // no property narrowing in the constructor
                             }
