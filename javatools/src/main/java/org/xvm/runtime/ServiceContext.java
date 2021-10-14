@@ -135,13 +135,25 @@ public class ServiceContext
     /**
      * Supporting method for natural Service.registerCriticalSection() API.
      *
-     * @param hSynchronizedSection  the new CriticalSection? handle
+     * @param hSection  the new CriticalSection? handle
      */
-    public void setSynchronizedSection(ObjectHandle hSynchronizedSection)
+    public void setSynchronizedSection(ObjectHandle hSection)
         {
-        assert hSynchronizedSection != null;
+        assert hSection != null;
 
-        m_hSynchronizedSection = hSynchronizedSection;
+        m_hSynchronizedSection = hSection;
+
+        if (hSection == xNullable.NULL)
+            {
+            m_synchronicity = Synchronicity.Concurrent;
+            }
+        else
+            {
+            ObjectHandle hCritical = ((GenericHandle) hSection).getField("critical");
+            m_synchronicity = ((BooleanHandle) hCritical).get()
+                    ? Synchronicity.Critical
+                    : Synchronicity.Synchronized;
+            }
         }
 
     /**
@@ -173,16 +185,7 @@ public class ServiceContext
      */
     public Synchronicity getSynchronicity()
         {
-        ObjectHandle hSection = m_hSynchronizedSection;
-        if (hSection == xNullable.NULL)
-            {
-            return Synchronicity.Concurrent;
-            }
-
-        ObjectHandle hCritical = ((GenericHandle) hSection).getField("critical");
-        return ((BooleanHandle) hCritical).get()
-                ? Synchronicity.Critical
-                : Synchronicity.Synchronized;
+        return m_synchronicity;
         }
 
     /**
@@ -455,11 +458,13 @@ public class ServiceContext
         processResponses();
 
         // pickup all the messages, but keep them in the "initial" state
-        Queue<Message> qMsg = f_queueMsg;
+        Queue<Message> qMsg   = f_queueMsg;
+        FiberQueue     qFiber = f_queueSuspended;
+
         Message message;
         while ((message = qMsg.poll()) != null)
             {
-            f_queueSuspended.add(message.createFrame(this));
+            qFiber.add(message.createFrame(this));
             }
 
         // allow initial timeouts to be processed always, since they won't run any natural code
@@ -472,7 +477,7 @@ public class ServiceContext
             return frameCurrent.f_fiber.isReady() ? frameCurrent : null;
             }
 
-        return f_queueSuspended.getReady();
+        return qFiber.getReady();
         }
 
     /**
@@ -1825,6 +1830,11 @@ public class ServiceContext
      * The reentrancy policy. Must be the same names as in natural Service.Synchronicity.
      */
     public enum Synchronicity {Concurrent, Synchronized, Critical}
+
+    /**
+     * The current value of service synchronicity.
+     */
+    private Synchronicity m_synchronicity = Synchronicity.Concurrent;
 
     /**
      * The context scheduling "lock", atomic operations are performed via {@link #SCHEDULING_LOCK_HANDLE}.
