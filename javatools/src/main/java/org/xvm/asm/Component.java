@@ -1109,9 +1109,9 @@ public abstract class Component
      *
      * @return the safety value for this method, property or class
      */
-    public ConcurrencySafety getConcurrencySafery()
+    public ConcurrencySafety getConcurrencySafety()
         {
-        return getParent().getConcurrencySafery();
+        return getParent().getConcurrencySafety();
         }
 
     /**

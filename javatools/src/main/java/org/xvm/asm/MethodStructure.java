@@ -1271,9 +1271,7 @@ public class MethodStructure
         {
         if (m_fInitialized)
             {
-            return frameNext == null
-                    ? Op.R_NEXT
-                    : frame.call(frameNext);
+            return frame.call(frameNext);
             }
 
         Constant[] aconstLocal = getLocalConstants();
@@ -1471,7 +1469,7 @@ public class MethodStructure
         }
 
     @Override
-    public ConcurrencySafety getConcurrencySafery()
+    public ConcurrencySafety getConcurrencySafety()
         {
         if (m_safety != null)
             {
@@ -1491,7 +1489,7 @@ public class MethodStructure
         else
             {
             // skip MultiMethodStructure parent
-            safety = getParent().getParent().getConcurrencySafery();
+            safety = getParent().getParent().getConcurrencySafety();
             }
         return m_safety = safety;
         }

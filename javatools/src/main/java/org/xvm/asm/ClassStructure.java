@@ -1130,7 +1130,7 @@ public class ClassStructure
         }
 
     @Override
-    public ConcurrencySafety getConcurrencySafery()
+    public ConcurrencySafety getConcurrencySafety()
         {
         if (m_safety != null)
             {

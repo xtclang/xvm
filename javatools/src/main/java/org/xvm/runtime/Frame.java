@@ -1762,7 +1762,7 @@ public class Frame
         MethodStructure function = f_function;
         if (function != null)
             {
-            switch (function.getConcurrencySafery())
+            switch (function.getConcurrencySafety())
                 {
                 case Unsafe:
                     return false;
