@@ -787,14 +787,16 @@ public class TypeCompositionStatement
             }
 
         // inner const/service classes must be declared static if the parent is not const/service
+        // TODO should also check some of these for Zone.InProperty
         if (!fExplicitlyStatic && zone == Zone.InClass)
             {
+            ClassStructure clzParent = (ClassStructure) container;
             switch (component.getFormat())
                 {
                 case CONST:
                     // parent MUST be a const or a service (because parent will be automatically
                     // captured, and a const can't capture a non-const)
-                    if (container.getFormat() != Format.CONST && container.getFormat() != Format.SERVICE)
+                    if (!clzParent.isConst() && !clzParent.isService())
                         {
                         log(errs, Severity.ERROR, Compiler.INNER_CONST_NOT_STATIC);
                         fExplicitlyStatic = true;
@@ -804,7 +806,7 @@ public class TypeCompositionStatement
                 case SERVICE:
                     // parent MUST be a const or a service (because parent is automatically captured,
                     // and a service can't capture an object that isn't either a const or a service)
-                    if (container.getFormat() != Format.CONST && container.getFormat() != Format.SERVICE)
+                    if (!clzParent.isConst() && !clzParent.isService())
                         {
                         log(errs, Severity.ERROR, Compiler.INNER_SERVICE_NOT_STATIC);
                         fExplicitlyStatic = true;

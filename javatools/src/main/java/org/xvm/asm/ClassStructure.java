@@ -355,7 +355,7 @@ public class ClassStructure
      *
      * @return true iff this class is a virtual child class
      */
-    public boolean isVirtualChildClass()
+    public boolean isVirtualChildClass() // REVIEW GG what is this?
         {
         if (isVirtualChild())
             {
@@ -566,6 +566,14 @@ public class ClassStructure
 
             parent = parent.getParent();
             }
+        }
+
+    /**
+     * @return true iff this class is a Service, or a virtual child thereof
+     */
+    public boolean isService()
+        {
+        return getFormat() == Format.SERVICE || isVirtualChild() && getOuter().isService();
         }
 
     /**
