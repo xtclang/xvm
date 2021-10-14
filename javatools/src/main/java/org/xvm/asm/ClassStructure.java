@@ -351,11 +351,12 @@ public class ClassStructure
         }
 
     /**
-     * Note: A virtual child class is a child class that is instantiated using the "NEWC_*" op codes.
+     * Note: A virtual child class can be instantiated using any of the "NEWC_*" op codes.
+     *       Singletons and abstract types (mixins, interfaces) are not instantiatable.
      *
      * @return true iff this class is a virtual child class
      */
-    public boolean isVirtualChildClass() // REVIEW GG what is this?
+    public boolean isVirtualChildClass()
         {
         if (isVirtualChild())
             {
