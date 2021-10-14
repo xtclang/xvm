@@ -7,17 +7,17 @@
  * using the {@link Service.registerAsyncSection} method, storing off the previously registered
  * AsyncSection.
  *
- * Employing either a `using` or `try`-with-resources block will automatically
- * re-register whatever previous AsyncSection it replaced (if any) at the conclusion of the block,
- * potentially blocking until all the unguarded asynchronous service invocations that occurred
- * within the block have been completed or timed-out.
+ * Employing either a `using` or `try`-with-resources block will automatically re-register whatever
+ * previous AsyncSection it replaced (if any) at the conclusion of the block, potentially blocking
+ * until all the unguarded asynchronous service invocations that occurred within the block have been
+ * completed or timed-out.
  *
  * The following example illustrates usage of try-with-resources block to manage asynchronous
  * exceptions that occur during execution:
  *
- *   List<Exception> listUnguarded = new List();
+ *   Exception[] unguarded = new Exception[];
  *
- *   using (new AsyncSection(listUnguarded.add))
+ *   using (new AsyncSection(unguarded.add))
  *       {
  *       svc1.asyncCall1^();
  *       svc2.asyncCall2^();
@@ -25,12 +25,12 @@
  *       }
  *
  *   // by now all the unguarded async calls must have completed
- *   if (!listUnguarded.empty)
+ *   if (!unguarded.empty)
  *       {
  *       console.out("some operations failed");
  *       }
  */
-const AsyncSection
+class AsyncSection
         implements Closeable
     {
     construct(function void (Exception) notify)
@@ -51,12 +51,12 @@ const AsyncSection
      *
      * Exceptions raised by the notification function are ignored and lost by the runtime.
      */
-    function void (Exception) notify;
+    public/private function void (Exception) notify;
 
     /**
      * The `AsyncSection` that this AsyncSection replaced, if any.
      */
-    AsyncSection? previousAsyncSection;
+    public/private AsyncSection? previousAsyncSection;
 
     /**
      * Determine whether this AsyncSection is the active AsyncSection for the current service.

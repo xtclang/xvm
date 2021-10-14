@@ -54,15 +54,21 @@ module TestServices
 
         @Inject Timer timer;
         timer.start();
-        Loop: for (TestService each : svcs)
+
+        Exception[] unguarded = new Exception[];
+        using (new ecstasy.AsyncSection(unguarded.add))
             {
-            val i = Loop.count;
-            each.spin^(10_000).passTo(n ->
+            Loop: for (TestService each : svcs)
                 {
-                // TODO CP console.println($"{tag()} spin {Loop.count} yielded {n}; took {timer.elapsed.milliseconds} ms");
-                console.println($"{tag()} spin {i} yielded {n}; took {timer.elapsed.milliseconds} ms");
-                });
+                val i = Loop.count;
+                each.spin^(10_000).passTo(n ->
+                    {
+                    // TODO CP console.println($"{tag()} spin {Loop.count} yielded {n}; took {timer.elapsed.milliseconds} ms");
+                    console.println($"{tag()} spin {i} yielded {n}; took {timer.elapsed.milliseconds} ms");
+                    });
+                }
             }
+        assert unguarded.empty;
 
         // test timeout
         import ecstasy.Timeout;
