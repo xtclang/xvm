@@ -606,7 +606,7 @@ public class PropertyStructure
         }
 
     @Override
-    public ConcurrencySafety getConcurrencySafery()
+    public ConcurrencySafety getConcurrencySafety()
         {
         ConstantPool pool = getConstantPool();
         if (containsPropertyAnnotation(pool.clzSynchronized()))
@@ -619,7 +619,7 @@ public class PropertyStructure
             return ConcurrencySafety.Safe;
             }
 
-        return getParent().getConcurrencySafery();
+        return getParent().getConcurrencySafety();
         }
 
     @Override
