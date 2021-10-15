@@ -35,6 +35,7 @@ mixin LazyVar<Referent>(function Referent ()? calculate = Null)
     private function Referent ()? calculate;
 
     @Override
+    @Concurrent
     Referent get()
         {
         if (!assigned)
@@ -45,6 +46,7 @@ mixin LazyVar<Referent>(function Referent ()? calculate = Null)
         return super();
         }
 
+    @Synchronized
     protected Referent calc()
         {
         return calculate?();
