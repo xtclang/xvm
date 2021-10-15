@@ -59,6 +59,7 @@ import storage.SchemaStore;
  *
  * TODO version - should only be able to open the catalog with the correct TypeSystem version
  */
+@Concurrent
 service Catalog<Schema extends RootSchema>
         implements Closeable
     {
