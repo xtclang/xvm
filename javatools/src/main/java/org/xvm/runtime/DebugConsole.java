@@ -23,6 +23,7 @@ import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.IdentityConstant;
 
+import org.xvm.runtime.Fiber.FiberStatus;
 import org.xvm.runtime.Frame.VarInfo;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
@@ -1636,10 +1637,15 @@ public class DebugConsole
                         sb.append(ljust(String.valueOf(ixFrame++), 7));
                         }
 
-                    sb.append("Fiber ")
-                        .append(fiber.getId())
-                        .append(": ")
-                        .append(fiber.getStatus());
+                    sb.append(fiber);
+
+                    if (fiber.getStatus() == FiberStatus.Waiting)
+                        {
+                        assert frame != null;
+                        frame = frame.f_framePrev;
+
+                        sb.append(fiber.reportWaiting());
+                        }
 
                     if (frame != null)
                         {

@@ -14,6 +14,7 @@ import org.xvm.asm.Op;
 
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
+import org.xvm.runtime.ServiceContext.Request;
 
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
@@ -310,19 +311,59 @@ public class Fiber
     /**
      * Register an invoke/call request to another service.
      *
-     * @param future  the future representing the call
+     * @param request  the request
      */
-    public void registerRequest(CompletableFuture future)
+    public void registerRequest(Request request)
         {
+        addPending(request);
+
         m_cPending++;
 
-        future.whenComplete((_void, ex) ->
+        request.f_future.whenComplete((_void, ex) ->
             {
+            removePending(request);
+
             if (--m_cPending == 0 && m_status == FiberStatus.Terminating)
                 {
                 f_context.terminateFiber(this);
                 }
             });
+        }
+
+    protected void addPending(Request request)
+        {
+        Object oPending = m_oPendingRequests;
+        if (oPending == null)
+            {
+            m_oPendingRequests = request;
+            }
+        else if (oPending instanceof Request)
+            {
+            Request requestPrev = (Request) oPending;
+
+            Map<CompletableFuture, Request> mapPending = new HashMap<>();
+            mapPending.put(requestPrev.f_future, requestPrev);
+            mapPending.put(request.f_future, request);
+            m_oPendingRequests = mapPending;
+            }
+        else
+            {
+            Map<CompletableFuture, Request> mapPending = (Map<CompletableFuture, Request>) oPending;
+            mapPending.put(request.f_future, request);
+            }
+        }
+
+    protected void removePending(Request request)
+        {
+        Object oPending = m_oPendingRequests;
+        if (oPending instanceof Request)
+            {
+            m_oPendingRequests = null;
+            }
+        else
+            {
+            ((Map<CompletableFuture, Request>) oPending).remove(request.f_future);
+            }
         }
 
     /**
@@ -337,10 +378,8 @@ public class Fiber
     /**
      * Uncaptured request is a "fire and forget" call that needs to be tracked and reported
      * to an UnhandledExceptionHandler if such a handle was registered naturally.
-     *
-     * @param future  the future representing the call
      */
-    public void registerUncapturedRequest(CompletableFuture future)
+    public void registerUncapturedRequest(Request request)
         {
         Map<CompletableFuture, ObjectHandle> mapPending = m_mapPendingUncaptured;
         if (mapPending == null)
@@ -349,6 +388,8 @@ public class Fiber
             }
 
         m_cPending++;
+
+        CompletableFuture future = request.f_future;
         mapPending.put(future, m_hAsyncSection);
 
         future.whenComplete((_void, ex) ->
@@ -443,6 +484,42 @@ public class Fiber
         }
 
 
+    // ----- Debugging support ---------------------------------------------------------------------
+
+    /**
+     * @return human readable status of a waiting fiber
+     */
+    public String reportWaiting()
+        {
+        assert m_status == FiberStatus.Waiting;
+
+        Object oPending = m_oPendingRequests;
+        if (oPending == null)
+            {
+            return " for closure";
+            }
+
+        // TODO: check for the deadlock
+        if (oPending instanceof Request)
+            {
+            Fiber fiber = ((Request) oPending).m_fiber;
+            return " for " + fiber;
+            }
+        else
+            {
+            StringBuilder sb = new StringBuilder(" for [");
+            for (Request request : ((Map<CompletableFuture, Request>) oPending).values())
+                {
+                Fiber fiber = request.m_fiber;
+                sb.append(fiber)
+                  .append(", ");
+                }
+            sb.append(']');
+            return sb.toString();
+            }
+        }
+
+
     // ----- Comparable & Object methods -----------------------------------------------------------
 
     @Override
@@ -466,7 +543,7 @@ public class Fiber
     @Override
     public String toString()
         {
-        return "Fiber " + f_lId + " of " + f_context + ": " + m_status.name();
+        return "Fiber " + f_lId + " (" + m_status.name() + ')';
         }
 
 
@@ -596,6 +673,11 @@ public class Fiber
      * service thread.
      */
     private int m_cPending;
+
+    /**
+     * Pending requests: Request | Map<CompletableFuture, Request>.
+     */
+    private Object m_oPendingRequests;
 
     /**
      * Pending uncaptured futures; values are AsyncSection? handlers. Can be accessed only on the

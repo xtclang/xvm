@@ -307,7 +307,7 @@ public class ServiceContext
                 }
             }
 
-        return true;
+        return !f_queueSuspended.isReady();
         }
 
     /**
@@ -1032,12 +1032,12 @@ public class ServiceContext
             return null;
             }
 
-        CompletableFuture<ObjectHandle> future = new CompletableFuture<>();
+        Request request = new CallLaterRequest(frameCaller, hFunction, ahArg, cReturns);
 
         // TODO: should we reject (throw) if the service overwhelmed?
-        addRequest(new CallLaterRequest(frameCaller, hFunction, ahArg, cReturns, future), true);
+        addRequest(request, true);
 
-        return future;
+        return request.f_future;
         }
 
     /*
@@ -1052,13 +1052,11 @@ public class ServiceContext
 
         OpRequest request = new OpRequest(frameCaller, op, iReturn == Op.A_IGNORE ? 0 : 1);
 
-        CompletableFuture<ObjectHandle> future = request.f_future;
-
         addRequest(request, frameCaller.isDynamicVar(iReturn));
 
-        frameCaller.f_fiber.registerRequest(future);
+        frameCaller.f_fiber.registerRequest(request);
 
-        return frameCaller.assignFutureResult(iReturn, future);
+        return frameCaller.assignFutureResult(iReturn, request.f_future);
         }
 
     /*
@@ -1169,7 +1167,7 @@ public class ServiceContext
                     {
                     return frameCaller.assignFutureResult(iReturn, future);
                     }
-                fiber.registerUncapturedRequest(future);
+                fiber.registerUncapturedRequest(request);
                 return Op.R_NEXT;
                 }
 
@@ -1177,7 +1175,7 @@ public class ServiceContext
             // overwhelmed, which would require some additional knowledge being retained
             }
 
-        fiber.registerRequest(future);
+        fiber.registerRequest(request);
 
         return frameCaller.assignFutureResult(iReturn, future);
         }
@@ -1224,13 +1222,13 @@ public class ServiceContext
         Fiber fiber = frameCaller.f_fiber;
         if (cReturns == 0)
             {
-            fiber.registerUncapturedRequest(future);
+            fiber.registerUncapturedRequest(request);
             return fOverwhelmed || future.isDone()
                 ? frameCaller.assignFutureResult(Op.A_IGNORE, (CompletableFuture) future)
                 : Op.R_NEXT;
             }
 
-        fiber.registerRequest(future);
+        fiber.registerRequest(request);
         if (cReturns == 1)
             {
             CompletableFuture<ObjectHandle> cfReturn =
@@ -1562,6 +1560,8 @@ public class ServiceContext
             }
 
         final public CompletableFuture f_future;
+
+        public Fiber m_fiber;
         }
 
     /**
@@ -1583,27 +1583,28 @@ public class ServiceContext
             {
             Frame frame0 = context.createServiceEntryFrame(this, f_cReturns, new Op[]{f_op, Return_0.INSTANCE});
 
+            m_fiber = frame0.f_fiber;
+
             frame0.addContinuation(_null -> sendResponse(f_fiberCaller, frame0, f_future, f_cReturns));
             return frame0;
             }
 
         private final Op  f_op;
         private final int f_cReturns;
-        }
+       }
 
     /**
      * Represents a natural "fire and forget" or a native call request to a service.
      */
     public static class CallLaterRequest
-            extends Message
+            extends Request
         {
-        private final FunctionHandle                  f_hFunction;
-        private final ObjectHandle[]                  f_ahArg;
-        private final int                             f_cReturns;
-        private final CompletableFuture<ObjectHandle> f_future;
+        private final FunctionHandle f_hFunction;
+        private final ObjectHandle[] f_ahArg;
+        private final int            f_cReturns;
 
         public CallLaterRequest(Frame frameCaller, FunctionHandle hFunction, ObjectHandle[] ahArg,
-                                int cReturns, CompletableFuture<ObjectHandle> future)
+                                int cReturns)
             {
             super(frameCaller);
 
@@ -1612,7 +1613,6 @@ public class ServiceContext
             f_hFunction = hFunction;
             f_ahArg     = ahArg;
             f_cReturns  = cReturns;
-            f_future    = future;
             }
 
         @Override
@@ -1634,10 +1634,12 @@ public class ServiceContext
             Frame frame0 = context.createServiceEntryFrame(this, f_cReturns,
                     new Op[] {opCall, Return_0.INSTANCE});
 
+            m_fiber = frame0.f_fiber;
+
             if (f_fiberCaller == null)
                 {
                 // since there was no originating fiber, we need to register the request on-the-spot
-                frame0.f_fiber.registerRequest(f_future);
+                frame0.f_fiber.registerRequest(this);
 
                 frame0.addContinuation(_null ->
                     {
