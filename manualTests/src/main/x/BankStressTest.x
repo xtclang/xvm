@@ -90,7 +90,7 @@ module BankStressTest
                     if (now < close)
                         {
                         bank.log.add(
-                            $|Branch {branchId} performed {tryCount + txCount} transactions in \
+                            $|Branch {branchId} performed {100 + txCount} transactions in \
                              |{(now - start).seconds} seconds
                              );
                         txCount = 0;
