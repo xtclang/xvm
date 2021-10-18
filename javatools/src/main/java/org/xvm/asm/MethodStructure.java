@@ -1488,8 +1488,7 @@ public class MethodStructure
             }
         else
             {
-            // skip MultiMethodStructure parent
-            safety = getParent().getParent().getConcurrencySafety();
+            safety = getParent().getConcurrencySafety();
             }
         return m_safety = safety;
         }
