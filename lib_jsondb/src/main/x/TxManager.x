@@ -12,6 +12,7 @@ import model.DBObjectInfo;
 import model.SysInfo;
 
 import oodb.RootSchema;
+import oodb.Transaction.CommitResult;
 import oodb.Transaction.TxInfo;
 
 import storage.ObjectStore;
@@ -355,6 +356,8 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      */
     protected/private ArrayDeque<Client<Schema>> clientCache = new ArrayDeque();
 
+    typedef Client<Schema>.DBObjectImpl.Requirement_ as Requirement;
+
     /**
      * The writeId of the transaction, if any, that is currently preparing.
      */
@@ -483,6 +486,8 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                             case Enqueued:
                             case Preparing:
                             case Prepared:
+                            case ReqsChecking:
+                            case ReqsChecked:
                             case Validating:
                             case Validated:
                             case Rectifying:
@@ -545,7 +550,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
 
                         if (doRollback)
                             {
-                            rec.rollback();
+                            rec.rollback(RollbackOnly);
                             }
                         }
 
@@ -675,6 +680,23 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         }
 
     /**
+     * Register the specified requirement for the specified transaction.
+     *
+     * @param writeId  the transaction id
+     * @param req      the Requirement
+     */
+    void registerRequirement(Int writeId, Requirement req)
+        {
+        checkEnabled();
+
+        // validate the transaction
+        TxRecord rec = txFor(writeId);
+        assert rec.status == InFlight;
+
+        rec.registerRequirement(req);
+        }
+
+    /**
      * Attempt to commit an in-flight transaction.
      *
      * This method is intended to only be used by the [Client].
@@ -684,7 +706,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      * @return True if the transaction was committed; False if the transaction was rolled back for
      *         any reason
      */
-    Boolean commit(Int writeId)
+    CommitResult commit(Int writeId)
         {
         checkEnabled();
 
@@ -692,20 +714,20 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         TxRecord rec = txFor(writeId);
         assert rec.status == InFlight;
 
+        // we don't have a result yet, but there will be a result (either the transaction is about
+        // to be processed, or it is queued), so use a "future result" to represent the
+        // result of the commit
+        @Future CommitResult result;
+        rec.pending = &result;
+        rec.status  = Enqueued;
+
         Boolean occupied   = currentlyPreparing != NO_TX;
         Boolean backlogged = !pendingPrepare.empty;
 
         // if there is already a transaction in the prepare phase, then get in line
         if (occupied || backlogged)
             {
-            // we don't have a result yet, but there will be a result when this transaction gets
-            // pulled from the queue and processed, so create a "future result" to represent the
-            // result of the commit
-            @Future Boolean result;
-
             // stick the transaction into the queue of transactions to prepare
-            rec.pending = &result;
-            rec.status  = Enqueued;
             pendingPrepare.add(rec);
 
             // if there's a prepare backlog, but no fiber already processing it, then this
@@ -728,34 +750,73 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             }
 
         currentlyPreparing = writeId;   // prevent concurrent transaction prepare
-        rec.status         = Enqueued;  // prevent further client changes to the transaction
 
-        Boolean prepareResult = rec.prepare^();
-        FutureVar<Boolean> result = &prepareResult;
+        // a simple function to evaluate the next step, and report an error if the step fails
+        static Future<Boolean> eval(Future<Boolean>      previousResult,
+                                    function Boolean()   nextStep,
+                                    CommitResult         stepFailed,
+                                    Future<CommitResult> result)
+            {
+            return previousResult.transform(ok ->
+                {
+                if (ok)
+                    {
+                    if (nextStep())
+                        {
+                        // proceed
+                        return True;
+                        }
+
+                    // this step killed the pipeline; deliver the result back to the client
+                    if (!result.assigned)
+                        {
+                        result.complete(stepFailed);
+                        }
+                    }
+
+                return False;
+                });
+            }
+
+        @Future Boolean start; // we just need some Future Boolean to chain from
+        FutureVar<Boolean> proceed = eval(&start, rec.prepare, ConcurrentConflict, &result);
+        &start.complete(True); // kick off the prepare
+
+        if (!rec.requirements.empty)
+            {
+            proceed = eval(proceed, rec.require, ConcurrentConflict, &result);
+            }
 
         if (!validators.empty)
             {
-            result = result.transform(ok -> ok && rec.validate());
+            proceed = eval(proceed, rec.validate, ValidatorFailed, &result);
             }
 
         if (!rectifiers.empty)
             {
-            result = result.transform(ok -> ok && rec.rectify());
+            proceed = eval(proceed, rec.rectify, RectifierFailed, &result);
             }
 
         if (!distributors.empty)
             {
-            result = result.transform(ok -> ok && rec.distribute());
+            proceed = eval(proceed, rec.distribute, DistributorFailed, &result);
             }
 
-        result = result.transform(ok -> ok && rec.seal())
-                       .handle(e ->
+        proceed = eval(proceed, rec.seal, DatabaseError, &result)
+                    .handle(e ->
+                        {
+                        log($"Exception occurred while preparing transaction {rec.idString}: {e}");
+                        if (!&result.assigned)
                             {
-                            log($"Exception occurred while preparing transaction {rec.idString}: {e}");
-                            return False;
-                            });
+                            result = DatabaseError;
+                            }
+                        return False;
+                        });
 
-        return result.transform(ok ->
+        // this is the end of the line (even though it is still far in the future, and won't be
+        // executed until all of the other futures above get evaluated); our job here is to either
+        // do the final commit or roll back of the transaction
+        proceed = proceed.transform(ok ->
             {
             // whether or not the prepare succeeded, it is done and we need to allow another
             // transaction to prepare
@@ -772,7 +833,12 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 {
                 try
                     {
-                    return rec.commit();
+                    Boolean success = rec.commit();
+                    if (!&result.assigned)
+                        {
+                        result = success ? Committed : DatabaseError;
+                        }
+                    return success;
                     }
                 catch (Exception e)
                     {
@@ -791,8 +857,15 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                     );
                 }
 
-            return rec.status == Committed;
+            Boolean success = rec.status == Committed;
+            if (!&result.assigned)
+                {
+                result = success ? Committed : DatabaseError;
+                }
+            return success;
             });
+
+        return result;
         }
 
     /**
@@ -1008,20 +1081,20 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      *
      * @return True iff the Transaction was rolled back
      */
-    void rollback(Int writeId)
+    Boolean rollback(Int writeId)
         {
-        checkEnabled();
-
         // validate the transaction
-        TxCat type = txCat(writeId);
-        if (type == ReadOnly)
+        if (writeId == NO_TX || txCat(writeId) == ReadOnly)
             {
-            return;
+            // nothing to roll back, so consider it a success
+            return True;
             }
+
+        checkEnabled();
 
         TxRecord rec = txFor(writeId);
         assert rec.status == InFlight;
-        rec.rollback();
+        return rec.rollback();
         }
 
 
@@ -1195,6 +1268,8 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
          * * Enqueued - the transaction is beginning to prepare, or waiting for its turn to prepare
          * * Preparing - the transaction has begun the "prepare" step
          * * Prepared - the transaction has completed the "prepare" step
+         * * ReqsChecking - the transaction has begun checking the requirements
+         * * ReqsChecked - the transaction has completed checking the requirements
          * * Validating - the transaction has begun the "validate" step
          * * Validated - the transaction has completed the "validate" step
          * * Rectifying - the transaction has begun the "rectify" step
@@ -1212,6 +1287,8 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             Enqueued,
             Preparing,
             Prepared,
+            ReqsChecking,
+            ReqsChecked,
             Validating,
             Validated,
             Rectifying,
@@ -1322,6 +1399,8 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 {
                 case Preparing:
                 case Prepared:
+                case ReqsChecking:
+                case ReqsChecked:
                 case Validating:
                 case Validated:
                 case Rectifying:
@@ -1346,6 +1425,23 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             }
 
         /**
+         * All of the require() calls that have occurred within this transaction.
+         */
+        Requirement[] requirements = [];
+
+        /**
+         * Add a requirement to the list of requirements that have occurred within this transaction.
+         */
+        void registerRequirement(Requirement req)
+            {
+            if (requirements.empty)
+                {
+                requirements = new Requirement[];
+                }
+            requirements.add(req);
+            }
+
+        /**
          * This is the Client object that is used to do all of the validate/rectify/distribute work.
          */
         Client<Schema>? prepareClient = Null;
@@ -1359,7 +1455,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
          */
         Client<Schema> ensureClient(TxCat txCat)
             {
-            assert txCat != Open && txCat != ReadOnly;
+            assert txCat != Open;
 
             Client<Schema>? client = prepareClient;
             if (client == Null)
@@ -1368,7 +1464,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 prepareClient = client;
                 }
 
-            client.representTransaction(generateTxId(writeId, txCat));
+            client.representTransaction(txCat == ReadOnly ? readId : generateTxId(writeId, txCat));
             return client;
             }
 
@@ -1399,7 +1495,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
          * The future result for a pending operation on the transaction, if there is a pending
          * operation.
          */
-        Future<Boolean>? pending = Null;
+        Future<CommitResult>? pending = Null;
 
         /**
          * Notification function to call when the transaction terminates.
@@ -1534,6 +1630,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 preparedAll = preparedAll?.and(preparedOne, (ok1, ok2) -> ok1 & ok2) : preparedOne;
                 }
 
+// REVIEW CP this is unusual, in retrospect; why doesn't it just return True or False?
             assert preparedAll != Null;
             return preparedAll.whenComplete((v, e) ->
                 {
@@ -1543,12 +1640,12 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                     default:
                     case (False, False):
                         // failed; remaining stores need to be rolled back
-                        rollback();
+                        rollback(ConcurrentConflict);
                         break;
 
                     case (False, True ):
                         // failed; already rolled back
-                        terminate(RolledBack);
+                        terminate(ConcurrentConflict);
                         break;
 
                     case (True , False):
@@ -1564,6 +1661,52 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             }
 
         /**
+         * Evaluate all of the requirements that have been registered for this transaction.
+         *
+         * @return True iff the Transaction requirements were all met
+         */
+        protected Boolean require()
+            {
+            switch (status)
+                {
+                case Prepared:
+                    checkEnabled();
+                    assert currentlyPreparing == writeId && !enlisted.empty;
+                    status = ReqsChecking;
+                    break;
+
+                case Committed:
+                    // assume that the transaction already short-circuited to a committed state
+                    assert enlisted.empty;
+                    return False;
+
+                case RollingBack:
+                case RolledBack:
+                    // assume that another fiber had a reason to roll back the transaction
+                    return False;
+
+                default:
+                    throw new IllegalState($"Unexpected status for transaction {idString}: {status}");
+                }
+
+            // recheck any requirements on a fake client using the most recently committed data
+            if (!requirements.empty)
+                {
+                Client<Schema> client = ensureClient(ReadOnly);
+                for (Requirement req : requirements)
+                    {
+                    if (!client.verifyRequirement(req))
+                        {
+                        return False;
+                        }
+                    }
+                }
+
+            status = ReqsChecked;
+            return True;
+            }
+
+        /**
          * Evaluate all of the validators that have been triggered by this transaction.
          *
          * @return True iff the Transaction was successfully validated
@@ -1573,6 +1716,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             switch (status)
                 {
                 case Prepared:
+                case ReqsChecked:
                     checkEnabled();
                     assert currentlyPreparing == writeId && !enlisted.empty;
                     status = Validating;
@@ -1629,6 +1773,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             switch (status)
                 {
                 case Prepared:
+                case ReqsChecked:
                 case Validated:
                     checkEnabled();
                     assert currentlyPreparing == writeId;
@@ -1696,6 +1841,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             switch (status)
                 {
                 case Prepared:
+                case ReqsChecked:
                 case Validated:
                 case Rectified:
                     checkEnabled();
@@ -1780,6 +1926,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             switch (status)
                 {
                 case Prepared:
+                case ReqsChecked:
                 case Validated:
                 case Rectified:
                 case Distributed:
@@ -1958,7 +2105,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
          *
          * @return True iff the Transaction was rolled back
          */
-        protected Boolean rollback()
+        protected Boolean rollback(CommitResult? reason = Null)
             {
             switch (status)
                 {
@@ -1966,6 +2113,8 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 case Enqueued:
                 case Preparing:
                 case Prepared:
+                case ReqsChecking:
+                case ReqsChecked:
                 case Validating:
                 case Validated:
                 case Rectifying:
@@ -1979,7 +2128,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 case RollingBack:
                 case Committing:
                     @Future Boolean result;
-                    addTermination(() -> {result=status==RolledBack;});
+                    addTermination(() -> {result=status!=Committed;});
                     return result;
 
                 case Committed:
@@ -2013,7 +2162,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 }
             finally
                 {
-                terminate(RolledBack);
+                terminate(reason ?: RollbackOnly);
                 }
             }
 
@@ -2054,14 +2203,13 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
          *
          * @param status  the terminal status of the transaction
          */
-        protected void terminate(Status status)
+        protected void terminate(CommitResult result)
             {
-            assert status == Committed || status == RolledBack;
-            this.status = status;
+            this.status = result == Committed ? Committed : RolledBack;
 
-            if (FutureVar<Boolean> pending ?= this.pending)
+            if (FutureVar<CommitResult> pending ?= this.pending, !pending.assigned)
                 {
-                pending.complete(status == Committed);
+                pending.complete(result);
                 this.pending = Null;
                 }
 

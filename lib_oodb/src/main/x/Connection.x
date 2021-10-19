@@ -34,27 +34,27 @@ interface Connection<Schema extends RootSchema>
     /**
      * Create a new transaction.
      *
-     * @param timeout     (optional) the requested time-out, which allows the database to roll back
-     *                    and discard the transaction after that period of time has elapsed
-     * @param name        (optional) a descriptive name to associate with the transaction
      * @param id          (optional) an integer identifier to associate with the transaction
+     * @param name        (optional) a descriptive name to associate with the transaction
      * @param priority    (optional) the transactional priority
-     * @param retryCount  (optional) the number of times that this same transaction has already been
-     *                    attempted
      * @param readOnly    (optional) pass True to indicate that transaction is not going to modify
      *                    any data
+     * @param timeout     (optional) the requested time-out, which allows the database to roll back
+     *                    and discard the transaction after that period of time has elapsed
+     * @param retryCount  (optional) the number of times that this same transaction has already been
+     *                    attempted
      *
      * @return the [Transaction] object
      *
      * @throws IllegalState  if a Transaction already exists
      */
-    (Transaction<Schema> + Schema) createTransaction(Duration?              timeout     = Null,
+    (Transaction<Schema> + Schema) createTransaction(UInt?                  id          = Null,
                                                      String?                name        = Null,
-                                                     UInt?                  id          = Null,
                                                      DBTransaction.Priority priority    = Normal,
+                                                     Boolean                readOnly    = False,
+                                                     Duration?              timeout     = Null,
                                                      Int                    retryCount  = 0,
-                                                     Boolean                readOnly    = False);
-
+                                                    );
     @Override
     void close(Exception? e = Null)
         {

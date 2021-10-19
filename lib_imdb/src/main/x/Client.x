@@ -315,6 +315,18 @@ service Client<Schema extends RootSchema>
             childIds.associate(id -> {val dbo = implFor(id); return id, dbo;}, children);
             return children;
             }
+
+        @Override
+        <Result extends immutable Const> Result peek(function Result(DBObjectImpl) test)
+            {
+            TODO implement peek() and remove this line
+            }
+
+        @Override
+        void defer(function Boolean(DBObjectImpl) adjust)
+            {
+            TODO implement defer() and remove this line
+            }
         }
 
 
@@ -477,17 +489,18 @@ service Client<Schema extends RootSchema>
             }
 
         @Override
-        (Transaction + Schema) createTransaction(Duration?              timeout     = Null,
+        (Transaction + Schema) createTransaction(UInt?                  id          = Null,
                                                  String?                name        = Null,
-                                                 UInt?                  id          = Null,
                                                  DBTransaction.Priority priority    = Normal,
+                                                 Boolean                readOnly    = False,
+                                                 Duration?              timeout     = Null,
                                                  Int                    retryCount  = 0,
-                                                 Boolean                readOnly    = False)
+                                                )
             {
             assert outer.tx == Null;
 
             import Transaction.TxInfo;
-            TxInfo txInfo = new TxInfo(timeout, name, id, priority, retryCount);
+            TxInfo txInfo = new TxInfo(id, name, priority, readOnly, timeout, retryCount);
 
             (Transaction + Schema) newTx = new Transaction(store_, txInfo).as(Transaction + Schema);
 
@@ -543,7 +556,15 @@ service Client<Schema extends RootSchema>
             }
 
         @Override
-        Boolean commit()
+        Boolean rollbackOnly.set(Boolean value)
+            {
+            assert pending;
+            assert value || !get();
+            super(value);
+            }
+
+        @Override
+        CommitResult commit()
             {
             Transaction? that = outer.tx;
             if (that == Null)
@@ -563,7 +584,7 @@ service Client<Schema extends RootSchema>
             ObjectStore[] stores = new ObjectStore[];
             enlisted_.values.map(impl -> impl.store_, stores);
 
-            Boolean result = Catalog.commit(stores.makeImmutable(), this.Client.id);
+            CommitResult result = Catalog.commit(stores.makeImmutable(), this.Client.id);
 
             enlisted_.clear();
             outer.tx = Null; // pending == False
@@ -572,7 +593,7 @@ service Client<Schema extends RootSchema>
             }
 
         @Override
-        void rollback()
+        Boolean rollback()
             {
             Transaction? that = outer.tx;
             if (that == Null)
@@ -596,6 +617,8 @@ service Client<Schema extends RootSchema>
 
             enlisted_.clear();
             outer.tx  = Null; // pending == False
+
+            return True; // REVIEW GG
             }
         }
 
@@ -624,7 +647,7 @@ service Client<Schema extends RootSchema>
             assert Transaction tx ?= this.tx;
             if (autocommit)
                 {
-                assert tx.commit(); // see jsondb/Client.x
+                assert tx.commit() == Committed; // see jsondb/Client.x
                 }
             this.tx = Null;
             }

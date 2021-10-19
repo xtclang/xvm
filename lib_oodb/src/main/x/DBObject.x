@@ -263,6 +263,19 @@ interface DBObject
     // ----- transactionally composable operations -------------------------------------------------
 
     /**
+     * Perform a semi-blind test against the DBObject.
+     *
+     * @param test  a function to evaluate immediately, which will return a `Result` to the caller,
+     *              without enlisting any data that is read in the process into the transaction
+     *
+     * @return the result of evaluating the function
+     */
+    <Result extends immutable Const> Result peek(function Result(DBObject) test)
+        {
+        return test(this);
+        }
+
+    /**
      * Perform a semi-blind test against the DBObject, and register the same test (along with the
      * result from running it) as a precondition for the commit (i.e. a "prepare constraint").
      *
@@ -280,15 +293,17 @@ interface DBObject
      *   declared in the schema and applies to every transaction (it is not dynamic), and this test
      *   may be parameterized, as long as all of the information that it captures is immutable.
      *
-     * @param test  a function to evaluate immediately, which will return a Boolean to the caller,
+     * When the commit occurs, the test is repeated against the _immediately-preceding_ transaction,
+     * although a database implementation may choose to skip the test if no database changes have
+     * occurred that would impact the result of the test.
+     *
+     * @param test  a function to evaluate immediately, which will return a `Result` to the caller,
+     *              without enlisting any data that is read in the process into the transaction,
      *              but which is also stored (along with that Boolean) as a precondition for commit
      *
      * @return the result of evaluating the function
      */
-    <Result extends immutable Const> Result peek(function Result(DBObject) test)
-        {
-        TODO implement peek() and remove this line
-        }
+    <Result extends immutable Const> Result require(function Result(DBObject) test);
 
     /**
      * Perform a blind adjustment of the DBObject.
@@ -319,10 +334,7 @@ interface DBObject
      * @param process  a function that operates against (and may both read and modify) the DBObject
      *                 reference passed to the function (representing this DBObject)
      */
-    void defer(function Boolean(DBObject) adjust)
-        {
-        TODO implement defer() and remove this line
-        }
+    void defer(function Boolean(DBObject) adjust);
 
 
     // ----- transactional information -------------------------------------------------------------

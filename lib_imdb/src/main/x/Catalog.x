@@ -294,7 +294,7 @@ static service Catalog
 
     // ----- Transaction support -------------------------------------------------------------------
 
-    Boolean commit(ObjectStore[] stores, Int clientId)
+    oodb.Transaction.CommitResult commit(ObjectStore[] stores, Int clientId)
         {
 // TODO GG
 //        for (ObjectStore store : stores)
@@ -306,14 +306,15 @@ static service Catalog
             {
             store.apply(clientId);
             }
-        return True;
+        return Committed;
         }
 
-    void rollback(ObjectStore[] stores, Int clientId)
+    Boolean rollback(ObjectStore[] stores, Int clientId)
         {
         for (ObjectStore store : stores)
             {
             store.discard(clientId);
             }
+        return True;
         }
     }

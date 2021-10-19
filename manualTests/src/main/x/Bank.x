@@ -17,6 +17,26 @@ module Bank
         @RO DBCounter holding; // in cents
         @RO @NoTx DBLog<String> log;
 
+//        const Overdraft(Int accountId, Int balance);
+//
+//        mixin OverdraftPenalizer
+//                into DBProcessor<Overdraft>
+//            {
+//            @Override
+//            void process(Overdraft overdraft)
+//                {
+//                //...
+//                }
+//            }
+//
+//        @RO OverdraftPenalizer penalties;
+//
+//        // somewhere else
+//        penalties.add(new Overdraft(account.id, account.balance);
+//        penalties.schedule(overdraft).every(Time:00:00).withPriority(Low);
+//        penalties.schedule(overdraft, every=Time:00:00, priority=Low);
+//        penalties.scheduleAfter(Duration:60s, new Overdraft(account.id, account.balance));
+
         Account openAccount(Int id, Int balance)
             {
             assert !accounts.contains(id) as $"account {id} already exists";

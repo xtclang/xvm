@@ -5,8 +5,8 @@ module BankStressTest
     import Bank.Account;
     import Bank.Connection;
 
-    static Int BRANCHES     = 24;
-    static Int MAX_ACCOUNTS = 100;
+    static Int BRANCHES     = 2;
+    static Int MAX_ACCOUNTS = 2;
 
     void run()
         {
