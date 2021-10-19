@@ -47,7 +47,7 @@ public class Fiber
 
         f_iCallerId = msgCall.f_iCallerId;
         f_fnCaller  = msgCall.f_fnCaller;
-        m_status    = FiberStatus.InitialNew;
+        m_status    = FiberStatus.Initial;
 
         if (fiberCaller == null)
             {
@@ -72,14 +72,6 @@ public class Fiber
                     {
                     m_ldtTimeout = System.currentTimeMillis() + cTimeoutMillis;
                     }
-                }
-
-            // check if the fiber chain points back to the same service
-            // (clearly fiberCaller should not belong to this service unless it's a PostRequest)
-            Fiber fiberPrev = fiberCaller.f_fiberCaller;
-            if (fiberPrev != null && fiberPrev.isAssociatedWaiting(context))
-                {
-                m_status = FiberStatus.InitialAssociated;
                 }
             }
         }
@@ -114,18 +106,18 @@ public class Fiber
         }
 
     /**
-     * @return true iff this fiber is waiting and points back to a waiting fiber on the
-     *         specified service
+     * @return true iff this fiber is waiting or currently running and points back (as a logical
+     *         thread of execution) to a waiting or running fiber on the specified service
      */
-    public boolean isAssociatedWaiting(ServiceContext context)
+    public boolean isContinuationOf(Fiber fiberOrig)
         {
-        if (m_status != FiberStatus.Waiting)
+        if (m_status != FiberStatus.Waiting && this != f_context.getCurrentFiber())
             {
             return false;
             }
 
-        return f_context == context ||
-               f_fiberCaller != null && f_fiberCaller.isAssociatedWaiting(context);
+        return f_context == fiberOrig.f_context ||
+               f_fiberCaller != null && f_fiberCaller.isContinuationOf(fiberOrig);
         }
 
     /**
@@ -178,8 +170,7 @@ public class Fiber
         switch (m_status = status)
             {
             default:
-            case InitialNew:
-            case InitialAssociated:
+            case Initial:
                 throw new IllegalArgumentException();
 
             case Running:
@@ -188,6 +179,7 @@ public class Fiber
                 break;
 
             case Waiting:
+            case SyncWait:
             case Paused:
                 long cNanos = System.nanoTime() - m_nanoStarted;
                 m_nanoStarted = 0;
@@ -210,14 +202,14 @@ public class Fiber
         switch (m_status)
             {
             default:
-            case InitialNew:
-            case InitialAssociated:
+            case Initial:
                 return null;
 
             case Running:
                 return f_context.getCurrentFrame();
 
             case Waiting:
+            case SyncWait:
             case Paused:
             case Terminating:
                 return m_frame;
@@ -298,6 +290,14 @@ public class Fiber
                         }
                     break;
 
+                case SyncWait:
+                    if (f_context.isAnyNonConcurrentWaiting(frame.f_fiber))
+                        {
+                        return Op.R_SYNC_WAIT;
+                        }
+                    iResult = Op.R_NEXT;
+                    break;
+
                 case Terminating:
                     return frame.raiseException(xException.serviceTerminated(frame, f_context.f_sName));
                 }
@@ -315,13 +315,13 @@ public class Fiber
      */
     public void registerRequest(Request request)
         {
-        addPending(request);
+        addDependee(request);
 
         m_cPending++;
 
         request.f_future.whenComplete((_void, ex) ->
             {
-            removePending(request);
+            removeDependee(request);
 
             if (--m_cPending == 0 && m_status == FiberStatus.Terminating)
                 {
@@ -330,8 +330,13 @@ public class Fiber
             });
         }
 
-    protected void addPending(Request request)
+    protected void addDependee(Request request)
         {
+        if (request.m_fiber == this)
+            {
+            return;
+            }
+
         Object oPending = m_oPendingRequests;
         if (oPending == null)
             {
@@ -353,8 +358,13 @@ public class Fiber
             }
         }
 
-    protected void removePending(Request request)
+    protected void removeDependee(Request request)
         {
+        if (request.m_fiber == this)
+            {
+            return;
+            }
+
         Object oPending = m_oPendingRequests;
         if (oPending instanceof Request)
             {
@@ -483,11 +493,19 @@ public class Fiber
         return m_mapPendingUncaptured != null && m_mapPendingUncaptured.containsValue(hSection);
         }
 
+    /**
+     * Set or clear the fiber that blocks this fiber's execution.
+     */
+    protected void setBlocker(Fiber fiberBlocker)
+        {
+        m_fiberBlocker = fiberBlocker;
+        }
+
 
     // ----- Debugging support ---------------------------------------------------------------------
 
     /**
-     * @return human readable status of a waiting fiber
+     * @return human-readable status of a waiting fiber
      */
     public String reportWaiting()
         {
@@ -691,16 +709,21 @@ public class Fiber
     private Frame.Continuation m_resume;
 
     /**
+     * If specified, indicates a fiber that blocks this fiber's execution. Used only for deadlock
+     * detection.
+     */
+    private Fiber m_fiberBlocker;
+
+    /**
      * The counter used to create fibers ids.
      */
     private static final AtomicLong s_counter = new AtomicLong();
 
     enum FiberStatus
         {
-        InitialNew        (3), // a new fiber has not been scheduled for execution yet
-        InitialAssociated (3), // a fiber that is associated with another existing fiber, but
-                               // has not been scheduled for execution yet
-        Running           (4), // normal execution
+        Initial           (3), // a new fiber has not been scheduled for execution yet
+        Running           (5), // normal execution
+        SyncWait          (4), // a fiber is blocked due to unsafe concurrency of the callee
         Paused            (2), // the execution was paused by the scheduler
         Waiting           (1), // execution is blocked until the "waiting" futures are completed
         Terminating       (0); // the fiber has been terminated, but some requests are still pending

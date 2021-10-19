@@ -26,6 +26,8 @@ import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.asm.op.Return_0;
+
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 
 import org.xvm.runtime.template.xBoolean;
@@ -917,6 +919,40 @@ public abstract class Utils
                 }
             }
         };
+
+    /**
+     * Create a pseudo frame that will block a call to the specified frame until concurrency
+     * synchronization clears up.
+     *
+     * @param frame      the caller frame
+     * @param frameNext  the blocked callee frame
+     *
+     * @return a new frame that blocks the current fiber's execution
+     */
+    public static Frame createSyncFrame(Frame frame, Frame frameNext)
+        {
+        Frame frameSync = frame.createNativeFrame(SYNC_CALL, OBJECTS_NONE, Op.A_IGNORE, null);
+        frameSync.addContinuation(frameCaller -> frameCaller.call(frameNext));
+        return frameSync;
+        }
+
+    private static final Op[] SYNC_CALL = new Op[]
+        {
+        new Op()
+            {
+            public int process(Frame frame, int iPC)
+                {
+                return R_SYNC_WAIT;
+                }
+
+            public String toString()
+                {
+                return "SyncWait";
+                }
+            },
+        Return_0.INSTANCE
+        };
+
 
     /**
      * An abstract base for in-place operation support.

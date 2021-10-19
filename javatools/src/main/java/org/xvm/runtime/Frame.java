@@ -286,7 +286,17 @@ public class Frame
     public int call(Frame frameNext)
         {
         assert frameNext.f_framePrev == this;
-        m_frameNext = frameNext;
+
+        // if we are transitioning to a "red" zone; check if any other fiber blocks this one
+        if (this.isSafeStack() && frameNext.isUnsafeFrame() &&
+                f_context.isAnyNonConcurrentWaiting(f_fiber))
+            {
+            m_frameNext = Utils.createSyncFrame(this, frameNext);
+            }
+        else
+            {
+            m_frameNext = frameNext;
+            }
         return Op.R_CALL;
         }
 
@@ -1732,7 +1742,7 @@ public class Frame
         switch (synchronicity)
             {
             case Concurrent:
-                return isConcurrentSafe()
+                return isSafeStack()
                     ? Synchronicity.Concurrent
                     : Synchronicity.Synchronized;
 
@@ -1748,30 +1758,39 @@ public class Frame
     /**
      * See documentation for the synchronicity property at Service.x.
      *
-     * @return true iff this frame is reentrant (concurrent-safe)
+     * @return true iff this frame's stack is reentrant (concurrent-safe)
      */
-    protected boolean isConcurrentSafe()
+    private boolean isSafeStack()
         {
         Frame framePrev = f_framePrev;
         if (framePrev == null)
             {
-            // this could only be asked when the frame's fiber is waiting to be terminated
+            // native frame is always safe
+            assert isNative();
             return true;
             }
 
+        return !isUnsafeFrame() && framePrev.isSafeStack();
+        }
+
+    /**
+     * @return false iff this frame alone is not concurrent safe
+     */
+    private boolean isUnsafeFrame()
+        {
         MethodStructure function = f_function;
         if (function != null)
             {
             switch (function.getConcurrencySafety())
                 {
                 case Unsafe:
-                    return false;
+                    return true;
 
                 case Instance:
                     ObjectHandle hThis = f_hThis;
                     if (hThis != null && hThis.isMutable())
                         {
-                        return false;
+                        return true;
                         }
                     break;
 
@@ -1779,8 +1798,7 @@ public class Frame
                     break;
                 }
             }
-
-        return framePrev.isConcurrentSafe();
+        return false;
         }
 
 

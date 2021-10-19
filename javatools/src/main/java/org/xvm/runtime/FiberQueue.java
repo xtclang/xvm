@@ -156,11 +156,11 @@ public class FiberQueue
                         sb.append(" waiting");
                         break;
 
-                    case InitialAssociated:
-                        sb.append(" associated");
+                    case SyncWait:
+                        sb.append(" sync wait");
                         break;
 
-                    case InitialNew:
+                    case Initial:
                         sb.append(" new");
                         break;
                     }
@@ -173,11 +173,13 @@ public class FiberQueue
      * Calculate the priority of the fiber at the specified index.
      * The return values are:
      * <ul>
-     *   <li/>[2]  a waiting fiber that is marked as "ready"
-     *   <li/>[1]  initial associated or yielded
+     *   <li/>[3]  running
+     *   <li/>[2]  a SyncCall fiber that became ready
+     *   <li/>[1]  a waiting fiber that is marked as "ready"
      *   <li/>[0]  initial new
      *   <li/>[-1] not ready
-     *   <li/>[-2] empty
+     *   <li/>[-2] blocked
+     *   <li/>[-3] empty
      * </ul>
      */
     private int checkPriority(int ix)
@@ -185,12 +187,18 @@ public class FiberQueue
         Frame frame = m_aFrame[ix];
         if (frame == null)
             {
-            return -2;
+            return -3;
             }
 
         Fiber fiber = frame.f_fiber;
         switch (fiber.getStatus())
             {
+            case Running:
+                return 3;
+
+            case SyncWait:
+                return isAnyNonConcurrentWaiting(fiber) ? -2 : 2;
+
             case Waiting:
                 if (fiber.isReady())
                     {
@@ -198,19 +206,16 @@ public class FiberQueue
                         {
                         case Concurrent:
                         case Critical:
-                            return 2;
+                            return 1;
 
                         case Synchronized:
-                            return isAnyNonConcurrentWaiting(ix, false) ? -1 : 2;
+                            return isAnyNonConcurrentWaiting(fiber) ? -2 : 1;
                         }
                     }
                 return -1;
 
-            case InitialAssociated:
-                return isAnyNonConcurrentWaiting(ix, true) ? -1 : 1;
-
-            case InitialNew:
-                return isAnyNonConcurrentWaiting(ix, false) ? -1 : 0;
+            case Initial:
+                return 0;
 
             default:
                 throw new IllegalStateException();
@@ -218,27 +223,30 @@ public class FiberQueue
         }
 
     /**
-     * Check if there is any "waiting" frame that is not concurrent safe.
+     * Check if there is any "waiting" frame that is not concurrent safe with regard to the
+     * specified fiber.
      *
-     * @param ixIgnore            an index of a frame that should not be checked
-     * @param fAllowSynchronized  if true, allow synchronized (non-critical) waiting frames
+     * @param fiberCandidate  the fiber that the service is evaluating for execution
      *
      * @return true iff there are any non-concurrent waiting frames
      */
-    private boolean isAnyNonConcurrentWaiting(int ixIgnore, boolean fAllowSynchronized)
+    public boolean isAnyNonConcurrentWaiting(Fiber fiberCandidate)
         {
-        Frame[] aFrame  = m_aFrame;
-        int     cFrames = aFrame.length;
-        int     ixHead  = m_ixHead;
+        Frame[] aFrame      = m_aFrame;
+        int     cFrames     = aFrame.length;
+        Fiber   fiberCaller = fiberCandidate.f_fiberCaller;
 
         for (int i = 0; i < cFrames; i++)
             {
-            int   ix    = (ixHead + i) % cFrames;
-            Frame frame = aFrame[ix];
-
-            if (ix != ixIgnore && frame != null)
+            Frame frame = aFrame[i];
+            if (frame == null)
                 {
-                Fiber fiber = frame.f_fiber;
+                continue;
+                }
+
+            Fiber fiber = frame.f_fiber;
+            if (fiber != fiberCandidate)
+                {
                 if (fiber.getStatus() == FiberStatus.Waiting)
                     {
                     if (frame.isNativeStack())
@@ -252,17 +260,18 @@ public class FiberQueue
                             continue;
 
                         case Synchronized:
-                            if (fAllowSynchronized)
+                            if (fiberCaller != null && fiberCaller.isContinuationOf(fiber))
                                 {
                                 continue;
                                 }
-                            // fall through
                         case Critical:
+                            fiberCandidate.setBlocker(fiber);
                             return true;
                         }
                     }
                 }
             }
+        fiberCandidate.setBlocker(null);
         return false;
         }
 

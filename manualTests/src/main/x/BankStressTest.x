@@ -5,8 +5,8 @@ module BankStressTest
     import Bank.Account;
     import Bank.Connection;
 
-    static Int BRANCHES     = 2;
-    static Int MAX_ACCOUNTS = 2;
+    static Int BRANCHES     = 24;
+    static Int MAX_ACCOUNTS = 100;
 
     void run()
         {
@@ -151,7 +151,7 @@ module BankStressTest
                         case 99:
                             op = "Audit";
                             txCount++;
-                            bank.log.add($"Audited amount: {Bank.format(bank.audit())}");
+                            bank.log.add($"Branch {branchId} audited amount is {Bank.format(bank.audit())}");
                             break;
                         }
                     }

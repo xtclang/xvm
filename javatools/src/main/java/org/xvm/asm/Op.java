@@ -236,7 +236,7 @@ public abstract class Op
             else
                 {
                 // make sure that the jump lands on a label; this is not strictly necessary, but
-                // some of the data structures were built assuming the label type
+                // some data structures were built assuming the label type
                 if (!(opPrefix instanceof Label))
                     {
                     aop[iPC] = opPrefix = new Label().append(opPrefix);
@@ -342,8 +342,7 @@ public abstract class Op
         }
 
     /**
-     * Invoked as part of the assembly process to register all of the constants being used by the
-     * ops.
+     * Invoked as part of the assembly process to register all constants being used by the ops.
      *
      * @param registry  the ConstantRegistry to use to register any constants used by this op
      */
@@ -518,7 +517,7 @@ public abstract class Op
             {
             if (m_op == null)
                 {
-                throw new IllegalStateException("prefix requires a suffix: " + this.toString());
+                throw new IllegalStateException("prefix requires a suffix: " + this);
                 }
             return m_op.ensureOp();
             }
@@ -694,7 +693,7 @@ public abstract class Op
 
     /**
      * Kind of like a ConstantPool, but this is local to a MethodStructure, and just collects
-     * together all of the constants used by the ops.
+     * together all the constants used by the ops.
      */
     public static class ConstantRegistry
         {
@@ -705,7 +704,7 @@ public abstract class Op
          */
         public ConstantRegistry(ConstantPool pool)
             {
-            m_pool = pool;
+            f_pool = pool;
             }
 
         /**
@@ -730,10 +729,10 @@ public abstract class Op
                 throw new IllegalStateException("Unresolved constant: " + constant);
                 }
 
-            constant = m_pool.register(constant);
+            constant = f_pool.register(constant);
 
             // keep track of how many times each constant is registered
-            m_mapConstants.compute(constant, (k, count) -> count == null ? 1 : 1 + count);
+            f_mapConstants.compute(constant, (k, count) -> count == null ? 1 : 1 + count);
 
             return constant;
             }
@@ -759,7 +758,7 @@ public abstract class Op
             {
             ensureOptimized();
 
-            Integer index = m_mapConstants.get(constant);
+            Integer index = f_mapConstants.get(constant);
             if (index == null)
                 {
                 throw new IllegalArgumentException("missing constant: " + constant);
@@ -786,11 +785,11 @@ public abstract class Op
             {
             if (m_aconst == null)
                 {
-                // first, create an array of all of the constants, sorted by how often they are used
+                // first, create an array of all the constants, sorted by how often they are used
                 // (backwards order, such that the most often used come first, since the variable
-                // length index encoding uses less bytes for lower indexes, the result is more
+                // length index encoding uses fewer bytes for lower indexes, the result is more
                 // compact)
-                Map<Constant, Integer> mapConstants = m_mapConstants;
+                Map<Constant, Integer> mapConstants = f_mapConstants;
                 Constant[] aconst = mapConstants.keySet().toArray(Constant.NO_CONSTS);
                 Arrays.sort(aconst, Constants.DEBUG
                         ? Comparator.naturalOrder()
@@ -809,7 +808,7 @@ public abstract class Op
         /**
          * The underlying ConstantPool.
          */
-        private ConstantPool m_pool;
+        private final ConstantPool f_pool;
 
         /**
          * The constants registered in the ConstantRegistry. While the registry is still
@@ -817,7 +816,7 @@ public abstract class Op
          * the registry optimizes its constant ordering, the map holds the index of each constant
          * (in the local "constant pool", not the real constant pool.)
          */
-        private Map<Constant, Integer> m_mapConstants = new HashMap<>();
+        private final Map<Constant, Integer> f_mapConstants = new HashMap<>();
 
         /**
          * The array of constants in their optimized order.
@@ -964,7 +963,7 @@ public abstract class Op
      * Register the specified arguments if they are constants.
      *
      * @param aArg      the argument array
-     * @param registry  the ConstantRegistry that represents all of the constants used by the code
+     * @param registry  the ConstantRegistry that represents all the constants used by the code
      */
     protected static void registerArguments(Argument[] aArg, ConstantRegistry registry)
         {
@@ -982,7 +981,7 @@ public abstract class Op
      * to identify the argument.
      *
      * @param arg       the argument
-     * @param registry  the ConstantRegistry that represents all of the constants used by the code
+     * @param registry  the ConstantRegistry that represents all the constants used by the code
      *                  containing the op
      *
      * @return the index of the argument
@@ -995,11 +994,11 @@ public abstract class Op
         }
 
     /**
-     * Convert the specified argument array to an an array if indexes that will be used in the
+     * Convert the specified argument array to an array if indexes that will be used in the
      * persistent form of the op to identify the arguments.
      *
      * @param aArg      the argument array
-     * @param registry  the ConstantRegistry that represents all of the constants used by the code
+     * @param registry  the ConstantRegistry that represents all the constants used by the code
      *                  containing the op
      *
      * @return the array of the arguments' indexes
@@ -2075,6 +2074,13 @@ public abstract class Op
      * fibers from execution and repeat the same op-code.
      */
     public static final int R_PAUSE            = -9;
+
+    /**
+     * Result from process() method: at the moment used only by Utils.createSyncFrame;
+     * the execution must be blocked until the blocking synchronized fiber terminates or becomes
+     * concurrent.
+     */
+    public static final int R_SYNC_WAIT        = -10;
 
 
     // ----- other constants -----------------------------------------------------------------------

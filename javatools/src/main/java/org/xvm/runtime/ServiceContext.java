@@ -165,6 +165,14 @@ public class ServiceContext
         }
 
     /**
+     * @return the currently active fiber
+     */
+    public Fiber getCurrentFiber()
+        {
+        return m_frameCurrent == null ? null : m_frameCurrent.f_fiber;
+        }
+
+    /**
      * @return the set of Fibers for this context
      */
     public Set<Fiber> getFibers()
@@ -425,17 +433,26 @@ public class ServiceContext
         }
 
     /**
-     * Add a message to the service response queue.
-     *
-     * @param response  the response message
+     * @return true iff there are any fibers that block the specified fiber's execution
      */
-    public void respond(Response response)
+    public boolean isAnyNonConcurrentWaiting(Fiber fiber)
+        {
+        return f_queueSuspended.isAnyNonConcurrentWaiting(fiber);
+        }
+
+    /**
+     * Add a response message to the service response queue.
+     */
+    private void respond(Response response)
         {
         f_queueResponse.add(response);
         ensureScheduled(true);
         }
 
-    protected void processResponses()
+    /**
+     * Process all queued responses.
+     */
+    private void processResponses()
         {
         Queue<Response> qResponse = f_queueResponse;
         Response response;
@@ -451,7 +468,7 @@ public class ServiceContext
      * @return a Frame to execute or null if this service doesn't have any frames ready for
      *         execution
      */
-    public Frame nextFiber()
+    private Frame nextFiber()
         {
         // responses have the highest priority and no natural code runs there;
         // process all we've got so far
@@ -492,11 +509,11 @@ public class ServiceContext
             case Running:
                 throw new IllegalStateException();
 
-            case InitialNew:
-            case InitialAssociated:
+            case Initial:
                 f_queueSuspended.add(frame);
                 break;
 
+            case SyncWait:
             case Waiting:
                 if (frame.getSynchronicity() == Synchronicity.Critical)
                     {
@@ -548,8 +565,8 @@ public class ServiceContext
                 iPC = Op.R_EXCEPTION;
                 break;
 
-            case Op.R_BLOCK:
-                // there are still some "waiting" registers
+            case Op.R_SYNC_WAIT: // there are still some waiting unsafe fibers
+            case Op.R_BLOCK:     // there are still some non-completed futures
                 return frame;
 
             default:
@@ -749,7 +766,6 @@ public class ServiceContext
                     }
 
                 case Op.R_REPEAT:
-                    frame.m_iPC = iPCLast;
                     fiber.setStatus(FiberStatus.Waiting, cOps);
                     return frame;
 
@@ -758,8 +774,12 @@ public class ServiceContext
                     fiber.setStatus(FiberStatus.Waiting, cOps);
                     return frame;
 
+                case Op.R_SYNC_WAIT:
+                    frame.m_iPC = iPCLast + 1;
+                    fiber.setStatus(FiberStatus.SyncWait, cOps);
+                    return frame;
+
                 case Op.R_PAUSE:
-                    frame.m_iPC = iPCLast;
                     fiber.setStatus(FiberStatus.Paused, cOps);
                     return frame;
 
@@ -918,12 +938,12 @@ public class ServiceContext
 
         switch (statusActive)
             {
-            case InitialNew:
-            case InitialAssociated:
+            case Initial:
             case Running:
             case Paused:
                 return ServiceStatus.Busy;
 
+            case SyncWait:
             case Waiting:
                 return ServiceStatus.BusyWaiting;
 

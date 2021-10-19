@@ -1330,12 +1330,7 @@ service Client<Schema extends RootSchema>
                     return DeferredFailed;
                     }
 
-                // it's important to prevent re-entrancy from the outside while this logical thread
-                // of execution is wending its way through the transaction manager and the various
-                // ObjectStores that are enlisted in the transaction; the Exclusive (instead of
-                // Forbidden) mode is important, because work can still be delegated back to this
-                // Client's Worker instance by the enlisted ObjectStores
-                try (val cs = new SynchronizedSection(critical=True))
+                try
                     {
                     result = txManager.commit(id_);
                     }
@@ -1387,8 +1382,7 @@ service Client<Schema extends RootSchema>
             Boolean result = True;
             if (id_ != NO_TX)
                 {
-                // avoid re-entrancy until transaction processing is complete
-                try (val cs = new SynchronizedSection(critical=True))
+                try
                     {
                     result = txManager.rollback(id_);
                     }
