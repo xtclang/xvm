@@ -44,6 +44,7 @@ public class xException
             {
             // cache all the well-known exception classes
             s_clzException                  = INSTANCE.getCanonicalClass();
+            s_clzDeadlock                   = f_templates.getTemplate("Deadlock"                     ).getCanonicalClass();
             s_clzIllegalArgument            = f_templates.getTemplate("IllegalArgument"              ).getCanonicalClass();
             s_clzIllegalState               = f_templates.getTemplate("IllegalState"                 ).getCanonicalClass();
             s_clzInvalidType                = f_templates.getTemplate("reflect.InvalidType"          ).getCanonicalClass();
@@ -115,6 +116,11 @@ public class xException
     public static ExceptionHandle serviceTerminated(Frame frame, String sService)
         {
         return makeHandle(frame, "Service terminated: " + sService);
+        }
+
+    public static ExceptionHandle deadlock(Frame frame, String sMsg)
+        {
+        return makeHandle(frame, s_clzDeadlock, sMsg);
         }
 
     public static ExceptionHandle illegalArgument(Frame frame, String sMsg)
@@ -271,6 +277,7 @@ public class xException
 
     // ----- well-known exception classes ----------------------------------------------------------
 
+    private static ClassComposition s_clzDeadlock;
     private static ClassComposition s_clzException;
     private static ClassComposition s_clzIllegalArgument;
     private static ClassComposition s_clzIllegalState;
