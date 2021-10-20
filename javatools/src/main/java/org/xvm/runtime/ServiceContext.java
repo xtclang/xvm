@@ -433,6 +433,8 @@ public class ServiceContext
         }
 
     /**
+     * Note: if this method returns true, it also sets the "blocker" on the evaluating fiber.
+     *
      * @return true iff there are any fibers that block the specified fiber's execution
      */
     public boolean isAnyNonConcurrentWaiting(Fiber fiber)

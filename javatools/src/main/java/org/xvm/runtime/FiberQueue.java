@@ -226,6 +226,8 @@ public class FiberQueue
      * Check if there is any "waiting" frame that is not concurrent safe with regard to the
      * specified fiber.
      *
+     * Note: if this method returns true, it also sets the "blocker" on the evaluating fiber
+     *
      * @param fiberCandidate  the fiber that the service is evaluating for execution
      *
      * @return true iff there are any non-concurrent waiting frames
