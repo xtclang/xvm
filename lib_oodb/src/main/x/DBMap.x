@@ -16,6 +16,37 @@ interface DBMap<Key extends immutable Const, Value extends immutable Const>
         return DBValue;
         }
 
+    /**
+     * Perform an requirement-test against a specific entry in the DBMap. Despite the naive default
+     * implementation provided as part of the DBMap interface, regarding the rechecking of the
+     * requirement-test before commit, the API contract for this method allows the database to omit
+     * rechecking any changes that do not impact the specified key.
+     *
+     * @param key   the key of the entry to apply the requirement-test to
+     * @param test  the requirement-test function to evaluate against the specified entry
+     *
+     * @return the `Result` of evaluating the function against the specified entry
+     */
+    <Result extends immutable Const> Result require(Key key, function Result(Entry) test)
+        {
+        return require(map -> map.process(key, test));
+        }
+
+    /**
+     * Perform a blind adjustment of a specific entry in the DBMap. Despite the naive default
+     * implementation provided as part of the DBMap interface, regarding the forced evaluation of
+     * the deferred adjustment on any access to the DBMap, the API contract for this method allows
+     * the database to continue to defer adjustments to the end of the transaction if the otherwise-
+     * forcing method calls would not be effected by the specified key.
+     *
+     * @param key     the key of the entry to apply the blind adjustment to
+     * @param adjust  a function that operates against (and may both read and modify) the entry
+     */
+    void defer(Key key, function Boolean(Entry) adjust)
+        {
+        defer(map -> map.process(key, adjust));
+        }
+
 
     // ----- Map.Entry extensions ------------------------------------------------------------------
 
