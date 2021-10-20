@@ -1,18 +1,83 @@
 /**
  * The base interface for all "database objects", which are the representations of database
- * organization, functionality, and storage. Examples including [DBMap], [DBQueue], [DBList],
- * [DBProcessor], [DBLog], and [DBCounter].
+ * organization, functionality, and storage. The categories of database object are: [DBSchema],
+ * [DBCounter], [DBValue], [DBMap], [DBList], [DBQueue], [DBProcessor], and [DBLog].
  *
- * The various `DBObject` interfaces are expected to be implemented as part of a database engine
- * implementation, but support orthogonal functionality that can be provided by an application
- * developer, packaged in the form of a `mixin`. Additionally, it is expected that database engine
- * implementations will make use of code generation to form a deployable database type system for
- * an application's database module; while not required, the code generation is expected to support
- * a richer set of capabilities (such as database evolution) without a dramatic performance impact.
- * The result is that an application's database design is independent of a specific database engine
- * implementation, coupling to it only through the implementation-independent `oodb` module
- * interfaces, yet still able to provide the custom application object interfaces as if they were
- * built into the database design itself.
+ * The implementations of these various `DBObject` interfaces are provided by a specific database
+ * engine implementation. A database schema developer may also provide their own additional
+ * functionality in addition to the methods and properties on any of their own defined DBObjects in
+ * their schema, by extending the appropriate DBObject interface, or by creating a `mixin` into that
+ * interface. This is the same manner in which database schemas are designed; in the following
+ * example, we see the concept applied both to the root database schema and to a DBObject within
+ * that schema:
+ *
+ *     module Bank
+ *             incorporates oodb.Database           // <- this marks the module as a database module
+ *         {
+ *         package oodb import oodb.xtclang.org;    // <- this is the OODB API
+ *
+ *         // this defines a custom database schema
+ *         interface BankSchema
+ *                 extends oodb.RootSchema
+ *             {
+ *             // this declares a database object within the schema
+ *             @RO Accounts accounts;
+ *             }
+ *
+ *         // this "customizes" the DBMap interface for holding Account objects
+ *         interface Accounts
+ *                 extends oodb.DBMap<Int, Account>
+ *             {
+ *             void transfer(Int fromId, Int toId, Dec amount)
+ *                 {
+ *                 assert Account from := accounts.get(fromId), Account to := accounts.get(toId);
+ *                 accounts.put(fromId, from.adjust(-amount));
+ *                 accounts.put(toId, to.adjust(amount));
+ *                 }
+ *             }
+ *
+ *         // this is just a value that can be stored in the database
+ *         const Account(Int id, Dec balance)
+ *             {
+ *             Account adjust(Dec amount)
+ *                 {
+ *                 return new Account(id, this.balance + amount);
+ *                 }
+ *             }
+ *         }
+ *
+ * That is an entire database schema, although obviously a very simple one. There are restrictions
+ * defined for the names used within a schema, but primarily those restrictions are:
+ *
+ * 1. Do not use any of the names that would conflict with the names in the `oodb` interfaces. This
+ *    one is simple; for example, if you are defining a schema, then you cannot use any of the names
+ *    on DBSchema (including any names on its base interface, `DBObject`, i.e. this interface.)
+ *
+ * 2. Names may not end with an underscore. This rule is arbitrary, but it allows the database
+ *    implementation of these interfaces to shield its implementations details (from collision),
+ *    by suffixing any potentially colliding names with an underscore.
+ *
+ * It is expected that database engine implementations will make use of code generation to form a
+ * deployable database type system built around the application's database module. Consider the
+ * schema example above:
+ *
+ * * The `accounts` property of the schema needs to have an implementation automatically provided by
+ *   the database engine that will produce a reference to a DBMap object that implements the
+ *   `Accounts` interface;
+ *
+ * * The implementation of the `Accounts` interface needs to ensure that a call to `transfer()`
+ *   is automatically wrapped in a transaction, if one does not already exist.
+ *
+ * While not required, a database engine is expected to provide a richer set of capabilities than
+ * are defined in the `oodb` API; support for schema evolution is one obvious example. The use of
+ * code generation allows these capabilities to be baked into an application's database without
+ * dramatic performance penalties.
+ *
+ * The result of this `oodb` design is that an application's database design can remain completely
+ * independent of a specific database engine. The custom logic and design within an application's
+ * database schema couples to the underlying database engine implementation only through the `oodb`
+ * API, yet are still able to support those customizations as if they were built into the database
+ * engine itself.
  */
 interface DBObject
     {
@@ -276,32 +341,32 @@ interface DBObject
         }
 
     /**
-     * Perform a semi-blind test against the DBObject, and register the same test (along with the
-     * result from running it) as a precondition for the commit (i.e. a "prepare constraint").
+     * Perform an arbitrarily coarse-grained test against the DBObject, and register the same test
+     * (along with the result from evaluating it) as a precondition for the commit (i.e. a "prepare
+     * constraint").
      *
-     * This operation provides several capabilities:
+     * This operation allows a test to be conducted on the previous state of the data in the
+     * database, without explicitly enlisting _the exact copy of that state_. In other words, the
+     * test is semi-blind, because only the result that the test returns to the caller must remain
+     * invariant in order for the commit to succeed. Both the test and the corresponding result are
+     * registered with the transaction as a necessary precondition for the commit, such that changes
+     * to the database sufficient to change the result of the test, will result in the current
+     * transaction failing to commit (and thus rolling back).
      *
-     * * First, it allows a test to be conducted on the current state of the data in the database,
-     *   without explicitly enlisting _that exact copy of that state_. In other words, the test is
-     *   semi-blind, because it does not return the data contents of the database to the caller.
+     * This method represents an explicit mechanism to dynamically register a pre-condition for
+     * commit, and as such can be thought of like a [Validator] -- except that a [Validator] is
+     * declared in the schema and applies to every transaction (it is not dynamic), while this
+     * requirement-test may be parameterized, so long as all of the arguments are immutable.
      *
-     * * Second, it registers the test and the corresponding result as a necessary precondition for
-     *   the commit, such that changes to the database sufficient to change the result of the test,
-     *   will result in the current transaction failing to commit (and thus rolling back). This
-     *   method represents the only explicit way to dynamically register a pre-condition for commit,
-     *   and as such can be thought of like a [Validator] -- except that a [Validator] must be
-     *   declared in the schema and applies to every transaction (it is not dynamic), and this test
-     *   may be parameterized, as long as all of the information that it captures is immutable.
+     * When the commit occurs, the test is repeated against the last-committed transaction (and
+     * **not** against the current transaction), which means that the commit is predicated on other
+     * concurrent transactions not having invalidated the test requirement. Additionally, the commit
+     * processing may omit the test altogether if no database changes have occurred concurrently
+     * that would impact the result of the test.
      *
-     * When the commit occurs, the test is repeated against the _immediately-preceding_ transaction,
-     * although a database implementation may choose to skip the test if no database changes have
-     * occurred that would impact the result of the test.
+     * @param test  the requirement-test function to evaluate
      *
-     * @param test  a function to evaluate immediately, which will return a `Result` to the caller,
-     *              without enlisting any data that is read in the process into the transaction,
-     *              but which is also stored (along with that Boolean) as a precondition for commit
-     *
-     * @return the result of evaluating the function
+     * @return the `Result` of evaluating the function
      */
     <Result extends immutable Const> Result require(function Result(DBObject) test);
 
