@@ -1,10 +1,12 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Compile xdk/lib" type="Application" factoryName="Application">
+  <configuration default="false" name="Compile xdk" type="Application" factoryName="Application">
     <option name="MAIN_CLASS_NAME" value="org.xvm.tool.Compiler" />
     <module name="xvm.javatools.main" />
-    <option name="PROGRAM_PARAMETERS" value="-v -o build/xdk/lib ../ecstasy/src/main/x ../javatools_bridge/src/main/x " />
+    <option name="PROGRAM_PARAMETERS" value="-v -rebuild -o build/xdk/lib ../ecstasy/src/main/x ../javatools_bridge/src/main/x " />
     <option name="VM_PARAMETERS" value="-Xms256m -Xmx1024m -ea " />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/xdk" />
-    <method v="2" />
+    <method v="2">
+      <option name="MakeProject" enabled="true" />
+    </method>
   </configuration>
 </component>
