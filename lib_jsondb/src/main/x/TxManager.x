@@ -11,6 +11,7 @@ import json.Parser;
 import model.DBObjectInfo;
 import model.SysInfo;
 
+import oodb.DBObject;
 import oodb.RootSchema;
 import oodb.Transaction.CommitResult;
 import oodb.Transaction.TxInfo;
@@ -356,7 +357,15 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      */
     protected/private ArrayDeque<Client<Schema>> clientCache = new ArrayDeque();
 
-    typedef Client<Schema>.DBObjectImpl.Requirement_ as Requirement;
+    /**
+     * Information about a [DBObject.require] call during a transaction.
+     */
+    static const Requirement<Result extends immutable Const>
+        (
+        Int                       dboId,
+        function Result(DBObject) test,
+        Result                    result,
+        );
 
     /**
      * The writeId of the transaction, if any, that is currently preparing.
@@ -685,7 +694,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      * @param writeId  the transaction id
      * @param req      the Requirement
      */
-    void registerRequirement(Int writeId, Requirement req)
+    <Result extends immutable Const> Result registerRequirement(Int writeId, Int dboId, function Result(DBObject) test)
         {
         checkEnabled();
 
@@ -693,7 +702,19 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         TxRecord rec = txFor(writeId);
         assert rec.status == InFlight;
 
-        rec.registerRequirement(req);
+        Client client = rec.ensureClient(ReadOnly);
+        Result result;
+        try
+            {
+            result = client.evaluateRequirement(dboId, test);
+            }
+        finally
+            {
+            rec.releaseClient();
+            }
+
+        rec.registerRequirement(new Requirement(dboId, test, result));
+        return result;
         }
 
     /**
@@ -1695,7 +1716,9 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 Client<Schema> client = ensureClient(ReadOnly);
                 for (Requirement req : requirements)
                     {
-                    if (!client.verifyRequirement(req))
+                    req.Result   oldVal = req.result                                      /*TODO GG why this:*/ .as(req.Result);
+                    req.Result   newVal = client.evaluateRequirement(req.dboId, req.test) /*TODO GG why this:*/ .as(req.Result);
+                    if (oldVal != newVal)
                         {
                         return False;
                         }

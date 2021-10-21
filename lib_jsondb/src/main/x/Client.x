@@ -36,6 +36,7 @@ import storage.ValueStore;
 
 import Catalog.BuiltIn;
 import TxManager.NO_TX;
+import TxManager.Requirement;
 
 
 /**
@@ -328,14 +329,12 @@ service Client<Schema extends RootSchema>
      *
      * @return True if the same result is produced as indicated in the requirement
      */
-    Boolean verifyRequirement(DBObjectImpl.Requirement_ req)
+    <Result extends immutable Const> Result evaluateRequirement(Int dboId, function Result(DBObjectImpl) test)
         {
         assert internal;
 
-        DBObjectImpl dbo    = implFor(req.dboId);
-        req.Result   oldVal = req.result    /*TODO GG*/ .as(req.Result);
-        req.Result   newVal = req.test(dbo) /*TODO GG*/ .as(req.Result);
-        return oldVal == newVal;
+        DBObjectImpl dbo = implFor(dboId);
+        return test(dbo);
         }
 
     /**
@@ -799,23 +798,11 @@ service Client<Schema extends RootSchema>
                 }
             }
 
-        /**
-         * Information about require() call during a transaction.
-         */
-        const Requirement_<Result extends immutable Const>
-            (
-            Int                           dboId,
-            function Result(DBObjectImpl) test,
-            Result                        result,
-            );
-
         @Override
-        <Result extends immutable Const> Result require(function Result(DBObjectImpl) test)
+        <Result extends immutable Const> Result require(function Result(DBObject) test)
             {
             Transaction tx = requireTransaction_("require()");
-            Result result = test(this); // REVIEW - use readId instead of writeId?
-            outer.txManager.registerRequirement(tx.id_, new Requirement_<Result>(info_.id, test, result));
-            return result;
+            return outer.txManager.registerRequirement(tx.id_, info_.id, test);
             }
 
         @Override
