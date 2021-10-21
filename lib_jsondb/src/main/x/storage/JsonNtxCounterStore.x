@@ -2,6 +2,9 @@ import model.DBObjectInfo;
 
 import json.Parser;
 
+import TxManager.NO_TX;
+
+
 /**
  * Provides the low-level I/O for a non-transactional (i.e. extra-transactional) counter.
  */
@@ -10,7 +13,15 @@ service JsonNtxCounterStore(Catalog catalog, DBObjectInfo info)
         extends ObjectStore(catalog, info)
         implements CounterStore
     {
+    /**
+     * The current value of the counter, as it is stored on disk.
+     */
     Int current;
+
+    /**
+     * The beginning of the block of counter values, if bulk allocation is being used.
+     */
+    Int block = -1;
 
     /**
      * The file owned by this ObjectStore for purpose of its data storage. The ObjectStore may
@@ -31,9 +42,25 @@ service JsonNtxCounterStore(Catalog catalog, DBObjectInfo info)
     @Override
     void store(Int txId, Int value)
         {
-        checkRead();
+        checkWrite();
         current = value;
         dataFile.contents = value.toString().utf8();
+        }
+
+    /**
+     * For use internally (only!) for monotonic counters that can have gaps on restart.
+     */
+    Int next()
+        {
+        checkWrite();
+        if (0 <= block < current)
+            {
+            return ++block;
+            }
+
+        block = current;
+        store(NO_TX, current + 100);
+        return next();
         }
 
     @Override

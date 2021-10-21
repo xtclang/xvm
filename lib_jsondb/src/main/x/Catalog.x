@@ -116,6 +116,7 @@ service Catalog<Schema extends RootSchema>
         Pending<DBList<DBPending>>,
         Transactions<DBLog<DBTransaction>>,
         Errors<DBLog<String>>,
+        TxCounter<DBCounter>,
         ;
 
         /**
@@ -175,21 +176,22 @@ service Catalog<Schema extends RootSchema>
             BuiltIn.Errors.id,
             ]),
 
-        new DBObjectInfo("info",         Path:/sys/info,         DBValue, BuiltIn.Info.id,         BuiltIn.Sys.id, typeParams=Map:["Value"=DBInfo]),
-        new DBObjectInfo("users",        Path:/sys/users,        DBMap,   BuiltIn.Users.id,        BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=DBUser]),
-        new DBObjectInfo("types",        Path:/sys/types,        DBMap,   BuiltIn.Types.id,        BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=Type]),
-        new DBObjectInfo("objects",      Path:/sys/objects,      DBMap,   BuiltIn.Objects.id,      BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=DBObject]),
-        new DBObjectInfo("schemas",      Path:/sys/schemas,      DBMap,   BuiltIn.Schemas.id,      BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=DBSchema]),
-        new DBObjectInfo("counters",     Path:/sys/counters,     DBMap,   BuiltIn.Counters.id,     BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=DBCounter]),
-        new DBObjectInfo("values",       Path:/sys/values,       DBMap,   BuiltIn.Values.id,       BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=DBValue]),
-        new DBObjectInfo("maps",         Path:/sys/maps,         DBMap,   BuiltIn.Maps.id,         BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=DBMap]),
-        new DBObjectInfo("lists",        Path:/sys/lists,        DBMap,   BuiltIn.Lists.id,        BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=DBList]),
-        new DBObjectInfo("queues",       Path:/sys/queues,       DBMap,   BuiltIn.Queues.id,       BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=DBQueue]),
-        new DBObjectInfo("processors",   Path:/sys/processors,   DBMap,   BuiltIn.Processors.id,   BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=DBProcessor]),
-        new DBObjectInfo("logs",         Path:/sys/logs,         DBMap,   BuiltIn.Logs.id,         BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=DBLog]),
-        new DBObjectInfo("pending",      Path:/sys/pending,      DBList,  BuiltIn.Pending.id,      BuiltIn.Sys.id, typeParams=Map:["Element"=DBPending]),
-        new DBObjectInfo("transactions", Path:/sys/transactions, DBLog,   BuiltIn.Transactions.id, BuiltIn.Sys.id, typeParams=Map:["Element"=DBTransaction]),
-        new DBObjectInfo("errors",       Path:/sys/errors,       DBLog,   BuiltIn.Errors.id,       BuiltIn.Sys.id, typeParams=Map:["Element"=String]),
+        new DBObjectInfo("info",         Path:/sys/info,         DBValue,   BuiltIn.Info.id,         BuiltIn.Sys.id, typeParams=Map:["Value"=DBInfo]),
+        new DBObjectInfo("users",        Path:/sys/users,        DBMap,     BuiltIn.Users.id,        BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=DBUser]),
+        new DBObjectInfo("types",        Path:/sys/types,        DBMap,     BuiltIn.Types.id,        BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=Type]),
+        new DBObjectInfo("objects",      Path:/sys/objects,      DBMap,     BuiltIn.Objects.id,      BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=DBObject]),
+        new DBObjectInfo("schemas",      Path:/sys/schemas,      DBMap,     BuiltIn.Schemas.id,      BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=DBSchema]),
+        new DBObjectInfo("counters",     Path:/sys/counters,     DBMap,     BuiltIn.Counters.id,     BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=DBCounter]),
+        new DBObjectInfo("values",       Path:/sys/values,       DBMap,     BuiltIn.Values.id,       BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=DBValue]),
+        new DBObjectInfo("maps",         Path:/sys/maps,         DBMap,     BuiltIn.Maps.id,         BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=DBMap]),
+        new DBObjectInfo("lists",        Path:/sys/lists,        DBMap,     BuiltIn.Lists.id,        BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=DBList]),
+        new DBObjectInfo("queues",       Path:/sys/queues,       DBMap,     BuiltIn.Queues.id,       BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=DBQueue]),
+        new DBObjectInfo("processors",   Path:/sys/processors,   DBMap,     BuiltIn.Processors.id,   BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=DBProcessor]),
+        new DBObjectInfo("logs",         Path:/sys/logs,         DBMap,     BuiltIn.Logs.id,         BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=DBLog]),
+        new DBObjectInfo("pending",      Path:/sys/pending,      DBList,    BuiltIn.Pending.id,      BuiltIn.Sys.id, typeParams=Map:["Element"=DBPending]),
+        new DBObjectInfo("transactions", Path:/sys/transactions, DBLog,     BuiltIn.Transactions.id, BuiltIn.Sys.id, typeParams=Map:["Element"=DBTransaction]),
+        new DBObjectInfo("errors",       Path:/sys/errors,       DBLog,     BuiltIn.Errors.id,       BuiltIn.Sys.id, typeParams=Map:["Element"=String]),
+        new DBObjectInfo("txCounter",    Path:/sys/txCounter,    DBCounter, BuiltIn.TxCounter.id,    BuiltIn.Sys.id, transactional=False),
         ];
 
     /**
@@ -457,6 +459,7 @@ service Catalog<Schema extends RootSchema>
 //                case Pending:      TODO new ListStore<DBPending>();
 //                case Transactions: TODO new LogStore<DBTransaction>();
 //                case Errors:       TODO new LogStore<String>();
+                case TxCounter:    new JsonNtxCounterStore(this, info);
                 default:           assert as $"unsupported id={id}, BuiltIn={BuiltIn.byId(id)}, info={info}";
                 };
             }

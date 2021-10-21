@@ -16,6 +16,7 @@ import oodb.RootSchema;
 import oodb.Transaction.CommitResult;
 import oodb.Transaction.TxInfo;
 
+import storage.JsonNtxCounterStore;
 import storage.ObjectStore;
 
 import Catalog.BuiltIn;
@@ -265,6 +266,16 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      * The JSON Schema to use (for system classes).
      */
     protected/private json.Schema internalJsonSchema;
+
+    /**
+     * The storage implementation for the transaction counter used to generate externally visible
+     * transaction identities.
+     */
+    @Lazy
+    protected/private JsonNtxCounterStore visibleIdCounter.calc()
+        {
+        return catalog.storeFor(BuiltIn.TxCounter.id).as(JsonNtxCounterStore);
+        }
 
     /**
      * An illegal transaction ID used to indicate that no ID has been assigned yet.
@@ -645,6 +656,16 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
     // ----- transactional API ---------------------------------------------------------------------
 
     /**
+     * @return the next transaction id to use; this is the transaction id that will be visible
+     *         through the oodb API, and not related to either the `readId` or `writeId` used
+     *         internally by this jsonDB implementation
+     */
+    UInt generateTxId()
+        {
+        return visibleIdCounter.next().toUInt64();
+        }
+
+    /**
      * Begin a new transaction when it performs its first operation.
      *
      * This method is intended to only be used by the [Client].
@@ -667,12 +688,11 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      *
      * @param tx        the Client Transaction to assign TxIds for
      * @param worker    the Client Worker service to offload expensive CPU tasks onto
-     * @param systemTx  indicates that the transaction is being conducted by the database system
-     *                  itself, and not by an application "client"
+     * @param readOnly  if the transaction is not allowed to make any changes
      *
      * @return  the "write" transaction ID to use
      */
-    Int begin(Client.Transaction tx, Client.Worker worker, Boolean systemTx = False)
+    Int begin(Client.Transaction tx, Client.Worker worker, Boolean readOnly)
         {
         checkEnabled();
 
@@ -680,7 +700,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         assert !byClientId.contains(clientId);
 
         Int      writeId = genWriteId();
-        TxRecord rec     = new TxRecord(tx, tx.txInfo, clientId, worker, writeId);
+        TxRecord rec     = new TxRecord(tx, tx.txInfo, clientId, worker, writeId, readOnly);
 
         byClientId.put(clientId, rec);
         byWriteId .put(writeId , rec);
@@ -1272,6 +1292,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                   Int                 clientId,
                   Client.Worker       worker,
                   Int                 writeId,
+                  Boolean             readOnly,
                  )
             {
             this.clientTx = clientTx;
@@ -1280,6 +1301,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             this.worker   = worker;
             this.writeId  = writeId;
             this.readId   = NO_TX;
+            this.readOnly = readOnly;
             }
 
         /**
@@ -1584,10 +1606,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         /**
          * True if the transaction is known to be read-only.
          */
-        @RO Boolean readOnly.get()
-            {
-            return txInfo.readOnly;
-            }
+        Boolean readOnly;
 
         /**
          * Attempt to prepare the transaction.

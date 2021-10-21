@@ -246,18 +246,6 @@ service Client<Schema extends RootSchema>
         }
 
     /**
-     * @return the next transaction id to use; this is the transaction id that will be visible
-     *         through the oodb API, and not related to either the `readId` or `writeId` used
-     *         internally by this jsonDB implementation
-     */
-    UInt generateTxId()
-        {
-        // TODO
-        private UInt c = 0;
-        return ++c;
-        }
-
-    /**
      * For the transaction manager's internal clients that emulate various stages in a transaction,
      * this sets the current transaction id for the client.
      *
@@ -726,6 +714,18 @@ service Client<Schema extends RootSchema>
          * The last deferred adjustment function for this DBObject in the current transaction.
          */
         protected Deferred_? dboLastDeferred_ = Null;
+
+        @Override
+        @RO (Connection + Schema) dbConnection.get()
+            {
+            return outer.conn ?: assert;
+            }
+
+        @Override
+        @RO (Transaction + Schema)? dbTransaction.get()
+            {
+            return outer.tx;
+            }
 
         @Override
         @RO DBObject!? dbParent.get()
@@ -1202,7 +1202,7 @@ service Client<Schema extends RootSchema>
             assert outer.tx == Null as "Attempted to create a transaction when one already exists";
             assert !internal;
 
-            id ?:= outer.generateTxId();
+            id ?:= outer.txManager.generateTxId();
             TxInfo txInfo = new TxInfo(id, name, priority, readOnly, timeout, retryCount);
 
             (Transaction + Schema) newTx = new Transaction(info_, txInfo).as(Transaction + Schema);

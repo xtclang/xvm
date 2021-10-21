@@ -13,7 +13,7 @@ interface DBMap<Key extends immutable Const, Value extends immutable Const>
     @Override
     @RO DBCategory dbCategory.get()
         {
-        return DBValue;
+        return DBMap;
         }
 
     /**

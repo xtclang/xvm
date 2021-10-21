@@ -7,6 +7,8 @@
 interface DBProcessor<Element extends immutable Const>
         extends DBObject
     {
+    // ----- scheduling methods --------------------------------------------------------------------
+
     /**
      * Schedule the specified element to run after this transaction completes, and return the
      * ability to customize the schedule.
@@ -193,7 +195,7 @@ interface DBProcessor<Element extends immutable Const>
     void resume();
 
 
-    // ----- DBObject methods ----------------------------------------------------------------------
+    // ----- processing methods --------------------------------------------------------------------
 
     /**
      * Process an element.
