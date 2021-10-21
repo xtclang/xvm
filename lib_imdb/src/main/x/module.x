@@ -1,18 +1,13 @@
+/**
+ * TODO this module with remaining classes is kept only as a placeholder for a future refactoring.
+ */
 module imdb.xtclang.org
     {
     package oodb import oodb.xtclang.org;
 
     import oodb.DBObject.DBCategory as Category;
 
-    const DBObjectInfo(
-            String                        id,
-            Category                      category,
-            String                        parentId      = "",
-            String[]                      childIds      = [],
-            Boolean                       transactional = True,
-            Map<String, Type>             typeParams    = Map:[],
-            Map<String, immutable Object> options       = Map:[],
-            )
+    const DBObjectInfo(String id, Category category)
         {
         }
 

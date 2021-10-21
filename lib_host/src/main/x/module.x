@@ -226,11 +226,9 @@ module host.xtclang.org
         {
         @Inject Map<String, String> properties;
 
-        switch (String impl = properties.getOrDefault("db.impl", "imdb"))
+        switch (String impl = properties.getOrDefault("db.impl", "json"))
             {
-            case "imdb":
-                return True, new ImdbHost(dbModuleName);
-
+            case "":
             case "json":
                 return True, new JsondbHost(dbModuleName);
 

@@ -76,23 +76,23 @@ class JsondbHost(String dbModuleName)
     String hostName = "jsondb";
 
     @Override
-    String moduleSourceTemplate = $./templates/jsondb/_module.txt;
+    String moduleSourceTemplate = $./templates/_module.txt;
 
     @Override
-    String propertyGetterTemplate = $./templates/jsondb/PropertyGetter.txt;
+    String propertyGetterTemplate = $./templates/PropertyGetter.txt;
 
     @Override
-    String propertyInfoTemplate = $./templates/jsondb/PropertyInfo.txt;
+    String propertyInfoTemplate = $./templates/PropertyInfo.txt;
 
     @Override
-    String customInstantiationTemplate = $./templates/jsondb/CustomInstantiation.txt;
+    String customInstantiationTemplate = $./templates/CustomInstantiation.txt;
 
     @Override
-    String customDeclarationTemplate = $./templates/jsondb/CustomDeclaration.txt;
+    String customDeclarationTemplate = $./templates/CustomDeclaration.txt;
 
     @Override
-    String customMethodTemplate = $./templates/jsondb/CustomMethod.txt;
+    String customMethodTemplate = $./templates/CustomMethod.txt;
 
     @Override
-    String customInvocationTemplate = $./templates/common/CustomInvocation.txt;
+    String customInvocationTemplate = $./templates/CustomInvocation.txt;
     }

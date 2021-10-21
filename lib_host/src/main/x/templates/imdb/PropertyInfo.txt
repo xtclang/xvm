@@ -1,3 +1,0 @@
-            "%propertyName%" = new DBObjectInfo_("%propertyName%", %propertyCategory%,
-                transactional=%transactional%, typeParams=Map<String, Type>:[%propertyTypeParams%],
-                options=Map<String, immutable Object>:[%options%]),
