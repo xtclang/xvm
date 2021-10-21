@@ -139,12 +139,18 @@ public class ReturnStatement
         int              cExprs       = listExprs == null ? 0 : listExprs.size();
         TypeConstant[]   atypeActual  = null;
 
-        // resolve auto-narrowing
+        // resolve auto-narrowing; don't mutate aRetTypes!
+        boolean fClone = true;
         for (int i = 0; i < cRets; i++)
             {
             TypeConstant typeRet = aRetTypes[i];
             if (typeRet.containsAutoNarrowing(false))
                 {
+                if (fClone)
+                    {
+                    aRetTypes = aRetTypes.clone();
+                    fClone    = false;
+                    }
                 IdentityConstant idCtx = ctx.isMethod()
                         ? ctx.getThisClass().getIdentityConstant()
                         : null;
