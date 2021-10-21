@@ -16,6 +16,57 @@ interface DBLog<Element extends immutable Const>
         return DBLog;
         }
 
+    /**
+     * A representation of information that is present in the `DBLog`.
+     */
+    interface Entry
+        {
+        /**
+         * The `DateTime` that the item was logged.
+         */
+        @RO DateTime datetime;
+
+        /**
+         * The `DBUser` that the item was logged on behalf of.
+         */
+        @RO DBUser user;
+
+        /**
+         * The transaction id, from the transaction's [TxInfo](Transaction.TxInfo), that the item
+         * was logged by, if there was a transaction.
+         */
+        @RO UInt? txId;
+
+        /**
+         * The transaction name, from the transaction's [TxInfo](Transaction.TxInfo), that the item
+         * was logged by, if any.
+         */
+        @RO String? txName;
+
+        /**
+         * The element that was logged.
+         */
+        @RO Element value;
+        }
+
+    /**
+     * If the application is permitted to access the log contents, then this method allows the
+     * application to request a portion of the log, selected based on the values in the log entries.
+     *
+     * @param period  (optional) the time period to search in, which can be provided as either a
+     *                begin and end date/time value, or as a duration from now (e.g. "the last 10S")
+     * @param user    (optional) the user to search for
+     * @param txIds   (optional) the transaction id (or range of ids) to search for
+     * @param txName  (optional) the transaction name to search for
+     *
+     * @return True iff any log entries were selected
+     * @return (conditional) a `List` that represents the selected log entries
+     */
+    conditional List<Entry> select((Range<DateTime>|Duration)? period = Null,
+                                   DBUser?                     user   = Null,
+                                   (UInt|Range<UInt>)?         txIds  = Null,
+                                   String?                     txName = Null);
+
 
     // ----- transactional information -------------------------------------------------------------
 

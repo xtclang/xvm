@@ -245,11 +245,15 @@ service Client<Schema extends RootSchema>
         }
 
     /**
-     * True if this is an internal ("system") client.
+     * @return the next transaction id to use; this is the transaction id that will be visible
+     *         through the oodb API, and not related to either the `readId` or `writeId` used
+     *         internally by this jsonDB implementation
      */
-    @RO Boolean internal.get()
+    UInt generateTxId()
         {
-        return Catalog.isInternalClientId(id);
+        // TODO
+        private UInt c = 0;
+        return ++c;
         }
 
     /**
@@ -273,8 +277,8 @@ service Client<Schema extends RootSchema>
             };
 
         // two cached transaction info objects (one R/W, one RO) for internal use
-        static TxInfo rwInfo = new TxInfo(name="internal", readOnly=False);
-        static TxInfo roInfo = new TxInfo(name="internal", readOnly=True );
+        static TxInfo rwInfo = new TxInfo(id=0, name="internal", readOnly=False);
+        static TxInfo roInfo = new TxInfo(id=0, name="internal", readOnly=True );
 
         TxInfo txInfo = readOnly ? roInfo : rwInfo;
         if (tx == Null)
@@ -307,6 +311,14 @@ service Client<Schema extends RootSchema>
         client.representTransaction(txManager.readIdFor(tx?.id_ : assert));
         preTxView = client;
         return client;
+        }
+
+    /**
+     * True if this is an internal ("system") client.
+     */
+    @RO Boolean internal.get()
+        {
+        return Catalog.isInternalClientId(id);
         }
 
     /**
@@ -1203,6 +1215,7 @@ service Client<Schema extends RootSchema>
             assert outer.tx == Null as "Attempted to create a transaction when one already exists";
             assert !internal;
 
+            id ?:= outer.generateTxId();
             TxInfo txInfo = new TxInfo(id, name, priority, readOnly, timeout, retryCount);
 
             (Transaction + Schema) newTx = new Transaction(info_, txInfo).as(Transaction + Schema);
@@ -1313,7 +1326,7 @@ service Client<Schema extends RootSchema>
                 return PreviouslyClosed;
                 }
 
-            if (internal)
+            if (outer.internal)
                 {
                 log($"Illegal commit request for {this}.");
                 // technically, this error is not correct, but the gist is correct: this transaction
@@ -1373,7 +1386,7 @@ service Client<Schema extends RootSchema>
                 return False;
                 }
 
-            if (internal)
+            if (outer.internal)
                 {
                 log($"Illegal rollback request for {this}.");
                 return False;
@@ -1890,6 +1903,17 @@ service Client<Schema extends RootSchema>
                 store_.append(tx.id, value);
                 }
             return this;
+            }
+
+        @Override
+        // TODO GG why is "DBLog<Value>." required for "Entry"
+        conditional List<DBLog<Value>.Entry> select((Range<DateTime>|Duration)? period = Null,
+                                                     DBUser?                     user   = Null,
+                                                     (UInt|Range<UInt>)?         txIds  = Null,
+                                                     String?                     txName = Null)
+            {
+            // TODO
+            return False;
             }
         }
     }

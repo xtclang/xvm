@@ -2239,11 +2239,8 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                .append(", Status=")
                .append(status);
 
-            if (!txInfo.nondescript)
-                {
-                buf.append(", txInfo=")
-                   .append(txInfo);
-                }
+            buf.append(", txInfo=")
+               .append(txInfo);
 
             if (!sealById.empty)
                 {

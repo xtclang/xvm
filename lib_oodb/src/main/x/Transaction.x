@@ -18,7 +18,7 @@ interface Transaction<Schema extends RootSchema>
     /**
      * Represents the parameters used to create a Transaction.
      *
-     * @param id          (optional) an integer identifier to associate with the transaction
+     * @param id          an integer identifier to associate with the transaction
      * @param name        (optional) a descriptive name to associate with the transaction
      * @param priority    (optional) the transactional priority
      * @param readOnly    (optional) pass True to indicate that transaction is not going to modify
@@ -30,7 +30,7 @@ interface Transaction<Schema extends RootSchema>
      * @param retryCount  (optional) the number of times that this same transaction has already been
      *                    attempted
      */
-    static const TxInfo(UInt?                  id          = Null,
+    static const TxInfo(UInt                   id,
                         String?                name        = Null,
                         DBTransaction.Priority priority    = Normal,
                         Boolean                readOnly    = False,
@@ -38,40 +38,25 @@ interface Transaction<Schema extends RootSchema>
                         Int                    retryCount  = 0,
                        )
         {
-        /**
-         * True iff the TxInfo doesn't specify any non-default information.
-         */
-        Boolean nondescript.get()
-            {
-            return id         == Null
-                && name       == Null
-                && priority   == Normal
-                && readOnly   == False
-                && timeout    == Null
-                && retryCount == 0;
-            }
-
         @Override
         String toString()
             {
             StringBuffer buf = new StringBuffer().append("TxInfo(");
 
-            if (id != null)
-                {
-                buf.append("id=")
-                   .append(id)
-                   .append(", ");
-                }
+            buf.append("id=")
+               .append(id);
 
             if (name != null)
                 {
-                buf.append("name=")
-                   .append(name)
-                   .append(", ");
+                buf.append(", name=")
+                   .append(name);
                 }
 
-            buf.append("priority=")
-               .append(priority);
+            if (priority != Normal)
+                {
+                buf.append(", priority=")
+                   .append(priority);
+                }
 
             if (readOnly)
                 {
@@ -80,9 +65,8 @@ interface Transaction<Schema extends RootSchema>
 
             if (timeout != null)
                 {
-                buf.append("timeout=")
-                   .append(timeout)
-                   .append(", ");
+                buf.append(", timeout=")
+                   .append(timeout);
                 }
 
             if (retryCount != 0)

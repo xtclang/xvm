@@ -1,7 +1,9 @@
 /**
- * The base interface for all "database objects", which are the representations of database
- * organization, functionality, and storage. The categories of database object are: [DBSchema],
- * [DBCounter], [DBValue], [DBMap], [DBList], [DBQueue], [DBProcessor], and [DBLog].
+ * The base interface for all "database objects", which are the representations of entities declared
+ * in the database schema, within the context of a database connection. DBObjects encapsulate the
+ * notions of data organization, functionality (both generic and custom), and persistent storage.
+ * The [categories](DBCategory) of database object are: [DBSchema], [DBCounter], [DBValue], [DBMap],
+ * [DBList], [DBQueue], [DBProcessor], and [DBLog].
  *
  * The implementations of these various `DBObject` interfaces are provided by a specific database
  * engine implementation. A database schema developer may also provide their own additional
@@ -81,6 +83,19 @@
  */
 interface DBObject
     {
+    /**
+     * The "current" Connection.
+     */
+    @RO Connection dbConnection;
+
+    /**
+     * The "current" Transaction, if any.
+     */
+    @RO Transaction? dbTransaction.get()
+        {
+        return dbConnection.transaction;
+        }
+
     /**
      * The root database object.
      */
@@ -461,6 +476,11 @@ interface DBObject
      * This is a simple mechanism that allows a database to "assert" on any user transaction data,
      * before that data is committed.
      *
+     * A [DBLog], [DBQueue], or [DBProcessor] may both be appended to by other `Validators`, and may
+     * also have `Validators` of its own, so it is important for the developer to understand some
+     * changes being validated may have originated in the user transaction, and some may have
+     * originated from other `Validators`.
+     *
      * (The term "user transaction" refers to changes from an application, as opposed to changes
      * that occur from automatic trigger processing.)
      */
@@ -470,7 +490,8 @@ interface DBObject
          * Validate a transactional change.
          *
          * This method is not permitted to modify any transactional `DBObjects` in the database,
-         * (other than adding to a [DBLog], [DBQueue], or [DBProcessor]).
+         * including this `DBObject`, with the explicit exception being that a Validator may **add**
+         * to a [DBLog], [DBQueue], or [DBProcessor].
          *
          * @param change  the change that is being validated
          *
@@ -486,11 +507,10 @@ interface DBObject
      * (The term "user transaction" refers to changes from an application, as opposed to changes
      * that occur from automatic trigger processing.)
      *
-     * The [DBLog], [DBQueue], and [DBProcessor] objects are considered transactional terminals, and
-     * thus a rectifier may add to any of those. Since those objects may also have `Rectifiers` of
-     * their own, it is important for the developer to understand some changes may have originated
-     * in the user transaction, and some may have originated from the validation and rectification
-     * phases.
+     * A [DBLog], [DBQueue], or [DBProcessor] may both be appended to by other `Validators` and
+     * `Rectifiers`, and may also have `Rectifiers` of its own, so it is important for the developer
+     * to understand some changes being rectified may have originated in the user transaction, and
+     * some may have originated from other `Validators` and `Rectifiers`.
      */
     static interface Rectifier<TxChange extends DBObject.TxChange>
         {
@@ -498,7 +518,8 @@ interface DBObject
          * Rectify the contents of a transactional change to the containing DBObject.
          *
          * This method is not permitted to modify any transactional `DBObjects` in the database,
-         * (other than adding to a [DBLog], [DBQueue], or [DBProcessor]).
+         * including this `DBObject`, with the explicit exception being that a Rectifier may **add**
+         * to a [DBLog], [DBQueue], or [DBProcessor].
          *
          * @param change  the change that is being rectified
          *
@@ -515,19 +536,19 @@ interface DBObject
      * data, and pushing the necessary adjustments to another DBObject that holds the summary
      * information.
      *
-     * The [DBLog], [DBQueue], and [DBProcessor] objects are considered transactional terminals, and
-     * thus none of these DBObjects can have a `Distributor` attached to it. This rule helps to
-     * prevent infinite loops.
+     * To prevent infinite loops, the [DBLog], [DBQueue], and [DBProcessor] objects are not
+     * permitted to have a `Distributor` attached to them.
      */
     static interface Distributor<TxChange extends DBObject.TxChange>
         {
         /**
-         * Distribute changes from the transactional change to the containing DBObject, to other
+         * Distribute changes from the transactional change to this containing DBObject, to other
          * DBObjects.
          *
          * This method **must** not attempt to make changes to either (i) this DBObject, or (ii)
-         * any transactional DBObject (other than a [DBLog], [DBQueue], or [DBProcessor]) that was
-         * already modified withing the current transaction.
+         * any transactional DBObject that was already modified withing the current transaction,
+         * with the explicit exception being that a Distributor may **add** to a [DBLog], [DBQueue],
+         * or [DBProcessor]..
          *
          * (All Distributor instances that are indicated by a transaction are executed in a pass,
          * and during that pass, any number of Distributor instances may modify the same

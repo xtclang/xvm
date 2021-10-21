@@ -34,7 +34,9 @@ interface Connection<Schema extends RootSchema>
     /**
      * Create a new transaction.
      *
-     * @param id          (optional) an integer identifier to associate with the transaction
+     * @param id          (optional) an integer identifier to associate with the transaction; if
+     *                    none is specified, then one will be automatically provided using a
+     *                    persistent counter (with no guarantees regarding contiguous identities)
      * @param name        (optional) a descriptive name to associate with the transaction
      * @param priority    (optional) the transactional priority
      * @param readOnly    (optional) pass True to indicate that transaction is not going to modify
@@ -55,6 +57,7 @@ interface Connection<Schema extends RootSchema>
                                                      Duration?              timeout     = Null,
                                                      Int                    retryCount  = 0,
                                                     );
+
     @Override
     void close(Exception? e = Null)
         {

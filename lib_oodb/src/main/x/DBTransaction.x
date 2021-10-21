@@ -52,9 +52,9 @@ interface DBTransaction<Schema extends RootSchema>
     Boolean rollbackOnly;
 
     /**
-     * The optional identifier provided when the transaction was created.
+     * The identifier specified or generated when the transaction was created.
      */
-    @RO UInt? id;
+    @RO UInt id;
 
     /**
      * An optional descriptive name provided when the transaction was created.
