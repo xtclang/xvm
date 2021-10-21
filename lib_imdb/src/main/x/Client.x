@@ -616,9 +616,9 @@ service Client<Schema extends RootSchema>
             Catalog.rollback(stores.makeImmutable(), this.Client.id);
 
             enlisted_.clear();
-            outer.tx  = Null; // pending == False
+            outer.tx = Null; // pending == False
 
-            return True; // REVIEW GG
+            return True;
             }
         }
 
