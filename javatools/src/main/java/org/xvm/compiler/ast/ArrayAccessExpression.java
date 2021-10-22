@@ -540,7 +540,7 @@ public class ArrayAccessExpression
                     }
 
                 aIndexTypes = idGet.getRawParams();
-                typeResult  = idGet.getRawReturns()[0];
+                typeResult  = idGet.getRawReturns()[0].removeAutoNarrowing();
                 m_idGet     = idGet;
                 }
             }

@@ -1849,11 +1849,23 @@ public class TypeInfo
      */
     protected MethodConstant resolveMethodConstant(MethodConstant idMethod, MethodInfo method)
         {
-        ConstantPool      pool        = pool();
-        SignatureConstant sigMethod   = method.getSignature();
-        SignatureConstant sigResolved = sigMethod.containsAutoNarrowing(false)
-                 ? sigMethod.resolveAutoNarrowing(pool, f_type, null)
-                 : sigMethod;
+        ConstantPool      pool      = pool();
+        SignatureConstant sigMethod = method.getSignature();
+        SignatureConstant sigResolved;
+
+        if (sigMethod.containsAutoNarrowing(false))
+            {
+            TypeConstant     type  = f_type;
+            IdentityConstant idCtx = type.isExplicitClassIdentity(true) && !type.isVirtualChild()
+                    ? (IdentityConstant) type.getDefiningConstant()
+                    : null;
+
+            sigResolved = sigMethod.resolveAutoNarrowing(pool, type, idCtx);
+            }
+        else
+            {
+            sigResolved = sigMethod;
+            }
 
         // TODO GG: the code above skips the resolution of signature that contain only virtual types,
         //          preventing double-resolving (which is not idempotent for virtual children);

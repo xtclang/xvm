@@ -4,67 +4,58 @@ module TestSimple.test.org
 
     void run()
         {
-        new Derived().test(5);
+        DBMap<Int, String> mapImpl = new DBMapImpl();
+
+        mapImpl.defer(1);
         }
 
-    class Base()
+    interface DBObject
         {
-        void test(Int value)
-            {
-            Child child = new Child(value);
-            child.report();
+        void defer(function Boolean(DBObject) adjust);
+        }
 
-            Child child2 = new Child("hello");
-            child2.report();
+    interface DBMap<Key extends immutable Const, Value extends immutable Const>
+            extends DBObject
+            extends Map<Key, Value>
+        {
+        void defer(Key key)
+            {
+            defer(lambda); // <-- this call used to throw at run-time
             }
 
-        class Child(Int value)
+        Boolean lambda(DBMap map)
             {
-            String name = "";
-            construct(String s)
-                {
-                name  = s;
-                value = 42;
-                }
-
-            void report()
-                {
-                console.println($"value={value} name={name}");
-                }
+            return True;
             }
         }
 
-    class Intermediate
-            extends Base
+    class DBObjectImpl
+            implements DBObject
         {
         @Override
-        class Child(Int value)
+        void defer(function Boolean(DBObjectImpl) adjust)
             {
-            construct(String s)
-                {
-                construct Base.Child(s + " there");
-                }
-
-            void reportIntermediate()
-                {
-                }
+            assert adjust(this);
             }
         }
 
-    class Derived
-            extends Intermediate
+    import ecstasy.collections.maps.KeySetBasedMap;
+
+    class DBMapImpl<Key extends immutable Const, Value extends immutable Const>
+            extends DBObjectImpl
+            implements DBMap<Key, Value>
+            incorporates KeySetBasedMap<Key, Value>
         {
         @Override
-        class Child
+        conditional Value get(Key key)
             {
-            construct(Int value)
-                {
-                construct Base.Child(-value);
-                }
+            TODO
+            }
 
-            void reportDerived()
-                {
-                }
+        @Override
+        @Lazy public/private Set<Key> keys.calc()
+            {
+            TODO
             }
         }
     }

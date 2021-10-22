@@ -714,7 +714,20 @@ public class TerminalTypeConstant
 
                 if (idCtx != null && idCtx.getType().isA(typeDecl))
                     {
-                    return getConstantPool().ensureThisTypeConstant(idCtx, null);
+                    TypeConstant typeCtx = pool.ensureThisTypeConstant(idCtx, null);
+
+                    // apply the target's type parameters and annotations (if any)
+                    if (typeTarget.isParamsSpecified())
+                        {
+                        typeCtx = pool.ensureParameterizedTypeConstant(typeCtx,
+                                        typeTarget.getParamTypesArray().clone());
+                        }
+                    if (typeTarget.isAnnotated())
+                        {
+                        typeCtx = pool.ensureAnnotatedTypeConstant(typeCtx,
+                                        typeTarget.getAnnotations().clone());
+                        }
+                    return typeCtx;
                     }
 
                 // strip the immutability and access modifiers
