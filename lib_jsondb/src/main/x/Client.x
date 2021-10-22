@@ -790,15 +790,6 @@ service Client<Schema extends RootSchema>
             }
 
         @Override
-        <Result extends immutable Const> Result peek(function Result(DBObjectImpl) test)
-            {
-            using (TxContext tx = ensureTransaction(this))
-                {
-                return test(this);
-                }
-            }
-
-        @Override
         <Result extends immutable Const> Result require(function Result(DBObject) test)
             {
             Transaction tx = requireTransaction_("require()");
