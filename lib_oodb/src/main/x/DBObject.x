@@ -343,19 +343,6 @@ interface DBObject
     // ----- transactionally composable operations -------------------------------------------------
 
     /**
-     * Perform a semi-blind test against the DBObject.
-     *
-     * @param test  a function to evaluate immediately, which will return a `Result` to the caller,
-     *              without enlisting any data that is read in the process into the transaction
-     *
-     * @return the result of evaluating the function
-     */
-    <Result extends immutable Const> Result peek(function Result(DBObject) test)
-        {
-        return test(this);
-        }
-
-    /**
      * Perform an arbitrarily coarse-grained test against the DBObject, and register the same test
      * (along with the result from evaluating it) as a precondition for the commit (i.e. a "prepare
      * constraint").
