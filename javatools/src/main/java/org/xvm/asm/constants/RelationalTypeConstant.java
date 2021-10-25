@@ -289,6 +289,13 @@ public abstract class RelationalTypeConstant
         }
 
     @Override
+    public void collectFormalTypes(boolean fAllowParams, Set<TypeConstant> setFormal)
+        {
+        m_constType1.collectFormalTypes(fAllowParams, setFormal);
+        m_constType2.collectFormalTypes(fAllowParams, setFormal);
+        }
+
+    @Override
     public boolean containsDynamicType(Register register)
         {
         return m_constType1.containsDynamicType(register)
@@ -300,13 +307,6 @@ public abstract class RelationalTypeConstant
         {
         return m_constType1.containsGenericType(fAllowParams)
             || m_constType2.containsGenericType(fAllowParams);
-        }
-
-    @Override
-    public void collectGenericNames(boolean fAllowParams, Set<PropertyConstant> setGeneric)
-        {
-        m_constType1.collectGenericNames(fAllowParams, setGeneric);
-        m_constType2.collectGenericNames(fAllowParams, setGeneric);
         }
 
     @Override

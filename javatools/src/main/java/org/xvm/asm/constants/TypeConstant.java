@@ -6017,6 +6017,18 @@ public abstract class TypeConstant
         }
 
     /**
+     * Collect formal types that are contained by this type into the passed-in set.
+     *
+     * @param fAllowParams  true if type parameters should be included
+     * @param setFormal     a set to add formal constants to; will be filled iff the
+     *                      {@link #isFormalType} method returns "true"
+     */
+    public void collectFormalTypes(boolean fAllowParams, Set<TypeConstant> setFormal)
+        {
+        getUnderlyingType().collectFormalTypes(fAllowParams, setFormal);
+        }
+
+    /**
      * Check if this type contains a dynamic formal type based on the specified register.
      *
      * @param register  the register to check for (null for all)
@@ -6059,18 +6071,6 @@ public abstract class TypeConstant
     public boolean containsGenericType(boolean fAllowParams)
         {
         return getUnderlyingType().containsGenericType(fAllowParams);
-        }
-
-    /**
-     * Collect generic property ids for this type into the passed-in set.
-     *
-     * @param fAllowParams  true if type parameters should contribute the corresponding names
-     * @param setGeneric    a set to add ids to; will be filled iff the
-     *                      {@link #containsGenericType} method returns "true"
-     */
-    public void collectGenericNames(boolean fAllowParams, Set<PropertyConstant> setGeneric)
-        {
-        getUnderlyingType().collectGenericNames(fAllowParams, setGeneric);
         }
 
     /**

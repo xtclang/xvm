@@ -400,6 +400,18 @@ public class ParameterizedTypeConstant
         }
 
     @Override
+    public void collectFormalTypes(boolean fAllowParams, Set<TypeConstant> setFormal)
+        {
+        if (fAllowParams)
+            {
+            for (TypeConstant typeParam : m_atypeParams)
+                {
+                typeParam.collectFormalTypes(fAllowParams, setFormal);
+                }
+            }
+        }
+
+    @Override
     public boolean containsDynamicType(Register register)
         {
         for (TypeConstant typeParam : m_atypeParams)
@@ -427,18 +439,6 @@ public class ParameterizedTypeConstant
             }
 
         return false;
-        }
-
-    @Override
-    public void collectGenericNames(boolean fAllowParams, Set<PropertyConstant> setGeneric)
-        {
-        if (fAllowParams)
-            {
-            for (TypeConstant typeParam : m_atypeParams)
-                {
-                typeParam.collectGenericNames(fAllowParams, setGeneric);
-                }
-            }
         }
 
     @Override

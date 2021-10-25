@@ -203,14 +203,14 @@ public class TypeSequenceTypeConstant
         }
 
     @Override
-    public void collectGenericNames(boolean fAllowParams, Set<PropertyConstant> setGeneric)
-        {
-        }
-
-    @Override
     public boolean containsFormalType(boolean fAllowParams)
         {
         return fAllowParams;
+        }
+
+    @Override
+    public void collectFormalTypes(boolean fAllowParams, Set<TypeConstant> setFormal)
+        {
         }
 
     @Override

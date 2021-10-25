@@ -1067,6 +1067,15 @@ public class TerminalTypeConstant
         }
 
     @Override
+    public void collectFormalTypes(boolean fAllowParams, Set<TypeConstant> setFormal)
+        {
+        if (isFormalType())
+            {
+            setFormal.add(this);
+            }
+        }
+
+    @Override
     public boolean containsDynamicType(Register register)
         {
         if (isDynamicType())
@@ -1086,15 +1095,6 @@ public class TerminalTypeConstant
     public boolean containsGenericType(boolean fAllowParams)
         {
         return isGenericType();
-        }
-
-    @Override
-    public void collectGenericNames(boolean fAllowParams, Set<PropertyConstant> setGeneric)
-        {
-        if (isGenericType())
-            {
-            setGeneric.add((PropertyConstant) getDefiningConstant());
-            }
         }
 
     @Override

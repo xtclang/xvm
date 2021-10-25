@@ -158,6 +158,12 @@ public abstract class AbstractDependantTypeConstant
         }
 
     @Override
+    public void collectFormalTypes(boolean fAllowParams, Set<TypeConstant> setFormal)
+        {
+        getParentType().collectFormalTypes(fAllowParams, setFormal);
+        }
+
+    @Override
     public boolean containsDynamicType(Register register)
         {
         return getParentType().containsDynamicType(register);
@@ -167,12 +173,6 @@ public abstract class AbstractDependantTypeConstant
     public boolean containsGenericType(boolean fAllowParams)
         {
         return getParentType().containsGenericType(fAllowParams);
-        }
-
-    @Override
-    public void collectGenericNames(boolean fAllowParams, Set<PropertyConstant> setGeneric)
-        {
-        getParentType().collectGenericNames(fAllowParams, setGeneric);
         }
 
     @Override

@@ -138,14 +138,14 @@ public class PendingTypeConstant
         }
 
     @Override
-    public boolean containsGenericType(boolean fAllowParams)
+    public void collectFormalTypes(boolean fAllowParams, Set<TypeConstant> setFormal)
         {
-        return false;
         }
 
     @Override
-    public void collectGenericNames(boolean fAllowParams, Set<PropertyConstant> setGeneric)
+    public boolean containsGenericType(boolean fAllowParams)
         {
+        return false;
         }
 
     @Override

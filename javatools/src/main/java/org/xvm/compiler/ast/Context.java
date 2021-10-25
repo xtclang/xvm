@@ -2600,17 +2600,17 @@ public class Context
                 assert reg != null;
                 ensureFormalMap().putIfAbsent(sName, reg);
                 }
-            else if (type.containsGenericType(true))
+            else if (type.containsGenericType(false))
                 {
-                Set<PropertyConstant> setIds = new HashSet<>();
-                type.collectGenericNames(true, setIds);
+                Set<TypeConstant> setFormal = new HashSet<>();
+                type.collectFormalTypes(false, setFormal);
 
-                for (PropertyConstant idProp : setIds)
+                for (TypeConstant typeFormal : setFormal)
                     {
-                    String     sName = idProp.getName();
-                    TargetInfo info  = (TargetInfo) resolveName(sName, null, errs);
-                    assert info != null;
-                    ensureFormalMap().putIfAbsent(sName, info);
+                    if (typeFormal.isGenericType())
+                        {
+                        useFormalType(typeFormal, errs);
+                        }
                     }
                 }
             else if (type.containsTypeParameter(true))

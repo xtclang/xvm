@@ -103,6 +103,11 @@ public class TypeParameterConstant
         // the type points to a register, which means that the type is a parameterized type;
         // the type of the register will be "Type<X>" or a formal type
         MethodConstant constMethod = getMethod();
+        if (constMethod.isNascent())
+            {
+            return getConstantPool().typeObject();
+            }
+
         int            nReg        = getRegister();
         TypeConstant[] atypeParams = constMethod.getRawParams();
 
