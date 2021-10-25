@@ -609,6 +609,12 @@ public class ForEachStatement
             return false;
             }
 
+        if (m_regLast != null)
+            {
+            log(errs, Severity.ERROR, Compiler.LABEL_VARIABLE_ILLEGAL, "last", getLabelName());
+            return false;
+            }
+
         // VAR_I   iter Iterator<T>         ; (passed in) hidden variable that holds the Iterator
         // MOV     xxx iter                 ; (passed in) however the iterator got assigned
         //
@@ -671,7 +677,7 @@ public class ForEachStatement
         // code simplification for intrinsic sequential types
         if (m_exprRValue.isConstant())
             {
-            switch (m_exprRValue.getType().getParamType(0).getEcstasyClassName())
+            switch (m_exprRValue.getType().getParamType(0).removeAutoNarrowing().getEcstasyClassName())
                 {
                 case "numbers.Bit":
                 case "numbers.Nibble":
