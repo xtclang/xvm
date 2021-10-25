@@ -754,23 +754,18 @@ public class NameExpression
 
         if (left == null && isRValue())
             {
-            Meaning meaning;
-            switch (meaning = getMeaning())
+            switch (getMeaning())
                 {
-                case Reserved:
                 case Variable:
+                    if (type.containsGenericType(false))
+                        {
+                        ctx.useFormalType(type, errs);
+                        }
+                    // fall through
+                case Reserved:
                     if (!isSuppressDeref())
                         {
                         ctx.markVarRead(getNameToken(), errs);
-                        }
-
-                    if (meaning == Meaning.Variable)
-                        {
-                        if (type.containsGenericType(false) ||
-                                isTypeParameter(ctx, (Register) argRaw))
-                            {
-                            ctx.useFormalType(type, errs);
-                            }
                         }
                     break;
 
