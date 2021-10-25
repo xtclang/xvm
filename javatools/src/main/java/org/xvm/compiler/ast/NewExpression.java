@@ -456,13 +456,6 @@ public class NewExpression
                 if (typeInferred != null)
                     {
                     type.setTypeConstant(typeResult = typeInferred);
-
-                    // the inferred type can contain generic types that need to be registered
-                    // with the context (used to compute lambda captures)
-                    if (typeInferred.containsGenericType(true))
-                        {
-                        ctx.useFormalType(typeInferred, errs);
-                        }
                     }
                 }
 

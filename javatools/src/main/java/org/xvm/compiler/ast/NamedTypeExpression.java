@@ -1005,16 +1005,7 @@ public class NamedTypeExpression
                     IdentityConstant idFrom    = idTypedef.getParentConstant();
                     IdentityConstant idClass   = getComponent().getContainingClass().getIdentityConstant();
 
-                    if (idFrom.isNestMateOf(idClass))
-                        {
-                        if (ctx != null && typeRef.containsGenericType(true))
-                            {
-                            // the resolved typedef type can contain generic types that need to be
-                            // registered with the context (used to compute lambda captures)
-                            ctx.useFormalType(typeRef, errs);
-                            }
-                        }
-                    else
+                    if (!idFrom.isNestMateOf(idClass))
                         {
                         if (idFrom.equals(pool.clzType()))
                             {

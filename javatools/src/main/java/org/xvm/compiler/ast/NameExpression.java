@@ -754,7 +754,8 @@ public class NameExpression
 
         if (left == null && isRValue())
             {
-            switch (getMeaning())
+            Meaning meaning;
+            switch (meaning = getMeaning())
                 {
                 case Reserved:
                 case Variable:
@@ -763,9 +764,13 @@ public class NameExpression
                         ctx.markVarRead(getNameToken(), errs);
                         }
 
-                    if (type.containsFormalType(true))
+                    if (meaning == Meaning.Variable)
                         {
-                        ctx.useFormalType(type, errs);
+                        if (type.containsGenericType(false) ||
+                                isTypeParameter(ctx, (Register) argRaw))
+                            {
+                            ctx.useFormalType(type, errs);
+                            }
                         }
                     break;
 

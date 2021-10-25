@@ -27,11 +27,11 @@ import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
 import org.xvm.asm.Assignment;
 
+import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
-import org.xvm.asm.constants.TypeParameterConstant;
 
 import org.xvm.asm.op.MoveThis;
 
@@ -2585,37 +2585,36 @@ public class Context
             {
             super.useFormalType(type, errs);
 
-            if (type.isGenericType())
+            if (type.isFormalType())
                 {
-                // TODO GG: add processing for formal child of generic type
-                String     sName = ((PropertyConstant) type.getDefiningConstant()).getName();
-                TargetInfo info  = (TargetInfo) resolveName(sName, null, errs);
-                assert info != null;
-                ensureFormalMap().putIfAbsent(sName, info);
-                }
-            else if (type.isTypeParameter())
-                {
-                String     sName = ((TypeParameterConstant) type.getDefiningConstant()).getName();
-                Register   reg   = (Register) resolveName(sName, null, errs);
-                assert reg != null;
-                ensureFormalMap().putIfAbsent(sName, reg);
-                }
-            else if (type.containsGenericType(false))
-                {
-                Set<TypeConstant> setFormal = new HashSet<>();
-                type.collectFormalTypes(false, setFormal);
-
-                for (TypeConstant typeFormal : setFormal)
+                FormalConstant constFormal = (FormalConstant) type.getDefiningConstant();
+                switch (constFormal.getFormat())
                     {
-                    if (typeFormal.isGenericType())
+                    case Property:
+                    case TypeParameter:
                         {
-                        useFormalType(typeFormal, errs);
+                        String   sName = constFormal.getName();
+                        Argument arg   = resolveName(sName, null, errs);
+                        assert arg != null;
+                        ensureFormalMap().putIfAbsent(sName, arg);
+                        break;
                         }
+
+                    case FormalTypeChild:
+                        // TODO GG: add processing for formal type child
+                    case DynamicFormal:
+                        break;
                     }
                 }
-            else if (type.containsTypeParameter(true))
+            else if (type.containsFormalType(false))
                 {
-                // TODO: enhance "collectGenericNames" or add "collectTypeParameters" API
+                Set<TypeConstant> setTypes = new HashSet<>();
+                type.collectFormalTypes(false, setTypes);
+
+                for (TypeConstant typeFormal : setTypes)
+                    {
+                    useFormalType(typeFormal, errs);
+                    }
                 }
             }
 
