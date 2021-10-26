@@ -19,7 +19,8 @@
  * * `sys/queues` - a [DBMap] of path to [DBQueue]
  * * `sys/processors` - a [DBMap] of path to [DBProcessor]
  * * `sys/logs` - a [DBMap] of path to [DBLog]
- * * `sys/pending` - a [DBList] ordered by scheduled invocation date/time of [DBPending] objects
+ * * `sys/pending` - a [DBList] ordered by scheduled invocation date/time of
+ *   [Pending](DBProcessor.Pending) objects
  * * `sys/transactions` - a [DBLog] of [Transaction] objects
  * * `sys/errors` - a [DBLog] of errors REVIEW String
  */
@@ -88,10 +89,11 @@ interface SystemSchema
     @RO DBMap<String, DBLog> logs;
 
     /**
-     * A [DBList] ordered by scheduled invocation date/time of [DBPending] objects. Note that a
-     * database may restrict access to the pending execution list for security reasons.
+     * A [DBList] ordered by scheduled invocation date/time of [Pending](DBProcessor.Pending)
+     * objects. Note that a database may restrict access to the pending execution list for security
+     * reasons.
      */
-    @RO DBList<DBPending> pending;
+    @RO DBList<DBProcessor.Pending> pending;
 
     /**
      * A [DBLog] of [DBTransaction] objects. Note that a database may restrict access to the

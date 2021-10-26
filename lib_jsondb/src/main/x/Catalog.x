@@ -10,8 +10,8 @@ import oodb.DBList;
 import oodb.DBLog;
 import oodb.DBMap;
 import oodb.DBObject;
-import oodb.DBPending;
 import oodb.DBProcessor;
+import oodb.DBProcessor.Pending;
 import oodb.DBQueue;
 import oodb.DBSchema;
 import oodb.DBTransaction;
@@ -20,7 +20,7 @@ import oodb.DBValue;
 import oodb.Permission;
 import oodb.RootSchema;
 
-import oodb.model.DBUser as DBUserImpl;
+import oodb.model.User;
 
 import storage.JsonCounterStore;
 import storage.JsonMapStore;
@@ -113,7 +113,7 @@ service Catalog<Schema extends RootSchema>
         Lists<DBMap<String, DBList>>,
         Processors<DBMap<String, DBProcessor>>,
         Logs<DBMap<String, DBLog>>,
-        Pending<DBList<DBPending>>,
+        Pending<DBList<Pending>>,
         Transactions<DBLog<DBTransaction>>,
         Errors<DBLog<String>>,
         TxCounter<DBCounter>,
@@ -188,7 +188,7 @@ service Catalog<Schema extends RootSchema>
         new DBObjectInfo("queues",       Path:/sys/queues,       DBMap,     BuiltIn.Queues.id,       BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=DBQueue]),
         new DBObjectInfo("processors",   Path:/sys/processors,   DBMap,     BuiltIn.Processors.id,   BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=DBProcessor]),
         new DBObjectInfo("logs",         Path:/sys/logs,         DBMap,     BuiltIn.Logs.id,         BuiltIn.Sys.id, typeParams=Map:["Key"=String, "Value"=DBLog]),
-        new DBObjectInfo("pending",      Path:/sys/pending,      DBList,    BuiltIn.Pending.id,      BuiltIn.Sys.id, typeParams=Map:["Element"=DBPending]),
+        new DBObjectInfo("pending",      Path:/sys/pending,      DBList,    BuiltIn.Pending.id,      BuiltIn.Sys.id, typeParams=Map:["Element"=Pending]),
         new DBObjectInfo("transactions", Path:/sys/transactions, DBLog,     BuiltIn.Transactions.id, BuiltIn.Sys.id, typeParams=Map:["Element"=DBTransaction]),
         new DBObjectInfo("errors",       Path:/sys/errors,       DBLog,     BuiltIn.Errors.id,       BuiltIn.Sys.id, typeParams=Map:["Element"=String]),
         new DBObjectInfo("txCounter",    Path:/sys/txCounter,    DBCounter, BuiltIn.TxCounter.id,    BuiltIn.Sys.id, transactional=False),
@@ -197,7 +197,7 @@ service Catalog<Schema extends RootSchema>
     /**
      * Default "system" user.
      */
-    static protected DBUserImpl DefaultUser = new DBUserImpl(0, "sys",
+    static protected User DefaultUser = new User(0, "sys",
             permissions = [new Permission(AllTargets, AllActions)]);
 
 
@@ -456,7 +456,7 @@ service Catalog<Schema extends RootSchema>
 //                case Queues:       TODO
 //                case Processors:   TODO
 //                case Logs:         TODO
-//                case Pending:      TODO new ListStore<DBPending>();
+//                case Pending:      TODO new ListStore<Pending>();
 //                case Transactions: TODO new LogStore<DBTransaction>();
 //                case Errors:       TODO new LogStore<String>();
                 case TxCounter:    new JsonNtxCounterStore(this, info);
