@@ -1,3 +1,5 @@
+import Transaction.CommitResult;
+
 /**
  * The database interface for scheduling work that will occur in one or more later database
  * transactions.
@@ -14,7 +16,7 @@ interface DBProcessor<Element extends immutable Const>
      * provided schedule.
      *
      * @param element   the element to process
-     * @param schedule  (optional) the schedule for processing; `Null` indicates "immediately"
+     * @param when      (optional) the schedule for processing; `Null` indicates "immediately"
      */
     void schedule(Element element, Schedule? when=Null);
 
@@ -23,7 +25,7 @@ interface DBProcessor<Element extends immutable Const>
      * provided schedule.
      *
      * @param elements  the elements to process
-     * @param schedule  (optional) the schedule for processing; `Null` indicates "immediately"
+     * @param when      (optional) the schedule for processing; `Null` indicates "immediately"
      */
     void scheduleAll(Iterable<Element> elements, Schedule? when=Null)
         {
@@ -38,7 +40,7 @@ interface DBProcessor<Element extends immutable Const>
      * for that same element.
      *
      * @param element   the element to reschedule the processing of
-     * @param schedule  the new schedule for processing the element
+     * @param when      the new schedule for processing the element
      */
     void reschedule(Element element, Schedule when)
         {
@@ -59,6 +61,28 @@ interface DBProcessor<Element extends immutable Const>
      * processing of any elements that is already occurring.
      */
     void unscheduleAll();
+
+    /**
+     * Obtain a **read-only** view of all previously added "pending" elements to process.
+     *
+     * Due to the transactional nature of the database, the actual state of pending operations is
+     * likely to be constantly in flux, with new elements being added and existing elements being
+     * processed and retired. Achieving a stable view may be extremely expensive; therefore, it is
+     * strongly suggested that the `DBProcessor` first be suspended (by calling [suspend]) before
+     * attempting any significant analysis of the resulting list. Note that, even with suspension,
+     * new items can continue to be added to the DBProcessor, although they will not appear in this
+     * list, due to the "repeatable-read" transactional guarantees provided by the OODB APIs.
+     *
+     * This is not an instantaneous property; the value of this property reflects the `DBProcessor`
+     * state at the beginning of the current transaction (or the state of the `DBProcessor` as the
+     * result of this transaction).
+     *
+     * Due to reasonable security considerations, it should not be assumed that this data will
+     * even be accessible to most user connections.
+     *
+     * @return the pending elements that are already scheduled for processing
+     */
+    @RO List<Pending> pending;
 
 
     // ----- processing methods --------------------------------------------------------------------
@@ -86,21 +110,72 @@ interface DBProcessor<Element extends immutable Const>
         }
 
     /**
-     * Determine if the failure of processing the element should be automatically retried.
+     * Determine if the processing for an element should be automatically retried, after the element
+     * has failed to [process].
+     *
+     * A database engine may stop re-trying the processing of the element at any point, and is
+     * expected to automatically stop re-trying the processing if the element fails repeatedly,
+     * particularly if the failure is exceptional.
      *
      * @param element         the element that failed to be processed and committed
+     * @param result          the result from the previous failed attempt, which is either a
+     *                        commit failure indicated as a [CommitResult], or an `Exception`
      * @param timesAttempted  the number of times that the processing of this element has been
      *                        attempted, and has failed
      *
      * @return `True` if the DBProcessor should try to process the same element again automatically
      */
-    Boolean autoRetry(Element element, Int timesAttempted)
+    Boolean autoRetry(Element element, CommitResult | Exception result, Int timesAttempted)
         {
-        if (timesAttempted < 5)
+        if (result.is(CommitResult))
             {
-            return True;
+            switch (result)
+                {
+                case Committed:
+                case DeferredFailed:
+                case ConcurrentConflict:
+                    // allow concurrency conflicts to retry indefinitely (up to the limit of the
+                    // patience of the database engine)
+                    return True;
+
+                case PreviouslyClosed:
+                case RollbackOnly:
+                case ValidatorFailed:
+                case RectifierFailed:
+                case DistributorFailed:
+                    break;
+
+                case DatabaseError:
+                    return False;
+
+                default: assert;
+                }
             }
 
+        // the default implementation of this method assumes that some number of retries may be
+        // necessary due to concurrent transactions colliding or some other factor that could
+        // (wishfully) disappear if the process is repeated
+        return timesAttempted < maxAttempts;
+        }
+
+    /**
+     * A limit for the number of auto-retries of failed attempts to [process] an element.
+     */
+    @RO Int maxAttempts = 3;
+
+    /**
+     * This method is invoked by the database engine when the element has failed to be processed,
+     * and either [autoRetry] has returned `False`, or the database engine has made a decision to
+     * not retry the element.
+     *
+     * @param element         the element that failed to be processed and committed
+     * @param result          the result from the last failed attempt, which is either a
+     *                        commit failure indicated as a [CommitResult], or an `Exception`
+     * @param timesAttempted  the number of times that the processing of this element has been
+     *                        attempted, and has failed
+     */
+    void abandon(Element element, CommitResult | Exception result, Int timesAttempted)
+        {
         String elementString;
         try
             {
@@ -110,10 +185,12 @@ interface DBProcessor<Element extends immutable Const>
             {
             elementString = $"??? (Exception={e.text})";
             }
-        dbLogFor<DBLog<String>>(Path:/sys/errors).add($|Failed to process {elementString};\
-                                                       | abandoning after {timesAttempted} attempts
-                                                     );
-        return False;
+
+        dbLogFor<DBLog<String>>(Path:/sys/errors).add(
+                $|Failed to process {elementString} due to\
+                 | {result.is(CommitResult) ? "commit error" : "exception"} {result};\
+                 | abandoning after {timesAttempted} attempts
+                );
         }
 
 
@@ -143,28 +220,6 @@ interface DBProcessor<Element extends immutable Const>
      * transaction is successfully committed**.
      */
     void resume();
-
-    /**
-     * Obtain a **read-only** view of all previously added "pending" elements to process.
-     *
-     * Due to the transactional nature of the database, the actual state of pending operations is
-     * likely to be constantly in flux, with new elements being added and existing elements being
-     * processed and retired. Achieving a stable view may be extremely expensive; therefore, it is
-     * strongly suggested that the `DBProcessor` first be suspended (by calling [suspend]) before
-     * attempting any significant analysis of the resulting list. Note that, even with suspension,
-     * new items can continue to be added to the DBProcessor, although they will not appear in this
-     * list, due to the "repeatable-read" transactional guarantees provided by the OODB APIs.
-     *
-     * This is not an instantaneous property; the value of this property reflects the `DBProcessor`
-     * state at the beginning of the current transaction (or the state of the `DBProcessor` as the
-     * result of this transaction).
-     *
-     * Due to reasonable security considerations, it should not be assumed that this data will
-     * even be accessible to most user connections.
-     *
-     * @return the pending elements that are already scheduled for processing
-     */
-    @RO List<Pending> pending;
 
 
     // ----- annotations ---------------------------------------------------------------------------
