@@ -14,8 +14,17 @@ module Bank
             extends RootSchema
         {
         @RO DBMap<Int, Account> accounts;
+
         @RO DBCounter holding; // in cents
+// TODO @RO DBValue<Dec> holding;
+
         @RO @NoTx DBLog<String> log;
+
+        // TODO validator
+        // TODO rectifier
+        // TODO distributor
+        // TODO processor
+
 
 //        const Overdraft(Int accountId, Int balance);
 //
@@ -40,6 +49,7 @@ module Bank
         Account openAccount(Int id, Int balance)
             {
             assert !accounts.contains(id) as $"account {id} already exists";
+            assert balance > 0 as $"invalid opening balance: {format(balance)}";
 
             Account acc = new Account(id, balance);
             accounts.put(id, acc);
@@ -59,12 +69,23 @@ module Bank
 
         void depositOrWithdraw(Int id, Int amount)
             {
-            assert Account acc := accounts.get(id) as $"account {id} doesn't exists";
+            assert accounts.get(id) as $"account {id} doesn't exists";
 
-            assert acc.balance + amount >= 0 as
-                $"not enough funds to withdraw {format(amount)} from account {id}";
+            if (amount < 0)
+                {
+                assert accounts.require(id, e -> e.exists && e.value.balance + amount >= 0)
+                    as $"not enough funds to withdraw {format(-amount)} from account {id}";
+                }
 
-            accounts.put(id, acc.changeBalance(amount));
+            accounts.defer(id, e ->
+                {
+                if (e.exists && e.value.balance + amount >= 0)
+                    {
+                    e.value = e.value.changeBalance(amount);
+                    return True;
+                    }
+                return False;
+                });
             holding.adjustBy(amount);
             }
 
@@ -74,6 +95,14 @@ module Bank
             assert Account accFrom := accounts.get(idFrom) as $"account {idFrom} doesn't exists";
             assert Account accTo   := accounts.get(idTo)   as $"account {idTo} doesn't exists";
             assert amount > 0 as $"invalid transfer amount: {format(amount)}";
+
+            // theoretically speaking, we could use the "require" here, e.g.:
+            //     assert accounts.require(idFrom, e -> e.exists && e.value.balance >= amount)
+            //          as $"not enough funds to transfer {format(amount)} from account {idFrom}";
+            // however, it's not necessary since the "put" operations below enlist the corresponding
+            // entries and would rollback if any change occurred to any of them, making the
+            // "client-side" assert absolutely sufficient and the "server-side" requirement test
+            // absolutely unnecessary
 
             assert accFrom.balance >= amount as
                 $"not enough funds to transfer {format(amount)} from account {idFrom}";
@@ -89,7 +118,7 @@ module Bank
                 {
                 Int balance = acc.balance;
                 assert balance >= 0 as
-                    $"audit failed: negatoive balance for account {acc.id}";
+                    $"audit failed: negative balance for account {acc.id}";
                 total += balance;
                 }
 

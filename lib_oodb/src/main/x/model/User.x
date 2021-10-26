@@ -5,7 +5,7 @@ const User(UInt            id,
            String          name,
            Boolean         active      = True,
            Boolean         group       = False,
-           Set<DBUser>     groups      = Set:[],
+           Set<User>       groups      = Set:[],
            Set<Permission> permissions = Set:[],
            Set<Permission> revocations = Set:[])
         implements DBUser
@@ -14,7 +14,7 @@ const User(UInt            id,
               String?          name        = Null,
               Boolean?         active      = Null,
               Boolean?         group       = Null,
-              Set<DBUser>?     groups      = Null,
+              Set<User>?       groups      = Null,
               Set<Permission>? permissions = Null,
               Set<Permission>? revocations = Null,
              )
@@ -42,7 +42,7 @@ const User(UInt            id,
     Boolean group;
 
     @Override
-    Set<DBUser> groups;
+    Set<User> groups;
 
     @Override
     Set<Permission> permissions;
