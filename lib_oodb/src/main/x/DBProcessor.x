@@ -410,18 +410,23 @@ interface DBProcessor<Element extends immutable Const>
          *   was supposed to begin; if a previous execution has not yet completed, start the next
          *   execution.
          *
+         * * SkipOverlapped - if the previous run has not finished running at the point that a
+         *   subsequent run is scheduled to be run, then the subsequent run is skipped. This policy
+         *   prevents overlapping of processing caused by same repeating-schedule Pending element.
+         *
          * * SuggestedMinimum - calculate the next scheduled time based on the time that each run
          *   was supposed to begin; if a previous execution has not yet completed, then delay the
          *   start of the next execution until the previous completes. This policy prevents
-         *   overlapping of processing of the same repetitive-scheduled element.
+         *   overlapping of processing caused by same repeating-schedule Pending element.
          *
          * * MeasureFromCommit - calculate the next scheduled time based on the time that the
-         *   previous run completes. This policy naturally prevents overlapping of processing of
-         *   the same repetitive-scheduled element.
+         *   previous run completes. This policy prevents overlapping of processing caused by same
+         *   repeating-schedule Pending element.
          */
         enum Policy
             {
             AllowOverlapping,
+            SkipOverlapped,
             SuggestedMinimum,
             MeasureFromCommit,
             }
