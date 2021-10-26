@@ -757,7 +757,7 @@ public class NameExpression
             switch (getMeaning())
                 {
                 case Variable:
-                    if (type.containsGenericType(false))
+                    if (type.containsGenericType(true))
                         {
                         ctx.useFormalType(type, errs);
                         }

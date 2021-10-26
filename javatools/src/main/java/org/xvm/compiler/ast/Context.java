@@ -2606,10 +2606,10 @@ public class Context
                         break;
                     }
                 }
-            else if (type.containsFormalType(false))
+            else if (type.containsFormalType(true))
                 {
                 Set<TypeConstant> setTypes = new HashSet<>();
-                type.collectFormalTypes(false, setTypes);
+                type.collectFormalTypes(true, setTypes);
 
                 for (TypeConstant typeFormal : setTypes)
                     {

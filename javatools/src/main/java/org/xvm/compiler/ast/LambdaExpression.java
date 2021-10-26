@@ -1416,9 +1416,17 @@ public class LambdaExpression
         public Map<String, Argument> getFormalMap()
             {
             // if the lambda requires "this", there is no need to capture the generic types
-            return isLambdaMethod()
-                    ? Collections.EMPTY_MAP
-                    : super.getFormalMap();
+            Map<String, Argument> mapFormal = super.getFormalMap();
+            if (isLambdaMethod() && !mapFormal.isEmpty())
+                {
+                mapFormal = new HashMap<>(mapFormal);
+                mapFormal.values().removeIf(arg ->
+                    {
+                    TypeConstant type = arg.getType();
+                    return type.isTypeOfType() && type.getParamType(0).isGenericType();
+                    });
+                }
+            return mapFormal;
             }
 
         @Override
