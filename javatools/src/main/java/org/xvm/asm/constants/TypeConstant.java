@@ -5490,15 +5490,19 @@ public abstract class TypeConstant
                 // 3. r-value (this) = T (type parameter type), constrained by U (real type)
                 //    l-value (that) = V (real type), where U "is a" V
                 TypeParameterConstant idRight = (TypeParameterConstant) constIdRight;
-                if (constIdLeft.getFormat() == format &&
-                    (((TypeParameterConstant) constIdLeft).getRegister() == idRight.getRegister()))
+                if (constIdLeft.getFormat() == format)
                     {
-                    // Note: it's quite opportunistic to assume that type parameters with the same
-                    // register are compatible regardless of the enclosing method, but we need to
-                    // assume that the caller has already (or will have) checked for the compatibility
-                    // all other elements of the containing method and the only thing left is the
-                    // register itself
-                    return Relation.IS_A;
+                    TypeParameterConstant idLeft = (TypeParameterConstant) constIdLeft;
+                    if (idLeft.getName().equals(idRight.getName()) ||
+                        idLeft.getRegister() == idRight.getRegister())
+                        {
+                        // Note: it's quite opportunistic to assume that type parameters with the same
+                        // register are compatible regardless of the enclosing method, but we need to
+                        // assume that the caller has already (or will have) checked for the compatibility
+                        // all other elements of the containing method and the only thing left is the
+                        // register itself
+                        return Relation.IS_A;
+                        }
                     }
 
                 // the typeRight is a type parameter and cannot have any modifiers

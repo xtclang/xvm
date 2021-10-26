@@ -1699,7 +1699,10 @@ public class TerminalTypeConstant
             case TypeParameter:
                 {
                 TypeParameterConstant idBase = (TypeParameterConstant) constIdBase;
-                return ((TypeParameterConstant) constIdThis).getRegister() == idBase.getRegister();
+                TypeParameterConstant idThis = (TypeParameterConstant) constIdThis;
+
+                return idThis.getRegister() == idBase.getRegister() ||
+                       idThis.getName().equals(idBase.getName());
                 }
 
             case FormalTypeChild:
