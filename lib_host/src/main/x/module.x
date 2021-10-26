@@ -165,7 +165,7 @@ module host.xtclang.org
                             {
                             // consider the injector to be passed some info about the calling
                             // container, so the host could figure out the user
-                            DBUser user = new oodb.model.DBUser(1, "test");
+                            DBUser user = new oodb.model.User(1, "test");
                             Connection conn = createConnection(user);
                             return &conn.maskAs<Connection>(type);
                             };

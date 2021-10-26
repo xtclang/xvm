@@ -15,8 +15,8 @@ import oodb.DBList;
 import oodb.DBLog;
 import oodb.DBMap;
 import oodb.DBObject;
-import oodb.DBPending;
 import oodb.DBProcessor;
+import oodb.DBProcessor.Pending;
 import oodb.DBQueue;
 import oodb.DBSchema;
 import oodb.DBTransaction;
@@ -491,7 +491,7 @@ service Client<Schema extends RootSchema>
                 case Queues:       TODO new DBMap<String, DBQueue>();
                 case Processors:   TODO new DBMap<String, DBProcessor>();
                 case Logs:         TODO new DBMap<String, DBLog>();
-                case Pending:      TODO new DBList<DBPending>();
+                case Pending:      TODO new DBList<Pending>();
                 case Transactions: TODO new DBLog<DBTransaction>();
                 case Errors:       TODO new DBLog<String>();
                 default: assert;
@@ -1125,9 +1125,9 @@ service Client<Schema extends RootSchema>
             }
 
         @Override
-        @RO DBList<DBPending> pending.get()
+        @RO DBList<Pending> pending.get()
             {
-            return implFor(BuiltIn.Pending.id).as(DBList<DBPending>);
+            return implFor(BuiltIn.Pending.id).as(DBList<Pending>);
             }
 
         @Override
