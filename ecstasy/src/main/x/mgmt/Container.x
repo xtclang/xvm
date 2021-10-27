@@ -556,8 +556,7 @@ service Container
          * and any nested containers.
          */
         @Override
-        // TODO GG: @RO ServiceStatus statusIndicator;
-        @RO Service.ServiceStatus statusIndicator;
+        @RO ServiceStatus statusIndicator;
 
         /**
          * The amount of time spent processing by the entire container, including all of its

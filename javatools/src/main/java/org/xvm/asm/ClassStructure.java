@@ -1011,8 +1011,8 @@ public class ClassStructure
         }
 
     /**
-     * Given this structure being a module or a package, build a list of all of the module
-     * dependencies, and the shortest path to each.
+     * Given this structure being a module or a package, build a list of all module dependencies,
+     * and the shortest path to each.
      *
      * @param sModulePath     pass "" for the primary module
      * @param mapModulePaths  pass a map containing all previously encountered modules (including
@@ -1201,6 +1201,30 @@ public class ClassStructure
         }
 
     @Override
+    public ResolutionResult resolveName(String sName, Access access, ResolutionCollector collector)
+        {
+        ResolutionResult result = super.resolveName(sName, access, collector);
+        if (result == ResolutionResult.UNKNOWN && getFormat() == Format.SERVICE)
+            {
+            // look into the Service interface itself
+            ClassStructure   clzSvc       = (ClassStructure) getConstantPool().clzService().getComponent();
+            SimpleCollector  collectorSvc = new SimpleCollector(ErrorListener.BLACKHOLE);
+            ResolutionResult resultSvc    = clzSvc.resolveName(sName, Access.PROTECTED, collectorSvc);
+            if (resultSvc == ResolutionResult.RESOLVED)
+                {
+                // only allow child classes; properties and methods are resolved by the TypeInfo
+                Constant constant = collectorSvc.getResolvedConstant();
+                if (constant.getFormat() == Constant.Format.Class)
+                    {
+                    collector.resolvedConstant(constant);
+                    return ResolutionResult.RESOLVED;
+                    }
+                }
+            }
+        return result;
+        }
+
+    @Override
     protected ClassStructure cloneBody()
         {
         ClassStructure that = (ClassStructure) super.cloneBody();
@@ -1245,7 +1269,7 @@ public class ClassStructure
                 {
                 if (contrib.getComposition() == Composition.Extends)
                     {
-                    // even though this class may be id'd using a ModuleConstant or PackageConstant,
+                    // even though this class may be id'd by a ModuleConstant or PackageConstant,
                     // the super will always be a class (because a Module and a Package cannot be
                     // extended)
                     ClassConstant constSuper = (ClassConstant)
@@ -1398,8 +1422,8 @@ public class ClassStructure
         }
 
     /**
-     * Check whether or not the specified contribution or any of its descendants matches the
-     * specified identity.
+     * Check whether the specified contribution or any of its descendants matches the specified
+     * identity.
      *
      * @param contrib      the contribution
      * @param typeContrib  the type of the contribution or one of its composing types (in the case
@@ -1422,8 +1446,8 @@ public class ClassStructure
         }
 
     /**
-     * Check whether or not the specified contribution of the union type or any of its
-     * descendants matches the specified identity.
+     * Check whether specified contribution of the union type or any of its descendants matches the
+     * specified identity.
      *
      * @param contrib      the contribution
      * @param typeContrib  the type of the contribution
@@ -1729,7 +1753,7 @@ public class ClassStructure
         }
 
     /**
-     * Recursively check if the formal name is introduced by this class of any of its contributions.
+     * Recursively check if the formal name is introduced by this class or any of its contributions.
      * <p/>
      * Note: while this seems to be a duplication of what TypoInfo does, we need to keep this
      * functionality since the TypeInfo generation itself uses it.
@@ -1745,7 +1769,7 @@ public class ClassStructure
      * Recursive implementation of containsGenericParamType method.
      *
      * @param sName       teh formal type name
-     * @param fAllowInto  specifies whether or not the "Into" contribution is to be skipped
+     * @param fAllowInto  specifies whether the "Into" contribution is to be skipped
      *
      * @return the corresponding actual type or null if there is no matching formal type
      */
@@ -1822,7 +1846,7 @@ public class ClassStructure
      * Recursive implementation of getGenericParamType method.
      *
      * @param pool        the ConstantPool to place a potentially created new constant into
-     * @param fAllowInto  specifies whether or not the "Into" contribution is to be skipped
+     * @param fAllowInto  specifies whether the "Into" contribution is to be skipped
      *
      * @return the corresponding actual type or null if there is no matching formal type
      */
@@ -2313,7 +2337,7 @@ public class ClassStructure
     /**
      * The implementation of the {@link #calculateRelation} method above.
      *
-     * @param fAllowInto  specifies whether or not the "Into" contribution is to be skipped
+     * @param fAllowInto  specifies whether the "Into" contribution is to be skipped
      */
     protected Relation calculateRelationImpl(TypeConstant typeLeft, TypeConstant typeRight,
                                              boolean fAllowInto)
@@ -2478,7 +2502,7 @@ public class ClassStructure
                 case Incorporates:
                 case Extends:
                     {
-                    // the identity constant for those contribution is always a class
+                    // the identity constant for those contributions is always a class
                     assert typeContrib.isExplicitClassIdentity(true);
 
                     // the "resolveType()" method, which accounts for conditional incorporates,
@@ -2684,7 +2708,7 @@ public class ClassStructure
                     // break through;
                 case Incorporates:
                 case Extends:
-                    // the identity constant for those contribution is always a class
+                    // the identity constant for those contributions is always a class
                     assert typeContrib.isExplicitClassIdentity(true);
                     break;
 
@@ -2835,7 +2859,7 @@ public class ClassStructure
                     // break through
                 case Incorporates:
                 case Extends:
-                    // the identity constant for those contribution is always a class
+                    // the identity constant for those contributions is always a class
                     assert typeContrib.isExplicitClassIdentity(true);
                     break;
 
@@ -3527,7 +3551,7 @@ public class ClassStructure
         }
 
     /**
-     * @return true iff a object of this class needs to hold a reference to its parent
+     * @return true iff an object of this class needs to hold a reference to its parent
      */
     public boolean isInstanceChild()
         {
@@ -3544,7 +3568,7 @@ public class ClassStructure
      *       compilation phase; it will be done by the compiler.
      *
      * @param fDisassemble  if true, indicates that this method is called during the "disassemble"
-     *                      phase, when the classes are constructed from it's persistent storage;
+     *                      phase, when the classes are constructed from its persistent storage;
      *                      false indicates that it's called during the compilation, when classes
      *                      are created from the source code
      */
@@ -3858,7 +3882,7 @@ public class ClassStructure
         }
 
     /**
-     * Register all of the constants associated with a list of type parameters.
+     * Register all the constants associated with a list of type parameters.
      *
      * @param mapOld  the map containing the type parameters
      *
