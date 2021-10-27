@@ -4,7 +4,6 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -995,18 +994,26 @@ public class LambdaExpression
             {
             // this is the first time that we have a chance to put together the signature, because
             // this is the first time that we are being called after validate()
-            ConstantPool          pool            = ctx.pool();
-            TypeConstant          typeFn          = getType();
-            String[]              asParams        = getParamNames();
-            TypeConstant[]        atypeParams     = pool.extractFunctionParams(typeFn);
-            TypeConstant[]        atypeReturns    = pool.extractFunctionReturns(typeFn);
-            Map<String, Argument> mapFormal       = ctxLambda.getFormalMap();
-            Map<String, Boolean>  mapCapture      = ctxLambda.getCaptureMap();
-            int                   cTypeParams     = mapFormal.size();
-            int                   cCaptures       = mapCapture.size();
-            int                   cBindArgs       = cTypeParams + cCaptures;
-            Argument[]            aBindArgs       = NO_RVALUES;
-            boolean[]             afImplicitDeref = null;
+            ConstantPool          pool         = ctx.pool();
+            TypeConstant          typeFn       = getType();
+            String[]              asParams     = getParamNames();
+            TypeConstant[]        atypeParams  = pool.extractFunctionParams(typeFn);
+            TypeConstant[]        atypeReturns = pool.extractFunctionReturns(typeFn);
+            Map<String, Argument> mapFormal    = ctxLambda.getFormalMap();
+            Map<String, Boolean>  mapCapture   = ctxLambda.getCaptureMap();
+            int                   cTypeParams  = mapFormal.size();
+            int                   cCaptures    = mapCapture.size();
+
+            // there is a chance that a formal type has been also captured; dedupe it
+            if (cTypeParams > 0 && cCaptures > 0
+                    && mapCapture.keySet().removeAll(mapFormal.keySet()))
+                {
+                cCaptures = mapCapture.size();
+                }
+
+            int        cBindArgs       = cTypeParams + cCaptures;
+            Argument[] aBindArgs       = NO_RVALUES;
+            boolean[]  afImplicitDeref = null;
 
             // MBIND is indicated by the method structure *NOT* being static
             lambda.setStatic(!ctxLambda.isLambdaMethod());
@@ -1304,7 +1311,8 @@ public class LambdaExpression
      *
      * @return a capturing context
      */
-    protected static LambdaContext enterCapture(Context ctx, StatementBlock body, TypeConstant[] atypeParams, String[] asParams)
+    protected static LambdaContext enterCapture(Context ctx, StatementBlock body,
+                                                TypeConstant[] atypeParams, String[] asParams)
         {
         return new LambdaContext(ctx, body, atypeParams, asParams);
         }
@@ -1324,7 +1332,8 @@ public class LambdaExpression
          * @param atypeParams  types of the explicit parameters for the context (e.g. for a lambda)
          * @param asParams     names of the explicit parameters for the context (e.g. for a lambda)
          */
-        public LambdaContext(Context ctxOuter, StatementBlock body, TypeConstant[] atypeParams, String[] asParams)
+        public LambdaContext(Context ctxOuter, StatementBlock body, TypeConstant[] atypeParams,
+                             String[] asParams)
             {
             super(ctxOuter);
 
@@ -1450,8 +1459,6 @@ public class LambdaExpression
                         {
                         reg = reg.narrowType(typeNarrowed);
                         reg.markInPlace();
-
-                        ensureNarrowedParameters().put(sName, typeNarrowed);
                         }
                     mapByName.put(sName, reg);
 
@@ -1462,39 +1469,15 @@ public class LambdaExpression
                 }
             }
 
-        /**
-         * @return a mutable map of narrowed parameter types for the corresponding lambda
-         */
-        public Map<String, TypeConstant> ensureNarrowedParameters()
-            {
-            Map<String, TypeConstant> map = m_mapNarrowed;
-            if (map == null)
-                {
-                m_mapNarrowed = map = new HashMap<>();
-                }
-            return map;
-            }
-
-        /**
-         * @return a map of narrowed parameter types for the corresponding lambda
-         */
-        public Map<String, TypeConstant> getNarrowedParameters()
-            {
-            return m_mapNarrowed == null ? Collections.EMPTY_MAP : m_mapNarrowed;
-            }
-
         private final TypeConstant[] f_atypeParams;
         private final String[]       f_asParams;
-
-        private Map<String, TypeConstant> m_mapNarrowed;
         }
 
 
     // ----- fields --------------------------------------------------------------------------------
 
-    private static final String[] NO_NAMES = Handy.NO_ARGS;
-
-    public static final String METHOD_NAME = "->";
+    private static final String[] NO_NAMES    = Handy.NO_ARGS;
+    private static final String   METHOD_NAME = "->";
 
     protected List<Parameter>  params;
     protected List<Expression> paramNames;
@@ -1505,29 +1488,30 @@ public class LambdaExpression
     /**
      * Set to true after the expression prepares.
      */
-    private transient boolean              m_fPrepared;
+    private transient boolean m_fPrepared;
     /**
      * The required type (stored here so that it can be picked up by other nodes below this node in
      * the AST).
      */
-    private transient TypeConstant         m_typeRequired;
+    private transient TypeConstant m_typeRequired;
     /**
      * A list of types from various return statements (collected here from information provided by
      * other nodes below this node in the AST).
      */
-    private transient TypeCollector        m_collector;
+    private transient TypeCollector m_collector;
     /**
      * The lambda structure itself.
      */
-    private transient MethodStructure      m_lambda;
+    private transient MethodStructure m_lambda;
     /**
      * The LambdaContext that collected all the necessary information during validation.
      */
-    private transient LambdaContext        m_ctxLambda;
+    private transient LambdaContext m_ctxLambda;
     /**
      * A cached array of bound arguments. Private to calculateBindings().
      */
-    private transient Argument[]           m_aBindArgs = NO_RVALUES;
+    private transient Argument[] m_aBindArgs = NO_RVALUES;
 
-    private static final Field[] CHILD_FIELDS = fieldsForNames(LambdaExpression.class, "params", "paramNames", "body");
+    private static final Field[] CHILD_FIELDS =
+            fieldsForNames(LambdaExpression.class, "params", "paramNames", "body");
     }
