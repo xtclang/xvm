@@ -5,6 +5,8 @@ module BankStressTest
     import Bank.Account;
     import Bank.Connection;
 
+    import Bank.oodb.CommitFailure;
+
     static Int BRANCHES     = 24;
     static Int MAX_ACCOUNTS = 100;
 
@@ -141,7 +143,8 @@ module BankStressTest
                             Int acctIdTo = rnd.int(MAX_ACCOUNTS);
                             if (acctIdTo != acctId,
                                     Account accFrom := bank.accounts.get(acctId),
-                                    bank.accounts.contains(acctIdTo))
+                                    bank.accounts.contains(acctIdTo),
+                                    accFrom.balance > 100)
                                 {
                                 txCount++;
                                 bank.transfer(acctId, acctIdTo, accFrom.balance / 2);
@@ -158,7 +161,7 @@ module BankStressTest
                 catch (Exception e)
                     {
                     bank.log.add($"{op} failed at {branchId}: {e.text}");
-                    if (op == "Audit")
+                    if (op == "Audit" || e.is(CommitFailure) && e.result == DatabaseError)
                         {
                         break business;
                         }

@@ -22,6 +22,7 @@ import oodb.DBSchema;
 import oodb.DBTransaction;
 import oodb.DBUser;
 import oodb.DBValue;
+import oodb.CommitFailure;
 import oodb.RootSchema;
 import oodb.SystemSchema;
 import oodb.Transaction.TxInfo;
@@ -642,7 +643,11 @@ service Client<Schema extends RootSchema>
                 if (e == Null)
                     {
                     val result = tx.commit();
-                    assert result == Committed as $"Failed to auto-commit {tx}; result={result}";
+                    if (result != Committed)
+                        {
+                        throw new CommitFailure(tx.txInfo, result,
+                            $"Failed to auto-commit {tx}; reason={result}");
+                        }
                     }
                 else
                     {

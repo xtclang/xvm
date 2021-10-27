@@ -50,6 +50,15 @@ module oodb.xtclang.org
         }
 
     /**
+     * A CommitFailure exception is raised by the database when an "auto-commit" transaction fails.
+     */
+    const CommitFailure(Transaction.TxInfo info, Transaction.CommitResult result, String? text = Null,
+                        Exception? cause = Null)
+            extends Exception(text, cause)
+        {
+        }
+
+    /**
      * Check to see if any of the database object name rules is broken by the specified name, and
      * if so, provide an explanation of the broken rule.
      *
