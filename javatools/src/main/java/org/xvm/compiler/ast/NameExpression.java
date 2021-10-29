@@ -14,6 +14,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.MultiMethodStructure;
@@ -2440,11 +2441,21 @@ public class NameExpression
                             }
                         else
                             {
+                            TypeConstant typeResolved = infoProp.getType();
+
+                            // strictly speaking, we could call "resolveDynamicType" regardless of
+                            // the desired type, but the implications of that are quite significant,
+                            // so we leave it to be dealt with as a part of the much wider "dynamic
+                            // type support" project
+                            if (typeDesired != null && typeDesired.containsDynamicType(null))
+                                {
+                                typeResolved = resolveDynamicType(ctx, typeLeft, type, typeResolved);
+                                }
+
                             IdentityConstant idCtx = ctx.isMethod() && typeLeft.isA(ctx.getThisType())
                                     ? ctx.getThisClass().getIdentityConstant()
                                     : null;
-
-                            type = infoProp.getType().resolveAutoNarrowing(pool, false, typeLeft, idCtx);
+                            type = typeResolved.resolveAutoNarrowing(pool, false, typeLeft, idCtx);
                             }
                         }
                     }
@@ -2572,6 +2583,89 @@ public class NameExpression
             default:
                 throw new IllegalStateException("constant=" + constant);
             }
+        }
+
+    /**
+     * Resolve the property type into a dynamic type is possible.
+     *
+     * @param ctx          the context
+     * @param typeLeft     the type for the "left" expression
+     * @param typeProp     the original property type, which could be formal
+     * @param typeResolved the resolved property type as computed by the TypeInfo
+     *
+     * @return a resolved property type
+     */
+    private TypeConstant resolveDynamicType(Context ctx, TypeConstant typeLeft,
+                                            TypeConstant typeProp, TypeConstant typeResolved)
+        {
+        ConstantPool pool = pool();
+
+        CheckDynamic:
+        if (left instanceof NameExpression &&
+                typeLeft.isSingleDefiningConstant() && !typeLeft.isFormalType())
+            {
+            NameExpression exprLeft = (NameExpression) left;
+            if (exprLeft.isSuppressDeref())
+                {
+                // this is a Ref property access, e.g.: "&outer.assigned"
+                break CheckDynamic;
+                }
+
+            Argument argLeft = exprLeft.resolveRawArgument(ctx, false, ErrorListener.BLACKHOLE);
+            if (!(argLeft instanceof Register))
+                {
+                break CheckDynamic;
+                }
+
+            Register regLeft = (Register) argLeft;
+            if (regLeft.isPredefined())
+                {
+                break CheckDynamic;
+                }
+
+            MethodConstant   idMethod = ctx.getMethod().getIdentityConstant();
+            String           sName    = exprLeft.getName();
+            IdentityConstant idParent = (IdentityConstant) typeLeft.
+                    removeAutoNarrowing().getDefiningConstant();
+
+            if (typeProp.isGenericType())
+                {
+                FormalConstant idFormal =
+                        (FormalConstant) typeProp.getDefiningConstant();
+                if (!typeResolved.isGenericType() &&
+                        idFormal.getParentConstant().equals(idParent))
+                    {
+                    return pool.ensureDynamicFormal(
+                            idMethod, regLeft, idFormal, sName).getType();
+                    }
+                }
+            else if (typeProp.containsGenericType(true))
+                {
+                // if the property type contains a generic type and that
+                // generic type belongs to the left argument, replace it with
+                // a corresponding dynamic type
+                GenericTypeResolver resolver = new GenericTypeResolver()
+                    {
+                    @Override
+                    public TypeConstant resolveGenericType(String sFormalName)
+                        {
+                        return typeResolved.resolveGenericType(sFormalName);
+                        }
+
+                    @Override
+                    public TypeConstant resolveFormalType(FormalConstant idFormal)
+                        {
+                        return idFormal.getParentConstant().equals(idParent)
+                            ? pool.ensureDynamicFormal(
+                                idMethod, regLeft, idFormal, sName).getType()
+                            : resolveGenericType(idFormal.getName());
+                        }
+                    };
+
+                return typeProp.resolveGenerics(pool, resolver);
+                }
+            }
+        return typeResolved;
         }
 
     /**

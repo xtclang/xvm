@@ -1735,8 +1735,8 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 Client<Schema> client = ensureClient(ReadOnly);
                 for (Requirement req : requirements)
                     {
-                    req.Result   oldVal = req.result                                      /*TODO GG why this:*/ .as(req.Result);
-                    req.Result   newVal = client.evaluateRequirement(req.dboId, req.test) /*TODO GG why this:*/ .as(req.Result);
+                    req.Result oldVal = req.result;
+                    req.Result newVal = client.evaluateRequirement(req.dboId, req.test);
                     if (oldVal != newVal)
                         {
                         return False;

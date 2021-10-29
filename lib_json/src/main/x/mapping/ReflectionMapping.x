@@ -55,7 +55,7 @@ const ReflectionMapping<Serializable, StructType extends Struct>(
                         value = elementInput.readUsing(mapping, field.defaultValue);
                         }
                     }
-                // TODO GG field.property.set(structure, value);
+                // TODO GG "field.property.set(structure, value);" compiles, but fails at run-time
                 field.property.as(Property<StructType, field.Value>).set(structure, value);
                 }
             }
