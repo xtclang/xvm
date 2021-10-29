@@ -347,13 +347,20 @@ interface DBObject
      * (along with the result from evaluating it) as a precondition for the commit (i.e. a "prepare
      * constraint").
      *
-     * This operation allows a test to be conducted on the previous state of the data in the
-     * database, without explicitly enlisting _the exact copy of that state_. In other words, the
-     * test is semi-blind, because only the result that the test returns to the caller must remain
-     * invariant in order for the commit to succeed. Both the test and the corresponding result are
-     * registered with the transaction as a necessary precondition for the commit, such that changes
-     * to the database sufficient to change the result of the test, will result in the current
-     * transaction failing to commit (and thus rolling back).
+     * This method allows the application to ask a question about the state of the database _as
+     * it was at the end of the most recent transaction_, and to require that the answer not change
+     * in order for the current transaction to be permitted to commit. If another transaction
+     * subsequently commits to the database, before the current transaction completes, then the
+     * same question is automatically re-evaluated during the commit of the current transaction, and
+     * if the result differs, then the current transaction will be rolled back.
+     *
+     * While this operation allows a test to be conducted on the previous state of the data in the
+     * database, that exact previous state is not explicitly enlisted into the transaction; in other
+     * words, the data may change and the current transaction could still be permitted to commit,
+     * but if the result of the test changes, then the transaction cannot commit. This behavior is
+     * referred to as "semi-blind", because only the result that the test returns to the caller must
+     * remain invariant in order for the commit to succeed. Both the test and the corresponding
+     * result are registered with the transaction as a necessary precondition for the commit.
      *
      * This method represents an explicit mechanism to dynamically register a pre-condition for
      * commit, and as such can be thought of like a [Validator] -- except that a [Validator] is

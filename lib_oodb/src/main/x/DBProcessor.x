@@ -1,72 +1,82 @@
 import Transaction.CommitResult;
 
 /**
- * The database interface for scheduling work that will occur in one or more later database
+ * The database interface for scheduling messages that will be processed by later database
  * transactions.
+ *
+ * TODO explain
  *
  * A `DBProcessor` is always transactional.
  */
-interface DBProcessor<Element extends immutable Const>
+interface DBProcessor<Message extends immutable Const>
         extends DBObject
     {
-    // ----- scheduling methods --------------------------------------------------------------------
+    // ----- message scheduling --------------------------------------------------------------------
 
     /**
-     * Schedule the specified element to run after this transaction completes, according to the
-     * provided schedule.
+     * Schedule the specified message to be processed after this transaction commits, according to
+     * the provided schedule.
      *
-     * @param element   the element to process
+     * @param message   the message to process
      * @param when      (optional) the schedule for processing; `Null` indicates "immediately"
      */
-    void schedule(Element element, Schedule? when=Null);
+    void schedule(Message message, Schedule? when=Null);
 
     /**
-     * Schedule the specified elements to run after this transaction completes, according to the
-     * provided schedule.
+     * Schedule the specified messages to be processed after this transaction completes, according
+     * to the provided schedule.
      *
-     * @param elements  the elements to process
+     * @param messages  the messages to process
      * @param when      (optional) the schedule for processing; `Null` indicates "immediately"
      */
-    void scheduleAll(Iterable<Element> elements, Schedule? when=Null)
+    void scheduleAll(Iterable<Message> messages, Schedule? when=Null)
         {
-        for (Element el : elements)
+        for (Message el : messages)
             {
             schedule(el, when);
             }
         }
 
     /**
-     * Remove all previously scheduled processing of the specified element, then add a new schedule
-     * for that same element.
+     * Remove all scheduled instances of the specified message, then re-schedule that message to be
+     * processed using the provided [Schedule].
      *
-     * @param element   the element to reschedule the processing of
-     * @param when      the new schedule for processing the element
+     * @param message   the message to reschedule the processing of
+     * @param when      the new schedule for processing the message
      */
-    void reschedule(Element element, Schedule when)
+    void reschedule(Message message, Schedule when)
         {
-        unschedule(element);
-        schedule(element, when);
+        unschedule(message);
+        schedule(message, when);
         }
 
     /**
-     * Unschedule the specified element that may currently be scheduled for processing.
+     * Remove all scheduled instances of the specified message.
      *
-     * @return `True` iff the specified element was scheduled at least once, and now is not
-     *         scheduled
+     * This does not have any effect on the processing of any messages that is already occurring.
+     *
+     * This only affects those messages scheduled before this transaction began; messages scheduled
+     * while this transaction is in process will not be unscheduled.
+     *
+     * @return `True` iff the specified message was scheduled at least once
      */
-    Boolean unschedule(Element element);
+    Boolean unschedule(Message message);
 
     /**
-     * Unschedule all scheduled processing of elements. This does not attempt to undo or stop the
-     * processing of any elements that is already occurring.
+     * Remove all scheduled messages.
+     *
+     * This does not have any effect on the processing of any messages that is already occurring.
+     *
+     * This only affects those messages scheduled before this transaction began; messages scheduled
+     * while this transaction is in process will not be unscheduled.
      */
     void unscheduleAll();
 
     /**
-     * Obtain a **read-only** view of all previously added "pending" elements to process.
+     * Obtain a read-only view of scheduled messages.
      *
      * Due to the transactional nature of the database, the actual state of pending operations is
-     * likely to be constantly in flux, with new elements being added and existing elements being
+     * likely to be constantly in flux, with new messages being added and existing messages being
      * processed and retired. Achieving a stable view may be extremely expensive; therefore, it is
      * strongly suggested that the `DBProcessor` first be suspended (by calling [suspend]) before
      * attempting any significant analysis of the resulting list. Note that, even with suspension,
@@ -74,59 +84,77 @@ interface DBProcessor<Element extends immutable Const>
      * list, due to the "repeatable-read" transactional guarantees provided by the OODB APIs.
      *
      * This is not an instantaneous property; the value of this property reflects the `DBProcessor`
-     * state at the beginning of the current transaction (or the state of the `DBProcessor` as the
-     * result of this transaction).
+     * state at the beginning of the current transaction, combined with any changes made by the
+     * current transaction. In other words, this is a transactional view of the pending messages.
      *
-     * Due to reasonable security considerations, it should not be assumed that this data will
-     * even be accessible to most user connections.
+     * Due to security considerations, it is expected that a database employing user-level security
+     * will disallow most users from obtaining this information.
      *
-     * @return the pending elements that are already scheduled for processing
+     * @return the pending messages that are scheduled for processing
      */
     @RO List<Pending> pending;
 
 
-    // ----- processing methods --------------------------------------------------------------------
+    // ----- message processing --------------------------------------------------------------------
 
     /**
-     * Process an element.
+     * Process a message.
      *
-     * @param element  the previously scheduled element to process
+     * Generally, this method is invoked by the database to process a message, based on the schedule
+     * information that was provided with the message when [schedule] was called. It is also
+     * possible for application code to invoke this method directly within a transaction, if the
+     * application wants to apply the messaging processing synchronously within the current
+     * transaction, instead of asynchronously within a different transaction.
+     *
+     * @param message  the message to process
      */
-    void process(Element element);
+    void process(Message message);
 
     /**
-     * Process a group of elements. It may be more efficient to process a group of elements
-     * together, and a developer should implement this method if that is the case.
+     * Process a group of messages. It may be more efficient to process a group of messages
+     * together, and the database developer should implement this method if that is the case.
      *
-     * @param elements  the previously scheduled elements to process; note that there are no
-     *                  guarantees of uniqueness in the list of elements
+     * @param messages  the previously scheduled messages to process; note that there are no
+     *                  guarantees of uniqueness in the list of messages
      */
-    void processAll(List<Element> elements)
+    void processAll(List<Message> messages)
         {
-        for (Element element : elements)
+        for (Message message : messages)
             {
-            process(element);
+            process(message);
             }
         }
 
     /**
-     * Determine if the processing for an element should be automatically retried, after the element
-     * has failed to [process].
+     * The specified message has failed to [process]; determine if the processing for the message
+     * should be automatically retried at a later point in time, and in a different transaction.
      *
-     * A database engine may stop re-trying the processing of the element at any point, and is
-     * expected to automatically stop re-trying the processing if the element fails repeatedly,
+     * A database engine may stop re-trying the processing of the message at any point, and is
+     * expected to automatically stop re-trying the processing if the message fails repeatedly,
      * particularly if the failure is exceptional.
      *
-     * @param element         the element that failed to be processed and committed
+     * @param message         the message that failed to process; note that the failure could have
+     *                        occurred during the [process] invocation itself, or during the
+     *                        subsequent commit of the transaction
      * @param result          the result from the previous failed attempt, which is either a
      *                        commit failure indicated as a [CommitResult], or an `Exception`
-     * @param timesAttempted  the number of times that the processing of this element has been
-     *                        attempted, and has failed
+     * @param when            the [Schedule] that caused the message to be processed
+     * @param startTime       the DateTime that the failed processing of the message began
+     * @param timesAttempted  the number of times `(n >= 1)` that the processing of this message has
+     *                        been attempted, and has failed
      *
-     * @return `True` if the DBProcessor should try to process the same element again automatically
+     * @return `True` indicates that the same message should be automatically scheduled to be
+     *         processed again
      */
-    Boolean autoRetry(Element element, CommitResult | Exception result, Int timesAttempted)
+    Boolean autoRetry(Message                  message,
+                      CommitResult | Exception result,
+                      Schedule?                when,
+                      DateTime                 startTime,
+                      Int                      timesAttempted)
         {
+        // TODO check repeating schedule+policy against start time and current time (abandon if it
+        //      is ripe to run again)
+
         if (result.is(CommitResult))
             {
             switch (result)
@@ -145,10 +173,9 @@ interface DBProcessor<Element extends immutable Const>
                 case DistributorFailed:
                     break;
 
+                default:
                 case DatabaseError:
                     return False;
-
-                default: assert;
                 }
             }
 
@@ -159,35 +186,41 @@ interface DBProcessor<Element extends immutable Const>
         }
 
     /**
-     * A limit for the number of auto-retries of failed attempts to [process] an element.
+     * A suggested limit for the number of auto-retries to successfully [process] a message.
      */
     @RO Int maxAttempts = 3;
 
     /**
-     * This method is invoked by the database engine when the element has failed to be processed,
-     * and either [autoRetry] has returned `False`, or the database engine has made a decision to
-     * not retry the element.
+     * This method is invoked by the database engine when the message has failed to be processed,
+     * and either [autoRetry] has returned `False`, or the database engine has made the decision to
+     * stop automatically retrying the processing of this message.
      *
-     * @param element         the element that failed to be processed and committed
+     * @param message         the message that failed to be processed and committed
      * @param result          the result from the last failed attempt, which is either a
      *                        commit failure indicated as a [CommitResult], or an `Exception`
-     * @param timesAttempted  the number of times that the processing of this element has been
+     * @param when            the [Schedule] that caused the message to be processed
+     * @param startTime       the DateTime that the failed processing of the message began
+     * @param timesAttempted  the number of times that the processing of this message has been
      *                        attempted, and has failed
      */
-    void abandon(Element element, CommitResult | Exception result, Int timesAttempted)
+    void abandon(Message                  message,
+                 CommitResult | Exception result,
+                 Schedule?                when,
+                 DateTime                 startTime,
+                 Int                      timesAttempted)
         {
-        String elementString;
+        String messageString;
         try
             {
-            elementString = element.toString();
+            messageString = message.toString();
             }
         catch (Exception e)
             {
-            elementString = $"??? (Exception={e.text})";
+            messageString = $"??? (Exception={e.text})";
             }
 
         dbLogFor<DBLog<String>>(Path:/sys/errors).add(
-                $|Failed to process {elementString} due to\
+                $|Failed to process {messageString} due to\
                  | {result.is(CommitResult) ? "commit error" : "exception"} {result};\
                  | abandoning after {timesAttempted} attempts
                 );
@@ -197,15 +230,15 @@ interface DBProcessor<Element extends immutable Const>
     // ----- runtime management methods ------------------------------------------------------------
 
     /**
-     * Suspend the processing of elements until a call is made to [resume].
+     * Suspend the processing of messages until a call is made to [resume].
      *
-     * This is not an instantaneous method; **the suspension only takes effect when the current
-     * transaction is successfully committed**.
+     * This is not an instantaneous method; the suspension only takes effect when the current
+     * transaction is successfully committed.
      */
     void suspend();
 
     /**
-     * Indicates whether the processing of elements has been suspended.
+     * Indicates whether the processing of messages has been suspended.
      *
      * This is not an instantaneous property; the value of this property reflects the suspension
      * state at the beginning of the current transaction (or the state of the suspension as the
@@ -214,10 +247,10 @@ interface DBProcessor<Element extends immutable Const>
     @RO Boolean suspended;
 
     /**
-     * Resume the processing of elements at some point after a call was made to [suspend].
+     * Resume the processing of messages at some point after a call was made to [suspend].
      *
-     * This is not an instantaneous method; **the resumption only takes effect when the current
-     * transaction is successfully committed**.
+     * This is not an instantaneous method; the resumption only takes effect when the current
+     * transaction is successfully committed.
      */
     void resume();
 
@@ -226,14 +259,14 @@ interface DBProcessor<Element extends immutable Const>
 
     /**
      * The `@Dedupe` annotation indicates that the `DBProcessor` should _automatically_ remove
-     * duplicate `Pending` entries, such that multiple entries for the same `Element` on the same
+     * duplicate `Pending` entries, such that multiple entries for the same `Message` on the same
      * `DBProcessor` that -- at some point in time -- _could_ be processed as multiple invocations
-     * of [process], would instead be processed as a single call to [process] that `Element`. This
+     * of [process], would instead be processed as a single call to [process] that `Message`. This
      * may involve removing duplicates when they are scheduled with the DBProcessor, and it may also
-     * involve de-duping the `Element`s to process when selecting from a backlog of [Pending] items.
+     * involve de-duping the `Message`s to process when selecting from a backlog of [Pending] items.
      *
-     * In the absence of this annotation, for each time that the same `Element` value is scheduled,
-     * a separate call to [process] will occur (or the same `Element` will appear multiple times in
+     * In the absence of this annotation, for each time that the same `Message` value is scheduled,
+     * a separate call to [process] will occur (or the same `Message` will appear multiple times in
      * the argument to [processAll], or some combination of the two).
      */
     static mixin Dedupe
@@ -260,7 +293,7 @@ interface DBProcessor<Element extends immutable Const>
 
     /**
      * The `@Individual` annotation indicates that the `DBProcessor` should **not** process more
-     * than one element per transaction; in other words, there should be only one call to this
+     * than one message per transaction; in other words, there should be only one call to this
      * `DBProcessor`'s [process] method within a transaction, regardless of the number of `Pending`
      * items that are ready to be processed by this DBProcessor.
      *
@@ -277,6 +310,8 @@ interface DBProcessor<Element extends immutable Const>
      * The `@Isolated` annotation indicates that the processing of this `DBProcessor` should not be
      * combined within the same transaction with the processing of _other_ `DBProcessor`s.
      *
+     * "For this dbprocess, don't put any other dbprocessors' processing in with me"
+     *
      * In the absence of this annotation, a database implementation _may_ choose to combine the
      * processing of multiple `DBProcessor` objects within a single transaction, for efficiency.
      */
@@ -286,7 +321,7 @@ interface DBProcessor<Element extends immutable Const>
         }
 
 
-    // ----- pending element representation --------------------------------------------------------
+    // ----- pending message representation --------------------------------------------------------
 
     /**
      * The representation of a pending `DBProcessor` execution in the database.
@@ -300,10 +335,10 @@ interface DBProcessor<Element extends immutable Const>
      * * Desired future invocations can be stored in persistent storage to ensure that the request
      *   for their execution can survive a database shutdown, outage, or other events.
      */
-    static const Pending<Element extends immutable Const>
+    static const Pending<Message extends immutable Const>
             (
             Path      processor,
-            Element   element,
+            Message   message,
             Schedule? schedule         = Null,
             Int       previousFailures = 0,
             )
@@ -314,14 +349,14 @@ interface DBProcessor<Element extends immutable Const>
         Path processor;
 
         /**
-         * The `Element` to be processed.
+         * The `Message` to be processed.
          */
-        Element element;
+        Message message;
 
         /**
          * Determine the schedule of the invocation, if one has been specified.
          *
-         * @return the [Schedule], or `Null` if the invocation should be processed as soon as
+         * @return the [Schedule], or `Null` if the message should be processed as soon as
          *         possible
          */
         Schedule? schedule;
@@ -331,7 +366,8 @@ interface DBProcessor<Element extends immutable Const>
          *
          * @return True if the invocation is auto-rescheduling, aka "repeating".
          * @return (conditional) the interval of repeating
-         * @return (conditional) the policy of repeating when the previous execution has not already
+         * @return (conditional) the policy for scheduling the message processing, when the previous
+         *         processing of the same message (i.e. this same `Pending` object) has not yet
          *         completed
          */
         conditional (Duration repeatInterval, Schedule.Policy repeatPolicy) isRepeating()
@@ -345,7 +381,7 @@ interface DBProcessor<Element extends immutable Const>
             }
 
         /**
-         * Determine the priority of the pending execution.
+         * Determine the priority of the pending message processing.
          */
         Schedule.Priority priority.get()
             {
@@ -353,21 +389,22 @@ interface DBProcessor<Element extends immutable Const>
             }
 
         /**
-         * The number of times that this pending invocation has already been attempted, and has failed.
+         * The number of times that this pending message processing has already been attempted, and
+         * has failed.
          */
         Int previousFailures;
         }
 
 
-    // ----- Scheduling support --------------------------------------------------------------------
+    // ----- schedule representation ---------------------------------------------------------------
 
     /**
-     * Represents the schedule for an element to be processed.
+     * Represents the schedule for a message to be processed.
      */
     static const Schedule(DateTime? scheduledAt      = Null,
                           Time?     scheduledDaily   = Null,
                           Duration? repeatInterval   = Null,
-                          Policy    repeatPolicy     = AllowOverlapping,
+                          Policy    repeatPolicy     = AllowOverlapping, // REVIEW SuggestedMinimum?
                           Priority  priority         = Normal,
                          )
         {
@@ -408,34 +445,23 @@ interface DBProcessor<Element extends immutable Const>
             }
 
         /**
-         * Determine if a specific time is set for the element to be processed.
+         * Determine if a specific time is set for the message to be processed.
          *
          * @return True iff the schedule indicates a specific point-in-time or daily-time that the
-         *         pending element should be processed
-         * @return (conditional) the point-in-time (DateTime) or daily-time (Time)
+         *         pending message should be processed
          */
-        conditional DateTime | Time isScheduled()
+        Boolean isScheduled()
             {
-            if (scheduledAt != Null)
-                {
-                return True, scheduledAt;
-                }
-
-            if (scheduledDaily != Null)
-                {
-                return True, scheduledDaily;
-                }
-
-            return False;
+            return scheduledAt != Null || scheduledDaily != Null;
             }
 
         /**
-         * Determine if the element processing is scheduled to repeat automatically.
+         * Determine if the message processing is scheduled to repeat automatically.
          *
-         * @return True iff the schedule indicates automatic repeating of the element processing
+         * @return True iff the schedule indicates automatic repeating of the message processing
          * @return (conditional) the interval of the repetition
          * @return (conditional) the policy governing the repetition, for example when the previous
-         *         execution has not completed before the next execution would begin
+         *         message processing has not completed before the next iteration would begin
          */
         conditional (Duration repeatInterval, Policy repeatPolicy) isRepeating()
             {
@@ -448,35 +474,42 @@ interface DBProcessor<Element extends immutable Const>
             }
 
         /**
-         * The supported priorities for scheduled items.
+         * The supported priorities for scheduled messages.
          *
          * * High - An indication that the priority is higher than the default priority.
-         * * Medium - The default priority.
+         * * Normal - The default priority.
          * * Low - An indication that the priority is lower than the default priority.
          * * WhenIdle - An indication that the processing should only occur when there appears to be
-         *   a lack of (or a measurable lull in) other database activity.
+         *   a lack of (or a measurable lull in) other database activity. (This definition is
+         *   purposefully lacking in explicitness.)
          */
         enum Priority {High, Normal, Low, WhenIdle}
 
         /**
          * Indicates how the repeating period is calculated.
          *
-         * * AllowOverlapping - calculate the next scheduled time based on the time that each run
-         *   was supposed to begin; if a previous execution has not yet completed, start the next
-         *   execution.
+         * * AllowOverlapping - Calculate the next scheduled time based on the time that each
+         *   instance of message processing was _supposed_ to begin; it is desired that the next
+         *   scheduled processing of the message begin regardless of whether the previous processing
+         *   of the message has completed.
          *
-         * * SkipOverlapped - if the previous run has not finished running at the point that a
-         *   subsequent run is scheduled to be run, then the subsequent run is skipped. This policy
-         *   prevents overlapping of processing caused by same repeating-schedule Pending element.
+         * * SkipOverlapped - Skip the processing of the message if a previous processing of the
+         *   message did not completed by the time that the processing of the message was to begin.
+         *   This policy prevents a repeating schedule from inadvertently starting the processing of
+         *   a message if that same message is already being concurrently processed as the result of
+         *   the same schedule.
          *
-         * * SuggestedMinimum - calculate the next scheduled time based on the time that each run
-         *   was supposed to begin; if a previous execution has not yet completed, then delay the
-         *   start of the next execution until the previous completes. This policy prevents
-         *   overlapping of processing caused by same repeating-schedule Pending element.
+         * * SuggestedMinimum - Defer the processing of the message as long as the previous
+         *   processing of the message from this same repeating schedule has not completed.
+         *   This policy prevents a repeating schedule from inadvertently starting the processing of
+         *   a message if that same message is already being concurrently processed as the result of
+         *   the same schedule.
          *
          * * MeasureFromCommit - calculate the next scheduled time based on the time that the
-         *   previous run completes. This policy prevents overlapping of processing caused by same
-         *   repeating-schedule Pending element.
+         *   previous run completes.
+         *   This policy prevents a repeating schedule from inadvertently starting the processing of
+         *   a message if that same message is already being concurrently processed as the result of
+         *   the same schedule.
          */
         enum Policy
             {
@@ -598,23 +631,23 @@ interface DBProcessor<Element extends immutable Const>
      * `TxChange` interface, it can provide both the change information, and a before/after view of
      * the data.
      */
-    static interface DBChange<Element>
+    static interface DBChange<Message>
         {
         /**
-         * The elements scheduled in this transaction to be processed later.
+         * The messages scheduled in this transaction to be processed later.
          *
          * The returned `List` does not allow mutation, but if the transaction is still processing,
          * any items subsequently added within the transaction _may_ appear in the list.
          */
-        List<Element> added;
+        List<Message> added;
 
         /**
-         * The elements processed by this transaction.
+         * The messages processed by this transaction.
          *
          * The returned `List` does not allow mutation, but if the transaction is still processing,
          * any items subsequently taken within the transaction _may_ appear in the list.
          */
-        List<Element> removed;
+        List<Message> removed;
         }
 
     /**
@@ -626,7 +659,7 @@ interface DBProcessor<Element extends immutable Const>
      */
     @Override
     interface TxChange
-            extends DBChange<Element>
+            extends DBChange<Message>
         {
         }
 
