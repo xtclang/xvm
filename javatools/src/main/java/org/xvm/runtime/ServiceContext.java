@@ -1096,7 +1096,8 @@ public class ServiceContext
                 {
                 xService service = (xService) clazz.getTemplate();
 
-                return service.constructSync(frame, constructor, clazz, hParent, ahArg, 0);
+                return service.constructSync(frame, constructor, clazz, hParent, ahArg,
+                        iReturn == A_IGNORE ? A_IGNORE : 0);
                 }
 
             public String toString()

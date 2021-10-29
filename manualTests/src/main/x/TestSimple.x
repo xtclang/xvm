@@ -4,17 +4,10 @@ module TestSimple.test.org
 
     void run()
         {
-        TestService svc = new TestService();
-        svc.test();
-        console.println(svc.serviceControl.statusIndicator);
+        new Test(); // "ignored" result used to blow up
         }
 
-    service TestService
+    service Test
         {
-        void test()
-            {
-            ServiceStatus indicator = serviceControl.statusIndicator;
-            console.println(indicator);
-            }
         }
     }
