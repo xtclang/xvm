@@ -7,6 +7,7 @@ import json.Mapping;
 import json.ObjectInputStream;
 import json.ObjectOutputStream;
 import json.Parser;
+import json.Printer.printString;
 
 import model.DBObjectInfo;
 import model.SysInfo;
@@ -76,10 +77,10 @@ import ObjectStore.MergeResult;
  *
  *    append this information to the end of the database tx log, e.g.:
  *        [
- *        {"_op":"created", "_ts":"2021-09-02T22:55:54.257Z", "_prev_tx":23},
- *        {"_tx":1, "_ts":"2021-09-02T22:55:54.672Z", "title":"My Contacts"},
- *        {"_tx":2, "_ts":"2021-09-02T22:55:55.272Z", "contacts":[{"k":"Washington, George",
- *          "v":{"firstName":"George","lastName":"Washington","emails":[],"phones":[]}}]
+ *        {"_op":"created", "_ts":"2021-09-02T22:55:54.257Z", "_prev_v":23},
+ *        {"_v":1, "_tx":1, "_ts":"2021-09-02T22:55:54.672Z", "title":"My Contacts"},
+ *        {"_v":2, "_tx":3, "_ts":"2021-09-02T22:55:55.272Z", "contacts":[{"k":"Washington, George",
+ *          "ver":{"firstName":"George","lastName":"Washington","emails":[],"phones":[]}}]
  *        {"_op":"closed", "_ts":"2021-09-02T22:55:55.272Z"}
  *        ]
  *
@@ -87,10 +88,13 @@ import ObjectStore.MergeResult;
  * "contacts") to be used as keys, without the potential for conflicting with the keys used by the
  * TxManager itself:
  *
- * * `_tx` - the transaction id
- * * `_ts` - the timestamp
- * * `_op` - other non-transactional operation record
- * * `_prev_tx` - the last transaction from the previous transaction log segment (previous file)
+ * * `_v` - the database version id (the "commit id", i.e. an internal transaction id)
+ * * `_tx` - the "visible" transaction id from the TxInfo record of the committed transaction
+ * * `_name` - the "visible" transaction name from the TxInfo record of the committed transaction
+ * * `_ts` - the clock's timestamp
+ * * `_rc` - the retry count before the transaction successfully committed
+ * * `_op` - operation indicator (for anything not a transaction record)
+ * * `_prev_v` - the last transaction from the previous transaction log segment (previous file)
  */
 @Concurrent
 service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
@@ -2123,11 +2127,26 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
          */
         protected StringBuffer addSeal(StringBuffer buf)
             {
-            buf.append(",\n{\"_tx\":")
+            buf.append(",\n{\"_v\":")
                .append(prepareId)
-               .append(", \"_ts\":\"")
+               .append(", _tx=")
+               .append(txInfo.id);
+
+            if (String name ?= txInfo.name)
+                {
+                buf.append(", _name=");
+                printString(name, buf);
+                }
+
+            buf.append(", \"_ts\":\"")
                .append(clock.now.toString(True))
                .add('\"');
+
+            if (txInfo.retryCount > 0)
+                {
+                buf.append(", _rc=")
+                   .append(txInfo.retryCount);
+                }
 
             Loop: for ((Int storeId, String? json) : sealById)
                 {
@@ -2488,7 +2507,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
     protected void initLogFile()
         {
         logFile.contents = $|[
-                            |\{"_op":"created", "_ts":"{clock.now.toString(True)}", "_prev_tx":{lastCommitted}}
+                            |\{"_op":"created", "_ts":"{clock.now.toString(True)}", "_prev_v":{lastCommitted}}
                             |]
                             .utf8();
         logUpdated();
@@ -2686,7 +2705,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             log("TxManager current segment of transaction log is missing, so one will be created");
             String timestamp = clock.now.toString(True);
             logFile.contents = $|[
-                                |\{"_op":"created", "_ts":"{timestamp}", "_prev_tx":{lastTx}},
+                                |\{"_op":"created", "_ts":"{timestamp}", "_prev_v":{lastTx}},
                                 |\{"_op":"recovered", "_ts":"{timestamp}"}
                                 |]
                                 .utf8();
@@ -2807,11 +2826,11 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                     using (val objectParser = arrayParser.expectObject())
                         {
                         Int txId;
-                        if (objectParser.matchKey("_tx"))
+                        if (objectParser.matchKey("_v"))
                             {
                             txId = objectParser.expectInt();
                             }
-                        else if (objectParser.matchKey("_op") && objectParser.findKey("_prev_tx"))
+                        else if (objectParser.matchKey("_op") && objectParser.findKey("_prev_v"))
                             {
                             txId = objectParser.expectInt() + 1;
                             }
