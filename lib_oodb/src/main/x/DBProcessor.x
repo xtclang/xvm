@@ -100,11 +100,9 @@ interface DBProcessor<Message extends immutable Const>
     /**
      * Process a message.
      *
-     * Generally, this method is invoked by the database to process a message, based on the schedule
-     * information that was provided with the message when [schedule] was called. It is also
-     * possible for application code to invoke this method directly within a transaction, if the
-     * application wants to apply the messaging processing synchronously within the current
-     * transaction, instead of asynchronously within a different transaction.
+     * Generally, this method is invoked by the database to process a message based on the schedule
+     * information that was provided with the message when [schedule] was called. However, it is
+     * also possible for application code to invoke this method directly within a transaction.
      *
      * @param message  the message to process
      */

@@ -350,7 +350,7 @@ interface DBObject
      * This method allows the application to ask a question about the state of the database _as
      * it was at the end of the most recent transaction_, and to require that the answer not change
      * in order for the current transaction to be permitted to commit. If another transaction
-     * subsequently commits to the database, before the current transaction completes, then the
+     * subsequently commits to the database before the current transaction completes, then the
      * same question is automatically re-evaluated during the commit of the current transaction, and
      * if the result differs, then the current transaction will be rolled back.
      *
