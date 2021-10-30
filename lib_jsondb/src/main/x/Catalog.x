@@ -81,8 +81,6 @@ service Catalog<Schema extends RootSchema>
         assert:arg dir.exists && dir.readable && (readOnly || dir.writable);
         assert metadata != Null || Schema == RootSchema;
 
-        @Inject Clock clock;
-
         this.timestamp   = clock.now;
         this.dir         = dir;
         this.metadata    = metadata;
@@ -203,6 +201,8 @@ service Catalog<Schema extends RootSchema>
 
     // ----- properties ----------------------------------------------------------------------------
 
+    @Inject Clock clock;
+
     /**
      * The timestamp from when this Catalog was created; used as an assumed-unique identifier.
      */
@@ -297,6 +297,15 @@ service Catalog<Schema extends RootSchema>
     @Lazy public/private TxManager txManager.calc()
         {
         return new TxManager(this);
+        }
+
+    /**
+     * The process scheduler for this `Catalog` object. The scheduler supports the asynchronous
+     * processing by the database.
+     */
+    @Lazy public/private Scheduler scheduler.calc()
+        {
+        return new Scheduler(this);
         }
 
     /**

@@ -368,7 +368,7 @@ interface DBProcessor<Message extends immutable Const>
          *         processing of the same message (i.e. this same `Pending` object) has not yet
          *         completed
          */
-        conditional (Duration repeatInterval, Schedule.Policy repeatPolicy) isRepeating()
+        conditional (Duration repeatInterval, Policy repeatPolicy) isRepeating()
             {
             // TODO GG return schedule?.isRepeating() : False;
             if (Schedule schedule ?= schedule)
@@ -381,7 +381,7 @@ interface DBProcessor<Message extends immutable Const>
         /**
          * Determine the priority of the pending message processing.
          */
-        Schedule.Priority priority.get()
+        Priority priority.get()
             {
             return schedule?.priority : Normal;
             }
@@ -395,6 +395,52 @@ interface DBProcessor<Message extends immutable Const>
 
 
     // ----- schedule representation ---------------------------------------------------------------
+
+    /**
+     * The supported priorities for scheduled messages.
+     *
+     * * High - An indication that the priority is higher than the default priority.
+     * * Normal - The default priority.
+     * * Low - An indication that the priority is lower than the default priority.
+     * * WhenIdle - An indication that the processing should only occur when there appears to be
+     *   a lack of (or a measurable lull in) other database activity. (This definition is
+     *   purposefully lacking in explicitness.)
+     */
+    enum Priority {High, Normal, Low, WhenIdle}
+
+    /**
+     * Indicates how the repeating period is calculated.
+     *
+     * * AllowOverlapping - Calculate the next scheduled time based on the time that each
+     *   instance of message processing was _supposed_ to begin; it is desired that the next
+     *   scheduled processing of the message begin regardless of whether the previous processing
+     *   of the message has completed.
+     *
+     * * SkipOverlapped - Skip the processing of the message if a previous processing of the
+     *   message did not completed by the time that the processing of the message was to begin.
+     *   This policy prevents a repeating schedule from inadvertently starting the processing of
+     *   a message if that same message is already being concurrently processed as the result of
+     *   the same schedule.
+     *
+     * * SuggestedMinimum - Defer the processing of the message as long as the previous
+     *   processing of the message from this same repeating schedule has not completed.
+     *   This policy prevents a repeating schedule from inadvertently starting the processing of
+     *   a message if that same message is already being concurrently processed as the result of
+     *   the same schedule.
+     *
+     * * MeasureFromCommit - calculate the next scheduled time based on the time that the
+     *   previous run completes.
+     *   This policy prevents a repeating schedule from inadvertently starting the processing of
+     *   a message if that same message is already being concurrently processed as the result of
+     *   the same schedule.
+     */
+    enum Policy
+        {
+        AllowOverlapping,
+        SkipOverlapped,
+        SuggestedMinimum,
+        MeasureFromCommit,
+        }
 
     /**
      * Represents the schedule for a message to be processed.
@@ -469,52 +515,6 @@ interface DBProcessor<Message extends immutable Const>
                 }
 
             return False;
-            }
-
-        /**
-         * The supported priorities for scheduled messages.
-         *
-         * * High - An indication that the priority is higher than the default priority.
-         * * Normal - The default priority.
-         * * Low - An indication that the priority is lower than the default priority.
-         * * WhenIdle - An indication that the processing should only occur when there appears to be
-         *   a lack of (or a measurable lull in) other database activity. (This definition is
-         *   purposefully lacking in explicitness.)
-         */
-        enum Priority {High, Normal, Low, WhenIdle}
-
-        /**
-         * Indicates how the repeating period is calculated.
-         *
-         * * AllowOverlapping - Calculate the next scheduled time based on the time that each
-         *   instance of message processing was _supposed_ to begin; it is desired that the next
-         *   scheduled processing of the message begin regardless of whether the previous processing
-         *   of the message has completed.
-         *
-         * * SkipOverlapped - Skip the processing of the message if a previous processing of the
-         *   message did not completed by the time that the processing of the message was to begin.
-         *   This policy prevents a repeating schedule from inadvertently starting the processing of
-         *   a message if that same message is already being concurrently processed as the result of
-         *   the same schedule.
-         *
-         * * SuggestedMinimum - Defer the processing of the message as long as the previous
-         *   processing of the message from this same repeating schedule has not completed.
-         *   This policy prevents a repeating schedule from inadvertently starting the processing of
-         *   a message if that same message is already being concurrently processed as the result of
-         *   the same schedule.
-         *
-         * * MeasureFromCommit - calculate the next scheduled time based on the time that the
-         *   previous run completes.
-         *   This policy prevents a repeating schedule from inadvertently starting the processing of
-         *   a message if that same message is already being concurrently processed as the result of
-         *   the same schedule.
-         */
-        enum Policy
-            {
-            AllowOverlapping,
-            SkipOverlapped,
-            SuggestedMinimum,
-            MeasureFromCommit,
             }
 
         /**

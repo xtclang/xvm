@@ -103,6 +103,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
     construct(Catalog<Schema> catalog)
         {
         this.catalog = catalog;
+        this.clock   = catalog.clock;
 
         // build the quick lookup information for the optional transactional "modifiers"
         // (validators, rectifiers, and distributors)
@@ -149,7 +150,10 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
 
     // ----- properties ----------------------------------------------------------------------------
 
-    @Inject Clock clock;
+    /**
+     * The clock shared by all of the services in the database.
+     */
+    Clock clock;
 
     /**
      * The runtime state of the TxManager:
