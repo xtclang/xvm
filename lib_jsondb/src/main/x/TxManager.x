@@ -2133,12 +2133,12 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             {
             buf.append(",\n{\"_v\":")
                .append(prepareId)
-               .append(", _tx=")
+               .append(", \"_tx\":")
                .append(txInfo.id);
 
             if (String name ?= txInfo.name)
                 {
-                buf.append(", _name=");
+                buf.append(", \"_name\":");
                 printString(name, buf);
                 }
 
@@ -2148,7 +2148,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
 
             if (txInfo.retryCount > 0)
                 {
-                buf.append(", _rc=")
+                buf.append(", \"_rc\":")
                    .append(txInfo.retryCount);
                 }
 
