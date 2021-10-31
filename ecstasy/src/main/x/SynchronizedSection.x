@@ -34,6 +34,7 @@
 const SynchronizedSection
         implements Closeable
     {
+    @Synchronized
     construct(Boolean critical = False)
         {
         // store off the previous SynchronizedSection; it will be replaced by this SynchronizedSection, and

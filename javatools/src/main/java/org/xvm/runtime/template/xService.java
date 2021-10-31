@@ -183,11 +183,9 @@ public class xService
                         : Op.R_NEXT;
 
             case "registerContextToken":
-                if (frame.f_context != hService.f_context)
-                    {
-                    return frame.raiseException("Call out of context");
-                    }
-                return frame.raiseException("Not implemented");
+                return frame.f_context == hService.f_context
+                        ? frame.raiseException("Not implemented")
+                        : frame.raiseException("Call out of context");
 
             case "registerTimeout":
                 if (frame.f_context == hService.f_context)
@@ -201,22 +199,17 @@ public class xService
                 return Op.R_NEXT;
 
             case "registerSynchronizedSection":
-                if (frame.f_context != hService.f_context)
-                    {
-                    return frame.raiseException("Call out of context");
-                    }
-                hService.f_context.setSynchronizedSection(hArg);
-                return Op.R_NEXT;
+                return frame.f_context == hService.f_context
+                        ? invokeRegisterSyncSection(frame, hArg)
+                        : frame.raiseException("Call out of context");
 
             case "registerShuttingDownNotification":
                 return frame.raiseException("Not implemented");
 
             case "registerAsyncSection":
-                if (frame.f_context != hService.f_context)
-                    {
-                    return frame.raiseException("Call out of context");
-                    }
-                return frame.f_fiber.registerAsyncSection(frame, hArg);
+                return frame.f_context == hService.f_context
+                        ? frame.f_fiber.registerAsyncSection(frame, hArg)
+                        : frame.raiseException("Call out of context");
 
             case "registerUnhandledExceptionNotification":
                 hService.f_context.m_hExceptionHandler = (FunctionHandle) hArg;
@@ -430,6 +423,26 @@ public class xService
 
         return frame.assignValue(iReturn,
             xString.makeHandle(ctx.f_sName + " (id=" + ctx.f_nId + ')'));
+        }
+
+
+    // ----- helpers -------------------------------------------------------------------------------
+
+    /**
+     * Implementation of "registerSynchronizedSection(SynchronizedSection? synchronizedSection)".
+     */
+    protected int invokeRegisterSyncSection(Frame frame, ObjectHandle hArg)
+        {
+        ServiceContext ctx = frame.f_context;
+        if (frame.isSafeStack() && ctx.isAnyNonConcurrentWaiting(frame.f_fiber))
+            {
+            frame.m_frameNext = Utils.createSyncFrame(frame,
+                frameCaller -> invokeRegisterSyncSection(frameCaller, hArg));
+            return Op.R_CALL;
+            }
+
+        ctx.setSynchronizedSection(frame.f_fiber, hArg);
+        return Op.R_NEXT;
         }
 
 

@@ -215,7 +215,7 @@ public class FiberQueue
                 return -1;
 
             case Initial:
-                return 0;
+                return fiber.f_context.isCriticalSection() ? -1 : 0;
 
             default:
                 throw new IllegalStateException();

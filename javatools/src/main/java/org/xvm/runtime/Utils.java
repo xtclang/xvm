@@ -924,15 +924,15 @@ public abstract class Utils
      * Create a pseudo frame that will block a call to the specified frame until concurrency
      * synchronization clears up.
      *
-     * @param frame      the caller frame
-     * @param frameNext  the blocked callee frame
+     * @param frame         the caller frame
+     * @param continuation  the continuation to run when the synchronization clears up
      *
      * @return a new frame that blocks the current fiber's execution
      */
-    public static Frame createSyncFrame(Frame frame, Frame frameNext)
+    public static Frame createSyncFrame(Frame frame, Frame.Continuation continuation)
         {
         Frame frameSync = frame.createNativeFrame(SYNC_CALL, OBJECTS_NONE, Op.A_IGNORE, null);
-        frameSync.addContinuation(frameCaller -> frameCaller.call(frameNext));
+        frameSync.addContinuation(continuation);
         return frameSync;
         }
 

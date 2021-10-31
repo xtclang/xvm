@@ -291,7 +291,8 @@ public class Frame
         if (this.isSafeStack() && frameNext.isUnsafeFrame() &&
                 f_context.isAnyNonConcurrentWaiting(f_fiber))
             {
-            m_frameNext = Utils.createSyncFrame(this, frameNext);
+            m_frameNext = Utils.createSyncFrame(this,
+                            frameCaller -> frameCaller.call(frameNext));
             }
         else
             {
@@ -1738,7 +1739,7 @@ public class Frame
             return Synchronicity.Concurrent;
             }
 
-        Synchronicity synchronicity = f_context.getSynchronicity();
+        Synchronicity synchronicity = f_context.getSynchronicity(f_fiber);
         switch (synchronicity)
             {
             case Concurrent:
@@ -1760,7 +1761,7 @@ public class Frame
      *
      * @return true iff this frame's stack is reentrant (concurrent-safe)
      */
-    private boolean isSafeStack()
+    public boolean isSafeStack()
         {
         Frame framePrev = f_framePrev;
         if (framePrev == null)

@@ -137,7 +137,7 @@ public class ServiceContext
      *
      * @param hSection  the new CriticalSection? handle
      */
-    public void setSynchronizedSection(ObjectHandle hSection)
+    public void setSynchronizedSection(Fiber fiber, ObjectHandle hSection)
         {
         assert hSection != null;
 
@@ -145,14 +145,15 @@ public class ServiceContext
 
         if (hSection == xNullable.NULL)
             {
+            m_fiberCritical = null;
             m_synchronicity = Synchronicity.Concurrent;
             }
         else
             {
             ObjectHandle hCritical = ((GenericHandle) hSection).getField("critical");
-            m_synchronicity = ((BooleanHandle) hCritical).get()
-                    ? Synchronicity.Critical
-                    : Synchronicity.Synchronized;
+
+            m_fiberCritical = ((BooleanHandle) hCritical).get() ? fiber : null;
+            m_synchronicity = Synchronicity.Synchronized;
             }
         }
 
@@ -189,11 +190,13 @@ public class ServiceContext
         }
 
     /**
-     * @return the current Synchronicity value for the service
+     * @return the current Synchronicity value for the specified fiber
      */
-    public Synchronicity getSynchronicity()
+    public Synchronicity getSynchronicity(Fiber fiber)
         {
-        return m_synchronicity;
+        return fiber == m_fiberCritical
+                ? Synchronicity.Critical
+                : m_synchronicity;
         }
 
     /**
@@ -489,14 +492,10 @@ public class ServiceContext
         // allow initial timeouts to be processed always, since they won't run any natural code
         // TODO: return ?f_queueSuspended.getInitialTimeout();
 
-        Frame frameCurrent = m_frameCurrent;
-        if (frameCurrent != null)
-            {
-            // resume the paused frame (could be critical synchronicity)
-            return frameCurrent.f_fiber.isReady() ? frameCurrent : null;
-            }
-
-        return qFiber.getReady();
+        // a paused frame must be resumed first
+        return m_frameCurrent == null
+                ? qFiber.getReady()
+                : m_frameCurrent;
         }
 
     /**
@@ -517,15 +516,8 @@ public class ServiceContext
 
             case SyncWait:
             case Waiting:
-                if (frame.getSynchronicity() == Synchronicity.Critical)
-                    {
-                    m_frameCurrent = frame;
-                    }
-                else
-                    {
-                    m_frameCurrent = null;
-                    f_queueSuspended.add(frame);
-                    }
+                m_frameCurrent = null;
+                f_queueSuspended.add(frame);
                 break;
 
             case Paused:
@@ -855,6 +847,13 @@ public class ServiceContext
      */
     protected void terminateFiber(Fiber fiber)
         {
+        if (fiber == m_fiberCritical)
+            {
+            // they somehow terminated the fiber without exiting the critical section;
+            // should it be an exception?
+            m_fiberCritical = null;
+            }
+
         if (fiber.hasPendingRequests())
             {
             fiber.setStatus(FiberStatus.Terminating, 0);
@@ -976,6 +975,14 @@ public class ServiceContext
         {
         return getStatus() == ServiceStatus.Idle &&
             (m_atomicNotifications == null || m_atomicNotifications.get() == 0);
+        }
+
+    /**
+     * @return true iff the service is Idle
+     */
+    public boolean isCriticalSection()
+        {
+        return m_fiberCritical != null;
         }
 
 
@@ -1830,6 +1837,11 @@ public class ServiceContext
      * The current frame.
      */
     private Frame m_frameCurrent;
+
+    /**
+     * If specifed, inidcates the current critical fiber.
+     */
+    private Fiber m_fiberCritical;
 
     /**
      * The queue of incoming messages.

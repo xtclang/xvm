@@ -388,6 +388,7 @@ interface Service
      *
      * Calling this method from the outside of the service is not allowed.
      */
+    @Synchronized
     void registerSynchronizedSection(SynchronizedSection? synchronizedSection);
 
     /**
