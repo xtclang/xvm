@@ -5,6 +5,7 @@
  *
  * Among other things, the Iterable interface is the basis for Ecstasy collections.
  */
+@Concurrent
 interface Iterable<Element>
     {
     /**

@@ -40,6 +40,7 @@
  * To implement a read-only collection, one must implement at least the [size] property and the
  * [iterator()] method.
  */
+@Concurrent
 interface Collection<Element>
         extends Iterable<Element>
         extends Appender<Element>
@@ -330,7 +331,7 @@ interface Collection<Element>
             Result[] results = new Result[size](_ -> transform(iter.take()));
             clear();
             addAll(results.as(List<Element>));
-            assert dest != Null;
+            assert dest != Null; // TODO GG - couldn't this be eliminated?
             return dest;
             }
 
