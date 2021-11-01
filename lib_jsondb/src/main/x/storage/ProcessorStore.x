@@ -40,7 +40,7 @@ interface ProcessorStore<Message extends immutable Const>
     /**
      * Obtain the number of pending PIDs.
      *
-     * @param txId  the "write" transaction identifier
+     * @param txId  the transaction identifier
      *
      * @return the count of PIDs
      */
@@ -49,7 +49,7 @@ interface ProcessorStore<Message extends immutable Const>
     /**
      * Obtain a list of pending PIDs.
      *
-     * @param txId  the "write" transaction identifier
+     * @param txId  the transaction identifier
      *
      * @return an array of PIDs
      */
@@ -58,7 +58,7 @@ interface ProcessorStore<Message extends immutable Const>
     /**
      * Obtain the information about a pending scheduled message.
      *
-     * @param txId  the "write" transaction identifier
+     * @param txId  the transaction identifier
      * @param pid   the process identifier
      *
      * @return the Pending object
@@ -68,7 +68,7 @@ interface ProcessorStore<Message extends immutable Const>
     /**
      * Determine if the DBProcessor is enabled.
      *
-     * @param txId  the "write" transaction identifier
+     * @param txId  the transaction identifier
      *
      * @return True iff the DBProcessor is enabled
      */
@@ -88,6 +88,8 @@ interface ProcessorStore<Message extends immutable Const>
     /**
      * Notify the store that an attempt to process a scheduled message has successfully completed.
      *
+     * The Scheduler will call this method after the successful completion of a PID.
+     *
      * @param pid      the process id
      * @param runtime  the interval of time that the processing consumed
      */
@@ -95,6 +97,8 @@ interface ProcessorStore<Message extends immutable Const>
 
     /**
      * Notify the store that an attempt to process a scheduled message has failed.
+     *
+     * The Scheduler will call this method after the failed processing of a PID.
      *
      * @param pid         the process id
      * @param runtime     the interval of time that the processing consumed
