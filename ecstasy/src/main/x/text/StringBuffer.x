@@ -2,6 +2,7 @@
  * A StringBuffer is used to efficiently create a resulting String from any number of contributions
  * of any size.
  */
+@Concurrent
 class StringBuffer
         implements Appender<Char>
         implements UniformIndexed<Int, Char>

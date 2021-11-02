@@ -21,6 +21,7 @@
  * dealing with cross-service invocation, continuations, and exception handling (e.g. an exception
  * indicating that the Queue was closed).
  */
+@Concurrent
 interface Queue<Element>
         extends Appender<Element>
     {

@@ -2,6 +2,7 @@
  * Represents an object that can be "sliced" into smaller objects that support the same interface as
  * the original object.
  */
+@Concurrent
 interface Sliceable<Index extends Orderable>
     {
     /**

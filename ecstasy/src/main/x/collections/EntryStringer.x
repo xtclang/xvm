@@ -5,6 +5,7 @@
  *
  *     incorporates conditional EntryStringer<Key extends Stringable, Value extends Stringable>
  */
+@Concurrent
 mixin EntryStringer<MapKey extends Stringable, MapValue extends Stringable>
         into Map<MapKey, MapValue>.Entry
         implements Stringable

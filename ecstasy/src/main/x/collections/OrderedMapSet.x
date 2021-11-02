@@ -2,6 +2,7 @@
  * The OrderedMapSet is simple implementation of the [OrderedSet] interface that uses an underlying
  * [OrderedMap] instance as its storage.
  */
+@Concurrent
 class OrderedMapSet<Element extends Orderable>(OrderedMap<Element, Nullable> contents)
         extends MapSet<Element>(contents)
         implements OrderedSet<Element>
