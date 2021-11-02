@@ -244,7 +244,7 @@ service Client<Schema extends RootSchema>
      *
      * @return the transactional context object
      */
-    TxContext ensureTransaction(DBObjectImpl dbo, Boolean allowNontransactional=False)
+    TxContext ensureTransaction(DBObjectImpl dbo, Boolean allowNontransactional=False, Boolean override=False)
         {
         private TxContext ctx = new TxContext();
         private TxContext ntx = new NtxContext();
@@ -263,7 +263,7 @@ service Client<Schema extends RootSchema>
             {
             assert !internal;
 
-            tx         = (conn?: assert).createTransaction(name="autocommit");
+            tx         = (conn?: assert).createTransaction(name="autocommit", override=override);
             this.tx    = tx;
             autocommit = True;
             }
@@ -345,6 +345,19 @@ service Client<Schema extends RootSchema>
         }
 
     /**
+     * On behalf of the scheduler, create a new internal transaction.
+     *
+     * @param retryCount  the number of times this transaction has been retried (zero indicates the
+     *                    first attempt)
+     */
+    void createProcessTx(Int retryCount)
+        {
+        assert internal && tx==Null;
+        assert Connection conn ?= this.conn;
+        conn.createTransaction(name="async", retryCount=retryCount, override=True);
+        }
+
+    /**
      * Process one pending message. Called by the Scheduler.
      *
      * @param dboId    indicates which DBProcessor
@@ -358,6 +371,30 @@ service Client<Schema extends RootSchema>
         val dbo = implFor(dboId).as(DBProcessorImpl<Message>);
 
         dbo.process_(pid, message);
+        }
+
+    /**
+     * On behalf of the scheduler, commit the current internal transaction.
+     *
+     * @return the CommitResult
+     */
+    CommitResult commitProcessTx()
+        {
+        assert internal;
+        assert Transaction tx ?= this.tx;
+        return tx.commit(override=True);
+        }
+
+    /**
+     * On behalf of the scheduler, roll back the current internal transaction.
+     */
+    void rollbackProcessTx()
+        {
+        assert internal;
+        if (Transaction tx ?= this.tx)
+            {
+            tx.rollback(override=True);
+            }
         }
 
     /**
@@ -1313,10 +1350,11 @@ service Client<Schema extends RootSchema>
                                                  Boolean                readOnly    = False,
                                                  Duration?              timeout     = Null,
                                                  Int                    retryCount  = 0,
+                                                 Boolean                override    = False,
                                                 )
             {
             assert outer.tx == Null as "Attempted to create a transaction when one already exists";
-            assert !internal;
+            assert !internal && !override;
 
             id ?:= outer.txManager.generateTxId();
             TxInfo txInfo = new TxInfo(id, name, priority, readOnly, timeout, retryCount);
@@ -1414,7 +1452,7 @@ service Client<Schema extends RootSchema>
             }
 
         @Override
-        CommitResult commit()
+        CommitResult commit(Boolean override = False)
             {
             Transaction? that = outer.tx;
             if (that == Null)
@@ -1429,7 +1467,7 @@ service Client<Schema extends RootSchema>
                 return PreviouslyClosed;
                 }
 
-            if (outer.internal)
+            if (outer.internal && !override)
                 {
                 log($"Illegal commit request for {this}.");
                 // technically, this error is not correct, but the gist is correct: this transaction
@@ -1474,7 +1512,7 @@ service Client<Schema extends RootSchema>
             }
 
         @Override
-        Boolean rollback()
+        Boolean rollback(Boolean override = False)
             {
             Transaction? that = outer.tx;
             if (that == Null)
@@ -1489,7 +1527,7 @@ service Client<Schema extends RootSchema>
                 return False;
                 }
 
-            if (outer.internal)
+            if (outer.internal && !override)
                 {
                 log($"Illegal rollback request for {this}.");
                 return False;
