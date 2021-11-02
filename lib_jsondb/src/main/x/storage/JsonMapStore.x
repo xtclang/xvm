@@ -239,6 +239,7 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
         }
 
     @Override
+    @Synchronized  // TODO GG: do we really need this?
     (Key[] keys, immutable Const? cookie) keysAt(Int txId, immutable Const? cookie = Null)
         {
         if (cookie != Null)
@@ -698,6 +699,7 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
         }
 
     @Override
+    @Synchronized
     void commit(Int[] writeIds)
         {
         assert !writeIds.empty;

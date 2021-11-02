@@ -271,6 +271,7 @@ service JsonValueStore<Value extends immutable Const>
         }
 
     @Override
+    @Synchronized
     void commit(Int[] writeIds)
         {
         assert !writeIds.empty;

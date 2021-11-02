@@ -6,6 +6,7 @@ import json.mapping.IntNumberMapping;
  * Provides the low-level I/O for a transactional counter, with optimizations for blind adjustments
  * in concurrent transactions.
  */
+@Concurrent
 service JsonCounterStore(Catalog catalog, DBObjectInfo info)
         extends JsonValueStore<Int>(catalog, info, JSON_MAPPING, 0)
         implements CounterStore

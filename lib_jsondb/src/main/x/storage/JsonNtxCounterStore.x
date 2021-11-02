@@ -40,6 +40,7 @@ service JsonNtxCounterStore(Catalog catalog, DBObjectInfo info)
         }
 
     @Override
+    @Synchronized
     void store(Int txId, Int value)
         {
         checkWrite();

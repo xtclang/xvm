@@ -58,6 +58,7 @@ service JsonLogStore<Element extends immutable Const>
     // ----- storage API exposed to the client -----------------------------------------------------
 
     @Override
+    @Synchronized
     void append(Int txId, Element element) // TODO this is all wrong (it's not transactional)
         {
         StringBuffer buf = new StringBuffer(64);

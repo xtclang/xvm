@@ -58,6 +58,7 @@ service JsonNtxLogStore<Element extends immutable Const>
     // ----- storage API exposed to the client -----------------------------------------------------
 
     @Override
+    @Synchronized
     void append(Int txId, Element element)
         {
         StringBuffer buf = new StringBuffer(64);
