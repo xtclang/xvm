@@ -396,6 +396,11 @@ service Catalog<Schema extends RootSchema>
 
         using (new SynchronizedSection())
             {
+            if (index < stores.size)
+                {
+                return stores[index]?;
+                }
+
             // create the ObjectStore
             ObjectStore store = createStore(id);
 
