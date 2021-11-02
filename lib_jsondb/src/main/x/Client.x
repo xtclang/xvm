@@ -33,6 +33,7 @@ import storage.CounterStore;
 import storage.LogStore;
 import storage.MapStore;
 import storage.ObjectStore;
+import storage.ProcessorStore;
 import storage.ValueStore;
 
 import Catalog.BuiltIn;
@@ -1533,7 +1534,7 @@ service Client<Schema extends RootSchema>
         }
 
 
-    // ----- DBValue ---------------------------------------------------------------------------
+    // ----- DBValue -------------------------------------------------------------------------------
 
     /**
      * The DBValue implementation.
@@ -1861,7 +1862,7 @@ service Client<Schema extends RootSchema>
         }
 
 
-    // ----- DBLog ---------------------------------------------------------------------------
+    // ----- DBLog ---------------------------------------------------------------------------------
 
     /**
      * The DBLog implementation.
@@ -1889,14 +1890,132 @@ service Client<Schema extends RootSchema>
             }
 
         @Override
-        // TODO GG why is "DBLog<Value>." required for "Entry"
-        conditional List<DBLog<Value>.Entry> select((Range<DateTime>|Duration)? period = Null,
-                                                     DBUser?                     user   = Null,
-                                                     (UInt|Range<UInt>)?         txIds  = Null,
-                                                     String?                     txName = Null)
+
+        conditional List<
+                         DBLog<Value>.        // TODO GG why is "DBLog<Value>." required for "Entry"
+                         Entry> select((Range<DateTime>|Duration)? period = Null,
+                                       DBUser?                     user   = Null,
+                                       (UInt|Range<UInt>)?         txIds  = Null,
+                                       String?                     txName = Null)
             {
             // TODO
             return False;
+            }
+        }
+
+
+    // ----- DBProcessor ---------------------------------------------------------------------------
+
+    /**
+     * The DBProcessor implementation.
+     */
+    class DBProcessorImpl<Message extends immutable Const>(DBObjectInfo info_, ProcessorStore<Message> store_)
+            extends DBObjectImpl(info_)
+            implements DBProcessor<Message>
+        {
+        protected ProcessorStore<Message> store_;
+
+        @Override
+        void schedule(Message message, Schedule? when=Null)
+            {
+            using (val tx = ensureTransaction(this))
+                {
+                store_.schedule(tx.id, message, when);
+                }
+            }
+
+        @Override
+        void scheduleAll(Iterable<Message> messages, Schedule? when=Null)
+            {
+            using (val tx = ensureTransaction(this))
+                {
+                super(messages, when);
+                }
+            }
+
+        @Override
+        void reschedule(Message message, Schedule when)
+            {
+            using (val tx = ensureTransaction(this))
+                {
+                super(message, when);
+                }
+            }
+
+        @Override
+        void unschedule(Message message)
+            {
+            using (val tx = ensureTransaction(this))
+                {
+                return store_.unschedule(tx.id, message);
+                }
+            }
+
+        @Override
+        void unscheduleAll()
+            {
+            using (val tx = ensureTransaction(this))
+                {
+                store_.unscheduleAll(tx.id);
+                }
+            }
+
+        @Override
+        List<Pending> pending()
+            {
+            using (val tx = ensureTransaction(this))
+                {
+                return new PendingList_(tx.id);
+                }
+            }
+
+        @Override
+        void process(Message message)
+            {
+            // this method must be overridden; the database schema is invalid if a DBProcessor
+            // does not override this method
+            }
+
+        @Override
+        void processAll(List<Message> messages)
+            {
+            using (val tx = ensureTransaction(this))
+                {
+                super(messages);
+                }
+            }
+
+        @Override
+        void suspend()
+            {
+            using (val tx = ensureTransaction(this))
+                {
+                store_.setEnabled(tx.id, False);
+                }
+            }
+
+        @Override
+        Boolean suspended.get()
+            {
+            using (val tx = ensureTransaction(this))
+                {
+                return store_.isEnabled(tx.id);
+                }
+            }
+
+        @Override
+        void resume()
+            {
+            using (val tx = ensureTransaction(this))
+                {
+                store_.setEnabled(tx.id, True);
+                }
+            }
+
+        class PendingList_(Int txid)
+                implements List<Pending>
+            {
+            // TODO
             }
         }
     }

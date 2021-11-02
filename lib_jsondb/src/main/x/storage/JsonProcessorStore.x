@@ -3,6 +3,13 @@ import model.DBObjectInfo;
 import json.Mapping;
 import json.ObjectOutputStream;
 
+import oodb.DBProcessor;
+import oodb.DBProcessor.Pending;
+import oodb.DBProcessor.Schedule;
+import oodb.Transaction;
+import oodb.Transaction.CommitResult;
+
+
 /**
  * Provides the low-level I/O for a DBProcessor, which represents the combination of a queue (with
  * scheduling) and a processor of the messages in the queue.
@@ -59,7 +66,68 @@ service JsonProcessorStore<Message extends immutable Const>
 
     // ----- storage API exposed to the client -----------------------------------------------------
 
-    // TODO
+    @Override
+    void schedule(Int txId, Message message, Schedule? when)
+        {
+        TODO
+        }
+
+    @Override
+    void unschedule(Int txId, Message message)
+        {
+        TODO
+        }
+
+    @Override
+    void unscheduleAll(Int txId)
+        {
+        TODO
+        }
+
+    @Override
+    Int pidCountAt(Int txId)
+        {
+        TODO
+        }
+
+    @Override
+    Int[] pidListAt(Int txId)
+        {
+        TODO
+        }
+
+    @Override
+    Pending pending(Int txId, Int pid)
+        {
+        TODO
+        }
+
+    @Override
+    Boolean isEnabled(Int txId)
+        {
+        TODO
+        }
+
+    @Override
+    void setEnabled(Int txId, Boolean enable)
+        {
+        TODO
+        }
+
+
+    // ----- Scheduler support ---------------------------------------------------------------------
+
+    @Override
+    void processCompleted(Int pid, Range<DateTime> runTime)
+        {
+        TODO
+        }
+
+    @Override
+    void processFailed(Int pid, Range<DateTime> runTime, CommitResult | Exception result, Boolean abandoning)
+        {
+        TODO
+        }
 
 
     // ----- transaction API exposed to TxManager --------------------------------------------------

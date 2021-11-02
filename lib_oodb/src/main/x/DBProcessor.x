@@ -57,10 +57,8 @@ interface DBProcessor<Message extends immutable Const>
      *
      * This only affects those messages scheduled before this transaction began; messages scheduled
      * while this transaction is in process will not be unscheduled.
-     *
-     * @return `True` iff the specified message was scheduled at least once
      */
-    Boolean unschedule(Message message);
+    void unschedule(Message message);
 
     /**
      * Remove all scheduled messages.
@@ -83,22 +81,31 @@ interface DBProcessor<Message extends immutable Const>
      * new items can continue to be added to the DBProcessor, although they will not appear in this
      * list, due to the "repeatable-read" transactional guarantees provided by the OODB APIs.
      *
-     * This is not an instantaneous property; the value of this property reflects the `DBProcessor`
+     * This resulting value is not an instantaneous value; the value reflects the `DBProcessor`
      * state at the beginning of the current transaction, combined with any changes made by the
      * current transaction. In other words, this is a transactional view of the pending messages.
+     * Do not attempt to use the returned list after the transaction completes; once the transaction
+     * completes, the behavior of the returned List is undefined. If the list needs to be retained
+     * after the completion of the transaction, then [reify](List.reify) the list.
      *
      * Due to security considerations, it is expected that a database employing user-level security
      * will disallow most users from obtaining this information.
      *
      * @return the pending messages that are scheduled for processing
      */
-    @RO List<Pending> pending;
+    List<Pending> pending();
 
 
-    // ----- message processing --------------------------------------------------------------------
+    // ----- message processing: explicitly developer implementable --------------------------------
 
     /**
      * Process a message.
+     *
+     * Unlike most methods on most of the DBObject interfaces, this method is actually intended to
+     * be written by the database developer; in fact, an implementation **must** be provided as part
+     * of the database schema, or the schema will evaluate to an error (because the DBProcessor
+     * would not have a concrete implementation). This method's implementation provides the logic
+     * for the DBProcessor's processing of its messages.
      *
      * Generally, this method is invoked by the database to process a message based on the schedule
      * information that was provided with the message when [schedule] was called. However, it is
@@ -109,8 +116,13 @@ interface DBProcessor<Message extends immutable Const>
     void process(Message message);
 
     /**
-     * Process a group of messages. It may be more efficient to process a group of messages
-     * together, and the database developer should implement this method if that is the case.
+     * Process a group of messages.
+     *
+     * Unlike most methods on most of the DBObject interfaces, this method may be implemented
+     * (i.e. overridden) by the database developer. Its existence allows the database to invoke this
+     * method when a group of messages are deemed possible to execute together, and that may allow
+     * for optimizations by the database developer, if the group can be processed as a group more
+     * efficiently than processing each message individually would be.
      *
      * @param messages  the previously scheduled messages to process; note that there are no
      *                  guarantees of uniqueness in the list of messages
@@ -130,6 +142,9 @@ interface DBProcessor<Message extends immutable Const>
      * A database engine may stop re-trying the processing of the message at any point, and is
      * expected to automatically stop re-trying the processing if the message fails repeatedly,
      * particularly if the failure is exceptional.
+     *
+     * Unlike most methods on most of the DBObject interfaces, this method may be implemented
+     * (i.e. overridden) by the database developer to customize the auto-retry logic.
      *
      * @param message         the message that failed to process; note that the failure could have
      *                        occurred during the [process] invocation itself, or during the
@@ -185,6 +200,9 @@ interface DBProcessor<Message extends immutable Const>
 
     /**
      * A suggested limit for the number of auto-retries to successfully [process] a message.
+     *
+     * Unlike most members on most of the DBObject interfaces, this property may be implemented
+     * (i.e. overridden) by the database developer to customize the auto-retry behavior.
      */
     @RO Int maxAttempts = 3;
 
@@ -192,6 +210,10 @@ interface DBProcessor<Message extends immutable Const>
      * This method is invoked by the database engine when the message has failed to be processed,
      * and either [autoRetry] has returned `False`, or the database engine has made the decision to
      * stop automatically retrying the processing of this message.
+     *
+     * Unlike most methods on most of the DBObject interfaces, this method may be implemented
+     * (i.e. overridden) by the database developer to provide custom logic when a message is
+     * abandoned.
      *
      * @param message         the message that failed to be processed and committed
      * @param result          the result from the last failed attempt, which is either a
