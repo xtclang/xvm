@@ -1,6 +1,7 @@
 /**
  * Functionality specific to arrays of floating point numbers.
  */
+@Concurrent
 mixin FPNumberArray<Element extends FPNumber>
         into Array<Element>
         extends NumberArray<Element>

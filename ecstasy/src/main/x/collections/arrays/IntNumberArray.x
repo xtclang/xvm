@@ -1,6 +1,7 @@
 /**
  * Functionality specific to arrays of integer numbers.
  */
+@Concurrent
 mixin IntNumberArray<Element extends IntNumber>
         into Array<Element>
         extends NumberArray<Element>
