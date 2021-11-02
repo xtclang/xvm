@@ -4,6 +4,7 @@
  * of the destination type; all operations are conducted as if in an arbitrarily-large-enough integer type, and then
  * truncated to the size of the original operands.
  */
+@Concurrent
 mixin UncheckedInt
         into IntNumber
     {

@@ -5,6 +5,7 @@
  * Usage example:
  *   @Watch(n -> {console.print($"new value={n}");}) Int n = 0;
  */
+@Concurrent
 mixin WatchVar<Referent>(function void (Referent) notify)
         into Var<Referent>
     {
