@@ -88,6 +88,11 @@ interface DBProcessor<Message extends immutable Const>
      * completes, the behavior of the returned List is undefined. If the list needs to be retained
      * after the completion of the transaction, then [reify](List.reify) the list.
      *
+     * It is undefined behavior whether subsequent changes within the current transaction will alter
+     * the contents of the already-returned list. In other words, scheduling or unscheduling items
+     * after obtaining the list may or may not cause those changes to appear in the already-returned
+     * list.
+     *
      * Due to security considerations, it is expected that a database employing user-level security
      * will disallow most users from obtaining this information.
      *
@@ -152,7 +157,7 @@ interface DBProcessor<Message extends immutable Const>
      * @param result          the result from the previous failed attempt, which is either a
      *                        commit failure indicated as a [CommitResult], or an `Exception`
      * @param when            the [Schedule] that caused the message to be processed
-     * @param startTime       the DateTime that the failed processing of the message began
+     * @param elapsed         the period of time consumed by the failed processing of the message
      * @param timesAttempted  the number of times `(n >= 1)` that the processing of this message has
      *                        been attempted, and has failed
      *
@@ -162,7 +167,7 @@ interface DBProcessor<Message extends immutable Const>
     Boolean autoRetry(Message                  message,
                       CommitResult | Exception result,
                       Schedule?                when,
-                      DateTime                 startTime,
+                      Range<DateTime>          elapsed,
                       Int                      timesAttempted)
         {
         // TODO check repeating schedule+policy against start time and current time (abandon if it
@@ -219,14 +224,14 @@ interface DBProcessor<Message extends immutable Const>
      * @param result          the result from the last failed attempt, which is either a
      *                        commit failure indicated as a [CommitResult], or an `Exception`
      * @param when            the [Schedule] that caused the message to be processed
-     * @param startTime       the DateTime that the failed processing of the message began
+     * @param elapsed         the period of time consumed by the failed processing of the message
      * @param timesAttempted  the number of times that the processing of this message has been
      *                        attempted, and has failed
      */
     void abandon(Message                  message,
                  CommitResult | Exception result,
                  Schedule?                when,
-                 DateTime                 startTime,
+                 Range<DateTime>          elapsed,
                  Int                      timesAttempted)
         {
         String messageString;

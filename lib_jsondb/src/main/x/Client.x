@@ -17,6 +17,7 @@ import oodb.DBMap;
 import oodb.DBObject;
 import oodb.DBProcessor;
 import oodb.DBProcessor.Pending;
+import oodb.DBProcessor.Schedule;
 import oodb.DBQueue;
 import oodb.DBSchema;
 import oodb.DBTransaction;
@@ -25,6 +26,7 @@ import oodb.DBValue;
 import oodb.CommitFailure;
 import oodb.RootSchema;
 import oodb.SystemSchema;
+import oodb.Transaction.CommitResult;
 import oodb.Transaction.TxInfo;
 
 import model.DBObjectInfo;
@@ -103,6 +105,14 @@ service Client<Schema extends RootSchema>
     public/private Catalog<Schema> catalog;
 
     /**
+     * The shared clock for the database.
+     */
+    public/private @Lazy Clock clock.calc()
+        {
+        return catalog.clock;
+        }
+
+    /**
      * The transaction manager for this `Catalog` object. The transaction manager provides a
      * sequential ordered (non-concurrent) application of potentially concurrent transactions.
      */
@@ -176,6 +186,28 @@ service Client<Schema extends RootSchema>
     protected void log(String msg)
         {
         catalog.log^(msg);
+        }
+
+    /**
+     * Helper to convert an object to a string, without allowing an exception to be raised by the
+     * processing thereof.
+     *
+     * @param o  an object
+     *
+     * @return a String
+     *
+     */
+    static protected String safeToString(Object o)
+        {
+        try
+            {
+            return o.toString();
+            }
+        // TODO CP: catch (Exception _)
+        catch (Exception e)
+            {
+            return "???";
+            }
         }
 
     /**
@@ -310,6 +342,85 @@ service Client<Schema extends RootSchema>
     @RO Boolean internal.get()
         {
         return Catalog.isInternalClientId(id);
+        }
+
+    /**
+     * Process one pending message. Called by the Scheduler.
+     *
+     * @param dboId    indicates which DBProcessor
+     * @param pid      indicates which Pending
+     * @param message  the Message to process
+     */
+    <Message extends immutable Const> void processPending(Int dboId, Int pid, Message message)
+        {
+        assert internal;
+
+        val dbo = implFor(dboId).as(DBProcessorImpl<Message>);
+
+        dbo.process_(pid, message);
+        }
+
+    /**
+     *
+     * @param dboId
+     * @param message         the message that failed to be processed and committed
+     * @param result          the result from the last failed attempt, which is either a
+     *                        commit failure indicated as a [CommitResult], or an `Exception`
+     * @param when            the [Schedule] that caused the message to be processed
+     * @param elapsed         the period of time consumed by the failed processing of the message
+     * @param timesAttempted  the number of times that the processing of this message has been
+     *                        attempted, and has failed
+     * @param abandoning      True iff the scheduler has already decided to abandon retries of
+     *                        processing of the message
+     *
+     * @return True if the Scheduler indicated that it is abandoning, or if the DBProcessor
+     *         indicates it is abandoning retrying of the processing of the message
+     */
+    <Message extends immutable Const> Boolean abandonPending(
+            Int                      dboId,
+            Message                  message,
+            CommitResult | Exception result,
+            Schedule?                when,
+            Range<DateTime>          elapsed,
+            Int                      timesAttempted,
+            Boolean                  abandoning,
+            )
+        {
+        assert internal;
+
+        val dbo = implFor(dboId).as(DBProcessor<Message>);
+
+        if (!abandoning)
+            {
+            try
+                {
+                abandoning = !dbo.autoRetry(message, result, when, elapsed, timesAttempted);
+                }
+            catch (Exception e)
+                {
+                log($|While attempting to determine whether a message ({safeToString(message)})\
+                     | should be retried for {dbo.dbPath.toString().substring(1)}, an exception\
+                     | occurred: {e}
+                   );
+                abandoning = True;
+                }
+            }
+
+        if (abandoning)
+            {
+            try
+                {
+                dbo.abandon(message, result, when, elapsed, timesAttempted);
+                }
+            catch (Exception e)
+                {
+                log($|While notifying {dbo.dbPath.toString().substring(1)} of an abandoned message\
+                     | ({safeToString(message)}), an exception occurred: {e}
+                   );
+                }
+            }
+
+        return abandoning;
         }
 
     /**
@@ -509,7 +620,7 @@ service Client<Schema extends RootSchema>
             case DBMap:       createDBMapImpl(info, storeFor(id).as(MapStore));
             case DBList:      TODO
             case DBQueue:     TODO
-            case DBProcessor: TODO
+            case DBProcessor: createDBProcessorImpl(info, storeFor(id).as(ProcessorStore));
             case DBLog:       createDBLogImpl  (info, storeFor(id).as(LogStore));
             };
         }
@@ -530,6 +641,14 @@ service Client<Schema extends RootSchema>
                     elementType.is(Type<immutable Const>);
 
         return new DBLogImpl<elementType.DataType>(info, store);
+        }
+
+    private DBProcessorImpl createDBProcessorImpl(DBObjectInfo info, ProcessorStore store)
+        {
+        assert Type messageType := info.typeParams.get("Message"),
+                    messageType.is(Type<immutable Const>);
+
+        return new DBProcessorImpl<messageType.DataType>(info, store);
         }
 
     private DBValueImpl createDBValueImpl(DBObjectInfo info, ValueStore store)
@@ -1960,13 +2079,98 @@ service Client<Schema extends RootSchema>
                 }
             }
 
+        /**
+         * Implements the list as returned from the pending() method.
+         */
+        class PendingList_(Int txid, Int[] pids)
+                implements List<Pending>
+            {
+            /**
+             * Cached Pending objects; the contents of this list.
+             */
+            Pending?[] pendingCache = new Pending?[];
+
+            /**
+             * Checks to make sure that this list isn't used outside of its transaction.
+             */
+            void checkTx()
+                {
+                assert txid == this.Client.tx?.id_ : False;
+                }
+
+            @Override
+            Int size.get()
+                {
+                checkTx();
+                return pids.size;
+                }
+
+            @Override
+            @Op("[]") Pending getElement(Index index)
+                {
+                checkTx();
+                assert:bounds 0 <= index < pids.size;
+                if (index < pendingCache.size, Pending pending ?= pendingCache[index])
+                    {
+                    return pending;
+                    }
+
+                Pending pending = store_.pending(txid, pids[index]);
+
+                // cache the result
+                if (index >= pendingCache.size)
+                    {
+                    pendingCache.fill(Null, pendingCache.size..index);
+                    }
+                pendingCache[index] = pending;
+
+                return pending;
+                }
+
+            @Override
+            List<Pending> reify()
+                {
+                checkTx();
+                return toArray();
+                }
+            }
+
         @Override
         List<Pending> pending()
             {
             using (val tx = ensureTransaction(this))
                 {
-                return new PendingList_(tx.id);
+                Int[] pids = store_.pidListAt(tx.id);
+                List<Pending> list = new PendingList_(tx.id, pids);
+                return tx.autocommit ? list.reify() : list;
                 }
+            }
+
+        (Range<DateTime>, Exception?) process_(Int pid, Message message)
+            {
+            Range<DateTime> elapsed;
+            Exception?      failure = Null;
+
+            using (val tx = ensureTransaction(this))
+                {
+                DateTime start = clock.now;
+                try
+                    {
+                    process(message);
+                    }
+                catch (Exception e)
+                    {
+                    failure = e;
+                    }
+                elapsed = start..clock.now;
+
+                if (failure == Null)
+                    {
+                    store_.processCompleted(tx.id, pid, elapsed);
+                    }
+                }
+
+            return elapsed, failure;
             }
 
         @Override
@@ -1982,6 +2186,32 @@ service Client<Schema extends RootSchema>
             using (val tx = ensureTransaction(this))
                 {
                 super(messages);
+                }
+            }
+
+        @Override
+        Boolean autoRetry(Message                  message,
+                          CommitResult | Exception result,
+                          Schedule?                when,
+                          Range<DateTime>          elapsed,
+                          Int                      timesAttempted)
+            {
+            using (val tx = ensureTransaction(this))
+                {
+                return super(message, result, when, elapsed, timesAttempted);
+                }
+            }
+
+        @Override
+        void abandon(Message                  message,
+                        CommitResult | Exception result,
+                        Schedule?                when,
+                        Range<DateTime>          elapsed,
+                        Int                      timesAttempted)
+            {
+            using (val tx = ensureTransaction(this))
+                {
+                super(message, result, when, elapsed, timesAttempted);
                 }
             }
 
@@ -2010,12 +2240,6 @@ service Client<Schema extends RootSchema>
                 {
                 store_.setEnabled(tx.id, True);
                 }
-            }
-
-        class PendingList_(Int txid)
-                implements List<Pending>
-            {
-            // TODO
             }
         }
     }

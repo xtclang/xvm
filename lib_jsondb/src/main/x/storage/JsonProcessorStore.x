@@ -85,12 +85,6 @@ service JsonProcessorStore<Message extends immutable Const>
         }
 
     @Override
-    Int pidCountAt(Int txId)
-        {
-        TODO
-        }
-
-    @Override
     Int[] pidListAt(Int txId)
         {
         TODO
@@ -118,13 +112,13 @@ service JsonProcessorStore<Message extends immutable Const>
     // ----- Scheduler support ---------------------------------------------------------------------
 
     @Override
-    void processCompleted(Int pid, Range<DateTime> runTime)
+    void processCompleted(Int txId, Int pid, Range<DateTime> elapsed)
         {
         TODO
         }
 
     @Override
-    void processFailed(Int pid, Range<DateTime> runTime, CommitResult | Exception result, Boolean abandoning)
+    void processFailed(Int pid, Range<DateTime> elapsed, CommitResult | Exception result, Boolean abandoning)
         {
         TODO
         }

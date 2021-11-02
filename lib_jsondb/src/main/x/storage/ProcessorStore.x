@@ -38,15 +38,6 @@ interface ProcessorStore<Message extends immutable Const>
     void unscheduleAll(Int txId);
 
     /**
-     * Obtain the number of pending PIDs.
-     *
-     * @param txId  the transaction identifier
-     *
-     * @return the count of PIDs
-     */
-    Int pidCountAt(Int txId);
-
-    /**
      * Obtain a list of pending PIDs.
      *
      * @param txId  the transaction identifier
@@ -90,10 +81,11 @@ interface ProcessorStore<Message extends immutable Const>
      *
      * The Scheduler will call this method after the successful completion of a PID.
      *
+     * @param txId     the "write" transaction identifier
      * @param pid      the process id
-     * @param runtime  the interval of time that the processing consumed
+     * @param elapsed  the interval of time that the processing consumed
      */
-    void processCompleted(Int pid, Range<DateTime> runTime);
+    void processCompleted(Int txId, Int pid, Range<DateTime> elapsed);
 
     /**
      * Notify the store that an attempt to process a scheduled message has failed.
@@ -101,9 +93,9 @@ interface ProcessorStore<Message extends immutable Const>
      * The Scheduler will call this method after the failed processing of a PID.
      *
      * @param pid         the process id
-     * @param runtime     the interval of time that the processing consumed
+     * @param elapsed     the interval of time that the processing consumed
      * @param result      the indication of the failure
      * @param abandoning  True iff the scheduler will no longer auto-retry this pid
      */
-    void processFailed(Int pid, Range<DateTime> runTime, CommitResult | Exception result, Boolean abandoning);
+    void processFailed(Int pid, Range<DateTime> elapsed, CommitResult | Exception result, Boolean abandoning);
     }
