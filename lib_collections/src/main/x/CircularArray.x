@@ -13,6 +13,7 @@
  * around" to the front of the array, once again appearing to chase the tail. At the point when the
  * tail catches up to the head, the underlying array size must be increased.
  */
+@Concurrent
 class CircularArray<Element>
         implements List<Element>
     {

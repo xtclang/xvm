@@ -12,6 +12,7 @@ import ecstasy.collections.SizeLimited;
  * interface provided by the ArrayDeque is the corresponding FIFO queue. To prepend to the queue, or
  * to use LIFO instead of FIFO, obtain the [lifoQueue].
  */
+@Concurrent
 class ArrayDeque<Element>
         implements Queue<Element>
     {
@@ -333,6 +334,7 @@ class ArrayDeque<Element>
      * A LIFO queue is one that takes from the end and "appends" to the beginning of the underlying
      * array.
      */
+    @Concurrent
     protected class LifoQueue
             implements Queue<Element>
         {
