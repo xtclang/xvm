@@ -1,6 +1,7 @@
 /**
  * A [Stringable] implementation for [Collection] implementations.
  */
+@Concurrent
 mixin CollectionStringer
         into Collection<Stringable>
         implements Stringable

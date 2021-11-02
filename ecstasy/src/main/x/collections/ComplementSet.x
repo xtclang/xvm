@@ -3,6 +3,7 @@ import iterators.FilteredIterator;
 /**
 * TODO
 */
+@Concurrent
 class ComplementSet<Element>(Set<Element> complementSet, immutable Set<Element> universalSet)
         implements Set<Element>
     {
