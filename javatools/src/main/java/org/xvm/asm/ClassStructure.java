@@ -3196,7 +3196,7 @@ public class ClassStructure
     public MethodStructure createInitializer(ConstantPool pool, TypeConstant typeStruct,
                                              Map<Object, FieldInfo> mapFields)
         {
-        int nFlags = Format.METHOD.ordinal() | Access.PUBLIC.FLAGS;
+        int nFlags = Format.METHOD.ordinal() | Access.PUBLIC.FLAGS | STATIC_BIT;
 
         // create a transient MethodStructure (without an intermediate MultiMethodStructure)
         MethodConstant idMethod = pool.ensureMethodConstant(
