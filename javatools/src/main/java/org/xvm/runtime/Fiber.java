@@ -179,7 +179,6 @@ public class Fiber
                 break;
 
             case Waiting:
-            case SyncWait:
             case Paused:
                 long cNanos = System.nanoTime() - m_nanoStarted;
                 m_nanoStarted = 0;
@@ -209,7 +208,6 @@ public class Fiber
                 return f_context.getCurrentFrame();
 
             case Waiting:
-            case SyncWait:
             case Paused:
             case Terminating:
                 return m_frame;
@@ -288,14 +286,6 @@ public class Fiber
                             }
                         m_resume = null;
                         }
-                    break;
-
-                case SyncWait:
-                    if (f_context.isAnyNonConcurrentWaiting(frame.f_fiber))
-                        {
-                        return Op.R_SYNC_WAIT;
-                        }
-                    iResult = Op.R_NEXT;
                     break;
 
                 case Terminating:
@@ -499,6 +489,14 @@ public class Fiber
     protected void setBlocker(Fiber fiberBlocker)
         {
         m_fiberBlocker = fiberBlocker;
+        }
+
+    /**
+     * @return the blocking fiber
+     */
+    public Fiber getBlocker()
+        {
+        return m_fiberBlocker;
         }
 
 
@@ -722,8 +720,7 @@ public class Fiber
     enum FiberStatus
         {
         Initial           (3), // a new fiber has not been scheduled for execution yet
-        Running           (5), // normal execution
-        SyncWait          (4), // a fiber is blocked due to unsafe concurrency of the callee
+        Running           (4), // normal execution
         Paused            (2), // the execution was paused by the scheduler
         Waiting           (1), // execution is blocked until the "waiting" futures are completed
         Terminating       (0); // the fiber has been terminated, but some requests are still pending

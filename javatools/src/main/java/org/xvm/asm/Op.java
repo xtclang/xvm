@@ -1254,7 +1254,7 @@ public abstract class Op
             case OP_MOV:         return new Move        (in, aconst);
             case OP_MOV_VAR:     return new MoveVar     (in, aconst);
             case OP_MOV_REF:     return new MoveRef     (in, aconst);
-            case OP_MOV_THIS:    return new MoveThis    (in, aconst, nOp);
+            case OP_MOV_THIS:
             case OP_MOV_THIS_A:  return new MoveThis    (in, aconst, nOp);
             case OP_MOV_TYPE:    return new MoveType    (in, aconst);
             case OP_CAST:        return new MoveCast    (in, aconst);
@@ -2074,13 +2074,6 @@ public abstract class Op
      * fibers from execution and repeat the same op-code.
      */
     public static final int R_PAUSE            = -9;
-
-    /**
-     * Result from process() method: at the moment used only by Utils.createSyncFrame;
-     * the execution must be blocked until the blocking synchronized fiber terminates or becomes
-     * concurrent.
-     */
-    public static final int R_SYNC_WAIT        = -10;
 
 
     // ----- other constants -----------------------------------------------------------------------

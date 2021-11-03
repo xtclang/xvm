@@ -275,7 +275,7 @@ public class ServiceContext
 
             if (frame != null)
                 {
-                try (var x = ConstantPool.withPool(frame.poolContext()))
+                try (var ignored = ConstantPool.withPool(frame.poolContext()))
                     {
                     frame = execute(frame);
 
@@ -436,16 +436,6 @@ public class ServiceContext
         }
 
     /**
-     * Note: if this method returns true, it also sets the "blocker" on the evaluating fiber.
-     *
-     * @return true iff there are any fibers that block the specified fiber's execution
-     */
-    public boolean isAnyNonConcurrentWaiting(Fiber fiber)
-        {
-        return f_queueSuspended.isAnyNonConcurrentWaiting(fiber);
-        }
-
-    /**
      * Add a response message to the service response queue.
      */
     private void respond(Response response)
@@ -514,7 +504,6 @@ public class ServiceContext
                 f_queueSuspended.add(frame);
                 break;
 
-            case SyncWait:
             case Waiting:
                 m_frameCurrent = null;
                 f_queueSuspended.add(frame);
@@ -559,8 +548,7 @@ public class ServiceContext
                 iPC = Op.R_EXCEPTION;
                 break;
 
-            case Op.R_SYNC_WAIT: // there are still some waiting unsafe fibers
-            case Op.R_BLOCK:     // there are still some non-completed futures
+            case Op.R_BLOCK: // there are still some non-completed futures
                 return frame;
 
             default:
@@ -768,11 +756,6 @@ public class ServiceContext
                     fiber.setStatus(FiberStatus.Waiting, cOps);
                     return frame;
 
-                case Op.R_SYNC_WAIT:
-                    frame.m_iPC = iPCLast + 1;
-                    fiber.setStatus(FiberStatus.SyncWait, cOps);
-                    return frame;
-
                 case Op.R_PAUSE:
                     fiber.setStatus(FiberStatus.Paused, cOps);
                     return frame;
@@ -944,7 +927,6 @@ public class ServiceContext
             case Paused:
                 return ServiceStatus.Busy;
 
-            case SyncWait:
             case Waiting:
                 return ServiceStatus.BusyWaiting;
 
@@ -978,7 +960,7 @@ public class ServiceContext
         }
 
     /**
-     * @return true iff the service is Idle
+     * @return true iff the service is in a critical synchronization
      */
     public boolean isCriticalSection()
         {
@@ -1839,7 +1821,7 @@ public class ServiceContext
     private Frame m_frameCurrent;
 
     /**
-     * If specifed, inidcates the current critical fiber.
+     * If specified, indicates the current critical fiber.
      */
     private Fiber m_fiberCritical;
 

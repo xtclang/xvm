@@ -286,18 +286,7 @@ public class Frame
     public int call(Frame frameNext)
         {
         assert frameNext.f_framePrev == this;
-
-        // if we are transitioning to a "red" zone; check if any other fiber blocks this one
-        if (this.isSafeStack() && frameNext.isUnsafeFrame() &&
-                f_context.isAnyNonConcurrentWaiting(f_fiber))
-            {
-            m_frameNext = Utils.createSyncFrame(this,
-                            frameCaller -> frameCaller.call(frameNext));
-            }
-        else
-            {
-            m_frameNext = frameNext;
-            }
+        m_frameNext = frameNext;
         return Op.R_CALL;
         }
 
@@ -1718,14 +1707,6 @@ public class Frame
             // the new continuation is to be executed after the existing ones (FIFO)
             ((ContinuationChain) m_continuation).add(continuation);
             }
-        }
-
-    /**
-     * @return true iff this frame allows reentrancy
-     */
-    public boolean allowsReentrancy()
-        {
-        return getSynchronicity() == Synchronicity.Concurrent;
         }
 
     /**

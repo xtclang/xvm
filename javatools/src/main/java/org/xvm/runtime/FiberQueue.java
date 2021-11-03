@@ -124,7 +124,7 @@ public class FiberQueue
     /**
      * Report on the status of the fiber queue. Temporary: for debugging only.
      */
-    public String report()
+    public String reportStatus()
         {
         if (m_cSize == 0)
             {
@@ -156,10 +156,6 @@ public class FiberQueue
                         sb.append(" waiting");
                         break;
 
-                    case SyncWait:
-                        sb.append(" sync wait");
-                        break;
-
                     case Initial:
                         sb.append(" new");
                         break;
@@ -173,8 +169,7 @@ public class FiberQueue
      * Calculate the priority of the fiber at the specified index.
      * The return values are:
      * <ul>
-     *   <li/>[3]  running
-     *   <li/>[2]  a SyncCall fiber that became ready
+     *   <li/>[2]  running
      *   <li/>[1]  a waiting fiber that is marked as "ready"
      *   <li/>[0]  initial new
      *   <li/>[-1] not ready
@@ -194,10 +189,7 @@ public class FiberQueue
         switch (fiber.getStatus())
             {
             case Running:
-                return 3;
-
-            case SyncWait:
-                return isAnyNonConcurrentWaiting(fiber) ? -2 : 2;
+                return 2;
 
             case Waiting:
                 if (fiber.isReady())
@@ -215,7 +207,7 @@ public class FiberQueue
                 return -1;
 
             case Initial:
-                return fiber.f_context.isCriticalSection() ? -1 : 0;
+                return isAnyNonConcurrentWaiting(fiber) ? -1 : 0;
 
             default:
                 throw new IllegalStateException();
