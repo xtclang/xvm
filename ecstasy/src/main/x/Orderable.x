@@ -2,7 +2,6 @@
  * The Orderable interface represents the general capabilities of data types that can be compared
  * for purposes of ordering.
  */
-@Concurrent
 interface Orderable
         extends Comparable
     {

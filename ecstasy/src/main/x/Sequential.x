@@ -2,7 +2,6 @@
  * Sequential values are values that exist within a series of values. A sequential value is aware of
  * both its next and previous value in the series, if any.
  */
-@Concurrent
 interface Sequential
         extends Orderable
     {

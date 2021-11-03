@@ -6,7 +6,6 @@
  * An immutable object is considered to be a duplicate of itself; there is generally no benefit from
  * actually duplicating an immutable object.
  */
-@Concurrent
 interface Duplicable
     {
     /**
