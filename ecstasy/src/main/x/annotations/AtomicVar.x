@@ -59,7 +59,6 @@
  *       ++Statistics.misses;
  *       }
  */
-@Concurrent
 mixin AtomicVar<Referent>
         into Var<Referent>
         incorporates conditional AtomicIntNumber<Referent extends IntNumber>

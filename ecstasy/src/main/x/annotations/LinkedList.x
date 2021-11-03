@@ -87,7 +87,6 @@ import reflect.Annotation;
  *             }
  *         }
  */
-@Concurrent
 mixin LinkedList<Element>
         into Var<Element?>
         implements List<Element>

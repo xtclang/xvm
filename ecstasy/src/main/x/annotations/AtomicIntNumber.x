@@ -4,7 +4,6 @@
  *
  * TODO this is AtomicIntNumber, but sub-pieces are needed, like AtomicSequential
  */
-@Concurrent
 mixin AtomicIntNumber<Referent extends IntNumber>
         into AtomicVar<Referent>
     {
