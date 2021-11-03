@@ -82,6 +82,7 @@ service Client<Schema extends RootSchema>
         this.id            = id;
         this.dbUser        = dbUser;
         this.catalog       = catalog;
+        this.clock         = catalog.clock;
         this.txManager     = catalog.txManager;
         this.jsonSchema    = catalog.jsonSchema;
         this.readOnly      = readOnly || catalog.readOnly;
@@ -107,10 +108,7 @@ service Client<Schema extends RootSchema>
     /**
      * The shared clock for the database.
      */
-    public/private @Lazy Clock clock.calc()
-        {
-        return catalog.clock;
-        }
+    public/private Clock clock;
 
     /**
      * The transaction manager for this `Catalog` object. The transaction manager provides a
@@ -363,14 +361,17 @@ service Client<Schema extends RootSchema>
      * @param dboId    indicates which DBProcessor
      * @param pid      indicates which Pending
      * @param message  the Message to process
+     *
+     * @return the elapsed processing time
+     * @return the exceptional processing failure, iff the processing failed
      */
-    <Message extends immutable Const> void processPending(Int dboId, Int pid, Message message)
+    <Message extends immutable Const> (Range<DateTime>, Exception?) processPending(Int dboId, Int pid, Message message)
         {
         assert internal;
 
         val dbo = implFor(dboId).as(DBProcessorImpl<Message>);
 
-        dbo.process_(pid, message);
+        return dbo.process_(pid, message);
         }
 
     /**
@@ -2184,6 +2185,15 @@ service Client<Schema extends RootSchema>
                 }
             }
 
+        /**
+         * Process one pending message.
+         *
+         * @param pid      indicates which Pending
+         * @param message  the Message to process
+         *
+         * @return the elapsed processing time
+         * @return the exceptional processing failure, iff the processing failed
+         */
         (Range<DateTime>, Exception?) process_(Int pid, Message message)
             {
             Range<DateTime> elapsed;

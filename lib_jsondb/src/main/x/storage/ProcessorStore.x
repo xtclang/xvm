@@ -73,9 +73,6 @@ interface ProcessorStore<Message extends immutable Const>
      */
     void setEnabled(Int txId, Boolean enable);
 
-
-    // ----- Scheduler support ---------------------------------------------------------------------
-
     /**
      * Notify the store that an attempt to process a scheduled message has successfully completed.
      *
@@ -86,6 +83,9 @@ interface ProcessorStore<Message extends immutable Const>
      * @param elapsed  the interval of time that the processing consumed
      */
     void processCompleted(Int txId, Int pid, Range<DateTime> elapsed);
+
+
+    // ----- Scheduler support ---------------------------------------------------------------------
 
     /**
      * Notify the store that an attempt to process a scheduled message has failed.
