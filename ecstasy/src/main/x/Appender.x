@@ -8,7 +8,6 @@
  *
  * The interface is designed so that only one method, [add(Element)], needs to be implemented.
  */
-@Concurrent
 interface Appender<Element>
     {
     /**
