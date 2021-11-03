@@ -2,7 +2,6 @@
  * A [Map] that is able to create an empty instance of its same implementation, and a copy of
  * itself including all of its contents, should implement this interface.
  */
-@Concurrent
 interface CopyableMap<Key, Value>
         extends Map<Key, Value>
         extends Replicable

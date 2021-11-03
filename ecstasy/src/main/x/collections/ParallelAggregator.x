@@ -27,7 +27,6 @@
  *    the ParallelAggregator, and obtain an `Accumulator` from that. It will then feed its
  *    `Partial` values into the `Accumulator` and reduce that into the `Result` value.
  */
-@Concurrent
 interface ParallelAggregator<Element, Partial, Result>
         extends Aggregator<Element, Result>
     {

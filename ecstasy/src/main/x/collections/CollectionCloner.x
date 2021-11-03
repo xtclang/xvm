@@ -4,7 +4,6 @@
  *
  *     incorporates conditional CollectionCloner<Element extends Cloneable>
  */
-@Concurrent
 mixin CollectionCloner<Element extends Cloneable>
         into CopyableCollection<Element>
         implements Cloneable
