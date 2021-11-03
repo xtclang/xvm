@@ -1,7 +1,6 @@
 /**
  * Functionality specific to an array of bits.
  */
-@Concurrent
 mixin BitArray<Element extends Bit>
         into Array<Element>
     {

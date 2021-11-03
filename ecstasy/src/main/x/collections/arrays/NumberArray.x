@@ -1,7 +1,6 @@
 /**
  * Functionality specific to arrays of numbers.
  */
-@Concurrent
 mixin NumberArray<Element extends Number>
         into Array<Element>
     {

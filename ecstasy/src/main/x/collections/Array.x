@@ -52,7 +52,6 @@ import ecstasy.io;
  * automatic and potentially dynamic optimizations are similar to those that are available (with
  * manual effort, and without dynamicity) in a low level, statically compiled language.
  */
-@Concurrent
 class Array<Element>
         implements ArrayDelegate<Element>
         implements List<Element>

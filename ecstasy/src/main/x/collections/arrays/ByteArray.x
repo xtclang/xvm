@@ -1,7 +1,6 @@
 /**
  * Functionality specific to arrays of bytes.
  */
-@Concurrent
 mixin ByteArray<Element extends Byte>
         into Array<Element>
         extends IntNumberArray<Element>

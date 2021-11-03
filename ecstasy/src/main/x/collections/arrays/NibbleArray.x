@@ -1,7 +1,6 @@
 /**
  * Functionality specific to an array of nibbles.
  */
-@Concurrent
 mixin NibbleArray<Element extends Nibble>
         into Array<Element>
     {
