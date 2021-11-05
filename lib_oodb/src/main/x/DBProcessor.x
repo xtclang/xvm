@@ -429,11 +429,11 @@ interface DBProcessor<Message extends immutable Const>
      * * High - An indication that the priority is higher than the default priority.
      * * Normal - The default priority.
      * * Low - An indication that the priority is lower than the default priority.
-     * * WhenIdle - An indication that the processing should only occur when there appears to be
+     * * Idle - An indication that the processing should only occur when there appears to be
      *   a lack of (or a measurable lull in) other database activity. (This definition is
      *   purposefully lacking in explicitness.)
      */
-    enum Priority {High, Normal, Low, WhenIdle}
+    typedef DBTransaction.Priority as Priority;
 
     /**
      * Indicates how the repeating period is calculated.

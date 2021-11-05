@@ -84,18 +84,25 @@ interface ProcessorStore<Message extends immutable Const>
      */
     void processCompleted(Int txId, Int pid, Range<DateTime> elapsed);
 
-
-    // ----- Scheduler support ---------------------------------------------------------------------
+    /**
+     * Notification of a decision to retry. Whether or not the transaction commits, the information
+     * should be persisted by the ProcessorStore.
+     *
+     * @param txId     the "write" transaction identifier
+     * @param pid      the process id
+     * @param elapsed  the interval of time that the processing consumed
+     * @param result   the indication of the failure
+     */
+    void retryPending(Int txId, Int pid, Range<DateTime> elapsed, CommitResult | Exception result);
 
     /**
-     * Notify the store that an attempt to process a scheduled message has failed.
+     * Notification of a decision to abandon. Whether or not the transaction commits, the
+     * information should be persisted by the ProcessorStore.
      *
-     * The Scheduler will call this method after the failed processing of a PID.
-     *
-     * @param pid         the process id
-     * @param elapsed     the interval of time that the processing consumed
-     * @param result      the indication of the failure
-     * @param abandoning  True iff the scheduler will no longer auto-retry this pid
+     * @param txId     the "write" transaction identifier
+     * @param pid      the process id
+     * @param elapsed  the interval of time that the processing consumed
+     * @param result   the indication of the failure
      */
-    void processFailed(Int pid, Range<DateTime> elapsed, CommitResult | Exception result, Boolean abandoning);
+    void abandonPending(Int txId, Int pid, Range<DateTime> elapsed, CommitResult | Exception result);
     }

@@ -108,9 +108,6 @@ service JsonProcessorStore<Message extends immutable Const>
         TODO
         }
 
-
-    // ----- Scheduler support ---------------------------------------------------------------------
-
     @Override
     void processCompleted(Int txId, Int pid, Range<DateTime> elapsed)
         {
@@ -118,7 +115,13 @@ service JsonProcessorStore<Message extends immutable Const>
         }
 
     @Override
-    void processFailed(Int pid, Range<DateTime> elapsed, CommitResult | Exception result, Boolean abandoning)
+    void retryPending(Int txId, Int pid, Range<DateTime> elapsed, CommitResult | Exception result)
+        {
+        TODO
+        }
+
+    @Override
+    void abandonPending(Int txId, Int pid, Range<DateTime> elapsed, CommitResult | Exception result)
         {
         TODO
         }

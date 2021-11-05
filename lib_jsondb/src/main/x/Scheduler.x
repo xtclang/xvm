@@ -3,6 +3,10 @@ import collections.SparseIntSet;
 
 import oodb.DBProcessor;
 import oodb.RootSchema;
+import oodb.Transaction.CommitResult;
+
+import Clock.Cancellable;
+import Clock.Alarm;
 
 import DBProcessor.Pending;
 import DBProcessor.Policy;
@@ -24,7 +28,31 @@ import TxManager.Status;
  * a [Changes](ObjectStore.Changes) record, associated with (i.e. keyed by) the uncommitted
  * transaction ID.
  *
- * Committing those DBProcessor ObjectStore instances
+ * The most difficult aspect of the DBProcessor / TxManager / Scheduler interaction to understand is
+ * that the behavior is truly asynchronous (and concurrent), and simultaneously the behavior is
+ * truly transactional. These two concepts are naturally in conflict. What this means is that, from
+ * the point of view of the application, all changes to the state of the DBProcessor occur
+ * transactionally. This includes pausing and resuming the DBProcessor, scheduling and rescheduling
+ * and unscheduling messages, processing messages, deciding whether to retry messages, and
+ * abandoning messages. Yet the processing is also occurring concurrently with the transactions that
+ * are making those changes to the state of the schedule. As a result, the API has been carefully
+ * defined to avoid treating each piece of schedule data as a uniquely addressable unit of
+ * transactional data (i.e. one that could be directly manipulated as a singular item), even though
+ * in reality that is how it is internally organized (using a unique identity called a "pid"). This
+ * allows one transaction to be "unscheduling" a message, while the Scheduler is busy processing
+ * that same message, without causing a conflict (because the behaviors are allowed to _compose_).
+ *
+ * To some extent, the Scheduler is a "third wheel" on a date: It's tacked on, but not particularly
+ * relevant. For example, it does not have any persistent state of its own; instead, it relies on
+ * the various ProcessorStore instances to manage their own state, which it then is given as part
+ * of starting up the database. When a transaction commits, the Scheduler is not "in the loop"; all
+ * of the necessary information (such as "the following pid has been processed") is captured and
+ * stored by the various ProcessorStore instances, and only relayed to the Scheduler after-the-fact.
+ * And when the database is shutting down, the careful coordination is between the TxMqnager and the
+ * ObjectStores, and the Scheduler is pretty much on the sidelines, with any of its in-flight
+ * processing at the risk of being aborted and rolled back by the TxManager. In other words, the
+ * Scheduler is well-connected (to information) inside the database, and its life cycle is managed
+ * by the database, but other than those aspects, it has no more "rights" than an application would.
  *
  * TODO on startup & recovery, all DBProcessors need to be started (so they dump their pending items
  *      onto the Scheduler)
@@ -52,9 +80,32 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
     Clock clock;
 
     /**
+     * The next scheduled wake-up for the scheduler.
+     */
+    Cancellable? cancelWakeUp = Null;
+
+    /**
+     * TODO
+     */
+    Boolean busy = False;
+
+    /**
      * The status of the Scheduler.
      */
     public/private Status status = Initial;
+
+    /**
+     * True whenever status is not enabled.
+     */
+    Boolean disabled.get()
+        {
+        return status != Enabled;
+        }
+
+    /**
+     * TODO
+     */
+    Boolean databaseIdle;
 
     /**
      * The set of ids of DBProcessors.
@@ -62,9 +113,10 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
     protected/private Set<Int> processors;
 
     /**
-     * TODO
+     * A counter used to generate unique PID values. This will be initialized only when all of the
+     * DBProcessor stores have contributed their scheduled items.
      */
-    protected/private Int pidCounter;
+    protected/private Int pidCounter = 0;
 
     /**
      * A pool of artificial clients for processing messages.
@@ -72,28 +124,16 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
     protected/private ArrayDeque<Client<Schema>> clientCache = new ArrayDeque();
 
     /**
-     * TODO
+     * This is the schedule. It contains all of the scheduled items, organized first by priority,
+     * and within a priority, by DateTime.
      */
-    protected/private SkiplistMap<>[] byPriority = new SkiplistMap[4](_ -> new SkiplistMap());
+    // TODO GG - protected/private SkiplistMap<DateTime, Process>[] byPriority = new SkiplistMap[4](_ -> new SkiplistMap());
+    protected/private SkiplistMap<DateTime, Process>[] byPriority = new SkiplistMap[4](_ -> new SkiplistMap<DateTime, Process>());
 
-    // TODO ripe
-    // TODO tracking in flight
-//    by client
-//    by dbo id
-//    by process
-
-    // TODO stats by dbo id
-//    class DboStats
-//        {
-//        Int inFlight;
-//        Int completed;
-//        retries
-//        failure by types (by commit result or exception -- and maybe which exception(s)?)
-//        Int totalFailed;
-//        Int exceptionCount;
-//        }
-
-    // TODO need some way to "drain" the scheduler, i.e. stop it from submitting new work to process
+    /**
+     * This is the lookup of all of the schedule items, by PID.
+     */
+    protected/private SkiplistMap<Int, Process> byPid = new SkiplistMap();
 
 
     // ----- lifecycle management ------------------------------------------------------------------
@@ -109,16 +149,16 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
         {
         switch (status)
             {
-            case Initial:
-                // TODO
-                return True;
-
             case Enabled:
                 return True;
 
-            case Disabled:
-                status = Enabled;
+            case Initial:
                 // TODO
+                continue;
+            case Disabled:
+                // TODO
+                status = Enabled;
+                checkRipe();
                 return True;
 
             case Closed:
@@ -214,7 +254,281 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
         }
 
 
+    // ----- Process state -------------------------------------------------------------------------
+
+    /**
+     * A Process contains all of the information about a pending message to process, or an in-flight
+     * message being processed.
+     */
+    class Process(Int dboId, Int pid, DateTime when, Pending pending)
+        {
+        // TODO toString etc.
+
+        /**
+         * A linked list of PidState objects that all have the same priority and schedule DateTime.
+         */
+        @LinkedList Process? next = Null;
+        }
+
+// TODO need a way to track stats by dbo id
+//    class DboStats
+//        {
+//        Int inFlight;
+//        Int completed;
+//        retries
+//        failure by types (by commit result or exception -- and maybe which exception(s)?)
+//        Int totalFailed;
+//        Int exceptionCount;
+//        }
+
+    /**
+     * Add a message to process into the schedule.
+     *
+     * @param process  specifies the message to process and the information about its schedule
+     */
+    void registerProcess(Process process)
+        {
+        assert byPid.putIfAbsent(process.pid, process);
+
+        SkiplistMap<DateTime, Process> byDateTime = byPriority[process.pending.priority.ordinal];
+        DateTime when = process.when;
+        if (Process head := byDateTime.get(when))
+            {
+            head.&next.add(process);
+            }
+        else
+            {
+            byDateTime.put(when, process);
+            }
+        }
+
+    /**
+     * Remove a message to process from the schedule.
+     *
+     * @param process  specifies the message to process and the information about its schedule
+     */
+    void unregisterProcess(Process process)
+        {
+        assert byPid.remove(process.pid, process);
+
+        SkiplistMap<DateTime, Process> byDateTime = byPriority[process.pending.priority.ordinal];
+        DateTime when = process.when;
+        assert Process head := byDateTime.get(when);
+        if (&head == &process)
+            {
+            if (Process tail ?= process.next)
+                {
+                byDateTime.put(when, tail);
+                }
+            else
+                {
+                byDateTime.remove(when);
+                }
+            }
+        else
+            {
+            head.&next.remove(process);
+            }
+        }
+
+
     // ----- message-processing client caching -----------------------------------------------------
+
+    /**
+     * Check for messages that are scheduled to be processed at or before the current point in time,
+     * and process some of them if possible.
+     */
+    void checkRipe()
+        {
+        if (busy || disabled)
+            {
+            return;
+            }
+
+        busy = True;
+        try
+            {
+            // this method will schedule its own subsequent wake-up
+            if (Cancellable cancel ?= cancelWakeUp)
+                {
+                cancel();
+                cancelWakeUp = Null;
+                }
+
+            DateTime cutoff = clock.now;
+            // TODO GG: Processing: for (Priority priority : High..Idle)
+            Processing: for (Priority priority : oodb.DBTransaction.Priority.High..oodb.DBTransaction.Priority.Idle)
+                {
+                if (priority == Idle && !databaseIdle)
+                    {
+                    break;
+                    }
+
+                SkiplistMap<DateTime, Process> byWhen = byPriority[priority.ordinal];
+                if (DateTime first := byWhen.first(), first <= cutoff)
+                    {
+                    Int limit = 1 << (priority.ordinal * 2);
+                    Int count = 0;
+                    for (Process firstProcess : byWhen[first..cutoff].values)
+                        {
+                        Process? nextProcess = firstProcess;
+                        while (Process process ?= nextProcess)
+                            {
+                            nextProcess = process.next;
+
+                            if (++count > limit)
+                                {
+                                // quota reached
+                                break;
+                                }
+
+                            if (disabled)
+                                {
+                                break Processing;
+                                }
+
+                            (Range<DateTime> elapsed, CommitResult | Exception result) = processOne(process);
+                            if (result != Committed)
+                                {
+                                handleFailure(process, elapsed, result);
+                                }
+                            unregisterProcess(process);
+                            }
+                        }
+                    }
+                }
+            }
+        finally
+            {
+            busy = False;
+
+            // schedule next processing
+            DateTime? wakeUp = Null;
+            if (!disabled)
+                {
+                // TODO GG for (Priority priority : High..Idle)
+                for (Priority priority : oodb.DBTransaction.Priority.High..oodb.DBTransaction.Priority.Idle)
+                    {
+                    if (DateTime first := byPriority[priority.ordinal].first())
+                        {
+                        // TODO GG shoot me now
+//                        if (wakeUp == Null || first < wakeUp)
+//                            {
+//                            wakeup = first;
+//                            }
+                        wakeUp = first < wakeUp? ? first : wakeUp : first;
+                        }
+                    }
+
+                cancelWakeUp = clock.schedule(wakeUp?, checkRipe);
+                }
+            }
+        }
+
+    /**
+     * Process the passed [Process] object.
+     *
+     * @param process  specifies the message to process and the DBProcessor to process it
+     *
+     * @return elapsed  the period of time consumed by the processing of the message
+     * @return result   the result of the processing, indicating success or detailed failure
+     */
+    (Range<DateTime> elapsed, CommitResult | Exception result) processOne(Process process)
+        {
+        Client<Schema> client = allocateClient();
+        try
+            {
+            // create a transaction
+            client.createProcessTx(process.pending.previousFailures);
+
+            // process the message
+            (Range<DateTime> elapsed, Exception? failure) = processOne(client, process);
+
+            // commit the transaction
+            CommitResult | Exception result;
+            if (failure == Null)
+                {
+                try
+                    {
+                    result = client.commitProcessTx();
+                    }
+                catch (Exception e)
+                    {
+                    result = e;
+                    }
+                }
+            else
+                {
+                result = failure;
+                }
+
+            // on failure, roll back the transaction
+            if (result != Committed)
+                {
+                client.rollbackProcessTx();
+                }
+
+            return elapsed, result;
+            }
+        finally
+            {
+            recycleClient(client);
+            }
+        }
+
+    /**
+     * Process the specified message using the provided client.
+     *
+     * @param client   the client to use to do the processing
+     * @param process  specifies the message to process and the DBProcessor to process it
+     *
+     * @return elapsed  the period of time consumed by the processing of the message
+     * @return failure  the exception if one occurred during processing the message, otherwise Null
+     */
+    (Range<DateTime> elapsed, Exception? failure) processOne(Client<Schema> client, Process process)
+        {
+        Pending pending = process.pending;
+
+        Range<DateTime> elapsed;
+        Exception?      failure = Null;
+        DateTime        start   = clock.now;
+        try
+            {
+            pending.Message message = pending.message;
+            (elapsed, failure) = client.processMessage(process.dboId, process.pid, pending.message);
+            }
+        catch (Exception e)
+            {
+            client.rollbackProcessTx();
+            elapsed = start..clock.now;
+            failure = e;
+            }
+
+        return elapsed, failure;
+        }
+
+    /**
+     * Plan a course of action based on the specified failure that occurred when processing a
+     * message.
+     *
+     * @param process  the message that failed to process and the DBProcessor to process it
+     * @param elapsed  the period of time consumed by the processing of the message
+     * @param result   the result of the processing, indicating the reason for the failure
+     */
+    void handleFailure(Process process, Range<DateTime> elapsed, CommitResult | Exception result)
+        {
+        Client<Schema> client = allocateClient();
+        try
+            {
+            Int attempts = process.pending.previousFailures + 1;
+            client.processingFailed(process.dboId, process.pid, process.pending.message, result,
+                    process.pending.schedule, elapsed, attempts, attempts > 8);
+            }
+        finally
+            {
+            recycleClient(client);
+            }
+        }
 
     /**
      * Obtain a Client object from an internal pool of Client objects. These Client objects are used
@@ -236,5 +550,43 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
     void recycleClient(Client<Schema> client)
         {
         return clientCache.reversed.add(client);
+        }
+
+    /**
+     * Commit or roll back the transaction on the processing client.
+     *
+     * @param client   the processing client
+     * @param failure  the exception, if any, thus far within the transaction
+     *
+     * @return Committed, if the transaction committed successfully, otherwise a CommitResult or
+     *         Exception indicating the cause of the failure
+     */
+    CommitResult | Exception completeTx(Client<Schema> client, Exception? failure)
+        {
+        // commit the transaction
+        CommitResult | Exception result;
+        if (failure == Null)
+            {
+            try
+                {
+                result = client.commitProcessTx();
+                }
+            catch (Exception e)
+                {
+                result = e;
+                }
+            }
+        else
+            {
+            result = failure;
+            }
+
+        // on failure, roll back the transaction
+        if (result != Committed)
+            {
+            client.rollbackProcessTx();
+            }
+
+        return result;
         }
     }

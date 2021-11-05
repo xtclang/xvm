@@ -350,7 +350,14 @@ service Client<Schema extends RootSchema>
      */
     void createProcessTx(Int retryCount)
         {
-        assert internal && tx==Null;
+        assert internal;
+
+        // roll back any previously left-over transaction (unlikely that this would ever occur)
+        if (tx != Null)
+            {
+            rollbackProcessTx();
+            }
+
         assert Connection conn ?= this.conn;
         conn.createTransaction(name="async", retryCount=retryCount, override=True);
         }
@@ -365,7 +372,7 @@ service Client<Schema extends RootSchema>
      * @return the elapsed processing time
      * @return the exceptional processing failure, iff the processing failed
      */
-    <Message extends immutable Const> (Range<DateTime>, Exception?) processPending(Int dboId, Int pid, Message message)
+    <Message extends immutable Const> (Range<DateTime>, Exception?) processMessage(Int dboId, Int pid, Message message)
         {
         assert internal;
 
@@ -399,8 +406,14 @@ service Client<Schema extends RootSchema>
         }
 
     /**
+     * Determine if the processing of the specified message should be retried, and signal the
+     * abandonment of the message processing if indicated.
      *
-     * @param dboId
+     * This method performs its own transaction management; do **not** call this method with a
+     * transaction already active.
+     *
+     * @param dboId           indicates which DBProcessor
+     * @param pid      indicates which Pending
      * @param message         the message that failed to be processed and committed
      * @param result          the result from the last failed attempt, which is either a
      *                        commit failure indicated as a [CommitResult], or an `Exception`
@@ -414,8 +427,9 @@ service Client<Schema extends RootSchema>
      * @return True if the Scheduler indicated that it is abandoning, or if the DBProcessor
      *         indicates it is abandoning retrying of the processing of the message
      */
-    <Message extends immutable Const> Boolean abandonPending(
+    <Message extends immutable Const> Boolean processingFailed(
             Int                      dboId,
+            Int                      pid,
             Message                  message,
             CommitResult | Exception result,
             Schedule?                when,
@@ -426,13 +440,29 @@ service Client<Schema extends RootSchema>
         {
         assert internal;
 
-        val dbo = implFor(dboId).as(DBProcessor<Message>);
+        // roll back any previously left-over transaction (unlikely, but just in case)
+        if (tx != Null)
+            {
+            rollbackProcessTx();
+            }
+
+        val dbo = implFor(dboId).as(DBProcessorImpl<Message>);
 
         if (!abandoning)
             {
             try
                 {
-                abandoning = !dbo.autoRetry(message, result, when, elapsed, timesAttempted);
+                using (val tx = ensureTransaction(dbo, override=True))
+                    {
+                    if (dbo.autoRetry(message, result, when, elapsed, timesAttempted))
+                        {
+                        dbo.retrying_(pid, elapsed, result);
+                        }
+                    else
+                        {
+                        abandoning = True;
+                        }
+                    }
                 }
             catch (Exception e)
                 {
@@ -448,7 +478,11 @@ service Client<Schema extends RootSchema>
             {
             try
                 {
-                dbo.abandon(message, result, when, elapsed, timesAttempted);
+                using (val tx = ensureTransaction(dbo, override=True))
+                    {
+                    dbo.abandoning_(pid, elapsed, result);
+                    dbo.abandon(message, result, when, elapsed, timesAttempted);
+                    }
                 }
             catch (Exception e)
                 {
@@ -2048,7 +2082,6 @@ service Client<Schema extends RootSchema>
             }
 
         @Override
-
         conditional List<
                          DBLog<Value>.        // TODO GG why is "DBLog<Value>." required for "Entry"
                          Entry> select((Range<DateTime>|Duration)? period = Null,
@@ -2196,26 +2229,28 @@ service Client<Schema extends RootSchema>
          */
         (Range<DateTime>, Exception?) process_(Int pid, Message message)
             {
-            Range<DateTime> elapsed;
+            Transaction     tx      = requireTransaction_("process()");
             Exception?      failure = Null;
-
-            using (val tx = ensureTransaction(this))
+            DateTime        start   = clock.now;
+            Range<DateTime> elapsed;
+            try
                 {
-                DateTime start = clock.now;
-                try
-                    {
-                    process(message);
-                    }
-                catch (Exception e)
-                    {
-                    failure = e;
-                    }
-                elapsed = start..clock.now;
+                process(message);
+                }
+            catch (Exception e)
+                {
+                failure = e;
+                }
+            elapsed = start..clock.now;
 
-                if (failure == Null)
-                    {
-                    store_.processCompleted(tx.id, pid, elapsed);
-                    }
+            if (failure == Null)
+                {
+                // the information about the PID being successfully processed is part of the
+                // transactional record, and must be committed as part of this transaction, so
+                // the information is provided to the DBProcessor's ObjectStore at this point;
+                // if the transaction fails to commit, then the fact that the PID was processed
+                // will also be lost -- as it should be!
+                store_.processCompleted(tx.id_, pid, elapsed);
                 }
 
             return elapsed, failure;
@@ -2250,12 +2285,34 @@ service Client<Schema extends RootSchema>
                 }
             }
 
+        /**
+         * Notification of a decision to retry.
+         */
+        void retrying_(Int                      pid,
+                       Range<DateTime>          elapsed,
+                       CommitResult | Exception result)
+            {
+            Transaction tx = requireTransaction_("retryPending()");
+            store_.retryPending(tx.id_, pid, elapsed, result);
+            }
+
+        /**
+         * Notification of a decision to abandon.
+         */
+        void abandoning_(Int                      pid,
+                         Range<DateTime>          elapsed,
+                         CommitResult | Exception result)
+            {
+            Transaction tx = requireTransaction_("abandonPending()");
+            store_.abandonPending(tx.id_, pid, elapsed, result);
+            }
+
         @Override
         void abandon(Message                  message,
-                        CommitResult | Exception result,
-                        Schedule?                when,
-                        Range<DateTime>          elapsed,
-                        Int                      timesAttempted)
+                     CommitResult | Exception result,
+                     Schedule?                when,
+                     Range<DateTime>          elapsed,
+                     Int                      timesAttempted)
             {
             using (val tx = ensureTransaction(this))
                 {
