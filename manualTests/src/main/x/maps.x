@@ -1,25 +1,41 @@
 module TestMaps
     {
+    package collections import collections.xtclang.org;
+
+    import collections.ConcurrentHashMap;
+
     @Inject Console console;
     @Inject Timer   timer;
     Log log = new ecstasy.io.ConsoleLog(console);
 
     void run()
         {
-        testBasic();
-        testEquals();
+        testBasic(new ListMap());
+        testBasic(new HashMap());
+        testBasic(new SkiplistMap());
+        testBasic(new ConcurrentHashMap());
+
+        testEquals(new ListMap());
+        testEquals(new HashMap());
+        testEquals(new SkiplistMap());
+        testEquals(new ConcurrentHashMap());
 
         function void () run = &testFill100();
         profile(run, 10);
 
         testListMap();
 
-        testMapIteration();
+        testMapIteration(new ListMap());
+        testMapIteration(new HashMap());
+        testMapIteration(new SkiplistMap());
+        testMapIteration(new ConcurrentHashMap());
+
         testFreezable();
 
         testBasicOps(new ListMap());
         testBasicOps(new HashMap());
         testBasicOps(new SkiplistMap());
+        testBasicOps(new ConcurrentHashMap());
 
 //        for (UInt seed : 1..500)
 //            {
@@ -28,11 +44,10 @@ module TestMaps
 //            }
         }
 
-    void testBasic()
+    void testBasic(Map<Int, String> map)
         {
         console.println("\n** testBasic()");
 
-        Map<Int, String> map = new HashMap();
         map.put(1, "Hello from Map");
         map.put(2, "Goodbye from Map");
 
@@ -43,9 +58,8 @@ module TestMaps
         console.println(map);
         }
 
-    void testEquals()
+    void testEquals(Map<Int, String> map1)
         {
-        Map<Int, String> map1 = new HashMap();
         map1.put(1, "v1");
 
         Map<Int, String> map2 = Map:[1="v1"];
@@ -146,11 +160,10 @@ module TestMaps
             }
         }
 
-    void testMapIteration()
+    void testMapIteration(Map<String, Int> map)
         {
         console.println("\n** testMapIteration()");
 
-        Map<String, Int> map = new HashMap();
         map.put("hello", 1);
         map.put("goodbye", 2);
 
@@ -167,7 +180,8 @@ module TestMaps
             }
 
         console.println("values:");
-        for ((_, Int i) : map)
+        // for ((_, Int i) : map) // TODO GG/CP: this AIOOBEs (in Java) with CHM
+        for ((String s, Int i) : map)
             {
             console.println($"? = {i}");
             }
@@ -354,4 +368,6 @@ module TestMaps
             assert map == check;
             }
         }
+
+
     }

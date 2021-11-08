@@ -107,6 +107,7 @@ interface Collection<Element>
      * @return True iff the `Collection` size is efficiently known
      * @return (conditional) the `Collection` size, if it is efficiently known
      */
+    @Concurrent
     conditional Int knownSize()
         {
         // implementations of Collection that do not have a cached size of the collection should
@@ -127,6 +128,7 @@ interface Collection<Element>
      *
      *     return size == 0;
      */
+    @Concurrent
     @RO Boolean empty.get()
         {
         // implementations of Collection that do not have a cached size of the collection should
@@ -141,6 +143,7 @@ interface Collection<Element>
      *
      * @return `True` iff the specified value is present in this `Collection`
      */
+    @Concurrent
     Boolean contains(Element value)
         {
         // this should be overridden by any implementation that has a structure that can do better
@@ -155,6 +158,7 @@ interface Collection<Element>
      *
      * @return `True` iff the specified values all exist in this collection
      */
+    @Concurrent
     Boolean containsAll(Collection! values)
         {
         // this.contains(values) is always True when there are no values to test, or when the passed
@@ -232,6 +236,7 @@ interface Collection<Element>
      * @return True if any element matched the specified criteria
      * @return (conditional) the first element that matched the criteria
      */
+    @Concurrent
     conditional Element any(function Boolean(Element) match = _ -> True)
         {
         return iterator().untilAny(match);
@@ -244,6 +249,7 @@ interface Collection<Element>
      *
      * @return True if every single element in the `Collection` matched the specified criteria
      */
+    @Concurrent
     Boolean all(function Boolean(Element) match)
         {
         return iterator().whileEach(match);
@@ -259,6 +265,7 @@ interface Collection<Element>
      *
      * @return the resulting `Collection` containing the elements that matched the criteria
      */
+    @Concurrent
     Collection! filter(function Boolean(Element) match,
                        Collection!?              dest  = Null)
         {
@@ -292,6 +299,7 @@ interface Collection<Element>
      * @return trueList   the list of elements that match the provided criteria
      * @return falseList  the list of elements that **do not** match the provided criteria
      */
+    @Concurrent
     (List<Element> trueList, List<Element> falseList) partition(function Boolean(Element) match,
                                                                 List<Element>? trueList  = Null,
                                                                 List<Element>? falseList = Null)
@@ -318,6 +326,7 @@ interface Collection<Element>
      *
      * @return the resulting `Collection` containing the elements that matched the criteria
      */
+    @Concurrent
     <Result> Collection!<Result> map(function Result(Element) transform,
                                      Collection!<Result>?     dest      = Null)
         {
@@ -358,6 +367,7 @@ interface Collection<Element>
      *
      * @return the resulting `Collection` containing the elements that matched the criteria
      */
+    @Concurrent
     <Result> Collection!<Result> flatMap(function Iterable<Result>(Element) flatten,
                                          Collection!<Result>?               dest    = Null)
         {
@@ -378,6 +388,7 @@ interface Collection<Element>
      *
      * @return the resulting `Set` containing the distinct set of elements
      */
+    @Concurrent
     Set<Element> distinct(Set<Element>? dest = Null)
         {
         if (dest == Null)
@@ -399,6 +410,7 @@ interface Collection<Element>
      *
      * @return the result of the reduction
      */
+    @Concurrent
     <Result> Result reduce(Result                           initial,
                            function Result(Result, Element) accumulate)
         {
@@ -416,6 +428,7 @@ interface Collection<Element>
      *
      * @param aggregator  the mechanism for the reduction
      */
+    @Concurrent
     <Result> Result reduce(Aggregator<Element, Result> aggregator)
         {
         Appender<Element> accumulator = aggregator.init();
@@ -432,6 +445,7 @@ interface Collection<Element>
      *
      * @return the resulting `Map`
      */
+    @Concurrent
     <Key, Value> Map<Key,Value> associate(function (Key, Value) (Element) transform,
                                           Map<Key,Value>?                 dest = Null)
         {
@@ -456,6 +470,7 @@ interface Collection<Element>
      *
      * @return the resulting `Map`
      */
+    @Concurrent
     <Key> Map<Key, Element> associateBy(function Key(Element) keyFor,
                                         Map<Key, Element>?    dest = Null)
         {
@@ -474,6 +489,7 @@ interface Collection<Element>
      *
      * @return the resulting `Map`
      */
+    @Concurrent
     <Value> Map<Element, Value> associateWith(function Value(Element) valueFor,
                                               Map<Element, Value>?    dest = Null)
         {
@@ -493,6 +509,7 @@ interface Collection<Element>
      *
      * @return the resulting `Map` of collections of elements
      */
+    @Concurrent
     <Key> Map<Key, Collection!<Element>> groupBy(function Key(Element)           keyFor,
                                                  Map<Key, Collection!<Element>>? dest   = Null)
         {
@@ -520,6 +537,7 @@ interface Collection<Element>
      *
      * @return the resulting `Map`
      */
+    @Concurrent
     <Value> Map<Element, Value> groupWith(function Value(Element, Value) accumulate,
                                           function Value(Element)        initial,
                                           Map<Element, Value>?           dest = Null)
@@ -549,6 +567,7 @@ interface Collection<Element>
      * @throws UnsupportedOperation  if no [Type.Orderer] is provided and [Element] is not
      *                               [Orderable]
      */
+    @Concurrent
     List<Element> sorted(Orderer? orderer = Null)
         {
         return toArray(Mutable).sorted(orderer, True);
@@ -580,6 +599,7 @@ interface Collection<Element>
      *
      * @return a reified Collection, which may be `this`
      */
+    @Concurrent
     Collection reify()
         {
         // this method must be overridden by any implementing Collection that may return a view of
@@ -636,6 +656,7 @@ interface Collection<Element>
      * @throws ReadOnly  if the collection does not support element addition
      */
     @Override
+    @Concurrent
     Collection addAll(Iterator<Element> iter)
         {
         Collection collection = this;
@@ -659,6 +680,7 @@ interface Collection<Element>
      *
      * @throws ReadOnly  if the collection does not support element addition
      */
+    @Concurrent
     conditional Collection addIfAbsent(Element value)
         {
         if (contains(value))
@@ -698,6 +720,7 @@ interface Collection<Element>
      *
      * @throws ReadOnly  if the collection does not support element removal
      */
+    @Concurrent
     @Op("-") Collection removeAll(Iterable<Element> values)
         {
         // this naive implementation is likely to be overridden in cases where optimizations can be
@@ -725,6 +748,7 @@ interface Collection<Element>
      *
      * @throws ReadOnly  if the collection does not support element removal
      */
+    @Concurrent
     conditional Collection removeIfPresent(Element value)
         {
         if (contains(value))
@@ -750,7 +774,8 @@ interface Collection<Element>
      *
      * @throws ReadOnly  if the collection does not support element removal
      */
-     (Collection, Int) removeAll(function Boolean (Element) shouldRemove)
+    @Concurrent
+    (Collection, Int) removeAll(function Boolean (Element) shouldRemove)
         {
         Element[]? values = Null;
         for (Element value : this)
@@ -782,6 +807,7 @@ interface Collection<Element>
      *
      * @throws ReadOnly  if the collection does not support element removal
      */
+    @Concurrent
     Collection retainAll(Iterable<Element> values)
         {
         // this default implementation is likely to be overridden in cases where optimizations can
@@ -801,6 +827,7 @@ interface Collection<Element>
      *
      * @throws ReadOnly  if the collection does not support element removal
      */
+    @Concurrent
     Collection clear()
         {
         // this default implementation is likely to always be overridden for efficiency

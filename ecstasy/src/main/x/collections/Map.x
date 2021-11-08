@@ -32,6 +32,7 @@ interface Map<Key, Value>
      * It is expected that all mutating operations that do not return a resulting map will
      * assert that `inPlace` is `True`.
      */
+    @Concurrent
     @RO Boolean inPlace.get()
         {
         return True;
@@ -46,6 +47,7 @@ interface Map<Key, Value>
      *         indicates that an order is maintained, but not by the comparison of keys, such as
      *         when a map stores entries in the order that they are added
      */
+    @Concurrent
     conditional Orderer? ordered()
         {
         return False;
@@ -60,6 +62,7 @@ interface Map<Key, Value>
      * @return True iff the `Map` size is efficiently known
      * @return (conditional) the `Map` size, if it is efficiently known
      */
+    @Concurrent
     conditional Int knownSize()
         {
         // implementations of Map that do not have a cached size should override this method and
@@ -73,6 +76,7 @@ interface Map<Key, Value>
     /**
      * Determine the size of the Map, which is the number of entries (key/value pairs) in the Map.
      */
+    @Concurrent
     @RO Int size.get()
         {
         return keys.size;
@@ -84,6 +88,7 @@ interface Map<Key, Value>
      * This is equivalent to checking `size == 0`, but may be implemented more efficiently for Map
      * implementations that have a cost associated with calculating the size.
      */
+    @Concurrent
     @RO Boolean empty.get()
         {
         return keys.empty;
@@ -96,6 +101,7 @@ interface Map<Key, Value>
      *
      * @return the True iff the specified key exists in the map
      */
+    @Concurrent
     Boolean contains(Key key)
         {
         return keys.contains(key);
@@ -122,6 +128,7 @@ interface Map<Key, Value>
      *
      * @return the value for the associated key if it exists in the map; otherwise Null
      */
+    @Concurrent
     @Op("[]") Value? getOrNull(Key key)
         {
         if (Value value := get(key))
@@ -143,6 +150,7 @@ interface Map<Key, Value>
      *
      * @return the value for the specified key if it exists in the map; otherwise, the default value
      */
+    @Concurrent
     Value getOrDefault(Key key, Value dftval)
         {
         if (Value value := get(key))
@@ -165,6 +173,7 @@ interface Map<Key, Value>
      * @return the value associated with the specified key iff the key exists in the map; otherwise,
      *         the result from the provided function
      */
+    @Concurrent
     Value getOrCompute(Key key, function Value () compute)
         {
         if (Value value := get(key))
@@ -209,6 +218,7 @@ interface Map<Key, Value>
      *
      * @return a Map containing entries indicated by the keys and values that matched the function
      */
+    @Concurrent
     Map! filter(function Boolean(Entry) match)
         {
         return entries.filter(match).associate(entryAssociator());
@@ -225,6 +235,7 @@ interface Map<Key, Value>
      *
      * @throws UnsupportedOperation  if no [Type.Orderer] is provided and [Key] is not [Orderable]
      */
+    @Concurrent
     Map! sorted(Orderer? order = Null)
         {
         if (order == Null)
@@ -247,6 +258,7 @@ interface Map<Key, Value>
      *
      * @return a sorted Map
      */
+    @Concurrent
     Map! sortedByEntry(function Ordered (Entry, Entry) order)
         {
         return entries.sorted(order).associate(entryAssociator());
@@ -313,6 +325,7 @@ interface Map<Key, Value>
      *
      * @throws ReadOnly  if the map does not allow or support the requested mutating operation
      */
+    @Concurrent
     @Op("[]=") void putInPlace(Key key, Value value)
         {
         if (inPlace)
@@ -338,6 +351,7 @@ interface Map<Key, Value>
      *
      * @throws ReadOnly  if the map does not allow or support the requested mutating operation
      */
+    @Concurrent
     Map putAll(Map! that)
         {
         Map result = this;
@@ -444,6 +458,7 @@ interface Map<Key, Value>
      *
      * @throws ReadOnly  if the map does not allow or support the requested mutating operation
      */
+    @Concurrent
     Map clear()
         {
         // this method should be overridden by any class that has a more efficient implementation
@@ -502,6 +517,7 @@ interface Map<Key, Value>
      * @throws ReadOnly  if the map does not support in-place mutation and the `compute` function
      *                   attempts to modify an entry
      */
+    @Concurrent
     <Result> Map!<Key, Result> processAll(Iterable<Key>          keys,
                                           function Result(Entry) compute)
         {

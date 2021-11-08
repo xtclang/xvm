@@ -289,7 +289,7 @@ class HashMap<Key, Value>
         // TODO implement Persistent/Constant mutability
         verifyInPlace();
 
-        (Int bucketCount, this.growAt, this.shrinkAt) = calcBucketCount(0);
+        (Int bucketCount, this.growAt, this.shrinkAt) = selectBucketCount(0);
         buckets = new HashEntry?[bucketCount];
         removeCount += entryCount;
         assert size == 0;
@@ -655,7 +655,7 @@ class HashMap<Key, Value>
      */
     private void resize(Int plannedSize)
         {
-        (Int bucketCount, Int growAt, Int shrinkAt) = calcBucketCount(plannedSize);
+        (Int bucketCount, Int growAt, Int shrinkAt) = selectBucketCount(plannedSize);
         HashEntry?[] oldBuckets = buckets;
         HashEntry?[] newBuckets = new HashEntry?[bucketCount];
 
@@ -691,6 +691,19 @@ class HashMap<Key, Value>
 
     /**
      * Select a desired number of buckets to use for the specified entry capacity.
+     *
+     * @param capacity  the number of entries to be able to manage efficiently
+     *
+     * @return the suggested number of buckets to achieve the specified capacity, and the
+     *         suggested grow and shrink thresholds
+     */
+    protected (Int bucketCount, Int growAt, Int shrinkAt) selectBucketCount(Int capacity)
+        {
+        return calcBucketCount(capacity);
+        }
+
+    /**
+     * Compute a desired number of buckets to use for the specified entry capacity.
      *
      * @param capacity  the number of entries to be able to manage efficiently
      *
