@@ -127,8 +127,7 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
      * This is the schedule. It contains all of the scheduled items, organized first by priority,
      * and within a priority, by DateTime.
      */
-    // TODO GG - protected/private SkiplistMap<DateTime, Process>[] byPriority = new SkiplistMap[4](_ -> new SkiplistMap());
-    protected/private SkiplistMap<DateTime, Process>[] byPriority = new SkiplistMap[4](_ -> new SkiplistMap<DateTime, Process>());
+    protected/private SkiplistMap<DateTime, Process>[] byPriority = new SkiplistMap[4](_ -> new SkiplistMap());
 
     /**
      * This is the lookup of all of the schedule items, by PID.

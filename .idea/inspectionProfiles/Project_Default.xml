@@ -22,6 +22,7 @@
       <option name="m_ignoreTestCases" value="true" />
       <option name="m_ignoreIgnoreParameter" value="true" />
     </inspection_tool>
+    <inspection_tool class="EnhancedSwitchMigration" enabled="true" level="WEAK WARNING" enabled_by_default="true" />
     <inspection_tool class="FieldNameWithMistakes" enabled="false" level="INFO" enabled_by_default="false" />
     <inspection_tool class="ForCanBeForeach" enabled="false" level="WARNING" enabled_by_default="false">
       <option name="REPORT_INDEXED_LOOP" value="true" />

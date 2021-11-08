@@ -506,11 +506,11 @@ public class MethodConstant
     @Override
     protected int compareDetails(Constant obj)
         {
-        if (!(obj instanceof MethodConstant))
+        if (!(obj instanceof MethodConstant that))
             {
             return -1;
             }
-        MethodConstant that = (MethodConstant) obj;
+
         int n = this.m_constParent.compareTo(that.m_constParent);
         if (n == 0)
             {
@@ -523,23 +523,8 @@ public class MethodConstant
                     {
                     return sigThis.compareTo(sigThat);
                     }
-
-                // WARNING! this is very unorthodox behavior. what we're about to do is to mutate
-                // a constant deep inside of its "equals()" call chain. that should be illegal, bad,
-                // naughty, etc., but it *isn't* because this is a lambda, and the signature isn't
-                // really part of the identity, i.e. it's just "cached" information, so we need to
-                // make sure that once the signature is assigned, that all of the identities that
-                // point to the lambda use the same signature (in reality, there will only be one)
-                if (sigThis != null)
-                    {
-                    that.setSignature(sigThis);
-                    }
-                else if (sigThat != null)
-                    {
-                    this.setSignature(sigThat);
-                    }
-
-                return 0;
+                // we can only get here for a nascent lambda, in which case the signature isn't
+                // really part of the identity
                 }
             }
         return n;
