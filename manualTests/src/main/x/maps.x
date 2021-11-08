@@ -180,8 +180,7 @@ module TestMaps
             }
 
         console.println("values:");
-        // for ((_, Int i) : map) // TODO GG/CP: this AIOOBEs (in Java) with CHM
-        for ((String s, Int i) : map)
+        for (Int i : map.values)
             {
             console.println($"? = {i}");
             }
@@ -270,7 +269,7 @@ module TestMaps
             }
 
         Int count2 = 0;
-        for ((String k, String v) : map)
+        for ((_, _) : map)
             {
             ++count2;
             }

@@ -1270,7 +1270,8 @@ public class ServiceContext
             {
             public int process(Frame frame, int iPC)
                 {
-                int iResult = op.invoke(frame, hTarget, idProp, 0);
+                int iResult = op.invoke(frame, hTarget, idProp,
+                                iReturn == A_IGNORE ? A_IGNORE : 0);
 
                 // don't return a FutureHandle, but wait till it's done
                 return idProp.isFutureVar() && iResult == Op.R_NEXT
