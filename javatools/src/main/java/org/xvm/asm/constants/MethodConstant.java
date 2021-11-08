@@ -506,11 +506,12 @@ public class MethodConstant
     @Override
     protected int compareDetails(Constant obj)
         {
-        if (!(obj instanceof MethodConstant that))
+        if (!(obj instanceof MethodConstant))
             {
             return -1;
             }
 
+        MethodConstant that = (MethodConstant) obj;
         int n = this.m_constParent.compareTo(that.m_constParent);
         if (n == 0)
             {
