@@ -1,0 +1,12 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Compile lib" type="Application" factoryName="Application">
+    <option name="MAIN_CLASS_NAME" value="org.xvm.tool.Compiler" />
+    <module name="xvm.javatools.main" />
+    <option name="PROGRAM_PARAMETERS" value="-v -rebuild -o build/xdk/lib -L ~/Development/xvm/xdk/build/xdk/lib -L ~/Development/xvm/xdk/build/xdk/javatools/javatools_bridge.xtc $PROJECT_DIR$/lib_jsondb/src/main/x/module.x" />
+    <option name="VM_PARAMETERS" value="-Xms256m -Xmx1024m -ea " />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/xdk" />
+    <method v="2">
+      <option name="Gradle.BeforeRunTask" enabled="false" tasks="build" externalProjectPath="$PROJECT_DIR$/javatools" vmOptions="" scriptParameters="" />
+    </method>
+  </configuration>
+</component>
