@@ -201,8 +201,7 @@ service Client<Schema extends RootSchema>
             {
             return o.toString();
             }
-        // TODO CP: catch (Exception _)
-        catch (Exception e)
+        catch (Exception _)
             {
             return "???";
             }

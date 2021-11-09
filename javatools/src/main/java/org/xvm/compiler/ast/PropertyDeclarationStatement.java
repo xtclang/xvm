@@ -260,6 +260,12 @@ public class PropertyDeclarationStatement
             return;
             }
 
+        if (name.getId() == Token.Id.ANY)
+            {
+            log(errs, Severity.ERROR, Compiler.NAME_RESERVED, sName);
+            return;
+            }
+
         if (name.isSpecial())
             {
             if (!(sName.equals("outer")

@@ -420,7 +420,7 @@ public class Parser
         // TypeCompositionBody
         StatementBlock body = null;
         long           lEndPos;
-        if (peek().getId() == Id.L_CURLY)
+        if (peek(Id.L_CURLY))
             {
             body    = parseTypeCompositionBody(category);
             lEndPos = body.getEndPosition();
@@ -447,7 +447,7 @@ public class Parser
         boolean fAny;
         do
             {
-            if (peek().getId() == Id.IF)
+            if (peek(Id.IF))
                 {
                 Token tokIf = expect(Id.IF);
                 expect(Id.L_PAREN);
@@ -474,7 +474,7 @@ public class Parser
                     {
                     Token      tokNot   = new Token(tokElse.getStartPosition(), tokElse.getEndPosition(), Id.NOT);
                     Expression exprElse = new PrefixExpression(tokNot, exprIf);
-                    boolean    fElseIf  = peek().getId() == Id.IF;
+                    boolean    fElseIf  = peek(Id.IF);
                     if (!fElseIf)
                         {
                         expect(Id.L_CURLY);
@@ -487,6 +487,7 @@ public class Parser
                         {
                         parseConditionalComposition(new CmpExpression(exprCondition, tokAnd, exprElse), compositions);
                         }
+
                     if (!fElseIf)
                         {
                         expect(Id.R_CURLY);
@@ -716,9 +717,9 @@ public class Parser
                 stmts.add(new TypeCompositionStatement(annotations, name, typeParams, args, body,
                         doc, lStartPos, lEndPos));
                 }
-            while (match(Id.COMMA) != null && peek().getId() != Id.SEMICOLON && peek().getId() != Id.R_CURLY);
+            while (match(Id.COMMA) != null && !peek(Id.SEMICOLON) && !peek(Id.R_CURLY));
 
-            if (peek().getId() != Id.R_CURLY)
+            if (!peek(Id.R_CURLY))
                 {
                 expect(Id.SEMICOLON);
                 }
@@ -790,7 +791,7 @@ public class Parser
                         {
                         Token      tokNot   = new Token(tokElse.getStartPosition(), tokElse.getEndPosition(), Id.NOT);
                         Expression exprElse = new PrefixExpression(tokNot, exprIf);
-                        boolean    fElseIf  = peek().getId() == Id.IF;
+                        boolean    fElseIf  = peek(Id.IF);
                         if (!fElseIf)
                             {
                             expect(Id.L_CURLY);
@@ -1004,7 +1005,7 @@ public class Parser
             case VOID:
                 {
                 // it's definitely a method or a function
-                List<Parameter> typeVars    = peek().getId() == Id.COMP_LT ? parseTypeParameterList(true) : null;
+                List<Parameter> typeVars    = peek(Id.COMP_LT) ? parseTypeParameterList(true) : null;
                 Token           conditional = match(Id.CONDITIONAL);
                 List<Parameter> returns     = parseReturnList();
                 Token           name        = expect(Id.IDENTIFIER);
@@ -1062,7 +1063,7 @@ public class Parser
                     Token      tokType  = matchVarOrVal();
                     if (tokType != null)
                         {
-                        if (peek().getId() == Id.IDENTIFIER)
+                        if (peekNameOrAny())
                             {
                             exprType = new VariableTypeExpression(tokType);
                             }
@@ -1079,7 +1080,7 @@ public class Parser
                         }
                     listExpr.add(exprType);
 
-                    Token tokName = match(Id.IDENTIFIER);
+                    Token tokName = matchNameOrAny();
                     fAnyNames |= tokName != null;
                     listName.add(tokName);
                     }
@@ -1172,7 +1173,7 @@ public class Parser
                         throw new CompilerException("var or val keyword outside of method");
                         }
 
-                    Token tokName = match(Id.IDENTIFIER);
+                    Token tokName = matchNameOrAny();
                     if (tokName == null)
                         {
                         // var and val are not reserved keywords; they are context sensitive types
@@ -1211,8 +1212,8 @@ public class Parser
                     }
 
                 // it's a constant, property, or method
-                Token name = expect(Id.IDENTIFIER);
-                if (peek().getId() == Id.COMP_LT || peek().getId() == Id.L_PAREN)
+                Token name = expectNameOrAny();
+                if (peek(Id.COMP_LT) || peek(Id.L_PAREN))
                     {
                     // '<' indicates redundant return type list
                     // '(' indicates parameters
@@ -1396,7 +1397,7 @@ public class Parser
                     method.getStartPosition(), method.getEndPosition());
             lEndPos = body.getEndPosition();
             }
-        else if (peek().getId() == Id.L_CURLY)
+        else if (peek(Id.L_CURLY))
             {
             // pretend we're parsing a class (use the property name token as the basis)
             body    = parseTypeCompositionBody(new Token(name.getStartPosition(),
@@ -1610,9 +1611,8 @@ public class Parser
             case IDENTIFIER:
                 {
                 // check if it is a LabeledStatement
-                Token name  = expect(Id.IDENTIFIER);
-                if (peek().getId() == Id.COLON
-                        && (peek().hasLeadingWhitespace() || peek().hasTrailingWhitespace()))
+                Token name = expect(Id.IDENTIFIER);
+                if (!name.hasTrailingWhitespace() && peek(Id.COLON) && peek().hasTrailingWhitespace())
                     {
                     expect(Id.COLON);
                     return new LabeledStatement(name, parseStatement());
@@ -1676,7 +1676,7 @@ public class Parser
             }
 
         List<AstNode> conds = null;
-        if (peek().getId() != Id.SEMICOLON && peek().getId() != Id.AS)
+        if (!peek(Id.SEMICOLON) && !peek(Id.AS))
             {
             conds   = parseConditionList();
             lEndPos = conds.get(conds.size()-1).getEndPosition();
@@ -1761,7 +1761,7 @@ public class Parser
         // 1) VariableInitializationList-opt ";" Expression-opt ";" VariableModificationList-opt
         // 2) OptionalDeclarationList ":" Expression
         List<AstNode> init = new ArrayList<>();
-        if (peek().getId() != Id.SEMICOLON)
+        if (!peek(Id.SEMICOLON))
             {
             boolean fFirst = true;
             do
@@ -1787,7 +1787,7 @@ public class Parser
                     if (LVal == null)
                         {
                         Expression expr = parseTernaryExpression();
-                        if (peek().getId() == Id.IDENTIFIER)
+                        if (peek(Id.IDENTIFIER))
                             {
                             LVal = new VariableDeclarationStatement(expr.toTypeExpression(), expect(Id.IDENTIFIER), false);
                             }
@@ -1803,7 +1803,7 @@ public class Parser
                         }
                     }
 
-                if (fFirst && peek().getId() == Id.COLON)
+                if (fFirst && peek(Id.COLON))
                     {
                     AssignmentStatement cond = new AssignmentStatement(
                             LVal, expect(Id.COLON), parseExpression(), false);
@@ -1819,12 +1819,12 @@ public class Parser
 
         // parse the second part
         expect(Id.SEMICOLON);
-        List<AstNode> conds = (peek().getId() == Id.SEMICOLON) ? null : parseConditionList();
+        List<AstNode> conds = (peek(Id.SEMICOLON)) ? null : parseConditionList();
         expect(Id.SEMICOLON);
 
         // parse the third part
         List<Statement> update = new ArrayList<>();
-        while (peek().getId() != Id.R_PAREN)
+        while (!peek(Id.R_PAREN))
             {
             if (!update.isEmpty())
                 {
@@ -1902,7 +1902,7 @@ public class Parser
             }
         else
             {
-            Statement stmtElse = peek().getId() == Id.IF ? parseIfStatement() : parseStatementBlock();
+            Statement stmtElse = peek(Id.IF) ? parseIfStatement() : parseStatementBlock();
             return new IfStatement(keyword, conds, block, stmtElse);
             }
         }
@@ -1983,7 +1983,7 @@ public class Parser
             if (LVal == null)
                 {
                 Expression expr = parseExpression();
-                if (peek().getId() == Id.IDENTIFIER)
+                if (peek(Id.IDENTIFIER))
                     {
                     LVal = new VariableDeclarationStatement(expr.toTypeExpression(), expect(Id.IDENTIFIER), false);
                     }
@@ -2278,14 +2278,14 @@ public class Parser
     private List<AstNode> parseSwitchCondition()
         {
         // no condition expression
-        if (peek().getId() == Id.R_PAREN)
+        if (peek(Id.R_PAREN))
             {
             return null;
             }
 
         // a single condition expression
         AstNode expr = parseSwitchConditionExpression();
-        if (peek().getId() != Id.COMMA)
+        if (!peek(Id.COMMA))
             {
             return Collections.singletonList(expr);
             }
@@ -2331,11 +2331,11 @@ public class Parser
             if (LVal == null)
                 {
                 Expression expr = parseExpression();
-                if (peek().getId() == Id.IDENTIFIER)
+                if (peek(Id.IDENTIFIER))
                     {
                     LVal = new VariableDeclarationStatement(expr.toTypeExpression(), expect(Id.IDENTIFIER), false);
                     }
-                else if (peek().getId() == Id.ASN)
+                else if (peek(Id.ASN))
                     {
                     // the expression has to be the L-Value
                     if (!expr.isLValueSyntax())
@@ -2393,25 +2393,25 @@ public class Parser
         do
             {
             // check for possible tuple form: "(" CaseExpressionList "," CaseExpression ")"
-            if (peek().getId() == Id.L_PAREN)
+            if (peek(Id.L_PAREN))
                 {
                 Mark mark = mark();
                 long lStart = expect(Id.L_PAREN).getStartPosition();
 
-                Expression expr = peek().getId() == Id.ANY
+                Expression expr = peek(Id.ANY)
                         ? new IgnoredNameExpression(current())
                         : parseExpression();
 
                 // if the expression is followed by a comma, then our guess was correct; otherwise,
                 // we shouldn't be here (must back up and assume that the opening parenthesis is the
                 // beginning of a single expression CaseOption)
-                if (peek().getId() == Id.COMMA)
+                if (peek(Id.COMMA))
                     {
                     ArrayList<Expression> listTupleValues = new ArrayList<>();
                     listTupleValues.add(expr);
                     while (match(Id.COMMA) != null);
                         {
-                        listTupleValues.add(peek().getId() == Id.ANY
+                        listTupleValues.add(peek(Id.ANY)
                                 ? new IgnoredNameExpression(current())
                                 : parseExpression());
                         }
@@ -2427,7 +2427,7 @@ public class Parser
                 }
 
             // single SafeCaseExpression
-            listCaseOptions.add(peek().getId() == Id.ANY
+            listCaseOptions.add(peek(Id.ANY)
                     ? new IgnoredNameExpression(current())
                     : parseTernaryExpression());
             }
@@ -2443,7 +2443,7 @@ public class Parser
      */
     MultipleLValueStatement peekMultiVariableInitializer()
         {
-        if (peek().getId() != Id.L_PAREN)
+        if (!peek(Id.L_PAREN))
             {
             return null;
             }
@@ -2459,7 +2459,7 @@ public class Parser
             Token   tokType = matchVarOrVal();
             if (tokType != null)
                 {
-                Token tokName = match(Id.IDENTIFIER);
+                Token tokName = matchNameOrAny();
                 if (tokName == null)
                     {
                     // var and val are not reserved keywords; they are context sensitive types
@@ -2487,7 +2487,7 @@ public class Parser
                 //              list is NOT empty: done parsing the multi VariableInitializer
                 // otherwise    list is empty    : oops, it's not a multi VariableInitializer
                 //              list is NOT empty: it's an error
-                if (peek().getId() == Id.IDENTIFIER)
+                if (peekNameOrAny())
                     {
                     // there is a variable declaration to use as an L-Value
                     LVal = new VariableDeclarationStatement(expr.toTypeExpression(), expect(Id.IDENTIFIER), false);
@@ -2499,7 +2499,7 @@ public class Parser
                 }
 
             // bail out if this is not a multiple value construct
-            if (fFirst && peek().getId() != Id.COMMA)
+            if (fFirst && !peek(Id.COMMA))
                 {
                 restore(mark);
                 return null;
@@ -2566,7 +2566,7 @@ public class Parser
             long lStartPos = prev().getStartPosition();
             expect(Id.L_PAREN);
             VariableDeclarationStatement var = new VariableDeclarationStatement(
-                    parseTypeExpression(), expect(Id.IDENTIFIER), false);
+                    parseTypeExpression(), expectNameOrAny(), false);
             expect(Id.R_PAREN);
             catches.add(new CatchStatement(var, parseStatementBlock(), lStartPos));
             }
@@ -2717,7 +2717,7 @@ public class Parser
         Token tokType = matchVarOrVal();
         if (tokType != null)
             {
-            if (peek().getId() == Id.IDENTIFIER)
+            if (peekNameOrAny())
                 {
                 type = new VariableTypeExpression(tokType);
                 }
@@ -2755,7 +2755,7 @@ public class Parser
             type = expr.toTypeExpression();
             }
 
-        VariableDeclarationStatement var = new VariableDeclarationStatement(type, expect(Id.IDENTIFIER), false);
+        VariableDeclarationStatement var = new VariableDeclarationStatement(type, expectNameOrAny(), false);
 
         Token tokAsn;
         switch (peek().getId())
@@ -2841,7 +2841,7 @@ public class Parser
     Expression parseElseExpression()
         {
         Expression expr = parseTernaryExpression();
-        if (peek().getId() == Id.COLON)
+        if (peek(Id.COLON))
             {
             expr = new ElseExpression(expr, current(), parseExpression());
             }
@@ -2862,7 +2862,7 @@ public class Parser
     Expression parseTernaryExpression()
         {
         Expression expr = parseOrExpression();
-        if (peek().getId() == Id.COND)
+        if (peek(Id.COND))
             {
             expect(Id.COND);
             Expression exprThen = parseOrExpression();
@@ -2920,7 +2920,7 @@ public class Parser
     Expression parseAndExpression()
         {
         Expression expr = parseEqualityExpression();
-        while (peek().getId() == Id.COND_AND)
+        while (peek(Id.COND_AND))
             {
             expr = new CondOpExpression(expr, current(), parseEqualityExpression());
             }
@@ -2946,7 +2946,7 @@ public class Parser
         ArrayList<Token>      listOps  = null;
         Token.Id              idPrev   = null;
         boolean               fErr     = false;
-        while (peek().getId() == Id.COMP_EQ || peek().getId() == Id.COMP_NEQ)
+        while (peek(Id.COMP_EQ) || peek(Id.COMP_NEQ))
             {
             Token      tokCmp   = current();
             Expression exprNext = parseRelationalExpression();
@@ -3085,7 +3085,7 @@ public class Parser
     Expression parseRangeExpression()
         {
         Expression expr = parseBitwiseExpression();
-        while (peek().getId() == Id.DOTDOT)
+        while (peek(Id.DOTDOT))
             {
             expr = new RelOpExpression(expr, current(), parseBitwiseExpression());
             }
@@ -3145,7 +3145,7 @@ public class Parser
     Expression parseAdditiveExpression()
         {
         Expression expr = parseMultiplicativeExpression();
-        while (peek().getId() == Id.ADD || peek().getId() == Id.SUB)
+        while (peek(Id.ADD) || peek(Id.SUB))
             {
             expr = new RelOpExpression(expr, current(), parseMultiplicativeExpression());
             }
@@ -3200,7 +3200,7 @@ public class Parser
     Expression parseElvisExpression()
         {
         Expression expr = parsePrefixExpression();
-        if (peek().getId() == Id.COND_ELSE)
+        if (peek(Id.COND_ELSE))
             {
             expr = new ElvisExpression(expr, current(), parseElvisExpression());
             }
@@ -3383,7 +3383,7 @@ public class Parser
                 case L_PAREN:
                 case ASYNC_PAREN:
                     // ArgumentList
-                    expr = new InvocationExpression(expr, peek().getId() == Id.ASYNC_PAREN,
+                    expr = new InvocationExpression(expr, peek(Id.ASYNC_PAREN),
                             parseArgumentList(true, true, false), prev().getEndPosition());
                     break;
 
@@ -3460,7 +3460,7 @@ public class Parser
         StatementBlock   body    = null;
         long             lEndPos = 0;
 
-        if (peek().getId() == Id.L_PAREN)
+        if (peek(Id.L_PAREN))
             {
             // this could be a type expression inside parenthesis, or it could be an
             // argument list for a "virtual new"; assume it's a virtual new, and we'll back
@@ -3489,7 +3489,7 @@ public class Parser
             boolean fArray = type instanceof ArrayTypeExpression;
             if (fArray)
                 {
-                if (peek().getId() == Id.L_SQUARE)
+                if (peek(Id.L_SQUARE))
                     {
                     args    = parseArgumentList(true, false, true);
                     dims    = args.size();
@@ -3524,7 +3524,7 @@ public class Parser
                 lEndPos = prev().getEndPosition();
                 }
 
-            if (left == null && peek().getId() == Id.L_CURLY)
+            if (left == null && peek(Id.L_CURLY))
                 {
                 body    = parseTypeCompositionBody(keyword);
                 lEndPos = prev().getEndPosition();
@@ -3574,7 +3574,7 @@ public class Parser
             case ANY:
                 {
                 IgnoredNameExpression exprIgnore = new IgnoredNameExpression(current());
-                return peek().getId() == Id.LAMBDA
+                return peek(Id.LAMBDA)
                         ? new LambdaExpression(Collections.singletonList(exprIgnore),
                             expect(Id.LAMBDA), parseLambdaBody(), exprIgnore.getStartPosition())
                         : exprIgnore;
@@ -3644,7 +3644,7 @@ public class Parser
                 boolean fNormal   = amp == null && construct == null;
 
                 // test for single-param implicit lambda
-                if (fNormal && peek().getId() == Id.LAMBDA)
+                if (fNormal && peek(Id.LAMBDA))
                     {
                     return new LambdaExpression(Collections.singletonList(new NameExpression(name)),
                             expect(Id.LAMBDA), parseLambdaBody(), name.getStartPosition());
@@ -3695,7 +3695,7 @@ public class Parser
                 // test for an access-specified TypeExpression, i.e. ending with :public,
                 // :protected, :private, or :struct
                 Token access = null;
-                if (peek().getId() == Id.COLON)
+                if (peek(Id.COLON))
                     {
                     Token colon = expect(Id.COLON);
                     if (!colon.hasLeadingWhitespace() && !colon.hasTrailingWhitespace())
@@ -3749,7 +3749,7 @@ public class Parser
 
                 // test to see if this is a tuple literal of the form "Tuple:(", or some other
                 // type literal of the form "type:["
-                if (peek().getId() == Id.COLON)
+                if (peek(Id.COLON))
                     {
                     Token colon = expect(Id.COLON);
                     if (!colon.hasLeadingWhitespace())
@@ -3809,7 +3809,7 @@ public class Parser
                             }
                         expect(Id.R_PAREN);
 
-                        if (peek().getId() == Id.LAMBDA)
+                        if (peek(Id.LAMBDA))
                             {
                             return new LambdaExpression(exprs, expect(Id.LAMBDA),
                                     parseLambdaBody(), tokLParen.getStartPosition());
@@ -3822,7 +3822,7 @@ public class Parser
                         // this is either a parenthesized expression or a single parameter for a
                         // lambda (it's not a tuple literal)
                         expect(Id.R_PAREN);
-                        if (peek().getId() == Id.LAMBDA)
+                        if (peek(Id.LAMBDA))
                             {
                             return new LambdaExpression(Collections.singletonList(expr),
                                     expect(Id.LAMBDA), parseLambdaBody(), tokLParen.getStartPosition());
@@ -3835,15 +3835,16 @@ public class Parser
                             }
 
                     case IDENTIFIER:
+                    case ANY:
                         // it has to be a lambda, because we just parsed an expression (which must
                         // have been a parameter type) and now we have the parameter name
                         {
                         List<Parameter> params = new ArrayList<>();
-                        params.add(new Parameter(expr.toTypeExpression(), expect(Id.IDENTIFIER)));
+                        params.add(new Parameter(expr.toTypeExpression(), expectNameOrAny()));
                         while (match(Id.COMMA) != null)
                             {
                             TypeExpression type  = parseTypeExpression();
-                            Token          name  = expect(Id.IDENTIFIER);
+                            Token          name  = expectNameOrAny();
                             params.add(new Parameter(type, name));
                             }
                         expect(Id.R_PAREN);
@@ -4548,7 +4549,7 @@ public class Parser
     TypeExpression parseIntersectingTypeExpression()
         {
         TypeExpression expr = parseNonBiTypeExpression();
-        while (peek().getId() == Id.BIT_OR)
+        while (peek(Id.BIT_OR))
             {
             expr = new BiTypeExpression(expr, expect(Id.BIT_OR), parseNonBiTypeExpression());
             }
@@ -4966,7 +4967,7 @@ public class Parser
                                 modifier.getEndPosition(), access, modifier);
                         }
                     modifiers.add(modifier);
-                    if (couldBeProperty && peek().getId() == Id.DIV)
+                    if (couldBeProperty && peek(Id.DIV))
                         {
                         modifiers.add(expect(Id.DIV));
                         Token second = match(Id.PUBLIC);
@@ -5164,7 +5165,7 @@ public class Parser
                 return types;
                 }
 
-            if (fAllowTypeSequence && peek().getId() == Id.COMP_LT)
+            if (fAllowTypeSequence && peek(Id.COMP_LT))
                 {
                 Token tokStart = peek();
                 List<TypeExpression> listSeq = parseTypeParameterTypeList(true, false);
@@ -5242,7 +5243,7 @@ public class Parser
         List<TypeExpression> types = null;
         if (match(Id.L_PAREN, required) != null)
             {
-            types = peek().getId() == Id.R_PAREN
+            types = peek(Id.R_PAREN)
                     ? Collections.EMPTY_LIST
                     : parseTypeExpressionList(false);
             expect(Id.R_PAREN);
@@ -5326,7 +5327,7 @@ public class Parser
                 if (!fArray)
                     {
                     // special case where the parameter names are being specified with the arguments
-                    if (peek().getId() == Id.IDENTIFIER)
+                    if (peek(Id.IDENTIFIER))
                         {
                         Token name = expect(Id.IDENTIFIER);
                         if (match(Id.ASN) == null)
@@ -5419,7 +5420,7 @@ public class Parser
             listReturn = new ArrayList<>();
             do
                 {
-                listReturn.add(new Parameter(parseTypeExpression(), match(Id.IDENTIFIER)));
+                listReturn.add(new Parameter(parseTypeExpression(), matchNameOrAny()));
                 }
             while (match(Id.R_PAREN, (match(Id.COMMA) == null)) == null);
             }
@@ -5669,6 +5670,30 @@ public class Parser
         }
 
     /**
+     * Look for a token that matches the specified ID. Do not change the parsing position.
+     *
+     * @param id  the id of the token to match
+     *
+     * @return true iff the next token matches
+     */
+    protected Boolean peek(Token.Id id)
+        {
+        return peek().getId() == id;
+        }
+
+    /**
+     * Look for a token that is either an identifier or the "_" token. Do not change the parsing
+     * position.
+     *
+     * @return true iff the next token is either an identifier or the "_" token
+     */
+    protected Boolean peekNameOrAny()
+        {
+        Token.Id id = peek().getId();
+        return id == Id.IDENTIFIER || id == Id.ANY;
+        }
+
+    /**
      * Obtain the current token, and then advance to the next token.
      *
      * @return the current token
@@ -5851,6 +5876,22 @@ public class Parser
         }
 
     /**
+     * Look for a token that is either an identifier or the "_" token.
+     *
+     * @return a token that is either an identifier or the "_" token, or null if neither is the next
+     *         token
+     */
+    protected Token matchNameOrAny()
+        {
+        Token token = match(Id.ANY);
+        if (token == null)
+            {
+            token = match(Id.IDENTIFIER);
+            }
+        return token;
+        }
+
+    /**
      * Return the most recently matched token.
      *
      * @return the token most recently returned from the match method
@@ -5881,6 +5922,21 @@ public class Parser
         log(Severity.ERROR, EXPECTED_TOKEN, lPos, lPos, id, m_token.getId());
 
         throw new CompilerException("expected token: " + id + " (found: " + m_token.getId() + ")");
+        }
+
+    /**
+     * Require a token that is either an identifier or the "_" token.
+     *
+     * @return a token that is either an identifier or the "_" token)
+     */
+    protected Token expectNameOrAny()
+        {
+        Token token = match(Id.ANY);
+        if (token == null)
+            {
+            token = expect(Id.IDENTIFIER);
+            }
+        return token;
         }
 
     /**
