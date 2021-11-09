@@ -48,14 +48,13 @@ module TestMaps
         {
         console.println("\n** testBasic()");
 
-        map.put(1, "Hello from Map");
-        map.put(2, "Goodbye from Map");
+        String one = "Hello from Map";
+        String two = "Goodbye from Map";
+        map.put(1, one);
+        map.put(2, two);
 
-        if (String s := map.get(1))
-            {
-            console.println(s);
-            }
-        console.println(map);
+        assert String s1 := map.get(1), s1 == one;
+        assert String s2 := map.get(2), s2 == two;
         }
 
     void testEquals(Map<Int, String> map1)
