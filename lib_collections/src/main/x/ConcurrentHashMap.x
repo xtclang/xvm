@@ -1,11 +1,12 @@
 import ecstasy.iterators.CompoundIterator;
+
 import ecstasy.collections.maps.EntryKeys;
 import ecstasy.collections.maps.EntryValues;
+
 import ecstasy.collections.Hasher;
 import ecstasy.collections.HashMap;
 import ecstasy.collections.ImmutableAble;
 import ecstasy.collections.NaturalHasher;
-import ecstasy.numbers.PseudoRandom;
 
 /**
  * A hash based map which allows for concurrent access.
@@ -17,7 +18,6 @@ import ecstasy.numbers.PseudoRandom;
 const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAble>
         implements Map<Key, Value>
     {
-
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -77,6 +77,12 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
      * The key hasher.
      */
     private Hasher<Key> hasher;
+
+    /**
+     * The random number generator.
+     * TODO: replace with something equivalent of Java's ThreadLocalRandom
+     */
+     @Inject Random rnd;
 
 
     // ----- Map interface -------------------------------------------------------------------------
@@ -235,9 +241,7 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
      */
     protected Int computeRandomStep()
         {
-        // TODO: replace with something equivalent of Java's ThreadLocalRandom
-        Int r = new PseudoRandom().int(Partition.PRIMES.size);
-        Int step = Partition.PRIMES[r];
+        Int step = Partition.PRIMES[rnd.int(Partition.PRIMES.size)];
         return step == partitions.size ? 1 : step;
         }
 
@@ -400,8 +404,7 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
     protected static service Partition<Key extends immutable Object, Value extends ImmutableAble>
             extends HashMap<Key, Value>
         {
-
-        // ----- constructors ------------------------------------------------------------------
+        // ----- constructors ----------------------------------------------------------------------
 
         construct(Hasher<Key> hasher, Int partitionCount)
             {
@@ -410,7 +413,7 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
             }
 
 
-        // ----- properties --------------------------------------------------------------------
+        // ----- properties ------------------------------------------------------------------------
 
         /**
          * The number of partitions in the [ConcurrentHashMap].
@@ -418,7 +421,7 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
         protected Int partitionCount;
 
 
-        // ----- HashMap overrides ------------------------------------------------------------
+        // ----- HashMap methods -------------------------------------------------------------------
 
         @Override
         protected (Int bucketCount, Int growAt, Int shrinkAt) selectBucketCount(Int capacity)
