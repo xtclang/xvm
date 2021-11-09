@@ -521,19 +521,17 @@ public class AnnotationExpression
         @Override
         public Context enter()
             {
-            throw new IllegalStateException();
+            return this;
             }
 
         @Override
         public void registerVar(Token tokName, Register reg, ErrorListener errs)
             {
-            throw new IllegalStateException();
             }
 
         @Override
         public void unregisterVar(Token tokName)
             {
-            throw new IllegalStateException();
             }
 
         @Override
@@ -565,19 +563,13 @@ public class AnnotationExpression
         @Override
         public Context exit()
             {
-            throw new IllegalStateException();
+            return this;
             }
 
         @Override
         public Map<String, Assignment> prepareJump(Context ctxDest)
             {
-            throw new IllegalStateException();
-            }
-
-        @Override
-        protected Assignment promote(String sName, Assignment asnInner, Assignment asnOuter)
-            {
-            throw new IllegalStateException();
+            return Collections.emptyMap();
             }
 
         private final ClassStructure f_clzContainer;
