@@ -1655,6 +1655,14 @@ public class DebugConsole
                         sb.append(" @")
                           .append(stackFrame);
                         }
+
+                    Frame frameBlocker = fiber.getBlocker();
+                    if (frameBlocker != null)
+                        {
+                        sb.append(" blocked by ")
+                          .append(frameBlocker.f_fiber);
+                        }
+
                     }
                 }
             }

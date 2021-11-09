@@ -1752,13 +1752,13 @@ public class Frame
             return true;
             }
 
-        return !isUnsafeFrame() && framePrev.isSafeStack();
+        return isSafeFrame() && framePrev.isSafeStack();
         }
 
     /**
-     * @return false iff this frame alone is not concurrent safe
+     * @return true iff this frame alone is concurrent safe
      */
-    private boolean isUnsafeFrame()
+     public boolean isSafeFrame()
         {
         MethodStructure function = f_function;
         if (function != null)
@@ -1766,13 +1766,13 @@ public class Frame
             switch (function.getConcurrencySafety())
                 {
                 case Unsafe:
-                    return true;
+                    return false;
 
                 case Instance:
                     ObjectHandle hThis = f_hThis;
                     if (hThis != null && hThis.isMutable())
                         {
-                        return true;
+                        return false;
                         }
                     break;
 
@@ -1780,7 +1780,7 @@ public class Frame
                     break;
                 }
             }
-        return false;
+        return true;
         }
 
 

@@ -14,7 +14,9 @@ import org.xvm.asm.Op;
 
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
+import org.xvm.runtime.ServiceContext.Message;
 import org.xvm.runtime.ServiceContext.Request;
+import org.xvm.runtime.ServiceContext.Synchronicity;
 
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
@@ -37,7 +39,7 @@ import org.xvm.runtime.template._native.temporal.xNanosTimer;
 public class Fiber
         implements Comparable<Fiber>
     {
-    public Fiber(ServiceContext context, ServiceContext.Message msgCall)
+    public Fiber(ServiceContext context, Message msgCall)
         {
         f_lId = s_counter.getAndIncrement();
 
@@ -484,19 +486,27 @@ public class Fiber
         }
 
     /**
-     * Set or clear the fiber that blocks this fiber's execution.
+     * @return the current Synchronicity value for this fiber
      */
-    protected void setBlocker(Fiber fiberBlocker)
+    public Synchronicity getSynchronicity()
         {
-        m_fiberBlocker = fiberBlocker;
+        return f_context.getSynchronicity(this);
         }
 
     /**
-     * @return the blocking fiber
+     * @return the blocking frame
      */
-    public Fiber getBlocker()
+    public Frame getBlocker()
         {
-        return m_fiberBlocker;
+        return m_frameBlocker;
+        }
+
+    /**
+     * Set or clear the frame that blocks this fiber's execution.
+     */
+    protected void setBlocker(Frame frameBlocker)
+        {
+        m_frameBlocker = frameBlocker;
         }
 
 
@@ -519,7 +529,7 @@ public class Fiber
         if (oPending instanceof Request)
             {
             Fiber fiber = ((Request) oPending).m_fiber;
-            return " for " + fiber;
+            return " for " + (fiber == null ? "initial" : fiber);
             }
         else
             {
@@ -707,10 +717,10 @@ public class Fiber
     private Frame.Continuation m_resume;
 
     /**
-     * If specified, indicates a fiber that blocks this fiber's execution. Used only for deadlock
+     * If specified, indicates a frame that blocks this fiber's execution. Used for deadlock
      * detection.
      */
-    private Fiber m_fiberBlocker;
+    private Frame m_frameBlocker;
 
     /**
      * The counter used to create fibers ids.

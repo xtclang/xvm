@@ -259,7 +259,7 @@ public class FiberQueue
                                 continue;
                                 }
                         case Critical:
-                            fiberCandidate.setBlocker(fiber);
+                            fiberCandidate.setBlocker(frame);
                             return true;
                         }
                     }
