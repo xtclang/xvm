@@ -95,6 +95,7 @@ interface Queue<Element>
      * @return the element taken from the queue if the queue is not empty; otherwise, the result
      *         from the provided function
      */
+    @Concurrent
     Element takeOrCompute(function Element () compute)
         {
         if (Element e := next())
