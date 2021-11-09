@@ -5,6 +5,7 @@ import ecstasy.collections.Hasher;
 import ecstasy.collections.HashMap;
 import ecstasy.collections.ImmutableAble;
 import ecstasy.collections.NaturalHasher;
+import ecstasy.numbers.PseudoRandom;
 
 /**
  * A hash based map which allows for concurrent access.
@@ -24,7 +25,7 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
      *
      * @param concurrency the number of services which may concurrent access the map
      */
-    construct(Int concurrency = 17)
+    construct(Int concurrency = 16)
         {
         assert(Key.is(Type<Hashable>));
         construct ConcurrentHashMap(new NaturalHasher<Key>(), concurrency);
@@ -35,7 +36,7 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
      *
      * @param concurrency an indicator of how many services may concurrently access this map
      */
-    construct(Hasher<Key> hasher, Int concurrency = 17)
+    construct(Hasher<Key> hasher, Int concurrency = 16)
         {
         assert concurrency >= 0;
         this.hasher = hasher;
@@ -102,11 +103,15 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
     @RO Int size.get()
         {
         Int sum = 0;
-        // TODO: random prime walk
-        for (Partition p : partitions)
+        Int step = computeRandomStep();
+        Int first = step % partitions.size;
+        Int i = first;
+        do
             {
-            sum += p.size;
+            sum += partitions[i].size;
+            i = (i + step) % partitions.size;
             }
+        while (i != first);
 
         return sum;
         }
@@ -114,14 +119,19 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
     @Override
     @RO Boolean empty.get()
         {
-        // TODO: random prime walk
-        for (Partition p : partitions)
+        Int step = computeRandomStep();
+        Int first = step % partitions.size;
+        Int i = first;
+        do
             {
-            if (!p.empty)
+            if (!partitions[i].empty)
                 {
                 return False;
                 }
+
+            i = (i + step) % partitions.size;
             }
+        while (i != first);
 
         return True;
         }
@@ -173,11 +183,15 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
     @Override
     ConcurrentHashMap clear()
         {
-        // TODO: random prime walk
-        for (Partition p : partitions)
+        Int step = computeRandomStep();
+        Int first = step % partitions.size;
+        Int i = first;
+        do
             {
-            p.clear();
+            partitions[i].clear();
+            i = (i + step) % partitions.size;
             }
+        while (i != first);
 
         return this;
         }
@@ -210,6 +224,21 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
     protected Partition<Key, Value> partitionOf(Key key)
         {
         return partitions[hasher.hashOf(key) % partitions.size];
+        }
+
+    /**
+     * Compute a random prime value to use perform a "random walk" over the partitions.
+     * This approach helps to reduce contention when multiple services iterate ove the
+     * map a the same time.
+     *
+     * @return the step
+     */
+    protected Int computeRandomStep()
+        {
+        // TODO: replace with something equivalent of Java's ThreadLocalRandom
+        Int r = new PseudoRandom().int(Partition.PRIMES.size);
+        Int step = Partition.PRIMES[r];
+        return step == partitions.size ? 1 : step;
         }
 
 
@@ -332,11 +361,14 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
                 return partitions[0].entries.iterator();
                 }
 
-            // TODO: random prime walk
-            GrowableCompoundIterator<Map.Entry> iter = new GrowableCompoundIterator(
-                partitions[0].entries.iterator(), partitions[1].entries.iterator());
+            Int step = computeRandomStep();
+            Int first = step % partitions.size;
+            Int second = (first + step) % partitions.size;
 
-            for (Int i = 2; i < partitions.size; ++i)
+            GrowableCompoundIterator<Map.Entry> iter = new GrowableCompoundIterator(
+                partitions[first].entries.iterator(), partitions[second].entries.iterator());
+
+            for (Int i = (second + step) % partitions.size; i != first; i = (i + step) % partitions.size)
                 {
                 iter.add(partitions[i].entries.iterator());
                 }
