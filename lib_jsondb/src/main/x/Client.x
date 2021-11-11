@@ -9,6 +9,7 @@ import json.Mapping;
 import json.ObjectInputStream;
 import json.ObjectOutputStream;
 
+import oodb.DBClosed;
 import oodb.DBCounter;
 import oodb.DBInfo;
 import oodb.DBList;
@@ -1522,6 +1523,10 @@ service Client<Schema extends RootSchema>
                     {
                     result = txManager.commit(id_);
                     }
+                catch (DBClosed e)
+                    {
+                    throw e;
+                    }
                 catch (Exception e)
                     {
                     log($"Exception during commit of {this}: {e}");
@@ -1573,6 +1578,9 @@ service Client<Schema extends RootSchema>
                 try
                     {
                     result = txManager.rollback(id_);
+                    }
+                catch (DBClosed e)
+                    {
                     }
                 catch (Exception e)
                     {
