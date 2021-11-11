@@ -218,37 +218,251 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
     // ----- support for the ProcessorStore implementation -----------------------------------------
 
     /**
-     * TODO
+     * Last known status of a given pid.
      */
-    Int generatePid(Int dboId, Schedule? when)
+    enum PidStatus {New, Completed, Failed, Abandoned}
+
+    /**
+     * Allows a ProcessorStore to register a pid that was previously persisted in the database. This
+     * occurs while the database is loading and/or recovering.
+     *
+     * @param dboId     the id of the DBProcessor
+     * @param pid       the pid to register
+     * @param status    the last known status of the pid
+     * @param lastTime  the last known finish datetime of the pid, or the creation datetime if the
+     *                  pid is new
+     * @param pending   the information about the message to process and the schedule to use
+     * @param tries     the number of tries, iff the status is `Failed`
+     */
+    void preRegisterPid(Int              dboId,
+                        Int              pid,
+                        PidStatus        status,
+                        DateTime         created,
+                        Range<DateTime>? previous,
+                        Pending          pending,
+                        Int              tries = 0,
+                       )
+        {
+        assert status == Failed ^^ tries == 0;
+        assert status != Abandoned || pending.isRepeating();
+
+        DateTime scheduled = calcSchedule(status, created, previous, pending);
+
+        Process process = new Process(dboId, pid, created, scheduled, pending);
+        if (status == Failed)
+            {
+            process.previousFailures = tries;
+            }
+
+        registerProcess(process);
+        }
+
+    /**
+     * Allows a ProcessorStore to request a new unique pid. This is purposefully split out from the
+     * [registerNewPending] operation, so that the ProcessorStore can claim the pid, update the
+     * persistent storage accordingly, and not worry about any race conditions with the Scheduler.
+     *
+     * Note that the parameters passed in may be used in some way to color the pid value, but this
+     * operation is **not** _registering_ the pid.
+     *
+     * @param dboId     the id of the DBProcessor
+     * @param schedule  the optional schedule
+     *
+     * @return a persistable identity to use for a scheduled process
+     */
+    Int generatePid(Int dboId, Schedule? schedule)
         {
         return ++pidCounter;
         }
 
     /**
-     * TODO
+     * Allows a ProcessorStore to register a new pid with the associated pending message to
+     * process.
+     *
+     * @param dboId    the id of the DBProcessor
+     * @param pid      the PID to register
+     * @param created  the date/time that the pid was created in the database
+     * @param pending  the information about the message to process and the schedule to use
      */
-    void registerPending(Int pid, Pending pending)
+    void registerPid(Int dboId, Int pid, DateTime created, Pending pending)
         {
         TODO
         }
 
     /**
-     * TODO
+     * Allows a ProcessorStore to explicitly remove the registration of a pid.
+     *
+     * @param dboId  the id of the DBProcessor
+     * @param pid    the PID to remove
      */
-    void unregisterPending(Int pid)
+    void unregisterPid(Int dboId, Int pid)
         {
         TODO
         }
 
     /**
-     * TODO
+     * Allows a ProcessorStore to explicitly remove the registration of a bunch of pids.
+     *
+     * @param dboId  the id of the DBProcessor
+     * @param pid    the PID to remove
      */
-    void unregisterPendingList(Int[] pids)
+    void unregisterPids(Int dboId, Int[] pids)
         {
         for (Int pid : pids)
             {
-            unregisterPending(pid);
+            unregisterPid(dboId, pid);
+            }
+        }
+
+
+    // ----- schedule helpers ----------------------------------------------------------------------
+
+    /**
+     * Determine when to schedule the pending item for.
+     *
+     * @param status    the last known status of the pid
+     * @param created   the datetime that the pid was created
+     * @param previous  the last known elapsed execution of the pid (if any)
+     * @param pending   the information about the message to process and the schedule to use
+     *
+     * @return the datetime value at which the pending item should be scheduled
+     */
+    DateTime calcSchedule(PidStatus        status,
+                          DateTime         created,
+                          Range<DateTime>? previous,
+                          Pending          pending,
+                         )
+        {
+        DateTime now = clock.now;
+        assert now >= created && now >= previous?.last;
+
+        // failed attempts are automatically retried until they are abandoned
+        if (status == Failed)
+            {
+            return now;
+            }
+
+        // check if there is no specified schedule (which means ASAP), or if the specified datetime
+        // is in the past (this should cover probably 99% of cases)
+        Schedule? schedule = pending.schedule;
+        if (schedule == Null || !schedule.isRepeating())
+            {
+            return schedule?.scheduledAt? : now;
+            }
+
+        // if this is the first time to run, then calculate the first time that this should be run
+        if (status == New)
+            {
+            // use the specified date/time, if there is one
+            return schedule.scheduledAt?;
+
+            // if there was no scheduled date/time, then it must be "schedule daily" at a specific
+            // time (since we already covered the non-repeating and non-scheduled options above);
+            // if we scheduled a daily run at 11:59, but we did so at 12:01, then we need to wait
+            // until the next day (at 11:59) to run it
+            assert Time daily ?= schedule.scheduledDaily;
+            return created.with(
+                    date = (created.time < daily ? created.date : created.date + Duration:1D),
+                    time = daily);
+            }
+
+        // at this point, only Completed and Abandoned statuses remain, and they are both treated
+        // the same, since we we are scheduling the next repetition of the processing
+        assert (Duration repeatInterval, Policy repeatPolicy) := schedule.isRepeating();
+
+        // previous run
+        assert previous != Null;
+        DateTime started  = previous.first;
+        DateTime finished = previous.last;
+        assert created <= started <= finished <= now;
+
+        // attempt to determine if the previous run was an "unaligned initial run"
+        if (DateTime initial ?= schedule.scheduledAt, Time daily ?= schedule.scheduledDaily)
+            {
+            assert created <= initial <= started;
+
+            // this is a special case, in which something is scheduled at e.g. 6pm (18:00), but then
+            // put on a daily schedule to run at midnight (12am, i.e. 00:00), so if the previous run
+            // started between 6pm and midnight on the scheduledAt date (i.e. before the first of
+            // the "repeating midnights"), then special handling is used
+            DateTime secondRun = initial.with(
+                    date = (initial.time < daily ? initial.date : initial.date + Duration:1D),
+                    time = daily);
+
+            if (started < secondRun)
+                {
+                switch (repeatPolicy)
+                    {
+                    case AllowOverlapping:
+                        return secondRun;
+
+                    case SkipOverlapped:
+                        return finished > secondRun
+                                ? finished.with(
+                                    date = (finished.time < daily ? finished.date : finished.date + Duration:1D),
+                                    time = daily)
+                                : secondRun;
+
+                    case SuggestedMinimum:
+                    case MeasureFromCommit:
+                        return finished > secondRun ? finished : secondRun;
+                    }
+                }
+            }
+
+        // complexities specific to daily repeating at a particular time
+        if (repeatPolicy != MeasureFromCommit, Time daily ?= schedule.scheduledDaily)
+            {
+            DateTime originalPlan = started.with(
+                    date = (started.time < daily ? started.date : started.date + Duration:1D),
+                    time = daily);
+
+            DateTime revisedPlan = finished.with(
+                    date = (finished.time < daily ? finished.date : finished.date + Duration:1D),
+                    time = daily);
+
+            switch (repeatPolicy)
+                {
+                case AllowOverlapping:
+                    return originalPlan;
+
+                case SkipOverlapped:
+                    return revisedPlan;
+
+                case SuggestedMinimum:
+                    return finished < originalPlan ? originalPlan : finished;
+                }
+            }
+
+        // otherwise, repeating at a regular interval (but apply
+        switch (repeatPolicy)
+            {
+            case AllowOverlapping:
+                return started + repeatInterval;
+
+            case SkipOverlapped:
+                DateTime originalPlan = started + repeatInterval;
+                if (originalPlan > finished)
+                    {
+                    return originalPlan;
+                    }
+
+                val gapSize   = (finished - started).picoseconds;
+                val cycleSize = repeatInterval.picoseconds;
+                Int cycles    = (gapSize / cycleSize + 1).toInt64();
+
+                DateTime revisedPlan = started + repeatInterval * cycles;
+                assert revisedPlan >= finished;
+                return revisedPlan;
+
+            case SuggestedMinimum:
+                DateTime originalPlan = started + repeatInterval;
+                return originalPlan > finished
+                        ? originalPlan
+                        : finished;
+
+            case MeasureFromCommit:
+                return finished + repeatInterval;
             }
         }
 
@@ -259,7 +473,7 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
      * A Process contains all of the information about a pending message to process, or an in-flight
      * message being processed.
      */
-    class Process(Int dboId, Int pid, DateTime when, Pending pending)
+    class Process(Int dboId, Int pid, DateTime created, DateTime scheduled, Pending pending)
         {
         // TODO toString etc.
 
@@ -267,6 +481,12 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
          * A linked list of PidState objects that all have the same priority and schedule DateTime.
          */
         @LinkedList Process? next = Null;
+
+        /**
+         * The number of times that this pending message processing has already been attempted, and
+         * has failed.
+         */
+        Int previousFailures;
         }
 
 // TODO need a way to track stats by dbo id
@@ -290,14 +510,14 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
         assert byPid.putIfAbsent(process.pid, process);
 
         SkiplistMap<DateTime, Process> byDateTime = byPriority[process.pending.priority.ordinal];
-        DateTime when = process.when;
-        if (Process head := byDateTime.get(when))
+        DateTime scheduled = process.scheduled;
+        if (Process head := byDateTime.get(scheduled))
             {
             head.&next.add(process);
             }
         else
             {
-            byDateTime.put(when, process);
+            byDateTime.put(scheduled, process);
             }
         }
 
@@ -311,17 +531,17 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
         assert byPid.remove(process.pid, process);
 
         SkiplistMap<DateTime, Process> byDateTime = byPriority[process.pending.priority.ordinal];
-        DateTime when = process.when;
-        assert Process head := byDateTime.get(when);
+        DateTime scheduled = process.scheduled;
+        assert Process head := byDateTime.get(scheduled);
         if (&head == &process)
             {
             if (Process tail ?= process.next)
                 {
-                byDateTime.put(when, tail);
+                byDateTime.put(scheduled, tail);
                 }
             else
                 {
-                byDateTime.remove(when);
+                byDateTime.remove(scheduled);
                 }
             }
         else
@@ -438,7 +658,7 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
         try
             {
             // create a transaction
-            client.createProcessTx(process.pending.previousFailures);
+            client.createProcessTx(process.previousFailures);
 
             // process the message
             (Range<DateTime> elapsed, Exception? failure) = processOne(client, process);
@@ -519,7 +739,7 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
         Client<Schema> client = allocateClient();
         try
             {
-            Int attempts = process.pending.previousFailures + 1;
+            Int attempts = process.previousFailures + 1;
             client.processingFailed(process.dboId, process.pid, process.pending.message, result,
                     process.pending.schedule, elapsed, attempts, attempts > 8);
             }
