@@ -50,11 +50,27 @@ module oodb.xtclang.org
         }
 
     /**
-     * A CommitFailure exception is raised by the database when an "auto-commit" transaction fails.
+     * Indicates that an exception related to the database processing has occurred.
      */
-    const CommitFailure(Transaction.TxInfo info, Transaction.CommitResult result, String? text = Null,
-                        Exception? cause = Null)
+    const DBException(String? text = Null, Exception? cause = Null)
             extends Exception(text, cause)
+        {
+        }
+
+    /**
+     * A DBClosed exception is raised by the database when it's no longer active.
+     */
+    const DBClosed(String? text = Null, Exception? cause = Null)
+            extends DBException(text, cause)
+        {
+        }
+
+    /**
+     * A CommitFailed exception is raised by the database when an "auto-commit" transaction fails.
+     */
+    const CommitFailed(Transaction.TxInfo info, Transaction.CommitResult result, String? text = Null,
+                        Exception? cause = Null)
+            extends DBException(text, cause)
         {
         }
 

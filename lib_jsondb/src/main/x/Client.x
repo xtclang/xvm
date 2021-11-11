@@ -23,7 +23,7 @@ import oodb.DBSchema;
 import oodb.DBTransaction;
 import oodb.DBUser;
 import oodb.DBValue;
-import oodb.CommitFailure;
+import oodb.CommitFailed;
 import oodb.RootSchema;
 import oodb.SystemSchema;
 import oodb.Transaction.CommitResult;
@@ -836,7 +836,7 @@ service Client<Schema extends RootSchema>
                     val result = tx.commit();
                     if (result != Committed)
                         {
-                        throw new CommitFailure(tx.txInfo, result,
+                        throw new CommitFailed(tx.txInfo, result,
                             $"Failed to auto-commit {tx}; reason={result}");
                         }
                     }

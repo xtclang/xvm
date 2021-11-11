@@ -5,7 +5,8 @@ module BankStressTest
     import Bank.Account;
     import Bank.Connection;
 
-    import Bank.oodb.CommitFailure;
+    import Bank.oodb.DBClosed;
+    import Bank.oodb.CommitFailed;
 
     static Int BRANCHES     = 24;
     static Int MAX_ACCOUNTS = 100;
@@ -161,7 +162,10 @@ module BankStressTest
                 catch (Exception e)
                     {
                     bank.log.add($"{op} failed at {branchId}: {e.text}");
-                    if (op == "Audit" || e.is(CommitFailure) && e.result == DatabaseError)
+                    if (op == "Audit"
+                            || e.is(DBClosed)
+                            || e.is(CommitFailed) && e.result == DatabaseError
+                            )
                         {
                         break business;
                         }
