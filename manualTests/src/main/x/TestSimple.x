@@ -2,17 +2,28 @@ module TestSimple.test.org
     {
     @Inject Console console;
 
-    // Int _ = 0;
-
     void run()
         {
+        Boolean successfullyPrepared = False;
         try
             {
-            assert;
+            successfullyPrepared = prepare() && seal();
             }
-        catch (Exception _)
+        catch (Exception e)
             {
-            console.println("caught something");
+            console.println($"exception: {e.text}");
             }
+
+        console.println(successfullyPrepared); // used to produce "True"
+        }
+
+    Boolean prepare()
+        {
+        return True;
+        }
+
+    Boolean seal()
+        {
+        assert;
         }
     }
