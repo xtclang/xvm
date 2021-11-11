@@ -6,6 +6,13 @@
  */
 const DateTime(Int128 epochPicos, TimeZone timezone = UTC)
     {
+    /**
+     * Create a new DateTime based on a Date, a Time, and a TimeZone.
+     *
+     * @param date      the date value
+     * @param time      the time value
+     * @param timezone  the timezone value
+     */
     construct(Date date, Time time, TimeZone timezone)
         {
         // it is not possible to reverse a date and time from an unresolved TimeZone, such as
@@ -78,6 +85,28 @@ const DateTime(Int128 epochPicos, TimeZone timezone = UTC)
         }
 
     static DateTime EPOCH = new DateTime(0, UTC);
+
+
+    // ----- withers -------------------------------------------------------------------------------
+
+    /**
+     * Create a new DateTime based on this DateTime, but with the Date and/or Time and/or TimeZone
+     * replaced with a new value.
+     *
+     * @param date      (optional) the new date value
+     * @param time      (optional) the new time value
+     * @param timezone  (optional) the new timezone value
+     *
+     * @return the new DateTime
+     */
+    DateTime with(Date?     date     = Null,
+                  Time?     time     = Null,
+                  TimeZone? timezone = Null)
+        {
+        return new DateTime(date     ?: this.date,
+                            time     ?: this.time,
+                            timezone ?: this.timezone);
+        }
 
 
     // ----- accessors -----------------------------------------------------------------------------
