@@ -37,6 +37,11 @@ module TestMaps
         testBasicOps(new SkiplistMap());
         testBasicOps(new ConcurrentHashMap());
 
+//        console.println("Concurrent load test of HashMap...");
+//        testConcurrentLoad(new SharedHashMap(),     8, 100_000, 1_000_000);
+//        console.println("Concurrent load test of ConcurrentHashMap...");
+//        testConcurrentLoad(new ConcurrentHashMap(), 8, 100_000, 1_000_000);
+
 //        for (UInt seed : 1..500)
 //            {
 //            log.add($"iteration #{seed}");
@@ -367,5 +372,44 @@ module TestMaps
             }
         }
 
+    void testConcurrentLoad(Map<Int, Int> map, Int concurrency, Int iterations, Int range)
+        {
 
+        timer.reset();
+
+        Future[] futures = new Array(concurrency,
+            i -> {
+            Int n = new LoadGenerator().run^(map, iterations, i, range);
+            return &n;
+            });
+
+        for (Future future : futures)
+            {
+            future.get();
+            }
+
+        Duration time = timer.elapsed;
+        console.println($"Elapsed {time.milliseconds} ms");
+        }
+
+    service LoadGenerator
+        {
+        public Int run(Map<Int, Int> map, Int iterations, Int seed, Int range)
+            {
+            Random rnd = new ecstasy.numbers.PseudoRandom(seed.toUInt64());
+
+            for (Int i : 0..iterations)
+                {
+                map.put(rnd.int(range), 42);
+                }
+
+            serviceControl.shutdown();
+            return 0;
+            }
+        }
+
+    service SharedHashMap<Key, Value>
+        extends HashMap<Key, Value>
+        {
+        }
     }
