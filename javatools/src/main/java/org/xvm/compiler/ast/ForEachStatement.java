@@ -11,6 +11,7 @@ import java.util.Set;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
+import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
@@ -105,7 +106,7 @@ public class ForEachStatement
         }
 
     /**
-     * @return true iff there is a continue label for this statement, which indicates that it has
+     * @return true iff there is a "continue" label for this statement, which indicates that it has
      *         already been requested at least one time
      */
     public boolean hasContinueLabel()
@@ -114,7 +115,7 @@ public class ForEachStatement
         }
 
     /**
-     * @return the continue label for this statement
+     * @return the "continue" label for this statement
      */
     public Label getContinueLabel()
         {
@@ -385,8 +386,14 @@ public class ForEachStatement
         Expression   exprRVal  = cond.getRValue();
         ConstantPool pool      = pool();
         Plan         plan      = null;
+        TypeConstant typeLVal  = exprLVal.getType();
         TypeConstant typeRVal  = null;
         boolean      fFoundFit = false;
+
+        if (typeLVal != null)
+            {
+            ctx = ctx.enterInferring(typeLVal);
+            }
 
         for (int i = Plan.ITERATOR.ordinal(); i <= Plan.ITERABLE.ordinal(); ++i)
             {
@@ -470,6 +477,11 @@ public class ForEachStatement
                 assert aTypeLVals.length >= exprLVal.getValueCount();
                 exprLVal.updateLValueFromRValueTypes(ctx, aTypeLVals);
                 }
+            }
+
+        if (typeLVal != null)
+            {
+            ctx = ctx.exit();
             }
 
         // regardless of the validity of the R-Value let's mark the L-Value as assigned
@@ -698,10 +710,17 @@ public class ForEachStatement
                 }
             }
 
-        ConstantPool pool         = pool();
-        TypeConstant typeElement  = getElementType();
-        TypeConstant typeRange    = pool.ensureRangeType(typeElement);
-        TypeConstant typeIter     = pool.ensureVirtualChildTypeConstant(typeRange, "IntervalIterator");
+        TypeConstant typeElement = getElementType().removeAutoNarrowing();
+
+        if (typeElement.isExplicitClassIdentity(false) &&
+                typeElement.getExplicitClassFormat() == Component.Format.ENUM)
+            {
+            return emitConstantRange(ctx, fReachable, code, errs);
+            }
+
+        ConstantPool pool      = pool();
+        TypeConstant typeRange = pool.ensureRangeType(typeElement);
+        TypeConstant typeIter  = pool.ensureVirtualChildTypeConstant(typeRange, "IntervalIterator");
 
         code.add(new Var(typeIter));
         Register regIter = code.lastRegister();
@@ -1089,15 +1108,11 @@ public class ForEachStatement
     @Override
     public String toString()
         {
-        StringBuilder sb = new StringBuilder();
-
-        sb.append(keyword.getId().TEXT)
-          .append(" (")
-          .append(getCondition())
-          .append(")\n")
-          .append(indentLines(block.toString(), "    "));
-
-        return sb.toString();
+        return keyword.getId().TEXT +
+            " (" +
+            getCondition() +
+            ")\n" +
+            indentLines(block.toString(), "    ");
         }
 
 

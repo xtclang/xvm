@@ -612,8 +612,7 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
                 }
 
             DateTime cutoff = clock.now;
-            // TODO GG: Processing: for (Priority priority : High..Idle)
-            Processing: for (Priority priority : oodb.DBTransaction.Priority.High..oodb.DBTransaction.Priority.Idle)
+            Processing: for (Priority priority : High..Idle)
                 {
                 if (priority == Idle && !databaseIdle)
                     {
@@ -662,8 +661,7 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
             DateTime? wakeUp = Null;
             if (!disabled)
                 {
-                // TODO GG for (Priority priority : High..Idle)
-                for (Priority priority : oodb.DBTransaction.Priority.High..oodb.DBTransaction.Priority.Idle)
+                for (Priority priority : High..Idle)
                     {
                     if (DateTime first := byPriority[priority.ordinal].first())
                         {
