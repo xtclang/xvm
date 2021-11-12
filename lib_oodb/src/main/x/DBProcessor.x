@@ -1,4 +1,5 @@
 import Transaction.CommitResult;
+import DBTransaction.Priority;
 
 /**
  * The database interface for scheduling messages that will be processed by later database
@@ -406,18 +407,6 @@ interface DBProcessor<Message extends immutable Const>
 
 
     // ----- schedule representation ---------------------------------------------------------------
-
-    /**
-     * The supported priorities for scheduled messages.
-     *
-     * * High - An indication that the priority is higher than the default priority.
-     * * Normal - The default priority.
-     * * Low - An indication that the priority is lower than the default priority.
-     * * Idle - An indication that the processing should only occur when there appears to be
-     *   a lack of (or a measurable lull in) other database activity. (This definition is
-     *   purposefully lacking in explicitness.)
-     */
-    typedef DBTransaction.Priority as Priority;
 
     /**
      * Indicates how the repeating period is calculated.

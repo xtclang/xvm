@@ -2,6 +2,7 @@ import collections.ArrayDeque;
 import collections.SparseIntSet;
 
 import oodb.DBProcessor;
+import oodb.DBTransaction.Priority;
 import oodb.RootSchema;
 import oodb.Transaction.CommitResult;
 
@@ -10,7 +11,6 @@ import Clock.Alarm;
 
 import DBProcessor.Pending;
 import DBProcessor.Policy;
-import DBProcessor.Priority;
 import DBProcessor.Schedule;
 
 import TxManager.Status;
@@ -91,6 +91,31 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
     Clock clock;
 
     /**
+     * Cached wake-up time.
+     */
+    DateTime? wakeUp.get()
+        {
+        DateTime? when = super();
+// TODO GG if (when == Null)
+            {
+            for (Priority priority : High..Idle)
+                {
+                if (DateTime first := byPriority[priority.ordinal].first())
+                    {
+                     if (when == Null || first < when)
+                         {
+                         when = first;
+                         }
+                    }
+                }
+
+            set(when);
+            }
+
+        return when;
+        }
+
+    /**
      * The next scheduled wake-up for the scheduler.
      */
     Cancellable? cancelWakeUp = Null;
@@ -104,14 +129,6 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
      * The status of the Scheduler.
      */
     public/private Status status = Initial;
-
-    /**
-     * True whenever status is not enabled.
-     */
-    Boolean disabled.get()
-        {
-        return status != Enabled;
-        }
 
     /**
      * Evaluates to `True` when the database appears to be relatively idle.
@@ -138,7 +155,9 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
      * This is the schedule. It contains all of the scheduled items, organized first by priority,
      * and within a priority, by DateTime.
      */
-    protected/private SkiplistMap<DateTime, Process>[] byPriority = new SkiplistMap[4](_ -> new SkiplistMap());
+    protected/private SkiplistMap<DateTime, Process>[] byPriority
+            // TODO GG this doesn't work if Priority is a typedef
+            = new SkiplistMap[Priority.count](_ -> new SkiplistMap());
 
     /**
      * This is the lookup of all of the schedule items, by PID.
@@ -162,10 +181,10 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
             case Enabled:
                 return True;
 
-            case Initial:
-                continue;
             case Disabled:
                 clearProcesses();
+                continue;
+            case Initial:
                 status = Enabled;
                 checkRipe();
                 return True;
@@ -173,18 +192,6 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
             case Closed:
                 return False;
             }
-        }
-
-    /**
-     * Verify that the transaction manager is open for client requests.
-     *
-     * @return True iff the transaction manager is enabled
-     *
-     * @throws IllegalState iff the transaction manager is not enabled
-     */
-    Boolean checkEnabled()
-        {
-        return status == Enabled;
         }
 
     /**
@@ -210,6 +217,14 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
             case Closed:
                 return True;
             }
+        }
+
+    /**
+     * True whenever status is not enabled.
+     */
+    Boolean disabled.get()
+        {
+        return status != Enabled;
         }
 
     @Override
@@ -253,6 +268,7 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
                         Int              tries = 0,
                        )
         {
+        assert disabled;
         assert status == Failed ^^ tries == 0;
         assert status != Abandoned || pending.isRepeating();
 
@@ -296,7 +312,7 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
      */
     void registerPid(Int dboId, Int pid, DateTime created, Pending pending)
         {
-        if (!checkEnabled())
+        if (disabled)
             {
             return;
             }
@@ -316,7 +332,7 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
      */
     void unregisterPid(Int dboId, Int pid)
         {
-        if (!checkEnabled())
+        if (disabled)
             {
             return;
             }
@@ -333,7 +349,7 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
      */
     void unregisterPids(Int dboId, Int[] pids)
         {
-        if (!checkEnabled())
+        if (disabled)
             {
             return;
             }
@@ -503,7 +519,7 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
      * A Process contains all of the information about a pending message to process, or an in-flight
      * message being processed.
      */
-    class Process(Int dboId, Int pid, DateTime created, DateTime scheduled, Pending pending)
+    protected static class Process(Int dboId, Int pid, DateTime created, DateTime scheduled, Pending pending)
         {
         /**
          * A linked list of PidState objects that all have the same priority and schedule DateTime.
@@ -516,6 +532,23 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
          */
         Int previousFailures;
 
+        /**
+         * True iff the process is a repeating process.
+         */
+        Boolean repeating.get()
+            {
+            return pending.isRepeating();
+            }
+
+        /**
+         * True iff the repeating process allows process overlapping.
+         */
+        Boolean overlapping.get()
+            {
+            assert (_, Policy repeatPolicy) := pending.isRepeating();
+            return repeatPolicy == AllowOverlapping;
+            }
+
         @Override
         String toString()
             {
@@ -526,14 +559,24 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
         }
 
     /**
-     * Add a message to process into the schedule.
+     * Add a message process to the Scheduler's registry, and add it to the schedule.
      *
      * @param process  specifies the message to process and the information about its schedule
      */
-    void registerProcess(Process process)
+    protected void registerProcess(Process process)
         {
         assert byPid.putIfAbsent(process.pid, process);
+        scheduleProcess(process);
+        }
 
+    /**
+     * Add a message to process into the schedule.  This assumes that the process is already
+     * registered with the Scheduler.
+     *
+     * @param process  specifies the message to process and the information about its schedule
+     */
+    protected void scheduleProcess(Process process)
+        {
         SkiplistMap<DateTime, Process> byDateTime = byPriority[process.pending.priority.ordinal];
         DateTime scheduled = process.scheduled;
         if (Process head := byDateTime.get(scheduled))
@@ -547,14 +590,13 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
         }
 
     /**
-     * Remove a message to process from the schedule.
+     * Remove a message to process from the schedule. This does not unregister the process from the
+     * Scheduler.
      *
      * @param process  specifies the message to process and the information about its schedule
      */
-    void unregisterProcess(Process process)
+    protected void unscheduleProcess(Process process)
         {
-        assert byPid.remove(process.pid, process);
-
         SkiplistMap<DateTime, Process> byDateTime = byPriority[process.pending.priority.ordinal];
         DateTime scheduled = process.scheduled;
         assert Process head := byDateTime.get(scheduled);
@@ -576,9 +618,20 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
         }
 
     /**
+     * Remove a message to process from the schedule, and unregister it from the Scheduler.
+     *
+     * @param process  specifies the message to process and the information about its schedule
+     */
+    protected void unregisterProcess(Process process)
+        {
+        assert byPid.remove(process.pid, process);
+        unscheduleProcess(process);
+        }
+
+    /**
      * Discard all of the schedule data.
      */
-    void clearProcesses()
+    protected void clearProcesses()
         {
         for (val map : byPriority)
             {
@@ -594,7 +647,7 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
      * Check for messages that are scheduled to be processed at or before the current point in time,
      * and process some of them if possible.
      */
-    void checkRipe()
+    protected void checkRipe()
         {
         if (busy || disabled)
             {
@@ -642,12 +695,78 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
                                 break Processing;
                                 }
 
-                            (Range<DateTime> elapsed, CommitResult | Exception result) = processOne(process);
-                            if (result != Committed)
+                            Boolean repeats = process.repeating;
+                            if (repeats)
                                 {
-                                handleFailure(process, elapsed, result);
+                                // the current schedule for this message to process is about to be
+                                // fulfilled, so remove it from the schedule, but keep the process
+                                // because it's repeating and will be rescheduled
+                                unscheduleProcess(process);
                                 }
-                            unregisterProcess(process);
+                            else
+                                {
+                                // it does not repeat, so remove it altogether
+                                unregisterProcess(process);
+                                }
+
+                            DateTime? nextRun     = Null;
+                            Boolean   overlapping = False;
+                            if (repeats)
+                                {
+                                // estimate the next time this would be run, if all goes well (and
+                                // assuming that it takes zero time to process the message)
+                                DateTime now = clock.now;
+                                nextRun = calcSchedule(Completed, process.created, now..now, process.pending);
+
+                                overlapping = process.overlapping;
+                                if (overlapping)
+                                    {
+                                    // schedule the following run right now, before we run the
+                                    // current one
+                                    process.scheduled = nextRun;
+                                    scheduleProcess(process);
+                                    }
+                                }
+
+                            // processing loop for the pending message (i.e. auto-retries)
+                            // (currently this is sequential, which is assumed to be a temporary
+                            // implementation decision, and will be modified at some point to
+                            // support concurrent execution across multuiple clients)
+                            Range<DateTime>          elapsed;
+                            CommitResult | Exception result;
+                            PidStatus                status;
+                            while (True)
+                                {
+                                // attempt to process the pending message
+                                (elapsed, result) = processOne(process);
+                                if (result == Committed)
+                                    {
+                                    status = Completed;
+                                    break;
+                                    }
+
+                                status = Failed;
+                                Int attempts = process.previousFailures + 1;
+                                process.previousFailures = attempts;
+
+                                // determine if the process should be abandoned
+                                Boolean abandoning = attempts > 8 || disabled;
+                                abandoning |= handleFailure(process, elapsed, result, abandoning);
+                                if (abandoning)
+                                    {
+                                    status = Abandoned;
+                                    break;
+                                    }
+                                }
+
+                            // the process loop is complete; if it is a non-overlapping repeating
+                            // process, then re-schedule it based on the elapsed time of the last
+                            // run
+                            if (repeats && !overlapping)
+                                {
+                                process.scheduled = calcSchedule(status, process.created, elapsed, process.pending);
+                                scheduleProcess(process);
+                                }
                             }
                         }
                     }
@@ -658,23 +777,9 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
             busy = False;
 
             // schedule next processing
-            DateTime? wakeUp = Null;
-            if (!disabled)
+            if (!disabled, DateTime wakeUp ?= this.wakeUp)
                 {
-                for (Priority priority : High..Idle)
-                    {
-                    if (DateTime first := byPriority[priority.ordinal].first())
-                        {
-                        // TODO GG shoot me now
-//                        if (wakeUp == Null || first < wakeUp)
-//                            {
-//                            wakeup = first;
-//                            }
-                        wakeUp = first < wakeUp? ? first : wakeUp : first;
-                        }
-                    }
-
-                cancelWakeUp = clock.schedule(wakeUp?, checkRipe);
+                cancelWakeUp = clock.schedule(wakeUp, checkRipe);
                 }
             }
         }
@@ -687,7 +792,7 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
      * @return elapsed  the period of time consumed by the processing of the message
      * @return result   the result of the processing, indicating success or detailed failure
      */
-    (Range<DateTime> elapsed, CommitResult | Exception result) processOne(Process process)
+    protected (Range<DateTime> elapsed, CommitResult | Exception result) processOne(Process process)
         {
         Client<Schema> client = allocateClient();
         try
@@ -739,7 +844,7 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
      * @return elapsed  the period of time consumed by the processing of the message
      * @return failure  the exception if one occurred during processing the message, otherwise Null
      */
-    (Range<DateTime> elapsed, Exception? failure) processOne(Client<Schema> client, Process process)
+    protected (Range<DateTime> elapsed, Exception? failure) processOne(Client<Schema> client, Process process)
         {
         Pending pending = process.pending;
 
@@ -768,15 +873,17 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
      * @param process  the message that failed to process and the DBProcessor to process it
      * @param elapsed  the period of time consumed by the processing of the message
      * @param result   the result of the processing, indicating the reason for the failure
+     * @param abandoning  True if the Scheduler has already decided to abandon the process
+     *
+     * @return True if the process should be abandoned
      */
-    void handleFailure(Process process, Range<DateTime> elapsed, CommitResult | Exception result)
+    protected Boolean handleFailure(Process process, Range<DateTime> elapsed, CommitResult | Exception result, Boolean abandoning)
         {
         Client<Schema> client = allocateClient();
         try
             {
-            Int attempts = process.previousFailures + 1;
-            client.processingFailed(process.dboId, process.pid, process.pending.message, result,
-                    process.pending.schedule, elapsed, attempts, attempts > 8);
+            return client.processingFailed(process.dboId, process.pid, process.pending.message,
+                    result, process.pending.schedule, elapsed, process.previousFailures, abandoning);
             }
         finally
             {
@@ -791,7 +898,7 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
      *
      * @return an "internal" Client object
      */
-    Client<Schema> allocateClient()
+    protected Client<Schema> allocateClient()
         {
         return clientCache.takeOrCompute(() -> catalog.createClient(system=True));
         }
@@ -801,7 +908,7 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
      *
      * @param client  an "internal" Client object previously obtained from [allocateClient]
      */
-    void recycleClient(Client<Schema> client)
+    protected void recycleClient(Client<Schema> client)
         {
         return clientCache.reversed.add(client);
         }
@@ -815,7 +922,7 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
      * @return Committed, if the transaction committed successfully, otherwise a CommitResult or
      *         Exception indicating the cause of the failure
      */
-    CommitResult | Exception completeTx(Client<Schema> client, Exception? failure)
+    protected CommitResult | Exception completeTx(Client<Schema> client, Exception? failure)
         {
         // commit the transaction
         CommitResult | Exception result;
