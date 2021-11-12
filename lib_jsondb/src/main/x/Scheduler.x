@@ -56,6 +56,17 @@ import TxManager.Status;
  *
  * TODO on startup & recovery, all DBProcessors need to be started (so they dump their pending items
  *      onto the Scheduler)
+ *
+ * TODO need a way to track stats by dbo id
+ *      class DboStats
+ *          {
+ *          Int inFlight;
+ *          Int completed;
+ *          retries
+ *          failure by types (by commit result or exception -- and maybe which exception(s)?)
+ *          Int totalFailed;
+ *          Int exceptionCount;
+ *          }
  */
 @Concurrent
 service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
@@ -85,7 +96,7 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
     Cancellable? cancelWakeUp = Null;
 
     /**
-     * TODO
+     * Set to `True` while the Scheduler is busy processing messages.
      */
     Boolean busy = False;
 
@@ -103,7 +114,7 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
         }
 
     /**
-     * TODO
+     * Evaluates to `True` when the database appears to be relatively idle.
      */
     Boolean databaseIdle;
 
@@ -152,10 +163,9 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
                 return True;
 
             case Initial:
-                // TODO
                 continue;
             case Disabled:
-                // TODO
+                clearProcesses();
                 status = Enabled;
                 checkRipe();
                 return True;
@@ -174,8 +184,7 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
      */
     Boolean checkEnabled()
         {
-        assert status == Enabled as $"Scheduler is not enabled (status={status})";
-        return True;
+        return status == Enabled;
         }
 
     /**
@@ -194,7 +203,7 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
                 return True;
 
             case Enabled:
-                // TODO
+                clearProcesses();
                 return True;
 
             case Disabled:
@@ -229,8 +238,9 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
      * @param dboId     the id of the DBProcessor
      * @param pid       the pid to register
      * @param status    the last known status of the pid
-     * @param lastTime  the last known finish datetime of the pid, or the creation datetime if the
-     *                  pid is new
+     * @param created   the datetime that the pid was created
+     * @param previous  the last known elapsed period of time for the processing that resulted in
+     *                  the passed status; `Null` if status is `New`
      * @param pending   the information about the message to process and the schedule to use
      * @param tries     the number of tries, iff the status is `Failed`
      */
@@ -286,7 +296,16 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
      */
     void registerPid(Int dboId, Int pid, DateTime created, Pending pending)
         {
-        TODO
+        if (!checkEnabled())
+            {
+            return;
+            }
+
+        DateTime scheduled = calcSchedule(New, created, Null, pending);
+
+        Process process = new Process(dboId, pid, created, scheduled, pending);
+
+        registerProcess(process);
         }
 
     /**
@@ -297,7 +316,13 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
      */
     void unregisterPid(Int dboId, Int pid)
         {
-        TODO
+        if (!checkEnabled())
+            {
+            return;
+            }
+
+        assert Process process := byPid.get(pid), process.dboId == dboId;
+        unregisterProcess(process);
         }
 
     /**
@@ -308,6 +333,11 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
      */
     void unregisterPids(Int dboId, Int[] pids)
         {
+        if (!checkEnabled())
+            {
+            return;
+            }
+
         for (Int pid : pids)
             {
             unregisterPid(dboId, pid);
@@ -475,8 +505,6 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
      */
     class Process(Int dboId, Int pid, DateTime created, DateTime scheduled, Pending pending)
         {
-        // TODO toString etc.
-
         /**
          * A linked list of PidState objects that all have the same priority and schedule DateTime.
          */
@@ -487,18 +515,15 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
          * has failed.
          */
         Int previousFailures;
-        }
 
-// TODO need a way to track stats by dbo id
-//    class DboStats
-//        {
-//        Int inFlight;
-//        Int completed;
-//        retries
-//        failure by types (by commit result or exception -- and maybe which exception(s)?)
-//        Int totalFailed;
-//        Int exceptionCount;
-//        }
+        @Override
+        String toString()
+            {
+            return $|{this:class.name}:\{dboId={dboId}, pid={pid}, created={created},
+                    | scheduled={scheduled}, pending={pending}}
+                    ;
+            }
+        }
 
     /**
      * Add a message to process into the schedule.
@@ -548,6 +573,18 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
             {
             head.&next.remove(process);
             }
+        }
+
+    /**
+     * Discard all of the schedule data.
+     */
+    void clearProcesses()
+        {
+        for (val map : byPriority)
+            {
+            map.clear();
+            }
+        byPid.clear();
         }
 
 
