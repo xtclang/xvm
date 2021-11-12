@@ -67,6 +67,9 @@ import TxManager.Status;
  *          Int totalFailed;
  *          Int exceptionCount;
  *          }
+ *
+ * TODO currently, the message processing is sequential, and not done in parallel across multiple
+ *      clients, which is a temporary implementation (for simplification)
  */
 @Concurrent
 service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
@@ -93,27 +96,7 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
     /**
      * Cached wake-up time.
      */
-    DateTime? wakeUp.get()
-        {
-        DateTime? when = super();
-// TODO GG if (when == Null)
-            {
-            for (Priority priority : High..Idle)
-                {
-                if (DateTime first := byPriority[priority.ordinal].first())
-                    {
-                     if (when == Null || first < when)
-                         {
-                         when = first;
-                         }
-                    }
-                }
-
-            set(when);
-            }
-
-        return when;
-        }
+    DateTime? wakeUp;
 
     /**
      * The next scheduled wake-up for the scheduler.
@@ -182,11 +165,9 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
                 return True;
 
             case Disabled:
-                clearProcesses();
-                continue;
             case Initial:
                 status = Enabled;
-                checkRipe();
+                scheduleAlarm();
                 return True;
 
             case Closed:
@@ -210,7 +191,7 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
                 return True;
 
             case Enabled:
-                clearProcesses();
+                cancelAlarm();
                 return True;
 
             case Disabled:
@@ -235,6 +216,7 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
             disable();
             }
 
+        clearProcesses();
         status = Closed;
         }
 
@@ -318,10 +300,13 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
             }
 
         DateTime scheduled = calcSchedule(New, created, Null, pending);
-
-        Process process = new Process(dboId, pid, created, scheduled, pending);
-
+        Process  process   = new Process(dboId, pid, created, scheduled, pending);
         registerProcess(process);
+
+        if (scheduled < wakeUp? : True)
+            {
+            scheduleAlarm();
+            }
         }
 
     /**
@@ -641,7 +626,7 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
         }
 
 
-    // ----- message-processing client caching -----------------------------------------------------
+    // ----- message-processing --------------------------------------------------------------------
 
     /**
      * Check for messages that are scheduled to be processed at or before the current point in time,
@@ -649,7 +634,7 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
      */
     protected void checkRipe()
         {
-        if (busy || disabled)
+        if (busy)
             {
             return;
             }
@@ -658,11 +643,7 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
         try
             {
             // this method will schedule its own subsequent wake-up
-            if (Cancellable cancel ?= cancelWakeUp)
-                {
-                cancel();
-                cancelWakeUp = Null;
-                }
+            cancelAlarm();
 
             DateTime cutoff = clock.now;
             Processing: for (Priority priority : High..Idle)
@@ -675,6 +656,8 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
                 SkiplistMap<DateTime, Process> byWhen = byPriority[priority.ordinal];
                 if (DateTime first := byWhen.first(), first <= cutoff)
                     {
+                    // calculate a limit of messages to process, with each lower priority degrading
+                    // exponentially from the number being processed of the priority above it
                     Int limit = 1 << (priority.ordinal * 2);
                     Int count = 0;
                     for (Process firstProcess : byWhen[first..cutoff].values)
@@ -687,7 +670,7 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
                             if (++count > limit)
                                 {
                                 // quota reached
-                                break;
+                                continue Processing;
                                 }
 
                             if (disabled)
@@ -728,10 +711,7 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
                                     }
                                 }
 
-                            // processing loop for the pending message (i.e. auto-retries)
-                            // (currently this is sequential, which is assumed to be a temporary
-                            // implementation decision, and will be modified at some point to
-                            // support concurrent execution across multuiple clients)
+                            // processing loop for the pending message (i.e. auto-retry loop)
                             Range<DateTime>          elapsed;
                             CommitResult | Exception result;
                             PidStatus                status;
@@ -775,13 +755,54 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
         finally
             {
             busy = False;
+            scheduleAlarm();
+            }
+        }
 
-            // schedule next processing
-            if (!disabled, DateTime wakeUp ?= this.wakeUp)
+    /**
+     * Calculate when the next scheduled item is ripe.
+     *
+     * @return the DateTime to set the alarm for, or Null
+     */
+    DateTime? calculateWakeup()
+        {
+        DateTime? when = Null;
+
+        for (Priority priority : High..Idle)
+            {
+            if (DateTime first := byPriority[priority.ordinal].first())
                 {
-                cancelWakeUp = clock.schedule(wakeUp, checkRipe);
+                 if (when == Null || first < when)
+                     {
+                     when = first;
+                     }
                 }
             }
+
+        return when;
+        }
+
+    /**
+     * Set the alarm for the next wake-up.
+     */
+    void scheduleAlarm()
+        {
+        // schedule next processing
+        if (!disabled, DateTime wakeUp ?= calculateWakeup())
+            {
+            this.wakeUp       = wakeUp;
+            this.cancelWakeUp = clock.schedule(wakeUp, checkRipe);
+            }
+        }
+
+    /**
+     * Turn off the alarm clock.
+     */
+    void cancelAlarm()
+        {
+        cancelWakeUp?();
+        wakeUp       = Null;
+        cancelWakeUp = Null;
         }
 
     /**
