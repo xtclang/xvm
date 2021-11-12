@@ -76,7 +76,7 @@ public class ElseExpression
         TypeFit fit = expr1.testFitMulti(ctx, atypeRequired, errs);
         if (fit.isFit() && expr2.isCompletable())
             {
-            fit.combineWith(expr2.testFitMulti(ctx, atypeRequired, errs));
+            fit = fit.combineWith(expr2.testFitMulti(ctx, atypeRequired, errs));
             }
         return fit;
         }
