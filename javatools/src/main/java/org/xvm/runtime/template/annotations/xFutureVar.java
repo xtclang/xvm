@@ -231,7 +231,7 @@ public class xFutureVar
                 if (ex == null)
                     {
                     CompletableFuture<ObjectHandle> cfThen =
-                            frame.f_context.postRequest(null, hRun, Utils.OBJECTS_NONE, 0);
+                            frame.f_context.postRequest(frame, hRun, Utils.OBJECTS_NONE, 0);
 
                     cfThen.whenComplete((hVoid, exThen) ->
                             hThen.assign(hR, translate(exThen)));
@@ -290,7 +290,7 @@ public class xFutureVar
                 if (ex == null)
                     {
                     CompletableFuture<ObjectHandle> cfPass =
-                            frame.f_context.postRequest(null, hConsume, new ObjectHandle[] {hR}, 0);
+                            frame.f_context.postRequest(frame, hConsume, new ObjectHandle[] {hR}, 0);
 
                     cfPass.whenComplete((hVoid, exPass) ->
                             hPass.assign(hR, translate(exPass)));
@@ -352,7 +352,7 @@ public class xFutureVar
                 if (ex == null)
                     {
                     CompletableFuture<ObjectHandle> cfTrans =
-                            frame.f_context.postRequest(null, hConvert, new ObjectHandle[] {hR}, 1);
+                            frame.f_context.postRequest(frame, hConvert, new ObjectHandle[] {hR}, 1);
 
                     cfTrans.whenComplete((hNew, exTrans) ->
                             hTrans.assign(hNew, translate(exTrans)));
@@ -420,7 +420,7 @@ public class xFutureVar
                     {
                     ExceptionHandle hEx = translate(ex).getExceptionHandle();
                     CompletableFuture<ObjectHandle> cfTrans =
-                            frame.f_context.postRequest(null, hConvert, new ObjectHandle[] {hEx}, 1);
+                            frame.f_context.postRequest(frame, hConvert, new ObjectHandle[] {hEx}, 1);
 
                     cfTrans.whenComplete((hNew, exTrans) ->
                             hHandle.assign(hNew, translate(exTrans)));
@@ -470,7 +470,7 @@ public class xFutureVar
             cfThis.whenComplete((hR, ex) ->
                 {
                 CompletableFuture<ObjectHandle> cfTrans =
-                        frame.f_context.postRequest(null, hConvert, combineResult(hR, ex), 1);
+                        frame.f_context.postRequest(frame, hConvert, combineResult(hR, ex), 1);
 
                 cfTrans.whenComplete((hNew, exTrans) ->
                         hTrans.assign(hNew, translate(exTrans)));
@@ -547,7 +547,7 @@ public class xFutureVar
                         }
 
                     CompletableFuture<ObjectHandle> cfAnd =
-                            frame.f_context.postRequest(null, hCombine, ahArg, 1);
+                            frame.f_context.postRequest(frame, hCombine, ahArg, 1);
 
                     cfAnd.whenComplete((hNew, exTrans) ->
                             hAnd.assign(hNew, translate(exTrans)));
@@ -620,7 +620,7 @@ public class xFutureVar
             cfThis.whenComplete((hR, ex) ->
                 {
                 CompletableFuture<ObjectHandle> cfWhen =
-                        frame.f_context.postRequest(null, hNotify, combineResult(hR, ex), 0);
+                        frame.f_context.postRequest(frame, hNotify, combineResult(hR, ex), 0);
 
                 cfWhen.whenComplete((hVoid, exWhen) ->
                     {
