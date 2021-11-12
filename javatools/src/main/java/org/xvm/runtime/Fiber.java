@@ -16,7 +16,6 @@ import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.ServiceContext.Message;
 import org.xvm.runtime.ServiceContext.Request;
-import org.xvm.runtime.ServiceContext.Synchronicity;
 
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
@@ -288,6 +287,11 @@ public class Fiber
                             }
                         m_resume = null;
                         }
+
+                    if (frame.m_hException != null)
+                        {
+                        iResult = Op.R_EXCEPTION;
+                        }
                     break;
 
                 case Terminating:
@@ -483,14 +487,6 @@ public class Fiber
     private boolean isSectionPending(ObjectHandle hSection)
         {
         return m_mapPendingUncaptured != null && m_mapPendingUncaptured.containsValue(hSection);
-        }
-
-    /**
-     * @return the current Synchronicity value for this fiber
-     */
-    public Synchronicity getSynchronicity()
-        {
-        return f_context.getSynchronicity(this);
         }
 
     /**

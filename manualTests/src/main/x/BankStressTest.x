@@ -13,14 +13,13 @@ module BankStressTest
 
     void run()
         {
-        assert:debug;
-        Duration openFor  = Duration.ofSeconds(3600);
+        Duration openFor  = Duration.ofSeconds(60);
         Branch[] branches = new Branch[BRANCHES](i -> new Branch(i.toUInt64()));
         for (Branch branch : branches)
             {
             branch.doBusiness^(openFor);
             }
-        wait(branches, openFor + Duration.ofSeconds(5)); // give them extra time to close naturally
+        wait(branches, openFor + Duration.ofSeconds(3)); // give them extra time to close naturally
         }
 
     void wait(Branch[] branches, Duration duration)

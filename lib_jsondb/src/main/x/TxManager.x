@@ -1017,8 +1017,6 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      */
     protected Boolean commit(TxRecord[] recs)
         {
-        checkEnabled();
-
         Boolean success = True;
 
         // bundle the results of "sealPrepare()" into a buffer
