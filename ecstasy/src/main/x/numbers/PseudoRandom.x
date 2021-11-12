@@ -2,7 +2,7 @@
  * An implementation of the lightweight xorshift* (xor / shift / multiply) pseudo-random number
  * generator.
  */
-class PseudoRandom(UInt seed = 0)
+service PseudoRandom(UInt seed = 0)
         implements Random
     {
     /**
