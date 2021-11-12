@@ -109,7 +109,7 @@ public class DebugConsole
         }
 
     @Override
-    public int checkBreakPoint(Frame frame, ExceptionHandle hEx)
+    public synchronized int checkBreakPoint(Frame frame, ExceptionHandle hEx)
         {
         if (m_stepMode == StepMode.NaturalCall)
             {
