@@ -388,8 +388,10 @@ public interface ErrorListener
                 String sFile = m_source.getFileName();
                 if (sFile != null)
                     {
+                    // output file:line as IntelliJ will then link to the line
                     sb.append(sFile)
-                      .append(' ');
+                        .append(':').append(getLine() + 1)
+                        .append(' ');
                     }
 
                 sb.append("[")
