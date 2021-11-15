@@ -1,3 +1,12 @@
+/**
+ * This is a database schema for the Bank demo.
+ *
+ * To compile this database:
+ *
+ *     gradle compileOne -PtestName=Bank
+ *
+ * See `BankStressTest` app.
+ */
 module Bank
         incorporates Database
     {

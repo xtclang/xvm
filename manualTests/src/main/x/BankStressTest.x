@@ -1,3 +1,16 @@
+/**
+ * This is a test app for the Bank demo.
+ *
+ * To compile this test:
+ *
+ *     gradle compileOne -PtestName=BankStressTest
+ *
+ * To run this test using the "jsonDB" database implementation:
+ *
+ *     gradle -Dxvm.db.impl=json hostOne -PtestName=BankStressTest
+ *
+ * See [Bank] database module.
+ */
 module BankStressTest
     {
     package Bank import Bank;
