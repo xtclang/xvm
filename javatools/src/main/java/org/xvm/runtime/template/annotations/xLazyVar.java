@@ -77,7 +77,7 @@ public class xLazyVar
                 LazyVarHandle hLazy = (LazyVarHandle) hTarget;
                 if (hLazy.isPropertyOnImmutable())
                     {
-                    return invokeSet(frame, hLazy, hArg);
+                    return invokeImmutableSet(frame, hLazy, hArg);
                     }
                 break;
                 }
@@ -86,7 +86,7 @@ public class xLazyVar
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
         }
 
-    protected int invokeSet(Frame frame, LazyVarHandle hLazy, ObjectHandle hValue)
+    protected int invokeImmutableSet(Frame frame, LazyVarHandle hLazy, ObjectHandle hValue)
         {
         if (!hValue.isPassThrough(null))
             {
