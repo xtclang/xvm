@@ -15,6 +15,9 @@ import ecstasy.collections.NaturalHasher;
  * Note that this is not lock-free and two keys which hash to the same "partition" will still
  * contend with one another.
  */
+//@Concurrent // TODO: GG marking the const as @Concurrent this causes an IllegalStateException
+// TODO: GG, if this is a service rather then a const Maps.equals throws an IllegalArgument complaining
+//       about a mutable being used for a service call, I don't see what that mutable is
 const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAble>
         implements Map<Key, Value>
     {
