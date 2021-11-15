@@ -4,26 +4,11 @@ module TestSimple.test.org
 
     void run()
         {
-        Boolean successfullyPrepared = False;
-        try
-            {
-            successfullyPrepared = prepare() && seal();
-            }
-        catch (Exception e)
-            {
-            console.println($"exception: {e.text}");
-            }
+        Map<Int, Int> map = new HashMap();
+        map.put(0, 0);
 
-        console.println(successfullyPrepared); // used to produce "True"
-        }
+        map.process(0, e -> e.value++); // this used to fail the compilation
 
-    Boolean prepare()
-        {
-        return True;
-        }
-
-    Boolean seal()
-        {
-        assert;
+        console.println(map);
         }
     }

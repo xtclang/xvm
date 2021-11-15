@@ -26,6 +26,7 @@ import org.xvm.asm.Assignment;
 import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.IntersectionTypeConstant;
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.PendingTypeConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeCollector;
@@ -467,7 +468,7 @@ public class LambdaExpression
 
         if (typeRequired != null)
             {
-            typeRequired = typeRequired.resolveTypedefs();
+            typeReqFn = typeRequired = typeRequired.resolveTypedefs();
             if (typeRequired instanceof IntersectionTypeConstant)
                 {
                 Set<TypeConstant> setFunctions = ((IntersectionTypeConstant) typeRequired).
@@ -479,18 +480,20 @@ public class LambdaExpression
 
                     if (calculateTypeFitImpl(ctx, atypeTestP, atypeTestR, errs).isFit())
                         {
-                        typeReqFn       = typeFunction;
                         atypeReqParams  = atypeTestP;
                         atypeReqReturns = atypeTestR;
+                        typeReqFn       = pool.buildFunctionType(atypeReqParams,
+                                            replacePending(atypeReqReturns));
                         break;
                         }
                     }
                 }
-            else
+            else if (typeRequired.isA(pool.typeFunction()))
                 {
-                typeReqFn       = typeRequired;
-                atypeReqParams  = pool.extractFunctionParams(typeReqFn);
-                atypeReqReturns = pool.extractFunctionReturns(typeReqFn);
+                atypeReqParams  = pool.extractFunctionParams(typeRequired);
+                atypeReqReturns = pool.extractFunctionReturns(typeRequired);
+                typeReqFn       = pool.buildFunctionType(atypeReqParams,
+                                    replacePending(atypeReqReturns));
                 }
             }
 
@@ -744,7 +747,7 @@ public class LambdaExpression
         // note that only the return types portion is going to be used via "getReturnTypes()" method
         if (atypeReturns != null)
             {
-            m_typeRequired = pool().buildFunctionType(atypeParams, atypeReturns);
+            m_typeRequired = pool().buildFunctionType(atypeParams, replacePending(atypeReturns));
             }
 
         // use a black-hole context (to avoid damaging the original)
@@ -1237,6 +1240,26 @@ public class LambdaExpression
         {
         assert isValidated();
         return m_ctxLambda.isLambdaMethod();
+        }
+
+    /**
+     * Replace all PendingTypeConstants in the specified аrray with the Object type.
+     */
+    private TypeConstant[] replacePending(TypeConstant[] atype)
+        {
+        TypeConstant[] atypeRets = atype;
+        for (int i = 0, c = atype == null ? 0 : atype.length; i < c; i++)
+            {
+            if (atype[i] instanceof PendingTypeConstant)
+                {
+                if (atypeRets == atype)
+                    {
+                    atypeRets = atype.clone();
+                    }
+                atypeRets[i] = pool().typeObject();
+                }
+            }
+        return atypeRets;
         }
 
 
