@@ -192,7 +192,7 @@ public abstract class Expression
             }
 
         TypeConstant[] aTypes = getImplicitTypes(ctx);
-        return aTypes.length == 0
+        return aTypes == null || aTypes.length == 0
                 ? null
                 : aTypes[0];
         }
