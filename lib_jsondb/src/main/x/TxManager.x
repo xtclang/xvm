@@ -95,6 +95,12 @@ import ObjectStore.MergeResult;
  * * `_ts` - the clock's timestamp
  * * `_rc` - the retry count before the transaction successfully committed
  * * `_op` - operation indicator (for anything not a transaction record)
+ * * * `created`
+ * * * `opened`
+ * * * `recovered`
+ * * * `safepoint`
+ * * * `closed`
+ * * * `archived`
  * * `_prev_v` - the last transaction from the previous transaction log segment (previous file)
  */
 @Concurrent

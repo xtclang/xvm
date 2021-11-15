@@ -157,6 +157,7 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
      *
      * @return True iff the Scheduler was successfully enabled
      */
+    @Synchronized
     Boolean enable()
         {
         switch (status)
@@ -182,6 +183,7 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
      *
      * @return True iff the Scheduler was successfully disabled
      */
+    @Synchronized
     Boolean disable()
         {
         switch (status)
@@ -209,6 +211,7 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
         }
 
     @Override
+    @Synchronized
     void close(Exception? cause = Null)
         {
         if (status == Enabled)
