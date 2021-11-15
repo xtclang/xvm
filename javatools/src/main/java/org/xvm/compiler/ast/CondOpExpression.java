@@ -26,8 +26,8 @@ import org.xvm.util.Handy;
  * Conditional operator expressions "||" and "&&".
  *
  * <ul>
- * <li><tt>COND_OR:    "||"</tt> - </li>
- * <li><tt>COND_AND:   "&&"</tt> - </li>
+ * <li><tt>COND_OR:  "||"</tt> - logical "or"</li>
+ * <li><tt>COND_AND: "&&"</tt> - logical "and"</li>
  * </ul>
  */
 public class CondOpExpression
@@ -232,8 +232,10 @@ public class CondOpExpression
         if (isConstant())
             {
             LVal.assign(toConstant(), code, errs);
+            return;
             }
-        else if (LVal.isNormalVariable())
+
+        if (LVal.isNormalVariable())
             {
             switch (combine(expr1.toConstant(), getOperatorString(), expr1.toConstant()))
                 {
@@ -241,39 +243,17 @@ public class CondOpExpression
                 case UandT:
                     // result is the same as the result of the first expression
                     expr1.generateAssignment(ctx, code, LVal, errs);
-                    break;
+                    return;
 
                 case ForU:
                 case TandU:
                     // result is the same as the result of the second expression
                     expr2.generateAssignment(ctx, code, LVal, errs);
-                    break;
-
-                case UorU:
-                case UandU:
-                    Label    labelEnd = new Label();
-                    Register regAccum = LVal.getRegister();
-                    expr1.generateAssignment(ctx, code, LVal, errs);
-                    if (isAnd())
-                        {
-                        code.add(new JumpFalse(regAccum, labelEnd));
-                        }
-                    else
-                        {
-                        code.add(new JumpTrue(regAccum, labelEnd));
-                        }
-                    expr2.generateAssignment(ctx, code, LVal, errs);
-                    code.add(labelEnd);
-                    break;
-
-                default:
-                    throw new IllegalStateException();
+                    return;
                 }
             }
-        else
-            {
-            super.generateAssignment(ctx, code, LVal, errs);
-            }
+
+        super.generateAssignment(ctx, code, LVal, errs);
         }
 
 
@@ -303,7 +283,7 @@ public class CondOpExpression
                 : "|";
         }
 
-    int combine(Constant const1, String sOp, Constant const2)
+    private int combine(Constant const1, String sOp, Constant const2)
         {
         int n;
 

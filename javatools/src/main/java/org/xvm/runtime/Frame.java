@@ -1714,13 +1714,13 @@ public class Frame
      */
     public Synchronicity getSynchronicity()
         {
-        if (isNativeStack() && f_fiber.getStatus() == Fiber.FiberStatus.Waiting)
+        if (isNativeStack())
             {
             // native waiting stack indicates a terminating fiber waiting on a future result
             return Synchronicity.Concurrent;
             }
 
-        Synchronicity synchronicity = f_context.getSynchronicity(f_fiber);
+        Synchronicity synchronicity = f_context.getSynchronicity();
         switch (synchronicity)
             {
             case Concurrent:

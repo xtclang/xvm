@@ -70,7 +70,7 @@ public class ElvisExpression
         TypeFit fit = expr1.testFit(ctx, typeRequired.ensureNullable(), errs);
         if (fit.isFit())
             {
-            fit.combineWith(expr2.testFit(ctx, typeRequired, errs));
+            fit = fit.combineWith(expr2.testFit(ctx, typeRequired, errs));
             }
         return fit;
         }

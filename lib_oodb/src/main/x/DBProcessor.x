@@ -1,4 +1,5 @@
 import Transaction.CommitResult;
+import DBTransaction.Priority;
 
 /**
  * The database interface for scheduling messages that will be processed by later database
@@ -349,23 +350,13 @@ interface DBProcessor<Message extends immutable Const>
     // ----- pending message representation --------------------------------------------------------
 
     /**
-     * The representation of a pending `DBProcessor` execution in the database.
-     *
-     * By representing an invocation as data:
-     *
-     * * The information can be communicated over a network connection;
-     *
-     * * A record of various invocations can be collected for later examination; and
-     *
-     * * Desired future invocations can be stored in persistent storage to ensure that the request
-     *   for their execution can survive a database shutdown, outage, or other events.
+     * A representation of a pending `DBProcessor` execution.
      */
     static const Pending<Message extends immutable Const>
             (
             Path      processor,
             Message   message,
-            Schedule? schedule         = Null,
-            Int       previousFailures = 0,
+            Schedule? schedule = Null,
             )
         {
         /**
@@ -412,28 +403,10 @@ interface DBProcessor<Message extends immutable Const>
             {
             return schedule?.priority : Normal;
             }
-
-        /**
-         * The number of times that this pending message processing has already been attempted, and
-         * has failed.
-         */
-        Int previousFailures;
         }
 
 
     // ----- schedule representation ---------------------------------------------------------------
-
-    /**
-     * The supported priorities for scheduled messages.
-     *
-     * * High - An indication that the priority is higher than the default priority.
-     * * Normal - The default priority.
-     * * Low - An indication that the priority is lower than the default priority.
-     * * Idle - An indication that the processing should only occur when there appears to be
-     *   a lack of (or a measurable lull in) other database activity. (This definition is
-     *   purposefully lacking in explicitness.)
-     */
-    typedef DBTransaction.Priority as Priority;
 
     /**
      * Indicates how the repeating period is calculated.
@@ -475,7 +448,7 @@ interface DBProcessor<Message extends immutable Const>
     static const Schedule(DateTime? scheduledAt      = Null,
                           Time?     scheduledDaily   = Null,
                           Duration? repeatInterval   = Null,
-                          Policy    repeatPolicy     = AllowOverlapping, // REVIEW SuggestedMinimum?
+                          Policy    repeatPolicy     = AllowOverlapping,
                           Priority  priority         = Normal,
                          )
         {
@@ -493,8 +466,7 @@ interface DBProcessor<Message extends immutable Const>
                     }
                 }
 
-            // can't be scheduled both at a specific date/time and the same time every day
-            assert scheduledAt == Null || scheduledDaily == Null;
+            assert repeatInterval?.picoseconds > 0;
             }
 
         /**

@@ -12,6 +12,7 @@ import json.Printer.printString;
 import model.DBObjectInfo;
 import model.SysInfo;
 
+import oodb.DBClosed;
 import oodb.DBObject;
 import oodb.RootSchema;
 import oodb.Transaction.CommitResult;
@@ -465,8 +466,9 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      */
     Boolean checkEnabled()
         {
-        assert status == Enabled as $"TxManager is not enabled (status={status})";
-        return True;
+        return status == Enabled
+            ? True
+            : throw new DBClosed($"TxManager is not enabled (status={status})");
         }
 
     /**
@@ -1015,8 +1017,6 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      */
     protected Boolean commit(TxRecord[] recs)
         {
-        checkEnabled();
-
         Boolean success = True;
 
         // bundle the results of "sealPrepare()" into a buffer

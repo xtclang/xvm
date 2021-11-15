@@ -9,6 +9,7 @@ import json.Mapping;
 import json.ObjectInputStream;
 import json.ObjectOutputStream;
 
+import oodb.DBClosed;
 import oodb.DBCounter;
 import oodb.DBInfo;
 import oodb.DBList;
@@ -23,7 +24,7 @@ import oodb.DBSchema;
 import oodb.DBTransaction;
 import oodb.DBUser;
 import oodb.DBValue;
-import oodb.CommitFailure;
+import oodb.CommitFailed;
 import oodb.RootSchema;
 import oodb.SystemSchema;
 import oodb.Transaction.CommitResult;
@@ -836,7 +837,7 @@ service Client<Schema extends RootSchema>
                     val result = tx.commit();
                     if (result != Committed)
                         {
-                        throw new CommitFailure(tx.txInfo, result,
+                        throw new CommitFailed(tx.txInfo, result,
                             $"Failed to auto-commit {tx}; reason={result}");
                         }
                     }
@@ -1522,6 +1523,10 @@ service Client<Schema extends RootSchema>
                     {
                     result = txManager.commit(id_);
                     }
+                catch (DBClosed e)
+                    {
+                    throw e;
+                    }
                 catch (Exception e)
                     {
                     log($"Exception during commit of {this}: {e}");
@@ -1573,6 +1578,9 @@ service Client<Schema extends RootSchema>
                 try
                     {
                     result = txManager.rollback(id_);
+                    }
+                catch (DBClosed e)
+                    {
                     }
                 catch (Exception e)
                     {

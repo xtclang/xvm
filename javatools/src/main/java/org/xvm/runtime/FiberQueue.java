@@ -3,18 +3,26 @@ package org.xvm.runtime;
 
 import org.xvm.runtime.Fiber.FiberStatus;
 
+
 /**
  * {@link FiberQueue} represents a queue-like data structure holding all pending Fibers and
  * facilitating a quick selection algorithm for the scheduler.
  */
 public class FiberQueue
     {
+    private final ServiceContext f_context;
+
     // a circular array
     private Frame[] m_aFrame = new Frame[16];
 
     private int m_ixHead = -1; // head
     private int m_ixTail = 0;  // past the tail - insertion point
     private int m_cSize  = 0;
+
+    public FiberQueue(ServiceContext ctx)
+        {
+        f_context = ctx;
+        }
 
     public void add(Frame frame)
         {
@@ -192,22 +200,42 @@ public class FiberQueue
                 return 2;
 
             case Waiting:
-                if (fiber.isReady())
+                if (!fiber.isReady())
                     {
-                    switch (frame.getSynchronicity())
-                        {
-                        case Concurrent:
-                        case Critical:
-                            return 1;
-
-                        case Synchronized:
-                            return isAnyNonConcurrentWaiting(fiber) ? -2 : 1;
-                        }
+                    return -1;
                     }
-                return -1;
+
+                // native waiting stack indicates a terminating fiber waiting on a future result
+                return frame.isNativeStack()
+                    || fiber == f_context.getSynchronizationOwner()
+                    || canResume(fiber)
+                        ? 1 : -2;
 
             case Initial:
-                return isAnyNonConcurrentWaiting(fiber) ? -1 : 0;
+                return canResume(fiber) ? 0 : -2;
+
+            default:
+                throw new IllegalStateException();
+            }
+        }
+
+    /**
+     * @return true iff a frame (which is not the synchronization owner) can be started or resumed
+     */
+    private boolean canResume(Fiber fiber)
+        {
+        switch (f_context.getSynchronicity())
+            {
+            case Critical:
+                return false;
+
+            case Synchronized:
+                Fiber fiberCaller = fiber.f_fiberCaller;
+                return fiberCaller != null &&
+                        fiberCaller.isContinuationOf(f_context.getSynchronizationOwner());
+
+            case Concurrent:
+                return !isAnyNonConcurrentWaiting(fiber);
 
             default:
                 throw new IllegalStateException();
@@ -218,13 +246,15 @@ public class FiberQueue
      * Check if there is any "waiting" frame that is not concurrent safe with regard to the
      * specified fiber.
      *
-     * Note: if this method returns true, it also sets the "blocker" on the evaluating fiber
+     * Note1: this method should be called only if the service is Concurrent (i.e. frame-dependent)
+     * Note2: if this method returns true, it also sets the "blocker" on the evaluating fiber
      *
-     * @param fiberCandidate  the fiber that the service is evaluating for execution
+     * @param fiberCandidate  the fiber that the service is evaluating for execution (either Initial
+     *                        or Waiting)
      *
      * @return true iff there are any non-concurrent waiting frames
      */
-    public boolean isAnyNonConcurrentWaiting(Fiber fiberCandidate)
+    private boolean isAnyNonConcurrentWaiting(Fiber fiberCandidate)
         {
         Frame[] aFrame      = m_aFrame;
         int     cFrames     = aFrame.length;
@@ -243,25 +273,13 @@ public class FiberQueue
                 {
                 if (fiber.getStatus() == FiberStatus.Waiting)
                     {
-                    if (frame.isNativeStack())
+                    if (frame.isSafeStack() ||
+                        fiberCaller != null && fiberCaller.isContinuationOf(fiber))
                         {
-                        // waiting native stack is exempt
                         continue;
                         }
-                    switch (frame.getSynchronicity())
-                        {
-                        case Concurrent:
-                            continue;
-
-                        case Synchronized:
-                            if (fiberCaller != null && fiberCaller.isContinuationOf(fiber))
-                                {
-                                continue;
-                                }
-                        case Critical:
-                            fiberCandidate.setBlocker(frame);
-                            return true;
-                        }
+                    fiberCandidate.setBlocker(frame);
+                    return true;
                     }
                 }
             }

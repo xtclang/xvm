@@ -63,13 +63,11 @@ public class ServiceContext
     {
     ServiceContext(Container container, ConstantPool pool, String sName, int nId)
         {
-        f_container     = container;
-        f_sName         = sName;
-        f_nId           = nId;
-        f_templates     = container.f_templates;
-        f_pool          = pool;
-        f_queueMsg      = new ConcurrentLinkedQueue<>();
-        f_queueResponse = new ConcurrentLinkedQueue<>();
+        f_container = container;
+        f_pool      = pool;
+        f_sName     = sName;
+        f_nId       = nId;
+        f_templates = container.f_templates;
         }
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -145,15 +143,16 @@ public class ServiceContext
 
         if (hSection == xNullable.NULL)
             {
-            m_fiberCritical = null;
-            m_synchronicity = Synchronicity.Concurrent;
+            m_fiberSyncOwner = null;
+            m_synchronicity  = Synchronicity.Concurrent;
             }
         else
             {
             ObjectHandle hCritical = ((GenericHandle) hSection).getField("critical");
 
-            m_fiberCritical = ((BooleanHandle) hCritical).get() ? fiber : null;
-            m_synchronicity = Synchronicity.Synchronized;
+            m_fiberSyncOwner = fiber;
+            m_synchronicity  = ((BooleanHandle) hCritical).get() ?
+                    Synchronicity.Critical : Synchronicity.Synchronized;
             }
         }
 
@@ -190,13 +189,22 @@ public class ServiceContext
         }
 
     /**
-     * @return the current Synchronicity value for the specified fiber
+     * Note: the value of {@link Synchronicity#Concurrent Concurrent} here actually means
+     * "frame-dependent".
+     *
+     * @return the current service Synchronicity value
      */
-    public Synchronicity getSynchronicity(Fiber fiber)
+    public Synchronicity getSynchronicity()
         {
-        return fiber == m_fiberCritical
-                ? Synchronicity.Critical
-                : m_synchronicity;
+        return m_synchronicity;
+        }
+
+    /**
+     * @return the synchronized section owner
+     */
+    public Fiber getSynchronizationOwner()
+        {
+        return m_fiberSyncOwner;
         }
 
     /**
@@ -830,11 +838,12 @@ public class ServiceContext
      */
     protected void terminateFiber(Fiber fiber)
         {
-        if (fiber == m_fiberCritical)
+        if (fiber == m_fiberSyncOwner)
             {
             // they somehow terminated the fiber without exiting the critical section;
             // should it be an exception?
-            m_fiberCritical = null;
+            m_fiberSyncOwner = null;
+            m_synchronicity  = Synchronicity.Concurrent;
             }
 
         if (fiber.hasPendingRequests())
@@ -859,12 +868,11 @@ public class ServiceContext
             // TODO MF: need a better lock to avoid messages getting into the queue after this point
             m_hService = null;
 
-            Queue<Message> qMsg   = f_queueMsg;
-            FiberQueue     qFiber = f_queueSuspended;
+            FiberQueue qFiber = f_queueSuspended;
 
             // process all outstanding messages
             Message message;
-            while ((message = qMsg.poll()) != null)
+            while ((message = f_queueMsg.poll()) != null)
                 {
                 qFiber.add(message.createFrame(this));
                 }
@@ -957,14 +965,6 @@ public class ServiceContext
         {
         return getStatus() == ServiceStatus.Idle &&
             (m_atomicNotifications == null || m_atomicNotifications.get() == 0);
-        }
-
-    /**
-     * @return true iff the service is in a critical synchronization
-     */
-    public boolean isCriticalSection()
-        {
-        return m_fiberCritical != null;
         }
 
 
@@ -1517,6 +1517,11 @@ public class ServiceContext
             {
             sb.append(" contended");
             }
+        if (m_synchronicity != Synchronicity.Concurrent)
+            {
+            sb.append(" ")
+              .append(m_synchronicity.name());
+            }
         if (m_frameCurrent != null)
             {
             sb.append(" @")
@@ -1822,19 +1827,14 @@ public class ServiceContext
     private Frame m_frameCurrent;
 
     /**
-     * If specified, indicates the current critical fiber.
-     */
-    private Fiber m_fiberCritical;
-
-    /**
      * The queue of incoming messages.
      */
-    private final Queue<Message>  f_queueMsg;
+    private final Queue<Message> f_queueMsg = new ConcurrentLinkedQueue<>();
 
     /**
      * The queue of message responses.
      */
-    private final Queue<Response> f_queueResponse;
+    private final Queue<Response> f_queueResponse = new ConcurrentLinkedQueue<>();
 
     /**
      * The set of active fibers. It can be [read] accessed by outside threads.
@@ -1844,7 +1844,7 @@ public class ServiceContext
     /**
      * The queue of suspended fibers.
      */
-    private final FiberQueue f_queueSuspended = new FiberQueue();
+    private final FiberQueue f_queueSuspended = new FiberQueue(this);
 
     /**
      * The reentrancy policy. Must be the same names as in natural Service.Synchronicity.
@@ -1855,6 +1855,11 @@ public class ServiceContext
      * The current value of service synchronicity.
      */
     private Synchronicity m_synchronicity = Synchronicity.Concurrent;
+
+    /**
+     * If specified, indicates the current synchronized section owner.
+     */
+    private Fiber m_fiberSyncOwner;
 
     /**
      * The context scheduling "lock", atomic operations are performed via {@link #SCHEDULING_LOCK_HANDLE}.

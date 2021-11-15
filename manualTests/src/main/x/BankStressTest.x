@@ -5,21 +5,21 @@ module BankStressTest
     import Bank.Account;
     import Bank.Connection;
 
-    import Bank.oodb.CommitFailure;
+    import Bank.oodb.DBClosed;
+    import Bank.oodb.CommitFailed;
 
     static Int BRANCHES     = 24;
     static Int MAX_ACCOUNTS = 100;
 
     void run()
         {
-        assert:debug;
-        Duration openFor  = Duration.ofSeconds(3600);
+        Duration openFor  = Duration.ofSeconds(60);
         Branch[] branches = new Branch[BRANCHES](i -> new Branch(i.toUInt64()));
         for (Branch branch : branches)
             {
             branch.doBusiness^(openFor);
             }
-        wait(branches, openFor + Duration.ofSeconds(5)); // give them extra time to close naturally
+        wait(branches, openFor + Duration.ofSeconds(3)); // give them extra time to close naturally
         }
 
     void wait(Branch[] branches, Duration duration)
@@ -161,7 +161,10 @@ module BankStressTest
                 catch (Exception e)
                     {
                     bank.log.add($"{op} failed at {branchId}: {e.text}");
-                    if (op == "Audit" || e.is(CommitFailure) && e.result == DatabaseError)
+                    if (op == "Audit"
+                            || e.is(DBClosed)
+                            || e.is(CommitFailed) && e.result == DatabaseError
+                            )
                         {
                         break business;
                         }
