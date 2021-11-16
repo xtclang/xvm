@@ -181,6 +181,7 @@ public class AnnotatedTypeExpression
     @Override
     protected void collectAnonInnerClassInfo(AnonInnerClass info)
         {
+        m_fAnonInner = true;
         info.addAnnotation(getAnnotation());
         type.collectAnonInnerClassInfo(info);
         }
@@ -275,6 +276,11 @@ public class AnnotatedTypeExpression
                     ? ((AnnotatedTypeConstant) typeReferent).getAnnotationType()
                     : typeAnno;
             }
+        else if (m_fAnonInner && typeAnno.getExplicitClassInto().isIntoClassType())
+            {
+            // REVIEW GG
+            typeReq = null;
+            }
         else
             {
             log(errs, Severity.ERROR, Constants.VE_ANNOTATION_INCOMPATIBLE,
@@ -337,6 +343,7 @@ public class AnnotatedTypeExpression
         Annotation   anno           = annotation.ensureAnnotation(pool());
         Constant     constAnno      = anno.getAnnotationClass();
         boolean      fResolved      = !constAnno.containsUnresolved();
+        boolean      fNotTypeAnno   = false;
 
         if (fResolved)
             {
@@ -355,8 +362,13 @@ public class AnnotatedTypeExpression
                 }
             else
                 {
-                m_fDisassociate = typeInto.isIntoVariableType() ||
-                        isMethodParameter() && typeInto.isIntoMethodParameterType();;
+                m_fDisassociate = typeInto.isIntoVariableType()
+                    || isMethodParameter() && typeInto.isIntoMethodParameterType();
+
+                // REVIEW GG
+                fNotTypeAnno = typeInto.isIntoClassType()
+                            || typeInto.isIntoPropertyType()
+                            || typeInto.isIntoMethodType();
                 }
             }
 
@@ -369,7 +381,7 @@ public class AnnotatedTypeExpression
             }
 
         TypeConstant type;
-        if (m_fDisassociate)
+        if (m_fDisassociate || fNotTypeAnno)
             {
             // our annotation is not added to the underlying type constant
             type = typeUnderlying;
@@ -438,6 +450,7 @@ public class AnnotatedTypeExpression
     protected TypeExpression       type;
 
     private transient boolean m_fDisassociate;
+    private transient boolean m_fAnonInner;
     private transient boolean m_fVar;
     private transient boolean m_fInjected;
     private transient boolean m_fFinal;

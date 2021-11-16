@@ -182,6 +182,7 @@ service Client<Schema extends RootSchema>
      *
      * @param msg  the message to log
      */
+    @Concurrent
     protected void log(String msg)
         {
         catalog.log^(msg);
@@ -215,6 +216,7 @@ service Client<Schema extends RootSchema>
      *
      * @throws Exception if the check fails
      */
+    @Concurrent
     Boolean checkRead()
         {
         assert conn != Null;
@@ -228,6 +230,7 @@ service Client<Schema extends RootSchema>
      *
      * @throws Exception if the check fails
      */
+    @Concurrent
     Boolean checkWrite()
         {
         assert !readOnly && !tx?.txInfo.readOnly;
@@ -337,6 +340,7 @@ service Client<Schema extends RootSchema>
     /**
      * True if this is an internal ("system") client.
      */
+    @Concurrent
     @RO Boolean internal.get()
         {
         return Catalog.isInternalClientId(id);
@@ -608,6 +612,7 @@ service Client<Schema extends RootSchema>
      *
      * @return the DBObjectInfo for the specified id
      */
+    @Concurrent
     DBObjectInfo infoFor(Int id)
         {
         return catalog.infoFor(id);
@@ -655,6 +660,7 @@ service Client<Schema extends RootSchema>
      *
      * @return the new DBObjectImpl
      */
+    @Concurrent
     DBObjectImpl createImpl(Int id)
         {
         if (id <= 0)
@@ -697,6 +703,7 @@ service Client<Schema extends RootSchema>
             };
         }
 
+    @Concurrent
     private DBMapImpl createDBMapImpl(DBObjectInfo info, MapStore store)
         {
         assert Type keyType := info.typeParams.get("Key"),
@@ -707,6 +714,7 @@ service Client<Schema extends RootSchema>
         return new DBMapImpl<keyType.DataType, valType.DataType>(info, store);
         }
 
+    @Concurrent
     private DBLogImpl createDBLogImpl(DBObjectInfo info, LogStore store)
         {
         assert Type elementType := info.typeParams.get("Element"),
@@ -715,6 +723,7 @@ service Client<Schema extends RootSchema>
         return new DBLogImpl<elementType.DataType>(info, store);
         }
 
+    @Concurrent
     private DBProcessorImpl createDBProcessorImpl(DBObjectInfo info, ProcessorStore store)
         {
         assert Type messageType := info.typeParams.get("Message"),
@@ -723,6 +732,7 @@ service Client<Schema extends RootSchema>
         return new DBProcessorImpl<messageType.DataType>(info, store);
         }
 
+    @Concurrent
     private DBValueImpl createDBValueImpl(DBObjectInfo info, ValueStore store)
         {
         assert Type valueType := info.typeParams.get("Value"),
@@ -738,6 +748,7 @@ service Client<Schema extends RootSchema>
      *
      * @return the DBObjectInfo for the specified id
      */
+    @Concurrent
     ObjectStore storeFor(Int id)
         {
         return catalog.storeFor(id);
@@ -754,6 +765,7 @@ service Client<Schema extends RootSchema>
      * letting that work fall onto more critical services, such AS the various `ObjectStore`
      * services.
      */
+    @Concurrent
     static service Worker(json.Schema jsonSchema)
         {
         /**
@@ -852,6 +864,7 @@ service Client<Schema extends RootSchema>
     /**
      * The non-transactional TxContext.
      */
+    @Concurrent
     protected class NtxContext
             extends TxContext
         {
@@ -925,33 +938,38 @@ service Client<Schema extends RootSchema>
             }
 
         @Override
+        @Concurrent
         @RO DBObject!? dbParent.get()
             {
             return implFor(info_.parentId);
             }
 
         @Override
+        @Concurrent
         @RO DBCategory dbCategory.get()
             {
             return info_.category;
             }
 
         @Override
+        @Concurrent
         @RO String dbName.get()
             {
             return info_.name;
             }
 
         @Override
+        @Concurrent
         @RO Path dbPath.get()
             {
             return info_.path;
             }
 
         @Override
+        @Concurrent
         @Lazy Map<String, DBObject> dbChildren.calc()
             {
-            return new Map()
+            return new /* TODO GG @Concurrent */ Map()
                 {
                 @Override
                 conditional DBObject get(String key)
