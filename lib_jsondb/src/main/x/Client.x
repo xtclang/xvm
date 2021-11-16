@@ -969,7 +969,7 @@ service Client<Schema extends RootSchema>
         @Concurrent
         @Lazy Map<String, DBObject> dbChildren.calc()
             {
-            return new /* TODO GG @Concurrent */ Map()
+            return new Map()
                 {
                 @Override
                 conditional DBObject get(String key)

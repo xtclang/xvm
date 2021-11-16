@@ -186,6 +186,20 @@ public class AnnotatedTypeExpression
         type.collectAnonInnerClassInfo(info);
         }
 
+    @Override
+    protected void setTypeConstant(TypeConstant constType)
+        {
+        TypeConstant constBase = constType;
+
+        if (!m_fDisassociateClass && !m_fDisassociateRef)
+            {
+            constBase = constType.getUnderlyingType();
+            }
+        type.setTypeConstant(constBase);
+
+        super.setTypeConstant(constType);
+        }
+
 
     // ----- Expression methods --------------------------------------------------------------------
 
