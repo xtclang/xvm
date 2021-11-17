@@ -57,7 +57,7 @@ public class AnnotatedTypeExpression
      */
     public boolean isDisassociated()
         {
-        return m_fDisassociate;
+        return m_fDisassociateRef;
         }
 
     /**
@@ -66,7 +66,7 @@ public class AnnotatedTypeExpression
      */
     public boolean isIntoRef()
         {
-        return m_fDisassociate
+        return m_fDisassociateRef
             || ((type instanceof AnnotatedTypeExpression)
                 && ((AnnotatedTypeExpression) type).isIntoRef());
         }
@@ -114,7 +114,7 @@ public class AnnotatedTypeExpression
 
     protected void collectRefAnnotations(List<AnnotationExpression> list)
         {
-        if (m_fDisassociate)
+        if (m_fDisassociateRef)
             {
             list.add(annotation);
             }
@@ -181,8 +181,23 @@ public class AnnotatedTypeExpression
     @Override
     protected void collectAnonInnerClassInfo(AnonInnerClass info)
         {
+        m_fAnonInner = true;
         info.addAnnotation(getAnnotation());
         type.collectAnonInnerClassInfo(info);
+        }
+
+    @Override
+    protected void setTypeConstant(TypeConstant constType)
+        {
+        TypeConstant constBase = constType;
+
+        if (!m_fDisassociateClass && !m_fDisassociateRef)
+            {
+            constBase = constType.getUnderlyingType();
+            }
+        type.setTypeConstant(constBase);
+
+        super.setTypeConstant(constType);
         }
 
 
@@ -236,7 +251,7 @@ public class AnnotatedTypeExpression
 
         // the annotation must mix in to the Var (if it's disassociated), or into the underlying
         // type otherwise
-        if (m_fDisassociate)
+        if (m_fDisassociateRef)
             {
             Constant clzAnno = anno.getAnnotationClass();
             if (clzAnno.equals(pool.clzInject()))
@@ -274,6 +289,11 @@ public class AnnotatedTypeExpression
             typeReq = typeReferent instanceof AnnotatedTypeConstant
                     ? ((AnnotatedTypeConstant) typeReferent).getAnnotationType()
                     : typeAnno;
+            }
+        else if (m_fAnonInner && m_fDisassociateClass)
+            {
+            // a class annotation into an anonymous class (e.g. "new @Concurrent Object() {}")
+            typeReq = null;
             }
         else
             {
@@ -355,8 +375,9 @@ public class AnnotatedTypeExpression
                 }
             else
                 {
-                m_fDisassociate = typeInto.isIntoVariableType() ||
-                        isMethodParameter() && typeInto.isIntoMethodParameterType();;
+                m_fDisassociateClass = typeInto.isIntoClassType();
+                m_fDisassociateRef   = typeInto.isIntoVariableType()
+                        || isMethodParameter() && typeInto.isIntoMethodParameterType();
                 }
             }
 
@@ -369,7 +390,7 @@ public class AnnotatedTypeExpression
             }
 
         TypeConstant type;
-        if (m_fDisassociate)
+        if (m_fDisassociateClass || m_fDisassociateRef)
             {
             // our annotation is not added to the underlying type constant
             type = typeUnderlying;
@@ -416,13 +437,7 @@ public class AnnotatedTypeExpression
     @Override
     public String toString()
         {
-        StringBuilder sb = new StringBuilder();
-
-        sb.append(annotation)
-          .append(' ')
-          .append(type);
-
-        return sb.toString();
+        return String.valueOf(annotation) + ' ' + type;
         }
 
     @Override
@@ -437,7 +452,9 @@ public class AnnotatedTypeExpression
     protected AnnotationExpression annotation;
     protected TypeExpression       type;
 
-    private transient boolean m_fDisassociate;
+    private transient boolean m_fDisassociateRef;
+    private transient boolean m_fDisassociateClass;
+    private transient boolean m_fAnonInner;
     private transient boolean m_fVar;
     private transient boolean m_fInjected;
     private transient boolean m_fFinal;

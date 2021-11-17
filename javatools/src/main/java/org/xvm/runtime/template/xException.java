@@ -98,14 +98,16 @@ public class xException
 
     public static ExceptionHandle notFreezableProperty(Frame frame, String sProp, TypeConstant type)
         {
-        return makeHandle(frame, "Property \"" + sProp +
-                "\" on an immutable \"" + type.getValueString() + "\" is not freezable");
+        String sDesc = type.isConstant() ? "const" : "an immutable";
+        return makeHandle(frame, "Property \"" + sProp + "\" on " + sDesc + " \"" +
+                type.removeAccess().getValueString() + "\" is not freezable");
         }
 
     public static ExceptionHandle immutableObjectProperty(Frame frame, String sProp, TypeConstant type)
         {
-        return makeHandle(frame, "Attempt to modify property \"" + sProp +
-                "\" on an immutable \"" + type.getValueString() + '"');
+        String sDesc = type.isConstant() ? "const" : "an immutable";
+        return makeHandle(frame, "Attempt to modify property \"" + sProp + "\" on " + sDesc + " \"" +
+                type.removeAccess().getValueString() + '"');
         }
 
     public static ExceptionHandle unknownProperty(Frame frame, String sProp, TypeConstant type)

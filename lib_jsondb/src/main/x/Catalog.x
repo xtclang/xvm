@@ -59,7 +59,6 @@ import storage.SchemaStore;
  *
  * TODO version - should only be able to open the catalog with the correct TypeSystem version
  */
-@Concurrent
 service Catalog<Schema extends RootSchema>
         implements Closeable
     {
@@ -201,16 +200,19 @@ service Catalog<Schema extends RootSchema>
 
     // ----- properties ----------------------------------------------------------------------------
 
+    @Concurrent
     @Inject Clock clock;
 
     /**
      * The timestamp from when this Catalog was created; used as an assumed-unique identifier.
      */
+    @Concurrent
     public/private DateTime timestamp;
 
     /**
      * The directory used to store the contents of the database
      */
+    @Concurrent
     public/private Directory dir;
 
     /**
@@ -219,11 +221,13 @@ service Catalog<Schema extends RootSchema>
      * emits as output a new module that provides a custom binding of the application's "@Database"
      * module to the `jsondb` implementation of the `oodb` database API.
      */
+    @Concurrent
     public/private CatalogMetadata<Schema>? metadata;
 
     /**
      * The JSON Schema to use.
      */
+    @Concurrent
     @Lazy json.Schema jsonSchema.calc()
         {
         return metadata?.jsonSchema : json.Schema.DEFAULT;
@@ -232,6 +236,7 @@ service Catalog<Schema extends RootSchema>
     /**
      * The JSON Schema to use for the various classes in the database implementation itself.
      */
+    @Concurrent
     @Lazy json.Schema internalJsonSchema.calc()
         {
         return new json.Schema(
@@ -244,6 +249,7 @@ service Catalog<Schema extends RootSchema>
     /**
      * A JSON Mapping to use to serialize instances of SysInfo.
      */
+    @Concurrent
     @Lazy Mapping<SysInfo> sysInfoMapping.calc()
         {
         return internalJsonSchema.ensureMapping(SysInfo);
@@ -252,12 +258,14 @@ service Catalog<Schema extends RootSchema>
     /**
      * True iff the database was opened in read-only mode.
      */
+    @Concurrent
     public/private Boolean readOnly;
 
     /**
      * The version of the database represented by this `Catalog` object. The version may not be
      * available before the database is opened.
      */
+    @Concurrent
     public/private Version? version;
 
     /**
@@ -294,6 +302,7 @@ service Catalog<Schema extends RootSchema>
      * The transaction manager for this `Catalog` object. The transaction manager provides a
      * sequential ordered (non-concurrent) application of potentially concurrent transactions.
      */
+    @Concurrent
     @Lazy public/private TxManager txManager.calc()
         {
         return new TxManager(this);
@@ -303,6 +312,7 @@ service Catalog<Schema extends RootSchema>
      * The process scheduler for this `Catalog` object. The scheduler supports the asynchronous
      * processing by the database.
      */
+    @Concurrent
     @Lazy public/private Scheduler scheduler.calc()
         {
         return new Scheduler(this);
@@ -329,6 +339,7 @@ service Catalog<Schema extends RootSchema>
     // ----- visibility ----------------------------------------------------------------------------
 
     @Override
+    @Concurrent
     String toString()
         {
         return $|{this:class.name}:\{dir={dir}, version={version}, status={status},
@@ -342,6 +353,7 @@ service Catalog<Schema extends RootSchema>
     /**
      * An error and message log for the database.
      */
+    @Concurrent
     void log(String msg)
         {
         // TODO
@@ -356,6 +368,7 @@ service Catalog<Schema extends RootSchema>
      *
      * @return the DBObjectInfo for the specified id
      */
+    @Concurrent
     DBObjectInfo infoFor(Int id)
         {
         if (id < 0)
@@ -378,6 +391,7 @@ service Catalog<Schema extends RootSchema>
      *
      * @return the ObjectStore for the specified id
      */
+    @Concurrent
     ObjectStore storeFor(Int id)
         {
         ObjectStore?[] stores = appStores;
@@ -448,7 +462,8 @@ service Catalog<Schema extends RootSchema>
      *
      * @return the new ObjectStore
      */
-    ObjectStore createStore(Int id)
+    @Concurrent
+    protected ObjectStore createStore(Int id)
         {
         DBObjectInfo info = infoFor(id);
         if (id <= 0)
@@ -508,6 +523,7 @@ service Catalog<Schema extends RootSchema>
             }
         }
 
+    @Concurrent
     private ObjectStore createMapStore(DBObjectInfo info)
         {
         assert Type keyType := info.typeParams.get("Key"),
@@ -520,6 +536,7 @@ service Catalog<Schema extends RootSchema>
                 jsonSchema.ensureMapping(valType).as(Mapping<valType.DataType>));
         }
 
+    @Concurrent
     private ObjectStore createCounterStore(DBObjectInfo info)
         {
         return info.transactional
@@ -527,6 +544,7 @@ service Catalog<Schema extends RootSchema>
                 : new JsonNtxCounterStore(this, info);
         }
 
+    @Concurrent
     private ObjectStore createValueStore(DBObjectInfo info)
         {
         assert Type valueType := info.typeParams.get("Value"),
@@ -539,6 +557,7 @@ service Catalog<Schema extends RootSchema>
                 initial.as(valueType.DataType));
         }
 
+    @Concurrent
     private ObjectStore createLogStore(DBObjectInfo info)
         {
         assert Type elementType := info.typeParams.get("Element"),
@@ -558,6 +577,7 @@ service Catalog<Schema extends RootSchema>
     /**
      * The file used to store the "in-use" status for the database.
      */
+    @Concurrent
     @Lazy File statusFile.calc()
         {
         return dir.fileFor("sys.json");
@@ -572,14 +592,10 @@ service Catalog<Schema extends RootSchema>
      *
      * @throws IllegalState  if the Catalog is not `Empty`, or is read-only
      */
+    @Synchronized
     void create(String name)
         {
-        using (new SynchronizedSection())
-            {
-            transition(Closed, Configuring, snapshot -> snapshot.empty);
-
-            // TODO maybe return a config API?
-            }
+        transition(Closed, Configuring, snapshot -> snapshot.empty);
         }
 
     /**
@@ -589,14 +605,10 @@ service Catalog<Schema extends RootSchema>
      *
      * @throws IllegalState  if the Catalog is not `Closed` or `Running`, or is read-only
      */
+    @Synchronized
     void edit()
         {
-        using (new SynchronizedSection())
-            {
-            transition([Closed, Recovering, Running], Configuring, snapshot -> !snapshot.empty && !snapshot.lockedOut);
-
-            // TODO maybe return a config API?
-            }
+        transition([Closed, Recovering, Running], Configuring, snapshot -> !snapshot.empty && !snapshot.lockedOut);
         }
 
     /**
@@ -605,80 +617,78 @@ service Catalog<Schema extends RootSchema>
      *
      * @throws IllegalState  if the Catalog is not locked-out or `Closed`
      */
+    @Synchronized
     void recover()
         {
-        using (new SynchronizedSection())
+        transition(Closed, Recovering, snapshot -> !snapshot.empty || sysDir.exists, ignoreLock = True);
+
+        txManager.enable();
+
+        ObjectStore[] repair = new ObjectStore[];
+        if (CatalogMetadata metadata ?= this.metadata)
             {
-            transition(Closed, Recovering, snapshot -> !snapshot.empty || sysDir.exists, ignoreLock = True);
-
-            txManager.enable();
-
-            ObjectStore[] repair = new ObjectStore[];
-            if (CatalogMetadata metadata ?= this.metadata)
+            for (DBObjectInfo info : metadata.dbObjectInfos)
                 {
-                for (DBObjectInfo info : metadata.dbObjectInfos)
+                if (info.lifeCycle != Removed)
                     {
-                    if (info.lifeCycle != Removed)
+                    // get the storage
+                    ObjectStore store = storeFor(info.id);
+
+                    // validate the storage
+                    try
                         {
-                        // get the storage
-                        ObjectStore store = storeFor(info.id);
-
-                        // validate the storage
-                        try
+                        if (store.deepScan())
                             {
-                            if (store.deepScan())
-                                {
-                                continue;
-                                }
-
-                            log($"During recovery, corruption was detected in \"{info.path}\"");
-                            }
-                        catch (Exception e)
-                            {
-                            log($"During recovery, an error occurred in the deepScan() of \"{info.path}\": {e}");
+                            continue;
                             }
 
-                        repair += store;
+                        log($"During recovery, corruption was detected in \"{info.path}\"");
                         }
+                    catch (Exception e)
+                        {
+                        log($"During recovery, an error occurred in the deepScan() of \"{info.path}\": {e}");
+                        }
+
+                    repair += store;
                     }
                 }
-            else
-                {
-                TODO("need an algorithm that finds all of the implied Storage impls based on the info in /sys/*");
-                }
+            }
+        else
+            {
+            TODO("need an algorithm that finds all of the implied Storage impls based on the info in /sys/*");
+            }
 
 // REVIEW CP - why did the algorithm have to scan everything before doing any repairs?
 
-            Boolean error = False;
-            for (ObjectStore store : repair)
+        Boolean error = False;
+        for (ObjectStore store : repair)
+            {
+            try
                 {
-                try
+                // repair the storage
+                if (store.deepScan(fix=True))
                     {
-                    // repair the storage
-                    if (store.deepScan(fix=True))
-                        {
-                        log($"Successfully recovered \"{store.info.path}\"");
-                        continue;
-                        }
-
-                    log($"During recovery, unable to fix \"{store.info.path}\"");
-                    }
-                catch (Exception e)
-                    {
-                    log($"During recovery, unable to fix \"{store.info.path}\" due to an error: {e}");
+                    log($"Successfully recovered \"{store.info.path}\"");
+                    continue;
                     }
 
-                error = True;
+                log($"During recovery, unable to fix \"{store.info.path}\"");
+                }
+            catch (Exception e)
+                {
+                log($"During recovery, unable to fix \"{store.info.path}\" due to an error: {e}");
                 }
 
-            if (error)
-                {
-                transition(Recovering, Closed);
-                }
-            else
-                {
-                transition(Recovering, Running, snapshot -> snapshot.owned);
-                }
+            error = True;
+            }
+
+        if (error)
+            {
+            transition(Recovering, Closed);
+            }
+        else
+            {
+            transition(Recovering, Running, snapshot -> snapshot.owned);
             }
         }
 
@@ -688,16 +698,21 @@ service Catalog<Schema extends RootSchema>
      *
      * @throws IllegalState  if the Catalog is not `Closed`, `Recovering`, or `Configuring`
      */
+    @Synchronized
     void open()
         {
-        using (new SynchronizedSection())
-            {
-            transition([Closed, Recovering, Configuring], Running,
-                    snapshot -> snapshot.owned || snapshot.unowned,
-                    allowReadOnly = True);
+        transition([Closed, Recovering, Configuring], Running,
+                snapshot -> snapshot.owned || snapshot.unowned,
+                allowReadOnly = True);
 
-            txManager.enable();
-            // TODO
+        if (!txManager.enable())
+            {
+            close();
+            }
+
+        if (!scheduler.enable())
+            {
+            close();
             }
         }
 
@@ -705,27 +720,26 @@ service Catalog<Schema extends RootSchema>
      * Close this `Catalog`.
      */
     @Override
+    @Synchronized
     void close(Exception? cause = Null)
         {
-        using (new SynchronizedSection())
+        switch (status)
             {
-            switch (status)
-                {
-                case Configuring:
-                case Recovering:
-                    transition(status, Closed, snapshot -> snapshot.owned);
-                    break;
+            case Configuring:
+            case Recovering:
+                transition(status, Closed, snapshot -> snapshot.owned);
+                break;
 
-                case Running:
-                    txManager.disable();
-                    continue;
-                case Closed:
-                    transition(status, Closed, snapshot -> snapshot.owned, allowReadOnly = True);
-                    break;
+            case Running:
+                scheduler.disable();
+                txManager.disable();
+                continue;
+            case Closed:
+                transition(status, Closed, snapshot -> snapshot.owned, allowReadOnly = True);
+                break;
 
-                default:
-                    assert;
-                }
+            default:
+                assert;
             }
         }
 
@@ -735,24 +749,22 @@ service Catalog<Schema extends RootSchema>
      *
      * @throws IllegalState  if the Catalog is not `Configuring` or `Closed`, or is read-only
      */
+    @Synchronized
     void delete()
         {
-        using (new SynchronizedSection())
+        transition([Closed, Configuring], Configuring, snapshot -> snapshot.owned || snapshot.unowned);
+
+        for (Directory subdir : dir.dirs())
             {
-            transition([Closed, Configuring], Configuring, snapshot -> snapshot.owned || snapshot.unowned);
-
-            for (Directory subdir : dir.dirs())
-                {
-                subdir.deleteRecursively();
-                }
-
-            for (File file : dir.files())
-                {
-                file.delete();
-                }
-
-            transition(status, Closed, snapshot -> snapshot.empty);
+            subdir.deleteRecursively();
             }
+
+        for (File file : dir.files())
+            {
+            file.delete();
+            }
+
+        transition(status, Closed, snapshot -> snapshot.empty);
         }
 
     /**
@@ -768,6 +780,7 @@ service Catalog<Schema extends RootSchema>
      *
      * @return True if the status has been changed
      */
+    @Synchronized
     protected void transition(Status | Status[]         requiredStatus,
                               Status                    targetStatus,
                               function Boolean(Glance)? canTransition = Null,
@@ -869,6 +882,7 @@ service Catalog<Schema extends RootSchema>
      *
      * @return a point-in-time snap-shot of the status of the database on disk
      */
+    @Synchronized
     Glance glance()
         {
         SysInfo?   info  = Null;
@@ -940,16 +954,27 @@ service Catalog<Schema extends RootSchema>
     /**
      * The file used to indicate a short-term lock.
      */
+    @Concurrent
     @Lazy File lockFile.calc()
         {
         return dir.fileFor("sys.lock");
         }
 
+    /**
+     * The directory containing the system schema data and other internal files.
+     */
+    @Concurrent
     @Lazy Directory sysDir.calc()
         {
         return dir.dirFor("sys");
         }
 
+    /**
+     * Obtain the lock on the catalog.
+     *
+     * @return a lock, which should be closed to release it
+     */
+    @Synchronized
     protected Closeable lock(Boolean ignorePreviousLock)
         {
         String           path  = lockFile.path.toString();
@@ -997,8 +1022,6 @@ service Catalog<Schema extends RootSchema>
         }
 
 
-    // ----- ObjectStore services for each DBObject ------------------------------------------------
-
     // ----- Client (Connection) management --------------------------------------------------------
 
     /**
@@ -1007,6 +1030,7 @@ service Catalog<Schema extends RootSchema>
      * @param dbUser  (optional) the database user that the connection will be created on behalf of;
      *                defaults to the database super-user
      */
+    @Concurrent
     Connection createConnection(DBUser? dbUser = Null)
         {
         return createClient(dbUser).conn ?: assert;
@@ -1026,9 +1050,11 @@ service Catalog<Schema extends RootSchema>
      *
      * @return a new `Client` instance
      */
+    @Concurrent
     Client<Schema> createClient(DBUser? dbUser=Null, Boolean readOnly=False, Boolean system=False)
         {
-            dbUser   ?:= DefaultUser;
+        dbUser ?:= DefaultUser;
+
         Int clientId   = system ? genInternalClientId() : genClientId();
         val metadata   = this.metadata;
 
@@ -1076,6 +1102,7 @@ service Catalog<Schema extends RootSchema>
      *
      * @param client  the Client object to register
      */
+    @Concurrent
     protected void registerClient(Client client)
         {
         assert clients.putIfAbsent(client.id, client);
@@ -1086,6 +1113,7 @@ service Catalog<Schema extends RootSchema>
      *
      * @param client  the Client object to unregister
      */
+    @Concurrent
     protected void unregisterClient(Client client)
         {
         assert client.catalog == this;

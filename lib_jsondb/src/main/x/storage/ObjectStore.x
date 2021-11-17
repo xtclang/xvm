@@ -35,7 +35,6 @@ import json.Doc;
  *
  * TODO background maintenance
  */
-@Concurrent
 service ObjectStore(Catalog catalog, DBObjectInfo info)
         implements Hashable
         implements Closeable
@@ -59,6 +58,7 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
      * TxManager is lazily obtained from the Catalog service and then cached here, to avoid service
      * hopping just to get a reference to the TxManager every time that it is needed.
      */
+    @Concurrent
     protected @Lazy TxManager txManager.calc()
         {
         return catalog.txManager;
@@ -110,6 +110,7 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
      * directory is used to load data from and store data into by this ObjectStore. Generally, the
      * ObjectStore does not use the `containingDir` directly.
      */
+    @Concurrent
     @Lazy public/private Directory containingDir.calc()
         {
         // TODO this should be a lot easier ... e.g.: return catalog.dir.apply(path);
@@ -133,6 +134,7 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
      * directory with any name can be created, modified, and removed by this ObjectStore except for
      * the file nodes named `A`, `B`, or `C`.)
      */
+    @Concurrent
     @Lazy public/private Directory dataDir.calc()
         {
         return containingDir.dirFor(info.name).ensure();
@@ -185,6 +187,7 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
      * Determine if this ObjectStore for a DBObject is allowed to write to disk. True iff the
      * catalog is not read only and the DBObject has not been deprecated or removed.
      */
+    @Concurrent
     protected Boolean defaultWriteable.get()
         {
         return !catalog.readOnly && info.lifeCycle == Current
@@ -305,24 +308,22 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
      *
      * @throws IllegalState  if the ObjectStore is not `Closed`
      */
+    @Synchronized
     Boolean recover()
         {
         assert status == Closed as $"Illegal attempt to recover {info.name.quoted()} storage while {status}";
 
         status = Recovering;
-        using (new SynchronizedSection(critical=True))
+        if (deepScan(True))
             {
-            if (deepScan(True))
-                {
-                status    = Running;
-                writeable = defaultWriteable;
-                return True;
-                }
-
-            status    = Closed;
-            writeable = False;
-            return False;
+            status    = Running;
+            writeable = defaultWriteable;
+            return True;
             }
+
+        status    = Closed;
+        writeable = False;
+        return False;
         }
 
     /**
@@ -333,36 +334,32 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
      *
      * @throws IllegalState  if the ObjectStore is not `Closed`
      */
+    @Synchronized
     Boolean open()
         {
         assert status == Closed as $"Illegal attempt to open {info.name.quoted()} storage while {status}";
-        using (new SynchronizedSection(critical=True))
+        if (quickScan())
             {
-            if (quickScan())
-                {
-                status    = Running;
-                writeable = defaultWriteable;
-                return True;
-                }
-
-            status    = Closed;
-            writeable = False;
-            return False;
+            status    = Running;
+            writeable = defaultWriteable;
+            return True;
             }
+
+        status    = Closed;
+        writeable = False;
+        return False;
         }
 
     /**
      * Close this `ObjectStore`.
      */
     @Override
+    @Synchronized
     void close(Exception? cause = Null)
         {
         if (status == Running)
             {
-            using (new SynchronizedSection(critical=True))
-                {
-                unload();
-                }
+            unload();
             }
 
         status    = Closed;
@@ -372,6 +369,7 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
     /**
      * Delete the contents of the ObjectStore's persistent data.
      */
+    @Synchronized
     void delete()
         {
         switch (status)
@@ -379,23 +377,20 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
             case Recovering:
             case Configuring:
             case Closed:
-                using (new SynchronizedSection(critical=True))
+                model        = Empty;
+                filesUsed    = 0;
+                bytesUsed    = 0;
+
+                Directory dir = dataDir;
+                if (dir.exists)
                     {
-                    model        = Empty;
-                    filesUsed    = 0;
-                    bytesUsed    = 0;
-
-                    Directory dir = dataDir;
-                    if (dir.exists)
-                        {
-                        dir.deleteRecursively();
-                        }
-
-                    // this cannot be assumed to be correct, since the filing system could run on
-                    // a different clock, so make sure that the timestamp is not moving backwards
-                    @Inject Clock clock;
-                    lastModified = lastModified?.maxOf(clock.now) : clock.now;
+                    dir.deleteRecursively();
                     }
+
+                // this cannot be assumed to be correct, since the filing system could run on
+                // a different clock, so make sure that the timestamp is not moving backwards
+                @Inject Clock clock;
+                lastModified = lastModified?.maxOf(clock.now) : clock.now;
                 break;
 
             case Running:
@@ -426,7 +421,8 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
      * @return True if the transaction is a write transaction
      * @return (conditional) the Changes record for the transaction
      */
-    conditional Changes checkTx(Int txId, Boolean writing=False)
+    @Concurrent
+    protected conditional Changes checkTx(Int txId, Boolean writing=False)
         {
         if (isWriteTx(txId))
             {
@@ -499,7 +495,7 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
      * @return True if the transaction exists on this ObjectStore
      * @return (conditional) the Changes record for the transaction
      */
-    conditional Changes peekTx(Int txId)
+    protected conditional Changes peekTx(Int txId)
         {
         return inFlight.get(writeIdFor(txId));
         }
@@ -544,6 +540,7 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
      *
      * @return a [PrepareResult] indicating the result of the `prepare()` operation
      */
+    @Concurrent
     PrepareResult prepare(Int writeId, Int prepareId)
         {
         TODO
@@ -556,6 +553,7 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
      * @param txId  the transaction ID that indications which of validation, rectification, and
      *              distribution is the trigger type that is going to be occurring
      */
+    @Concurrent
     void triggerBegin(Int txId)
         {
         assert isWriteTx(txId) && triggerWriteId == NO_TX;
@@ -568,6 +566,7 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
      *
      * @param writeId  the transaction ID that was previously passed to [triggerBegin]
      */
+    @Concurrent
     void triggerEnd(Int txId)
         {
         assert isWriteTx(txId) && triggerWriteId == txId;
@@ -603,6 +602,7 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
      *
      * @return a [MergeResult] indicating the result of the `mergePrepare()` operation
      */
+    @Concurrent
     MergeResult mergePrepare(Int writeId, Int prepareId)
         {
         TODO
@@ -621,6 +621,7 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
      * @throws Exception on any failure, including if serialization of the transactional data into
      *         the JSON log format fails
      */
+    @Concurrent
     String sealPrepare(Int writeId)
         {
         TODO
@@ -635,6 +636,7 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
      *
      * @throws Exception on any failure
      */
+    @Concurrent
     void commit(Int[] writeIds)
         {
         for (Int writeId : writeIds)
@@ -651,6 +653,7 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
      *
      * @throws Exception on any failure
      */
+    @Concurrent
     void commit(Int writeId)
         {
         commit([writeId]);
@@ -668,6 +671,7 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
      *
      * @throws Exception on hard failure
      */
+    @Concurrent
     void rollback(Int writeId)
         {
         TODO
@@ -684,6 +688,7 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
      * @param force       (optional) specify True to force the ObjectStore to immediately clean out
      *                    all older transactions in order to synchronously compress the storage
      */
+    @Concurrent
     void retainTx(OrderedSet<Int> inUseTxIds, Boolean force = False)
         {
         TODO
@@ -697,6 +702,7 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
      *
      * @return an iterator over all of the files that are presumed to be owned by this storage
      */
+    @Synchronized
     Iterator<File> findFiles()
         {
         return dataDir.files().filter(f -> f.name.endsWith(".json")).toArray().iterator();
@@ -709,6 +715,7 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
      * @return True if no issues were detected (which does not guarantee that no issues exist);
      *         False indicates that fixes are required
      */
+    @Synchronized
     Boolean quickScan()
         {
         model        = Empty;
@@ -750,6 +757,7 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
      * @return True if the scan is clean (which, if `fix` is True, indicates that the scan corrected
      *         any errors that it encountered)
      */
+    @Synchronized
     Boolean deepScan(Boolean fix = True)
         {
         // knowledge of how to perform a deep scan is handled by specific ObjectStore sub-classes
@@ -763,9 +771,10 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
      *
      * @throws Exception if the check fails
      */
+    @Concurrent
     Boolean checkRead()
         {
-        return status == Recovering || status == Running && ready()
+        return status == Recovering || status == Running && ensureReady()
             || throw new IllegalState($"Read is not permitted for {info.name.quoted()} storage when status is {status}");
         }
 
@@ -778,11 +787,12 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
      *
      * @throws Exception if the check fails
      */
+    @Concurrent
     Boolean checkWrite()
         {
         return (writeable
                 || throw new IllegalState($"Write is not enabled for the {info.name.quoted()} storage"))
-            && (status == Recovering || status == Running && ready()
+            && (status == Recovering || status == Running && ensureReady()
                 || throw new IllegalState($"Write is not permitted for {info.name.quoted()} storage when status is {status}"));
         }
 
@@ -793,20 +803,36 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
      *
      * @throws Exception if loading the initial data fails in any way
      */
-    protected Boolean ready()
+    @Concurrent
+    Boolean ensureReady()
         {
         if (!loaded)
             {
-            using (new SynchronizedSection(critical=True))
+            makeReady();
+            }
+
+        return True;
+        }
+
+    /**
+     * Ensure that the ObjectStore has loaded its initial set of data from disk.
+     *
+     * @return True
+     *
+     * @throws Exception if loading the initial data fails in any way
+     */
+    @Synchronized
+    Boolean makeReady()
+        {
+        if (!loaded)
+            {
+            if (model == Empty)
                 {
-                if (model == Empty)
-                    {
-                    initializeEmpty();
-                    }
-                else
-                    {
-                    loadInitial();
-                    }
+                initializeEmpty();
+                }
+            else
+                {
+                loadInitial();
                 }
             loaded = True;
             }
@@ -817,6 +843,7 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
     /**
      * Initialize the ObjectStore as empty, to its default state.
      */
+    @Synchronized
     void initializeEmpty()
         {
         assert model == Empty;
@@ -825,6 +852,7 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
     /**
      * Load the necessary ObjectStore state from disk.
      */
+    @Synchronized
     void loadInitial()
         {
         TODO
@@ -833,6 +861,7 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
     /**
      * Jettison any loaded data.
      */
+    @Synchronized
     void unload()
         {
         TODO
@@ -843,6 +872,7 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
      *
      * @param err  an error message to add to the log
      */
+    @Concurrent
     void log(String err)
         {
         catalog.log^(err);
@@ -851,11 +881,13 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
     /**
      * Update the access statistics.
      */
+    @Concurrent
     void updateReadStats()
         {
         @Inject Clock clock;
         lastAccessed = clock.now;
         }
+
 
     // ----- Hashable funky interface --------------------------------------------------------------
 
