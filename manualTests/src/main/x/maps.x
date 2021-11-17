@@ -37,16 +37,19 @@ module TestMaps
         testBasicOps(new SkiplistMap());
         testBasicOps(new ConcurrentHashMap());
 
+//        testProcess(new SharedHashMap());
+        testProcess(new ConcurrentHashMap());
+
         // concurrency performance comparison of maps
 //        Int concurrency = 8;
-//        Int keys = 100_000;
-//        Int iterations = 1_000_000;
+//        Int keys = 10_000;
+//        Int iterations = 100_000;
 //        for (Int i : 0..3)
 //            {
 //            console.println("Concurrent load test of HashMap...");
 //            testConcurrentLoad(new SharedHashMap(),     concurrency, keys, iterations);
 //            console.println("Concurrent load test of ConcurrentHashMap...");
-//            testConcurrentLoad(new ConcurrentHashMap(), concurrency, keys, iterations);
+//            testConcurrentLoad(new ConcurrentHashMap(), concurrency, iterations, keys);
 //            }
 
 //        for (UInt seed : 1..500)
@@ -379,6 +382,36 @@ module TestMaps
             }
         }
 
+    void testProcess(Map<Int, Int> map)
+        {
+        console.println("test process");
+        map.put(0, 0);
+
+        // TODO: GG java NPE: map.process(0, {e -> e.value++;});
+
+        Int f = map.process^(0, e ->
+            {
+            @Inject Timer timer;
+            @Future Int   result;
+            timer.schedule(Duration:1s, () ->
+                {
+                result = 42;
+                });
+
+            e.value++;
+            return result;
+            });
+
+        // schedule an overlapping process on the same key, this should
+        // be queued behind the former async task
+        map.process(0, e ->
+            {
+            e.value++;
+            });
+
+        assert map.getOrNull(0) == 2;
+        }
+
     void testConcurrentLoad(Map<Int, Int> map, Int concurrency, Int iterations, Int range)
         {
 
@@ -397,6 +430,7 @@ module TestMaps
 
         Duration time = timer.elapsed;
         console.println($"Elapsed {time.milliseconds} ms");
+        //console.println(map);
         }
 
     service LoadGenerator
@@ -407,7 +441,17 @@ module TestMaps
             {
             for (Int i : 0..iterations)
                 {
-                map.put(rnd.int(range), 42);
+                if (i % 10 == 0)
+                    {
+                    map.process(rnd.int(range), e ->
+                        {
+                        e.value = e.exists ? e.value + 1 : 1;
+                        });
+                    }
+                else
+                    {
+                    map.put(rnd.int(range), 42);
+                    }
                 //map.put((i * seed * 1000) % range, 42);
                 }
 

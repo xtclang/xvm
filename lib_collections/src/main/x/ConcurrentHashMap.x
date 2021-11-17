@@ -8,6 +8,8 @@ import ecstasy.collections.HashMap;
 import ecstasy.collections.ImmutableAble;
 import ecstasy.collections.NaturalHasher;
 
+import ecstasy.collections.maps.KeyEntry;
+
 /**
  * A hash based map which allows for concurrent access.
  *
@@ -160,7 +162,7 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
     @Override
     ConcurrentHashMap put(Key key, Value value)
         {
-        partitionOf(key).put(key, value);
+        partitionOf(key).putSafe(key, value);
         return this;
         }
 
@@ -206,10 +208,10 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
         }
 
     @Override
-    public
     <Result> Result process(Key key, function Result(Entry) compute)
         {
-        return partitionOf(key).process(key, compute);
+        Result result = partitionOf(key).process^(key, compute);
+        return &result;
         }
 
     @Override
@@ -412,6 +414,7 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
         construct(Hasher<Key> hasher, Int partitionCount)
             {
             this.partitionCount = partitionCount;
+            pendingByKey = new HashMap();
             construct HashMap(hasher, 0);
             }
 
@@ -423,8 +426,70 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
          */
         protected Int partitionCount;
 
+        /**
+         * A secondary map of pending operations.
+         */
+        protected HashMap<Key, FutureVar> pendingByKey;
+
+        // ----- Partition methods -----------------------------------------------------------------
+
+        /**
+         * Perform a [put] operation, potentially queueing it behind pending actions.
+         *
+         * @param key the key
+         * @param value the value
+         */
+        @Concurrent
+        protected void putSafe(Key key, Value value)
+            {
+            if (pendingByKey.contains(key))
+                {
+                process(key, e -> {e.value = value;});
+                }
+            else
+                {
+                put(key, value);
+                }
+            }
 
         // ----- HashMap methods -------------------------------------------------------------------
+
+        @Override
+        @Concurrent
+        <Result> Result process(Key key, function Result(Entry) compute)
+            {
+            // TODO, route all mutating CHM methods though process (if there are pending actions)
+            // so that they don't invalidate the k/v pairings seen by process. Non-mutating CHM
+            // methods will remain unordered, similar to Java's CHM.
+
+            Entry entry = new @KeyEntry(key) Entry() {};
+            @Future Result result;
+            FutureVar rVar = &result;
+
+            // ensure that when we complete if there are no more pending actions that
+            // we clean our entry from the pending map
+            // TODO: GG &result.thenDo(() -> pendingByKey.remove(key, &result));
+
+            // TODO: GG this NPEs in Java in concurrency when contention is detected
+            // rVar.thenDo(() -> pendingByKey.remove(key, rVar));
+
+            if (FutureVar pending := pendingByKey.get(key))
+                {
+                // there are pending operations, add our action to the end of the list
+                // TODO: it would be nice to have a callback when an @Concurrent frame yields
+                // this would allow me to only do the extra bookkeeping when we actually yield
+                pendingByKey.put(key, rVar);
+                pending.thenDo(() -> {result = compute(entry);});
+                }
+            else
+                {
+                // no contention; register our action and run async
+                pendingByKey.put(key, rVar);
+                result = compute(entry);
+                }
+
+            return &result;
+            }
 
         @Override
         protected (Int bucketCount, Int growAt, Int shrinkAt) selectBucketCount(Int capacity)
