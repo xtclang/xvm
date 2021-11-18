@@ -37,17 +37,17 @@ module TestMaps
         testBasicOps(new SkiplistMap());
         testBasicOps(new ConcurrentHashMap());
 
-//        testProcess(new SharedHashMap());
+// TODO: deadlocks        testProcess(new SafeHashMap());
         testProcess(new ConcurrentHashMap());
 
         // concurrency performance comparison of maps
 //        Int concurrency = 8;
-//        Int keys = 10_000;
-//        Int iterations = 100_000;
+//        Int keys = 1_000;
+//        Int iterations = 10_000;
 //        for (Int i : 0..3)
 //            {
 //            console.println("Concurrent load test of HashMap...");
-//            testConcurrentLoad(new SharedHashMap(),     concurrency, keys, iterations);
+//            testConcurrentLoad(new SafeHashMap(), concurrency, iterations, keys);
 //            console.println("Concurrent load test of ConcurrentHashMap...");
 //            testConcurrentLoad(new ConcurrentHashMap(), concurrency, iterations, keys);
 //            }
@@ -55,7 +55,7 @@ module TestMaps
 //        for (UInt seed : 1..500)
 //            {
 //            log.add($"iteration #{seed}");
-//            testRandomOps(new SkiplistMap(), seed);
+//            testRandomOps(new ConcurrentHashMap(), seed);
 //            }
         }
 
@@ -389,7 +389,8 @@ module TestMaps
 
         // TODO: GG java NPE: map.process(0, {e -> e.value++;});
 
-        Int f = map.process^(0, e ->
+        // run a long running blocking processor in the background
+        map.process^(0, e ->
             {
             @Inject Timer timer;
             @Future Int   result;
@@ -398,18 +399,33 @@ module TestMaps
                 result = 42;
                 });
 
+            console.println($"{tag()} process(0)");
             e.value++;
             return result;
             });
 
-        // schedule an overlapping process on the same key, this should
-        // be queued behind the former async task
-        map.process(0, e ->
+        // write to an alternate key; should not block with CHM even on the same partition
+        map.put(17, 1);
+        console.println($"{tag()} put(17)");
+
+        // read of the same key as long write; CHM should not block
+        map.get(0);
+        console.println($"{tag()} get(0)");
+
+        // write to the same key; CHM should block until original write completes
+        map.put(0, 1);
+        console.println($"{tag()} put(0)");
+
+        // processor based write to the same key; CHM should also block
+        Int n = map.process(0, e ->
             {
-            e.value++;
+            console.println($"{tag()} process(0)'");
+            return ++e.value;
             });
 
-        assert map.getOrNull(0) == 2;
+        // verify that our second process didn't finish until after our
+        // delayed first one on the same key
+        assert n == 2;
         }
 
     void testConcurrentLoad(Map<Int, Int> map, Int concurrency, Int iterations, Int range)
@@ -452,6 +468,8 @@ module TestMaps
                     {
                     map.put(rnd.int(range), 42);
                     }
+
+                map.get(rnd.int(range));
                 //map.put((i * seed * 1000) % range, 42);
                 }
 
@@ -460,8 +478,20 @@ module TestMaps
             }
         }
 
-    service SharedHashMap<Key, Value>
+    service SafeHashMap<Key, Value>
         extends HashMap<Key, Value>
         {
         }
+
+    static DateTime now()
+        {
+        @Inject Clock clock;
+        return clock.now;
+        }
+
+    static String tag()
+        {
+        static DateTime base = now();
+        return $"{(now() - base).seconds}:\t" + (this:service.serviceName == "TestService" ? "[svc ]" : "[main]");
+        }        
     }

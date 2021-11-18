@@ -13,9 +13,14 @@ import ecstasy.collections.maps.KeyEntry;
 /**
  * A hash based map which allows for concurrent access.
  *
- * As compared to [HashMap] this allows multiple services to access the map in concurrently.
+ * As compared to [HashMap] this allows multiple services to access the map concurrently.
+ *
  * Note that this is not lock-free and two keys which hash to the same "partition" will still
- * contend with one another.
+ * contend to some degree with one another. Mutating operations against a given [Entry] occur as
+ * if under a key-level lock thus preventing concurrent modifications but not concurrent reads of
+ * the same [Entry]. Similarly mutating operations which accept functions to invoke upon the [Entry]
+ * only block other mutators of same [Entry] but not other entries even if they reside in the same
+ * partition.
  */
 //@Concurrent // TODO: GG marking the const as @Concurrent this causes an IllegalStateException
 // TODO: GG, if this is a service rather then a const Maps.equals throws an IllegalArgument complaining
@@ -162,33 +167,36 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
     @Override
     ConcurrentHashMap put(Key key, Value value)
         {
-        partitionOf(key).putSafe(key, value);
+        partitionOf(key).putOrdered(key, value);
         return this;
         }
 
     @Override
     conditional ConcurrentHashMap putIfAbsent(Key key, Value value)
         {
-        return partitionOf(key).putIfAbsent(key, value) ? (True, this) : False;
+        return partitionOf(key).putIfAbsentOrdered(key, value)
+            ? (True, this) : False;
         }
 
     @Override
     conditional ConcurrentHashMap replace(Key key, Value valueOld, Value valueNew)
         {
-        return partitionOf(key).replace(key, valueOld, valueNew) ? (True, this) : False;
+        return partitionOf(key).replaceOrdered(key, valueOld, valueNew)
+            ? (True, this) : False;
         }
 
     @Override
     ConcurrentHashMap remove(Key key)
         {
-        partitionOf(key).remove(key);
+        partitionOf(key).removeOrdered(key);
         return this;
         }
 
     @Override
     conditional ConcurrentHashMap remove(Key key, Value value)
         {
-        return partitionOf(key).remove(key, value) ? (True, this) : False;
+        return partitionOf(key).removeOrdered(key, value)
+            ? (True, this) : False;
         }
 
     @Override
@@ -199,7 +207,7 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
         Int i = first;
         do
             {
-            partitions[i].clear();
+            partitions[i].clearOrdered();
             i = (i + step) % partitions.size;
             }
         while (i != first);
@@ -208,14 +216,15 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
         }
 
     @Override
-    <Result> Result process(Key key, function Result(Entry) compute)
+    <Result> Result process(Key key, function Result(Map<Key, Value>.Entry) compute)
         {
         Result result = partitionOf(key).process^(key, compute);
         return &result;
         }
 
     @Override
-    <Result> conditional Result processIfPresent(Key key, function Result(Entry) compute)
+    <Result> conditional Result processIfPresent(Key key,
+            function Result(Map<Key, Value>.Entry) compute)
         {
         return partitionOf(key).processIfPresent(key, compute);
         }
@@ -272,7 +281,7 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
             }
 
         @Override
-        Boolean contains(Element entry)
+        Boolean contains(Map.Entry entry)
             {
             if (Value value := this.ConcurrentHashMap.get(entry.key))
                 {
@@ -283,7 +292,7 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
             }
 
         @Override
-        Boolean containsAll(Collection!<Element> that)
+        Boolean containsAll(Collection!<Map.Entry> that)
             {
             for (Map.Entry entry : that)
                 {
@@ -298,7 +307,7 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
 
         @Override
         @Op("+")
-        Entries add(Element entry)
+        Entries add(Map.Entry entry)
             {
             this.ConcurrentHashMap.put(entry.key, entry.value);
             return this;
@@ -306,7 +315,7 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
 
         @Override
         @Op("+")
-        Entries addAll(Iterable<Element> that)
+        Entries addAll(Iterable<Map.Entry> that)
             {
             for (Map.Entry entry : that)
                 {
@@ -317,7 +326,7 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
             }
 
         @Override
-        Entries addAll(Iterator<Element> iter)
+        Entries addAll(Iterator<Map.Entry> iter)
             {
             while (Map.Entry entry := iter.next())
                 {
@@ -328,21 +337,21 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
             }
 
         @Override
-        conditional Entries addIfAbsent(Element entry)
+        conditional Entries addIfAbsent(Map.Entry entry)
             {
             return this.ConcurrentHashMap.putIfAbsent(entry.key, entry.value) ? (True, this) : False;
             }
 
         @Override
         @Op("-")
-        Entries remove(Element entry)
+        Entries remove(Map.Entry entry)
             {
             this.ConcurrentHashMap.remove(entry.key, entry.value);
             return this;
             }
 
         @Override
-        conditional Entries removeIfPresent(Element entryThat)
+        conditional Entries removeIfPresent(Map.Entry entryThat)
             {
             return this.ConcurrentHashMap.processIfPresent(entryThat.key, entry ->
                 {
@@ -431,37 +440,164 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
          */
         protected HashMap<Key, FutureVar> pendingByKey;
 
+
         // ----- Partition methods -----------------------------------------------------------------
 
         /**
-         * Perform a [put] operation, potentially queueing it behind pending actions.
+         * Perform an ordered [put] operations.
          *
          * @param key the key
          * @param value the value
+         *
+         * @return this
          */
         @Concurrent
-        protected void putSafe(Key key, Value value)
+        protected Map putOrdered(Key key, Value value)
             {
             if (pendingByKey.contains(key))
                 {
-                process(key, e -> {e.value = value;});
+                this.process(key, e -> {e.value = value;});
                 }
             else
                 {
                 put(key, value);
                 }
+
+            return this;
             }
+
+        /**
+         * Perform an ordered [putIfAbsent] operations.
+         *
+         * @param key the key
+         * @param value the value
+         *
+         * @return this
+         */
+        @Concurrent
+        protected conditional Map putIfAbsentOrdered(Key key, Value value)
+            {
+            if (pendingByKey.contains(key))
+                {
+                return process(key, e ->
+                    {
+                    if (!e.exists)
+                        {
+                        e.value = value;
+                        return True;
+                        }
+    
+                    return False;
+                    }), this;
+                }
+    
+            return putIfAbsent(key, value);
+            }
+
+        /**
+         * Perform an ordered [replace] operations.
+         *
+         * @param key the key
+         * @param valueOld the required old value
+         * @param valueNew the new value
+         *
+         * @return this if the the replace occured
+         */
+        @Concurrent
+        protected conditional Map replaceOrdered(Key key, Value valueOld, Value valueNew)
+            {
+            if (pendingByKey.contains(key))
+                {
+                return process(key, e ->
+                    {
+                    if (e.exists && e.value == valueOld)
+                        {
+                        e.value = valueNew;
+                        return True;
+                        }
+                    return False;
+                    }), this;
+                }
+    
+            return replace(key, valueOld, valueNew);
+            }
+
+        /**
+         * Perform an ordered [remove] operations.
+         *
+         * @param key the key
+         *i
+         * @return this
+         */
+        @Concurrent
+        protected Map removeOrdered(Key key)
+            {
+            if (pendingByKey.contains(key))
+                {
+                process(key, e -> {e.delete();});
+                return this;
+                }
+
+            return remove(key);
+            }
+
+        /**
+         * Perform an ordered conditional [remove] operations.
+         *
+         * @param key the key
+         * @param value the required old value
+         *
+         * @return this if the remove occured
+         */
+        @Concurrent
+        protected conditional Map removeOrdered(Key key, Value value)
+            {
+            if (pendingByKey.contains(key))
+                {
+                return process(key, e ->
+                    {
+                    if (e.exists && e.value == value)
+                        {
+                        e.delete();
+                        return True;
+                        }
+
+                    return False;
+                    }), this;
+                }
+
+            return remove(key, value);
+            }
+
+        /**
+         * Perform an ordered [clear] operations.
+         *
+         * @return this
+         */
+        @Concurrent
+        protected Map clearOrdered()
+            {
+            if (pendingByKey.empty)
+                {
+                clear();
+                return this;
+                }
+
+            for (Key key : keys)
+                {
+                removeOrdered(key);
+                }
+
+            return this;
+            }
+
 
         // ----- HashMap methods -------------------------------------------------------------------
 
         @Override
         @Concurrent
-        <Result> Result process(Key key, function Result(Entry) compute)
+        <Result> Result process(Key key, function Result (Map<Key, Value>.Entry) compute)
             {
-            // TODO, route all mutating CHM methods though process (if there are pending actions)
-            // so that they don't invalidate the k/v pairings seen by process. Non-mutating CHM
-            // methods will remain unordered, similar to Java's CHM.
-
             Entry entry = new @KeyEntry(key) Entry() {};
             @Future Result result;
             FutureVar rVar = &result;
@@ -470,8 +606,14 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
             // we clean our entry from the pending map
             // TODO: GG &result.thenDo(() -> pendingByKey.remove(key, &result));
 
-            // TODO: GG this NPEs in Java in concurrency when contention is detected
-            // rVar.thenDo(() -> pendingByKey.remove(key, rVar));
+            Var<FutureVar> ref = &rVar;
+            rVar.thenDo(() -> pendingByKey.process(key, e -> {
+                FutureVar value = e.value;
+                if (&value == ref)
+                    {
+                    e.delete();
+                    }
+            }));
 
             if (FutureVar pending := pendingByKey.get(key))
                 {
