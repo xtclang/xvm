@@ -89,7 +89,6 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
         partitions = new Array(partCount, i -> new Partition<Key, Value>(hasher, partCount, capacity));
         }
 
-
     // ----- properties ----------------------------------------------------------------------------
 
     /**
@@ -143,6 +142,7 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
             }
         while (i != first);
 
+        // TODO: return a future?
         return sum;
         }
 
@@ -163,54 +163,61 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
             }
         while (i != first);
 
+        // TODO: return a future?
         return True;
         }
 
     @Override
     conditional Value get(Key key)
         {
-        return partitionOf(key).get(key);
+        return partitionOf(key).get^(key);
         }
 
     @Override
     Boolean contains(Key key)
         {
-        return partitionOf(key).contains(key);
+        return partitionOf(key).contains^(key);
         }
 
     @Override
     ConcurrentHashMap put(Key key, Value value)
         {
+        // fast, but doesn't allow caller to go async
         partitionOf(key).putOrdered(key, value);
         return this;
+
+        // ~2x slower, but asyncable
+//        @Future ConcurrentHashMap result;
+//        Tuple future = partitionOf(key).putOrdered^(key, value);
+//        &future.thenDo(() -> {result = this;});
+//        return result;
+
+        // ~200x slower, simple asyncable, but too slow
+//        return partitionOf(key).putOrdered^(this, key, value);
         }
 
     @Override
     conditional ConcurrentHashMap putIfAbsent(Key key, Value value)
         {
-        return partitionOf(key).putIfAbsentOrdered(key, value)
-            ? (True, this) : False;
+        return partitionOf(key).putIfAbsentOrdered^(this, key, value);
         }
 
     @Override
     conditional ConcurrentHashMap replace(Key key, Value valueOld, Value valueNew)
         {
-        return partitionOf(key).replaceOrdered(key, valueOld, valueNew)
-            ? (True, this) : False;
+        return partitionOf(key).replaceOrdered^(this, key, valueOld, valueNew);
         }
 
     @Override
     ConcurrentHashMap remove(Key key)
         {
-        partitionOf(key).removeOrdered(key);
-        return this;
+        return partitionOf(key).removeOrdered^(this, key);
         }
 
     @Override
     conditional ConcurrentHashMap remove(Key key, Value value)
         {
-        return partitionOf(key).removeOrdered(key, value)
-            ? (True, this) : False;
+        return partitionOf(key).removeOrdered^(this, key, value);
         }
 
     @Override
@@ -221,11 +228,12 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
         Int i = first;
         do
             {
-            partitions[i].clearOrdered();
+            partitions[i].clearOrdered(this);
             i = (i + step) % partitions.size;
             }
         while (i != first);
 
+        // TODO: return a future?
         return this;
         }
 
@@ -233,20 +241,20 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
     <Result> Result process(Key key, function Result(Map<Key, Value>.Entry) compute)
         {
         Result result = partitionOf(key).process^(key, compute);
-        return &result;
+        return &result; // TODO: GG shouldn't need return on new line
         }
 
     @Override
     <Result> conditional Result processIfPresent(Key key,
             function Result(Map<Key, Value>.Entry) compute)
         {
-        return partitionOf(key).processIfPresent(key, compute);
+        return partitionOf(key).processIfPresent^(key, compute);
         }
 
     @Override
     (Value, Boolean) computeIfAbsent(Key key, function Value() compute)
         {
-        return partitionOf(key).computeIfAbsent(key, compute);
+        return partitionOf(key).computeIfAbsent^(key, compute);
         }
 
 
@@ -450,12 +458,26 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
 
         /**
          * A secondary map of pending operations, null up until the first call to process.
-         * TODO: does/should @Lazy have a way to do a not-initialized check?
          */
-        protected HashMap<Key, FutureVar>? pendingByKey;
+        protected @Lazy HashMap<Key, FutureVar> pendingByKey.calc()
+            {
+            return new HashMap();
+            }
 
 
         // ----- Partition methods -----------------------------------------------------------------
+
+        /**
+         * Return [true] iff there are pending operations outstanding for the key.
+         *
+         * @param key the key to check
+         *
+         * @return [true] iff the key is contended
+         */
+        protected Boolean isContended(Key key)
+            {
+            return &pendingByKey.assigned && pendingByKey.contains(key);
+            }
 
         /**
          * Perform an ordered [put] operations.
@@ -466,9 +488,22 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
          * @return this
          */
         @Concurrent
-        protected Map putOrdered(Key key, Value value)
+        protected void putOrdered(Key key, Value value)
             {
-            if (pendingByKey?.contains(key))
+            if (isContended(key))
+                {
+                process(key, e -> {e.value = value;});
+                }
+            else
+                {
+                put(key, value);
+                }
+            }
+
+        @Concurrent
+        protected <P> P putOrdered(P parent, Key key, Value value)
+            {
+            if (isContended(key))
                 {
                 process(key, e -> {e.value = value;});
                 }
@@ -477,7 +512,7 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
                 put(key, value);
                 }
 
-            return this;
+            return parent;
             }
 
         /**
@@ -489,9 +524,9 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
          * @return this
          */
         @Concurrent
-        protected conditional Map putIfAbsentOrdered(Key key, Value value)
+        protected <P> conditional P putIfAbsentOrdered(P parent, Key key, Value value)
             {
-            if (pendingByKey?.contains(key))
+            if (isContended(key))
                 {
                 return process(key, e ->
                     {
@@ -502,11 +537,11 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
 
                     e.value = value;
                     return True;
-                    }), this;
+                    }), parent;
                 }
             else
                 {
-                return putIfAbsent(key, value);
+                return putIfAbsent(key, value) ? (True, parent) : False;
                 }
             }
 
@@ -520,9 +555,9 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
          * @return this if the the replace occured
          */
         @Concurrent
-        protected conditional Map replaceOrdered(Key key, Value valueOld, Value valueNew)
+        protected <P> conditional P replaceOrdered(P parent, Key key, Value valueOld, Value valueNew)
             {
-            if (pendingByKey?.contains(key))
+            if (isContended(key))
                 {
                 return process(key, e ->
                     {
@@ -533,11 +568,11 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
                         }
 
                     return False;
-                    }), this;
+                    }), parent;
                 }
             else
                 {
-                return replace(key, valueOld, valueNew);
+                return replace(key, valueOld, valueNew) ? (True, parent) : False;
                 }
             }
 
@@ -545,21 +580,22 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
          * Perform an ordered [remove] operations.
          *
          * @param key the key
-         *i
+         *
          * @return this
          */
         @Concurrent
-        protected Map removeOrdered(Key key)
+        protected <P> P removeOrdered(P parent, Key key)
             {
-            if (pendingByKey?.contains(key))
+            if (isContended(key))
                 {
                 process(key, e -> {e.delete();});
-                return this;
                 }
             else
                 {
-                return remove(key);
+                remove(key);
                 }
+
+            return parent;
             }
 
         /**
@@ -568,12 +604,12 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
          * @param key the key
          * @param value the required old value
          *
-         * @return this if the remove occured
+         * @return this if the remove occurred
          */
         @Concurrent
-        protected conditional Map removeOrdered(Key key, Value value)
+        protected <P> conditional P removeOrdered(P parent, Key key, Value value)
             {
-            if (pendingByKey?.contains(key))
+            if (isContended(key))
                 {
                 return process(key, e ->
                     {
@@ -584,11 +620,11 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
                         }
 
                     return False;
-                    }), this;
+                    }), parent;
                 }
             else
                 {
-                return remove(key, value);
+                return remove(key, value) ? (True, parent) : False;
                 }
             }
 
@@ -598,21 +634,22 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
          * @return this
          */
         @Concurrent
-        protected Map clearOrdered()
+        protected <P> P clearOrdered(P parent)
             {
-            if (pendingByKey == null || pendingByKey?.empty)
+            if (&pendingByKey.assigned && !pendingByKey.empty)
                 {
-                clear();
+                // TODO: async section?
+                for (Key key : keys)
+                    {
+                    removeOrdered(parent, key);
+                    }
                 }
             else
                 {
-                for (Key key : keys)
-                    {
-                    removeOrdered(key);
-                    }
+                clear();
                 }
 
-            return this;
+            return parent;
             }
 
 
@@ -624,32 +661,11 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
             {
             Entry entry = new @KeyEntry(key) Entry() {};
             @Future Result result;
-            FutureVar rVar = &result;
-
-            Map<Key, FutureVar>? pbk = pendingByKey;
-            Map<Key, FutureVar> pendingByKey;
-            if (pbk == null)
-                {
-                pendingByKey = new HashMap();
-                this.pendingByKey = pendingByKey;
-                }
-            else
-                {
-                pendingByKey = pbk;
-                }
+            FutureVar<Result> rVar = &result;
 
             // ensure that when we complete if there are no more pending actions that
             // we clean our entry from the pending map
             rVar.thenDo(() -> pendingByKey.remove(key, rVar));
-
-            Var<FutureVar> ref = &rVar;
-            rVar.thenDo(() -> pendingByKey.process(key, e -> {
-                FutureVar value = e.value;
-                if (&value == ref)
-                    {
-                    e.delete();
-                    }
-            }));
 
             if (FutureVar pending := pendingByKey.get(key))
                 {
@@ -666,7 +682,7 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
                 result = compute(entry);
                 }
 
-            return &result;
+            return result;
             }
 
         @Override
