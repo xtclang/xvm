@@ -11,16 +11,15 @@ import ecstasy.collections.NaturalHasher;
 import ecstasy.collections.maps.KeyEntry;
 
 /**
- * A hash based map which allows for concurrent access.
+ * A hash based map which allows for parallel and concurrent access with scalable performance.
  *
- * As compared to [HashMap] this allows multiple services to access the map concurrently.
+ * Parallelism is provided by partitioning the keys into a number of inner [HashMap] based partition.
+ * Each partition can be independently accessed without contention.
  *
- * Note that this is not lock-free and two keys which hash to the same "partition" will still
- * contend to some degree with one another. Mutating operations against a given [Entry] occur as
- * if under a key-level lock thus preventing concurrent modifications but not concurrent reads of
- * the same [Entry]. Similarly mutating operations which accept functions to invoke upon the [Entry]
- * only block other mutators of same [Entry] but not other entries even if they reside in the same
- * partition.
+ * Concurrency is provided within a partition down to the key level, that is if an operation on one
+ * key within a partition blocks it will not prevent reads or writes to other keys in the same
+ * partition. Furthermore blocking writes such as by [#process] on a key will not block concurrent
+ * reads of that same key. Writes to any given key are ordered.
  */
 //@Concurrent // TODO: GG marking the const as @Concurrent this causes an IllegalStateException
 // TODO: GG, if this is a service rather then a const Maps.equals throws an IllegalArgument complaining
@@ -31,48 +30,63 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Construct a new [ConcurrentHashMap] with default concurrency.
+     * Construct a new [ConcurrentHashMap].
      *
-     * @param concurrency the number of services which may concurrent access the map
+     * @param parallelism  the target parallelism to optimize for
+     * @param initCapacity  the number of expected entries
      */
-    construct(Int concurrency = 16)
+    construct(Int parallelism = 16, Int initCapacity = 0)
         {
         assert(Key.is(Type<Hashable>));
-        construct ConcurrentHashMap(new NaturalHasher<Key>(), concurrency);
+        construct ConcurrentHashMap(new NaturalHasher<Key>(), parallelism, initCapacity);
         }
 
     /**
-     * Construct a new [ConcurrentHashMap] with a suggested concurrency.
+     * Construct a new [ConcurrentHashMap].
      *
-     * @param concurrency an indicator of how many services may concurrently access this map
+     * @param parallelism  the target parallelism to optimize for
+     * @param initCapacity  the number of expected entries
      */
-    construct(Hasher<Key> hasher, Int concurrency = 16)
+    construct(Hasher<Key> hasher, Int parallelism = 16, Int initCapacity = 0)
         {
-        assert concurrency >= 0;
+        assert parallelism > 0;
+        assert initCapacity >= 0;
         this.hasher = hasher;
 
         // select a prime partition count greater then the requested concurrency
-        Int c = concurrency;
-        if (concurrency <= Partition.PRIMES[0])
+        Int partCount = parallelism;
+        Int capacity = initCapacity / parallelism;
+        Int buckets = Partition.calcBucketCount(capacity);
+        if (parallelism == 1)
+            {
+            // user asked for it, allow it; there is still value here as compared to a simple
+            // service wrapper around HashMap because we still offer key-level concurrency even it
+            // not parallelism
+            }
+        else if (parallelism <= Partition.PRIMES[0])
             {
             // Explicitly avoid the first prime as our underlying HashMaps will have this as their
             // starting bucket count. See Partition.selectBucketCount for how this is resolved as
             // the HashMaps grow
-            c = Partition.PRIMES[1];
+            partCount = Partition.PRIMES[1];
+            if (partCount == buckets)
+                {
+                partCount = Partition.PRIMES[2];
+                }
             }
         else
             {
             for (Int p : Partition.PRIMES)
                 {
-                if (p >= concurrency)
+                partCount = p;
+                if (partCount >= parallelism && p != buckets)
                     {
-                    c = p;
                     break;
                     }
                 }
             }
 
-        partitions = new Array(c, i -> new Partition<Key, Value>(hasher, c));
+        partitions = new Array(partCount, i -> new Partition<Key, Value>(hasher, partCount, capacity));
         }
 
 
@@ -420,11 +434,10 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
         {
         // ----- constructors ----------------------------------------------------------------------
 
-        construct(Hasher<Key> hasher, Int partitionCount)
+        construct(Hasher<Key> hasher, Int partitionCount, Int initCapacity)
             {
             this.partitionCount = partitionCount;
-            pendingByKey = new HashMap();
-            construct HashMap(hasher, 0);
+            construct HashMap(hasher, initCapacity);
             }
 
 
@@ -436,9 +449,10 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
         protected Int partitionCount;
 
         /**
-         * A secondary map of pending operations.
+         * A secondary map of pending operations, null up until the first call to process.
+         * TODO: does/should @Lazy have a way to do a not-initialized check?
          */
-        protected HashMap<Key, FutureVar> pendingByKey;
+        protected HashMap<Key, FutureVar>? pendingByKey;
 
 
         // ----- Partition methods -----------------------------------------------------------------
@@ -454,9 +468,9 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
         @Concurrent
         protected Map putOrdered(Key key, Value value)
             {
-            if (pendingByKey.contains(key))
+            if (pendingByKey?.contains(key))
                 {
-                this.process(key, e -> {e.value = value;});
+                process(key, e -> {e.value = value;});
                 }
             else
                 {
@@ -477,21 +491,23 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
         @Concurrent
         protected conditional Map putIfAbsentOrdered(Key key, Value value)
             {
-            if (pendingByKey.contains(key))
+            if (pendingByKey?.contains(key))
                 {
                 return process(key, e ->
                     {
-                    if (!e.exists)
+                    if (e.exists)
                         {
-                        e.value = value;
-                        return True;
+                        return False;
                         }
-    
-                    return False;
+
+                    e.value = value;
+                    return True;
                     }), this;
                 }
-    
-            return putIfAbsent(key, value);
+            else
+                {
+                return putIfAbsent(key, value);
+                }
             }
 
         /**
@@ -506,7 +522,7 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
         @Concurrent
         protected conditional Map replaceOrdered(Key key, Value valueOld, Value valueNew)
             {
-            if (pendingByKey.contains(key))
+            if (pendingByKey?.contains(key))
                 {
                 return process(key, e ->
                     {
@@ -515,11 +531,14 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
                         e.value = valueNew;
                         return True;
                         }
+
                     return False;
                     }), this;
                 }
-    
-            return replace(key, valueOld, valueNew);
+            else
+                {
+                return replace(key, valueOld, valueNew);
+                }
             }
 
         /**
@@ -532,13 +551,15 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
         @Concurrent
         protected Map removeOrdered(Key key)
             {
-            if (pendingByKey.contains(key))
+            if (pendingByKey?.contains(key))
                 {
                 process(key, e -> {e.delete();});
                 return this;
                 }
-
-            return remove(key);
+            else
+                {
+                return remove(key);
+                }
             }
 
         /**
@@ -552,7 +573,7 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
         @Concurrent
         protected conditional Map removeOrdered(Key key, Value value)
             {
-            if (pendingByKey.contains(key))
+            if (pendingByKey?.contains(key))
                 {
                 return process(key, e ->
                     {
@@ -565,8 +586,10 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
                     return False;
                     }), this;
                 }
-
-            return remove(key, value);
+            else
+                {
+                return remove(key, value);
+                }
             }
 
         /**
@@ -577,15 +600,16 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
         @Concurrent
         protected Map clearOrdered()
             {
-            if (pendingByKey.empty)
+            if (pendingByKey == null || pendingByKey?.empty)
                 {
                 clear();
-                return this;
                 }
-
-            for (Key key : keys)
+            else
                 {
-                removeOrdered(key);
+                for (Key key : keys)
+                    {
+                    removeOrdered(key);
+                    }
                 }
 
             return this;
@@ -602,9 +626,22 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
             @Future Result result;
             FutureVar rVar = &result;
 
+            Map<Key, FutureVar>? pbk = pendingByKey;
+            Map<Key, FutureVar> pendingByKey;
+            if (pbk == null)
+                {
+                pendingByKey = new HashMap();
+                this.pendingByKey = pendingByKey;
+                }
+            else
+                {
+                pendingByKey = pbk;
+                }
+
             // ensure that when we complete if there are no more pending actions that
             // we clean our entry from the pending map
             // TODO: GG &result.thenDo(() -> pendingByKey.remove(key, &result));
+            // TODO: GG NPE from rVar.thenDo(() -> pendingByKey.remove(key, rVar));
 
             Var<FutureVar> ref = &rVar;
             rVar.thenDo(() -> pendingByKey.process(key, e -> {

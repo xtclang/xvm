@@ -41,9 +41,9 @@ module TestMaps
         testProcess(new ConcurrentHashMap());
 
         // concurrency performance comparison of maps
-//        Int concurrency = 8;
+//        Int concurrency = 4;
 //        Int keys = 1_000;
-//        Int iterations = 10_000;
+//        Int iterations = 100_000;
 //        for (Int i : 0..3)
 //            {
 //            console.println("Concurrent load test of HashMap...");
@@ -419,7 +419,7 @@ module TestMaps
         // processor based write to the same key; CHM should also block
         Int n = map.process(0, e ->
             {
-            console.println($"{tag()} process(0)'");
+            console.println($"{tag()} process(0)");
             return ++e.value;
             });
 
@@ -457,20 +457,12 @@ module TestMaps
             {
             for (Int i : 0..iterations)
                 {
-                if (i % 10 == 0)
-                    {
-                    map.process(rnd.int(range), e ->
-                        {
-                        e.value = e.exists ? e.value + 1 : 1;
-                        });
-                    }
-                else
-                    {
-                    map.put(rnd.int(range), 42);
-                    }
-
-                map.get(rnd.int(range));
-                //map.put((i * seed * 1000) % range, 42);
+//                map.process(rnd.int(range), e ->
+//                    {
+//                    e.value = e.exists ? e.value + 1 : 1;
+//                    });
+                map.put(rnd.int(range), 42);
+//                map.get(rnd.int(range));
                 }
 
             serviceControl.shutdown();
