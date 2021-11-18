@@ -82,7 +82,7 @@ import org.xvm.util.Severity;
  *
  * There are number of TypeConstant transformation APIs. If a transformation is based only on the
  * state of the TypeConstant itself, it doesn't require passing a target ConstantPool, since
- * the transformed constant doesn't create any new cross-pool dependencies and be can safely placed
+ * the transformed constant doesn't create any new cross-pool dependencies and can be safely placed
  * into the same constant pool.
  */
 public abstract class TypeConstant
@@ -356,7 +356,7 @@ public abstract class TypeConstant
      *
      * This method measures the overall depth of that recursion or nesting.
      *
-     * @return the depth of the this type
+     * @return the depth of this type
      */
     protected int getTypeDepth()
         {
@@ -379,7 +379,7 @@ public abstract class TypeConstant
         }
 
     /**
-     * @return type type parameters as an array, iff the type has parameters specified
+     * @return the type parameters as an array, iff the type has parameters specified
      *
      * @throws UnsupportedOperationException if there are no type parameters specified, or if the
      *         type is a relational type
@@ -492,7 +492,7 @@ public abstract class TypeConstant
      * In this case virtual child type VCT(D, "C") is a phantom virtual child type, but VCT(B, "C")
      * is not.
      *
-     * @return whether or not this type represents a phantom virtual child
+     * @return true iff this type represents a phantom virtual child
      */
     public boolean isPhantom()
         {
@@ -719,7 +719,7 @@ public abstract class TypeConstant
      * this type.
      * <p/>
      * Note: while this operation is most of the time commutative, e.g.
-     *  (t1.combine(t2) === t2.combine(t1)
+     *      t1.combine(t2) === t2.combine(t1)
      * there are some dynamic type scenarios where both t1.isA(t2)==true and t2.isA(t1)==true,
      * but still one time is more descriptive that another and the way combine() is called may be
      * significant.
@@ -909,7 +909,7 @@ public abstract class TypeConstant
 
     /**
      * @return this same type, but with the number of parameters equal to the number of
-     *         formal parameters for the the underlying terminal type, assigning missing
+     *         formal parameters for the underlying terminal type, assigning missing
      *         type parameters to the corresponding canonical types
      */
     public TypeConstant normalizeParameters()
@@ -980,9 +980,9 @@ public abstract class TypeConstant
      * for the underlying terminal type, where missing parameters are assigned to the resolved
      * canonical types).
      *
-     * @param pool        the ConstantPool to place a potentially created new constant into
-     * @param atypeParams the parameters to adopt or null if the parameters of this type are
-     *                    simply to be normalized
+     * @param pool         the ConstantPool to place a potentially created new constant into
+     * @param atypeParams  the parameters to adopt or null if the parameters of this type are
+     *                     simply to be normalized
      *
      * @return potentially new normalized type that is parameterized by the specified types
      */
@@ -1289,7 +1289,7 @@ public abstract class TypeConstant
         }
 
     /**
-     * Check whether or not this type represents a "nest mate" of the specified class.
+     * Check whether this type represents a "nest mate" of the specified class.
      *
      * @param idClass  the identity of the class
      */
@@ -1305,7 +1305,7 @@ public abstract class TypeConstant
     // ----- TypeInfo support ----------------------------------------------------------------------
 
     /**
-     * Obtain all of the information about this type, resolved from its recursive composition.
+     * Obtain the information about this type, resolved from its recursive composition.
      *
      * @return the flattened TypeInfo that represents the resolved type of this TypeConstant
      */
@@ -1315,8 +1315,7 @@ public abstract class TypeConstant
         }
 
     /**
-     * Obtain all of the information about this type, while being used in a context of the
-     * specified class.
+     * Obtain the information about this type, while being used in a context of the specified class.
      *
      * @param idClass  the identity of the class
      * @param errs     the error listener to log errors to
@@ -1333,7 +1332,7 @@ public abstract class TypeConstant
         }
 
     /**
-     * Obtain all of the information about this type, resolved from its recursive composition.
+     * Obtain the information about this type, resolved from its recursive composition.
      *
      * @param errs  the error listener to log errors to
      *
@@ -1375,7 +1374,7 @@ public abstract class TypeConstant
 
         // this is where things get very, very complicated. this method is responsible for returning
         // a "completed" TypeInfo, but there are (theoretically) lots of threads trying to do the
-        // same or similar thing at the same time, and any one thread can end up in a recursive
+        // same or similar thing at the same time, and any thread can end up in a recursive
         // situation in which to complete the TypeInfo for type X, it has to get the TypeInfo for
         // type Y, and do build that, it has to get the TypeInfo for type X. this is a catch-22!
         // so what we do to avoid this is to have two layers of requests:
@@ -1791,7 +1790,7 @@ public abstract class TypeConstant
 
         // 1) build the "potential call chains" (basically, the order in which we would search for
         //    methods to call in a virtual manner)
-        // 2) collect all of the type parameter data from the various contributions
+        // 2) collect all the type parameter data from the various contributions
         ListMap<IdentityConstant, Origin> listmapClassChain   = new ListMap<>();
         ListMap<IdentityConstant, Origin> listmapDefaultChain = new ListMap<>();
         Set<TypeConstant>                 setDepends          = new HashSet<>();
@@ -1806,7 +1805,7 @@ public abstract class TypeConstant
         Map<Object           , PropertyInfo> mapVirtProps   = new HashMap<>(); // keyed by nested id
         Map<Object           , MethodInfo  > mapVirtMethods = new HashMap<>(); // keyed by nested id
         ListMap<String       , ChildInfo   > mapChildren    = new ListMap<>(); // keyed by name
-        // note that the mapChildren keys may be '.' delim'd in the case of a "prop.class"
+        // note that the mapChildren keys may be '.' delimited in the case of a "prop.class"
 
         fComplete &= collectMemberInfo(constId, struct, mapTypeParams,
                 listProcess, setDepends, listmapClassChain, listmapDefaultChain,
@@ -2026,7 +2025,7 @@ public abstract class TypeConstant
                 }
             }
 
-        // now go through all of the contributions and "vacuum" any fields from those contributions
+        // now go through all the contributions and "vacuum" any fields from those contributions
         // that were not visible to (i.e. from within) the private form of this type
         boolean fIncomplete = false;
         for (Contribution contrib : infoPri.getContributionList())
@@ -2545,7 +2544,7 @@ public abstract class TypeConstant
                 }
             else
                 {
-                // check if this mixin extends some of the already collected ones
+                // check if this mixin extends any of the already collected ones
                 for (Iterator<TypeConstant> iter = listCondContribs.iterator(); iter.hasNext();)
                     {
                     TypeConstant     typeOther = iter.next();
@@ -2792,7 +2791,7 @@ public abstract class TypeConstant
                             errs = ErrorListener.BLACKHOLE;
                             if (infoContrib == null || composition == Composition.Into)
                                 {
-                                // see the comment at the similar block at "collectMemebrInfo"
+                                // see the comment at the similar block at "collectMemberInfo"
                                 break;
                                 }
                             }
@@ -2927,7 +2926,7 @@ public abstract class TypeConstant
                 // correctly identified. in general, we work from the top of the hierarchy (the
                 // containing class) down (the nested properties), so that the "explosion" never
                 // can occur before we layer on the property, but also that the "explosion" must
-                // always occur before we layer on any properties nested thereunder. since the
+                // always occur before we layer on any properties nested thereunder. Since the
                 // createMembers() method recurses, it provides an ideal order for us in the
                 // listExplode, and since any properties that remain in the contribution when we're
                 // done with this will naturally layer on top of any artifacts from the explosion,
@@ -2993,7 +2992,7 @@ public abstract class TypeConstant
 
                 if (composition != Composition.Into)
                     {
-                    // collect all of the IdentityConstants in the potential call chain that map to
+                    // collect all the IdentityConstants in the potential call chain that map to
                     // this particular contribution
                     HashSet<IdentityConstant> setClass = new HashSet<>();
                     for (Entry<IdentityConstant, Origin> entry : listmapClassChain.entrySet())
@@ -3062,7 +3061,7 @@ public abstract class TypeConstant
             // properties are _based on_ the call chains of this type, but due to annotations on
             // the Ref/Var aspect of the property, the call chains can "bloom" at any level within
             // this type's call chain. fortunately, the property call chains are simpler in one
-            // particular aspect vis-a-vis the type's call chains: property call chains do not
+            // particular aspect vis-à-vis the type's call chains: property call chains do not
             // having the "yanking" aspect, since what we refer to as Ref/Var _annotations_ are
             // treated more like "incorporated" mix-ins, in that the custom code on the property
             // at a given virtual level in the type's call chain will overlay the annotations from
@@ -3171,7 +3170,7 @@ public abstract class TypeConstant
      * @param mapVirtMethods  the virtual methods of the type, keyed by nested id
      * @param errs            the error list to log any errors to
      *
-     * @return true iff the process was able to obtain all of the necessary TypeInfo information
+     * @return true iff the process was able to obtain all the necessary TypeInfo information
      *         required to explode the property
      */
     protected boolean explodeProperty(
@@ -3610,10 +3609,10 @@ public abstract class TypeConstant
         //    should virtually invoke.
         // to accurately collect this information, including sufficient information to report
         // any errors, all changes to virtual method chains are recorded in a separate map, so
-        // that the "pre-contribution" view is not modified until all of the information has
-        // been collected. additionally, if any method signatures are narrowed, the un-narrowed
-        // signatures are recorded in a separate set, so that it is possible to determine if
-        // they should be capped (and to identify any errors).
+        // that the "pre-contribution" view is not modified until all the information has been
+        // collected. Additionally, if any method signatures are narrowed, the un-narrowed
+        // signatures are recorded in a separate set, so that it is possible to determine if they
+        // should be capped (and to identify any errors).
 
         ConstantPool             pool            = getConstantPool();
         Map<Object, MethodInfo>  mapVirtMods     = new HashMap<>();
@@ -4179,7 +4178,7 @@ public abstract class TypeConstant
      * Collect all virtual constructors that may serve as a base contract for the specified
      * contributing constructor.
      *
-     * This methods is very similar, but simpler then "collectPotentialSuperMethods" above.
+     * This method is very similar, but simpler then "collectPotentialSuperMethods" above.
      *
      * @param infoConstruct  the contributing constructor at the "sub" level
      * @param mapMethods     the map of all super methods
@@ -4885,7 +4884,7 @@ public abstract class TypeConstant
 
             if (fHasAbstract && prop.getParent().getFormat() == Component.Format.INTERFACE)
                 {
-                // it is an error for a interface property to be annotated by "@Abstract"
+                // it is an error for an interface property to be annotated by "@Abstract"
                 log(errs, Severity.ERROR, VE_INTERFACE_PROPERTY_ABSTRACT_ILLEGAL,
                         getValueString(), sName);
                 }
@@ -4998,7 +4997,7 @@ public abstract class TypeConstant
     /**
      * Verify that properties exist for each of the type parameters.
      *
-     * @param mapTypeParams  the map containing all of the type parameters
+     * @param mapTypeParams  the map containing all the type parameters
      * @param mapProps       the public and protected properties of the class
      * @param errs           the error list to log any errors to
      */
@@ -5035,7 +5034,7 @@ public abstract class TypeConstant
 
     /**
      * For this type representing a base for conditional incorporates, merge the TypeInfo
-     * built without those incorporates with the corresponding mixins.
+     * built without those "incorporates" with the corresponding mixins.
      *
      * @param cInvalidations  the count of TypeInfo invalidations before staring building the info
      * @param idBase          the identity constant of the class that this type is based on
@@ -5158,7 +5157,7 @@ public abstract class TypeConstant
      *
      * @param pool          the constant pool to use
      * @param infoBase      the TypeInfo for the type that is being mixed into
-     * @param idBaseClass   the identity of the class (etc) that is being mixed into
+     * @param idBaseClass   the identity of the class that is being mixed into
      * @param mapProps      properties already collected from the base
      * @param mapVirtProps  virtual properties already collected from the base
      * @param idMixinProp   the identity of the property at the mixin
@@ -6151,7 +6150,7 @@ public abstract class TypeConstant
 
     /**
      * Determine if this type refers to a class that can be used in an annotation, an extends
-     * clause, an incorporates clause, or an implements clause.
+     * clause, an incorporates clause, or an "implements" clause.
      *
      * @param fAllowParams     true if type parameters are acceptable
      *
@@ -6485,7 +6484,8 @@ public abstract class TypeConstant
                 hValue1.getComposition().getType().equals(this) ? hValue1.getComposition() :
                 hValue2.getComposition().getType().equals(this) ? hValue2.getComposition() :
                                                                   frame.ensureClass(this);
-        return clz.getTemplate().callEquals(frame, clz, hValue1, hValue2, iReturn);        }
+        return clz.getTemplate().callEquals(frame, clz, hValue1, hValue2, iReturn);
+        }
 
     /**
      * Compare for order (<=>) two object handles that both belong to this type.
@@ -6710,7 +6710,7 @@ public abstract class TypeConstant
     protected boolean isDuckTypeAbleFrom(TypeConstant typeRight)
         {
         // interfaces are duck-type able except Tuple, Function and Orderable
-        // (the later due to the fact that it's has no abstract methods and
+        // (the later due to the fact that it has no abstract methods and
         //  is well-known by the runtime only by its "compare" function)
         if (!isInterfaceType() || isVirtualChild() || isTuple())
             {
