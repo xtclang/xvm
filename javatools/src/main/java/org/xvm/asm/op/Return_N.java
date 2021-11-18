@@ -101,7 +101,7 @@ public class Return_N
                 }
             else if (frame.isDynamicVar(nArg))
                 {
-                if (afDynamic != null)
+                if (afDynamic == null)
                     {
                     afDynamic = new boolean[cArgs];
                     }

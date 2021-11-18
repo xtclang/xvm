@@ -1169,7 +1169,7 @@ public class InvocationExpression
                 m_fAutoFuture = true;
                 if (atypeResult.length > 0)
                     {
-                    atypeResult   = atypeResult.clone(); // don't mess up the actual types
+                    atypeResult = atypeResult.clone(); // don't mess up the actual types
                     for (int i = 0, c = atypeResult.length; i < c; i++)
                         {
                         atypeResult[i] = pool.ensureFutureVar(atypeResult[i]);
@@ -1228,33 +1228,56 @@ public class InvocationExpression
     public Argument[] generateArguments(Context ctx, Code code, boolean fLocalPropOk,
                                         boolean fUsedOnce, ErrorListener errs)
         {
-        if (m_fAutoFuture)
+        if (async)
             {
-            TypeConstant[] atype      = getTypes();
-            int            cRVals     = getValueCount();
-            Argument[]     aargResult = new Argument[cRVals];
-            Assignable[]   aLVal      = new Assignable[cRVals];
+            TypeConstant[] atype  = getTypes();
+            int            cRVals = getValueCount();
+            Assignable[]   aLVal  = new Assignable[cRVals];
 
-            for (int i = 0; i < cRVals; i++)
+            if (m_fAutoFuture)
                 {
-                code.add(new Var_D(atype[i]));
+                for (int i = 0; i < cRVals; i++)
+                    {
+                    code.add(new Var_D(atype[i]));
 
-                aLVal[i] = new Assignable(code.lastRegister());
+                    aLVal[i] = new Assignable(code.lastRegister());
+                    }
+
+                generateAssignments(ctx, code, aLVal, errs);
+
+                Argument[] aargResult = new Argument[cRVals];
+                for (int i = 0; i < cRVals; i++)
+                    {
+                    Register regVar = createRegister(atype[i], false);
+
+                    code.add(new MoveVar(aLVal[i].getRegister(), regVar));
+                    aargResult[i] = regVar;
+                    }
+                return aargResult;
                 }
 
-            generateAssignments(ctx, code, aLVal, errs);
-
-            for (int i = 0; i < cRVals; i++)
+            if (getParent() instanceof ReturnStatement)
                 {
-                Register regVar = createRegister(atype[i], false);
+                // let the caller deal with dynamic return values
+                ConstantPool pool       = pool();
+                Argument[]   aargResult = new Argument[cRVals];
 
-                code.add(new MoveVar(aLVal[i].getRegister(), regVar));
-                aargResult[i] = regVar;
+                for (int i = 0; i < cRVals; i++)
+                    {
+                    Register reg = createRegister(pool.ensureFutureVar(atype[i]), false);
+
+                    code.add(new Var_D(reg));
+
+                    aLVal[i]      = new Assignable(reg);
+                    aargResult[i] = reg;
+                    }
+
+                generateAssignments(ctx, code, aLVal, errs);
+                return aargResult;
                 }
-            return aargResult;
             }
 
-        return super.generateArguments(ctx, code, fLocalPropOk, fUsedOnce, errs);
+        return super.generateArguments(ctx, code, fLocalPropOk, fUsedOnce & !async, errs);
         }
 
     @Override

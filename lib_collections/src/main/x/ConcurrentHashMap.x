@@ -232,15 +232,14 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
     @Override
     <Result> Result process(Key key, function Result(Map<Key, Value>.Entry) compute)
         {
-        Result result = partitionOf(key).process^(key, compute);
-        return &result;
+        return partitionOf(key).process^(key, compute);
         }
 
     @Override
     <Result> conditional Result processIfPresent(Key key,
             function Result(Map<Key, Value>.Entry) compute)
         {
-        return partitionOf(key).processIfPresent(key, compute);
+        return partitionOf(key).processIfPresent^(key, compute);
         }
 
     @Override
@@ -641,15 +640,6 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
             // ensure that when we complete if there are no more pending actions that
             // we clean our entry from the pending map
             rVar.thenDo(() -> pendingByKey.remove(key, rVar));
-
-            Var<FutureVar> ref = &rVar;
-            rVar.thenDo(() -> pendingByKey.process(key, e -> {
-                FutureVar value = e.value;
-                if (&value == ref)
-                    {
-                    e.delete();
-                    }
-            }));
 
             if (FutureVar pending := pendingByKey.get(key))
                 {
