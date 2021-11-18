@@ -97,6 +97,22 @@ public class xFutureVar
         }
 
     @Override
+    public TypeComposition ensureClass(TypeConstant typeActual)
+        {
+        if (!typeActual.isAnnotated())
+            {
+            ConstantPool pool = typeActual.getConstantPool();
+
+            // turn FutureVar<T> into @Future Var<T>
+            assert typeActual.getDefiningConstant().equals(pool.clzFuture());
+
+            typeActual = pool.ensureFutureVar(typeActual.getParamType(0));
+            }
+
+        return super.ensureClass(typeActual);
+        }
+
+    @Override
     public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
         {
         FutureHandle hThis = (FutureHandle) hTarget;
@@ -187,6 +203,20 @@ public class xFutureVar
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
         }
+
+    @Override
+    public int callEquals(Frame frame, TypeComposition clazz,
+                          ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        FutureHandle hVar1 = (FutureHandle) hValue1;
+        FutureHandle hVar2 = (FutureHandle) hValue2;
+
+        return frame.assignValue(iReturn,
+                xBoolean.makeHandle(hVar1.getFuture() == hVar2.getFuture()));
+        }
+
+
+    // ----- native method implementations ---------------------------------------------------------
 
     /**
      * Implementation of "FutureVar! thenDo(function void () run)"
@@ -859,20 +889,20 @@ public class xFutureVar
     public static class FutureHandle
             extends RefHandle
         {
-        private final CompletableFuture<ObjectHandle> m_future;
+        private final CompletableFuture<ObjectHandle> f_future;
 
         protected FutureHandle(TypeComposition clazz, String sName, CompletableFuture<ObjectHandle> future)
             {
             super(clazz, sName);
 
             assert future != null;
-            m_future = future;
+            f_future = future;
             }
 
         @Override
         public boolean isAssigned()
             {
-            return m_future.isDone();
+            return f_future.isDone();
             }
 
         @Override
@@ -884,7 +914,7 @@ public class xFutureVar
 
         public CompletableFuture<ObjectHandle> getFuture()
             {
-            return m_future;
+            return f_future;
             }
 
         /**
@@ -892,11 +922,11 @@ public class xFutureVar
          */
         public ExceptionHandle getException()
             {
-            if (m_future.isCompletedExceptionally())
+            if (f_future.isCompletedExceptionally())
                 {
                 try
                     {
-                    m_future.get();
+                    f_future.get();
                     throw new IllegalStateException(); // cannot happen
                     }
                 catch (Exception e)
@@ -909,7 +939,7 @@ public class xFutureVar
 
         public int assign(ObjectHandle hValue, WrapperException ex)
             {
-            CompletableFuture<ObjectHandle> cf = m_future;
+            CompletableFuture<ObjectHandle> cf = f_future;
 
             if (cf.isDone())
                 {
@@ -937,7 +967,7 @@ public class xFutureVar
          */
         public int waitAndAssign(Frame frame, int iReturn)
             {
-            CompletableFuture<ObjectHandle> cf = m_future;
+            CompletableFuture<ObjectHandle> cf = f_future;
             if (cf.isDone())
                 {
                 return assignDone(frame, cf, iReturn);
@@ -955,7 +985,7 @@ public class xFutureVar
         public String toString()
             {
             return "(" + m_clazz + ") " + (
-                    m_future.isDone() ? "Completed: "  + toSafeString():
+                    f_future.isDone() ? "Completed: "  + toSafeString():
                                         "Not completed"
                     );
             }
@@ -964,7 +994,7 @@ public class xFutureVar
             {
             try
                 {
-                return String.valueOf(m_future.get());
+                return String.valueOf(f_future.get());
                 }
             catch (Throwable e)
                 {

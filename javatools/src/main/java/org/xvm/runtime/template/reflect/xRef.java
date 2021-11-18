@@ -352,7 +352,9 @@ public class xRef
         // Reference equality is used to determine if two references are referring to the same referent
         // _identity_. Specifically, two references are equal iff they reference the same runtime
         // object, or the two objects that they reference are both immutable and structurally identical.
-        return new CompareReferents(hRef1, hRef2, this, iReturn).doNext(frame);
+        return hRef1.isAssigned() && hRef2.isAssigned()
+                ? new CompareReferents(hRef1, hRef2, this, iReturn).doNext(frame)
+                : frame.assignValue(iReturn, xBoolean.FALSE);
         }
 
 

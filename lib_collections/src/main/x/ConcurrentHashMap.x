@@ -640,8 +640,7 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
 
             // ensure that when we complete if there are no more pending actions that
             // we clean our entry from the pending map
-            // TODO: GG &result.thenDo(() -> pendingByKey.remove(key, &result));
-            // TODO: GG NPE from rVar.thenDo(() -> pendingByKey.remove(key, rVar));
+            rVar.thenDo(() -> pendingByKey.remove(key, rVar));
 
             Var<FutureVar> ref = &rVar;
             rVar.thenDo(() -> pendingByKey.process(key, e -> {

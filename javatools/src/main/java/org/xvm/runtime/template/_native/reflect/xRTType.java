@@ -16,7 +16,6 @@ import org.xvm.asm.Op;
 import org.xvm.asm.PackageStructure;
 import org.xvm.asm.Parameter;
 
-import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.ChildInfo;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.FormalTypeChildConstant;
