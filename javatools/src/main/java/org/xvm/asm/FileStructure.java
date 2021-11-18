@@ -217,6 +217,7 @@ public class FileStructure
 
         moduleClone.registerConstants(pool);
         moduleClone.registerChildrenConstants(pool);
+        moduleClone.synthesizeChildren();
 
         TypeConstant typeNakedRef = module.getConstantPool().getNakedRefType();
         if (typeNakedRef != null)
@@ -444,6 +445,8 @@ public class FileStructure
                         {
                         this.replaceChild(structFingerprint, structLinked);
                         }
+
+                    structLinked.synthesizeChildren();
 
                     // TODO eventually we need to handle the case that these are actual modules and not just pointers to the modules
                     listModulesTodo.addAll(structUnlinked.getFileStructure().moduleNames());

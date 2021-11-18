@@ -21,7 +21,6 @@ import ecstasy.collections.maps.KeyEntry;
  * partition. Furthermore blocking writes such as by [#process] on a key will not block concurrent
  * reads of that same key. Writes to any given key are ordered.
  */
-//@Concurrent // TODO: GG marking the const as @Concurrent this causes an IllegalStateException
 // TODO: GG, if this is a service rather then a const Maps.equals throws an IllegalArgument complaining
 //       about a mutable being used for a service call, I don't see what that mutable is
 const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAble>
@@ -240,8 +239,7 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
     @Override
     <Result> Result process(Key key, function Result(Map<Key, Value>.Entry) compute)
         {
-        Result result = partitionOf(key).process^(key, compute);
-        return &result; // TODO: GG shouldn't need return on new line
+        return partitionOf(key).process^(key, compute);
         }
 
     @Override

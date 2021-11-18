@@ -41,16 +41,16 @@ module TestMaps
         testProcess(new ConcurrentHashMap());
 
         // concurrency performance comparison of maps
-        Int concurrency = 4;
-        Int keys = 1_000;
-        Int iterations = 100_000;
-        for (Int i : 0..3)
-            {
-            console.println("Concurrent load test of HashMap...");
-            testConcurrentLoad(new SafeHashMap(), concurrency, iterations, keys);
-            console.println("Concurrent load test of ConcurrentHashMap...");
-            testConcurrentLoad(new ConcurrentHashMap(), concurrency, iterations, keys);
-            }
+//        Int concurrency = 4;
+//        Int keys = 1_000;
+//        Int iterations = 100_000;
+//        for (Int i : 0..3)
+//            {
+//            console.println("Concurrent load test of HashMap...");
+//            testConcurrentLoad(new SafeHashMap(), concurrency, iterations, keys);
+//            console.println("Concurrent load test of ConcurrentHashMap...");
+//            testConcurrentLoad(new ConcurrentHashMap(), concurrency, iterations, keys);
+//            }
 
 //        for (UInt seed : 1..500)
 //            {

@@ -1824,7 +1824,7 @@ public abstract class Component
                     in.readFully(ab);
                     for (Component eachSibling = kid; eachSibling != null; eachSibling = eachSibling.getNextSibling())
                         {
-                        // note that every sibling has a copy of all of the children; this is because
+                        // note that every sibling has a copy of all the children; this is because
                         // the byte[] serves as both the storage of those children and an indicator that
                         // the deserialization of the children has been deferred
                         eachSibling.m_abChildren = ab;
@@ -2215,6 +2215,18 @@ public abstract class Component
             }
 
         return childThis;
+        }
+
+    /**
+     * This method is used during the load and link stage to allow components to create synthetic
+     * children necessary for the runtime.
+     */
+    protected void synthesizeChildren()
+        {
+        for (Component child : children())
+            {
+            child.synthesizeChildren();
+            }
         }
 
     /**
