@@ -6,7 +6,6 @@
       <GradleProjectSettings>
         <option name="distributionType" value="DEFAULT_WRAPPED" />
         <option name="externalProjectPath" value="$PROJECT_DIR$" />
-        <option name="gradleHome" value="/usr/local/Cellar/gradle/6.5/libexec" />
         <option name="modules">
           <set>
             <option value="$PROJECT_DIR$" />
@@ -15,6 +14,7 @@
             <option value="$PROJECT_DIR$/javatools_bridge" />
             <option value="$PROJECT_DIR$/javatools_launcher" />
             <option value="$PROJECT_DIR$/lib_aggregate" />
+            <option value="$PROJECT_DIR$/lib_collections" />
             <option value="$PROJECT_DIR$/lib_host" />
             <option value="$PROJECT_DIR$/lib_imdb" />
             <option value="$PROJECT_DIR$/lib_json" />
