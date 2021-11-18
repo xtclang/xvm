@@ -3744,7 +3744,7 @@ public class ClassStructure
         }
 
 
-    // ----- XvmStructure methods ------------------------------------------------------------------
+    // ----- XvmStructure/Component methods --------------------------------------------------------
 
     @Override
     protected void disassemble(DataInput in)
@@ -3758,19 +3758,14 @@ public class ClassStructure
         }
 
     @Override
-    protected void disassembleChildren(DataInput in, boolean fLazy) throws IOException
+    protected void synthesizeChildren()
         {
         if (getFormat() == Format.CONST)
             {
-            // load the children proactively and synthesize the funky interface
-            super.disassembleChildren(in, /*lazy*/ false);
-
             synthesizeConstInterface(true);
             }
-        else
-            {
-            super.disassembleChildren(in, fLazy);
-            }
+
+        super.synthesizeChildren();
         }
 
     @Override
