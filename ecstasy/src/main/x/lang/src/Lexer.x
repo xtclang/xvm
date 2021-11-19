@@ -239,9 +239,6 @@ class Lexer
                     case '.':
                         switch (nextChar())
                             {
-                            case '.':
-                                return Ellipsis, Null;
-
                             case '/':
                                 return ParentDir, Null;
 
@@ -590,8 +587,17 @@ class Lexer
             case '\"':
                 return eatStringLiteral(before);
 
-            case '`':
-                return eatMultilineLiteral(before);
+            case '\\':
+                switch (nextChar())
+                    {
+                    case '|':
+                        return eatMultilineLiteral(before);
+
+                    default:
+                        rewind();
+                        break;
+                    }
+                continue;
 
             default:
                 if (!isIdentifierStart(next))
@@ -1679,7 +1685,7 @@ class Lexer
         }
 
     /**
-     * Eat the remainder of a multi-line string literal. The opening tick has already been eaten.
+     * Eat the remainder of a multi-line string literal. The opening "\|" has already been eaten.
      *
      * @param before  the position of the first character of the token
      *
@@ -2605,7 +2611,6 @@ class Lexer
         Comma        <Object    >(","              ),
         Dot          <Object    >("."              ),
         DotDot       <Object    >(".."             ),
-        Ellipsis     <Object    >("..."            ),
         CurrentDir   <Object    >("./"             ),
         ParentDir    <Object    >("../"            ),
         LeftParen    <Object    >("("              ),

@@ -16,7 +16,7 @@ module TestParser
         console.println("\n** Lexer:");
         import ecstasy.lang.src.Lexer;
         import ecstasy.lang.src.Lexer.Token;
-        String s = `|Date:2020-12-21 /* date */
+        String s = \|Date:2020-12-21 /* date */
                     |Time:12:34 // <- time value
                     |/**
                     | * Doc

@@ -2015,7 +2015,7 @@ service Client<Schema extends RootSchema>
                         // previous partial iteration, we can't guarantee that we will get the
                         // same read tx-id from the new autocommit transaction
                         assert !started || this.Client.tx != Null as
-                                `|Unable to complete iteration in auto-commit mode;
+                                \|Unable to complete iteration in auto-commit mode;
                                  | the Map contained too many keys at the start of the iteration
                                  | to deliver them within a single autocommit transaction.
                                 ;

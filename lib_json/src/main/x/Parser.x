@@ -1234,8 +1234,8 @@ class Parser
             {
             if (!eof)
                 {
-                assert isKeyNext as `|JSON parsing error: attempt to match a key while  Key\
-                                     | \"{key}\" expected, but \"{token.value}\" encountered.
+                assert isKeyNext as $|JSON parsing error: attempt to match a key while Key \"{key}\"\
+                                     | expected, but \"{token?.value : "Null"}\" encountered.
                                     ;
 
                 Token keyToken = peek();
