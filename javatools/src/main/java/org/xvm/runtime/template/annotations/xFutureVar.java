@@ -968,17 +968,9 @@ public class xFutureVar
         public int waitAndAssign(Frame frame, int iReturn)
             {
             CompletableFuture<ObjectHandle> cf = f_future;
-            if (cf.isDone())
-                {
-                return assignDone(frame, cf, iReturn);
-                }
-
-            // add a notification and wait for the assignment/completion;
-            // the service is responsible for timing out
-            cf.whenComplete(
-                (r, x) -> frame.f_fiber.onResponse());
-
-            return frame.call(Utils.createWaitFrame(frame, cf, iReturn));
+            return cf.isDone()
+                    ? assignDone(frame, cf, iReturn)
+                    : frame.call(Utils.createWaitFrame(frame, cf, iReturn));
             }
 
         @Override

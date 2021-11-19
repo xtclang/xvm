@@ -397,7 +397,7 @@ module TestMaps
                 result = 42;
                 });
 
-            console.println($"{tag()} process(0)");
+            console.println($"{tag()} process(0) {result}");
             e.value++;
             return result;
             });
@@ -483,5 +483,5 @@ module TestMaps
         {
         static DateTime base = now();
         return $"{(now() - base)}:\t" + (this:service.serviceName == "TestService" ? "[svc ]" : "[main]");
-        }        
+        }
     }
