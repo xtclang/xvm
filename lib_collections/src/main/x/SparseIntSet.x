@@ -1,3 +1,5 @@
+import ecstasy.collections.OrderedSetSlice;
+
 import ecstasy.Duplicable;
 
 
@@ -7,7 +9,7 @@ import ecstasy.Duplicable;
  * corresponding value is a bit set of size 64.
  */
 class SparseIntSet
-        implements Set<Int>
+        implements OrderedSet<Int>
         implements Duplicable
         implements Freezable
     {
@@ -44,7 +46,7 @@ class SparseIntSet
     public/protected Int size;
 
     @Override
-    Iterator<Element> iterator()
+    Iterator<Int> iterator()
         {
         // for each key in the SkiplistMap, there is one or more value in the set
         val bitsets = contents.entries.iterator();
@@ -142,7 +144,7 @@ class SparseIntSet
             @Override conditional Iterator<Int>.Orderer knownOrder()
                 {
                 assert val orderer := this.SparseIntSet.ordered();
-                return True, orderer? : assert;
+                return True, orderer;
                 }
 
             @Override Boolean knownEmpty()
@@ -164,7 +166,7 @@ class SparseIntSet
         }
 
     @Override
-    conditional Orderer? ordered()
+    conditional Orderer ordered()
         {
         return contents.keys.ordered();
         }
@@ -173,6 +175,48 @@ class SparseIntSet
     Boolean contains(Int value)
         {
         return testBit(value, loadBitset(value));
+        }
+
+    @Override
+    conditional Int first()
+        {
+        return contents.first();
+        }
+
+    @Override
+    conditional Int last()
+        {
+        return contents.last();
+        }
+
+    @Override
+    conditional Int next(Int value)
+        {
+        return contents.next(value);
+        }
+
+    @Override
+    conditional Int prev(Int value)
+        {
+        return contents.prev(value);
+        }
+
+    @Override
+    conditional Int ceiling(Int value)
+        {
+        return contents.ceiling(value);
+        }
+
+    @Override
+    conditional Int floor(Int value)
+        {
+        return contents.floor(value);
+        }
+
+    @Override
+    @Op("[..]") OrderedSet<Int> slice(Range<Int> indexes)
+        {
+        return new OrderedSetSlice<Int>(this, indexes);
         }
 
 
@@ -201,12 +245,12 @@ class SparseIntSet
         }
 
     @Override
-    @Op("+") SparseIntSet addAll(Iterable<Element> values)
+    @Op("+") SparseIntSet addAll(Iterable<Int> values)
         {
         if (values.is(SparseIntSet))
             {
-            SkiplistMap<Int, Int> these = this.contents;
-            SkiplistMap<Int, Int> those = values.contents;
+            OrderedMap<Int, Int> these = this.contents;
+            OrderedMap<Int, Int> those = values.contents;
             Int overlap = 0;
             for ((Int index, Int addBits) : those)
                 {
@@ -232,12 +276,12 @@ class SparseIntSet
         }
 
     @Override
-    @Op("-") SparseIntSet removeAll(Iterable<Element> values)
+    @Op("-") SparseIntSet removeAll(Iterable<Int> values)
         {
         if (values.is(SparseIntSet))
             {
-            SkiplistMap<Int, Int> these = this.contents;
-            SkiplistMap<Int, Int> those = values.contents;
+            OrderedMap<Int, Int> these = this.contents;
+            OrderedMap<Int, Int> those = values.contents;
             Int removed = 0;
             for ((Int index, Int remove) : those)
                 {
@@ -267,12 +311,12 @@ class SparseIntSet
         }
 
     @Override
-    @Op("&") SparseIntSet retainAll(Iterable<Element> values)
+    @Op("&") SparseIntSet retainAll(Iterable<Int> values)
         {
         if (values.is(SparseIntSet))
             {
-            SkiplistMap<Int, Int> these = this.contents;
-            SkiplistMap<Int, Int> those = values.contents;
+            OrderedMap<Int, Int> these = this.contents;
+            OrderedMap<Int, Int> those = values.contents;
             if (those.empty)
                 {
                 return clear();
@@ -428,7 +472,7 @@ class SparseIntSet
      *
      * @param  an integer value that might be stored in the SparseIntSet
      *
-     * @return an integer value that acts as a key to the SkiplistMap
+     * @return an integer value that acts as a key to the OrderedMap
      */
     protected static Int indexFor(Int n)
         {
