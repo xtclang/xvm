@@ -1108,7 +1108,7 @@ public class DebugConsole
 
         String   sFHeader  = "Call stack frames:";
         String[] asFrames  = renderFrames();
-        int      cchFrames = Math.max(longestOf(asFrames), sFHeader.length());
+        int      cchFrames = Math.min(Math.max(longestOf(asFrames), sFHeader.length()), m_cWidth/2);
 
         String   sVHeader  = "Variables and watches:";
         String[] asVars    = renderVars();
