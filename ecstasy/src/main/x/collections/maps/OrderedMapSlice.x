@@ -195,27 +195,40 @@ class OrderedMapSlice<Key extends Orderable, Value>
     @Override
     conditional Value get(Key key)
         {
-        TODO include map.get
+        if (include(key))
+            {
+            return map.get(key);
+            }
+
+        return False;
         }
 
     @Override
     OrderedMapSlice put(Key key, Value value)
         {
-        TODO
+        assert:bounds include(key);
+        map.put(key, value);
         return this;
         }
 
     @Override
     OrderedMapSlice remove(Key key)
         {
-        TODO
+        if (include(key))
+            {
+            map.remove(key);
+            }
+
         return this;
         }
 
     @Override
     OrderedMapSlice clear()
         {
-        TODO
+        while (Key key := first())
+            {
+            map.remove(key);
+            }
         return this;
         }
 
