@@ -191,6 +191,10 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
 //        &future.thenDo(() -> {result = this;});
 //        return result;
 
+         // ~10x slower, but asyncable
+//        Tuple future = partitionOf(key).putOrdered^(key, value);
+//        return &future.transform(r -> this);
+
         // ~200x slower, simple asyncable, but too slow
 //        return partitionOf(key).putOrdered^(this, key, value);
         }
@@ -308,6 +312,7 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
                 return value == entry.value;
                 }
 
+            // TODO: future?
             return False;
             }
 
@@ -322,6 +327,7 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
                     }
                 }
 
+            // TODO: future?
             return True;
             }
 
@@ -329,7 +335,7 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
         @Op("+")
         Entries add(Map.Entry entry)
             {
-            this.ConcurrentHashMap.put(entry.key, entry.value);
+            put(entry.key, entry.value);
             return this;
             }
 
@@ -339,7 +345,7 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
             {
             for (Map.Entry entry : that)
                 {
-                this.ConcurrentHashMap.put(entry.key, entry.value);
+                put(entry.key, entry.value);
                 }
 
             return this;
@@ -350,7 +356,7 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
             {
             while (Map.Entry entry := iter.next())
                 {
-                this.ConcurrentHashMap.put(entry.key, entry.value);
+                put(entry.key, entry.value);
                 }
 
             return this;
@@ -359,7 +365,7 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
         @Override
         conditional Entries addIfAbsent(Map.Entry entry)
             {
-            return this.ConcurrentHashMap.putIfAbsent(entry.key, entry.value) ? (True, this) : False;
+            return putIfAbsent(entry.key, entry.value) ? (True, this) : False;
             }
 
         @Override
@@ -373,7 +379,7 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
         @Override
         conditional Entries removeIfPresent(Map.Entry entryThat)
             {
-            return this.ConcurrentHashMap.processIfPresent(entryThat.key, entry ->
+            return processIfPresent(entryThat.key, entry ->
                 {
                 if (entry.value == entryThat.value)
                     {
@@ -478,7 +484,7 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
             }
 
         /**
-         * Perform an ordered [put] operations.
+         * Perform an ordered [put] operation.
          *
          * @param key the key
          * @param value the value
@@ -514,7 +520,7 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
             }
 
         /**
-         * Perform an ordered [putIfAbsent] operations.
+         * Perform an ordered [putIfAbsent] operation.
          *
          * @param key the key
          * @param value the value
@@ -544,13 +550,13 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
             }
 
         /**
-         * Perform an ordered [replace] operations.
+         * Perform an ordered [replace] operation.
          *
          * @param key the key
          * @param valueOld the required old value
          * @param valueNew the new value
          *
-         * @return this if the the replace occured
+         * @return this if the the replace occurred
          */
         @Concurrent
         protected <P> conditional P replaceOrdered(P parent, Key key, Value valueOld, Value valueNew)
@@ -575,7 +581,7 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
             }
 
         /**
-         * Perform an ordered [remove] operations.
+         * Perform an ordered [remove] operation.
          *
          * @param key the key
          *
@@ -597,7 +603,7 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
             }
 
         /**
-         * Perform an ordered conditional [remove] operations.
+         * Perform an ordered conditional [remove] operation.
          *
          * @param key the key
          * @param value the required old value
@@ -627,7 +633,7 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
             }
 
         /**
-         * Perform an ordered [clear] operations.
+         * Perform an ordered [clear] operation.
          *
          * @return this
          */

@@ -32,7 +32,6 @@ interface Map<Key, Value>
      * It is expected that all mutating operations that do not return a resulting map will
      * assert that `inPlace` is `True`.
      */
-    @Concurrent
     @RO Boolean inPlace.get()
         {
         return True;
@@ -47,7 +46,6 @@ interface Map<Key, Value>
      *         indicates that an order is maintained, but not by the comparison of keys, such as
      *         when a map stores entries in the order that they are added
      */
-    @Concurrent
     conditional Orderer? ordered()
         {
         return False;
