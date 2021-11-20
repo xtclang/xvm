@@ -476,7 +476,6 @@ public class Token
         COMMA        (","              ),
         DOT          ("."              ),
         DOTDOT       (".."             ),
-        ELLIPSIS     ("..."            ),
         DIR_CUR      ("./"             ),
         DIR_PARENT   ("../"            ),
         STR_FILE     ("$"              ),

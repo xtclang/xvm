@@ -157,7 +157,7 @@ module TestIO
         }
 
     static String ExampleJSON =
-            `|{
+            \|{
              |   "name" : "Bob",
              |   "age" : 23,
              |   "married" : true,
@@ -369,14 +369,14 @@ module TestIO
         console.println("\n*** testPoint()");
 
         static String ExamplePoint =
-                `|  {
+                \|  {
                  |  "x" : 31,
                  |  "y" : 7
                  |  }
                 ;
 
         static String ExampleRandom =
-                `|  {
+                \|  {
                  |  "y" : 7,
                  |  "x" : 31
                  |  }
@@ -453,7 +453,7 @@ module TestIO
         Schema schemaRM = new Schema(randomAccess = True , enableMetadata = True );
 
         static String Example1 =
-                `|  {
+                \|  {
                  |  "y" : 7,
                  |  "x" : 31
                  |  }
@@ -464,7 +464,7 @@ module TestIO
         assert openObject(schemaRM, Example1).metadataFor("$type") == Null;
 
         static String Example2 =
-                `|  {
+                \|  {
                  |  "$type" : "point",
                  |  "y" : 7,
                  |  "x" : 31,
@@ -498,7 +498,7 @@ module TestIO
         Schema schema = new Schema(mappings, enablePointers = True);
 
         static String RelativeExample =
-                `| {
+                \| {
                  | "p1": {
                  |       "x" : -1,
                  |       "y" : 28
@@ -508,7 +508,7 @@ module TestIO
                  ;
 
         static String AbsoluteExample =
-                `| {
+                \| {
                  | "p1": {
                  |       "x" : 1,
                  |       "y" : 9
@@ -531,7 +531,7 @@ module TestIO
         }
 
     static String ReflectionExample =
-            `| {
+            \| {
              | "$type" : "Segment",
              | "p1": {
              |       "$type" : "Point",

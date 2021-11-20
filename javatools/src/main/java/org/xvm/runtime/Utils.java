@@ -882,11 +882,17 @@ public abstract class Utils
                     boolean      fNoReentrancy = frame.f_iReturn == A_BLOCK;
                     FutureHandle hFuture       = (FutureHandle) frame.f_ahVar[0];
 
-                    return hFuture.isAssigned()
-                        ? frame.returnValue(hFuture, true)
-                        : fNoReentrancy
-                            ? R_PAUSE
-                            : R_REPEAT;
+                    if (hFuture.isAssigned())
+                        {
+                        return frame.returnValue(hFuture, true);
+                        }
+
+                    // add a notification and wait for the assignment/completion;
+                    // the service is responsible for timing out
+                    hFuture.getFuture().whenComplete(
+                        (r, x) -> frame.f_fiber.onResponse());
+
+                    return fNoReentrancy ? R_PAUSE : R_REPEAT;
                     }
 
                 assert frame.f_iReturn == A_MULTI;
@@ -901,6 +907,8 @@ public abstract class Utils
                         }
                     else
                         {
+                        hFuture.getFuture().whenComplete(
+                            (r, x) -> frame.f_fiber.onResponse());
                         return R_REPEAT;
                         }
                     }

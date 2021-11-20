@@ -202,13 +202,9 @@ public class Lexer
                         case '.':
                             if (source.hasNext())
                                 {
-                                switch (nextChar())
+                                if (nextChar() == '/')
                                     {
-                                    case '.':
-                                        return new Token(lInitPos, source.getPosition(), Id.ELLIPSIS);
-
-                                    case '/':
-                                        return new Token(lInitPos, source.getPosition(), Id.DIR_PARENT);
+                                    return new Token(lInitPos, source.getPosition(), Id.DIR_PARENT);
                                     }
                                 source.rewind();
                                 }
@@ -585,7 +581,7 @@ public class Lexer
             case '\"':
                 return eatStringLiteral(lInitPos);
 
-            case '`':
+            case '\\':
                 if (source.hasNext())
                     {
                     if (nextChar() == '|')

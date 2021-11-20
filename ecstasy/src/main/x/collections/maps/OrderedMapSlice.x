@@ -1,5 +1,5 @@
 /**
- * An implementation of the `OrderedMap` interface that represents a slice of another `OrderedMap`.
+ * An implementation of the [OrderedMap] interface that represents a slice of another `OrderedMap`.
  */
 class OrderedMapSlice<Key extends Orderable, Value>
         implements OrderedMap<Key, Value>
@@ -17,6 +17,10 @@ class OrderedMapSlice<Key extends Orderable, Value>
      */
     construct(OrderedMap<Key, Value> map, Range<Key> range)
         {
+        // while this implementation could be altered to support persistent map implementations, it
+        // currently assumes that the underlying map will mutate in-place
+        assert map.inPlace;
+
         this.map   = map;
         this.range = range;
 
@@ -177,7 +181,7 @@ class OrderedMapSlice<Key extends Orderable, Value>
     @RO Boolean empty.get()
         {
         // the assumption is that it's faster to find the first than the last in the underlying map
-        return (descending ? !last() : !first());
+        return map.empty || (descending ? !last() : !first());
         }
 
     @Override
@@ -195,27 +199,40 @@ class OrderedMapSlice<Key extends Orderable, Value>
     @Override
     conditional Value get(Key key)
         {
-        TODO include map.get
+        if (include(key))
+            {
+            return map.get(key);
+            }
+
+        return False;
         }
 
     @Override
     OrderedMapSlice put(Key key, Value value)
         {
-        TODO
+        assert:bounds include(key);
+        map.put(key, value);
         return this;
         }
 
     @Override
     OrderedMapSlice remove(Key key)
         {
-        TODO
+        if (include(key))
+            {
+            map.remove(key);
+            }
+
         return this;
         }
 
     @Override
     OrderedMapSlice clear()
         {
-        TODO
+        while (Key key := first())
+            {
+            map.remove(key);
+            }
         return this;
         }
 
@@ -294,7 +311,7 @@ class OrderedMapSlice<Key extends Orderable, Value>
     // ----- Sliceable interface -------------------------------------------------------------------
 
     @Override
-    @Op("[..]") OrderedMapSlice<Key, Value> slice(Range<Key> indexes)
+    @Op("[..]") OrderedMapSlice slice(Range<Key> indexes)
         {
         // use the orderer instead of the range's own logic, since the custom key ordering
         // doesn't necessarily match the natural ordering used by the range
@@ -384,18 +401,6 @@ class OrderedMapSlice<Key extends Orderable, Value>
                 : lower..upper;
 
         return new OrderedMapSlice(map, indexes);
-        }
-
-    @Override
-    @Op("[[..]]") OrderedMapSlice<Key, Value> sliceInclusive(Range<Index> indexes)
-        {
-        return slice(indexes.ensureInclusive());
-        }
-
-    @Override
-    @Op("[[..)]") OrderedMapSlice<Key, Value> sliceExclusive(Range<Index> indexes)
-        {
-        return slice(indexes.ensureExclusive());
         }
 
     @Override

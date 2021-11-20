@@ -179,7 +179,7 @@ module TestLiterals
         {
         console.println("\n** testMultiline()");
 
-        String s = `|<%@ taglib uri="/WEB-INF/jspwiki.tld" prefix="wiki" %>
+        String s = \|<%@ taglib uri="/WEB-INF/jspwiki.tld" prefix="wiki" %>
                     |<%@ taglib uri="http://stripes.sourceforge.net/stripes.tld" prefix="stripes" %>
                     |<stripes:useActionBean binding="/View.action" />
                     |<wiki:Include page="ViewTemplate.jsp" />
@@ -202,7 +202,7 @@ module TestLiterals
                   ; // semi-colon is the end of the declaration statement
         console.println($"s={s}");
 
-        s = `|This is my string\
+        s = \|This is my string\
              | which I want to be\
              | on one line
              ;
@@ -371,7 +371,7 @@ module TestLiterals
         import ecstasy.lang.src.Lexer.Token;
         import ecstasy.lang.src.Source;
 
-//        String     text   = `|Version v = v:1.0;
+//        String     text   = \|Version v = v:1.0;
 //                             ;
 //        Source     source = new Source(text);
 //        ErrorList  errs   = new ErrorList(100);

@@ -877,7 +877,7 @@ FPTypeName:
 
 StringLiteral
     "$"-opt NoWhitespace '"' CharacterString-opt '"'
-    "`|" FreeformLiteral
+    "\|" FreeformLiteral
     "$|" FreeformLiteral
     "$" NoWhitespace File                                       # value is String contents of file
 
