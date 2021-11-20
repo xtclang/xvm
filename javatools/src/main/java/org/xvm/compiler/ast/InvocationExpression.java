@@ -2038,11 +2038,11 @@ public class InvocationExpression
         m_fNamedArgs  = fNamedArgs;
 
         ConstantPool pool = pool();
-        if (atypeReturn != null && fNoCall)
+        if (atypeReturn != null && atypeReturn.length > 0 && fNoCall)
             {
             // "no call" means that we are expected to produce a function, but the code below
             // treats atypeReturn as function return types
-            if (atypeReturn.length != 1)
+            if (atypeReturn.length > 1)
                 {
                 log(errs, Severity.ERROR, Compiler.WRONG_TYPE_ARITY, 1, atypeReturn.length);
                 return null;
