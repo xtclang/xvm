@@ -216,7 +216,7 @@ public abstract class ObjectHandle
         }
 
     /**
-     * Check if this handle belongs to the same type system as the one represented by the
+     * Check if this immutable handle belongs to the same type system as the one represented by the
      * specified ConstantPool.
      *
      * @param poolThat    the pool representing the "receiving" container
@@ -230,8 +230,8 @@ public abstract class ObjectHandle
         }
 
     /**
-     * Helper method to check if all the specified handles belongs to the same type system as the
-     * one represented by the specified ConstantPool.
+     * Helper method to check if all the immutable specified handles belongs to the same type system
+     * as the one represented by the specified ConstantPool.
      *
      * @param ahValue     an array of handles to check
      * @param poolThat    the pool representing the "receiving" container
@@ -443,7 +443,7 @@ public abstract class ObjectHandle
         @Override
         public boolean isService()
             {
-            if (getComposition().getFieldNids().contains(OUTER))
+            if (getComposition().hasOuter())
                 {
                 ObjectHandle hParent = getField(OUTER);
                 return hParent != null && hParent.isService();
@@ -563,22 +563,29 @@ public abstract class ObjectHandle
         @Override
         public boolean isShared(ConstantPool poolThat, Map<ObjectHandle, Boolean> mapVisited)
             {
-            if (!getType().isShared(poolThat))
+            TypeConstant type = getType();
+            if (!type.isShared(poolThat))
                 {
                 return false;
                 }
 
-            // TODO GG: we could make this check less expensive by pre-emptively calculating
-            //          whether all the fields belong to the same pool, which would be a wast
-            //          majority of the objects; in that case, no object tree traversing would be
-            //          necessary
+            if (poolThat == m_pool)
+                {
+                return true;
+                }
+
             if (mapVisited == null)
                 {
                 mapVisited = new IdentityHashMap<>();
                 }
 
-            return mapVisited.put(this, Boolean.TRUE) != null ||
-                   areShared(m_aFields, poolThat, mapVisited);
+            if (mapVisited.put(this, Boolean.TRUE) != null ||
+                    areShared(m_aFields, poolThat, mapVisited))
+                {
+                m_pool = poolThat;
+                return true;
+                }
+            return false;
             }
 
         /**
@@ -587,10 +594,17 @@ public abstract class ObjectHandle
         private final ObjectHandle[] m_aFields;
 
         /**
-         * The owner field is most commonly not set, unless this object is a service, a module,
+         * The "m_owner" field is most commonly not set, unless this object is a service, a module,
          * was injected or explicitly "masked as".
          */
         protected Container m_owner;
+
+        /**
+         * The "m_pool" field is most commonly not set, unless this object is a const that needs to
+         * be passed across the service boundaries and all objects fields belong to the same pool
+         * as the type (TypeConstant).
+         */
+        protected ConstantPool m_pool;
 
         /**
          * Synthetic property holding a reference to a parent instance.

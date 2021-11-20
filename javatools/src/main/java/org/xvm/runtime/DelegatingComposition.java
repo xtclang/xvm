@@ -145,6 +145,13 @@ abstract public class DelegatingComposition
         return f_clzOrigin.getFieldNids();
         }
 
+    @Override
+    public boolean hasOuter()
+        {
+        return f_clzOrigin.hasOuter();
+        }
+
+
     // ----- data fields ---------------------------------------------------------------------------
 
     /**
