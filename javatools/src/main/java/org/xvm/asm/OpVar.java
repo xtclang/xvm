@@ -19,7 +19,7 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * Support for all of the various "VAR" ops.
+ * Base class for all "VAR" ops.
  */
 public abstract class OpVar
         extends Op
@@ -112,7 +112,7 @@ public abstract class OpVar
                     }
                 }
             }
-        catch (Throwable e) {}
+        catch (Throwable ignore) {}
 
         return "?";
         }
@@ -130,7 +130,7 @@ public abstract class OpVar
         }
 
     /**
-     * Specifies whether or not this op carries the type information.
+     * @return true iff this op carries the type information
      */
     protected boolean isTypeAware()
         {
@@ -148,9 +148,9 @@ public abstract class OpVar
      */
     protected TypeComposition getArrayClass(Frame frame, TypeConstant typeList)
         {
-        ServiceContext   context  = frame.f_context;
-        TypeComposition clzArray = (TypeComposition) context.getOpInfo(this, Category.Composition);;
-        TypeConstant     typePrev = (TypeConstant)     context.getOpInfo(this, Category.Type);
+        ServiceContext  context  = frame.f_context;
+        TypeComposition clzArray = (TypeComposition) context.getOpInfo(this, Category.Composition);
+        TypeConstant    typePrev = (TypeConstant)    context.getOpInfo(this, Category.Type);
 
         if (clzArray == null || !typeList.equals(typePrev))
             {
@@ -256,5 +256,5 @@ public abstract class OpVar
     protected int m_nType;
 
     // categories for cached info
-    enum Category {Composition, Type};
+    enum Category {Composition, Type}
     }

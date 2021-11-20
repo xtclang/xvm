@@ -139,7 +139,12 @@ public interface TypeComposition
     Set<Object> getFieldNids();
 
     /**
-     * Check whether or not the property referred by the specified nid has a custom code or
+     * @return true iff this composition contains the {@link GenericHandle#OUTER} field
+     */
+    boolean hasOuter();
+
+    /**
+     * Check whether the property referred by the specified nid has a custom code or
      * Ref-annotation.
      *
      * @param nid  the property nid
@@ -149,7 +154,7 @@ public interface TypeComposition
     boolean isInflated(Object nid);
 
     /**
-     * Check whether or not the property referred by the specified nid is LazyVar annotated.
+     * Check whether the property referred by the specified nid is LazyVar annotated.
      *
      * @param nid  the property nid
      *
@@ -158,8 +163,8 @@ public interface TypeComposition
     boolean isLazy(Object nid);
 
     /**
-     * Check whether or not the property referred by the specified nid is a "regular" one, meaning
-     * that it's neither nested nor synthetic nor lazy.
+     * Check whether the property referred by the specified nid is a "regular" one, meaning that
+     * it's neither nested nor synthetic nor lazy.
      *
      * @param nid  the property nid
      *
@@ -182,8 +187,8 @@ public interface TypeComposition
         }
 
     /**
-     * Check whether or not the property referred by the specified nid is allowed to stay
-     * unassigned after the construction.
+     * Check whether the property referred by the specified nid is allowed to stay unassigned after
+     * the construction.
      *
      * @param nid  the property nid
      *

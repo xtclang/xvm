@@ -183,6 +183,12 @@ public class PropertyComposition
         }
 
     @Override
+    public boolean hasOuter()
+        {
+        return f_clzRef.hasOuter();
+        }
+
+    @Override
     public boolean isInflated(Object nid)
         {
         return f_clzRef.isInflated(nid);

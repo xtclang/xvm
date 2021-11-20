@@ -100,6 +100,7 @@ public class ClassComposition
         f_mapSetters      = f_clzInception.f_mapSetters;
 
         m_mapFields       = f_clzInception.m_mapFields;
+        m_fHasOuter       = f_clzInception.m_fHasOuter;
         m_methodInit      = f_clzInception.m_methodInit;
         }
 
@@ -472,6 +473,12 @@ public class ClassComposition
         }
 
     @Override
+    public boolean hasOuter()
+        {
+        return m_fHasOuter;
+        }
+
+    @Override
     public int makeStructureImmutable(Frame frame, ObjectHandle[] ahField)
         {
         for (Map.Entry<Object, FieldInfo> entry : m_mapFields.entrySet())
@@ -575,6 +582,10 @@ public class ClassComposition
         // create storage for implicits
         for (String sField : f_template.getImplicitFields())
             {
+            if (sField.equals(GenericHandle.OUTER))
+                {
+                m_fHasOuter = true;
+                }
             mapFields.put(sField, new FieldInfo(nIndex++, null, true));
             }
 
@@ -810,6 +821,11 @@ public class ClassComposition
      * {@link FieldInfo}s for class fields keyed by nids.
      */
     private Map<Object, FieldInfo> m_mapFields;
+
+    /**
+     * True iff this class contains an OUTER field.
+     */
+    private boolean m_fHasOuter;
 
     /**
      * A cache of derivative TypeCompositions keyed by the "revealed type".

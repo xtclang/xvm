@@ -181,22 +181,7 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
     @Override
     ConcurrentHashMap put(Key key, Value value)
         {
-        // fast, but doesn't allow caller to go async
-        partitionOf(key).putOrdered(key, value);
-        return this;
-
-        // ~2x slower, but asyncable
-//        @Future ConcurrentHashMap result;
-//        Tuple future = partitionOf(key).putOrdered^(key, value);
-//        &future.thenDo(() -> {result = this;});
-//        return result;
-
-         // ~10x slower, but asyncable
-//        Tuple future = partitionOf(key).putOrdered^(key, value);
-//        return &future.transform(r -> this);
-
-        // ~200x slower, simple asyncable, but too slow
-//        return partitionOf(key).putOrdered^(this, key, value);
+        return partitionOf(key).putOrdered^(this, key, value);
         }
 
     @Override
@@ -496,12 +481,10 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
             {
             if (isContended(key))
                 {
-                process(key, e -> {e.value = value;});
+                return process^(key, e -> {e.value = value;});
                 }
-            else
-                {
-                put(key, value);
-                }
+
+            put(key, value);
             }
 
         @Concurrent
@@ -509,13 +492,13 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
             {
             if (isContended(key))
                 {
-                process(key, e -> {e.value = value;});
-                }
-            else
-                {
-                put(key, value);
+                @Future P futureParent;
+                process^(key, e -> {e.value = value;}).
+                    thenDo(() -> {futureParent = parent;});
+                return futureParent;
                 }
 
+            put(key, value);
             return parent;
             }
 
