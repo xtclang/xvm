@@ -384,7 +384,7 @@ module TestMaps
 
     void testProcess(Map<Int, Int> map)
         {
-        console.println("test process");
+        console.println("\n** testProcess()");
         map.put(0, 0);
 
         // run a long running blocking processor in the background
@@ -392,32 +392,32 @@ module TestMaps
             {
             @Inject Timer timer;
             @Future Int   result;
-            timer.schedule(Duration:1s, () ->
+            timer.schedule(Duration:0.1s, () ->
                 {
                 result = 42;
                 });
 
-            console.println($"{tag()} process(0) {result}");
+            console.println($"3) process(0) {result}");
             e.value++;
             return result;
             });
 
         // write to an alternate key; should not block with CHM even on the same partition
         map.put(17, 1);
-        console.println($"{tag()} put(17)");
+        console.println($"1) put(17)");
 
         // read of the same key as long write; CHM should not block
         map.get(0);
-        console.println($"{tag()} get(0)");
+        console.println($"2) get(0)");
 
         // write to the same key; CHM should block until original write completes
         map.put(0, 1);
-        console.println($"{tag()} put(0)");
+        console.println($"4) put(0)");
 
         // processor based write to the same key; CHM should also block
         Int n = map.process(0, e ->
             {
-            console.println($"{tag()} process(0)");
+            console.println($"5) process(0)");
             return ++e.value;
             });
 
@@ -477,11 +477,5 @@ module TestMaps
         {
         @Inject Clock clock;
         return clock.now;
-        }
-
-    static String tag()
-        {
-        static DateTime base = now();
-        return $"{(now() - base)}:\t" + (this:service.serviceName == "TestService" ? "[svc ]" : "[main]");
         }
     }
