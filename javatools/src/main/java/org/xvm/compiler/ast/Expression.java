@@ -347,6 +347,19 @@ public abstract class Expression
             }
 
         TypeFit fitOut = TypeFit.Fit;
+        if (cTypesOut == 1)
+            {
+            // check for a Tuple packing
+            TypeConstant typeOut = atypeOut[0];
+            if (typeOut.isTuple() && typeOut.getParamsCount() <= cTypesIn &&
+                    (cTypesIn > 1 || !atypeIn[0].isTuple()))
+                {
+                atypeOut  = typeOut.getParamTypesArray();
+                cTypesOut = atypeOut.length;
+                fitOut    = TypeFit.Pack;
+                }
+            }
+
         for (int i = 0; i < cTypesOut; ++i)
             {
             TypeConstant typeIn    = atypeIn [i];
@@ -742,6 +755,7 @@ public abstract class Expression
         if (cTypeReqs > cActual && fit.isFit())
             {
             log(errs, Severity.ERROR, Compiler.WRONG_TYPE_ARITY, cTypeReqs, cActual);
+            fit = TypeFit.NoFit;
             }
 
         boolean fCloneActual = true;
