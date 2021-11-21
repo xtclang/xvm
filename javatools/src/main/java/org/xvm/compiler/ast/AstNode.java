@@ -1640,6 +1640,7 @@ public abstract class AstNode
                 {
                 fit         = fit.addPack();
                 atypeReturn = atypeReturn[0].getParamTypesArray();
+                cReturns    = atypeReturn.length;
                 }
             }
 

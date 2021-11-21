@@ -346,11 +346,6 @@ public abstract class Expression
             return TypeFit.NoFit;
             }
 
-        if (cTypesIn == 1 && cTypesOut <= 1)
-            {
-            return calcFit(ctx, atypeIn[0], cTypesOut == 0 ? null : atypeOut[0]);
-            }
-
         TypeFit fitOut = TypeFit.Fit;
         for (int i = 0; i < cTypesOut; ++i)
             {
