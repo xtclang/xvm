@@ -314,7 +314,6 @@ Statement
 	TypeDefStatement
     "using" "(" UsingResources ")" StatementBlock
     "while" "(" ConditionList ")" StatementBlock
-    WithStatement
     StatementBlock
 	Expression ";"      // for parsing purposes (compilation will only allow specific expression forms)
 
