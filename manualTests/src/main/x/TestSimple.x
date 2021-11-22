@@ -4,21 +4,40 @@ module TestSimple.test.org
 
     void run()
         {
+        recover();
         }
 
-    void testProcess(Map<Int, Int> map)
+    void recover()
         {
-        Int count = 0;
-
-        map.process^(0, e ->
+        for (Int i : 0..2)
             {
-            @Inject Timer timer;
-            timer.schedule(Duration:1s, () ->
-                {
-                TODO
-                });
+            Int store = storeFor(i);
 
-            return ++count; // this used to fail the compilation
-            });
+            try
+                {
+                if (deepScan())
+                    {
+                    continue;
+                    }
+                }
+            catch (Exception e)
+                {
+                console.println("MUST NOT THROW"); // this used to log for i==1
+                }
+            }
+        }
+
+    Int storeFor(Int i)
+        {
+        if (i == 0)
+            {
+            return i;
+            }
+        TODO
+        }
+
+    Boolean deepScan()
+        {
+        return True;
         }
     }
