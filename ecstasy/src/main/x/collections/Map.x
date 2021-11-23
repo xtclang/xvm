@@ -778,6 +778,7 @@ interface Map<Key, Value>
         {
         if (map1.size != map2.size)
             {
+            assert:debug;
             return False;
             }
 

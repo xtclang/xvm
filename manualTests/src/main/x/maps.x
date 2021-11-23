@@ -30,6 +30,10 @@ module TestMaps
         testMapIteration(new SkiplistMap());
         testMapIteration(new ConcurrentHashMap());
 
+        testMapStableIteration(new HashMap());
+        testMapStableIteration(new ConcurrentHashMap());
+        testMapStableIteration(new SkiplistMap());
+
         testFreezable();
 
         testBasicOps(new ListMap());
@@ -37,13 +41,13 @@ module TestMaps
         testBasicOps(new SkiplistMap());
         testBasicOps(new ConcurrentHashMap());
 
-// TODO: deadlocks        testProcess(new SafeHashMap());
+// TODO: deadlocks testProcess(new SafeHashMap());
         testProcess(new ConcurrentHashMap());
 
         // concurrency performance comparison of maps
 //        Int concurrency = 4;
 //        Int keys = 1_000;
-//        Int iterations = 100_000;
+//        Int iterations = 1000_000;
 //        for (Int i : 0..3)
 //            {
 //            console.println("Concurrent load test of HashMap...");
@@ -197,6 +201,56 @@ module TestMaps
         for (Int i : map.values)
             {
             console.println($"? = {i}");
+            }
+        }
+
+    void testMapStableIteration(Map<Int, Int> map)
+        {
+        console.println("\n** testMapStableIteration()");
+
+        for (Int i : 0..10)
+            {
+            map[i] = i + 1;
+            }
+
+        Iterator<Map<Int, Int>.Entry> iter = map.entries.iterator();
+        Map<Int, Int> control = new HashMap();
+        if (Map<Int, Int>.Entry next := iter.next())
+            {
+            assert(!control.contains(next.key));
+            control.put(next.key, next.value);
+            }
+
+        for (Int i : 11..100)
+            {
+            map[i] = i + 1;
+            }
+
+        for (Int i : 0..20)
+            {
+            if (Map<Int, Int>.Entry next := iter.next())
+                {
+                assert(!control.contains(next.key));
+                control.put(next.key, next.value);
+                }
+            }
+
+        for (Int i : 100..500)
+            {
+            map[i] = i;
+            }
+
+        while (Map<Int, Int>.Entry next := iter.next())
+            {
+            assert(!control.contains(next.key));
+            control.put(next.key, next.value);
+            }
+
+        // verify that we at least saw all the original items from the time the
+        // iterator was created
+        for (Int i : 0..10)
+            {
+            assert(control.contains(i));
             }
         }
 
@@ -459,8 +513,8 @@ module TestMaps
 //                    {
 //                    e.value = e.exists ? e.value + 1 : 1;
 //                    });
-                map.put(rnd.int(range), 42);
-//                map.get(rnd.int(range));
+//                map.put(rnd.int(range), 42);
+                map.get(rnd.int(range));
                 }
 
             serviceControl.shutdown();

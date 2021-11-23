@@ -7,6 +7,11 @@ import maps.KeyEntry;
  * * If no [Hasher] is provided, then the Key type must be immutable and must implement Hashable; or
  * * If a [Hasher] is provided, then the Key type does not have to be immutable and does not have to
  *   implement Hashable.
+ *
+ * The iterators provided by this map are stable in presence of structural changes to the map and
+ * will not throw [ConcurrentModification], return duplicate entries, or skip entries which remain
+ * present over the coarse of iteration. The iterator may return entries which were inserted after
+ * the creation of the iterator.
  */
 class HashMap<Key, Value>
         implements CopyableMap<Key, Value>
@@ -419,60 +424,313 @@ class HashMap<Key, Value>
         @Override
         Iterator<Entry> iterator()
             {
-            return new EntryIterator();
+            return new StableEntryIterator();
             }
 
-        // TODO GG: move inside the method above
-        class EntryIterator
+        /**
+         * An iterator over the maps entries which is stable in the presence of concurrent modifications.
+         */
+        class StableEntryIterator
+                // TODO: extends CursorEntry
                 implements Iterator<Entry>
             {
+
             private construct()
                 {
-                buckets     = this.HashMap.buckets;
-                nextBucket  = 0;
-                nextEntry   = Null;
-                addSnapshot = this.HashMap.addCount;
                 }
 
-            private construct(EntryIterator that)
+            private construct(StableEntryIterator that)
                 {
-                this.buckets     = that.buckets;
-                this.nextBucket  = that.nextBucket;
-                this.nextEntry   = that.nextEntry;
-                this.addSnapshot = that.addSnapshot;
+                this.bucketCount = that.bucketCount;
+                this.bucketNext = that.bucketNext;
+                this.entryNext = that.entryNext;
+                this.firstEntry = that.firstEntry;
+                that.secondEntry = that.secondEntry;
+
+                HashEntry?[]? entries = that.entries;
+                if (entries != Null)
+                    {
+                    this.entries = new HashEntry?[](Array.Mutability.Mutable, entries);
+                    }
+
+                Int[]? processed = that.processed;
+                if (processed != Null)
+                    {
+                    this.processed = new Int[](Array.Mutability.Mutable, processed);
+                    }
                 }
 
-            private HashEntry?[] buckets;
-            private Int          nextBucket;
-            private HashEntry?   nextEntry;
-            private Int          addSnapshot;
-            private CursorEntry  entry = new CursorEntry();
+            /**
+             * The number of buckets in the map at the time that the current bucket was cached.
+             */
+            private Int bucketCount = this.HashMap.buckets.size;
+
+            /**
+             * The next bucket to process.
+             */
+            private Int bucketNext;
+
+            /**
+             * Pairs of bucketCount and bucketNext which had been fully processed before
+             * the map's bucketCount changed.
+             */
+            private Int[]? processed;
+
+            /**
+             * The first unprocessed entry in the currently cached bucket.
+             * This is an optimization array allocation for common acse of small buckets.
+             */
+            private HashEntry? firstEntry; // to avoid entries array inflation
+
+            /**
+             * The second unprocessed entry in the currently cached bucket.
+             * This is an optimization array allocation for common acse of small buckets.
+             */
+            private HashEntry? secondEntry; // to avoid entries  array inflation
+
+            /**
+             * The cached bucket consisting of unprocessed entries.
+             */
+            private HashEntry?[]? entries; // unprocessed entries from current bucket
+
+            /**
+             * The next entry in the cached bucket to process.
+             */
+            private Int entryNext;
+
+            /**
+             * The re-usable [Entry] to return from [next]
+             */
+            private CursorEntry cursor = new CursorEntry();
+
+            /**
+             * Return the unprocessed entry from the cached bucket at a given index.
+             *
+             * @param i the entry index
+             *
+             * @return the entry, or [Null]
+             */
+            protected HashEntry? entriesOf(Int i)
+                {
+                switch (i)
+                    {
+                    case 0:
+                        return firstEntry;
+
+                    case 1:
+                        return secondEntry;
+
+                    default:
+                        HashEntry?[]? entries = this.entries;
+                        if (entries == Null || i - 2 >= entries.size)
+                            {
+                            return Null;
+                            }
+                        return entries[i - 2];
+                    }
+                }
+
+            /**
+             * Set the entry for a given index in the cached bucket.
+             *
+             * @param i the index
+             * @param entry the entry or [Null]
+             */
+            protected void entriesOf(Int i, HashEntry? entry)
+                {
+                switch (i)
+                    {
+                    case 0:
+                        firstEntry = entry;
+                        break;
+
+                    case 1:
+                        secondEntry = entry;
+                        break;
+
+                    default:
+                        HashEntry?[]? entries = this.entries;
+                        if (entries == Null)
+                            {
+                            entries = new HashEntry?[](2);
+                            this.entries = entries;
+                            }
+                        entries[i - 2] = entry;
+                        break;
+                    }
+                }
+
+            /**
+             * @return the size of the cached bucket
+             */
+            protected Int entriesSize()
+                {
+                HashEntry?[]? entries = this.entries;
+                if (entries == Null)
+                    {
+// TODO: GG
+//                    return secondEntry == Null
+//                        ? firstEntry == Null
+//                            ? 0
+//                            : 1
+//                        : 2;
+                    if (secondEntry != Null)
+                        {
+                        return 2;
+                        }
+                    else if (firstEntry != Null)
+                        {
+                        return 1;
+                        }
+
+                    return 0;
+                    }
+
+                return 2 + entries.size;
+                }
+
+            /**
+             * Fix the state of the iterator after witnessing a change in the map's bucket count.
+             */
+            private void fixup()
+                {
+                // we've re-hashed; record our progress
+                HashEntry?[] buckets   = this.HashMap.buckets;
+                Int[]?       processed = this.processed;
+                if (processed == Null)
+                    {
+                    if (bucketNext > 0)
+                        {
+                        processed = new Int[](2);
+                        processed[0] = bucketCount;
+                        processed[1] = bucketNext;
+                        this.processed = processed;
+                        }
+                    bucketCount = buckets.size;
+                    bucketNext = 0;
+                    }
+                else
+                    {
+                    for (Int i = 0; ; i += 2)
+                        {
+                        if (processed[i] == bucketCount)
+                            {
+                            // update existing processed data for bucket
+                            processed[i + 1] = bucketNext;
+                            break;
+                            }
+                        else if (i == processed.size - 2)
+                            {
+                            // record a new bucketCount and progress buckets
+                            processed += [bucketCount, bucketNext];
+                            break;
+                            }
+                        }
+
+                    // determine which bucket to restart from
+                    bucketCount = buckets.size;
+                    bucketNext = 0;
+                    for (Int i = 0; i < processed.size; i += 2)
+                        {
+                        if (processed[i] == bucketCount)
+                            {
+                            // we've previously worked at this bucketCount; resume at next bucket
+                            bucketNext = processed[i + 1];
+                            break;
+                            }
+                        }
+                    }
+                }
+
+            /**
+             * Advance to the next populated bucket, returning the first unprocessed entry and caching
+             * the remainder from its bucket.
+             *
+             * @return [False] if the iterator is exhausted, else the first unprocessed entry from
+             *         the next bucket
+             */
+            private conditional Entry advanceBucket()
+                {
+                Int bucketCount = this.bucketCount;
+                Int bucketNext = this.bucketNext;
+                if (bucketNext == bucketCount)
+                    {
+                    return False;
+                    }
+
+                HashEntry?[] buckets = this.HashMap.buckets;
+                if (bucketCount != buckets.size)
+                    {
+                    fixup();
+                    bucketCount = this.bucketCount;
+                    bucketNext = this.bucketNext;
+                    }
+
+                Int ofEntry = -1;
+
+                for (; bucketNext < buckets.size; ++bucketNext)
+                    {
+                    // find next populated bucket
+                    if (HashEntry next ?= buckets[bucketNext])
+                        {
+                        HashEntry? entry = Null;
+                        // copy bucket entries which we haven't visited yet
+                        NEXT_ENTRY: do
+                            {
+                            // filter out processed entries
+                            Int[]? processed = this.processed;
+                            if (processed != Null)
+                                {
+                                for (Int i = 0; i < processed.size; i += 2)
+                                    {
+                                    Int bucketId = next.keyhash % processed[i];
+                                    if (bucketId < processed[i + 1])
+                                        {
+                                        // we've previously processed this entry
+                                        continue NEXT_ENTRY;
+                                        }
+                                    }
+                                }
+
+                            // we've yet to process this entry
+                            if (entry == Null)
+                                {
+                                entry = next;
+                                }
+                            else
+                                {
+                                entriesOf(ofEntry, next);
+                                }
+
+                            ++ofEntry;
+                            }
+                        while (next ?= next.next);
+
+                        if (ofEntry >= 0)
+                            {
+                            this.bucketNext = bucketNext + 1;
+                            this.entryNext = 0;
+                            return True, cursor.advance(entry);
+                            }
+                        }
+                    }
+
+                return False;
+                }
 
             @Override
             conditional Entry next()
                 {
-                if (addSnapshot != this.HashMap.addCount)
+                Int entryNext = this.entryNext;
+                HashEntry? next = entriesOf(entryNext);
+                if (next == Null)
                     {
-                    throw new ConcurrentModification();
+                    return advanceBucket();
                     }
 
-                Int bucketCount = buckets.size;
-                while (nextEntry == Null && nextBucket < bucketCount)
-                    {
-                    nextEntry = buckets[nextBucket++];
-                    }
-
-                HashEntry? currEntry = nextEntry;
-                if (currEntry != Null)
-                    {
-                    // this is the entry to return;
-                    // always load next one in the chain to avoid losing the position if/when
-                    // the current entry is removed
-                    nextEntry = currEntry.next;
-                    return True, entry.advance(currEntry);
-                    }
-
-                return False;
+                entriesOf(entryNext, Null); // clear for reuse in advanceBucket
+                this.entryNext = entryNext + 1;
+                return True, cursor.advance(next);
                 }
 
             @Override
@@ -490,7 +748,7 @@ class HashMap<Key, Value>
             @Override
             (Iterator<Entry>, Iterator<Entry>) bifurcate()
                 {
-                return new EntryIterator(this), new EntryIterator(this);
+                return new StableEntryIterator(this), new StableEntryIterator(this);
                 }
             }
 
