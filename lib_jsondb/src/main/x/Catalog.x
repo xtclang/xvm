@@ -27,6 +27,7 @@ import storage.JsonMapStore;
 import storage.JsonNtxCounterStore;
 import storage.JsonNtxLogStore;
 import storage.JsonLogStore;
+import storage.JsonProcessorStore;
 import storage.JsonValueStore;
 import storage.ObjectStore;
 import storage.SchemaStore;
@@ -515,7 +516,7 @@ service Catalog<Schema extends RootSchema>
                     TODO
 
                 case DBProcessor:
-                    TODO
+                    return createProcessorStore(info);
 
                 case DBLog:
                     return createLogStore(info);
@@ -569,6 +570,16 @@ service Catalog<Schema extends RootSchema>
         return info.transactional
                 ? new JsonLogStore<elementType.DataType>(this, info, elementMapping)
                 : new JsonNtxLogStore<elementType.DataType>(this, info, elementMapping);
+        }
+
+    @Concurrent
+    private ObjectStore createProcessorStore(DBObjectInfo info)
+        {
+        assert Type messageType := info.typeParams.get("Message"),
+                    messageType.is(Type<immutable Const>);
+
+        return new JsonProcessorStore<messageType.DataType>(this, info,
+                jsonSchema.ensureMapping(messageType).as(Mapping<messageType.DataType>));
         }
 
 

@@ -246,7 +246,7 @@ class DbHost(String dbModuleName)
 
                     String elementTypeName = displayName(elementType, appName);
 
-                    propertyStoreType  = "{hostName}_.storage.LogStore";
+                    propertyStoreType  = $"{hostName}_.storage.LogStore<{elementTypeName}>";
                     propertyBaseType   = $"DBLogImpl<{elementTypeName}>";
                     propertyTypeParams = $"\"Element\"={elementTypeName}";
 
@@ -254,6 +254,16 @@ class DbHost(String dbModuleName)
                         {
                         transactional = "False";
                         }
+                    break;
+
+                case DBProcessor:
+                    assert TypeTemplate messageType := typeTemplate.resolveFormalType("Message");
+
+                    String messageTypeName = displayName(messageType, appName);
+
+                    propertyStoreType  = $"{hostName}_.storage.ProcessorStore<{messageTypeName}>";
+                    propertyBaseType   = $"DBProcessorImpl<{messageTypeName}>";
+                    propertyTypeParams = $"\"Message\"={messageTypeName}";
                     break;
 
                 default:
@@ -283,7 +293,7 @@ class DbHost(String dbModuleName)
                 continue;
                 }
 
-            (String customMethods, String customInvocations) = createMethods(appName, classTemplate);
+            String customMethods = createMethods(appName, classTemplate);
 
             customInstantiations += customInstantiationTemplate
                                     .replace("%appName%"          , appName)
@@ -300,7 +310,6 @@ class DbHost(String dbModuleName)
                                     .replace("%propertyStoreType%", propertyStoreType)
                                     .replace("%propertyBaseType%" , propertyBaseType)
                                     .replace("%CustomMethods%"    , customMethods)
-                                    .replace("%CustomInvocations%", customInvocations)
                                     ;
             }
 
@@ -322,10 +331,9 @@ class DbHost(String dbModuleName)
         return True;
         }
 
-    (String customMethods, String customInvocations) createMethods(String appName, ClassTemplate classTemplate)
+    String createMethods(String appName, ClassTemplate classTemplate)
         {
-        String customMethods     = "";
-        String customInvocations = "";
+        String customMethods = "";
 
         for (MultiMethodTemplate multimethod : classTemplate.multimethods)
             {
@@ -398,18 +406,11 @@ class DbHost(String dbModuleName)
                                         .replace("%argDecl%", argDecl)
                                         .replace("%args%"   , args)
                                         ;
-
-                    customInvocations += customInvocationTemplate
-                                        .replace("%name%"        , methodName)
-                                        .replace("%argTypes%"    , argTypes)
-                                        .replace("%arg%"         , args)
-                                        .replace("%tupleValues%" , tupleValues)
-                                        ;
                     }
                 }
             }
 
-        return customMethods, customInvocations;
+        return customMethods;
         }
 
     // ----- common helper methods -----------------------------------------------------------------

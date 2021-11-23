@@ -5,13 +5,4 @@
             // ----- mixin methods ---------------------------------------------------------------------
 
 %CustomMethods%
-
-            // ----- DBObject interface ------------------------------------------------------------
-
-            @Override
-            Tuple dbInvoke(String | Function fn, Tuple args = Tuple:(), (Duration|DateTime)? when = Null)
-                {
-%CustomInvocations%
-                throw new UnsupportedOperation(fn.toString());
-                }
             }

@@ -150,6 +150,7 @@ module host.xtclang.org
             dbHost.dbContainer = new Container(dbModuleTemplate, Lightweight, repository, dbInjector);
 
             import oodb.Connection;
+            import oodb.RootSchema;
             import oodb.DBUser;
 
             function Connection(DBUser) createConnection = dbHost.ensureDatabase();
@@ -159,7 +160,7 @@ module host.xtclang.org
                 @Override
                 Supplier getResource(Type type, String name)
                     {
-                    if (type.is(Type<Connection>))
+                    if (type.is(Type<Connection>) || type.is(Type<RootSchema>))
                         {
                         return (InjectedRef.Options opts) ->
                             {
@@ -167,7 +168,9 @@ module host.xtclang.org
                             // container, so the host could figure out the user
                             DBUser user = new oodb.model.User(1, "test");
                             Connection conn = createConnection(user);
-                            return &conn.maskAs<Connection>(type);
+                            return type.is(Type<Connection>)
+                                    ? &conn.maskAs<Connection>(type)
+                                    : &conn.maskAs<RootSchema>(type);
                             };
                         }
                     return super(type, name);
