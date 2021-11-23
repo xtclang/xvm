@@ -2,6 +2,7 @@ import maps.EntryKeys;
 import maps.EntryValues;
 import maps.KeyEntry;
 
+
 /**
  * HashMap is a hashed implementation of the Map interface. One of two conditions is required:
  * * If no [Hasher] is provided, then the Key type must be immutable and must implement Hashable; or
@@ -434,30 +435,25 @@ class HashMap<Key, Value>
                 // TODO: extends CursorEntry
                 implements Iterator<Entry>
             {
-
+            /**
+             * Construct an iterator over all of the entries in the HashMap.
+             */
             private construct()
                 {
                 }
 
+            /**
+             * Construct a clone of the passed StableEntryIterator.
+             */
             private construct(StableEntryIterator that)
                 {
                 this.bucketCount = that.bucketCount;
-                this.bucketNext = that.bucketNext;
-                this.entryNext = that.entryNext;
-                this.firstEntry = that.firstEntry;
+                this.bucketNext  = that.bucketNext;
+                this.entryNext   = that.entryNext;
+                this.firstEntry  = that.firstEntry;
                 that.secondEntry = that.secondEntry;
-
-                HashEntry?[]? entries = that.entries;
-                if (entries != Null)
-                    {
-                    this.entries = new HashEntry?[](Array.Mutability.Mutable, entries);
-                    }
-
-                Int[]? processed = that.processed;
-                if (processed != Null)
-                    {
-                    this.processed = new Int[](Array.Mutability.Mutable, processed);
-                    }
+                this.entries     = that.entries?.clone();
+                this.processed   = that.processed?.clone();
                 }
 
             /**
@@ -478,20 +474,22 @@ class HashMap<Key, Value>
 
             /**
              * The first unprocessed entry in the currently cached bucket.
-             * This is an optimization array allocation for common acse of small buckets.
+             *
+             * This optimization avoids array allocation for the common case of small buckets.
              */
-            private HashEntry? firstEntry; // to avoid entries array inflation
+            private HashEntry? firstEntry;
 
             /**
              * The second unprocessed entry in the currently cached bucket.
-             * This is an optimization array allocation for common acse of small buckets.
+             *
+             * This optimization avoids array allocation for the common case of small buckets.
              */
-            private HashEntry? secondEntry; // to avoid entries  array inflation
+            private HashEntry? secondEntry;
 
             /**
-             * The cached bucket consisting of unprocessed entries.
+             * The cached bucket; contains the unprocessed entries from the current bucket.
              */
-            private HashEntry?[]? entries; // unprocessed entries from current bucket
+            private HashEntry?[]? entries;
 
             /**
              * The next entry in the cached bucket to process.
@@ -499,7 +497,7 @@ class HashMap<Key, Value>
             private Int entryNext;
 
             /**
-             * The re-usable [Entry] to return from [next]
+             * The re-usable [Entry] to return from [next].
              */
             private CursorEntry cursor = new CursorEntry();
 
@@ -568,22 +566,9 @@ class HashMap<Key, Value>
                 HashEntry?[]? entries = this.entries;
                 if (entries == Null)
                     {
-// TODO: GG
-//                    return secondEntry == Null
-//                        ? firstEntry == Null
-//                            ? 0
-//                            : 1
-//                        : 2;
-                    if (secondEntry != Null)
-                        {
-                        return 2;
-                        }
-                    else if (firstEntry != Null)
-                        {
-                        return 1;
-                        }
-
-                    return 0;
+                    return secondEntry == Null
+                            ? firstEntry == Null ? 0 : 1
+                            : 2;
                     }
 
                 return 2 + entries.size;
@@ -742,13 +727,15 @@ class HashMap<Key, Value>
             @Override
             conditional Int knownSize()
                 {
+                // TODO MF we only  know the size if we haven't started iterating yet (map size), or
+                //         if the map is empty (zero), or if the iterator is exhausted (zero)
                 return True, this.HashMap.size;
                 }
 
             @Override
             (Iterator<Entry>, Iterator<Entry>) bifurcate()
                 {
-                return new StableEntryIterator(this), new StableEntryIterator(this);
+                return this, new StableEntryIterator(this);
                 }
             }
 
