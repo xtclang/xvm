@@ -180,7 +180,7 @@ module TestMaps
 
     void testMapIteration(Map<String, Int> map)
         {
-        console.println("\n** testMapIteration()");
+        console.println($"\n** testMapIteration({&map.actualType.underlyingTypes[0]})");
 
         map.put("hello", 1);
         map.put("goodbye", 2);
@@ -206,8 +206,6 @@ module TestMaps
 
     void testMapStableIteration(Map<Int, Int> map)
         {
-        console.println("\n** testMapStableIteration()");
-
         for (Int i : 0..10)
             {
             map[i] = i + 1;
