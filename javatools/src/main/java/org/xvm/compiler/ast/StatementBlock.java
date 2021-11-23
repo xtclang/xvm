@@ -203,7 +203,7 @@ public class StatementBlock
      * is used to resolve all global names (all names, down to the method level, but not resolving
      * within any methods), and thus imports outside of methods are all registered during that
      * phase, such that only the ones registered will be visible via this method. The reason for
-     * this approach is that imports are not visible outside of a file, and furthermore, because
+     * this approach is that imports are not visible outside a file, and furthermore, because
      * they can occur at any point within the file, only those encountered "above" some current
      * point in that file are considered to be visible at that point.
      *
@@ -341,7 +341,7 @@ public class StatementBlock
             }
         else
             {
-            // it is is possible that there is a dangling label at the end that is unreachable,
+            // it is possible that there is a dangling label at the end that is unreachable,
             // and it will not have been eliminated at this point, so "cap" the op code stream
             // with a Nop that will get removed by "dead code elimination"
             code.add(new Nop());
@@ -365,10 +365,10 @@ public class StatementBlock
             AstNode parent = getParent();
             if (parent instanceof LambdaExpression)
                 {
-                // go through all of the parameters looking for any implicit de-reference params
+                // go through all the parameters looking for any implicit de-reference params
                 // (a new local variable will be created for each, effectively hiding the original
                 // parameter)
-                MethodStructure method = ctx.getMethod();
+                MethodStructure method = ((LambdaExpression) parent).getLambda();
                 if (method != null)
                     {
                     for (org.xvm.asm.Parameter param : method.getParamArray())
@@ -435,10 +435,11 @@ public class StatementBlock
 
             if (fLambda)
                 {
-                // go through all of the parameters looking for any implicit de-reference params
+                // go through all the parameters looking for any implicit de-reference params
                 // (a new local variable will be created for each, effectively hiding the original
                 // parameter)
-                for (org.xvm.asm.Parameter param : ctx.getMethod().getParamArray())
+                MethodStructure method = ((LambdaExpression) parent).getLambda();
+                for (org.xvm.asm.Parameter param : method.getParamArray())
                     {
                     if (param.isImplicitDeref())
                         {
@@ -1078,7 +1079,7 @@ public class StatementBlock
                             Argument argCapture = ctx.getVar(sName);
                             if (argCapture != null)
                                 {
-                                // we are responsible for capturing a variable for code inside of an
+                                // we are responsible for capturing a variable for code inside an
                                 // anonymous inner class
                                 Register reg = new Register(argCapture.getType());
                                 super.registerVar(name, reg, errs);
@@ -1512,14 +1513,6 @@ public class StatementBlock
         private void checkValidating()
             {
             if (m_fEmitting)
-                {
-                throw new IllegalStateException();
-                }
-            }
-
-        private void checkEmitting()
-            {
-            if (!m_fEmitting)
                 {
                 throw new IllegalStateException();
                 }

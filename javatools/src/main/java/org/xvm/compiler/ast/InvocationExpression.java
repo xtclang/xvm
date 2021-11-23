@@ -966,12 +966,12 @@ public class InvocationExpression
                             return null;
                             }
                         }
-                    else if (cReturns > 0)
+                    if (cReturns > 0)
                         {
                         // check for Tuple conversion for the return value; we know that the
                         // method should fit, so the only thing to figure out is whether
                         // "packing" to a Tuple is necessary
-                        if (isVoid(atypeReturn))
+                        if (atypeReturn.length == 0)
                             {
                             atypeResult = atypeReturn;
                             }

@@ -71,7 +71,7 @@ public class LambdaExpression
      * @param params     either a list of Expression objects or a list of Parameter objects
      * @param operator   the operator (for now always {@link Id#LAMBDA})
      * @param body       the StatementBlock of the lambda
-     * @param lStartPos   the expression's start position in the source code
+     * @param lStartPos  the expression's start position in the source code
      */
     public LambdaExpression(List params, Token operator, StatementBlock body, long lStartPos)
         {
@@ -106,6 +106,14 @@ public class LambdaExpression
         return method == null
                 ? super.getComponent()
                 : method;
+        }
+
+    /**
+     * @return the lambda structure (null until the validation phase)
+     */
+    public MethodStructure getLambda()
+        {
+        return m_lambda;
         }
 
     /**
@@ -1243,7 +1251,7 @@ public class LambdaExpression
         }
 
     /**
-     * Replace all PendingTypeConstants in the specified аrray with the Object type.
+     * Replace all PendingTypeConstants in the specified array with the Object type.
      */
     private TypeConstant[] replacePending(TypeConstant[] atype)
         {

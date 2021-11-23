@@ -48,10 +48,17 @@ public class Jump
     @Override
     public int process(Frame frame, int iPC)
         {
-        return m_fCallFinally
-            ? frame.processAllGuard(
-                new JumpAction(iPC + m_ofJmp, m_nJumpToScope, m_ixAllGuard, m_ixBaseGuard))
-            : jump(frame, iPC + m_ofJmp, m_cExits);
+        if (m_fCallFinally)
+            {
+            return frame.processAllGuard(
+                new JumpAction(iPC + m_ofJmp, m_nJumpToScope, m_ixAllGuard, m_ixBaseGuard));
+            }
+
+        for (int cPop = m_cPopGuards; cPop-- > 0;)
+            {
+            frame.popGuard();
+            }
+        return jump(frame, iPC + m_ofJmp, m_cExits);
         }
 
     @Override
@@ -59,20 +66,27 @@ public class Jump
         {
         super.resolveAddresses(aop);
 
-        int nGuardAllDepth = getGuardAllDepth();
-        if (nGuardAllDepth > 0)
+        Op  opJumpTo      = aop[getAddress() + m_ofJmp];
+        int nAllDepthThis = getGuardAllDepth();
+        int nAllDepthJump = opJumpTo.getGuardAllDepth();
+
+        assert nAllDepthJump <= nAllDepthThis;
+
+        if (nAllDepthJump < nAllDepthThis)
             {
             Op opFinally = findFirstUnmatchedOp(aop, OP_GUARD_ALL, OP_FINALLY);
-            Op opJumpTo  = aop[getAddress() + m_ofJmp];
 
-            assert opFinally.getGuardAllDepth() == nGuardAllDepth; // GuardAllDepth drops right after OP_FINALLY
-            assert opJumpTo.getGuardAllDepth() <= nGuardAllDepth;
+            assert opFinally.getGuardAllDepth() == nAllDepthThis; // GuardAllDepth drops right after OP_FINALLY
 
-            m_ixAllGuard   = opFinally.getGuardDepth() + nGuardAllDepth - 1;
-            m_ixBaseGuard  = opJumpTo.getGuardAllDepth() - 1;
+            m_ixAllGuard   = opFinally.getGuardDepth() + nAllDepthThis - 1;
+            m_ixBaseGuard  = nAllDepthJump - 1;
             m_nJumpToScope = opJumpTo.getDepth() - 1;
-            m_fCallFinally = opJumpTo.getGuardAllDepth() < nGuardAllDepth;
+            m_fCallFinally = true;
             }
+
+        int cPopGuards = getGuardDepth() - opJumpTo.getGuardDepth();
+        assert cPopGuards >= 0;
+        m_cPopGuards = cPopGuards;
         }
 
     @Override
@@ -116,4 +130,5 @@ public class Jump
     protected transient int     m_ixAllGuard;
     protected transient int     m_ixBaseGuard;
     protected transient int     m_nJumpToScope;
+    protected transient int     m_cPopGuards;
     }
