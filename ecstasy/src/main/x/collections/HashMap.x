@@ -492,47 +492,43 @@ class HashMap<Key, Value>
             private HashEntry?[]? entries;
 
             /**
-             * The next entry in the cached bucket to process.
+             * The next entry index in the cached bucket to process.
              */
-            private Int entryNext;
+            private Int entryNext; // TODO MF: the name is confusing
 
             /**
-             * The re-usable [Entry] to return from [next].
+             * The re-usable [Entry] to return from [next] call.
              */
             private CursorEntry cursor = new CursorEntry();
 
             /**
              * Return the unprocessed entry from the cached bucket at a given index.
              *
-             * @param i the entry index
+             * @param i  the entry index
              *
-             * @return the entry, or [Null]
+             * @return the entry or Null
              */
             protected HashEntry? entriesOf(Int i)
                 {
-                switch (i)
+                return switch (i)
                     {
-                    case 0:
-                        return firstEntry;
-
-                    case 1:
-                        return secondEntry;
-
+                    case 0: firstEntry;
+                    case 1: secondEntry;
                     default:
+                        {
                         HashEntry?[]? entries = this.entries;
-                        if (entries == Null || i - 2 >= entries.size)
-                            {
-                            return Null;
-                            }
-                        return entries[i - 2];
-                    }
+                        return entries == Null || i - 2 >= entries.size
+                                ? Null
+                                : entries[i - 2];
+                        };
+                    };
                 }
 
             /**
              * Set the entry for a given index in the cached bucket.
              *
-             * @param i the index
-             * @param entry the entry or [Null]
+             * @param i     the index
+             * @param entry  the entry or [Null]
              */
             protected void entriesOf(Int i, HashEntry? entry)
                 {
@@ -550,10 +546,10 @@ class HashMap<Key, Value>
                         HashEntry?[]? entries = this.entries;
                         if (entries == Null)
                             {
-                            entries = new HashEntry?[](2);
+                            entries      = new HashEntry?[](2);
                             this.entries = entries;
                             }
-                        entries[i - 2] = entry;
+                        entries[i - 2] = entry; // TODO MF: is it possible that entries == null and i > 4?
                         break;
                     }
                 }
@@ -586,13 +582,11 @@ class HashMap<Key, Value>
                     {
                     if (bucketNext > 0)
                         {
-                        processed = new Int[](2);
-                        processed[0] = bucketCount;
-                        processed[1] = bucketNext;
+                        processed      = new Int[](Mutable, [bucketCount, bucketNext]);
                         this.processed = processed;
                         }
                     bucketCount = buckets.size;
-                    bucketNext = 0;
+                    bucketNext  = 0;
                     }
                 else
                     {
@@ -614,7 +608,7 @@ class HashMap<Key, Value>
 
                     // determine which bucket to restart from
                     bucketCount = buckets.size;
-                    bucketNext = 0;
+                    bucketNext  = 0;
                     for (Int i = 0; i < processed.size; i += 2)
                         {
                         if (processed[i] == bucketCount)
@@ -631,13 +625,13 @@ class HashMap<Key, Value>
              * Advance to the next populated bucket, returning the first unprocessed entry and caching
              * the remainder from its bucket.
              *
-             * @return [False] if the iterator is exhausted, else the first unprocessed entry from
+             * @return False if the iterator is exhausted, else the first unprocessed entry from
              *         the next bucket
              */
             private conditional Entry advanceBucket()
                 {
                 Int bucketCount = this.bucketCount;
-                Int bucketNext = this.bucketNext;
+                Int bucketNext  = this.bucketNext;
                 if (bucketNext == bucketCount)
                     {
                     return False;
@@ -648,12 +642,10 @@ class HashMap<Key, Value>
                     {
                     fixup();
                     bucketCount = this.bucketCount;
-                    bucketNext = this.bucketNext;
+                    bucketNext  = this.bucketNext;
                     }
 
-                Int ofEntry = -1;
-
-                for (; bucketNext < buckets.size; ++bucketNext)
+                for (Int ofEntry = -1; bucketNext < buckets.size; ++bucketNext)
                     {
                     // find next populated bucket
                     if (HashEntry next ?= buckets[bucketNext])
@@ -694,7 +686,7 @@ class HashMap<Key, Value>
                         if (ofEntry >= 0)
                             {
                             this.bucketNext = bucketNext + 1;
-                            this.entryNext = 0;
+                            this.entryNext  = 0;
                             return True, cursor.advance(entry);
                             }
                         }
@@ -706,8 +698,8 @@ class HashMap<Key, Value>
             @Override
             conditional Entry next()
                 {
-                Int entryNext = this.entryNext;
-                HashEntry? next = entriesOf(entryNext);
+                Int        entryNext = this.entryNext;
+                HashEntry? next      = entriesOf(entryNext);
                 if (next == Null)
                     {
                     return advanceBucket();
