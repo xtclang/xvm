@@ -4,40 +4,11 @@ module TestSimple.test.org
 
     void run()
         {
-        recover();
-        }
+        Int i1 = 1;
+        Int i2 = 2;
 
-    void recover()
-        {
-        for (Int i : 0..2)
-            {
-            Int store = storeFor(i);
-
-            try
-                {
-                if (deepScan())
-                    {
-                    continue;
-                    }
-                }
-            catch (Exception e)
-                {
-                console.println("MUST NOT THROW"); // this used to log for i==1
-                }
-            }
-        }
-
-    Int storeFor(Int i)
-        {
-        if (i == 0)
-            {
-            return i;
-            }
-        TODO
-        }
-
-    Boolean deepScan()
-        {
-        return True;
+        Int i3 = i1 > 5
+            ? i2 > 4 ? 0 : 1 // TODO CP: requires parenthesis (i2 > 4 ? 0 : 1) to compile
+            : 2;
         }
     }

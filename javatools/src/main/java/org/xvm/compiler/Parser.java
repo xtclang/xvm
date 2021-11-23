@@ -2843,7 +2843,7 @@ public class Parser
         Expression expr = parseTernaryExpression();
         if (peek(Id.COLON))
             {
-            expr = new ElseExpression(expr, current(), parseExpression());
+            expr = new ElseExpression(expr, current(), parseElseExpression());
             }
         return expr;
         }
@@ -2865,7 +2865,7 @@ public class Parser
         if (peek(Id.COND))
             {
             expect(Id.COND);
-            Expression exprThen = parseOrExpression();
+            Expression exprThen = parseTernaryExpression();
             expect(Id.COLON);
             Expression exprElse = parseTernaryExpression();
             expr = new TernaryExpression(expr, exprThen, exprElse);

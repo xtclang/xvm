@@ -624,13 +624,16 @@ TypeDefStatement
 #   :               conditional ELSE         14     right to left
 
 Expression
+    ElseExpression
+
+ElseExpression
     TernaryExpression
-    TernaryExpression ":" Expression
+    TernaryExpression ":" ElseExpression
 
 # whitespace is documented here to differentiate from the conditional expression of the form "e?"
 TernaryExpression
     OrExpression
-    OrExpression Whitespace "?" OrExpression ":" TernaryExpression
+    OrExpression Whitespace "?" TernaryExpression ":" TernaryExpression
 
 OrExpression
     AndExpression
