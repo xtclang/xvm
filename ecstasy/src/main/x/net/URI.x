@@ -220,7 +220,7 @@ const URI(String? scheme,
                 }
 
             next();
-            String? comp = parseComponent(":/?#", true);
+            String? comp = parseComponent(":/?#", True);
 
             if (hasNext())
                 {

@@ -81,7 +81,7 @@ const UriMatchTemplate(String             template,
                     variableMap.put(variable.name, value);
                     }
                 }
-            variableMap.freeze(true);
+            variableMap.freeze(True);
             return True, new DefaultUriMatchInfo(uri, variableMap, variables);
             }
         return False;

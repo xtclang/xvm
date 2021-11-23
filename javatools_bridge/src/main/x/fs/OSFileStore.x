@@ -49,13 +49,13 @@ class OSFileStore
     @Override
     Directory|File copy(Path source, Path dest)
         {
-        return copyOrMove(source, source.toString(), dest, dest.toString(), false);
+        return copyOrMove(source, source.toString(), dest, dest.toString(), False);
         }
 
     @Override
     Directory|File move(Path source, Path dest)
         {
-        return copyOrMove(source, source.toString(), dest, dest.toString(), true);
+        return copyOrMove(source, source.toString(), dest, dest.toString(), True);
         }
 
     @Override

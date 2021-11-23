@@ -270,7 +270,13 @@ service Catalog<Schema extends RootSchema>
     public/private Version? version;
 
     /**
-     * The status of this `Catalog`.
+     * The status of this `Catalog` service. Note that the database status itself may differ from
+     * this Catalog's status, since the database may be in use elsewhere (by another instance of
+     * the Catalog service), or it may have previously crashed. In the first case (of the database
+     * being in use elsewhere), this Catalog will have a `Closed` status, but the database status is
+     * probably "Running". In the second case (of a previous db crash), this Catalog will have a
+     * `Closed` status, the database status (as it claims on disk) would probably be "Running", and
+     * the "real" database status would be "Closed" (since it crashed and isn't running).
      *
      * * `Closed` - This `Catalog` object has not yet been opened, or it has been shut down.
      * * `Configuring` - This `Catalog` object has the database open for schema definition and

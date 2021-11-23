@@ -90,7 +90,7 @@ class UriQueryStringParser
     public Map<String, List<String>> getParameters()
         {
         Map<String, List<String>>? params = this.params;
-        if (params == null)
+        if (params == Null)
             {
             params = decodeParams(uri, pathEndIdx);
             }
@@ -241,8 +241,8 @@ class UriQueryStringParser
             valueStart = valueEnd + 1;
             }
 
-        String name  = decodeComponent(s, nameStart, valueStart - 1, false);
-        String value = decodeComponent(s, valueStart, valueEnd, false);
+        String name  = decodeComponent(s, nameStart, valueStart - 1, False);
+        String value = decodeComponent(s, valueStart, valueEnd, False);
 
         if (List<String> values := params.get(name))
             {

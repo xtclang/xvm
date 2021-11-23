@@ -278,11 +278,11 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                     assert var modEntry := modEntries.next();
 
                     // create an iterator of the keys in the history to use as the "main" iterator
-                    NextKey: while (true)
+                    NextKey: while (True)
                         {
                         if (val histEntry := histEntries.next())
                             {
-                            while (true)
+                            while (True)
                                 {
                                 // determine if we are at a junction point between the history and
                                 // the transactional modifications

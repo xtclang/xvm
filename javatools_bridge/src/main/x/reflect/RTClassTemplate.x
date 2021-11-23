@@ -62,7 +62,7 @@ class RTClassTemplate
         assert Composition         ingredient := ingredientType.template.fromClass();
         Map<String, TypeTemplate>? constraints = Null;
 
-        if (constraintNames != Null && constraintTypes != null)
+        if (constraintNames != Null && constraintTypes != Null)
             {
             Int count = constraintNames.size;
 

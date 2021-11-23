@@ -46,7 +46,7 @@ interface Transaction<Schema extends RootSchema>
             buf.append("id=")
                .append(id);
 
-            if (name != null)
+            if (name != Null)
                 {
                 buf.append(", name=")
                    .append(name);
@@ -63,7 +63,7 @@ interface Transaction<Schema extends RootSchema>
                 buf.append(", readOnly");
                 }
 
-            if (timeout != null)
+            if (timeout != Null)
                 {
                 buf.append(", timeout=")
                    .append(timeout);

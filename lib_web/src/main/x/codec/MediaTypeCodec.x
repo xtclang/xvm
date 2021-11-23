@@ -65,6 +65,6 @@ interface MediaTypeCodec
      */
     Boolean supports(Type type)
         {
-        return true;
+        return True;
         }
     }

@@ -53,7 +53,7 @@ const MediaType
             throw new IllegalArgument("Illegal media type name - missing type/subType separator '" + name + "'");
             }
 
-        if (extension != null)
+        if (extension != Null)
             {
             this.extension = extension;
             }

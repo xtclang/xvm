@@ -1412,7 +1412,7 @@ interface List<Element>
      */
     static <Element> List<Element> sort(List<Element> list, Element.Orderer? order = Null)
         {
-        if (order == null)
+        if (order == Null)
             {
             if (order := Element.ordered()) {}
             else

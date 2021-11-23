@@ -231,17 +231,19 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
     /**
      * A snapshot of information about a transactional log file.
      */
-    static const LogFileInfo(String name, Range<Int> txIds, Int size, DateTime timestamp)
+    static const LogFileInfo(String name, Range<Int> txIds, Int safepoint, Int size, DateTime timestamp)
         {
         LogFileInfo with(String?     name      = Null,
                          Range<Int>? txIds     = Null,
+                         Int?        safepoint = Null,
                          Int?        size      = Null,
                          DateTime?   timestamp = Null)
             {
-            return new LogFileInfo(name       ?: this.name,
-                                   txIds      ?: this.txIds,
-                                   size       ?: this.size,
-                                   timestamp  ?: this.timestamp);
+            return new LogFileInfo(name      ?: this.name,
+                                   txIds     ?: this.txIds,
+                                   safepoint ?: this.safepoint,
+                                   size      ?: this.size,
+                                   timestamp ?: this.timestamp);
             }
         }
 
@@ -340,6 +342,15 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
     public/private Int lastCommitted = 0;
 
     /**
+     * The last transaction id that is known to have been fully written to disk by all ObjectStores.
+     */
+    Int safepoint.get()
+        {
+        // TODO
+        return lastCommitted;
+        }
+
+    /**
      * The transactions that have begun, but have not yet committed or rolled back. The key is the
      * client id. Each client may have up to one "in flight" transaction at any given time.
      */
@@ -359,7 +370,21 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      * a read transaction is in use by a write transaction, its information must be retained and
      * kept available to clients.
      */
-    protected/private Map<Int, Int> byReadId = new HashMap();
+    protected/private OrderedMap<Int, Int> byReadId = new SkiplistMap();
+
+// REVIEW remove this unless it gets used
+    /**
+     * The oldest transaction id that is still being used.
+     */
+    Int retainTxId.get()
+        {
+        if (Int oldest := byReadId.first())
+            {
+            return oldest;
+            }
+
+        return lastCommitted;
+        }
 
     /**
      * The set of ids of DBObjects that have validators.
@@ -427,9 +452,11 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      *
      * This method is intended to only be used by the [Catalog].
      *
+     * @param recover
+     *
      * @return True iff the TxManager was successfully enabled
      */
-    Boolean enable()
+    Boolean enable(Boolean recover=False)
         {
         switch (status)
             {
@@ -2505,7 +2532,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         logFile.parent?.ensure();
         initLogFile();
 
-        logInfos.add(new LogFileInfo(logFile.name, [1..1), logFile.size, logFile.modified));
+        logInfos.add(new LogFileInfo(logFile.name, [1..1), 0, logFile.size, logFile.modified));
         writeStatus();
 
         return True;
@@ -2517,7 +2544,8 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
     protected void initLogFile()
         {
         logFile.contents = $|[
-                            |\{"_op":"created", "_ts":"{clock.now.toString(True)}", "_prev_v":{lastCommitted}}
+                            |\{"_op":"created", "_ts":"{clock.now.toString(True)}",\
+                            | "_prev_v":{lastCommitted}, "safepoint":{safepoint}}
                             |]
                             .utf8();
         logUpdated();
@@ -2543,7 +2571,8 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 logUpdated();
 
                 // append the "we're open" message to the log
-                addLogEntry($|\{"_op":"opened", "_ts":"{clock.now.toString(True)}"}
+                addLogEntry($|\{"_op":"opened", "_ts":"{clock.now.toString(True)}",\
+                             | "safepoint":{safepoint}}
                            );
 
                 this.logInfos      = logInfos;
@@ -2701,11 +2730,14 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 }
             }
 
+// TODO need a value for safepoint
+
         // create the "current" log file, if one does not exist
         if (logFile.exists)
             {
             // append a recovery message to the log
-            addLogEntry($|\{"_op":"recovered", "_ts":"{clock.now.toString(True)}"}
+            addLogEntry($|\{"_op":"recovered", "_ts":"{clock.now.toString(True)}",\
+                         | "safepoint":{safepoint}}
                        );
             logInfos[logInfos.size-1] = logInfos[logInfos.size-1].with(size=logFile.size,
                                                                        timestamp=logFile.modified);
@@ -2715,11 +2747,12 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             log("TxManager current segment of transaction log is missing, so one will be created");
             String timestamp = clock.now.toString(True);
             logFile.contents = $|[
-                                |\{"_op":"created", "_ts":"{timestamp}", "_prev_v":{lastTx}},
-                                |\{"_op":"recovered", "_ts":"{timestamp}"}
+                                |\{"_op":"created", "_ts":"{timestamp}", "_prev_v":{lastTx},\
+                                | "safepoint":{safepoint}},
+                                |\{"_op":"recovered", "_ts":"{timestamp}", "safepoint":{safepoint}}
                                 |]
                                 .utf8();
-            LogFileInfo info = new LogFileInfo(logFile.name, [lastTx+1..lastTx+1), logFile.size, logFile.modified);
+            LogFileInfo info = new LogFileInfo(logFile.name, [lastTx+1..lastTx+1), safepoint, logFile.size, logFile.modified);
             if (logInfos[logInfos.size-1].name == logFile.name)
                 {
                 logInfos[logInfos.size-1] = info;
@@ -2827,26 +2860,37 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
 
         Int first = -1;
         Int last  = -1;
+        Int safe  = -1;
         using (Parser logParser = new Parser(json.toReader()))
             {
             using (val arrayParser = logParser.expectArray())
                 {
-                while (!arrayParser.eof)
+                NextEntry: while (!arrayParser.eof)
                     {
                     using (val objectParser = arrayParser.expectObject())
                         {
-                        Int txId;
+                        Int txId = -1;
                         if (objectParser.matchKey("_v"))
                             {
                             txId = objectParser.expectInt();
                             }
-                        else if (objectParser.matchKey("_op") && objectParser.findKey("_prev_v"))
+                        else if (objectParser.matchKey("_op"))
                             {
-                            txId = objectParser.expectInt() + 1;
-                            }
-                        else
-                            {
-                            continue;
+                            switch (objectParser.expectString())
+                                {
+                                case "created":
+                                    if (objectParser.findKey("_prev_v"))
+                                        {
+                                        txId = objectParser.expectInt() + 1;
+                                        }
+                                    continue;
+                                default:
+                                    if (objectParser.findKey("safepoint"))
+                                        {
+                                        safe = objectParser.expectInt();
+                                        }
+                                    break;
+                                }
                             }
 
                         if (txId > last)
@@ -2862,8 +2906,8 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 }
             }
 
-        assert first >= 0 as $"Log file \"{logFile.name}\" is missing required header information";
-        return new LogFileInfo(logFile.name, first..last, logFile.size, logFile.modified);
+        assert first >= 0 && safe >= 0 as $"Log file \"{logFile.name}\" is missing required header information";
+        return new LogFileInfo(logFile.name, first..last, safe, logFile.size, logFile.modified);
         }
 
     /**
@@ -2923,19 +2967,20 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         assert !logInfos.empty;
 
         String timestamp = clock.now.toString(True);
-        addLogEntry($|\{"_op":"archived", "_ts":"{timestamp}"}
+        Int    safepoint = this.safepoint;
+        addLogEntry($|\{"_op":"archived", "_ts":"{timestamp}", "safepoint":{safepoint}}
                    );
 
         String rotatedName = $"txlog_{timestamp}.json";
         assert File rotatedFile := logFile.renameTo(rotatedName);
 
         LogFileInfo previousInfo = logInfos[logInfos.size-1];
-        LogFileInfo rotatedInfo  = new LogFileInfo(rotatedName,
-                previousInfo.txIds.first..lastCommitted, rotatedFile.size, rotatedFile.modified);
+        LogFileInfo rotatedInfo  = new LogFileInfo(rotatedName, previousInfo.txIds.first..lastCommitted,
+                safepoint, rotatedFile.size, rotatedFile.modified);
 
         initLogFile();
         LogFileInfo currentInfo = new LogFileInfo(logFile.name, [lastCommitted+1..lastCommitted+1),
-                logFile.size, logFile.modified);
+                safepoint, logFile.size, logFile.modified);
 
         logInfos[logInfos.size-1] = rotatedInfo;
         logInfos += currentInfo;
@@ -2947,18 +2992,23 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      */
     protected void closeLog()
         {
-        addLogEntry($|\{"_op":"closed", "_ts":"{clock.now.toString(True)}"}
+        // the database should have quiesced by now
+        assert lastCommitted == safepoint;
+
+        addLogEntry($|\{"_op":"closed", "_ts":"{clock.now.toString(True)}", "safepoint":{safepoint}}
                    );
 
         // update the "current log file" status record
         LogFileInfo oldInfo = logInfos[logInfos.size-1];
         assert oldInfo.name == logFile.name;
+
         Range<Int> txIds = oldInfo.txIds;
         if (lastCommitted > txIds.effectiveUpperBound)
             {
             txIds = txIds.effectiveLowerBound .. lastCommitted;
             }
-        LogFileInfo newInfo = new LogFileInfo(logFile.name, txIds, logFile.size, logFile.modified);
+
+        LogFileInfo newInfo = new LogFileInfo(logFile.name, txIds, safepoint, logFile.size, logFile.modified);
         logInfos[logInfos.size-1] = newInfo;
         writeStatus();
         }
