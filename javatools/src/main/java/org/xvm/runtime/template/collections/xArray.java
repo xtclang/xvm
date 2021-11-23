@@ -468,7 +468,7 @@ public class xArray
                 {
                 ArrayHandle hArray = (ArrayHandle) hTarget;
 
-                // a bit view cannot naturally grow or shrink
+                // a view cannot naturally grow or shrink
                 Mutability mutability = hArray.m_mutability == Mutability.Constant ||
                                         hArray.m_mutability == Mutability.Persistent
                         ? Mutability.Constant

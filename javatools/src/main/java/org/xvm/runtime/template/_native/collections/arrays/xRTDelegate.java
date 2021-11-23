@@ -7,6 +7,7 @@ import java.util.IdentityHashMap;
 import java.util.Map;
 
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
@@ -389,7 +390,7 @@ public class xRTDelegate
         switch (hDelegate.getMutability())
             {
             case Fixed:
-                return frame.raiseException(xException.readOnly(frame));
+                return frame.raiseException(xException.sizeLimited(frame, "Fixed size array"));
 
             case Constant:
             case Persistent:
@@ -433,7 +434,7 @@ public class xRTDelegate
         switch (hDelegate.getMutability())
             {
             case Fixed:
-                return frame.raiseException(xException.readOnly(frame));
+                return frame.raiseException(xException.sizeLimited(frame, "Fixed size array"));
 
             case Constant:
             case Persistent:
@@ -511,25 +512,31 @@ public class xRTDelegate
         DelegateHandle hDelegate = (DelegateHandle) hTarget;
         long           cSize     = hDelegate.m_cSize;
 
-        if (lIndex < 0 || lIndex > cSize)
-            {
-            // an array can only grow without any "holes"
-            return frame.raiseException(xException.outOfBounds(frame, lIndex, cSize));
-            }
-
         switch (hDelegate.getMutability())
             {
             case Constant:
-                return frame.raiseException(xException.immutableObject(frame));
+                return frame.raiseException(xException.readOnly(frame));
 
             case Fixed:
-                if (lIndex < cSize)
+                if (lIndex >= cSize)
                     {
-                    break;
+                    return frame.raiseException(xException.sizeLimited(frame, "Fixed size array"));
                     }
-                // break through
+                break;
+
             case Persistent:
-                return frame.raiseException(xException.readOnly(frame));
+                return frame.raiseException(xException.unsupportedOperation(frame, "Persistent array"));
+            }
+
+        if (lIndex < 0)
+            {
+            return frame.raiseException(xException.outOfBounds(frame, lIndex, cSize));
+            }
+
+        if (lIndex > cSize && hTarget.getType().getParamType(0).getDefaultValue() == null)
+            {
+            // an array without a default value can only grow without any "holes"
+            return frame.raiseException(xException.unsupportedOperation(frame, "No default value"));
             }
 
         return assignArrayValueImpl(frame, hDelegate, lIndex, hValue);
@@ -600,8 +607,9 @@ public class xRTDelegate
         GenericArrayDelegate hDelegate = (GenericArrayDelegate) hTarget;
         ObjectHandle[]       ahValue   = hDelegate.m_ahValue;
         int                  cSize     = (int) hDelegate.m_cSize;
+        int                  nIndex    = (int) lIndex;
 
-        if (lIndex == cSize)
+        if (nIndex == cSize)
             {
             if (cSize == ahValue.length)
                 {
@@ -609,8 +617,38 @@ public class xRTDelegate
                 }
             hDelegate.m_cSize++;
             }
+        else if (nIndex > cSize)
+            {
+            TypeConstant typeElement  = hTarget.getType().getParamType(0);
+            Constant     constDefault = typeElement.getDefaultValue();
 
-        ahValue[(int) lIndex] = hValue;
+            if (constDefault == null)
+                {
+                return frame.raiseException(xException.unsupportedOperation(
+                        frame, "No default value for " + typeElement.getValueString()));
+                }
+
+            if (nIndex >= ahValue.length)
+                {
+                hDelegate.m_ahValue = ahValue = grow(ahValue, nIndex + 1);
+                }
+            hDelegate.m_cSize = nIndex + 1;
+
+            ObjectHandle hDefault = frame.getConstHandle(constDefault);
+            if (Op.isDeferred(hDefault))
+                {
+                ObjectHandle[] ahVal = ahValue;
+                return hDefault.proceed(frame, frameCaller ->
+                    {
+                    Arrays.fill(ahVal, cSize, nIndex, frameCaller.popStack());
+                    ahVal[nIndex] = hValue;
+                    return Op.R_NEXT;
+                    });
+                }
+            Arrays.fill(ahValue, cSize, nIndex, hDefault);
+            }
+
+        ahValue[nIndex] = hValue;
         return Op.R_NEXT;
         }
 
@@ -626,7 +664,7 @@ public class xRTDelegate
 
         if (cSize == ahValue.length)
             {
-            ahValue = hDelegate.m_ahValue = grow(ahValue, (int) cSize + 1);
+            ahValue = hDelegate.m_ahValue = grow(ahValue, cSize + 1);
             }
         hDelegate.m_cSize++;
 

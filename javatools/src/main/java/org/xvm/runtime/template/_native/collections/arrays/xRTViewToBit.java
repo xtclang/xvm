@@ -93,7 +93,7 @@ public class xRTViewToBit
      * Create an ArrayDelegate<Bit> view into the specified ArrayDelegate<NumType> source.
      *
      * @param hSource     the source (of numeric type) delegate
-     * @param mutability  the desired mutability
+     * @param mutability  the desired mutability (Constant of Fixed)
      */
     public DelegateHandle createBitViewDelegate(DelegateHandle hSource, Mutability mutability)
         {

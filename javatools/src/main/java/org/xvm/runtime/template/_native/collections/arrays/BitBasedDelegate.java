@@ -124,14 +124,14 @@ public abstract class BitBasedDelegate
         long   cSize   = hDelegate.m_cSize;
         byte[] abValue = hDelegate.m_abValue;
 
-        if (lIndex == cSize)
+        if (lIndex >= cSize)
             {
-            if (index(cSize) == abValue.length)
+            if (index(lIndex) >= abValue.length)
                 {
-                abValue = hDelegate.m_abValue = grow(abValue, storage(cSize) + 1);
+                abValue = hDelegate.m_abValue = grow(abValue, storage(lIndex + 1));
                 }
 
-            hDelegate.m_cSize++;
+            hDelegate.m_cSize = lIndex + 1;
             }
 
         setBit(abValue, (int) lIndex, isSet(hValue));

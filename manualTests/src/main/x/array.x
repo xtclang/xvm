@@ -99,11 +99,33 @@ module TestArray
         {
         console.println("\n** testArrayListAdd()");
 
-        String[] list = new String[];
+        String?[] list = new String?[];
         list += "one";
         list += ["two", "three"];
+        list[4] = "five";
 
-        console.println("list=" + list);
+        console.println($"list={list}");
+
+        Int[] ints = new Int[];
+        ints += 1;
+        ints += [Int:2, Int:3];
+        ints[4] = 4;
+
+        console.println($"ints={ints}");
+
+        Byte[] bytes = new Byte[];
+        bytes += 1;
+        bytes += [Byte:2, Byte:3];
+        bytes[9] = 10;
+
+        console.println($"bytes={bytes}");
+
+        Boolean[] bools = new Boolean[];
+        bools += True;
+        bools += [False, True];
+        bools[9] = True;
+
+        console.println($"bools={bools}");
         }
 
     void testFixedArray()

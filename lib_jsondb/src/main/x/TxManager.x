@@ -3059,10 +3059,6 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         DBObjectInfo info = catalog.infoFor(id);
 
         // save off the ObjectStore (lazy cache)
-        if (id > infos.size)
-            {
-            infos.fill(Null, infos.size..id);
-            }
         infos[id] = info;
 
         return info;
@@ -3094,10 +3090,6 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         ObjectStore store = catalog.storeFor(id);
 
         // save off the ObjectStore (lazy cache)
-        if (index > stores.size)
-            {
-            stores.fill(Null, stores.size..index);
-            }
         stores[index] = store;
 
         return store;

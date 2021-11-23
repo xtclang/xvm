@@ -69,13 +69,13 @@ public class xClass
         markNativeProperty("composition");
         markNativeProperty("virtualChild");
 
-        markNativeMethod("allocate"              , null, null);
-        markNativeMethod("derivesFrom"           , null, null);
-        markNativeMethod("extends"               , null, null);
-        markNativeMethod("implements"            , null, null);
-        markNativeMethod("incorporates"          , null, null);
-        markNativeMethod("isSingleton"           , null, null);
-        markNativeMethod("defaultValue"          , null, null);
+        markNativeMethod("allocate"    , null, null);
+        markNativeMethod("derivesFrom" , null, null);
+        markNativeMethod("extends"     , null, null);
+        markNativeMethod("implements"  , null, null);
+        markNativeMethod("incorporates", null, null);
+        markNativeMethod("isSingleton" , null, null);
+        markNativeMethod("defaultValue", null, null);
 
         getCanonicalType().invalidateTypeInfo();
         }

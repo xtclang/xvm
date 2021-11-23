@@ -449,12 +449,6 @@ service Catalog<Schema extends RootSchema>
                     break;
                 }
 
-            // make room for caching the ObjectStore
-            if (index > stores.size)
-                {
-                stores.fill(Null, stores.size..index);
-                }
-
             // save off the ObjectStore (lazy cache)
             stores[index] = store;
 

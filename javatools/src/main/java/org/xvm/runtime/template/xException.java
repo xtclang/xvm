@@ -50,6 +50,7 @@ public class xException
             s_clzInvalidType                = f_templates.getTemplate("reflect.InvalidType"          ).getCanonicalClass();
             s_clzOutOfBounds                = f_templates.getTemplate("OutOfBounds"                  ).getCanonicalClass();
             s_clzReadOnly                   = f_templates.getTemplate("ReadOnly"                     ).getCanonicalClass();
+            s_clzSizeLimited                = f_templates.getTemplate("collections.SizeLimited"      ).getCanonicalClass();
             s_clzTimedOut                   = f_templates.getTemplate("TimedOut"                     ).getCanonicalClass();
             s_clzTypeMismatch               = f_templates.getTemplate("TypeMismatch"                 ).getCanonicalClass();
             s_clzUnsupportedOperation       = f_templates.getTemplate("UnsupportedOperation"         ).getCanonicalClass();
@@ -165,6 +166,11 @@ public class xException
     public static ExceptionHandle readOnly(Frame frame)
         {
         return makeHandle(frame, s_clzReadOnly, null);
+        }
+
+    public static ExceptionHandle sizeLimited(Frame frame, String sMsg)
+        {
+        return makeHandle(frame, s_clzSizeLimited, sMsg);
         }
 
     public static ExceptionHandle timedOut(Frame frame, String sMs)
@@ -286,6 +292,7 @@ public class xException
     private static ClassComposition s_clzInvalidType;
     private static ClassComposition s_clzOutOfBounds;
     private static ClassComposition s_clzReadOnly;
+    private static ClassComposition s_clzSizeLimited;
     private static ClassComposition s_clzTimedOut;
     private static ClassComposition s_clzTypeMismatch;
     private static ClassComposition s_clzUnsupportedOperation;

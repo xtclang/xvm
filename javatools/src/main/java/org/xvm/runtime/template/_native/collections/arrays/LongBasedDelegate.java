@@ -143,14 +143,14 @@ public abstract class LongBasedDelegate
         long            cSize     = hDelegate.m_cSize;
         long[]          alValue   = hDelegate.m_alValue;
 
-        if (lIndex == cSize)
+        if (lIndex >= cSize)
             {
-            if (valueIndex(cSize) == alValue.length)
+            if (valueIndex(lIndex) >= alValue.length)
                 {
-                alValue = hDelegate.m_alValue = grow(alValue, storage(cSize) + 1);
+                alValue = hDelegate.m_alValue = grow(alValue, storage(lIndex + 1));
                 }
 
-            hDelegate.m_cSize++;
+            hDelegate.m_cSize = lIndex + 1;
             }
 
         try

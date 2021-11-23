@@ -644,10 +644,6 @@ service Client<Schema extends RootSchema>
         DBObjectImpl impl = createImpl(id);
 
         // save off the ObjectStore (lazy cache)
-        if (index > impls.size)
-            {
-            impls.fill(Null, impls.size..index);
-            }
         impls[index] = impl;
 
         return impl;
@@ -2215,10 +2211,6 @@ service Client<Schema extends RootSchema>
                 Pending pending = store_.pending(txid, pids[index]);
 
                 // cache the result
-                if (index >= pendingCache.size)
-                    {
-                    pendingCache.fill(Null, pendingCache.size..index);
-                    }
                 pendingCache[index] = pending;
 
                 return pending;

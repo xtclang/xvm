@@ -97,7 +97,7 @@ public class xRTViewFromBitToByte
 
         if (tSource instanceof ByteView)
             {
-            // the underlying delegate is a bit view, which is a ByteView
+            // the underlying delegate is a BitView, which is a ByteView
             ByteView tView = (ByteView) tSource;
 
             return frame.assignValue(iReturn,
@@ -117,7 +117,7 @@ public class xRTViewFromBitToByte
 
         if (tSource instanceof ByteView)
             {
-            // the underlying delegate is a bit view, which is a ByteView
+            // the underlying delegate is a BitView, which is a ByteView
             ByteView tView = (ByteView) tSource;
 
             tView.assignByte(hSource, lIndex, (byte) ((JavaLong) hValue).getValue());

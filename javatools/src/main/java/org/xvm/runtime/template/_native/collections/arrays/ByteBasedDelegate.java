@@ -126,18 +126,19 @@ public abstract class ByteBasedDelegate
 
         int    cSize   = (int) hDelegate.m_cSize;
         byte[] abValue = hDelegate.m_abValue;
+        int    nIndex  = (int) lIndex;
 
-        if (lIndex == cSize)
+        if (nIndex >= cSize)
             {
-            if (cSize == abValue.length)
+            if (nIndex >= abValue.length)
                 {
-                abValue = hDelegate.m_abValue = grow(abValue, cSize + 1);
+                abValue = hDelegate.m_abValue = grow(abValue, nIndex + 1);
                 }
 
-            hDelegate.m_cSize++;
+            hDelegate.m_cSize = nIndex + 1;
             }
 
-        abValue[(int) lIndex] = (byte) ((JavaLong) hValue).getValue();
+        abValue[nIndex] = (byte) ((JavaLong) hValue).getValue();
         return Op.R_NEXT;
         }
 

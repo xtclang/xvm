@@ -90,20 +90,21 @@ public abstract class LongDelegate
 
         int    cSize   = (int) hDelegate.m_cSize;
         long[] alValue = hDelegate.m_alValue;
+        int    nIndex  = (int) lIndex;
 
-        if (lIndex == cSize)
+        if (nIndex >= cSize)
             {
-            if (cSize == alValue.length)
+            if (nIndex >= alValue.length)
                 {
-                alValue = hDelegate.m_alValue = grow(alValue, cSize + 1);
+                alValue = hDelegate.m_alValue = grow(alValue, nIndex + 1);
                 }
 
-            hDelegate.m_cSize++;
+            hDelegate.m_cSize = nIndex + 1;
             }
 
         try
             {
-            alValue[(int) lIndex] = ((JavaLong) hValue).getValue();
+            alValue[nIndex] = ((JavaLong) hValue).getValue();
             return Op.R_NEXT;
             }
         catch (ClassCastException e)

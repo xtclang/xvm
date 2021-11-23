@@ -187,18 +187,19 @@ public class xRTCharDelegate
 
         int    cSize    = (int) hDelegate.m_cSize;
         char[] achValue = hDelegate.m_achValue;
+        int    nIndex   = (int) lIndex;
 
-        if (lIndex == cSize)
+        if (nIndex >= cSize)
             {
-            if (cSize == achValue.length)
+            if (nIndex >= achValue.length)
                 {
-                achValue = hDelegate.m_achValue = grow(achValue, cSize + 1);
+                achValue = hDelegate.m_achValue = grow(achValue, nIndex + 1);
                 }
 
-            hDelegate.m_cSize++;
+            hDelegate.m_cSize = nIndex + 1;
             }
 
-        achValue[(int) lIndex] = (char) ((JavaLong) hValue).getValue();
+        achValue[nIndex] = (char) ((JavaLong) hValue).getValue();
         return Op.R_NEXT;
         }
 
