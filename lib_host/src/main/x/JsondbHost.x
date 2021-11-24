@@ -92,7 +92,4 @@ class JsondbHost(String dbModuleName)
 
     @Override
     String customMethodTemplate = $./templates/CustomMethod.txt;
-
-    @Override
-    String customInvocationTemplate = $./templates/CustomInvocation.txt;
     }

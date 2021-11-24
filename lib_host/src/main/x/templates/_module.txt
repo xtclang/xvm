@@ -41,7 +41,6 @@ module %appName%_jsondb
 // TODO:
 //            "String"=String,
 //            "AddressBookDB_:Contact"=AddressBookDB_.Contact,
-
             ];
         }
 
@@ -88,8 +87,7 @@ module %appName%_jsondb
         class RootSchemaImpl(DBObjectInfo_ info_)
                 implements %appSchema%_
             {
-%PropertyGetters%
-%SchemaMethods%
+%PropertyGetters% %SchemaMethods%
             }
 
         @Override

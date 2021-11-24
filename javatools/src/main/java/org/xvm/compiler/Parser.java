@@ -4010,10 +4010,7 @@ public class Parser
                 if (fErr)
                     {
                     log(Severity.ERROR, INVALID_PATH, lStart, lEnd, sFile);
-                    if (file == null)
-                        {
-                        throw new CompilerException("no such file: " + sFile);
-                        }
+                    throw new CompilerException("no such file: " + sFile);
                     }
 
                 return fContents
