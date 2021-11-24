@@ -432,7 +432,7 @@ class HashMap<Key, Value>
          * An iterator over the maps entries which is stable in the presence of concurrent modifications.
          */
         class StableEntryIterator
-                // TODO: extends CursorEntry
+                // TODO MF: extends CursorEntry
                 implements Iterator<Entry>
             {
             /**
@@ -447,13 +447,13 @@ class HashMap<Key, Value>
              */
             private construct(StableEntryIterator that)
                 {
-                this.bucketCount = that.bucketCount;
-                this.nextBucket  = that.nextBucket;
-                this.nextEntry   = that.nextEntry;
-                this.entry0      = that.entry0;
-                that.entry1      = that.entry1;
-                this.entry2toN   = that.entry2toN?.clone();
-                this.processed   = that.processed?.clone();
+                this.bucketCount     = that.bucketCount;
+                this.nextBucketIndex = that.nextBucketIndex;
+                this.nextEntryIndex  = that.nextEntryIndex;
+                this.entry0          = that.entry0;
+                that.entry1          = that.entry1;
+                this.entry2toN       = that.entry2toN?.clone();
+                this.processed       = that.processed?.clone();
                 }
 
             /**
@@ -462,12 +462,12 @@ class HashMap<Key, Value>
             private Int bucketCount = this.HashMap.buckets.size;
 
             /**
-             * The next bucket to process.
+             * The index of the next bucket to process.
              */
-            private Int nextBucket;
+            private Int nextBucketIndex;
 
             /**
-             * Pairs of bucketCount and nextBucket which had been fully processed before
+             * Pairs of bucketCount and nextBucketIndex which had been fully processed before
              * the map's bucketCount changed.
              */
             private Int[]? processed;
@@ -494,7 +494,7 @@ class HashMap<Key, Value>
             /**
              * The next entry index in the cached bucket to process.
              */
-            private Int nextEntry; // TODO MF: the name is confusing
+            private Int nextEntryIndex;
 
             /**
              * The re-usable [Entry] to return from [next] call.
@@ -508,7 +508,7 @@ class HashMap<Key, Value>
              *
              * @return the entry or Null
              */
-            protected HashEntry? getEntry(Int i)
+            protected HashEntry? getCachedEntry(Int i)
                 {
                 return switch (i)
                     {
@@ -527,10 +527,10 @@ class HashMap<Key, Value>
             /**
              * Set the entry for a given index in the cached bucket.
              *
-             * @param i     the index
+             * @param i      the index
              * @param entry  the entry or [Null]
              */
-            protected void setEntry(Int i, HashEntry? entry)
+            protected void setCachedEntry(Int i, HashEntry? entry)
                 {
                 switch (i)
                     {
@@ -549,7 +549,7 @@ class HashMap<Key, Value>
                             entry2toN      = new HashEntry?[](2);
                             this.entry2toN = entry2toN;
                             }
-                        entry2toN[i - 2] = entry; // TODO MF: is it possible that entry2toN == null and i > 4?
+                        entry2toN[i - 2] = entry;
                         break;
                     }
                 }
@@ -564,13 +564,13 @@ class HashMap<Key, Value>
                 Int[]?       processed = this.processed;
                 if (processed == Null)
                     {
-                    if (nextBucket > 0)
+                    if (nextBucketIndex > 0)
                         {
-                        processed      = new Int[](Mutable, [bucketCount, nextBucket]);
+                        processed      = new Int[](Mutable, [bucketCount, nextBucketIndex]);
                         this.processed = processed;
                         }
-                    bucketCount = buckets.size;
-                    nextBucket  = 0;
+                    bucketCount      = buckets.size;
+                    nextBucketIndex  = 0;
                     }
                 else
                     {
@@ -579,26 +579,26 @@ class HashMap<Key, Value>
                         if (processed[i] == bucketCount)
                             {
                             // update existing processed data for bucket
-                            processed[i + 1] = nextBucket;
+                            processed[i + 1] = nextBucketIndex;
                             break;
                             }
                         else if (i == processed.size - 2)
                             {
                             // record a new bucketCount and progress buckets
-                            processed += [bucketCount, nextBucket];
+                            processed += [bucketCount, nextBucketIndex];
                             break;
                             }
                         }
 
                     // determine which bucket to restart from
-                    bucketCount = buckets.size;
-                    nextBucket  = 0;
+                    bucketCount     = buckets.size;
+                    nextBucketIndex = 0;
                     for (Int i = 0; i < processed.size; i += 2)
                         {
                         if (processed[i] == bucketCount)
                             {
                             // we've previously worked at this bucketCount; resume at next bucket
-                            nextBucket = processed[i + 1];
+                            nextBucketIndex = processed[i + 1];
                             break;
                             }
                         }
@@ -614,9 +614,9 @@ class HashMap<Key, Value>
              */
             private conditional Entry advanceBucket()
                 {
-                Int bucketCount = this.bucketCount;
-                Int nextBucket  = this.nextBucket;
-                if (nextBucket == bucketCount)
+                Int bucketCount     = this.bucketCount;
+                Int nextBucketIndex = this.nextBucketIndex;
+                if (nextBucketIndex == bucketCount)
                     {
                     return False;
                     }
@@ -625,14 +625,14 @@ class HashMap<Key, Value>
                 if (bucketCount != buckets.size)
                     {
                     fixup();
-                    bucketCount = this.bucketCount;
-                    nextBucket  = this.nextBucket;
+                    bucketCount     = this.bucketCount;
+                    nextBucketIndex = this.nextBucketIndex;
                     }
 
-                for (Int ofEntry = -1; nextBucket < buckets.size; ++nextBucket)
+                for (Int entryIndex = -1; nextBucketIndex < buckets.size; ++nextBucketIndex)
                     {
                     // find next populated bucket
-                    if (HashEntry next ?= buckets[nextBucket])
+                    if (HashEntry next ?= buckets[nextBucketIndex])
                         {
                         HashEntry? entry = Null;
                         // copy bucket entries which we haven't visited yet
@@ -660,17 +660,17 @@ class HashMap<Key, Value>
                                 }
                             else
                                 {
-                                setEntry(ofEntry, next);
+                                setCachedEntry(entryIndex, next);
                                 }
 
-                            ++ofEntry;
+                            ++entryIndex;
                             }
                         while (next ?= next.next);
 
-                        if (ofEntry >= 0)
+                        if (entryIndex >= 0)
                             {
-                            this.nextBucket = nextBucket + 1;
-                            this.nextEntry  = 0;
+                            this.nextBucketIndex = nextBucketIndex + 1;
+                            this.nextEntryIndex  = 0;
                             return True, cursor.advance(entry);
                             }
                         }
@@ -682,15 +682,15 @@ class HashMap<Key, Value>
             @Override
             conditional Entry next()
                 {
-                Int        nextEntry = this.nextEntry;
-                HashEntry? next      = getEntry(nextEntry);
+                Int        nextEntryIndex = this.nextEntryIndex;
+                HashEntry? next           = getCachedEntry(nextEntryIndex);
                 if (next == Null)
                     {
                     return advanceBucket();
                     }
 
-                setEntry(nextEntry, Null); // clear for reuse in advanceBucket
-                this.nextEntry = nextEntry + 1;
+                setCachedEntry(nextEntryIndex, Null); // clear for reuse in advanceBucket
+                this.nextEntryIndex = nextEntryIndex + 1;
                 return True, cursor.advance(next);
                 }
 
@@ -703,9 +703,11 @@ class HashMap<Key, Value>
             @Override
             conditional Int knownSize()
                 {
-                // TODO MF we only  know the size if we haven't started iterating yet (map size), or
-                //         if the map is empty (zero), or if the iterator is exhausted (zero)
-                return True, this.HashMap.size;
+                return nextBucketIndex == 0 && processed == Null
+                    ? (True, this.HashMap.size) // we've yet to start
+                    : nextBucketIndex == bucketCount && getCachedEntry(nextEntryIndex) == Null
+                        ? (True, 0) // we've finished
+                        : False;
                 }
 
             @Override
