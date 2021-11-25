@@ -77,9 +77,6 @@ class DbHost(String dbModuleName)
     @Abstract
     @RO String customMethodTemplate;
 
-    @Abstract
-    @RO String customInvocationTemplate;
-
     /**
      * Generate all the necessary classes to use a DB modules.
      *

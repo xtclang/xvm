@@ -1,6 +1,0 @@
-                if (fn == "%name%" && when == Null)
-                    {
-                    assert args.is(Tuple<%argTypes%>);
-
-                    return %name%(%tupleValues%);
-                    }

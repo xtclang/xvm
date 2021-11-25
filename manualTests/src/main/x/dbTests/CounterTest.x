@@ -33,14 +33,8 @@ module CounterTest
         {
         assert:debug;
 
-//        for ((String name, Int count) : map) // TODO GG: this blows at RT
-//            {
-//            console.println($"{name}={count}");
-//            }
-
-        for (String name : map.keys)
+        for ((String name, Int count) : map)
             {
-            assert Int count := map.get(name);
             console.println($"{name}={count}");
             }
         }

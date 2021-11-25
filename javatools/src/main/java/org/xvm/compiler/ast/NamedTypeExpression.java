@@ -1169,7 +1169,9 @@ public class NamedTypeExpression
 
                                 if (clzChild.isVirtualChild())
                                     {
-                                    type = pool.ensureVirtualChildTypeConstant(type, sChild);
+                                    type = isExplicitlyNonAutoNarrowing()
+                                            ? pool.ensureVirtualChildTypeConstant(type, sChild)
+                                            : pool.ensureThisVirtualChildTypeConstant(type, sChild);
                                     }
                                 else
                                     {
