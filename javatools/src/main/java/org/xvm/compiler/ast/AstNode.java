@@ -1299,9 +1299,15 @@ public abstract class AstNode
                 TypeConstant typeExpr = exprArg.isValidated()
                         ? exprArg.getType()
                         : exprArg.getImplicitType(ctx);
-
-                // if *all* tests fail, report the errors from the first unsuccessful attempt
-                fit = exprArg.testFit(ctx, typeParam, errsTemp);
+                if (typeExpr != null && typeExpr.isA(typeParam))
+                    {
+                    fit = TypeFit.Fit;
+                    }
+                else
+                    {
+                    // if *all* tests fail, report the errors from the first unsuccessful attempt
+                    fit = exprArg.testFit(ctx, typeParam, errsTemp);
+                    }
                 if (fit.isFit())
                     {
                     // the challenge is that the inferred expression could be more forgiving

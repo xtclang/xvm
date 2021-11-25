@@ -136,15 +136,7 @@ mixin FutureVar<Referent>
     @Override
     void close(Exception? cause = Null)
         {
-        // TODO GG: completeExceptionally(cause == Null ? new Closed() : cause);
-        if (cause == Null)
-            {
-            completeExceptionally(new Closed());
-            }
-        else
-            {
-            completeExceptionally(cause);
-            }
+        completeExceptionally(cause == Null ? new Closed() : cause);
         }
 
 
