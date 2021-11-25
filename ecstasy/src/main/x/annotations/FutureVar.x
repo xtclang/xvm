@@ -136,7 +136,10 @@ mixin FutureVar<Referent>
     @Override
     void close(Exception? cause = Null)
         {
-        completeExceptionally(cause == Null ? new Closed() : cause);
+        if (completion == Pending)
+            {
+            completeExceptionally(cause ?: new Closed());
+            }
         }
 
 
