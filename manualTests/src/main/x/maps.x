@@ -441,7 +441,6 @@ module TestMaps
 
     void testProcess(Map<Int, Int> map)
         {
-        console.println("\n** testProcess()");
         assert(map.processIfPresent(1, e -> e.value++) == False);
 
         map.put(1, 1);
