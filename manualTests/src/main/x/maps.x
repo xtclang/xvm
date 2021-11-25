@@ -41,8 +41,13 @@ module TestMaps
         testBasicOps(new SkiplistMap());
         testBasicOps(new ConcurrentHashMap());
 
-// TODO: deadlocks testProcess(new SafeHashMap());
+        testProcess(new ListMap());
+        testProcess(new HashMap());
+        testProcess(new SkiplistMap());
         testProcess(new ConcurrentHashMap());
+
+// TODO GG: deadlocks testConcurrentProcess(new SafeHashMap());
+        testConcurrentProcess(new ConcurrentHashMap());
 
         // concurrency performance comparison of maps
 //        Int concurrency = 4;
@@ -437,6 +442,31 @@ module TestMaps
     void testProcess(Map<Int, Int> map)
         {
         console.println("\n** testProcess()");
+        assert(map.processIfPresent(1, e -> e.value++) == False);
+
+        map.put(1, 1);
+        assert(map.processIfPresent(1, e -> ++e.value));
+        assert(map.getOrNull(1) == 2);
+
+        map.process(1, e -> {e.delete();});
+        assert(map.contains(1) == False);
+
+        try
+            {
+            map.process(1, e ->
+                {
+                TODO;
+                });
+            }
+        catch (UnsupportedOperation e)
+            {
+            // expected
+            }
+        }
+
+    void testConcurrentProcess(Map<Int, Int> map)
+        {
+        console.println("\n** testConcurrentProcess()");
         map.put(0, 0);
 
         Int count = 0;
@@ -464,6 +494,26 @@ module TestMaps
         // read of the same key as long write; CHM should not block
         map.get(0);
         console.println($"{++count}) get(0)");
+
+        try
+            {
+            Int ex = map.process(0, e ->
+                {
+                console.println($"{++count}) deferred process(0) throw");
+                if (e.exists)
+                    {
+                    TODO;
+                    }
+
+                return 123;
+                });
+
+            assert;
+            }
+        catch (UnsupportedOperation e)
+            {
+            // expected
+            }
 
         // write to the same key; CHM should block until original write completes
         map.put(0, 1);

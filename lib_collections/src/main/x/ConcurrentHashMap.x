@@ -141,7 +141,7 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
             }
         while (i != first);
 
-        // TODO: MF return a future?
+        // TODO MF: return a future?
         return sum;
         }
 
@@ -162,7 +162,7 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
             }
         while (i != first);
 
-        // TODO: MF return a future?
+        // TODO MF: return a future?
         return True;
         }
 
@@ -221,7 +221,7 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
             }
         while (i != first);
 
-        // TODO: MF return a future?
+        // TODO MF: return a future?
         return this;
         }
 
@@ -297,7 +297,7 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
                 return value == entry.value;
                 }
 
-            // TODO: MF future?
+            // TODO MF: future?
             return False;
             }
 
@@ -312,7 +312,7 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
                     }
                 }
 
-            // TODO: MF future?
+            // TODO MF: future?
             return True;
             }
 
@@ -625,7 +625,7 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
             {
             if (&pendingByKey.assigned && !pendingByKey.empty)
                 {
-                // TODO: MF async section?
+                // TODO MF: async section?
                 for (Key key : keys)
                     {
                     removeOrdered(parent, key);
@@ -652,7 +652,7 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
 
             // ensure that when we complete if there are no more pending actions that
             // we clean our entry from the pending map
-            rVar.thenDo(() -> pendingByKey.remove(key, rVar));
+            rVar.whenComplete((_, _) -> pendingByKey.remove(key, rVar));
 
             if (FutureVar pending := pendingByKey.get(key))
                 {
@@ -660,7 +660,18 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
                 // TODO: GG it would be nice to have a callback when an @Concurrent frame yields
                 // this would allow me to only do the extra bookkeeping when we actually yield
                 pendingByKey.put(key, rVar);
-                pending.thenDo(() -> {result = compute(entry);});
+                pending.whenComplete((_, _) ->
+                    {
+                    try
+                        {
+                        result = compute(entry);
+                        }
+                    catch (Exception e)
+                        {
+                        // TODO GG: &result.completeExceptionally(e); doesn't compile
+                        rVar.completeExceptionally(e);
+                        }
+                    });
                 }
             else
                 {
@@ -672,30 +683,22 @@ const ConcurrentHashMap<Key extends immutable Object, Value extends ImmutableAbl
             return result;
             }
 
-// TODO MF
-//        @Override
-//        <Result> conditional Result processIfPresent(Key key,
-//                function Result(Map<Key, Value>.Entry) compute)
-//            {
-//            if (contains(key))
-//                {
-//                if (Result r : process(key, e ->
-//                    {
-//                    if (e.exists)
-//                        {
-//                        return (True, compute(e));
-//                        }
-//
-//                    return False;
-//                    }))
-//                    {
-//                    return (True, r);
-//                    }
-//                }
-//            return False;
-//            }
+        @Override
+        @Concurrent
+        <Result> conditional Result processIfPresent(Key key,
+                function Result(Map<Key, Value>.Entry) compute)
+            {
+            if (contains(key))
+                {
+                enum Exist {Not}
+                Result|Exist result = process(key, e -> e.exists ? compute(e) : Exist.Not);
+                return result.is(Exist) ? False : (True, result);
+                }
+            return False;
+            }
 
         @Override
+        @Concurrent
         (Value, Boolean) computeIfAbsent(Key key, function Value() compute)
             {
             if (Value value := get(key))
