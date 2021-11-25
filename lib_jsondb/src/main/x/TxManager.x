@@ -891,7 +891,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             proceed = eval(proceed, rec.validate, ValidatorFailed, &result);
             }
 
-        // "rectiry" the transaction
+        // "rectify" the transaction
         if (!rectifiers.empty)
             {
             proceed = eval(proceed, rec.rectify, RectifierFailed, &result);
@@ -906,7 +906,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         // "seal" the transaction
         proceed = eval(proceed, rec.seal, DatabaseError, &result);
 
-        // handle any exception that occurred in any of the above steps (implying a failue)
+        // handle any exception that occurred in any of the above steps (implying a failure)
         proceed = proceed.handle(e ->
                 {
                 log($"Exception occurred while preparing transaction {rec.idString}: {e}");
@@ -1129,7 +1129,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             rec.complete(Committed);
             }
 
-        // direct the ObjectStores to write (i.e. asychronously catch up to the transaction log),
+        // direct the ObjectStores to write (i.e. asynchronously catch up to the transaction log),
         // and clean up the transaction records
         @Future Boolean initialResult = success;
         Future<Boolean> finalResult   = &initialResult;
@@ -1337,7 +1337,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         {
         return txCat(txId) == ReadOnly
                 ? assert as $"Transaction {txId} is a ReadOnly transaction"
-                : byWriteId[writeIdFor(txId)] ?: assert as $"Missing TxRecord for txid={txId}";
+                : byWriteId[writeIdFor(txId)] ?: assert as $"Missing TxRecord for txId={txId}";
         }
 
     /**

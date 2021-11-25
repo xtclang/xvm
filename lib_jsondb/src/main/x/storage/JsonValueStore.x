@@ -70,11 +70,9 @@ service JsonValueStore<Value extends immutable Const>
         return dataDir.fileFor("value.json");
         }
 
-    /**
-     * An internal, mutable record of Changes for a specific transaction.
-     */
     @Override
-    @Concurrent protected class Changes(Int writeId, Future<Int> pendingReadId)
+    @Concurrent
+    protected class Changes(Int writeId, Future<Int> pendingReadId)
         {
         /**
          * Set to True when the transaction contains possible changes related to this ObjectStore.
@@ -183,7 +181,7 @@ service JsonValueStore<Value extends immutable Const>
         Value prev   = latestValue(readId);
 
         assert Int latestId := history.last();
-        if (latestId == tx.readId)
+        if (latestId == readId)
             {
             if (&value == &prev) // any change assumed significant, so use reference equality
                 {

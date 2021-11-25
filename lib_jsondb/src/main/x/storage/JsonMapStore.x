@@ -70,10 +70,12 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
     /**
      * Used as a "singleton" empty map.
      */
-    protected immutable OrderedMap<Key, Value|Deletion> NoChanges = new SkiplistMap<Key, Value|Deletion>().makeImmutable();
+    protected immutable OrderedMap<Key, Value|Deletion> NoChanges =
+            new SkiplistMap<Key, Value|Deletion>().makeImmutable();
 
     @Override
-    @Concurrent protected class Changes(Int writeId, Future<Int> pendingReadId)
+    @Concurrent
+    protected class Changes(Int writeId, Future<Int> pendingReadId)
         {
         /**
          * A map of inserted and updated key/value pairs.
