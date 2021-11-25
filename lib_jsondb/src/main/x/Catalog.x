@@ -70,7 +70,7 @@ service Catalog<Schema extends RootSchema>
     /**
      * Open the catalog for the specified directory.
      *
-     * @param dir          the directory that contains (or may contain) the catalog
+     * @param dir       the directory that contains (or may contain) the catalog
      * @param metadata  (optional) the `CatalogMetadata` for this `Catalog`; if the metadata is not
      *                  provided, then the `Catalog` can only operate on the database as a raw JSON
      *                  data store

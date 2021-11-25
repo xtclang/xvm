@@ -2510,7 +2510,6 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 assert as $"Attempt to enlist into a transaction whose status is {tx.status} is forbidden";
             }
 
-        assert !tx.enlisted.contains(storeId); // TODO is this redundant?
         tx.enlist(storeId);
 
         return readId;
@@ -2859,73 +2858,134 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         // rebuild the ObjectStore instances
         if (safepoint < lastTx)
             {
-            recoverStores(safepoint, lastTx);
+            if (!recoverStores(safepoint, lastTx))
+                {
+                log($|TxManager failed to replay log from known safepoint {safepoint} to latest\
+                     | transaction {lastTx}
+                   );
+                return False;
+                }
             }
 
         log("TxManager automatic recovery completed");
         return openLog();
         }
 
-    protected void recoverStores(Int safepoint, Int lastTx)
+    /**
+     * Load the transaction log that ranges from the `safepoint` to the `lastTx`, and apply those
+     * transactions to all of the ObjectStore instances that were enlisted in those transactions,
+     * to ensure that the storage for those ObjectStore instances is up-to-date with the transaction
+     * log.
+     *
+     * @return True if the transaction log did exist, and was successfully recovered, and the
+     *         impacted ObjectStore instances were also recovered
+     */
+    protected Boolean recoverStores(Int safepoint, Int lastTx)
         {
+        SkiplistMap<Int, SkiplistMap<Int, String>> replayByDboId = new SkiplistMap();
+        SkiplistMap<String, Int>                   dboIdByPath   = new SkiplistMap();
 
-//        ObjectStore[] repair = new ObjectStore[];
-//        if (CatalogMetadata metadata ?= this.metadata)
-//            {
-//            for (DBObjectInfo info : metadata.dbObjectInfos)
-//                {
-//                if (info.lifeCycle != Removed)
-//                    {
-//                    // get the storage
-//                    ObjectStore store = storeFor(info.id);
-//
-//                    // validate the storage
-//                    try
-//                        {
-//                        if (store.deepScan())
-//                            {
-//                            continue;
-//                            }
-//
-//                        log($"During recovery, corruption was detected in \"{info.path}\"");
-//                        }
-//                    catch (Exception e)
-//                        {
-//                        log($"During recovery, an error occurred in the deepScan() of \"{info.path}\": {e}");
-//                        }
-//
-//                    repair += store;
-//                    }
-//                }
-//            }
-//        else
-//            {
-//            TODO("need an algorithm that finds all of the implied Storage impls based on the info in /sys/*");
-//            }
-//
-//// REVIEW CP - why did the algorithm have to scan everything before doing any repairs?
-//
-//        Boolean error = False;
-//        for (ObjectStore store : repair)
-//            {
-//            try
-//                {
-//                // repair the storage
-//                if (store.deepScan(fix=True))
-//                    {
-//                    log($"Successfully recovered \"{store.info.path}\"");
-//                    continue;
-//                    }
-//
-//                log($"During recovery, unable to fix \"{store.info.path}\"");
-//                }
-//            catch (Exception e)
-//                {
-//                log($"During recovery, unable to fix \"{store.info.path}\" due to an error: {e}");
-//                }
-//
-//            error = True;
-//            }
+        // first, determine all of the impacted ObjectStores, and load all of the transactions in
+        // the recovery range that need to be replayed to those ObjectStores
+        Int firstTx = safepoint+1;
+        if (Int logInfoIndex := findLogInfoIndex(firstTx))
+            {
+            log($"Loading transactions {firstTx}..{lastTx} for replay");
+            for ( ; logInfoIndex < logInfos.size; ++logInfoIndex)
+                {
+                log($"Loading transaction log file {logInfos[logInfoIndex].name}");
+                assert File logFile := sysDir.findFile(logInfos[logInfoIndex].name);
+                String json = logFile.contents.unpackUtf8();
+                using (Parser logParser = new Parser(json.toReader()))
+                    {
+                    using (val arrayParser = logParser.expectArray())
+                        {
+                        NextEntry: while (!arrayParser.eof)
+                            {
+                            using (val objectParser = arrayParser.expectObject())
+                                {
+                                if (objectParser.matchKey("_v"))
+                                    {
+                                    Int txId = objectParser.expectInt();
+                                    if (txId >= firstTx && txId <= lastTx)
+                                        {
+                                        // TODO parse and add to replayByDboId
+                                        // {"_v":1059, "_tx":7309, "_name":"autocommit", "_ts":"2021-11-25T05:48:40.585Z", "accounts":[{"k":69, "v":{"id":69,"balance":8762}}, {"k":65, "v":{"id":65,"balance":13806}}]},
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        else
+            {
+            log($"Could not locate transaction {firstTx} in the transaction log");
+            return False;
+            }
+
+        // scan the effected ObjectStore images
+        ObjectStore[] repair = new ObjectStore[];
+        for (Int dboId : replayByDboId.keys)
+            {
+            DBObjectInfo info = catalog.infoFor(dboId);
+            if (info.lifeCycle != Removed)
+                {
+                // get the storage
+                ObjectStore store = storeFor(info.id);
+
+                // validate the storage
+                try
+                    {
+                    if (store.deepScan())
+                        {
+                        continue;
+                        }
+
+                    log($"During recovery, corruption was detected in \"{info.path}\"");
+                    }
+                catch (Exception e)
+                    {
+                    log($"During recovery, an error occurred in the deepScan() of \"{info.path}\": {e}");
+                    }
+
+                repair += store;
+                }
+            }
+
+        // try to repair any damaged ObjectStore images
+        Boolean error = False;
+        for (ObjectStore store : repair)
+            {
+            try
+                {
+                // repair the storage
+                if (store.deepScan(fix=True))
+                    {
+                    log($"Successfully recovered \"{store.info.path}\"");
+                    continue;
+                    }
+
+                log($"During recovery, unable to fix \"{store.info.path}\"");
+                }
+            catch (Exception e)
+                {
+                log($"During recovery, unable to fix \"{store.info.path}\" due to an error: {e}");
+                }
+
+            error = True;
+            }
+        if (error)
+            {
+            return False;
+            }
+
+        // finally, for each ObjectStores impacted by any of those transactions, instruct it to
+        // apply all transactions from the recovery range that it was enlisted in
+        // TODO replay the data in replayByDboId to the ObjectStores
+
+        return True;
         }
 
     /**
@@ -3066,6 +3126,38 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         assert first >= 0 && safe >= 0 as $"Log file \"{logFile.name}\" is missing required header information";
         return new LogFileInfo(logFile.name, first..last, safe, logFile.size, logFile.modified);
         }
+
+    /**
+     * Find the log file that contains the specified transaction.
+     *
+     * @param txId  the internal transaction id (version number)
+     *
+     * @return True iff the `txId` exists in the log
+     * @return (conditional) the log file index that contains the `txId`
+     */
+    protected conditional Int findLogInfoIndex(Int txId)
+        {
+        LogFileInfo[] logInfos = logInfos;
+        if (logInfos.empty || txId < logInfos[0].txIds.effectiveLowerBound
+                || txId > logInfos[logInfos.size-1].txIds.effectiveUpperBound)
+            {
+            return False;
+            }
+
+        // search backward through the log
+        Int logInfoIndex = logInfos.size-1;
+        while (logInfoIndex >= 0)
+            {
+            Range<Int> txIds = logInfos[logInfoIndex].txIds;
+            if (txIds.contains(txId))
+                {
+                return True, logInfoIndex;
+                }
+            --logInfoIndex;
+            }
+
+        return False;
+            }
 
     /**
      * Append a log entry to the log file.
