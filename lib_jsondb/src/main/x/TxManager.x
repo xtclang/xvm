@@ -346,9 +346,22 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      */
     Int safepoint.get()
         {
-        // TODO
-        return lastCommitted;
+        Int safepoint = lastCommitted;
+        for (TxRecord rec : byWriteId.values)
+            {
+            if (rec.status == Committed && rec.commitId <= safepoint)
+                {
+                assert rec.commitId > 0;
+                safepoint = rec.commitId - 1;
+                }
+            }
+        return safepoint;
         }
+
+    /**
+     * The last recorded safepoint.
+     */
+    Int previousSafepoint = NO_TX;
 
     /**
      * The transactions that have begun, but have not yet committed or rolled back. The key is the
@@ -372,19 +385,19 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      */
     protected/private OrderedMap<Int, Int> byReadId = new SkiplistMap();
 
-// REVIEW remove this unless it gets used
-    /**
-     * The oldest transaction id that is still being used.
-     */
-    Int retainTxId.get()
-        {
-        if (Int oldest := byReadId.first())
-            {
-            return oldest;
-            }
-
-        return lastCommitted;
-        }
+// TODO CP remove this unless it gets used
+//    /**
+//     * The oldest transaction id that is still being used.
+//     */
+//    Int retainTxId.get()
+//        {
+//        if (Int oldest := byReadId.first())
+//            {
+//            return oldest;
+//            }
+//
+//        return lastCommitted;
+//        }
 
     /**
      * The set of ids of DBObjects that have validators.
@@ -463,7 +476,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             case Initial:
                 using (new SynchronizedSection())
                     {
-                    if ((statusFile.exists ? openLog() : createLog()) || recoverLog())
+                    if ((statusFile.exists ? openLog() : createLog()) || recover && recoverLog())
                         {
                         status = Enabled;
                         return True;
@@ -477,7 +490,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             case Disabled:
                 using (new SynchronizedSection())
                     {
-                    if (remainingTerminating == 0 && (openLog() || recoverLog()))
+                    if (remainingTerminating == 0 && (openLog() || recover && recoverLog()))
                         {
                         status = Enabled;
                         return True;
@@ -866,36 +879,43 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         FutureVar<Boolean> proceed = eval(&start, rec.prepare, ConcurrentConflict, &result);
         &start.complete(True); // kick off the prepare
 
+        // "require" the transaction
         if (!rec.requirements.empty)
             {
             proceed = eval(proceed, rec.require, ConcurrentConflict, &result);
             }
 
+        // "validate" the transaction
         if (!validators.empty)
             {
             proceed = eval(proceed, rec.validate, ValidatorFailed, &result);
             }
 
+        // "rectiry" the transaction
         if (!rectifiers.empty)
             {
             proceed = eval(proceed, rec.rectify, RectifierFailed, &result);
             }
 
+        // "distribute" the transaction
         if (!distributors.empty)
             {
             proceed = eval(proceed, rec.distribute, DistributorFailed, &result);
             }
 
-        proceed = eval(proceed, rec.seal, DatabaseError, &result)
-                    .handle(e ->
-                        {
-                        log($"Exception occurred while preparing transaction {rec.idString}: {e}");
-                        if (!&result.assigned)
-                            {
-                            result = DatabaseError;
-                            }
-                        return False;
-                        });
+        // "seal" the transaction
+        proceed = eval(proceed, rec.seal, DatabaseError, &result);
+
+        // handle any exception that occurred in any of the above steps (implying a failue)
+        proceed = proceed.handle(e ->
+                {
+                log($"Exception occurred while preparing transaction {rec.idString}: {e}");
+                if (!&result.assigned)
+                    {
+                    result = DatabaseError;
+                    }
+                return False;
+                });
 
         // this is the end of the line (even though it is still far in the future, and won't be
         // executed until all of the other futures above get evaluated); our job here is to either
@@ -913,6 +933,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 this:service.callLater(processBacklog);
                 }
 
+            // if everything thus far has succeeded, then we attempt to commit the transaction
             if (rec.status == Sealed)
                 {
                 try
@@ -930,6 +951,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                     }
                 }
 
+            // if we didn't successfully commit (for any reason), then we roll back
             try
                 {
                 rec.rollback();
@@ -1054,16 +1076,14 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
 
         // bundle the results of "sealPrepare()" into a buffer
         StringBuffer buf       = new StringBuffer();
-        Int[]        writeIds  = new Int[recs.size];
         Int          lastAdded = NO_TX;
         TxRecord[]   processed = new TxRecord[];
         NextTx: for (TxRecord rec : recs)
             {
-            assert rec.prepareId > lastAdded;
-
             switch (rec.status)
                 {
                 case Sealed:
+                    assert rec.prepareId > lastAdded;
                     rec.status = Committing;
                     break;
 
@@ -1092,7 +1112,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             return success;
             }
 
-        // append all of the commits to the log
+        // append all of the commits to the log (this officially "commits" the transactions)
         buf.append("\n]");
         appendLog(buf.toString());
         assert lastCommitted < lastAdded;
@@ -1103,15 +1123,21 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             rotateLog();
             }
 
-        // direct the ObjectStores to write, and clean up the transactions
+        // notify the clients that their transactions have committed
+        for (TxRecord rec : processed)
+            {
+            rec.complete(Committed);
+            }
+
+        // direct the ObjectStores to write (i.e. asychronously catch up to the transaction log),
+        // and clean up the transaction records
         @Future Boolean initialResult = success;
         Future<Boolean> finalResult   = &initialResult;
-        NextTx: for (TxRecord rec : processed)
+        for (TxRecord rec : processed)
             {
             Set<Int> storeIds = rec.enlisted;
             if (storeIds.empty)
                 {
-                rec.terminate(Committed);
                 continue;
                 }
 
@@ -1130,24 +1156,18 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
 
                 if (e != Null)
                     {
-                    log($"HeuristicException during commit caused by: {e}");
+                    log($"HeuristicException during commit of {rec} caused by: {e}");
                     // REVIEW should this panic() right here?
                     localSuccess = False;
                     }
 
-                try
-                    {
-                    rec.terminate(Committed);
-                    }
-                catch (Exception e2)
-                    {
-                    log($"Exception while terminating transaction {rec.idString}: {e2}");
-                    // REVIEW should this panic() right here?
-                    localSuccess = False;
-                    }
+                // the existence of this transaction prevents the safepoint from advancing, so once
+                // it completes, it needs to be removed
+                rec.release();
 
                 return localSuccess;
                 });
+
             finalResult = finalResult.and(incrementalResult, (ok1, ok2) -> ok1 & ok2);
             }
 
@@ -1492,12 +1512,15 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 case Distributing:
                 case Distributed:
                 case Sealing:
-                case Sealed:
-                case Committing:
-                case Committed:
                     // prepare is re-homed "on top of" the previously committed (or previously
                     // prepared) transaction
                     return readId + 1;
+
+                case Sealed:
+                case Committing:
+                case Committed:
+                    assert commitId >= 0 as $"Illegal commitId {commitId}, status={status}";
+                    return commitId;
 
                 case InFlight:
                 case Enqueued:
@@ -1507,6 +1530,12 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                     return NO_TX;
                 }
             }
+
+        /**
+         * The permanent id assigned to a committed transaction. This property does not have a real
+         * value until the transaction is sealed, which occurs immediately before the commit.
+         */
+        Int commitId = NO_TX;
 
         /**
          * All of the require() calls that have occurred within this transaction.
@@ -1657,7 +1686,10 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         protected Boolean prepare()
             {
             checkEnabled();
-            assert status == Enqueued && currentlyPreparing == writeId;
+            if (status != Enqueued || currentlyPreparing != writeId)
+                {
+                return status == Committed;
+                }
 
             status = Preparing;
 
@@ -1665,7 +1697,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             if (storeIds.empty)
                 {
                 // an empty transaction is considered committed
-                terminate(Committed);
+                complete(Committed);
                 return True;
                 }
 
@@ -1690,9 +1722,9 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
 
                 import ObjectStore.PrepareResult;
                 PrepareResult   prepareResult = store.prepare^(writeId, destinationId);
-                Future<Boolean> preparedOne   = &prepareResult.transform(pr ->
+                Future<Boolean> preparedOne   = &prepareResult.transform(result ->
                     {
-                    switch (pr)
+                    switch (result)
                         {
                         case FailedRolledBack:
                             storeIds.remove(storeId);
@@ -1711,34 +1743,41 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 preparedAll = preparedAll?.and(preparedOne, (ok1, ok2) -> ok1 & ok2) : preparedOne;
                 }
 
-// REVIEW CP this is unusual, in retrospect; why doesn't it just return True or False?
             assert preparedAll != Null;
-            return preparedAll.whenComplete((v, e) ->
-                {
-                // check for successful prepare, and whether anything is left enlisted
-                switch (v, storeIds.empty)
+
+            // handle any exception that occurred in the ObjectStore prepare steps
+            return preparedAll.handle(e ->
                     {
-                    default:
-                    case (False, False):
-                        // failed; remaining stores need to be rolled back
-                        rollback(ConcurrentConflict);
-                        break;
+                    log($"Exception occurred while preparing transaction {this.TxRecord.idString}: {e}");
+                    return False;
+                    })
+                .transform(ok ->
+                    {
+                    // check for successful prepare, and whether anything is left enlisted
+                    switch (ok, !storeIds.empty)
+                        {
+                        case (False, False):
+                            // failed; already rolled back
+                            complete(ConcurrentConflict);
+                            return False;
 
-                    case (False, True ):
-                        // failed; already rolled back
-                        terminate(ConcurrentConflict);
-                        break;
+                        default:
+                        case (False, True):
+                            // failed; remaining stores need to be rolled back
+                            rollback(ConcurrentConflict);
+                            return False;
 
-                    case (True , False):
-                        status = Prepared;
-                        break;
+                        case (True, False):
+                            // succeeded; already committed
+                            complete(Committed);
+                            release();
+                            return True;
 
-                    case (True , True ):
-                        // succeeded; already committed
-                        terminate(Committed);
-                        break;
-                    }
-                });
+                        case (True, True):
+                            status = Prepared;
+                            return True;
+                        }
+                    });
             }
 
         /**
@@ -1759,7 +1798,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 case Committed:
                     // assume that the transaction already short-circuited to a committed state
                     assert enlisted.empty;
-                    return False;
+                    return True;
 
                 case RollingBack:
                 case RolledBack:
@@ -1808,7 +1847,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 case Committed:
                     // assume that the transaction already short-circuited to a committed state
                     assert enlisted.empty;
-                    return False;
+                    return True;
 
                 case RollingBack:
                 case RolledBack:
@@ -1866,7 +1905,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 case Committed:
                     // assume that the transaction already short-circuited to a committed state
                     assert enlisted.empty;
-                    return False;
+                    return True;
 
                 case RollingBack:
                 case RolledBack:
@@ -2026,7 +2065,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
 
                 case Committed:
                     // assume that the transaction already short-circuited to a committed state
-                    return False;
+                    return True;
 
                 case RollingBack:
                 case RolledBack:
@@ -2050,7 +2089,10 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                     }
                 }
 
+            Int prepareId = this.prepareId;
+            assert prepareId > 0;
             lastPrepared = prepareId;
+            commitId     = prepareId;
             status       = Sealed;
             return True;
             }
@@ -2084,7 +2126,6 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                     assert as $"Unexpected status: {status}";
                 }
 
-            Int commitId = prepareId;
             switch (commitId <=> lastCommitted + 1)
                 {
                 case Lesser:
@@ -2122,13 +2163,24 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 log($"Error: An empty transaction transaction {idString} was sealed");
                 }
 
-            // bundle the results of "sealPrepare()" into a transaction log entry
+            // bundle the results of "sealPrepare()" into a transaction log entry; this is the
+            // "official commit" of the transaction
             StringBuffer buf = new StringBuffer();
             addSeal(buf);
             buf.append("\n]");
             appendLog(buf.toString());
             lastCommitted = commitId;
 
+            if (logFile.size > maxLogSize)
+                {
+                rotateLog();
+                }
+
+            // notify the client that the transaction committed
+            complete(Committed);
+
+            // now get the ObjectStores to asynchronously write all of their transactional changes
+            // to disk
             FutureVar<Tuple<>>? commitAll = Null;
             for (Int storeId : enlisted)
                 {
@@ -2143,14 +2195,11 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                     log($"Heuristic Commit Exception: During commit of {idString}: {e}");
                     panic();
                     }
+
+                // the writes completed, so advance the safepoint by unregistering the in-flight
+                // transaction
+                release();
                 });
-
-            terminate(Committed);
-
-            if (logFile.size > maxLogSize)
-                {
-                rotateLog();
-                }
 
             return True;
             }
@@ -2260,7 +2309,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 }
             finally
                 {
-                terminate(reason ?: RollbackOnly);
+                complete(reason ?: RollbackOnly);
                 }
             }
 
@@ -2301,9 +2350,17 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
          *
          * @param status  the terminal status of the transaction
          */
-        protected void terminate(CommitResult result)
+        protected void complete(CommitResult result)
             {
-            this.status = result == Committed ? Committed : RolledBack;
+            // check if the TxRecord already completed
+            if (status == Committed || status ==  RolledBack)
+                {
+                assert pending == Null && terminated == Null;
+                assert (result == Committed) == (status == Committed);
+                return;
+                }
+
+            status = result == Committed ? Committed : RolledBack;
 
             if (FutureVar<CommitResult> pending ?= this.pending, !pending.assigned)
                 {
@@ -2311,8 +2368,15 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 this.pending = Null;
                 }
 
-            byWriteId.remove(writeId);
             byClientId.remove(clientId);
+
+            // if the transaction is still being committed asynchronously by any enlisted
+            // ObjectStore instances, then do not unregister the transaction (until they have
+            // finished writing to disk)
+            if (result != Committed || enlisted.empty)
+                {
+                release();
+                }
 
             releaseClient();
 
@@ -2324,6 +2388,17 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
 
             // clearing the readId will unregister it from the count byReadId
             readId = NO_TX;
+            }
+
+        /**
+         * Unregister the transaction. This occurs only after the enlisted ObjectStore instances
+         * confirm that the commit has completed writing to disk.
+         */
+        protected void release()
+            {
+            assert status == Committed || status ==  RolledBack;
+
+            byWriteId.remove(writeId);
             }
 
         @Override
@@ -2543,12 +2618,13 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      */
     protected void initLogFile()
         {
+        Int safepoint = safepoint;
         logFile.contents = $|[
                             |\{"_op":"created", "_ts":"{clock.now.toString(True)}",\
                             | "_prev_v":{lastCommitted}, "safepoint":{safepoint}}
                             |]
                             .utf8();
-        logUpdated();
+        logUpdated(safepoint);
         }
 
     /**
@@ -2567,17 +2643,21 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             LogFileInfo current = logInfos[logInfos.size-1];
             if (current.size == logFile.size && current.timestamp == logFile.modified)
                 {
+                Int lastCommitted = current.txIds.effectiveUpperBound;
+                Int safepoint     = safepoint;
+                assert safepoint == lastCommitted;
+
                 // remember the timestamp on the log, as if we just updated it
                 logUpdated();
 
                 // append the "we're open" message to the log
                 addLogEntry($|\{"_op":"opened", "_ts":"{clock.now.toString(True)}",\
                              | "safepoint":{safepoint}}
-                           );
+                           , safepoint);
 
                 this.logInfos      = logInfos;
-                this.lastCommitted = current.txIds.effectiveUpperBound;
-                this.lastPrepared  = this.lastCommitted;
+                this.lastCommitted = lastCommitted;
+                this.lastPrepared  = lastCommitted;
 
                 return True;
                 }
@@ -2587,15 +2667,17 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         }
 
     /**
-     * Make a "best attempt" to automatically recover the transaction log.
+     * Make a "best attempt" to automatically recover the transaction log and the database.
      *
-     * @return True if the transaction log did exist, and was successfully opened
+     * @return True if the transaction log did exist, and was successfully recovered, and the
+     *         impacted ObjectStore instances were also recovered
      */
     protected Boolean recoverLog()
         {
         // start by trying to read the status file
         LogFileInfo[] logInfos;
-        Int           lastTx  = -1;
+        Int           lastTx    = -1;
+        Int           safepoint = -1;
         if (logInfos := readStatus())
             {
             // validate the LogFileInfo entries; assume that older files may have been deleted, and
@@ -2639,6 +2721,8 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                             return False;
                             }
                         }
+
+                    safepoint = newInfo.safepoint;
                     logInfos[Loop.count] = newInfo;
                     }
                 else
@@ -2727,14 +2811,16 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                     lastTx = info.txIds.effectiveUpperBound;
                     assert lastTx >= 0;
                     }
+
+                safepoint = info.safepoint;
                 }
             }
-
-// TODO need a value for safepoint
 
         // create the "current" log file, if one does not exist
         if (logFile.exists)
             {
+            assert lastTx >= 0 && safepoint >= 0;
+
             // append a recovery message to the log
             addLogEntry($|\{"_op":"recovered", "_ts":"{clock.now.toString(True)}",\
                          | "safepoint":{safepoint}}
@@ -2752,6 +2838,8 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                                 |\{"_op":"recovered", "_ts":"{timestamp}", "safepoint":{safepoint}}
                                 |]
                                 .utf8();
+
+            safepoint = safepoint.maxOf(0);
             LogFileInfo info = new LogFileInfo(logFile.name, [lastTx+1..lastTx+1), safepoint, logFile.size, logFile.modified);
             if (logInfos[logInfos.size-1].name == logFile.name)
                 {
@@ -2764,11 +2852,80 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             }
 
         // rebuild the status file
-        this.logInfos = logInfos;
+        this.logInfos          = logInfos;
+        this.previousSafepoint = safepoint;
         writeStatus();
+
+        // rebuild the ObjectStore instances
+        if (safepoint < lastTx)
+            {
+            recoverStores(safepoint, lastTx);
+            }
 
         log("TxManager automatic recovery completed");
         return openLog();
+        }
+
+    protected void recoverStores(Int safepoint, Int lastTx)
+        {
+
+//        ObjectStore[] repair = new ObjectStore[];
+//        if (CatalogMetadata metadata ?= this.metadata)
+//            {
+//            for (DBObjectInfo info : metadata.dbObjectInfos)
+//                {
+//                if (info.lifeCycle != Removed)
+//                    {
+//                    // get the storage
+//                    ObjectStore store = storeFor(info.id);
+//
+//                    // validate the storage
+//                    try
+//                        {
+//                        if (store.deepScan())
+//                            {
+//                            continue;
+//                            }
+//
+//                        log($"During recovery, corruption was detected in \"{info.path}\"");
+//                        }
+//                    catch (Exception e)
+//                        {
+//                        log($"During recovery, an error occurred in the deepScan() of \"{info.path}\": {e}");
+//                        }
+//
+//                    repair += store;
+//                    }
+//                }
+//            }
+//        else
+//            {
+//            TODO("need an algorithm that finds all of the implied Storage impls based on the info in /sys/*");
+//            }
+//
+//// REVIEW CP - why did the algorithm have to scan everything before doing any repairs?
+//
+//        Boolean error = False;
+//        for (ObjectStore store : repair)
+//            {
+//            try
+//                {
+//                // repair the storage
+//                if (store.deepScan(fix=True))
+//                    {
+//                    log($"Successfully recovered \"{store.info.path}\"");
+//                    continue;
+//                    }
+//
+//                log($"During recovery, unable to fix \"{store.info.path}\"");
+//                }
+//            catch (Exception e)
+//                {
+//                log($"During recovery, unable to fix \"{store.info.path}\" due to an error: {e}");
+//                }
+//
+//            error = True;
+//            }
         }
 
     /**
@@ -2913,19 +3070,21 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
     /**
      * Append a log entry to the log file.
      *
-     * @param entry  a JSON object, rendered as a string, to append to the log
+     * @param entry      a JSON object, rendered as a string, to append to the log
+     * @param safepoint  non-null iff the safepoint is being updated as part of the log update
      */
-    protected void addLogEntry(String entry)
+    protected void addLogEntry(String entry, Int? safepoint=Null)
         {
-        appendLog($",\n{entry}\n]");
+        appendLog($",\n{entry}\n]", safepoint);
         }
 
     /**
      * Append a buffer to the log file.
      *
-     * @param buf  the buffer containing the text to append to the log
+     * @param buf        the buffer containing the text to append to the log
+     * @param safepoint  non-null iff the safepoint is being updated as part of the log update
      */
-    protected void appendLog(String s)
+    protected void appendLog(String s, Int? safepoint=Null)
         {
         validateLog();
 
@@ -2936,7 +3095,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         file.truncate(length-2)
             .append(s.utf8());
 
-        logUpdated();
+        logUpdated(safepoint);
         }
 
     /**
@@ -2953,10 +3112,13 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
 
     /**
      * Record the timestamp on the log after it was updated.
+     *
+     * @param safepoint  non-null iff the safepoint was updated as part of the log update
      */
-    protected void logUpdated()
+    protected void logUpdated(Int? safepoint=Null)
         {
         expectedLogTimestamp = logFile.modified;
+        previousSafepoint    = safepoint?;
         }
 
     /**
