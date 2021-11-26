@@ -20,8 +20,8 @@ module CounterTest
         for (Int i : 1..3)
             {
             // pick a letter to schedule
-            String name = 'a' + rnd.int(26) .toString();
-            console.println($"cranking up {name}...");
+            String name = ('A' + rnd.uint(26).toUInt32()).toString();
+            console.println($"cranking up schedule \"{name}\"...");
             schema.cranker.schedule(name);
             }
 
@@ -31,8 +31,6 @@ module CounterTest
 
     void dump(DBMap<String, Int> map)
         {
-        assert:debug;
-
         for ((String name, Int count) : map)
             {
             console.println($"{name}={count}");

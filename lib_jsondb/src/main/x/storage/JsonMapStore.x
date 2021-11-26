@@ -27,6 +27,7 @@ import TxManager.NO_TX;
 service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
         extends ObjectStore
         implements MapStore<Key, Value>
+        incorporates KeyBasedStore<Key>
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -129,13 +130,6 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
     typedef Map<Key,    Range<Int>>  EntryLayout;
     typedef Map<String, EntryLayout> FileLayout; // very often - just a single key per file
     protected SkiplistMap<Int, FileLayout> storageLayout = new SkiplistMap();
-
-    /**
-     * The files names used to store the data for the keys. For Large model, this map will be
-     * actively purged, retaining only most recently/frequently used keys. For all other models, it
-     * contains all existing keys (lazily added).
-     */
-    protected Map<Key, String> fileNames = new HashMap();
 
     /**
      * The append offset, measured in Chars, within the each data file, keyed by the Key's URI form.
@@ -735,7 +729,7 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                             () -> new StringBuffer());
 
                     // build the String that will be appended to the disk file
-                    // format is "{"tx":14, "c":[{"k":{...}}, "v":{...}}, ...],"; comma is first (since we are appending)
+                    // format is "{"tx":14, "c":[{"k":{...}, "v":{...}}, ...],"; comma is first (since we are appending)
                     if (buf.size == 0)
                         {
                         buf.append(",\n{\"tx\":")
@@ -754,6 +748,8 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                     // remember the transaction location
 //                     storageLayout.put(prepareId, [offset+start .. offset+end));
                     }
+
+                modsByTx.remove(prepareId);
                 }
             }
 
@@ -908,25 +904,6 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
             }
 
         return False;
-        }
-
-    /**
-     * Get the file used to store data for the specified key.
-     */
-    protected String nameForKey(Key key)
-        {
-        return fileNames.computeIfAbsent(key, () ->
-            {
-            return $"{computeURI(key)}.json";
-            });
-
-        private String computeURI(Key key)
-            {
-            String name = key.toString();
-
-            // TODO remove illegal chars
-            return name.slice([0 .. name.size.minOf(40)));
-            }
         }
 
 
