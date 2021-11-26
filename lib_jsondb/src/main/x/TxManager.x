@@ -3,6 +3,7 @@ import collections.CircularArray;
 import collections.SparseIntSet;
 
 import json.ElementOutput;
+import json.Lexer.Token;
 import json.Mapping;
 import json.ObjectInputStream;
 import json.ObjectOutputStream;
@@ -2882,8 +2883,8 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      */
     protected Boolean recoverStores(Int safepoint, Int lastTx)
         {
-        SkiplistMap<Int, SkiplistMap<Int, String>> replayByDboId = new SkiplistMap();
-        SkiplistMap<String, Int>                   dboIdByPath   = new SkiplistMap();
+        SkiplistMap<Int, SkiplistMap<Int, Token[]>> replayByDboId = new SkiplistMap();
+        SkiplistMap<String, Int>                    dboIdByPath   = new SkiplistMap();
 
         // first, determine all of the impacted ObjectStores, and load all of the transactions in
         // the recovery range that need to be replayed to those ObjectStores
@@ -2909,8 +2910,25 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                                     Int txId = objectParser.expectInt();
                                     if (txId >= firstTx && txId <= lastTx)
                                         {
-                                        // TODO parse and add to replayByDboId
-                                        // {"_v":1059, "_tx":7309, "_name":"autocommit", "_ts":"2021-11-25T05:48:40.585Z", "accounts":[{"k":69, "v":{"id":69,"balance":8762}}, {"k":65, "v":{"id":65,"balance":13806}}]},
+                                        // every non-"_" key is a path to a DBObject
+                                        while (Token token := objectParser.matchKey())
+                                            {
+                                            String name = token.value.toString();
+                                            if (name.startsWith('_'))
+                                                {
+                                                objectParser.skip();
+                                                }
+                                            else
+                                                {
+                                                Int dboId = dboIdByPath.computeIfAbsent(name,
+                                                        () -> catalog.infoFor(name).id);
+                                                Token[] seal = new Token[];
+                                                objectParser.skip(seal);
+                                                assert replayByDboId.computeIfAbsent(dboId,
+                                                        ()->new SkiplistMap())
+                                                        .putIfAbsent(txId, seal);
+                                                }
+                                            }
                                         }
                                     }
                                 }

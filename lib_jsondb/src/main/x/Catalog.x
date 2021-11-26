@@ -392,6 +392,41 @@ service Catalog<Schema extends RootSchema>
         }
 
     /**
+     * Obtain the DBObjectInfo for the specified name or path.
+     *
+     * @param path  the path from the root to the DBObject; "/" indicates the root
+     *
+     * @return the DBObjectInfo for the specified path
+     */
+    @Concurrent
+    DBObjectInfo infoFor(String path)
+        {
+        DBObjectInfo current = infoFor(0); // ROOT
+
+        NextPathSegment: for (String name : path.split('/'))
+            {
+            if (name == "" && NextPathSegment.first)
+                {
+                continue NextPathSegment;
+                }
+
+            for (Int childId : current.childIds)
+                {
+                DBObjectInfo child = infoFor(childId);
+                if (child.name == name)
+                    {
+                    current = child;
+                    continue NextPathSegment;
+                    }
+                }
+
+            assert:arg as $"Missing DBObjectInfo for {name.quoted()} in path {path.quoted()}";
+            }
+
+        return current;
+        }
+
+    /**
      * Obtain the ObjectStore for the specified id.
      *
      * @param id  the internal object id
