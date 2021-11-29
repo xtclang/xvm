@@ -717,10 +717,12 @@ service Catalog<Schema extends RootSchema>
      * For an existent database, if this `Catalog` is `Closed`, `Recovering`, or `Configuring`, then
      * transition to the `Running` state, allowing access and modification of the database contents.
      *
+     * @return True iff the catalog is `Open`
+     *
      * @throws IllegalState  if the Catalog is not `Closed`, `Recovering`, or `Configuring`
      */
     @Synchronized
-    void open()
+    Boolean open()
         {
         transition([Closed, Recovering, Configuring], Running,
                 snapshot -> snapshot.owned || snapshot.unowned,
@@ -729,12 +731,15 @@ service Catalog<Schema extends RootSchema>
         if (!txManager.enable())
             {
             close();
+            return False;
             }
 
         if (!scheduler.enable())
             {
             close();
+            return False;
             }
+        return True;
         }
 
     /**

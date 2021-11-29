@@ -38,21 +38,34 @@ class JsondbHost(String dbModuleName)
         dataDir = curDir.dirFor($"build/{dbModuleName}_data").ensure();
 
         Catalog catalog = meta.createCatalog(dataDir, False);
+        Boolean success = False;
         try
             {
-            catalog.open();
+            success = catalog.open();
             }
         catch (IllegalState e)
             {
+            catalog.log($"Failed to open the catalog for \"{dbModuleName}\"; reason={e}");
+            }
+
+        if (!success)
+            {
+            // failed to open; try to recover
             try
-                {
-                catalog.create("name_goes_here");
-                catalog.open();
-                }
-            catch (IllegalState e2)
                 {
                 catalog.recover();
                 }
+            catch (IllegalState e)
+                {
+                catalog.log($"Failed to recover the catalog for \"{dbModuleName}\"; reason={e}");
+                }
+            }
+
+        if (!success)
+            {
+            // failed to recover; try to create
+            catalog.create(dbModuleName);
+            assert catalog.open() as $"Failed to create the catalog for \"{dbModuleName}\"";
             }
         return catalog;
         }
