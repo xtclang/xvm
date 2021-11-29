@@ -834,8 +834,6 @@ class SkiplistMap<Key extends Orderable, Value>
                 else
                     {
                     this.SkiplistMap.put(key, value);
-                    exists        = True;
-                    expectedCount = modCount;
                     }
                 }
             }
@@ -846,8 +844,6 @@ class SkiplistMap<Key extends Orderable, Value>
             if (exists)
                 {
                 this.SkiplistMap.remove(key);
-                exists        = False;
-                expectedCount = modCount;
                 }
             }
 
