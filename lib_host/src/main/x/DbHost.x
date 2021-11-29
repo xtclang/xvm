@@ -154,6 +154,7 @@ class DbHost(String dbModuleName)
             return False;
             }
 
+        String childrenIds          = "";
         String propertyInfos        = "";
         String propertyTypes        = "";
         String propertyGetters      = "";
@@ -183,6 +184,7 @@ class DbHost(String dbModuleName)
             String propertyBaseType;
             String propertyTypeParams;
 
+            childrenIds += $"{propertyId},";
             switch (category)
                 {
                 case DBMap:
@@ -315,6 +317,7 @@ class DbHost(String dbModuleName)
         String moduleSource = moduleSourceTemplate
                                 .replace("%appName%"             , appName)
                                 .replace("%appSchema%"           , appSchema)
+                                .replace("%ChildrenIds%"         , childrenIds)
                                 .replace("%PropertyInfos%"       , propertyInfos)
                                 .replace("%PropertyTypes%"       , propertyTypes)
                                 .replace("%PropertyGetters%"     , propertyGetters)
