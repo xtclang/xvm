@@ -2944,7 +2944,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                                                 objectParser.skip(seal);
                                                 assert replayByDboId.computeIfAbsent(dboId,
                                                         ()->new SkiplistMap())
-                                                        .putIfAbsent(txId, seal);
+                                                        .putIfAbsent(txId, seal.freeze(inPlace=True));
                                                 }
                                             }
                                         }
@@ -2960,6 +2960,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             log($"Could not locate transaction {firstTx} in the transaction log");
             return False;
             }
+        replayByDboId.freeze(inPlace=True);
 
         // scan the effected ObjectStore images
         ObjectStore[] repair = new ObjectStore[];
