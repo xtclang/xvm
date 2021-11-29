@@ -1,11 +1,12 @@
 import Catalog.Status;
 import TxManager.NO_TX;
 
+import json.Doc;
+import json.Lexer.Token;
+
 import model.DBObjectInfo;
 
 import oodb.DBObject.DBCategory as Category;
-
-import json.Doc;
 
 
 /**
@@ -762,6 +763,22 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
         {
         // knowledge of how to perform a deep scan is handled by specific ObjectStore sub-classes
         return quickScan();
+        }
+
+    /**
+     * Fill in any missing persistent state of the ObjectStore by re-applying the provided
+     * transaction seals that may not have been persisted by the ObjectStore.
+     *
+     * @param sealsByTxId  a Map, keyed and ordered by internal transaction id, that contains the
+     *                     seal information provided by this ObjectStore at the time that the
+     *                     transaction was prepared
+     *
+     * @return True if the recovery data was applied successfully
+     */
+    @Synchronized
+    Boolean recover(SkiplistMap<Int, Token[]> sealsByTxId)
+        {
+        TODO
         }
 
     /**

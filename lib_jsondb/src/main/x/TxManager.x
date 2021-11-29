@@ -466,7 +466,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      *
      * This method is intended to only be used by the [Catalog].
      *
-     * @param recover
+     * @param recover  pass true to enable database recovery, if recovery is necessary
      *
      * @return True iff the TxManager was successfully enabled
      */
@@ -2645,7 +2645,11 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 {
                 Int lastCommitted = current.txIds.effectiveUpperBound;
                 Int safepoint     = safepoint;
-                assert safepoint == lastCommitted;
+                assert safepoint <= lastCommitted;
+                if (safepoint < lastCommitted)
+                    {
+                    return False;
+                    }
 
                 // remember the timestamp on the log, as if we just updated it
                 logUpdated();
@@ -2655,9 +2659,10 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                              | "safepoint":{safepoint}}
                            , safepoint);
 
-                this.logInfos      = logInfos;
-                this.lastCommitted = lastCommitted;
-                this.lastPrepared  = lastCommitted;
+                this.logInfos          = logInfos;
+                this.lastPrepared      = lastCommitted;
+                this.lastCommitted     = lastCommitted;
+                this.previousSafepoint = safepoint;
 
                 return True;
                 }
@@ -2821,10 +2826,10 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             {
             assert lastTx >= 0 && safepoint >= 0;
 
-            // append a recovery message to the log
+            // append a log recovery message to the log
             addLogEntry($|\{"_op":"recovered", "_ts":"{clock.now.toString(True)}",\
                          | "safepoint":{safepoint}}
-                       );
+                       , safepoint);
             logInfos[logInfos.size-1] = logInfos[logInfos.size-1].with(size=logFile.size,
                                                                        timestamp=logFile.modified);
             }
@@ -2859,7 +2864,20 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         // rebuild the ObjectStore instances
         if (safepoint < lastTx)
             {
-            if (!recoverStores(safepoint, lastTx))
+            if (recoverStores(safepoint, lastTx))
+                {
+                safepoint = lastCommitted;
+
+                // append a database recovery message to the log (the safepoint is now caught up)
+                addLogEntry($|\{"_op":"recovered", "_ts":"{clock.now.toString(True)}",\
+                             | "safepoint":{safepoint}}
+                           , safepoint);
+
+                Int last = logInfos.size-1;
+                logInfos[last] = logInfos[last].with(safepoint=safepoint);
+                writeStatus();
+                }
+            else
                 {
                 log($|TxManager failed to replay log from known safepoint {safepoint} to latest\
                      | transaction {lastTx}
@@ -2981,7 +2999,6 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 // repair the storage
                 if (store.deepScan(fix=True))
                     {
-                    log($"Successfully recovered \"{store.info.path}\"");
                     continue;
                     }
 
@@ -3001,9 +3018,33 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
 
         // finally, for each ObjectStores impacted by any of those transactions, instruct it to
         // apply all transactions from the recovery range that it was enlisted in
-        // TODO replay the data in replayByDboId to the ObjectStores
+        for ((Int dboId, SkiplistMap<Int, Token[]> seals) : replayByDboId)
+            {
+            DBObjectInfo info = catalog.infoFor(dboId);
+            if (info.lifeCycle != Removed)
+                {
+                // get the storage
+                ObjectStore store = storeFor(info.id);
+                try
+                    {
+                    // recover the storage by applying all the potentially missing tx data
+                    if (store.recover(seals))
+                        {
+                        continue;
+                        }
 
-        return True;
+                    log($"During recovery, unable to recover \"{store.info.path}\"");
+                    }
+                catch (Exception e)
+                    {
+                    log($"During recovery, unable to recover \"{store.info.path}\" due to an error: {e}");
+                    }
+
+                error = True;
+                }
+            }
+
+        return !error;
         }
 
     /**
