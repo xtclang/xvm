@@ -321,11 +321,10 @@ class SkiplistMap<Key extends Orderable, Value>
             }
 
         // return the next node
-        node   = nodes.getIndex(node, height, 0);
-        height = nodes.heightOf(node);
+        node = nodes.getIndex(node, height, 0);
         return node == nil
                 ? False
-                : (True, keyStore.load(node, height));
+                : (True, keyStore.load(node, nodes.heightOf(node)));
         }
 
     @Override
@@ -551,7 +550,6 @@ class SkiplistMap<Key extends Orderable, Value>
                     }
 
                 IndexStore nodes = this.SkiplistMap.nodes;
-                Int        nil   = nodes.nil;
 
                 if (started)
                     {
@@ -586,7 +584,7 @@ class SkiplistMap<Key extends Orderable, Value>
 
                 // verify that the iterator can advance to the next node
                 Int next = nodes.getIndex(prevNode, prevHeight, 0);
-                if (next == nil)
+                if (next == nodes.nil)
                     {
                     prevKey  = Null;
                     finished = True;
