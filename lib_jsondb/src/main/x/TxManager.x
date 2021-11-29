@@ -2644,7 +2644,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             if (current.size == logFile.size && current.timestamp == logFile.modified)
                 {
                 Int lastCommitted = current.txIds.effectiveUpperBound;
-                Int safepoint     = safepoint;
+                Int safepoint     = current.safepoint;
                 assert safepoint <= lastCommitted;
                 if (safepoint < lastCommitted)
                     {
