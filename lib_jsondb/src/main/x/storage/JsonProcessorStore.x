@@ -99,28 +99,55 @@ service JsonProcessorStore<Message extends immutable Const>
     protected class Changes(Int writeId, Future<Int> pendingReadId)
         {
         /**
-         * A map of inserted and updated scheduling or unscheduling requests.
+         * A map of inserted and updated processing requests.
          */
-        OrderedMap<Message, PidSet>? mods;
+        OrderedMap<Message, PidSet>? processMods;
 
         /**
          * @return a map used to view previously collected modifications, but not intended to be
          *         modified by the caller
          */
-        OrderedMap<Message, PidSet> peekMods()
+        OrderedMap<Message, PidSet> peekProcessMods()
             {
-            return mods ?: NoChanges;
+            return processMods ?: NoChanges;
             }
 
         /**
-         * @return the read/write map used to collect modifications
+         * @return the read/write map used to collect processing modifications
          */
-        OrderedMap<Message, PidSet> ensureMods()
+        OrderedMap<Message, PidSet> ensureProcessMods()
             {
-            return mods ?:
+            return processMods ?:
                 {
                 val map = new SkiplistMap<Message, PidSet>();
-                mods = map;
+                processMods = map;
+                return map;
+                };
+            }
+
+        /**
+         * A map of inserted and updated scheduling or unscheduling requests.
+         */
+        OrderedMap<Message, PidSet>? scheduleMods;
+
+        /**
+         * @return a map used to view previously collected modifications, but not intended to be
+         *         modified by the caller
+         */
+        OrderedMap<Message, PidSet> peekScheduleMods()
+            {
+            return scheduleMods ?: NoChanges;
+            }
+
+        /**
+         * @return the read/write map used to collect scheduling modifications
+         */
+        OrderedMap<Message, PidSet> ensureScheduleMods()
+            {
+            return scheduleMods ?:
+                {
+                val map = new SkiplistMap<Message, PidSet>();
+                scheduleMods = map;
                 return map;
                 };
             }
@@ -147,12 +174,13 @@ service JsonProcessorStore<Message extends immutable Const>
      * the same data that is stored on disk.
      */
     typedef SkiplistMap<Int, PidSet> History;
-    protected Map<Message, History> history = new SkiplistMap();
+    protected Map<Message, History> processHistory  = new SkiplistMap();
+    protected Map<Message, History> scheduleHistory = new SkiplistMap();
 
     /**
      * A cache of schedules.
      */
-    SkiplistMap<Pid, Schedule?> byPid = new SkiplistMap();
+    SkiplistMap<Pid, Schedule?> scheduleByPid = new SkiplistMap();
 
     /**
      * A record of how all persistent transactions are laid out on disk.
@@ -161,11 +189,12 @@ service JsonProcessorStore<Message extends immutable Const>
 
     /**
      * Uncommitted transaction information, held temporarily by prepareId. Basically, while a
-     * transaction is being prepared, up until it is committed, the information from [Changes.mods]
+     * transaction is being prepared, up until it is committed, the information from [Changes]
      * is copied here, so that a view of the transaction as a separate set of changes is not lost;
      * that information is required by the [commit] processing.
      */
-    protected SkiplistMap<Int, OrderedMap<Message, PidSet>> modsByTx = new SkiplistMap();
+    protected SkiplistMap<Int, OrderedMap<Message, PidSet>> processModsByTx  = new SkiplistMap();
+    protected SkiplistMap<Int, OrderedMap<Message, PidSet>> scheduleModsByTx = new SkiplistMap();
 
     /**
      * The ID of the latest known commit for this ObjectStore.
@@ -187,9 +216,9 @@ service JsonProcessorStore<Message extends immutable Const>
 
         Pid pid = scheduler.generatePid(this.id, when);
 
-        byPid.put(pid, when);
+        scheduleByPid.put(pid, when);
 
-        tx.ensureMods().process(message, e ->
+        tx.ensureScheduleMods().process(message, e ->
             {
             if (e.exists)
                 {
@@ -212,7 +241,7 @@ service JsonProcessorStore<Message extends immutable Const>
         {
         assert Changes tx := checkTx(txId, writing=True);
 
-        Map<Message, PidSet> mods = tx.ensureMods();
+        Map<Message, PidSet> mods = tx.ensureScheduleMods();
         if (PidSet pids := mods.get(message))
             {
             clearSchedules(pids);
@@ -251,19 +280,35 @@ service JsonProcessorStore<Message extends immutable Const>
         }
 
     @Override
-    void processCompleted(Int txId, Int pid, Range<DateTime> elapsed)
+    void processCompleted(Int txId, Message message, Int pid, Range<DateTime> elapsed)
+        {
+        assert Changes tx := checkTx(txId, writing=True);
+
+        tx.ensureProcessMods().process(message, e ->
+            {
+            if (e.exists)
+                {
+                PidSet pids = e.value;
+                assert !pids.is(Unschedule);
+                e.value = pids.is(Int)
+                            ? [pids, pid]
+                            : pids + pid;
+                }
+            else
+                {
+                e.value = pid;
+                }
+            });
+        }
+
+    @Override
+    void retryPending(Int txId, Message message, Int pid, Range<DateTime> elapsed, CommitResult | Exception result)
         {
         TODO
         }
 
     @Override
-    void retryPending(Int txId, Int pid, Range<DateTime> elapsed, CommitResult | Exception result)
-        {
-        TODO
-        }
-
-    @Override
-    void abandonPending(Int txId, Int pid, Range<DateTime> elapsed, CommitResult | Exception result)
+    void abandonPending(Int txId, Message message, Int pid, Range<DateTime> elapsed, CommitResult | Exception result)
         {
         TODO
         }
@@ -277,51 +322,73 @@ service JsonProcessorStore<Message extends immutable Const>
         // the transaction can be prepared if (a) no transaction has modified this value after the
         // read id, or (b) the "current" value is equal to the read id transaction's value
         assert Changes tx := checkTx(writeId);
-        if (tx.peekMods().empty)
+        Boolean processed = !tx.peekProcessMods().empty;
+        Boolean scheduled = !tx.peekScheduleMods().empty;
+
+        if (!processed && !scheduled)
             {
             inFlight.remove(writeId);
             return CommittedNoChanges;
             }
 
-        // obtain the transaction modifications (note: we already verified that modifications exist)
-        OrderedMap<Message, PidSet> mods = tx.mods ?: assert;
-
-        Boolean checkConflicts = tx.askedForPids;
-        Int     readId         = tx.readId;
-        if (checkConflicts && readId != prepareId - 1)
+        if (processed)
             {
-            // interleaving transactions have occurred
-            // TODO: what could be possible conflicts between different transactions?
+            // obtain the transaction modifications (note: we already verified that modifications exist)
+            OrderedMap<Message, PidSet> processMods = tx.processMods ?: assert;
+
+            for ((Message message, PidSet pids) : processMods)
+                {
+                History messageHistory = processHistory.computeIfAbsent(message, () -> new History());
+                messageHistory.put(prepareId, pids);
+                }
+
+            // store off transaction's mods
+            processModsByTx.put(prepareId, processMods);
             }
 
-        for ((Message message, PidSet pids) : mods)
+        if (scheduled)
             {
-            History messageHistory;
-            if (messageHistory := history.get(message))
+            // obtain the transaction modifications (note: we already verified that modifications exist)
+            OrderedMap<Message, PidSet> scheduleMods = tx.scheduleMods ?: assert;
+
+            Boolean checkConflicts = tx.askedForPids;
+            Int     readId         = tx.readId;
+            if (checkConflicts && readId != prepareId - 1)
                 {
-                if (checkConflicts)
+                // interleaving transactions have occurred
+                // TODO: what could be possible conflicts between different transactions?
+                }
+
+            for ((Message message, PidSet pids) : scheduleMods)
+                {
+                History messageHistory;
+                if (messageHistory := scheduleHistory.get(message))
                     {
-                    assert Int    latestTx := messageHistory.last();
-                    assert PidSet latest   := messageHistory.get(latestTx);
+                    if (checkConflicts)
+                        {
+                        assert Int    latestTx := messageHistory.last();
+                        assert PidSet latest   := messageHistory.get(latestTx);
 
-                    TODO process the changes
+                        TODO process the changes
+                        }
                     }
+                else
+                    {
+                    messageHistory = new History();
+                    scheduleHistory.put(message, messageHistory);
+                    }
+                messageHistory.put(prepareId, pids);
                 }
-            else
-                {
-                messageHistory = new History();
-                history.put(message, messageHistory);
-                }
-            messageHistory.put(prepareId, pids);
-            }
 
-        // store off transaction's mods
-        modsByTx.put(prepareId, mods);
+            // store off transaction's mods
+            scheduleModsByTx.put(prepareId, scheduleMods);
+            }
 
         // re-do the write transaction to point to the prepared transaction
-        tx.readId   = prepareId;
-        tx.prepared = True;
-        tx.mods     = Null;
+        tx.readId       = prepareId;
+        tx.prepared     = True;
+        tx.processMods  = Null;
+        tx.scheduleMods = Null;
         return Prepared;
         }
 
@@ -415,38 +482,44 @@ service JsonProcessorStore<Message extends immutable Const>
             buf.add('}');
             }
 
-        assert Changes tx := checkTx(writeId), tx.prepared;
-        if (tx.sealed)
+        private void appendProcessPids(StringBuffer buf, PidSet pids)
             {
-            return buildJsonTx(tx.jsonEntries ?: assert);
+            assert !pids.is(Unschedule);
+
+            buf.append(", \"p\":[");
+            if (pids.is(Int))
+                {
+                pids.appendTo(buf);
+                }
+            else
+                {
+                Loop: for (Pid pid : pids)
+                    {
+                    pid.appendTo(buf);
+                    if (!Loop.last)
+                        {
+                        buf.add(',');
+                        }
+                    }
+                }
+            buf.add(']');
             }
 
-        assert Map<Message, PidSet> mods := modsByTx.get(tx.readId);
-
-        HashMap<Message, String> jsonEntries = new HashMap();
-        val                      worker      = tx.worker;
-
-        for ((Message message, PidSet pids) : mods)
+        private void appendSchedulePids(StringBuffer buf, PidSet pids)
             {
-            StringBuffer buf = new StringBuffer();
-
-            String jsonMsg = worker.writeUsing(messageMapping, message);
-
-            buf.append("{\"m\":").append(jsonMsg);
-
             if (!pids.is(Unschedule))
                 {
                 buf.append(", \"s\":[");
                 if (pids.is(Int))
                     {
-                    assert Schedule? schedule := byPid.get(pids);
+                    assert Schedule? schedule := scheduleByPid.get(pids);
                     appendJsonSchedule(buf, pids, schedule);
                     }
                 else
                     {
                     Loop: for (Pid pid : pids)
                         {
-                        assert Schedule? schedule := byPid.get(pid);
+                        assert Schedule? schedule := scheduleByPid.get(pid);
                         appendJsonSchedule(buf, pid, schedule);
                         if (!Loop.last)
                             {
@@ -456,6 +529,60 @@ service JsonProcessorStore<Message extends immutable Const>
                     }
                 buf.add(']');
                 }
+            }
+
+        assert Changes tx := checkTx(writeId), tx.prepared;
+        if (tx.sealed)
+            {
+            return buildJsonTx(tx.jsonEntries ?: assert);
+            }
+
+        Int readId = tx.readId;
+
+        Map<Message, PidSet> processMods  = processModsByTx .getOrDefault(readId, NoChanges);
+        Map<Message, PidSet> scheduleMods = scheduleModsByTx.getOrDefault(readId, NoChanges);
+
+        assert !processMods.empty || !scheduleMods.empty;
+
+        HashMap<Message, String> jsonEntries = new HashMap();
+        val                      worker      = tx.worker;
+
+        for ((Message message, PidSet processPids) : processMods)
+            {
+            StringBuffer buf = new StringBuffer();
+
+            String jsonMsg = worker.writeUsing(messageMapping, message);
+
+            buf.append("{\"m\":").append(jsonMsg);
+
+            appendProcessPids(buf, processPids);
+            if (PidSet schedulePids := scheduleMods.get(message))
+                {
+                appendSchedulePids(buf, schedulePids);
+                }
+            buf.add('}');
+
+            jsonEntries.put(message, buf.toString());
+            }
+
+        for ((Message message, PidSet schedulePids) : scheduleMods)
+            {
+            if (jsonEntries.contains(message))
+                {
+                continue;
+                }
+
+            StringBuffer buf = new StringBuffer();
+
+            String jsonMsg = worker.writeUsing(messageMapping, message);
+
+            buf.append("{\"m\":").append(jsonMsg);
+
+            if (PidSet processPids := processMods.get(message))
+                {
+                appendProcessPids(buf, processPids);
+                }
+            appendSchedulePids(buf, schedulePids);
             buf.add('}');
 
             jsonEntries.put(message, buf.toString());
@@ -492,16 +619,14 @@ service JsonProcessorStore<Message extends immutable Const>
 
                 Int prepareId = tx.readId;
 
-                assert Map<Message, PidSet> mods := modsByTx.get(prepareId);
-
-                // the "for" loop below is almost the same as at JsonMapStore
                 for ((Message message, String jsonEntry) : jsonEntries)
                     {
                     StringBuffer buf = buffers.computeIfAbsent(nameForKey(message),
                             () -> new StringBuffer());
 
                     // build the String that will be appended to the disk file
-                    // format is "{"tx":14, "c":[{"m":{...}, "s":{...}}, ...],"; comma is first (since we are appending)
+                    // format is "{"tx":14, "c":[{"m":{...}, "p":[], "s":{...}}, ...], ...]}"
+                    // (comma is first since we are appending)
                     if (buf.size == 0)
                         {
                         buf.append(",\n{\"tx\":")
@@ -514,14 +639,52 @@ service JsonProcessorStore<Message extends immutable Const>
                         }
                     buf.append(jsonEntry);
 
-                    assert PidSet pids := mods.get(message);
-                    clearSchedules(pids);
+                    // register/unregister requests with the scheduler
+                    if (Map<Message, PidSet> scheduleMods := scheduleModsByTx.get(prepareId))
+                        {
+                        assert PidSet pids := scheduleMods.get(message);
+
+                        if (pids.is(Int))
+                            {
+                            assert Schedule? schedule := scheduleByPid.get(pids);
+                            scheduler.registerPid(id, pids, clock.now,
+                                    new Pending(path, message, schedule));
+                            scheduleByPid.remove(pids);
+                            }
+                        else if (pids.is(Int[]))
+                            {
+                            for (Pid pid : pids)
+                                {
+                                assert Schedule? schedule := scheduleByPid.get(pid);
+                                scheduler.registerPid(id, pid, clock.now,
+                                        new Pending(path, message, schedule));
+                                scheduleByPid.remove(pid);
+                                }
+                            }
+                        else
+                            {
+                            if (History messageHistory := scheduleHistory.get(message))
+                                {
+                                assert PidSet prevPids := messageHistory.get(prepareId);
+
+                                if (prevPids.is(Int))
+                                    {
+                                    scheduler.unregisterPid(id, prevPids);
+                                    }
+                                else if (prevPids.is(Int[]))
+                                    {
+                                    scheduler.unregisterPids(id, prevPids);
+                                    }
+                                }
+                            }
+                        }
 
                     // remember the id of the last transaction that we process here
                     lastCommitId = prepareId;
                     }
 
-                modsByTx.remove(prepareId);
+                processModsByTx .remove(prepareId);
+                scheduleModsByTx.remove(prepareId);
                 }
             }
 
@@ -585,17 +748,18 @@ service JsonProcessorStore<Message extends immutable Const>
                 Int prepareId = tx.readId;
 
                 // the transaction is already sprinkled all over the history
-                assert OrderedMap<Message, PidSet> mods := modsByTx.get(prepareId);
-                for ((Message message, PidSet pids) : mods)
+                assert OrderedMap<Message, PidSet> scheduleMods := scheduleModsByTx.get(prepareId);
+                for ((Message message, PidSet pids) : scheduleMods)
                     {
-                    if (History messageHistory := history.get(message))
+                    if (History messageHistory := scheduleHistory.get(message))
                         {
                         messageHistory.remove(prepareId);
                         }
                     clearSchedules(pids);
                     }
 
-                modsByTx.remove(prepareId);
+                processModsByTx .remove(prepareId);
+                scheduleModsByTx.remove(prepareId);
                 }
 
             inFlight.remove(writeId);
@@ -636,11 +800,11 @@ service JsonProcessorStore<Message extends immutable Const>
         {
         if (pids.is(Int))
             {
-            byPid.remove(pids);
+            scheduleByPid.remove(pids);
             }
         else if (pids.is(Int[]))
             {
-            byPid.keys.removeAll(pids);
+            scheduleByPid.keys.removeAll(pids);
             }
         }
 

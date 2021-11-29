@@ -24,9 +24,20 @@ module CounterTest
             console.println($"cranking up schedule \"{name}\"...");
             schema.cranker.schedule(name);
             }
+        wait(schema, Duration:15s);
+        }
 
-        // last, show the state
-        timer.schedule(Duration:5s, () -> dump(schema.counters));
+    void wait(CounterSchema schema, Duration duration)
+        {
+        @Inject Timer timer;
+
+        @Future Tuple<> result;
+        timer.schedule(duration, () ->
+            {
+            dump(schema.counters);
+            result=Tuple:();
+            });
+        return result;
         }
 
     void dump(DBMap<String, Int> map)

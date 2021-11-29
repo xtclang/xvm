@@ -460,7 +460,7 @@ service Client<Schema extends RootSchema>
                     {
                     if (dbo.autoRetry(message, result, when, elapsed, timesAttempted))
                         {
-                        dbo.retrying_(pid, elapsed, result);
+                        dbo.retrying_(message, pid, elapsed, result);
                         }
                     else
                         {
@@ -484,7 +484,7 @@ service Client<Schema extends RootSchema>
                 {
                 using (val tx = ensureTransaction(dbo, override=True))
                     {
-                    dbo.abandoning_(pid, elapsed, result);
+                    dbo.abandoning_(message, pid, elapsed, result);
                     dbo.abandon(message, result, when, elapsed, timesAttempted);
                     }
                 }
@@ -2267,7 +2267,7 @@ service Client<Schema extends RootSchema>
                 // the information is provided to the DBProcessor's ObjectStore at this point;
                 // if the transaction fails to commit, then the fact that the PID was processed
                 // will also be lost -- as it should be!
-                store_.processCompleted(tx.id_, pid, elapsed);
+                store_.processCompleted(tx.id_, message, pid, elapsed);
                 }
 
             return elapsed, failure;
@@ -2305,23 +2305,25 @@ service Client<Schema extends RootSchema>
         /**
          * Notification of a decision to retry.
          */
-        void retrying_(Int                      pid,
+        void retrying_(Message                  message,
+                       Int                      pid,
                        Range<DateTime>          elapsed,
                        CommitResult | Exception result)
             {
             Transaction tx = requireTransaction_("retryPending()");
-            store_.retryPending(tx.id_, pid, elapsed, result);
+            store_.retryPending(tx.id_, message, pid, elapsed, result);
             }
 
         /**
          * Notification of a decision to abandon.
          */
-        void abandoning_(Int                      pid,
+        void abandoning_(Message                  message,
+                         Int                      pid,
                          Range<DateTime>          elapsed,
                          CommitResult | Exception result)
             {
             Transaction tx = requireTransaction_("abandonPending()");
-            store_.abandonPending(tx.id_, pid, elapsed, result);
+            store_.abandonPending(tx.id_, message, pid, elapsed, result);
             }
 
         @Override
