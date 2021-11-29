@@ -60,7 +60,7 @@
  *   of name collision, these classes are implemented as separate virtual children. Additionally,
  *   the DBOs within the database are all represented as virtual children of the client, so that
  *   the application can access the entirety of the database through a single shared service
- *   context, which is configured to disallow re-entrancy from the application. Virtual children of
+ *   context, which is configured to disallow reentrancy from the application. Virtual children of
  *   the `Client`:
  * * * Connection - this is the injected root of the database access into an application; by having
  *     it be part of the `Client` service, almost all of the database work related to the connection

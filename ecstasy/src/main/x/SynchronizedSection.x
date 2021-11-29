@@ -45,7 +45,7 @@ const SynchronizedSection
         // and restored when this SynchronizedSection is closed
         Boolean previousCritical = previousSynchronizedSection?.critical : False;
 
-        // calculate the re-entrancy for the synchronized section
+        // calculate the reentrancy for the synchronized section
         this.critical = critical | previousCritical;
         }
     finally

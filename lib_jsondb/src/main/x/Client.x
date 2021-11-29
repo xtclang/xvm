@@ -91,8 +91,8 @@ service Client<Schema extends RootSchema>
         }
     finally
         {
-        // exclusive re-entrancy is critically important: it eliminates race conditions while any
-        // operation (including a commit or rollback) is in flight, while still allowing re-entrancy
+        // exclusive reentrancy is critically important: it eliminates race conditions while any
+        // operation (including a commit or rollback) is in flight, while still allowing reentrancy
         // that is required to carry out that operation
         conn   = new Connection(infoFor(0)).as(Connection + Schema);
         worker = new Worker(jsonSchema);
@@ -262,7 +262,7 @@ service Client<Schema extends RootSchema>
 
         if (tx == Null)
             {
-            assert !internal;
+            assert !internal || override;
 
             tx         = (conn?: assert).createTransaction(name="autocommit", override=override);
             this.tx    = tx;
@@ -1403,7 +1403,7 @@ service Client<Schema extends RootSchema>
                                                 )
             {
             assert outer.tx == Null as "Attempted to create a transaction when one already exists";
-            assert !internal && !override;
+            assert !internal || override;
 
             id ?:= outer.txManager.generateTxId();
             TxInfo txInfo = new TxInfo(id, name, priority, readOnly, timeout, retryCount);

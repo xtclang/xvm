@@ -34,7 +34,7 @@ module ecstasy.xtclang.org
         }
 
     /**
-     * A Deadlock exception is raised by the runtime in response to a situation in which re-entrancy
+     * A Deadlock exception is raised by the runtime in response to a situation in which reentrancy
      * to a service is necessary, but for one of several reasons cannot be accomplished.
      */
     const Deadlock(String? text = Null, Exception? cause = Null)
