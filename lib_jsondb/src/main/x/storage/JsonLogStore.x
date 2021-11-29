@@ -99,27 +99,23 @@ service JsonLogStore<Element extends immutable Const>
     // ----- transaction API exposed to TxManager --------------------------------------------------
 
     @Override
-    Iterator<File> findFiles()
-        {
-        return (dataFile.exists ? [dataFile] : []).iterator();
-        }
-
-    @Override
     void initializeEmpty()
         {
         assert model == Empty;
-        assert !dataFile.exists;
+        // TODO
         }
 
     @Override
     void loadInitial()
         {
-        TODO
+        assert model != Empty;
+        // TODO
         }
 
     @Override
     void unload()
         {
+        // TODO
         }
 
 

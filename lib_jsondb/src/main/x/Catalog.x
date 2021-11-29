@@ -385,6 +385,21 @@ service Catalog<Schema extends RootSchema>
 
         if (CatalogMetadata metadata ?= this.metadata)
             {
+            if (id == 0)
+                {
+                private DBObjectInfo? root = Null;
+                return root?;
+
+                DBObjectInfo raw = metadata.dbObjectInfos[0];
+                Int          sys = BuiltIn.Sys.id;
+                if (!raw.childIds.contains(sys))
+                    {
+                    raw = raw.withChild(BuiltIn.Sys.info);
+                    }
+                root = raw;
+                return raw;
+                }
+
             return metadata.dbObjectInfos[id];
             }
 
