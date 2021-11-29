@@ -487,7 +487,8 @@ public abstract class OpCallable extends Op
                                  ObjectHandle hParent, ObjectHandle[] ahVar)
         {
         ClassStructure  structChild = (ClassStructure) constructor.getParent().getParent();
-        TypeConstant    typeChild   = getCanonicalChildType(frame, hParent.getType(), structChild.getName());
+        TypeConstant    typeChild   = frame.poolContext().ensureThisVirtualChildTypeConstant
+                                            (hParent.getType(), structChild.getName());
         TypeComposition clzTarget   = frame.ensureClass(typeChild);
 
         if (frame.isNextRegister(m_nRetValue))
@@ -497,12 +498,6 @@ public abstract class OpCallable extends Op
 
         return clzTarget.getTemplate().construct(
                 frame, constructor, clzTarget, hParent, ahVar, m_nRetValue);
-        }
-
-    // return the corresponding VirtualChildType constant
-    protected TypeConstant getCanonicalChildType(Frame frame, TypeConstant typeParent, String sName)
-        {
-        return frame.poolContext().ensureVirtualChildTypeConstant(typeParent, sName);
         }
 
     // check if a register for the return value needs to be allocated
