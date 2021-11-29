@@ -645,17 +645,9 @@ public class Frame
             //        {
             //        return bar();
             //        }
-
-            if (nVar >= 0)
+            if (nVar < 0 && nVar != Op.A_IGNORE)
                 {
-                f_ahVar[nVar] = null;
-                }
-            else
-                {
-                if (nVar != Op.A_IGNORE)
-                    {
-                    return raiseException(xException.unassignedValue(this, "@" + nVar));
-                    }
+                return raiseException(xException.unassignedValue(this, "@" + nVar));
                 }
 
             return Op.R_NEXT;
