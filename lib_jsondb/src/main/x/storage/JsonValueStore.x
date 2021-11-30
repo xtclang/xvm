@@ -736,6 +736,14 @@ service JsonValueStore<Value extends immutable Const>
         return intact;
         }
 
+    @Override
+    @Synchronized
+    Boolean recover(SkiplistMap<Int, Token[]> sealsByTxId)
+        {
+        // TODO
+        return True;
+        }
+
     /**
      * Re-format the JSON structure that is stored on disk, to contain only the transactions
      * specified in the passed map, pulled from the passed JSON structure.
