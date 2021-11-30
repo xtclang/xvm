@@ -1755,26 +1755,26 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 .transform(ok ->
                     {
                     // check for successful prepare, and whether anything is left enlisted
-                    switch (ok, !storeIds.empty)
+                    switch (ok, storeIds.empty)
                         {
-                        case (False, False):
+                        case (False, True):
                             // failed; already rolled back
                             complete(ConcurrentConflict);
                             return False;
 
                         default:
-                        case (False, True):
+                        case (False, False):
                             // failed; remaining stores need to be rolled back
                             rollback(ConcurrentConflict);
                             return False;
 
-                        case (True, False):
+                        case (True, True):
                             // succeeded; already committed
                             complete(Committed);
                             release();
                             return True;
 
-                        case (True, True):
+                        case (True, False):
                             status = Prepared;
                             return True;
                         }
@@ -2354,10 +2354,10 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         protected void complete(CommitResult result)
             {
             // check if the TxRecord already completed
-            if (status == Committed || status ==  RolledBack)
+            if (status == Committed || status == RolledBack)
                 {
                 assert pending == Null && terminated == Null;
-                assert (result == Committed) == (status == Committed);
+                assert (result == Committed) == (status == Committed); // TODO CP: I hit this once (result == Committed; status == RolledBack)
                 return;
                 }
 
@@ -2659,6 +2659,10 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                              | "safepoint":{safepoint}}
                            , safepoint);
 
+                Int last = logInfos.size-1;
+                logInfos[last] = logInfos[last].with(size=logFile.size,
+                                                     timestamp=logFile.modified);
+
                 this.logInfos          = logInfos;
                 this.lastPrepared      = lastCommitted;
                 this.lastCommitted     = lastCommitted;
@@ -2826,6 +2830,9 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             {
             assert lastTx >= 0 && safepoint >= 0;
 
+            // remember the timestamp on the log, as if we just updated it
+            logUpdated();
+
             // append a log recovery message to the log
             addLogEntry($|\{"_op":"recovered", "_ts":"{clock.now.toString(True)}",\
                          | "safepoint":{safepoint}}
@@ -2845,7 +2852,8 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                                 .utf8();
 
             safepoint = safepoint.maxOf(0);
-            LogFileInfo info = new LogFileInfo(logFile.name, [lastTx+1..lastTx+1), safepoint, logFile.size, logFile.modified);
+            LogFileInfo info = new LogFileInfo(logFile.name, [lastTx+1..lastTx+1),
+                                        safepoint, logFile.size, logFile.modified);
             if (logInfos[logInfos.size-1].name == logFile.name)
                 {
                 logInfos[logInfos.size-1] = info;
@@ -2859,6 +2867,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         // rebuild the status file
         this.logInfos          = logInfos;
         this.previousSafepoint = safepoint;
+        this.lastCommitted     = lastTx;
         writeStatus();
 
         // rebuild the ObjectStore instances
@@ -2866,7 +2875,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             {
             if (recoverStores(safepoint, lastTx))
                 {
-                safepoint = lastCommitted;
+                safepoint = lastTx;
 
                 // append a database recovery message to the log (the safepoint is now caught up)
                 addLogEntry($|\{"_op":"recovered", "_ts":"{clock.now.toString(True)}",\
@@ -2874,7 +2883,9 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                            , safepoint);
 
                 Int last = logInfos.size-1;
-                logInfos[last] = logInfos[last].with(safepoint=safepoint);
+                logInfos[last] = logInfos[last].with(safepoint=safepoint,
+                                                     size=logFile.size,
+                                                     timestamp=logFile.modified);
                 writeStatus();
                 }
             else

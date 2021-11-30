@@ -45,7 +45,7 @@ class JsondbHost(String dbModuleName)
             }
         catch (IllegalState e)
             {
-            catalog.log($"Failed to open the catalog for \"{dbModuleName}\"; reason={e}");
+            catalog.log($"Failed to open the catalog for \"{dbModuleName}\"; reason={e.text}");
             }
 
         if (!success)
@@ -54,10 +54,11 @@ class JsondbHost(String dbModuleName)
             try
                 {
                 catalog.recover();
+                success = True;
                 }
             catch (IllegalState e)
                 {
-                catalog.log($"Failed to recover the catalog for \"{dbModuleName}\"; reason={e}");
+                catalog.log($"Failed to recover the catalog for \"{dbModuleName}\"; reason={e.text}");
                 }
             }
 
