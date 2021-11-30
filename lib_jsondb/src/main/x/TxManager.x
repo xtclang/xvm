@@ -2357,7 +2357,16 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             if (status == Committed || status == RolledBack)
                 {
                 assert pending == Null && terminated == Null;
-                assert (result == Committed) == (status == Committed); // TODO CP: I hit this once (result == Committed; status == RolledBack)
+                assert (result == Committed) == (status == Committed);
+// TODO CP: reproduced:
+//*** Exception occurred while preparing transaction -28212 (TxInfo(id=30153, name=autocommit) for client 8):
+//      IllegalState: (result == Committed) == (status == Committed), result=Committed, status=RolledBack
+//        at TxManager.TxRecord.complete(oodb:Transaction.CommitResult) (TxManager.x:2360)
+//        at TxManager.TxRecord.prepare().->(Set<Int>, Boolean) (TxManager.x:1773)
+//        at ^TxManager (CallLaterRequest: ->)
+//            =========
+//        at TxManager.processBacklog(Nullable | Int) (TxManager.x:1011)
+//        at ^TxManager (CallLaterRequest: processBacklog)
                 return;
                 }
 
