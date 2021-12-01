@@ -183,7 +183,7 @@ module TestIO
         Lexer lexer = new Lexer(reader);
         while (Token tok := lexer.next())
             {
-            console.println($"token={tok}");
+            console.println($"token={tok.toDebugString()}");
             }
 
         console.println($"(eof) position={reader.position}");

@@ -159,13 +159,18 @@ class Lexer
      */
     static const Token(Id id, TextPosition start, TextPosition end, Primitive value = Null)
         {
+        /**
+         * @return a longer form of the `toString()` output that includes the token's position
+         */
+        String toDebugString()
+            {
+            return $"({start.lineNumber}:{start.lineOffset}): {this}";
+            }
+
         @Override
         Int estimateStringLength()
             {
-            return 5
-                 + start.lineNumber.estimateStringLength()
-                 + start.lineOffset.estimateStringLength()
-                 + switch (id)
+            return switch (id)
                     {
                     case NoVal..FPVal: value.estimateStringLength();
                     case StrVal:       value.estimateStringLength() + 2;
@@ -176,21 +181,18 @@ class Lexer
         @Override
         Appender<Char> appendTo(Appender<Char> buf)
             {
-            buf.add('(');
-            start.lineNumber.appendTo(buf);
-            buf.add(':');
-            start.lineOffset.appendTo(buf);
-            "): ".appendTo(buf);
             switch (id)
                 {
                 case NoVal..FPVal:
                     value.appendTo(buf);
                     break;
+
                 case StrVal:
                     buf.add('\"');
                     value.appendTo(buf);
                     buf.add('\"');
                     break;
+
                 default:
                     buf.add('\'')
                        .add(switch (id)
@@ -206,7 +208,6 @@ class Lexer
                        .add('\'');
                     break;
                 }
-
             return buf;
             }
         }
