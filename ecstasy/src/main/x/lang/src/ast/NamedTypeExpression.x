@@ -176,15 +176,12 @@ const NamedTypeExpression(Token[]?          moduleNames,
         if (params != Null)
             {
             buf.add('<');
-            Loop: for (TypeExpression param : params)
+            for (TypeExpression param : params)
                 {
-                if (!Loop.first)
-                    {
-                    buf.add(',').add(' ');
-                    }
                 param.appendTo(buf);
+                buf.add(',').add(' ');
                 }
-            buf.add('>');
+            buf.truncate(-2).add('>');
             }
 
         return buf.toString();

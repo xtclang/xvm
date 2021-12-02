@@ -613,7 +613,7 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                         valueHistory.put(prepareId, value);
                         }
 
-                    result = Merged; // TOOD GG or CP determine when this should be CommittedNoChanges
+                    result = Merged; // TODO GG or CP determine when this should be CommittedNoChanges
                     break;
                 }
 
@@ -643,19 +643,18 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
         {
         private String buildJsonTx(Map<Key, String> jsonEntries)
             {
+            if (jsonEntries.empty)
+                {
+                return "[]";
+                }
+
             StringBuffer buf = new StringBuffer();
             buf.add('[');
-            loop:
             for (String jsonEntry : jsonEntries.values)
                 {
-                if (!loop.first)
-                    {
-                    ", ".appendTo(buf);
-                    }
-                buf.append(jsonEntry);
+                buf.append(jsonEntry).add(',').add(' ');
                 }
-            buf.add(']');
-            return buf.toString();
+            return buf.truncate(-2).add(']').toString();
             }
 
         assert Changes tx := checkTx(writeId), tx.prepared;
@@ -1118,17 +1117,16 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
            .append(txId)
            .append(", \"c\":[");
 
-        Loop: for ((Key key, Range<Int> entryLoc) : layout)
+        if (!layout.empty)
             {
-            if (!Loop.first)
+            for ((Key key, Range<Int> entryLoc) : layout)
                 {
-                buf.add(',');
+                Int startPos = buf.size;
+                buf.append(json[entryLoc]).add(',');
+                Int endPos = buf.size;
+                newLayout.put(key, [startPos..endPos));
                 }
-
-            Int startPos = buf.size;
-            buf.append(json[entryLoc]);
-            Int endPos = buf.size;
-            newLayout.put(key, [startPos..endPos));
+            buf.truncate(-1);
             }
 
         buf.append("]}\n]");

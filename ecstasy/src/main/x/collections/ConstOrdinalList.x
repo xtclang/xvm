@@ -698,17 +698,18 @@ const ConstOrdinalList
     @Override
     String toString()
         {
+        if (size == 0)
+            {
+            return "[]";
+            }
+
         StringBuffer buf = new StringBuffer(size * 4);
         buf.add('[');
-        Loop: for (Int n : this)
+        for (Int n : this)
             {
-            if (!Loop.first)
-                {
-                buf.addAll(", ");
-                }
             n.appendTo(buf);
+            buf.add(',').add(' ');
             }
-        buf.add(']');
-        return buf.toString();
+        return buf.truncate(-2).add(']').toString();
         }
     }

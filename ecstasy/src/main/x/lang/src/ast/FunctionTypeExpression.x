@@ -57,9 +57,7 @@ const FunctionTypeExpression(Token             func,
                 break;
             }
 
-        buf.add(' ');
-
-        buf.add('(');
+        buf.add(' ').add('(');
         Loop: for (TypeExpression type : params)
             {
             if (!Loop.first)

@@ -753,10 +753,12 @@ service JsonValueStore<Value extends immutable Const>
         StringBuffer                 buf    = new StringBuffer(json.size);
         SkiplistMap<Int, Range<Int>> newLoc = new SkiplistMap();
 
-        Loop: for ((Int txId, Range<Int> txLoc) : byTx)
+        assert !byTx.empty;
+
+        buf.add('[');
+        for ((Int txId, Range<Int> txLoc) : byTx)
             {
-            buf.add(Loop.first ? '[' : ',')
-               .append("\n{\"tx\":")
+            buf.append("\n{\"tx\":")
                .append(txId)
                .append(", \"value\":");
 
@@ -765,10 +767,10 @@ service JsonValueStore<Value extends immutable Const>
             Int endPos = buf.size;
             newLoc.put(txId, [startPos..endPos));
 
-            buf.append('}');
+            buf.add('}').add(',');
             }
 
-        buf.append("\n]");
+        buf.truncate(-1).append("\n]");
         return buf.toString(), newLoc;
         }
 

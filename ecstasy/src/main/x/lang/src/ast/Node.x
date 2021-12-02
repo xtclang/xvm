@@ -35,21 +35,18 @@ import io.TextPosition;
 
             default:
                 {
-                Int len = tokens.size - 1;
+                Int len = tokens.size;
                 for (Token token : tokens)
                     {
                     len += token.valueText.size;
                     }
                 StringBuffer buf = new StringBuffer(len);
-                Loop: for (Token token : tokens)
+                for (Token token : tokens)
                     {
-                    if (!Loop.first)
-                        {
-                        buf.add('.');
-                        }
                     token.valueText.appendTo(buf);
+                    buf.add('.');
                     }
-                return buf.toString();
+                return buf.truncate(-1).toString();
                 };
             };
         }

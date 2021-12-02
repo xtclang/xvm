@@ -86,16 +86,12 @@ const AnnotationExpression(TypeExpression name,
                 buf.add('@');
                 name.appendTo(buf);
                 buf.add('(');
-                Loop: for (Expression arg : args)
+                for (Expression arg : args)
                     {
-                    if (!Loop.first)
-                        {
-                        buf.add(',').add(' ');
-                        }
-                    buf.addAll(arg.toString());
+                    buf.append(arg.toString())
+                       .add(',').add(' ');
                     }
-                buf.add(')');
-                return buf.toString();
+                return buf.truncate(-2).add(')').toString();
                 };
             };
 

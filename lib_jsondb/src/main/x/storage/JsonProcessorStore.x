@@ -397,18 +397,18 @@ service JsonProcessorStore<Message extends immutable Const>
         {
         private String buildJsonTx(Map<Message, String> jsonEntries)
             {
+            if (jsonEntries.empty)
+                {
+                return "[]";
+                }
+
             StringBuffer buf = new StringBuffer();
             buf.add('[');
-            Loop: for (String jsonEntry : jsonEntries.values)
+            for (String jsonEntry : jsonEntries.values)
                 {
-                if (!Loop.first)
-                    {
-                    ", ".appendTo(buf);
-                    }
-                buf.append(jsonEntry);
+                buf.append(jsonEntry).add(',').add(' ');
                 }
-            buf.add(']');
-            return buf.toString();
+            return buf.truncate(-2).add(']').toString();
             }
 
         private void appendJsonSchedule(StringBuffer buf, Pid pid, Schedule? schedule)
