@@ -62,7 +62,7 @@ public abstract class LongBasedDelegate
     // ----- RTDelegate API ------------------------------------------------------------------------
 
     @Override
-    public void fill(DelegateHandle hTarget, int cSize, ObjectHandle hValue)
+    public DelegateHandle fill(DelegateHandle hTarget, int cSize, ObjectHandle hValue)
         {
         assert cSize > 0;
 
@@ -76,6 +76,7 @@ public abstract class LongBasedDelegate
             }
 
         hDelegate.m_cSize = cSize;
+        return hDelegate;
         }
 
     @Override
@@ -197,6 +198,7 @@ public abstract class LongBasedDelegate
 
         if (lIndex < cSize - 1)
             {
+            // TODO: improve naive implementation below by changing a long at the time
             for (long i = lIndex + 1; i < cSize; i++)
                 {
                 setValue(alValue, i - 1, getValue(alValue, i));
@@ -204,6 +206,29 @@ public abstract class LongBasedDelegate
             }
 
         alValue[(int) --hDelegate.m_cSize] = 0;
+        }
+
+    @Override
+    protected void deleteRangeImpl(DelegateHandle hTarget, long lIndex, long cDelete)
+        {
+        LongArrayHandle hDelegate = (LongArrayHandle) hTarget;
+        long            cSize     = hDelegate.m_cSize;
+        long[]          alValue   = hDelegate.m_alValue;
+
+        if (lIndex < cSize - cDelete)
+            {
+            // TODO: improve naive implementation below by changing a long at the time
+            for (long i = lIndex + cDelete; i < cSize; i++)
+                {
+                setValue(alValue, i - cDelete, getValue(alValue, i));
+                }
+            }
+
+        for (long i = cSize - cDelete; i < cSize; i++)
+            {
+            setValue(alValue, i, 0);
+            }
+        hDelegate.m_cSize -= cDelete;
         }
 
     /**

@@ -65,8 +65,14 @@ abstract public class xRTView
         }
 
     @Override
-    public void fill(DelegateHandle hTarget, int cSize, ObjectHandle hValue)
+    public DelegateHandle fill(DelegateHandle hTarget, int cSize, ObjectHandle hValue)
         {
-        throw new IllegalStateException();
+        return null;
+        }
+
+    @Override
+    public DelegateHandle deleteRange(DelegateHandle hTarget, long ofStart, long cSize)
+        {
+        return null;
         }
     }

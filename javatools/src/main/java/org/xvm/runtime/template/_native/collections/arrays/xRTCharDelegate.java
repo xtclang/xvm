@@ -74,12 +74,13 @@ public class xRTCharDelegate
     // ----- RTDelegate API ------------------------------------------------------------------------
 
     @Override
-    public void fill(DelegateHandle hTarget, int cSize, ObjectHandle hValue)
+    public DelegateHandle fill(DelegateHandle hTarget, int cSize, ObjectHandle hValue)
         {
         CharArrayHandle hDelegate = (CharArrayHandle) hTarget;
 
         Arrays.fill(hDelegate.m_achValue, 0, cSize, (char) ((JavaLong) hValue).getValue());
         hDelegate.m_cSize = cSize;
+        return hDelegate;
         }
 
     @Override
@@ -235,13 +236,29 @@ public class xRTCharDelegate
         CharArrayHandle hDelegate = (CharArrayHandle) hTarget;
         int             cSize     = (int) hDelegate.m_cSize;
         char[]          achValue  = hDelegate.m_achValue;
+        int             nIndex    = (int) lIndex;
 
-        if (lIndex < cSize - 1)
+        if (nIndex < cSize - 1)
             {
-            int nIndex = (int) lIndex;
-            System.arraycopy(achValue, nIndex + 1, achValue, nIndex, cSize - nIndex -1);
+            System.arraycopy(achValue, nIndex + 1, achValue, nIndex, cSize - nIndex - 1);
             }
         achValue[(int) --hDelegate.m_cSize] = 0;
+        }
+
+    @Override
+    protected void deleteRangeImpl(DelegateHandle hTarget, long lIndex, long cDelete)
+        {
+        CharArrayHandle hDelegate = (CharArrayHandle) hTarget;
+        int             cSize     = (int) hDelegate.m_cSize;
+        char[]          achValue  = hDelegate.m_achValue;
+        int             nIndex    = (int) lIndex;
+        int             nDelete   = (int) cDelete;
+
+        if (nIndex < cSize - nDelete)
+            {
+            System.arraycopy(achValue, nIndex + nDelete, achValue, nIndex, cSize - nIndex - nDelete);
+            }
+        hDelegate.m_cSize -= cDelete;
         }
 
 

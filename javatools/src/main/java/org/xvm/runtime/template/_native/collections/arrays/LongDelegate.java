@@ -65,12 +65,13 @@ public abstract class LongDelegate
     // ----- RTDelegate API ------------------------------------------------------------------------
 
     @Override
-    public void fill(DelegateHandle hTarget, int cSize, ObjectHandle hValue)
+    public DelegateHandle fill(DelegateHandle hTarget, int cSize, ObjectHandle hValue)
         {
         LongArrayHandle hDelegate = (LongArrayHandle) hTarget;
 
         Arrays.fill(hDelegate.m_alValue, 0, cSize, ((JavaLong) hValue).getValue());
         hDelegate.m_cSize = cSize;
+        return hDelegate;
         }
 
     @Override
@@ -144,16 +145,32 @@ public abstract class LongDelegate
     protected void deleteElementImpl(DelegateHandle hTarget, long lIndex)
         {
         LongArrayHandle hDelegate = (LongArrayHandle) hTarget;
-        int            cSize     = (int) hDelegate.m_cSize;
-        long[]         alValue   = hDelegate.m_alValue;
+        int             cSize     = (int) hDelegate.m_cSize;
+        long[]          alValue   = hDelegate.m_alValue;
 
         if (lIndex < cSize - 1)
             {
             int nIndex = (int) lIndex;
-            System.arraycopy(alValue, nIndex + 1, alValue, nIndex, cSize - nIndex -1);
+            System.arraycopy(alValue, nIndex + 1, alValue, nIndex, cSize - nIndex - 1);
             }
 
         alValue[(int) --hDelegate.m_cSize] = 0;
+        }
+
+    @Override
+    protected void deleteRangeImpl(DelegateHandle hTarget, long lIndex, long cDelete)
+        {
+        LongArrayHandle hDelegate = (LongArrayHandle) hTarget;
+        int             cSize     = (int) hDelegate.m_cSize;
+        long[]          alValue   = hDelegate.m_alValue;
+        int             nIndex    = (int) lIndex;
+        int             nDelete   = (int) cDelete;
+
+        if (nIndex < cSize - nDelete)
+            {
+            System.arraycopy(alValue, nIndex + nDelete, alValue, nIndex, cSize - nIndex - nDelete);
+            }
+        hDelegate.m_cSize -= cDelete;
         }
 
 

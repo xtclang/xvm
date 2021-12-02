@@ -153,6 +153,7 @@ public class xArray
         markNativeMethod("setElement", null, VOID);
         markNativeMethod("elementAt", INT, null);
         markNativeMethod("slice", null, THIS);
+        markNativeMethod("deleteAll", null, THIS);
 
         ClassTemplate mixinNumber = f_templates.getTemplate("collections.arrays.NumberArray");
         mixinNumber.markNativeMethod("asBitArray" , VOID, null);
@@ -453,6 +454,18 @@ public class xArray
 
                 return invokeSlice(frame, hTarget, ixFrom, fExLower, ixTo, fExUpper, fReverse, iReturn);
                 }
+
+            case "deleteAll":
+                {
+                GenericHandle hInterval = (GenericHandle) hArg;
+
+                long    ixFrom   = ((JavaLong) hInterval.getField("lowerBound")).getValue();
+                long    ixTo     = ((JavaLong) hInterval.getField("upperBound")).getValue();
+                boolean fExLower = ((BooleanHandle) hInterval.getField("lowerExclusive")).get();
+                boolean fExUpper = ((BooleanHandle) hInterval.getField("upperExclusive")).get();
+
+                return invokeDeleteAll(frame, hTarget, ixFrom, fExLower, ixTo, fExUpper, iReturn);
+                }
             }
 
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
@@ -655,12 +668,17 @@ public class xArray
         {
         ArrayHandle    hArray    = (ArrayHandle) hTarget;
         DelegateHandle hDelegate = hArray.m_hDelegate;
-        ClassTemplate  template  = hDelegate.getTemplate();
+        xRTDelegate    template  = (xRTDelegate) hDelegate.getTemplate();
 
         if (fExLower)
             {
             // exclusive lower
             ++ixLower;
+            }
+
+        if (ixLower < 0)
+            {
+            return frame.raiseException(xException.outOfBounds(frame, ixLower, 0));
             }
 
         if (fExUpper)
@@ -670,13 +688,12 @@ public class xArray
             }
 
         int cSize = (int) hDelegate.m_cSize;
-        if (ixUpper >= cSize)
+        if (ixUpper < 0 || ixUpper >= cSize)
             {
             return frame.raiseException(xException.outOfBounds(frame, ixUpper, cSize));
             }
 
-        DelegateHandle hSlice = ((xRTDelegate) template).
-                slice(hDelegate, ixLower, ixUpper - ixLower + 1, fReverse);
+        DelegateHandle hSlice = template.slice(hDelegate, ixLower, ixUpper - ixLower + 1, fReverse);
         if (hSlice != hDelegate)
             {
             Mutability mutability = hArray.m_mutability;
@@ -685,6 +702,57 @@ public class xArray
                 mutability = Mutability.Fixed;
                 }
             hArray = new ArrayHandle(hArray.getComposition(), hSlice, mutability);
+            }
+        return frame.assignValue(iReturn, hArray);
+        }
+
+    /**
+     * deleteAll(Interval<Int>) implementation.
+     */
+    protected int invokeDeleteAll(Frame frame, ObjectHandle hTarget, long ixLower, boolean fExLower,
+                                 long ixUpper, boolean fExUpper, int iReturn)
+        {
+        ArrayHandle    hArray    = (ArrayHandle) hTarget;
+        DelegateHandle hDelegate = hArray.m_hDelegate;
+        xRTDelegate    template  = (xRTDelegate) hDelegate.getTemplate();
+
+        if (fExLower)
+            {
+            // exclusive lower
+            ++ixLower;
+            }
+
+        if (ixLower < 0)
+            {
+            return frame.raiseException(xException.outOfBounds(frame, ixLower, 0));
+            }
+
+        if (fExUpper)
+            {
+            // exclusive upper
+            --ixUpper;
+            }
+
+        int cSize = (int) hDelegate.m_cSize;
+        if (ixUpper < 0 || ixUpper >= cSize)
+            {
+            return frame.raiseException(xException.outOfBounds(frame, ixUpper, cSize));
+            }
+
+        Mutability mutability = hArray.m_mutability;
+        if (mutability == Mutability.Fixed)
+            {
+            return frame.raiseException(xException.sizeLimited(frame, "Fixed size array"));
+            }
+
+        DelegateHandle hDelegateNew = template.deleteRange(hDelegate, ixLower, ixUpper - ixLower + 1);
+        if (hDelegateNew != hDelegate)
+            {
+            if (hDelegateNew == null)
+                {
+                return frame.raiseException(xException.readOnly(frame));
+                }
+            hArray = new ArrayHandle(hArray.getComposition(), hDelegateNew, mutability);
             }
         return frame.assignValue(iReturn, hArray);
         }
@@ -700,9 +768,17 @@ public class xArray
         {
         ArrayHandle    hArray    = (ArrayHandle) hTarget;
         DelegateHandle hDelegate = hArray.m_hDelegate;
-        ClassTemplate  template  = hDelegate.getTemplate();
+        xRTDelegate    template  = (xRTDelegate) hDelegate.getTemplate();
 
-        ((xRTDelegate) template).fill(hDelegate, cSize, hValue);
+        DelegateHandle hDelegateNew = template.fill(hDelegate, cSize, hValue);
+        if (hDelegateNew != hDelegate)
+            {
+            if (hDelegateNew == null)
+                {
+                return frame.raiseException(xException.readOnly(frame));
+                }
+            hArray = new ArrayHandle(hArray.getComposition(), hDelegateNew, hArray.m_mutability);
+            }
         return frame.assignValue(iReturn, hArray);
         }
 

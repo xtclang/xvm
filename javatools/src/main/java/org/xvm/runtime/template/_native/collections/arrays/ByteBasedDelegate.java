@@ -53,12 +53,13 @@ public abstract class ByteBasedDelegate
     // ----- RTDelegate API ------------------------------------------------------------------------
 
     @Override
-    public void fill(DelegateHandle hTarget, int cSize, ObjectHandle hValue)
+    public DelegateHandle fill(DelegateHandle hTarget, int cSize, ObjectHandle hValue)
         {
         ByteArrayHandle hDelegate = (ByteArrayHandle) hTarget;
 
         Arrays.fill(hDelegate.m_abValue, 0, cSize, (byte) ((JavaLong) hValue).getValue());
         hDelegate.m_cSize = cSize;
+        return hDelegate;
         }
 
     @Override
@@ -174,9 +175,26 @@ public abstract class ByteBasedDelegate
         if (lIndex < cSize - 1)
             {
             int nIndex = (int) lIndex;
-            System.arraycopy(abValue, nIndex + 1, abValue, nIndex, cSize - nIndex -1);
+            System.arraycopy(abValue, nIndex + 1, abValue, nIndex, cSize - nIndex - 1);
             }
         abValue[(int) --hDelegate.m_cSize] = 0;
+        }
+
+    @Override
+    protected void deleteRangeImpl(DelegateHandle hTarget, long lIndex, long cDelete)
+        {
+        ByteArrayHandle hDelegate = (ByteArrayHandle) hTarget;
+        int             cSize     = (int) hDelegate.m_cSize;
+        byte[]          abValue   = hDelegate.m_abValue;
+        int             nIndex    = (int) lIndex;
+        int             nDelete   = (int) cDelete;
+
+        if (nIndex < cSize - nDelete)
+            {
+            System.arraycopy(abValue, nIndex + 1, abValue, nIndex, cSize - nIndex - nDelete);
+            }
+        Arrays.fill(abValue, cSize - nDelete, nDelete, (byte) 0);
+        hDelegate.m_cSize -= cDelete;
         }
 
 

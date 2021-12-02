@@ -52,7 +52,7 @@ public abstract class BitBasedDelegate
     // ----- RTDelegate API ------------------------------------------------------------------------
 
     @Override
-    public void fill(DelegateHandle hTarget, int cSize, ObjectHandle hValue)
+    public DelegateHandle fill(DelegateHandle hTarget, int cSize, ObjectHandle hValue)
         {
         assert cSize > 0;
 
@@ -80,6 +80,7 @@ public abstract class BitBasedDelegate
             }
 
         hDelegate.m_cSize = cSize;
+        return hDelegate;
         }
 
     @Override
@@ -178,6 +179,29 @@ public abstract class BitBasedDelegate
             }
 
         setBit(abValue, --hDelegate.m_cSize, false);
+        }
+
+    @Override
+    protected void deleteRangeImpl(DelegateHandle hTarget, long lIndex, long cDelete)
+        {
+        BitArrayHandle hDelegate = (BitArrayHandle) hTarget;
+        long           cSize     = hDelegate.m_cSize;
+        byte[]         abValue   = hDelegate.m_abValue;
+
+        if (lIndex < cSize - cDelete)
+            {
+            // TODO: improve naive implementation below by changing a byte at the time
+            for (long i = lIndex + cDelete; i < cSize; i++)
+                {
+                setBit(abValue, i - cDelete, getBit(abValue, i));
+                }
+            }
+
+        for (long i = cSize - cDelete; i < cSize; i++)
+            {
+            setBit(abValue, i, false);
+            }
+        hDelegate.m_cSize -= cDelete;
         }
 
 

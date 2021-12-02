@@ -31,6 +31,8 @@ class StringBuffer
      * Append a value to the StringBuffer.
      *
      * @param o  the object to append
+     *
+     * @return this buffer
      */
     @Op("+")
     StringBuffer append(Object o)
@@ -54,11 +56,33 @@ class StringBuffer
         }
 
     /**
+     * Modify the contents of this StringBuffer so that it has the specified size.
+     *
+     * @param newSize  if non-negative, the size to truncate the buffer to; otherwise the number of
+     *                 characters to truncate from the end
+     *
+     * @return this buffer
+     */
+    StringBuffer truncate(Int newSize)
+        {
+        Int size = this.size;
+        if (newSize < 0)
+            {
+            newSize = size + newSize;
+            }
+
+        assert:bounds 0 <= newSize < size;
+        chars.deleteAll([newSize..size));
+        return this;
+        }
+
+    /**
      * Clear the contents of this StringBuffer.
      */
-    void clear()
+    StringBuffer clear()
         {
         chars.clear();
+        return this;
         }
 
 

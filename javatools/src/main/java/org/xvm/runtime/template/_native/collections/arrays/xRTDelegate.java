@@ -473,12 +473,47 @@ public class xRTDelegate
      * @param cSize    the number of elements to fill
      * @param hValue   the value
      */
-    public void fill(DelegateHandle hTarget, int cSize, ObjectHandle hValue)
+    public DelegateHandle fill(DelegateHandle hTarget, int cSize, ObjectHandle hValue)
         {
         GenericArrayDelegate hDelegate = (GenericArrayDelegate) hTarget;
 
         Arrays.fill(hDelegate.m_ahValue, 0, cSize, hValue);
         hDelegate.m_cSize = cSize;
+        return hDelegate;
+        }
+
+    /**
+     * Delete the elements within the specified range.
+     */
+    public DelegateHandle deleteRange(DelegateHandle hTarget, long ofStart, long cSize)
+        {
+        DelegateHandle hDelegate  = hTarget;
+        Mutability     mutability = hTarget.getMutability();
+        switch (mutability)
+            {
+            case Fixed:
+                throw new IllegalStateException();
+
+            case Constant:
+            case Persistent:
+                hDelegate = createCopy(hTarget, Mutability.Mutable);
+                break;
+            }
+
+        if (cSize == 1)
+            {
+            deleteElementImpl(hDelegate, ofStart);
+            }
+        else
+            {
+            deleteRangeImpl(hDelegate, ofStart, cSize);
+            }
+
+        if (hDelegate != hTarget)
+            {
+            hDelegate.setMutability(mutability);
+            }
+        return hDelegate;
         }
 
     /**
@@ -696,6 +731,25 @@ public class xRTDelegate
             System.arraycopy(ahValue, nIndex + 1, ahValue, nIndex, cSize - nIndex - 1);
             }
         ahValue[(int) --hDelegate.m_cSize] = null;
+        }
+
+    /**
+     * Storage-specific implementation of {@link #deleteRange}.
+     */
+    protected void deleteRangeImpl(DelegateHandle hTarget, long lIndex, long cDelete)
+        {
+        GenericArrayDelegate hDelegate = (GenericArrayDelegate) hTarget;
+        int                  cSize     = (int) hDelegate.m_cSize;
+        ObjectHandle[]       ahValue   = hDelegate.m_ahValue;
+        int                  nIndex    = (int) lIndex;
+        int                  nDelete   = (int) cDelete;
+
+        if (nIndex < cSize - nDelete)
+            {
+            System.arraycopy(ahValue, nIndex + nDelete, ahValue, nIndex, cSize - nIndex - nDelete);
+            }
+        Arrays.fill(ahValue, cSize - nDelete, nDelete, null);
+        hDelegate.m_cSize -= cDelete;
         }
 
 
