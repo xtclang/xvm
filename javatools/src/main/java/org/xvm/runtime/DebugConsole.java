@@ -144,18 +144,30 @@ public class DebugConsole
         }
 
     @Override
-    public void onReturn(Frame frame)
+    public synchronized void onReturn(Frame frame)
         {
-        if (frame == m_frame)
+        if (frame != m_frame)
             {
             switch (m_stepMode)
                 {
-                case StepOver:
-                case StepOut:
-                    // we're exiting the frame; stop at the first chance
-                    m_stepMode = StepMode.StepInto;
+                case StepInto:
+                    // apparently, there was no op to step at; engage the debugger now
+                    // TODO GG: disallow a natural processing (e.g. "DS" command)
+                    enterCommand(frame, frame.m_iPC, true);
                     break;
+
+                default:
+                    return;
                 }
+            }
+
+        switch (m_stepMode)
+            {
+            case StepOver:
+            case StepOut:
+                // we're exiting the frame; stop at the first chance
+                m_stepMode = StepMode.StepInto;
+                break;
             }
         }
 
