@@ -174,7 +174,7 @@ class Lexer
                     {
                     case NoVal..FPVal: value.estimateStringLength();
                     case StrVal:       value.estimateStringLength() + 2;
-                    default:           3;
+                    default:           1;
                     };
             }
 
@@ -194,8 +194,7 @@ class Lexer
                     break;
 
                 default:
-                    buf.add('\'')
-                       .add(switch (id)
+                    buf.add(switch (id)
                         {
                         case ArrayEnter:  '[';
                         case ArrayExit:   ']';
@@ -204,8 +203,7 @@ class Lexer
                         case Colon:       ':';
                         case Comma:       ',';
                         default:          assert;
-                        })
-                       .add('\'');
+                        });
                     break;
                 }
             return buf;
