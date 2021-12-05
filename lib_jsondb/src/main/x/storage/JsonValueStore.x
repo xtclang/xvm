@@ -568,9 +568,9 @@ service JsonValueStore<Value extends immutable Const>
         assert model == Small;
         assert file.exists;
 
-        Int         closest = NO_TX;
-        Range<Int>  txLoc   = -1..0; // some illegal value
-        Int         desired = txManager.lastCommitted;
+        Int     closest     = NO_TX;
+        Token[] valueTokens = new Token[];
+        Int     desired     = txManager.lastCommitted;
         assert desired != NO_TX && desired > 0;
 
         Byte[] bytes      = file.contents;
@@ -590,31 +590,45 @@ service JsonValueStore<Value extends immutable Const>
                         {
                         closest = txId;
                         objectParser.expectKey("value");
-                        (Token first, Token last) = objectParser.skipDoc();
-                        txLoc = [first.start.offset .. last.end.offset);
+                        valueTokens.clear();
+                        objectParser.skip(valueTokens);
                         }
                     }
                 }
             }
-        assert closest != NO_TX;
 
-        String jsonRecord = jsonStr.slice(txLoc);
-        Value  value;
-        using (ObjectInputStream stream = new ObjectInputStream(jsonSchema, jsonRecord.toReader()))
+        if (closest == NO_TX)
+            {
+            // the store doesn't have any valid data; nuke the file
+            file.delete();
+            model = Empty;
+            initializeEmpty();
+            return;
+            }
+
+        Value value;
+        using (ObjectInputStream stream = new ObjectInputStream(jsonSchema, valueTokens.iterator()))
             {
             value = valueMapping.read(stream.ensureElementInput());
             }
 
-        history.put(closest, value);
-        storageLayout.put(closest, txLoc);
+        Range<Int> txLoc;
         if (txCount > 1)
             {
             // there's extra stuff in the file that we should get rid of now
-            (jsonStr, storageLayout) = rebuildJson(jsonStr, storageLayout);
+            (jsonStr, txLoc)  = rebuildJson(closest, valueTokens);
             dataFile.contents = jsonStr.utf8();
             updateWriteStats();
             }
+        else
+            {
+            Token first = valueTokens[0];
+            Token last  = valueTokens[valueTokens.size-1];
+            txLoc = [first.start.offset .. last.end.offset);
+            }
 
+        history.put(closest, value);
+        storageLayout.put(closest, txLoc);
         storageOffset = jsonStr.size - 2; // append position is before the closing "\n]"
         lastCommit    = closest;
         }
@@ -740,8 +754,42 @@ service JsonValueStore<Value extends immutable Const>
     @Synchronized
     Boolean recover(SkiplistMap<Int, Token[]> sealsByTxId)
         {
-        // TODO
+        Int     latest      = NO_TX;
+        Token[] valueTokens = [];
+
+        for ((Int tx, Token[] tokens) : sealsByTxId)
+            {
+            if (tx > latest || latest == NO_TX)
+                {
+                latest      = tx;
+                valueTokens = tokens;
+                }
+            }
+
+        dataFile.contents = rebuildJson(latest, valueTokens).utf8();
         return True;
+        }
+
+    /**
+     * Create the JSON structure to be stored on disk to contain the latest value.
+     */
+    (String newJson, Range<Int> txLoc) rebuildJson(Int latest, Token[] valueTokens)
+        {
+        StringBuffer buf = new StringBuffer();
+        buf.append("[\n{\"tx\":")
+           .append(latest)
+           .append(", \"value\":");
+
+        Int startPos = buf.size;
+        for (Token token : valueTokens)
+            {
+            token.appendTo(buf);
+            }
+        Int endPos = buf.size;
+
+        buf.append("}\n]");
+
+        return buf.toString(), [startPos..endPos);
         }
 
     /**

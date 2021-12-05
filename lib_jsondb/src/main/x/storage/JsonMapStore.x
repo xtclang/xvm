@@ -1096,7 +1096,123 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
     @Synchronized
     Boolean recover(SkiplistMap<Int, Token[]> sealsByTxId)
         {
-        // TODO
+        Map<Key, Int>      latestTx    = new HashMap();
+        Map<Key, Token[]>  latestKey   = new HashMap();
+        Map<Key, Token[]>  latestValue = new HashMap();
+        Map<String, Key[]> byFileName  = new HashMap();
+
+        for ((Int tx, Token[] tokens) : sealsByTxId)
+            {
+            using (val sealParser = new Parser(tokens.iterator()))
+                {
+                using (val changeArrayParser = sealParser.expectArray())
+                    {
+                    while (!changeArrayParser.eof)
+                        {
+                        using (val changeParser = changeArrayParser.expectObject())
+                            {
+                            Key key;
+
+                            changeParser.expectKey("k");
+
+                            Token[] keyTokens = new Token[];
+                            changeParser.skip(keyTokens);
+
+                            using (ObjectInputStream stream =
+                                    new ObjectInputStream(jsonSchema, keyTokens.iterator()))
+                                {
+                                key = keyMapping.read(stream.ensureElementInput());
+                                }
+
+                            if (Int latest := latestTx.get(key), tx < latest)
+                                {
+                                continue;
+                                }
+
+                            Token[] valueTokens;
+                            if (changeParser.matchKey("v"))
+                                {
+                                valueTokens = new Token[];
+                                changeParser.skip(valueTokens);
+                                }
+                            else
+                                {
+                                valueTokens = []; // empty array represents a "Delete"
+                                }
+
+                            latestTx   .put(key, tx);
+                            latestKey  .put(key, keyTokens);
+                            latestValue.put(key, valueTokens);
+                            byFileName .process(nameForKey(key), e ->
+                                {
+                                if (e.exists)
+                                    {
+                                    if (!e.value.contains(key))
+                                        {
+                                        e.value += key;
+                                        }
+                                    }
+                                else
+                                    {
+                                    e.value = [key];
+                                    }
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+
+        for ((String fileName, Key[] keys) : byFileName)
+            {
+            File file = dataDir.fileFor(fileName);
+
+            StringBuffer buf    = new StringBuffer();
+            Boolean      exists = False;
+
+            for (Key key : keys)
+                {
+                assert Token[] valueTokens := latestValue.get(key);
+                if (valueTokens.size == 0)
+                    {
+                    continue;
+                    }
+
+                if (!exists)
+                    {
+                    assert Int txId := latestTx.get(key);
+                    buf.append("[\n{\"tx\":")
+                       .append(txId)
+                       .append(", \"c\":[");
+                    exists = True;
+                    }
+
+                assert Token[] keyTokens := latestKey.get(key);
+
+                buf.append("{\"k\":");
+                for (Token token : keyTokens)
+                    {
+                    token.appendTo(buf);
+                    }
+                buf.append(", \"v\":");
+                for (Token token : valueTokens)
+                    {
+                    token.appendTo(buf);
+                    }
+                buf.add('}');
+                }
+
+            if (exists)
+                {
+                buf.append("]}\n]");
+                file.contents = buf.toString().utf8();
+                }
+            else
+                {
+                file.delete();
+                }
+            }
+
         return True;
         }
 
