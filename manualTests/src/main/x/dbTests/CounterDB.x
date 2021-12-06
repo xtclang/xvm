@@ -23,8 +23,7 @@ module CounterDB
             {
             CounterSchema schema = dbRoot.as(CounterSchema);
 
-            Int total = 0;
-            total := schema.counters.get(name);
+            Int total = schema.counters.getOrDefault(name, 0);
             schema.counters.put(name, ++total);
 
             if (total < 100)
