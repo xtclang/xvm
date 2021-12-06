@@ -582,7 +582,11 @@ class Array<Element>
         switch (mutability)
             {
             case Mutable:
-                delegate = result;
+                deleteAll([newSize..size));
+                for (Int i : [0..newSize))
+                    {
+                    this[i] = result[i];
+                    }
                 return this, deletedCount;
 
             case Persistent:

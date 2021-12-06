@@ -4,11 +4,19 @@ module TestSimple.test.org
 
     void run()
         {
-        Int i1 = 1;
-        Int i2 = 2;
+        Int[] ints = new Int[];
+        ints.add(1);
+        ints.add(0);
+        ints.add(2);
+        ints.add(0);
+        ints.add(3);
 
-        Int i3 = i1 > 5
-            ? i2 > 4 ? 0 : 1 // TODO CP: requires parenthesis (i2 > 4 ? 0 : 1) to compile
-            : 2;
+        Int[] ints2 = ints.freeze(False);
+
+        console.println(ints.removeAll(i -> i == 0));
+        console.println(ints);
+
+        console.println(ints2.removeAll(i -> i == 0));
+        console.println(ints2);
         }
     }
