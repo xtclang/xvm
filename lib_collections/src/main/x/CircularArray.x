@@ -4,14 +4,17 @@
  * data structure very efficient.
  *
  * This implementation is a circular list on top of an array. An array is selected as an underlying
- * data structure for both its space efficiency and its random access and update efficiency, O(1).
- * Initially the "tail" and the "head" of the structure are at index `0` in the array, and the
- * "tail" of the structure advances with each `add`. As items are removed in FIFO order, the head
- * advances towards the tail. When the tail reaches the end of the array, and if the head is no
- * longer at the start of the array, then the tail "wraps around" to the front of the array,
- * seemingly chasing the head. Similarly, when the head reaches the end of the array, it too "wraps
- * around" to the front of the array, once again appearing to chase the tail. At the point when the
- * tail catches up to the head, the underlying array size must be increased.
+ * data structure for both its space efficiency and its random access and update efficiency, `O(1)`.
+ * Initially the "head" and the "tail" of the structure are at index `0` in the array, and the
+ * "head" of the structure advances with each `add`. As items are removed in FIFO order, the tail
+ * advances towards the head. When the head reaches the end of the array, and if the tail is no
+ * longer at the start of the array, then the head "wraps around" to the front of the array in order
+ * to store added items, seemingly chasing the tail. (In reality, the head is modulo'd by the size
+ * of the array to obtain a storage location.) Similarly, when the tail reaches the end of the
+ * array, it too "wraps around" (via the same modulo function) to the front of the array, once again
+ * appearing to chase the head. At the point when the tail catches up to the head, the array is
+ * "empty", and when the head catches up to the tail, the underlying array size must be increased in
+ * order to add more elements.
  */
 class CircularArray<Element>
         implements List<Element>
@@ -42,25 +45,25 @@ class CircularArray<Element>
         }
 
     /**
-     * The index of the next element to add at the `tail`. The index starts at zero, and is never
-     * reset, so the index into the `contents` array is the modulo of the `tail` and the size of
-     * the `contents` array. The size of the CircularArray is `tail-head`.
-     *
-     * In theory, the tail can be negative, because it is possible to insert before the start of
-     * the array, and then to delete from the end (the tail) of the array.
-     */
-    protected/private Int tail;
-
-    /**
-     * The index of the next element to remove from the `head`. The index starts at zero, and is
-     * never reset, so the index into the `contents` array is the modulo of the `head` and the size
-     * of the `contents` array. For any value of `tail`, `head<=tail`. When `head==tail`, the
-     * CircularArray is empty.
+     * The index of the next element to add at the `head`. The index starts at zero, and is never
+     * reset, so the index into the underlying `contents` array is the modulo of the `head` and the
+     * size of the `contents` array. The size of the CircularArray is `head-tail`.
      *
      * In theory, the head can be negative, because it is possible to insert before the start of
-     * the array.
+     * the array, and then to delete from the end (the head) of the array.
      */
     protected/private Int head;
+
+    /**
+     * The index of the next element to remove from the `tail`. The index starts at zero, and is
+     * never reset, so the index into the `contents` array is the modulo of the `tail` and the size
+     * of the underlying `contents` array. For any value of `head`, `tail<=head`. The size of the
+     * CircularArray is `head-tail`, and when `tail==head`, the CircularArray is empty.
+     *
+     * In theory, the tail can be negative, because it is possible to insert before the start of
+     * the array.
+     */
+    protected/private Int tail;
 
     /**
      * Reallocate the internal storage of the CircularArray.
@@ -78,7 +81,7 @@ class CircularArray<Element>
 
         Int oldMask = oldSize - 1;
         Int newMask = newSize - 1;
-        for (Int i = head; i < tail; ++i)
+        for (Int i = tail; i < head; ++i)
             {
             newContents[i & newMask] = oldContents[i & oldMask];
             }
@@ -100,10 +103,10 @@ class CircularArray<Element>
         }
 
     /**
-     * Given an absolute index such as the head and tail indexes, determine the corresponding index
+     * Given an absolute index such as the tail and head indexes, determine the corresponding index
      * in the contents array.
      *
-     * @param index an index such as `head` or `tail`
+     * @param index an index such as `tail` or `head`
      *
      * @return a corresponding index into the contents array
      */
@@ -111,23 +114,6 @@ class CircularArray<Element>
         {
         // contents must be of a power-of-two size
         return index & contents.size-1;
-        }
-
-    /**
-     * Verify that the specified index is in the range 0 (inclusive) to `size` (exclusive).
-     *
-     * @throws OutOfBounds  if the index is not valid
-     *
-     * @return True
-     */
-    protected Boolean validateIndex(Int index)
-        {
-        if (index < 0 || index >= size)
-            {
-            throw new OutOfBounds("index=" + index + ", size=" + size);
-            }
-
-        return True;
         }
 
 
@@ -166,16 +152,16 @@ class CircularArray<Element>
     @Op("[]")
     Element getElement(Int index)
         {
-        validateIndex(index);
-        return contents[indexFor(head+index)].as(Element);
+        assert:bounds 0 <= index < size;
+        return contents[indexFor(tail+index)].as(Element);
         }
 
     @Override
     @Op("[]=")
     void setElement(Int index, Element value)
         {
-        validateIndex(index);
-        contents[indexFor(head+index)] = value;
+        assert:bounds 0 <= index < size;
+        contents[indexFor(tail+index)] = value;
         }
 
 
@@ -201,31 +187,31 @@ class CircularArray<Element>
         ensureCapacity(1);
         if (index == 0)
             {
-            contents[indexFor(--head)] = value;
+            contents[indexFor(--tail)] = value;
             }
         else
             {
-            validateIndex(index);
+            assert:bounds 0 < index < size;
             Int mask = contents.size - 1;
             if (index < (size >>> 1))
                 {
-                // move the head
-                for (Int iCopy = head, Int iLast = head + index - 1; iCopy <= iLast; ++iCopy)
+                // move the tail
+                for (Int iCopy = tail, Int iLast = tail + index - 1; iCopy <= iLast; ++iCopy)
                     {
                     contents[iCopy-1 & mask] = contents[iCopy & mask];
                     }
-                --head;
+                --tail;
                 }
             else
                 {
-                // move the tail
-                for (Int iCopy = tail - 1, Int iLast = head + index; iCopy >= iLast; --iCopy)
+                // move the head
+                for (Int iCopy = head - 1, Int iLast = tail + index; iCopy >= iLast; --iCopy)
                     {
                     contents[iCopy+1 & mask] = contents[iCopy & mask];
                     }
-                ++tail;
+                ++head;
                 }
-            contents[head+index & mask] = value;
+            contents[tail+index & mask] = value;
             }
 
         return this;
@@ -254,42 +240,42 @@ class CircularArray<Element>
         Int mask = contents.size - 1;
         if (index == 0)
             {
-            Int insertAt = head - additional;
+            Int insertAt = tail - additional;
             for (Element value : values)
                 {
                 contents[insertAt++ & mask] = value;
                 }
-            assert insertAt == head;
-            head -= additional;
+            assert insertAt == tail;
+            tail -= additional;
             }
         else
             {
-            validateIndex(index);
+            assert:bounds 0 < index < size;
             if (index < (size >>> 1))
                 {
-                // move the head
-                for (Int iCopy = head, Int iLast = head + index - 1; iCopy <= iLast; ++iCopy)
+                // move the tail
+                for (Int iCopy = tail, Int iLast = tail + index - 1; iCopy <= iLast; ++iCopy)
                     {
                     contents[iCopy-additional & mask] = contents[iCopy & mask];
                     }
-                head -= additional;
+                tail -= additional;
                 }
             else
                 {
-                // move the tail
-                for (Int iCopy = tail - 1, Int iLast = head + index; iCopy >= iLast; --iCopy)
+                // move the head
+                for (Int iCopy = head - 1, Int iLast = tail + index; iCopy >= iLast; --iCopy)
                     {
                     contents[iCopy+additional & mask] = contents[iCopy & mask];
                     }
-                tail += additional;
+                head += additional;
                 }
 
-            Int insertAt = head + index;
+            Int insertAt = tail + index;
             for (Element value : values)
                 {
                 contents[insertAt++ & mask] = value;
                 }
-            assert insertAt == head + index + additional;
+            assert insertAt == tail + index + additional;
             }
 
         return this;
@@ -298,35 +284,35 @@ class CircularArray<Element>
     @Override
     CircularArray delete(Int index)
         {
-        validateIndex(index);
+        assert:bounds 0 <= index < size;
         if (index == 0)
             {
-            contents[indexFor(head++)] = Null;
+            contents[indexFor(tail++)] = Null;
             }
         else if (index == size - 1)
             {
-            contents[indexFor(--tail)] = Null;
+            contents[indexFor(--head)] = Null;
             }
         else
             {
             Int mask = contents.size - 1;
             if (index < (size >>> 1))
                 {
-                // move the head forward
-                for (Int iCopy = head + index - 1; iCopy >= head; --iCopy)
+                // move the tail forward (but copy the sliding elements right to left)
+                for (Int iCopy = tail + index - 1; iCopy >= tail; --iCopy)
                     {
                     contents[iCopy+1 & mask] = contents[iCopy & mask];
                     }
-                contents[head++ & mask] = Null;
+                contents[tail++ & mask] = Null;
                 }
             else
                 {
-                // move the tail backwards
-                for (Int iCopy = head + index + 1, Int iLast = tail - 1; iCopy <= iLast; ++iCopy)
+                // move the head backwards (but copy the sliding elements left to right)
+                for (Int iCopy = tail + index + 1, Int iLast = head - 1; iCopy <= iLast; ++iCopy)
                     {
                     contents[iCopy-1 & mask] = contents[iCopy & mask];
                     }
-                contents[--tail & mask] = Null;
+                contents[--head & mask] = Null;
                 }
             }
 
@@ -334,65 +320,82 @@ class CircularArray<Element>
         }
 
     @Override
-    CircularArray deleteAll(Interval<Int> interval)
+    CircularArray deleteAll(Interval<Int> indexes)
         {
-        validateIndex(interval.lowerBound);
-        validateIndex(interval.upperBound);
+        Int lo = indexes.effectiveLowerBound;
+        Int hi = indexes.effectiveUpperBound;
+        switch (lo <=> hi)
+            {
+            case Lesser:
+                break;
 
-        Int removing = interval.size;
+            case Equal:
+                return delete(lo);
+
+            case Greater:
+                // e.g. a range like [3..3)
+                return this;
+            }
+
+        Int size = size;
+        assert:bounds 0 <= lo < hi < size;
+
+        Int removing = hi - lo + 1;
         if (removing == size)
             {
-            clear();
-            return this;
-            }
-        else if (removing == 1)
-            {
-            return delete(interval.lowerBound);
+            return clear();
             }
 
+        // determine whether the deletions should occur from the head or from the tail
         Int     mask = contents.size - 1;
-        Boolean fromTail;
-        if (interval.lowerBound == 0)
+        Boolean fromHead;
+        if (lo == 0)
             {
-            fromTail = True;
+            // delete from the tail; the head will not move
+            fromHead = False;
             }
-        else if (interval.upperBound == size-1)
+        else if (hi == size-1)
             {
-            fromTail = False;
+            // delete from the head; the tail will not move
+            fromHead = True;
             }
         else
             {
-            fromTail = interval.lowerBound < (size - removing >>> 1);
-            if (fromTail)
+            // stuff is getting removed from somewhere the middle; figure out which end to remove
+            // from in order to move the least number of elements
+            Int retainTail = lo;
+            Int retainHead = size - hi - 1;
+            fromHead = retainTail > retainHead;
+            if (fromHead)
                 {
-                // move the head forward
-                for (Int iCopy = head + interval.lowerBound - 1; iCopy >= head; --iCopy)
+                // move the head backwards (but copy the sliding elements left to right)
+                for (Int copy = tail + hi + 1, Int last = head - 1; copy <= last; ++copy)
                     {
-                    contents[iCopy+removing & mask] = contents[iCopy & mask];
+                    contents[copy-removing & mask] = contents[copy & mask];
                     }
                 }
             else
                 {
-                // move the tail backwards
-                for (Int iCopy = head + interval.upperBound + 1, Int iLast = tail - 1; iCopy <= iLast; ++iCopy)
+                // slide the tail forward (but copy the sliding elements right to left)
+                for (Int copy = tail + lo - 1; copy >= tail; --copy)
                     {
-                    contents[iCopy-1 & mask] = contents[iCopy & mask];
+                    contents[copy+removing & mask] = contents[copy & mask];
                     }
                 }
             }
 
-        if (fromTail)
+        if (fromHead)
             {
-            while (removing-- > 0)
+            while (--removing >= 0)
                 {
-                contents[head++ & mask] == Null;
+                contents[--head & mask] == Null;
                 }
             }
         else
             {
-            while (removing-- > 0)
+            while (--removing >= 0)
                 {
-                contents[--tail & mask] == Null;
+                contents[tail++ & mask] == Null;
                 }
             }
 
@@ -405,13 +408,13 @@ class CircularArray<Element>
     @Override
     @RO Int size.get()
         {
-        return tail - head;
+        return head - tail;
         }
 
     @Override
     @RO Boolean empty.get()
         {
-        return tail == head;
+        return head == tail;
         }
 
     @Override
@@ -419,22 +422,31 @@ class CircularArray<Element>
         {
         return new Iterator()
             {
-            Int prevHead = head;
+            Int index    = tail;
             Int prevTail = tail;
-            Int index    = head;
+            Int prevHead = head;
 
             @Override
             conditional Element next()
                 {
                 // adjust for a single deletion
-                if (prevHead != head || prevTail != tail)
+                if (prevTail != tail)
                     {
-                    if (prevHead == head && prevTail-1 == tail)
+                    if (prevTail+1 == tail && prevHead == head && index >= tail)
                         {
+                        // the last iterated thing was deleted
                         prevTail = tail;
                         }
-                    else if (prevHead+1 == head && prevTail == tail && index >= head)
+                    else
                         {
+                        throw new ConcurrentModification();
+                        }
+                    }
+                else if (prevHead != head)
+                    {
+                    if (prevHead-1 == head)
+                        {
+                        // the end of the array was deleted
                         prevHead = head;
                         }
                     else
@@ -443,10 +455,11 @@ class CircularArray<Element>
                         }
                     }
 
-                if (index < tail)
+                if (index < head)
                     {
-                    return True, this.CircularArray[index++ - head];
+                    return True, this.CircularArray[index++ - tail];
                     }
+
                 return False;
                 }
             };
@@ -457,7 +470,7 @@ class CircularArray<Element>
     CircularArray add(Element value)
         {
         ensureCapacity(1);
-        contents[indexFor(tail++)] = value;
+        contents[indexFor(head++)] = value;
         return this;
         }
 
@@ -468,7 +481,7 @@ class CircularArray<Element>
         ensureCapacity(values.size);
         for (Element value : values)
             {
-            contents[indexFor(tail++)] = value;
+            contents[indexFor(head++)] = value;
             }
         return this;
         }
@@ -478,12 +491,8 @@ class CircularArray<Element>
         {
         if (capacity <= 16)
             {
-            // REVIEW do we need Array.fill()???
             // just wipe the existing storage
-            while (size > 0)
-                {
-                delete(0);
-                }
+            contents.fill(Null);
             }
         else
             {
@@ -491,8 +500,8 @@ class CircularArray<Element>
             contents = new Element?[minCapacityFor(0)];
             }
 
-        head = 0;
         tail = 0;
+        head = 0;
 
         return this;
         }

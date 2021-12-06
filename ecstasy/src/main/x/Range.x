@@ -15,7 +15,10 @@ const Range<Element extends Orderable>
      * @param firstExclusive  True iff the first value is _exclusive_ (not included in the range)
      * @param lastExclusive   True iff the last value is _exclusive_ (not included in the range)
      */
-    construct(Element first, Element last, Boolean firstExclusive = False, Boolean lastExclusive = False)
+    construct(Element first,
+              Element last,
+              Boolean firstExclusive = False,
+              Boolean lastExclusive = False)
         {
         if (first > last)
             {
@@ -33,6 +36,29 @@ const Range<Element extends Orderable>
             upperExclusive = lastExclusive;
             descending     = False;
             }
+        }
+
+    /**
+     * Internal constructor.
+     *
+     * @param lowerBound      the lower bound of the range
+     * @param lowerExclusive  True iff the lowerBound is exclusive
+     * @param upperBound      the upper bound of the range
+     * @param upperExclusive  True iff the upperBound is exclusive
+     * @param descending      True iff the range proceeds from its upper bound to its lower bound
+     */
+    private construct(Element lowerBound,
+                      Boolean lowerExclusive,
+                      Element upperBound,
+                      Boolean upperExclusive,
+                      Boolean descending,
+                     )
+        {
+        this.lowerBound     = lowerBound;
+        this.lowerExclusive = lowerExclusive;
+        this.upperBound     = upperBound;
+        this.upperExclusive = upperExclusive;
+        this.descending     = descending;
         }
 
     /**
@@ -93,12 +119,39 @@ const Range<Element extends Orderable>
     Boolean descending;
 
     /**
+     * If the range is descending, reverse it.
+     *
+     * @return the range in ascending order
+     */
+    Range! asAscending()
+        {
+        return descending
+                ? this.reversed()
+                : this;
+        }
+
+    /**
+     * If the range is ascending, reverse it.
+     *
+     * @return the range in descending order
+     */
+    Range! asDescending()
+        {
+        return descending
+                ? this
+                : this.reversed();
+        }
+
+    /**
      * Create a new range in the reverse order of this range.
      */
     Range! reversed()
         {
-        return new Range(first=last, firstExclusive=lastExclusive,
-                         last=first, lastExclusive=firstExclusive);
+        return new Range(lowerBound,
+                         lowerExclusive,
+                         upperBound,
+                         upperExclusive,
+                         !descending);
         }
 
     /**

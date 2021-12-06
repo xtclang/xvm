@@ -661,13 +661,17 @@ mixin LinkedList<Element>
         }
 
     @Override
-    LinkedList deleteAll(Interval<Int> interval)
+    LinkedList deleteAll(Interval<Int> indexes)
         {
-        Cursor cursor = cursor(interval.effectiveLowerBound);
-        for (Int i = 0, Int c = interval.size; i < c; ++i)
+        Int count = indexes.size;
+        if (count > 0)
             {
-            assert cursor.exists;
-            cursor.delete();
+            Cursor cursor = cursor(indexes.effectiveLowerBound);
+            for (Int i = 0; i < count; ++i)
+                {
+                assert cursor.exists;
+                cursor.delete();
+                }
             }
         return this;
         }

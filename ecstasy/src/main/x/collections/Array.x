@@ -808,26 +808,28 @@ class Array<Element>
         }
 
     @Override
-    Array deleteAll(Interval<Int> interval)
+    Array deleteAll(Interval<Int> indexes)
         {
-        Int lo = interval.effectiveLowerBound;
-        Int hi = interval.effectiveUpperBound;
+        Int lo = indexes.effectiveLowerBound;
+        Int hi = indexes.effectiveUpperBound;
         switch (lo <=> hi)
             {
             case Lesser:
-                return this;
+                break;
 
             case Equal:
                 return delete(lo);
 
             case Greater:
-                break;
+                // e.g. a range like [3..3)
+                return this;
             }
 
-        assert:bounds lo >= 0 && hi < size;
+        Int size = size;
+        assert:bounds 0 <= lo < hi < size;
 
-        Int gap = hi - lo;
-        if (gap == size)
+        Int removing = hi - lo + 1;
+        if (removing == size)
             {
             return clear();
             }
@@ -852,7 +854,7 @@ class Array<Element>
 
             case Persistent:
             case Constant:
-                Array<Element> result = new Array(size, i -> this[i < lo ? i : i+gap]);
+                Array<Element> result = new Array(size, i -> this[i < lo ? i : i+removing]);
                 return mutability == Persistent
                         ? result.toArray(Persistent, True)
                         : result.freeze(True);

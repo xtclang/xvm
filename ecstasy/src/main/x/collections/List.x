@@ -925,22 +925,20 @@ interface List<Element>
      * Warning: This can be an incredibly expensive operation if the data structure is not
      * explicitly intended to support efficient deletion.
      *
-     * @param interval  the interval of indexes of the elements to delete, which must be between `0`
-     *                  (inclusive) and `size` (exclusive)
+     * @param indexes  the interval of indexes of the elements to delete, which must be between `0`
+     *                 (inclusive) and `size` (exclusive)
      *
      * @return the resultant list, which is the same as `this` for a mutable list
      *
-     * @throws OutOfBounds  if the specified index is outside of range `0` (inclusive) to
+     * @throws OutOfBounds  if any of the specified indexes is outside of range `0` (inclusive) to
      *                      `size` (exclusive)
      */
-    List deleteAll(Interval<Int> interval)
+    List deleteAll(Interval<Int> indexes)
         {
         // this implementation should be overridden by any non-mutable implementation of List, and
         // by any implementation that is able to delete multiple elements efficiently
         List result = this;
-        Int  index  = interval.effectiveLowerBound;
-        Int  count  = interval.effectiveUpperBound - index + 1;
-        while (count-- > 0)
+        for (Int index = indexes.effectiveLowerBound, Int count = indexes.size; count-- > 0; )
             {
             result = result.delete(index);
             }
