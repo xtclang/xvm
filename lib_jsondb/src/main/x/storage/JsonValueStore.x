@@ -754,17 +754,9 @@ service JsonValueStore<Value extends immutable Const>
     @Synchronized
     Boolean recover(SkiplistMap<Int, Token[]> sealsByTxId)
         {
-        Int     latest      = NO_TX;
-        Token[] valueTokens = [];
-
-        for ((Int tx, Token[] tokens) : sealsByTxId)
-            {
-            if (tx > latest || latest == NO_TX)
-                {
-                latest      = tx;
-                valueTokens = tokens;
-                }
-            }
+        sealsByTxId = new SkiplistMap(sealsByTxId); // TODO CP: remove this
+        assert Int     latest      := sealsByTxId.last();
+        assert Token[] valueTokens := sealsByTxId.get(latest);
 
         dataFile.contents = rebuildJson(latest, valueTokens).utf8();
         return True;

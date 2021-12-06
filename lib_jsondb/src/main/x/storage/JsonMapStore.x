@@ -1,6 +1,6 @@
 import json.Doc;
-import json.Mapping;
 import json.Lexer.Token;
+import json.Mapping;
 import json.ObjectInputStream;
 import json.Parser;
 
@@ -1122,11 +1122,6 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                                     new ObjectInputStream(jsonSchema, keyTokens.iterator()))
                                 {
                                 key = keyMapping.read(stream.ensureElementInput());
-                                }
-
-                            if (Int latest := latestTx.get(key), tx < latest)
-                                {
-                                continue;
                                 }
 
                             Token[] valueTokens;
