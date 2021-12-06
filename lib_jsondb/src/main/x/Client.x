@@ -1,5 +1,6 @@
 import collections.SparseIntSet;
 
+import ecstasy.collections.maps.KeyEntry;
 import ecstasy.collections.maps.KeySetBasedMap;
 import ecstasy.reflect.Annotation;
 
@@ -2069,6 +2070,73 @@ service Client<Schema extends RootSchema>
             KeySet remove(Key key)
                 {
                 outer.remove(key);
+                return this;
+                }
+            }
+
+        @Override
+        protected class CursorEntry
+                implements Entry // TODO GG this line should not be required!
+            {
+            @Override
+            Map<Key, Value>.Entry reify()
+                {
+                return new ReifiedEntry(key);
+                }
+
+            // TODO GG how did this DBMap even compile before without this property being present? (without an explicit @Abstract)
+            @Override
+            // TODO GG this declaration compiles but should not: Entry original.get()
+            immutable Entry original.get()
+                {
+                TODO GG
+                }
+            }
+
+        /**
+         * An implementation of the Entry interface suitable for use as the "original" entry.
+         */
+        protected const ReifiedEntry(Key key)
+                implements Entry
+                incorporates KeyEntry<Key, Value>(key)
+            {
+            }
+
+        /**
+         * An implementation of the Entry interface suitable for use as the "original" entry.
+         */
+        protected const HistoricalEntry
+                implements Entry
+            {
+            // TODO GG shouldn't need immutable on key
+            construct(immutable Key key)
+                {
+                this.key    = key;
+                this.exists = False;
+                }
+
+            // TODO GG shouldn't need immutable on key and value
+            construct(immutable Key key, immutable Value value)
+                {
+                this.key    = key;
+                this.value  = value;
+                this.exists = True;
+                }
+
+            @Override
+            @Unassigned
+            immutable Value value.get()
+                {
+                return assigned
+                        ? super()
+                        : throw new OutOfBounds($"A value for the key \"{key}\" does not exist");
+                }
+
+            @Override
+            @Unassigned
+            Entry original.get()
+                {
+                // return this.as(immutable Entry); // TODO GG .as() should not be required (this is from when I had the property declared as immutable)
                 return this;
                 }
             }

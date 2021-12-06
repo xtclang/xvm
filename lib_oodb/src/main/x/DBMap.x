@@ -54,22 +54,11 @@ interface DBMap<Key extends immutable Const, Value extends immutable Const>
     interface Entry
         {
         /**
-         * The Date/Time when this Entry was modified (or the commit time for that modification).
-         */
-        @RO DateTime modified;
-
-        /**
          * The Entry as it existed at the start of the current transaction; if no transaction is
-         * active, then this will be the same Entry as `this`.
+         * active, then this will be the same Entry as `this`. No changes are possible through the
+         * returned Entry.
          */
         @RO Entry original;
-
-        /**
-         * If the DBMap is audited, then this contains previous versions of the Entry, indexed by
-         * DateTime. If the DBMap is not audited, then this list will contain at least the current
-         * Entry, and if a modification is in the process of occurring, the original Entry.
-         */
-        @RO List<Entry> changeLog;
         }
 
 

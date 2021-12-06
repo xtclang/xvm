@@ -257,7 +257,7 @@ public abstract class TypeConstant
             {
             public TypeConstant apply(TypeConstant type)
                 {
-                return type instanceof TerminalTypeConstant
+                return type instanceof TerminalTypeConstant || type instanceof VirtualChildTypeConstant
                         ? type
                         : type instanceof ImmutableTypeConstant
                             ? type.getUnderlyingType()
