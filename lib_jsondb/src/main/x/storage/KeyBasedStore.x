@@ -26,7 +26,13 @@ mixin KeyBasedStore<Key>
             String name = key.toString();
 
             // TODO remove illegal chars
-            return name.slice([0 .. name.size.minOf(40)));
+            Int size = name.size;
+            return switch (size)
+                {
+                case 0   : assert;
+                case 1, 2: name[0].toString();
+                default  : $"{name[0]}{name[size-1]}";
+                };
             }
         }
     }

@@ -932,19 +932,21 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                 };
             }
 
-        Map<Key, Int>    closestTx  = new HashMap();
-        Map<String, Int> dupeCounts = new HashMap(); // number of duplicate entries per file
-        Int              totalBytes = 0;
-        Int              totalFiles = 0;
+        Map<Key, Int> closestTx  = new HashMap();
+        Int           totalBytes = 0;
+        Int           totalFiles = 0;
 
         for (File file : dataDir.files())
             {
             String               fileName   = file.name;
             Byte[]               bytes      = file.contents;
             String               jsonStr    = bytes.unpackUtf8();
+            Boolean              rebuild    = False;
             Parser               fileParser = new Parser(jsonStr.toReader());
             Map<Key, Range<Int>> valueLoc   = new HashMap();
             Map<Key, Range<Int>> entryLoc   = new HashMap();
+
+            SkiplistMap<Int, Key[]> keysByTx = new SkiplistMap();
 
             totalFiles++;
             totalBytes += bytes.size;
@@ -958,51 +960,64 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                         txParser.expectKey("tx");
 
                         Int txId = txParser.expectInt();
-                        if (txId <= desired)
+                        if (txId > desired)
                             {
-                            txParser.expectKey("c");
+                            // this should not be happening
+                            rebuild = True;
+                            continue;
+                            }
 
-                            using (val changeArrayParser = txParser.expectArray())
+                        txParser.expectKey("c");
+
+                        using (val changeArrayParser = txParser.expectArray())
+                            {
+                            while (!changeArrayParser.eof)
                                 {
-                                while (!changeArrayParser.eof)
+                                Int startOffset = changeArrayParser.peek().start.offset;
+
+                                using (val changeParser = changeArrayParser.expectObject())
                                     {
-                                    Int startOffset = changeArrayParser.peek().start.offset;
+                                    Key key;
 
-                                    using (val changeParser = changeArrayParser.expectObject())
+                                    changeParser.expectKey("k");
+                                    using (ObjectInputStream stream =
+                                            new ObjectInputStream(jsonSchema, changeParser))
                                         {
-                                        Key key;
+                                        key = keyMapping.read(stream.ensureElementInput());
+                                        }
 
-                                        changeParser.expectKey("k");
-                                        using (ObjectInputStream stream =
-                                                new ObjectInputStream(jsonSchema, changeParser))
+                                    fileNames.putIfAbsent(key, fileName);
+
+                                    if (Int lastTx := closestTx.get(key))
+                                        {
+                                        rebuild = True;
+                                        if (txId < lastTx)
                                             {
-                                            key = keyMapping.read(stream.ensureElementInput());
+                                            // out of order transaction record; ignore
+                                            continue;
                                             }
-
-                                        fileNames.put(key, fileName);
-
-                                        if (Int keyTx := closestTx.get(key))
+                                        keysByTx.process(lastTx, e ->
                                             {
-                                            dupeCounts.process(fileName, incrementCount(1));
-                                            if (txId < keyTx)
-                                                {
-                                                // out of order transaction record; ignore
-                                                continue;
-                                                }
-                                            }
+                                            assert e.exists;
+                                            e.value -= key;
+                                            });
+                                        }
 
-                                        closestTx.put(key, txId);
+                                    closestTx.put(key, txId);
+                                    keysByTx.process(txId, e ->
+                                        {
+                                        e.value = e.exists ? e.value + key : [key];
+                                        });
 
-                                        if (changeParser.matchKey("v"))
-                                            {
-                                            (Token first, Token last) = changeParser.skipDoc();
-                                            valueLoc.put(key, [first.start.offset .. last.end.offset));
-                                            entryLoc.put(key, [startOffset .. last.end.offset]);
-                                            }
-                                        else
-                                            {
-                                            valueLoc.remove(key);
-                                            }
+                                    if (changeParser.matchKey("v"))
+                                        {
+                                        (Token first, Token last) = changeParser.skipDoc();
+                                        valueLoc.put(key, [first.start.offset .. last.end.offset));
+                                        entryLoc.put(key, [startOffset .. last.end.offset]);
+                                        }
+                                    else
+                                        {
+                                        valueLoc.remove(key);
                                         }
                                     }
                                 }
@@ -1011,58 +1026,80 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                     }
                 }
 
-            for ((Key key, Range<Int> locValue) : valueLoc)
+            if (valueLoc.empty)
                 {
-                String jsonRecord = jsonStr.slice(locValue);
-                using (ObjectInputStream stream = new ObjectInputStream(jsonSchema, jsonRecord.toReader()))
+                // all the keys were removed; remove the storage
+                file.delete();
+                totalFiles--;
+                bytesUsed -= bytes.size;
+                continue;
+                }
+
+            StringBuffer buf = new StringBuffer();
+            if (rebuild)
+                {
+                buf.append("[");
+                }
+
+            for ((Int txId, Key[] keys) : keysByTx)
+                {
+                Boolean addedHeader = False;
+                for (Key key : keys)
                     {
-                    Value value = valueMapping.read(stream.ensureElementInput());
+                    if (Range<Int> valueRange := valueLoc.get(key))
+                        {
+                        assert Range<Int> entryRange := entryLoc.get(key);
 
-                    History valueHistory = new SkiplistMap();
-                    valueHistory.put(desired, value);
-                    history.put(key, valueHistory);
+                        if (!addedHeader)
+                            {
+                            buf.append("\n{\"tx\":")
+                               .append(txId)
+                               .append(", \"c\":[");
+                            addedHeader = True;
+                            }
 
-                    FileLayout  fileLayout = storageLayout.computeIfAbsent(desired, () -> new HashMap());
-                    EntryLayout layout     = fileLayout.computeIfAbsent(fileName, () -> new HashMap());
+                        String jsonValue = jsonStr.slice(valueRange);
+                        if (rebuild)
+                            {
+                            Int startPos = buf.size;
+                            buf.append(jsonStr.slice(entryRange)).add(',');
+                            Int endPos   = buf.size;
 
-                    assert Range<Int> locEntry := entryLoc.get(key);
-                    layout.put(key, locEntry);
+                            entryRange = [startPos..endPos);
+                            }
+
+                        using (ObjectInputStream stream = new ObjectInputStream(jsonSchema, jsonValue.toReader()))
+                            {
+                            Value value = valueMapping.read(stream.ensureElementInput());
+
+                            History valueHistory = new SkiplistMap();
+                            valueHistory.put(txId, value);
+                            history.put(key, valueHistory);
+
+                            FileLayout  fileLayout = storageLayout.computeIfAbsent(txId, () -> new HashMap());
+                            EntryLayout layout     = fileLayout.computeIfAbsent(fileName, () -> new HashMap());
+
+                            layout.put(key, entryRange);
+                            }
+                        }
+                    }
+
+                if (addedHeader)
+                    {
+                    buf.truncate(-1).add(']').add('}').add(',');
                     }
                 }
 
             sizeByTx.process(desired, incrementCount(valueLoc.size));
-            }
 
-        if (dupeCounts.size > 0)
-            {
-            for (String fileName : dupeCounts.keys)
+            if (rebuild)
                 {
-                File file = dataDir.fileFor(fileName);
-                if (file.exists)
-                    {
-                    Byte[] bytesOld = file.contents;
-                    String jsonStr  = bytesOld.unpackUtf8();
+                String jsonNew  = buf.truncate(-1).add('\n').add(']').toString();
+                Byte[] bytesNew = jsonNew.utf8();
 
-                    if (FileLayout  fileLayout := storageLayout.get(desired),
-                        EntryLayout layout     := fileLayout.get(fileName))
-                        {
-                        // there may be extra stuff in some files that we should get rid of now
-                        (jsonStr, layout) = rebuildJson(desired, jsonStr, layout);
+                file.contents = bytesNew;
 
-                        Byte[] bytesNew = jsonStr.utf8();
-                        file.contents = bytesNew;
-
-                        fileLayout.put(fileName, layout);
-                        this.bytesUsed += bytesNew.size - bytesOld.size;
-                        }
-                    else
-                        {
-                        // the DBMap has been removed
-                        file.delete();
-                        totalFiles--;
-                        this.bytesUsed -= bytesOld.size;
-                        }
-                    }
+                bytesUsed += bytesNew.size - bytes.size;
                 }
             }
 
@@ -1142,10 +1179,14 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                                 {
                                 if (e.exists)
                                     {
-                                    if (!e.value.contains(key))
+                                    // make sure the keys are sorted according to the last
+                                    // corresponding transaction
+                                    Key[] keys = e.value;
+                                    if (keys.contains(key))
                                         {
-                                        e.value += key;
+                                        keys -= key;
                                         }
+                                    e.value = keys + key;
                                     }
                                 else
                                     {
@@ -1158,28 +1199,109 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                 }
             }
 
+        assert Int firstSeal := sealsByTxId.first();
+        assert Int lastSeal  := sealsByTxId.last();
+
         for ((String fileName, Key[] keys) : byFileName)
             {
-            File file = dataDir.fileFor(fileName);
+            File         file       = dataDir.fileFor(fileName);
+            Boolean      exists     = file.exists;
+            Int          lastInFile = NO_TX;
+            StringBuffer buf;
 
-            StringBuffer buf    = new StringBuffer();
-            Boolean      exists = False;
+            if (exists)
+                {
+                // find the last valid transaction in the file by parsing as far as we can
+                Byte[]  bytes      = file.contents;
+                String  jsonStr    = bytes.unpackUtf8();
+                Parser  fileParser = new Parser(jsonStr.toReader());
+                Int     offsetEnd  = 0;
+                Boolean corrupted  = False;
 
+                using (val arrayParser = fileParser.expectArray())
+                    {
+                    try
+                        {
+                        while (!arrayParser.eof)
+                            {
+                            Token endToken;
+                            Int   currentTx;
+                            using (val txParser = arrayParser.expectObject())
+                                {
+                                txParser.expectKey("tx");
+                                currentTx = txParser.expectInt();
+
+                                txParser.skipRemaining();
+                                endToken = txParser.peek();
+                                }
+
+                            assert endToken.id == ObjectExit;
+                            lastInFile = currentTx;
+                            offsetEnd  = endToken.end.offset;
+                            }
+                        }
+                    catch (Exception e)
+                        {
+                        corrupted = True;
+                        }
+                    }
+
+                if (lastInFile > lastSeal)
+                    {
+                    // something is really wrong; we should never be ahead of the txlog
+                    catalog.log($|File {fileName} contains transaction {lastInFile},
+                                 | which is beyond the latest recovered transaction {lastSeal}
+                               );
+                    return False;
+                    }
+
+                if (lastInFile == lastSeal)
+                    {
+                    // this file doesn't need any recovery; go to the next one
+                    continue;
+                    }
+
+                if (corrupted && lastInFile < firstSeal)
+                    {
+                    catalog.log($|File {fileName} is corrupted beyond transaction {lastInFile} and
+                                 | may contain transaction data preceeding the earliest recovered
+                                 | transaction {firstSeal}
+                               );
+                    return False;
+                    }
+
+                buf = new StringBuffer();
+                buf.append(jsonStr[0..offsetEnd)).add(',');
+                }
+            else
+                {
+                buf = new StringBuffer();
+                buf.add('[');
+                }
+
+            Int currentTx = NO_TX;
             for (Key key : keys)
                 {
-                assert Token[] valueTokens := latestValue.get(key);
-                if (valueTokens.size == 0)
+                assert Int txId := latestTx.get(key);
+                if (lastInFile != NO_TX && txId <= lastInFile)
                     {
                     continue;
                     }
 
-                if (!exists)
+                if (txId == currentTx)
                     {
-                    assert Int txId := latestTx.get(key);
-                    buf.append("[\n{\"tx\":")
+                    buf.add(',').add(' ');
+                    }
+                else
+                    {
+                    if (currentTx != NO_TX)
+                        {
+                        buf.add(']').add('}').add(',');
+                        }
+                    buf.append("\n{\"tx\":")
                        .append(txId)
                        .append(", \"c\":[");
-                    exists = True;
+                    currentTx = txId;
                     }
 
                 assert Token[] keyTokens := latestKey.get(key);
@@ -1189,23 +1311,31 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                     {
                     token.appendTo(buf);
                     }
-                buf.append(", \"v\":");
-                for (Token token : valueTokens)
+
+                assert Token[] valueTokens := latestValue.get(key);
+                if (valueTokens.size > 0)
                     {
-                    token.appendTo(buf);
+                    buf.append(", \"v\":");
+                    for (Token token : valueTokens)
+                        {
+                        token.appendTo(buf);
+                        }
                     }
                 buf.add('}');
                 }
 
-            if (exists)
+            if (currentTx == NO_TX)
                 {
-                buf.append("]}\n]");
-                file.contents = buf.toString().utf8();
+                // we didn't add anything; remove the comma
+                buf.truncate(-1);
                 }
             else
                 {
-                file.delete();
+                // close the last "c" object
+                buf.add(']').add('}');
                 }
+            buf.add('\n').add(']');
+            file.contents = buf.toString().utf8();
             }
 
         return True;
