@@ -938,15 +938,14 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
 
         for (File file : dataDir.files())
             {
-            String               fileName   = file.name;
-            Byte[]               bytes      = file.contents;
-            String               jsonStr    = bytes.unpackUtf8();
-            Boolean              rebuild    = False;
-            Parser               fileParser = new Parser(jsonStr.toReader());
-            Map<Key, Range<Int>> valueLoc   = new HashMap();
-            Map<Key, Range<Int>> entryLoc   = new HashMap();
-
-            SkiplistMap<Int, Key[]> keysByTx = new SkiplistMap();
+            String                  fileName   = file.name;
+            Byte[]                  bytes      = file.contents;
+            String                  jsonStr    = bytes.unpackUtf8();
+            Boolean                 rebuild    = False;
+            Parser                  fileParser = new Parser(jsonStr.toReader());
+            Map<Key, Range<Int>>    valueLoc   = new HashMap();
+            Map<Key, Range<Int>>    entryLoc   = new HashMap();
+            SkiplistMap<Int, Key[]> keysByTx   = new SkiplistMap();
 
             totalFiles++;
             totalBytes += bytes.size;
@@ -1339,39 +1338,6 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
             }
 
         return True;
-        }
-
-    /**
-     * Re-format the JSON structure that is stored on disk, to contain only the transactions
-     * specified in the passed Layout map, pulled from the passed JSON structure.
-     *
-     * @param txId    the transaction to associate the rebuilt JSON record with
-     * @param json    the JSON string, representing a change
-     * @param layout  the layout for entries in the JSON string
-     */
-    (String newJson, EntryLayout newLayout) rebuildJson(Int txId, String json, EntryLayout layout)
-        {
-        StringBuffer buf       = new StringBuffer(json.size);
-        EntryLayout  newLayout = new HashMap();
-
-        buf.append("[\n{\"tx\":")
-           .append(txId)
-           .append(", \"c\":[");
-
-        if (!layout.empty)
-            {
-            for ((Key key, Range<Int> entryLoc) : layout)
-                {
-                Int startPos = buf.size;
-                buf.append(json[entryLoc]).add(',');
-                Int endPos = buf.size;
-                newLayout.put(key, [startPos..endPos));
-                }
-            buf.truncate(-1);
-            }
-
-        buf.append("]}\n]");
-        return buf.toString(), newLayout;
         }
 
     // REVIEW something like this? -> protected Boolean storeImpl(Int txId, Key key, Value|Deletion value, Boolean blind)
