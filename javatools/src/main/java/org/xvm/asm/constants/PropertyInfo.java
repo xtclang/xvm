@@ -73,18 +73,18 @@ public class PropertyInfo
         }
 
     /**
-     * Combine the information in this PropertyInfo with the information from a sub type's
+     * Combine the information in this PropertyInfo with the information from a contribution type's
      * PropertyInfo.
      *
-     * @param that   the "contribution" PropertyInfo to layer on top of this property
-     * @param fSelf  true if the layer being added ("that") represents the "Equals" contribution of
-     *               the type
-     * @param fAnno  true if the layer(s) being added ("that") represents an annotation
-     * @param errs   the error list to log any conflicts to
+     * @param that    the "contribution" PropertyInfo to layer on top of this property
+     * @param fSelf   true if the layer being added ("that") represents the "Equals" contribution of
+     *                the type
+     * @param fMixin  true if the layer(s) being added ("that") represents a mixin or annotation
+     * @param errs    the error list to log any conflicts to
      *
      * @return a PropertyInfo representing the combined information
      */
-    public PropertyInfo layerOn(PropertyInfo that, boolean fSelf, boolean fAnno, ErrorListener errs)
+    public PropertyInfo layerOn(PropertyInfo that, boolean fSelf, boolean fMixin, ErrorListener errs)
         {
         assert that != null && errs != null;
 
@@ -108,13 +108,13 @@ public class PropertyInfo
 
         // types must match (but it is possible that an annotation is wider than the specific type
         // that it annotates)
-        TypeConstant typeThis = this.getType();
-        TypeConstant typeThat = that.getType();
-        boolean fAllowWidening = fAnno || !that.isVar();
+        TypeConstant typeThis       = this.getType();
+        TypeConstant typeThat       = that.getType();
+        boolean      fAllowWidening = fMixin || !fSelf;
         if (!(typeThat.isA(typeThis) || fAllowWidening && typeThis.isA(typeThat)))
             {
             constId.log(errs, Severity.ERROR, VE_PROPERTY_TYPES_INCOMPATIBLE,
-                    that.getIdentity().getValueString(),
+                    that.getIdentity().getPathString(),
                     typeThis.getValueString(), typeThat.getValueString());
             return this;
             }
@@ -213,7 +213,7 @@ public class PropertyInfo
                 // or the layer-on is an annotation; otherwise it is an error
                 else if (!(bodyAdd.isRO() && typeResult.isA(typeAdd))
                         && !bodyAdd.isSynthetic() // synthetic might not be marked
-                        && !fAnno)
+                        && !fMixin)
                     {
                     constId.log(errs, Severity.ERROR, VE_PROPERTY_TYPES_INCOMPATIBLE,
                             bodyAdd.getIdentity().getValueString(),

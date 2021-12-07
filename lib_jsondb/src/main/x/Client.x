@@ -2076,7 +2076,7 @@ service Client<Schema extends RootSchema>
 
         @Override
         protected class CursorEntry
-                implements Entry // TODO GG this line should not be required!
+                implements DBMap<Key, Value>.Entry  // TODO GG this line should not be required!
             {
             @Override
             Map<Key, Value>.Entry reify()
@@ -2084,12 +2084,10 @@ service Client<Schema extends RootSchema>
                 return new ReifiedEntry(key);
                 }
 
-            // TODO GG how did this DBMap even compile before without this property being present? (without an explicit @Abstract)
             @Override
-            // TODO GG this declaration compiles but should not: Entry original.get()
-            immutable Entry original.get()
+            Map<Key, Value>.Entry original.get()
                 {
-                TODO GG
+                TODO CP
                 }
             }
 
@@ -2097,7 +2095,7 @@ service Client<Schema extends RootSchema>
          * An implementation of the Entry interface suitable for use as the "original" entry.
          */
         protected const ReifiedEntry(Key key)
-                implements Entry
+                implements DBMap<Key, Value>.Entry  // TODO GG: would be nice to simply say "implements Entry"
                 incorporates KeyEntry<Key, Value>(key)
             {
             }
@@ -2106,17 +2104,15 @@ service Client<Schema extends RootSchema>
          * An implementation of the Entry interface suitable for use as the "original" entry.
          */
         protected const HistoricalEntry
-                implements Entry
+                implements DBMap<Key, Value>.Entry // TODO GG: ditto
             {
-            // TODO GG shouldn't need immutable on key
-            construct(immutable Key key)
+            construct(Key key)
                 {
                 this.key    = key;
                 this.exists = False;
                 }
 
-            // TODO GG shouldn't need immutable on key and value
-            construct(immutable Key key, immutable Value value)
+            construct(Key key, Value value)
                 {
                 this.key    = key;
                 this.value  = value;
@@ -2133,10 +2129,8 @@ service Client<Schema extends RootSchema>
                 }
 
             @Override
-            @Unassigned
             Entry original.get()
                 {
-                // return this.as(immutable Entry); // TODO GG .as() should not be required (this is from when I had the property declared as immutable)
                 return this;
                 }
             }
