@@ -1615,7 +1615,7 @@ public class DebugConsole
                   .append(container.f_parent.f_idModule);
                 }
 
-            for (ServiceContext ctx : container.f_setServices)
+            for (ServiceContext ctx : container.getServices())
                 {
                 sb.append("\n    Service \"")
                   .append(ctx.f_sName)

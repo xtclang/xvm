@@ -2,9 +2,9 @@ package org.xvm.runtime;
 
 
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.WeakHashMap;
 
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -118,8 +118,16 @@ public abstract class Container
         {
         ServiceContext service = new ServiceContext(this, f_idModule.getConstantPool(),
                 sName, f_runtime.f_idProducer.getAndIncrement());
-        f_setServices.add(service);
+        f_setServices.put(service, null);
         return service;
+        }
+
+    /**
+     * @return a set of services that belong to this container
+     */
+    public Set<ServiceContext> getServices()
+        {
+        return f_setServices.keySet();
         }
 
     /**
@@ -493,7 +501,7 @@ public abstract class Container
     protected final Map<InjectionKey, BiFunction<Frame, ObjectHandle, ObjectHandle>> f_mapResources = new HashMap<>();
 
     /**
-     * Set of services that were started by this container.
+     * Set of services that were started by this container (stored as a Map with no values).
      */
-    protected final Set<ServiceContext> f_setServices = new HashSet<>();
+    protected final Map<ServiceContext, Object> f_setServices = new WeakHashMap<>();
     }
