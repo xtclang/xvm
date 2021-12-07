@@ -24,6 +24,7 @@ import storage.ObjectStore;
 
 import Catalog.BuiltIn;
 import ObjectStore.MergeResult;
+import ObjectStore.PrepareResult;
 
 
 /**
@@ -1699,29 +1700,16 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 {
                 // an empty transaction is considered committed
                 complete(Committed);
-                return True;
+                return status == Committed;
                 }
 
             // prepare phase
-            Boolean             abort       = False;
             FutureVar<Boolean>? preparedAll = Null;
 
             Int destinationId = selectPrepareId();
             for (Int storeId : storeIds)
                 {
-                ObjectStore store = storeFor(storeId);
-
-                // we cannot predict the order of asynchronous execution, so it is quite possible that
-                // we find out that the transaction must be rolled back while we are still busy here
-                // trying to get the various ObjectStore instances to prepare what changes they have
-                if (abort)
-                    {
-                    // this will eventually resolve to False, since something has failed and caused the
-                    // transaction to roll back (which rollback may still be occurring asynchronously)
-                    break;
-                    }
-
-                import ObjectStore.PrepareResult;
+                ObjectStore     store         = storeFor(storeId);
                 PrepareResult   prepareResult = store.prepare^(writeId, destinationId);
                 Future<Boolean> preparedOne   = &prepareResult.transform(result ->
                     {
@@ -1729,7 +1717,6 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                         {
                         case FailedRolledBack:
                             storeIds.remove(storeId);
-                            abort = True;
                             return False;
 
                         case CommittedNoChanges:
@@ -1772,7 +1759,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                             // succeeded; already committed
                             complete(Committed);
                             release();
-                            return True;
+                            return status == Committed;
 
                         case (True, False):
                             status = Prepared;
@@ -2357,16 +2344,9 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             if (status == Committed || status == RolledBack)
                 {
                 assert pending == Null && terminated == Null;
-                assert (result == Committed) == (status == Committed);
-// TODO CP: reproduced:
-//*** Exception occurred while preparing transaction -28212 (TxInfo(id=30153, name=autocommit) for client 8):
-//      IllegalState: (result == Committed) == (status == Committed), result=Committed, status=RolledBack
-//        at TxManager.TxRecord.complete(oodb:Transaction.CommitResult) (TxManager.x:2360)
-//        at TxManager.TxRecord.prepare().->(Set<Int>, Boolean) (TxManager.x:1773)
-//        at ^TxManager (CallLaterRequest: ->)
-//            =========
-//        at TxManager.processBacklog(Nullable | Int) (TxManager.x:1011)
-//        at ^TxManager (CallLaterRequest: processBacklog)
+                assert (result == Committed) == (status == Committed)
+                        || this.TxManager.remainingTerminating > 0          // shutting down
+                        || this.TxManager.status == Disabled;               // shut down
                 return;
                 }
 

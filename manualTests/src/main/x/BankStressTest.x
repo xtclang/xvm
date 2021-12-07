@@ -21,12 +21,13 @@ module BankStressTest
     import Bank.oodb.DBClosed;
     import Bank.oodb.CommitFailed;
 
-    static Int BRANCHES     = 24;
-    static Int MAX_ACCOUNTS = 100;
+    static Duration TEST_DURATION = Duration:30s;
+    static Int      BRANCHES      = 24;
+    static Int      MAX_ACCOUNTS  = 100;
 
     void run()
         {
-        Duration openFor  = Duration.ofSeconds(60);
+        Duration openFor  = TEST_DURATION;
         Branch[] branches = new Branch[BRANCHES](i -> new Branch(i.toUInt64()));
         for (Branch branch : branches)
             {
