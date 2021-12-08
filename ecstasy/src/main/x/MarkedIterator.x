@@ -2,7 +2,7 @@
  * An Iterator that adds [Markable] functionality to another [Iterator].
  */
 class MarkedIterator<Element>(Iterator<Element> that)
-        implements Markable, Iterator<Element>
+        implements Markable, Iterator<Element>, Closeable
     {
     /**
      * The underlying iterator.
@@ -205,9 +205,17 @@ class MarkedIterator<Element>(Iterator<Element> that)
     @Override
     void close(Exception? cause = Null)
         {
-        markCount = 0;
-        position  = -1;
-        buffer.clear();
-        that.close(cause);
+        if (!closed)
+            {
+            markCount = 0;
+            position  = -1;
+            buffer.clear();
+
+            Iterator<Element> that = this.that;
+            if (that.is(Closeable))
+                {
+                that.close(cause);
+                }
+            }
         }
     }

@@ -1,8 +1,16 @@
 /**
  * An iterator over a sequence of elements.
+ *
+ * Any time that an iterator is obtained, and it is not used in a manner that will reliably exhaust
+ * its supply of elements, then the code should be structured so that the iterator is _closed_. This
+ * is automatically performed by either the `using` or the `try`-with-resources statements, such as:
+ *
+ *    using (val iter = list.iterator())
+ *        {
+ *        // ...
+ *        }
  */
 interface Iterator<Element>
-        extends Closeable
     {
     /**
      * An Orderer is a function that compares two objects for order.
@@ -12,7 +20,9 @@ interface Iterator<Element>
     /**
      * Get the next element.
      *
-     * It is expected that the Iterator will close itself when it exhausts its supply of elements.
+     * It is expected that the Iterator will release any resources when it exhausts its supply of
+     * elements, in the same manner as it would if it implemented the [Closeable] interface and its
+     * `close()` method were called.
      *
      * @return True iff an element is available
      * @return (conditional) an Element value
@@ -712,13 +722,5 @@ interface Iterator<Element>
             }
 
         return new MarkedIterator<Element>(this);
-        }
-
-
-    // ----- Closeable interface -------------------------------------------------------------------
-
-    @Override
-    void close(Exception? cause = Null)
-        {
         }
     }

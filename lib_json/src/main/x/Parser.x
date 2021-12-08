@@ -867,7 +867,7 @@ class Parser
         }
 
 
-    // -----
+    // ----- nested parser support -----------------------------------------------------------------
 
     /**
      * The entire parsing API of the Parser class.
@@ -875,6 +875,7 @@ class Parser
     static interface AnyParser
             extends Iterator<Doc>
             extends Markable
+            extends Closeable
         {
         @RO Boolean eof;
         void skip(Token[]? skipped = Null);
@@ -896,6 +897,11 @@ class Parser
         Token expect(Id id, Token[]? skipped);
         conditional Token match(Id id);
         conditional Token match(Id id, Token[]? skipped);
+
+        @Override
+        void close(Exception? cause = Null)
+            {
+            }
         }
 
     /**
