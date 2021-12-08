@@ -148,29 +148,38 @@ class Parser
      * Skip over the next JSON document.
      *
      * @param skipped  the optional array to accrue skipped tokens into
+     *
+     * @return the array that was passed in, if one was passed in, otherwise an empty array
      */
     @Override
-    void skip(Token[]? skipped = Null)
+    Token[] skip(Token[]? skipped = Null)
         {
         if (!eof)
             {
             skipDoc(skipped);
             }
+
+        return skipped ?: [];
         }
 
     /**
      * Skip over all remaining JSON documents.
      *
      * @param skipped  the optional array to accrue skipped tokens into
+     *
+     * @return the array that was passed in, if one was passed in, otherwise an empty array
      */
     @Override
-    void skipRemaining(Token[]? skipped = Null)
+    Token[] skipRemaining(Token[]? skipped = Null)
         {
         while (!eof)
             {
             skip(skipped);
             }
+
+        return skipped ?: [];
         }
+
 
     // ----- parsing (advanced) --------------------------------------------------------------------
 
@@ -878,8 +887,8 @@ class Parser
             extends Closeable
         {
         @RO Boolean eof;
-        void skip(Token[]? skipped = Null);
-        void skipRemaining(Token[]? skipped = Null);
+        Token[] skip(Token[]? skipped = Null);
+        Token[] skipRemaining(Token[]? skipped = Null);
         Doc parseDoc();
         (Token first, Token last) skipDoc(Token[]? skipped = Null);
         Array<Doc> parseArray();
@@ -940,17 +949,19 @@ class Parser
         protected function void()? notifyClosed;
 
         @Override
-        void skip(Token[]? skipped = Null)
+        Token[] skip(Token[]? skipped = Null)
             {
             if (!eof)
                 {
                 raw.skip(skipped);
                 checkDelimiter();
                 }
+
+            return skipped ?: [];
             }
 
         @Override
-        @Abstract void skipRemaining(Token[]? skipped = Null);
+        @Abstract Token[] skipRemaining(Token[]? skipped = Null);
 
         @Override
         Doc parseDoc()
@@ -1103,12 +1114,14 @@ class Parser
             }
 
         @Override
-        void skipRemaining(Token[]? skipped = Null)
+        Token[] skipRemaining(Token[]? skipped = Null)
             {
             while (!eof)
                 {
                 skipDoc(skipped);
                 }
+
+            return skipped ?: [];
             }
 
         protected static const ArrayMark(immutable Object mark, Int index);
@@ -1183,7 +1196,7 @@ class Parser
             }
 
         @Override
-        void skipRemaining(Token[]? skipped = Null)
+        Token[] skipRemaining(Token[]? skipped = Null)
             {
             if (isValueNext)
                 {
@@ -1195,6 +1208,8 @@ class Parser
                 skipDoc(skipped);   // key
                 skipDoc(skipped);   // value
                 }
+
+            return skipped ?: [];
             }
 
         protected static const ObjectMark(immutable Object mark, Boolean isKeyNext);

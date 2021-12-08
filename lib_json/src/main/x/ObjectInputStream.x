@@ -1080,8 +1080,7 @@ class ObjectInputStream(Schema schema, Parser parser)
 
         private Token[] skipAndStore(String current)
             {
-            Token[] tokens = new Token[];
-            parser.skip(tokens);
+            Token[] tokens = parser.skip(new Token[]);
             if (skipped == Null)
                 {
                 skipped = new ListMap<String, Token[]>();

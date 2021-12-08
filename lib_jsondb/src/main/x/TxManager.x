@@ -2940,8 +2940,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                                                 {
                                                 Int dboId = dboIdByPath.computeIfAbsent(name,
                                                         () -> catalog.infoFor(name).id);
-                                                Token[] seal = new Token[];
-                                                objectParser.skip(seal);
+                                                Token[] seal = objectParser.skip(new Token[]);
                                                 assert replayByDboId.computeIfAbsent(dboId,
                                                         ()->new SkiplistMap())
                                                         .putIfAbsent(txId, seal.freeze(inPlace=True));

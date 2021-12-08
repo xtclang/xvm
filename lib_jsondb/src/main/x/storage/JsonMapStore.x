@@ -932,9 +932,8 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                 };
             }
 
-        Map<Key, Int> closestTx  = new HashMap();
-        Int           totalBytes = 0;
-        Int           totalFiles = 0;
+        Int totalBytes = 0;
+        Int totalFiles = 0;
 
         for (File file : dataDir.files())
             {
@@ -945,6 +944,7 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
             Parser                  fileParser = new Parser(jsonStr.toReader());
             Map<Key, Range<Int>>    valueLoc   = new HashMap();
             Map<Key, Range<Int>>    entryLoc   = new HashMap();
+            Map<Key, Int>           closestTx  = new HashMap();
             SkiplistMap<Int, Key[]> keysByTx   = new SkiplistMap();
 
             totalFiles++;
@@ -1151,8 +1151,7 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
 
                             changeParser.expectKey("k");
 
-                            Token[] keyTokens = new Token[];
-                            changeParser.skip(keyTokens);
+                            Token[] keyTokens = changeParser.skip(new Token[]);
 
                             using (ObjectInputStream stream =
                                     new ObjectInputStream(jsonSchema, keyTokens.iterator()))
@@ -1163,8 +1162,7 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                             Token[] valueTokens;
                             if (changeParser.matchKey("v"))
                                 {
-                                valueTokens = new Token[];
-                                changeParser.skip(valueTokens);
+                                valueTokens = changeParser.skip(new Token[]);
                                 }
                             else
                                 {
