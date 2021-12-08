@@ -1956,6 +1956,7 @@ service Client<Schema extends RootSchema>
              */
             protected class KeyIterator
                     implements Iterator<Key>
+                    implements Closeable
                 {
                 /**
                  * Set to true once iteration has begun.
@@ -2129,7 +2130,7 @@ service Client<Schema extends RootSchema>
                 }
 
             @Override
-            Entry original.get()
+            DBMap<Key, Value>.Entry original.get()
                 {
                 return this;
                 }

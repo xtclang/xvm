@@ -177,6 +177,20 @@ public class AccessTypeConstant
         return super.buildTypeInfo(errs);
         }
 
+    @Override
+    public void invalidateTypeInfo()
+        {
+        super.invalidateTypeInfo();
+
+        // clear the TypeInfo for the base and PRIVATE types
+        getUnderlyingType().clearTypeInfo();
+        if (getAccess() != Access.PRIVATE)
+            {
+            getConstantPool().ensureAccessTypeConstant(
+                    getUnderlyingType(), Access.PRIVATE).clearTypeInfo();
+            }
+        }
+
 
     // ----- type comparison support ---------------------------------------------------------------
 
