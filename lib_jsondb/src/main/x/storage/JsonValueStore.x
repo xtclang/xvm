@@ -395,112 +395,113 @@ service JsonValueStore<Value extends immutable Const>
     @Override
     void retainTx(OrderedSet<Int> inUseTxIds, Boolean force = False)
         {
-        Iterator<Int> eachInUse = inUseTxIds.iterator();
-        Int inUseId;
-        if (inUseId := eachInUse.next())
-            {
-            }
-        else
-            {
-            assert inUseTxIds.empty;
-            inUseId = lastCommit;
-            }
-
-        Iterator<Int> eachPresent = history.keys.iterator();
-        assert Int presentId := eachPresent.next();
-        if (presentId == lastCommit)
-            {
-            return;
-            }
-
-        Boolean discarded = False;
-        Loop: while (True)
-            {
-            Boolean loadNextPresent = False;
-            Boolean loadNextInUse   = False;
-
-            switch (presentId <=> inUseId)
-                {
-                case Lesser:
-                    // discard the transaction
-                    history.remove(presentId);
-                    storageLayout.remove(presentId);
-                    discarded = True;
-
-                    // advance to the next transaction in our history log
-                    loadNextPresent = True;
-                    break;
-
-                case Equal:
-                    // the current one that we're examining in our history is still in use; advance
-                    // to the next of each list
-                    loadNextInUse   = True;
-                    loadNextPresent = True;
-                    break;
-
-                case Greater:
-                    // determine the next transaction that we're being instructed to keep
-                    loadNextInUse = True;
-                    break;
-                }
-
-            if (loadNextInUse)
-                {
-                if (inUseId := eachInUse.next())
-                    {
-                    if (inUseId > lastCommit)
-                        {
-                        // we don't have any transactions in this range
-                        inUseId = lastCommit;
-                        }
-                    }
-                else if (inUseId >= lastCommit)
-                    {
-                    // we already moved past our last transaction; we're done
-                    break Loop;
-                    }
-                else
-                    {
-                    // we're *almost* done; pretend that the only other transaction that we need to
-                    // keep is our "current" one
-                    inUseId = lastCommit;
-                    }
-                }
-
-            if (loadNextPresent)
-                {
-                if (presentId := eachPresent.next())
-                    {
-                    if (presentId >= lastCommit)
-                        {
-                        // we need to keep this one (it's our "current" history), so we're done
-                        break Loop;
-                        }
-                    }
-                else
-                    {
-                    // no more transactions to evaluate; we're done
-                    break Loop;
-                    }
-                }
-            }
-
-        if (discarded)
-            {
-            if (force)
-                {
-                (String json, storageLayout) = rebuildJson(dataFile.contents.unpackUtf8(), storageLayout);
-                this.storageOffset += json.size - 2; // appends will occur before the closing "\n]"
-                dataFile.contents = json.utf8();
-                cleanupPending = False;
-
-                updateWriteStats();
-                }
-            else
-                {
-                cleanupPending = True;
-                }
-            }
+        // TODO GG
+//        Iterator<Int> eachInUse = inUseTxIds.iterator();
+//        Int inUseId;
+//        if (inUseId := eachInUse.next())
+//            {
+//            }
+//        else
+//            {
+//            assert inUseTxIds.empty;
+//            inUseId = lastCommit;
+//            }
+//
+//        Iterator<Int> eachPresent = history.keys.iterator();
+//        assert Int presentId := eachPresent.next();
+//        if (presentId == lastCommit)
+//            {
+//            return;
+//            }
+//
+//        Boolean discarded = False;
+//        Loop: while (True)
+//            {
+//            Boolean loadNextPresent = False;
+//            Boolean loadNextInUse   = False;
+//
+//            switch (presentId <=> inUseId)
+//                {
+//                case Lesser:
+//                    // discard the transaction
+//                    history.remove(presentId);
+//                    storageLayout.remove(presentId);
+//                    discarded = True;
+//
+//                    // advance to the next transaction in our history log
+//                    loadNextPresent = True;
+//                    break;
+//
+//                case Equal:
+//                    // the current one that we're examining in our history is still in use; advance
+//                    // to the next of each list
+//                    loadNextInUse   = True;
+//                    loadNextPresent = True;
+//                    break;
+//
+//                case Greater:
+//                    // determine the next transaction that we're being instructed to keep
+//                    loadNextInUse = True;
+//                    break;
+//                }
+//
+//            if (loadNextInUse)
+//                {
+//                if (inUseId := eachInUse.next())
+//                    {
+//                    if (inUseId > lastCommit)
+//                        {
+//                        // we don't have any transactions in this range
+//                        inUseId = lastCommit;
+//                        }
+//                    }
+//                else if (inUseId >= lastCommit)
+//                    {
+//                    // we already moved past our last transaction; we're done
+//                    break Loop;
+//                    }
+//                else
+//                    {
+//                    // we're *almost* done; pretend that the only other transaction that we need to
+//                    // keep is our "current" one
+//                    inUseId = lastCommit;
+//                    }
+//                }
+//
+//            if (loadNextPresent)
+//                {
+//                if (presentId := eachPresent.next())
+//                    {
+//                    if (presentId >= lastCommit)
+//                        {
+//                        // we need to keep this one (it's our "current" history), so we're done
+//                        break Loop;
+//                        }
+//                    }
+//                else
+//                    {
+//                    // no more transactions to evaluate; we're done
+//                    break Loop;
+//                    }
+//                }
+//            }
+//
+//        if (discarded)
+//            {
+//            if (force)
+//                {
+//                (String json, storageLayout) = rebuildJson(dataFile.contents.unpackUtf8(), storageLayout);
+//                this.storageOffset += json.size - 2; // appends will occur before the closing "\n]"
+//                dataFile.contents = json.utf8();
+//                cleanupPending = False;
+//
+//                updateWriteStats();
+//                }
+//            else
+//                {
+//                cleanupPending = True;
+//                }
+//            }
         }
 
 
