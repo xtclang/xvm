@@ -225,7 +225,7 @@ TypeCompositionComponent
 #
 
 PropertyDeclarationStatement
-    PropertyModifiers-opt TypeExpression Name PropertyDeclarationFinish-opt
+    PropertyModifiers-opt TypeExpression Name PropertyDeclarationFinish
 
 PropertyModifiers
     PropertyModifier
@@ -241,9 +241,13 @@ PropertyAccessModifier
     AccessModifier "/" AccessModifier
 
 PropertyDeclarationFinish
+    ";"
+    PropertyDeclarationInitialValue
+    "." Name Parameters MethodBody PropertyDeclarationInitialValue-opt
+    TypeCompositionBody PropertyDeclarationInitialValue-opt
+
+PropertyDeclarationInitialValue
     "=" Expression ";"
-    "." Name Parameters MethodBody
-    TypeCompositionBody
 
 #
 # methods

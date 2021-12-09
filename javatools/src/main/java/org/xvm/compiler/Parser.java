@@ -1373,18 +1373,9 @@ public class Parser
             Expression exprCondition, Token doc, List<Token> modifiers,
             List<AnnotationExpression> annotations, TypeExpression type, Token name)
         {
-        Token          tokAsn = null;
-        Expression     value  = null;
-        StatementBlock body   = null;
-        long           lEndPos;
-        if ((tokAsn = match(Id.ASN)) != null)
-            {
-            // "=" Expression ";"
-            value   = parseExpression();
-            lEndPos = value.getEndPosition();
-            expect(Id.SEMICOLON);
-            }
-        else if (match(Id.DOT) != null)
+        StatementBlock body    = null;
+        long           lEndPos = prev().getEndPosition();
+        if (match(Id.DOT) != null)
             {
             // "." Name Parameters MethodBody
             Token                      methodName = expect(Id.IDENTIFIER);
@@ -1404,9 +1395,18 @@ public class Parser
                                                name.getEndPosition(), Id.CLASS));
             lEndPos = body.getEndPosition();
             }
-        else
+
+        Token      tokAsn = tokAsn = match(Id.ASN);
+        Expression value  = null;
+        if (tokAsn != null)
             {
-            lEndPos = prev().getEndPosition();
+            // "=" Expression ";"
+            value   = parseExpression();
+            lEndPos = value.getEndPosition();
+            expect(Id.SEMICOLON);
+            }
+        else if (body == null)
+            {
             expect(Id.SEMICOLON);
             }
 
