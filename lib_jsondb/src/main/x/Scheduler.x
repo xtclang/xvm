@@ -167,7 +167,8 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
 
             case Disabled:
             case Initial:
-                status = Enabled;
+                status       = Enabled;
+                databaseIdle = False;
                 scheduleAlarm();
                 return True;
 

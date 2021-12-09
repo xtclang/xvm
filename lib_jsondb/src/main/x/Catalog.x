@@ -342,6 +342,11 @@ service Catalog<Schema extends RootSchema>
      */
     protected Int systemCounter = 0;
 
+    /**
+     * The datetime that the database appears to have been idle since; otherwise, `Null`.
+     */
+    protected DateTime? idleSince;
+
 
     // ----- visibility ----------------------------------------------------------------------------
 
@@ -630,6 +635,32 @@ service Catalog<Schema extends RootSchema>
 
         return new JsonProcessorStore<messageType.DataType>(this, info,
                 jsonSchema.ensureMapping(messageType).as(Mapping<messageType.DataType>));
+        }
+
+    /**
+     * Called to indicate that the database appears to be idle.
+     */
+    void indicateIdle()
+        {
+        if (idleSince == Null)
+            {
+            // we were busy but now we're idle
+            idleSince = clock.now;
+            scheduler.databaseIdle = True;
+            }
+        }
+
+    /**
+     * Called to indicate that the database appears to be busy.
+     */
+    void indicateBusy()
+        {
+        if (idleSince != Null)
+            {
+            // we were idle but now we're busy
+            idleSince = Null;
+            scheduler.databaseIdle = False;
+            }
         }
 
 

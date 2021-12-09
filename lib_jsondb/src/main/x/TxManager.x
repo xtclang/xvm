@@ -1,4 +1,5 @@
 import collections.ArrayDeque;
+import collections.ArrayOrderedSet;
 import collections.CircularArray;
 import collections.SparseIntSet;
 
@@ -165,6 +166,11 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
     Clock clock;
 
     /**
+     * A timer used to schedule periodic events.
+     */
+    @Inject Timer timer;
+
+    /**
      * The runtime state of the TxManager:
      * * **Initial** - the TxManager has been newly created, but has not been used yet
      * * **Enabled** - the TxManager has been [enabled](enable), and can process transactions
@@ -179,7 +185,26 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      * "Boolean enabled" flag, but the two additional book-end states provide more clarity for
      * the terminal points of the life cycle, and thus (in theory) better assertions.
      */
-    public/private Status status = Initial;
+    public/private Status status
+        {
+        @Override
+        void set(Status newStatus)
+            {
+            Status oldStatus = get();
+            if (newStatus != oldStatus)
+                {
+                super(newStatus);
+                if (newStatus == Enabled)
+                    {
+                    startBackgroundMaintenance();
+                    }
+                else if (oldStatus == Enabled)
+                    {
+                    stopBackgroundMaintenance();
+                    }
+                }
+            }
+        } = Initial;
 
     /**
      * The lazily cached DBObjectInfo for each user defined DBObject in the `Catalog`.
@@ -344,6 +369,31 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
     public/private Int lastCommitted = 0;
 
     /**
+     * Used to determine idleness.
+     */
+    protected DateTime lastActivity = EPOCH;
+
+    /**
+     * Used to determine when the next storage cleanup should occur.
+     */
+    protected DateTime lastCleanupTime = EPOCH;
+
+    /**
+     * Used to determine when the next storage cleanup should occur.
+     */
+    protected Int lastCleanupTx = NO_TX;
+
+    /**
+     * Used to avoid redundant cleanups.
+     */
+    protected immutable Set<Int> lastCleanupRetained = [];
+
+    /**
+     * The cancellation function for the maintenance timer.
+     */
+    protected Timer.Cancellable? cancelMaintenance;
+
+    /**
      * The last transaction id that is known to have been fully written to disk by all ObjectStores.
      */
     Int safepoint.get()
@@ -386,20 +436,6 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      * kept available to clients.
      */
     protected/private OrderedMap<Int, Int> byReadId = new SkiplistMap();
-
-// TODO CP remove this unless it gets used
-//    /**
-//     * The oldest transaction id that is still being used.
-//     */
-//    Int retainTxId.get()
-//        {
-//        if (Int oldest := byReadId.first())
-//            {
-//            return oldest;
-//            }
-//
-//        return lastCommitted;
-//        }
 
     /**
      * The set of ids of DBObjects that have validators.
@@ -1641,6 +1677,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                         sealById = new SkiplistMap();
                         }
                     assert sealById.putIfAbsent(storeId, Null);
+                    lastActivity = clock.now;
                     break;
 
                 default:
@@ -2378,6 +2415,8 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
 
             // clearing the readId will unregister it from the count byReadId
             readId = NO_TX;
+
+            lastActivity = clock.now;
             }
 
         /**
@@ -3324,6 +3363,121 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         LogFileInfo newInfo = new LogFileInfo(logFile.name, txIds, safepoint, logFile.size, logFile.modified);
         logInfos[logInfos.size-1] = newInfo;
         writeStatus();
+        }
+
+
+    // ----- background maintenance ----------------------------------------------------------------
+
+    /**
+     * Schedule background maintenance work to happen periodically.
+     */
+    protected void startBackgroundMaintenance()
+        {
+        assert cancelMaintenance == Null;
+
+        // pretend we just cleaned up; this is not technically correct, but it does avoid having an
+        // immediate clean-up triggered just by starting up
+        lastCleanupTime = clock.now;
+        lastCleanupTx   = lastCommitted;
+
+        cancelMaintenance = timer.schedule(Duration:1s, doMaintenance);
+        }
+
+    /**
+     * Stop the periodic background maintenance work.
+     */
+    protected void stopBackgroundMaintenance()
+        {
+        if (Timer.Cancellable cancel ?= cancelMaintenance)
+            {
+            cancelMaintenance = Null;
+            cancel();
+            }
+        }
+
+    /**
+     * Do the periodic background maintenance work, if applicable.
+     */
+    protected void doMaintenance()
+        {
+        cancelMaintenance = Null;
+        if (status == Enabled                         // not shut down
+                && remainingTerminating == 0)         // not shutting down
+            {
+            try
+                {
+                // the database is considered idle if no transactions are in the pipeline, and the
+                // most recent activity occurred sufficiently in the past
+                DateTime now  = clock.now;
+                Boolean  idle = currentlyPreparing == NO_TX && pendingPrepare.empty
+                        && now - lastActivity > Duration:1s;
+                if (idle)
+                    {
+                    backgroundIdle();
+                    }
+                else
+                    {
+                    backgroundBusy();
+                    }
+
+                // tell the various ObjectStores to purge old transactions after a certain time
+                // period, or after so many transactions have gone through, or some combination
+                Int seconds = (now - lastCleanupTime).seconds;
+                Int txCount = lastCommitted - lastCleanupTx;
+                if (seconds * txCount > 10k)
+                    {
+                    lastCleanupTime = now;
+                    lastCleanupTx   = lastCommitted;
+                    cleanUpStorages();
+                    }
+                }
+            catch (Exception e)
+                {
+                log($"Exception occurred during background maintenance: {e}");
+                }
+            finally
+                {
+                if (cancelMaintenance == Null && status == Enabled)
+                    {
+                    cancelMaintenance = timer.schedule(Duration:1s, doMaintenance);
+                    }
+                }
+            }
+        }
+
+    /**
+     * Called during background maintenance when the database appears to be idle.
+     */
+    protected void backgroundIdle()
+        {
+        catalog.indicateIdle^();
+        }
+
+    /**
+     * Called during background maintenance when the database appears to **not** be idle.
+     */
+    protected void backgroundBusy()
+        {
+        catalog.indicateBusy^();
+        }
+
+    /**
+     * Called during background maintenance when it appears that the time has come to clean up the
+     * various ObjectStore histories by purging old transactions.
+     */
+    protected void cleanUpStorages()
+        {
+        Set<Int> cleanupRetained = byReadId.keys;
+        if (cleanupRetained != lastCleanupRetained)
+            {
+            immutable ArrayOrderedSet<Int> txSet = new ArrayOrderedSet<Int>(cleanupRetained.toArray()).freeze();
+            lastCleanupRetained = txSet;
+
+            for (ObjectStore? store : appStores)
+                {
+                store?.retainTx^(txSet);
+                }
+            }
         }
 
 
