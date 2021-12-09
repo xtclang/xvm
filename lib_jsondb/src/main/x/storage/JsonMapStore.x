@@ -12,12 +12,13 @@ import TxManager.NO_TX;
 /**
  * Provides a key/value storage service for JSON formatted data on disk.
  *
- * The disk format follows this style:
+ * The disk format follows this style: (possible multiple line per transaction)
  *
  *     [
- *     {"tx":14, "c":[{"k":{...}}, {"k":{...}, "v":{...}}]},
- *     {"tx":17, "c":[{"k":{...}, "v":{...}}, {"k":{...}, "v":{...}}]},
- *     {"tx":18, "c":[{"k":{...}, "v":{...}}, {"k":{...}, "v":{...}}, {"k":{...}}]}
+ *     {"tx":14, "k":{...}, "v":{...}},
+ *     {"tx":17, "k":{...}},
+ *     {"tx":18, "k":{...}, "v":{...}}
+ *     {"tx":18, "k":{...}, "v":{...}}
  *     ]
  *
  * where a "k" (key) without a corresponding "v" (value) indicates a deletion and the "[...]" part
@@ -125,14 +126,16 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
     protected Map<Key, History> history = new HashMap();
 
     /**
-     * A record of how all persistent transactions are laid out on disk.
+     * A record of how all persistent transactions are laid out on disk. It is computed in terms of
+     * range positions of Chars (not bytes).
      */
     typedef Map<Key,    Range<Int>>  EntryLayout;
     typedef Map<String, EntryLayout> FileLayout; // very often - just a single key per file
     protected SkiplistMap<Int, FileLayout> storageLayout = new SkiplistMap();
 
     /**
-     * The append offset, measured in Chars, within the each data file, keyed by the Key's URI form.
+     * The append offset, measured in Chars, within the each data file, keyed by the Key's URI form
+     * (it is basically the length of the file in chars - 2).
      */
     protected Map<String, Int> storageOffset = new HashMap();
 
@@ -652,9 +655,11 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
             buf.add('[');
             for (String jsonEntry : jsonEntries.values)
                 {
-                buf.append(jsonEntry).add(',').add(' ');
+                buf.add('{')
+                   .append(jsonEntry)
+                   .add('}').add(',');
                 }
-            return buf.truncate(-2).add(']').toString();
+            return buf.truncate(-1).add(']').toString();
             }
 
         assert Changes tx := checkTx(writeId), tx.prepared;
@@ -674,14 +679,13 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
 
             String jsonK = worker.writeUsing(keyMapping, key);
 
-            buf.append("{\"k\":").append(jsonK);
+            buf.append("\"k\":").append(jsonK);
 
             if (!value.is(Deletion))
                 {
                 buf.append(", \"v\":")
                    .append(worker.writeUsing(valueMapping, value));
                 }
-            buf.add('}');
 
             jsonEntries.put(key, buf.toString());
             }
@@ -698,14 +702,9 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
         {
         assert !writeIds.empty;
 
-        Int offset;
         if (cleanupPending)
             {
             TODO
-            }
-        else
-            {
-            // offset = storageOffset.getOrDefault(key, Int.minvalue);
             }
 
         Int lastCommitId = NO_TX;
@@ -724,31 +723,29 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
 
                 for ((Key key, String jsonEntry) : jsonEntries)
                     {
-                    StringBuffer buf = buffers.computeIfAbsent(nameForKey(key),
-                            () -> new StringBuffer());
+                    String       name = nameForKey(key);
+                    StringBuffer buf  = buffers.computeIfAbsent(name, () -> new StringBuffer());
 
-                    // build the String that will be appended to the disk file
-                    // format is "{"tx":14, "c":[{"k":{...}, "v":{...}}, ...],"; comma is first (since we are appending)
-                    if (buf.size == 0)
-                        {
-                        buf.append(",\n{\"tx\":")
-                           .append(prepareId)
-                           .append(", \"c\":[");
-                        }
-                    else
-                        {
-                        buf.append(", ");
-                        }
-                    buf.append(jsonEntry);
-
-                    // remember the id of the last transaction that we process here
-                    lastCommitId = prepareId;
+                    // build the String that will be appended to the disk file; format is:
+                    //     {"tx":14, "k":{...}, "v":{...}}
+                    buf.append(",\n{\"tx\":")
+                       .append(prepareId)
+                       .add(',').add(' ')
+                       .append(jsonEntry)
+                       .add('}');
 
                     // remember the transaction location
-//                     storageLayout.put(prepareId, [offset+start .. offset+end));
+                    Int         startOffset = storageOffset.getOrDefault(name, 2);
+                    Int         endOffset   = startOffset + buf.size - 2;
+                    FileLayout  fileLayout  = storageLayout.computeIfAbsent(prepareId, () -> new HashMap());
+                    EntryLayout layout      = fileLayout.computeIfAbsent(name, () -> new HashMap());
+                    layout.put(key, [startOffset..endOffset));
                     }
 
                 modsByTx.remove(prepareId);
+
+                // remember the id of the last transaction that we process here
+                lastCommitId = prepareId;
                 }
             }
 
@@ -756,18 +753,13 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
             {
             for ((String fileName, StringBuffer buf) : buffers)
                 {
-                // update where we will append the next record to, in terms of Chars (not bytes), so
-                // that subsequent storageLayout information can be determined without expanding the
-                // contents of the UTF-8 encoded file into Chars to calculate the "append location"
-                //  TODO: this.storageOffset += buf.size;
-
                 // the JSON for entries data is inside an array, so "close" the array
-                buf.append("]}\n]");
+                buf.add('\n').add(']');
 
                 File file = dataDir.fileFor(fileName);
 
                 // write the changes to disk
-                if (file.exists && !cleanupPending)
+                if (file.exists)
                     {
                     Int length = file.size;
 
@@ -790,17 +782,16 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                 bytesUsed    += buf.size;
                 lastModified = file.modified;
                 }
-
             cleanupPending = False;
+            }
 
-            // remember which is the "current" value
-            lastCommit = lastCommitId;
+        // remember which is the "current" value
+        lastCommit = lastCommitId;
 
-            // discard the transactional records
-            for (Int writeId : writeIds)
-                {
-                inFlight.remove(writeId);
-                }
+        // discard the transactional records
+        for (Int writeId : writeIds)
+            {
+            inFlight.remove(writeId);
             }
         }
 
@@ -954,11 +945,13 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                 {
                 while (!arrayParser.eof)
                     {
-                    using (val txParser = arrayParser.expectObject())
-                        {
-                        txParser.expectKey("tx");
+                    Int startOffset = arrayParser.peek().start.offset;
 
-                        Int txId = txParser.expectInt();
+                    using (val changeParser = arrayParser.expectObject())
+                        {
+                        changeParser.expectKey("tx");
+
+                        Int txId = changeParser.expectInt();
                         if (txId > desired)
                             {
                             // this should not be happening
@@ -966,61 +959,51 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                             continue;
                             }
 
-                        txParser.expectKey("c");
+                        Key key;
 
-                        using (val changeArrayParser = txParser.expectArray())
+                        changeParser.expectKey("k");
+                        using (ObjectInputStream stream =
+                                new ObjectInputStream(jsonSchema, changeParser))
                             {
-                            while (!changeArrayParser.eof)
-                                {
-                                Int startOffset = changeArrayParser.peek().start.offset;
-
-                                using (val changeParser = changeArrayParser.expectObject())
-                                    {
-                                    Key key;
-
-                                    changeParser.expectKey("k");
-                                    using (ObjectInputStream stream =
-                                            new ObjectInputStream(jsonSchema, changeParser))
-                                        {
-                                        key = keyMapping.read(stream.ensureElementInput());
-                                        }
-
-                                    fileNames.putIfAbsent(key, fileName);
-
-                                    if (Int lastTx := closestTx.get(key))
-                                        {
-                                        rebuild = True;
-                                        if (txId < lastTx)
-                                            {
-                                            // out of order transaction record; ignore
-                                            continue;
-                                            }
-                                        keysByTx.process(lastTx, e ->
-                                            {
-                                            assert e.exists;
-                                            e.value -= key;
-                                            });
-                                        }
-
-                                    closestTx.put(key, txId);
-                                    keysByTx.process(txId, e ->
-                                        {
-                                        e.value = e.exists ? e.value + key : [key];
-                                        });
-
-                                    if (changeParser.matchKey("v"))
-                                        {
-                                        (Token first, Token last) = changeParser.skipDoc();
-                                        valueLoc.put(key, [first.start.offset .. last.end.offset));
-                                        entryLoc.put(key, [startOffset .. last.end.offset]);
-                                        }
-                                    else
-                                        {
-                                        valueLoc.remove(key);
-                                        }
-                                    }
-                                }
+                            key = keyMapping.read(stream.ensureElementInput());
                             }
+
+                        fileNames.putIfAbsent(key, fileName);
+
+                        if (Int lastTx := closestTx.get(key))
+                            {
+                            rebuild = True;
+                            if (txId < lastTx)
+                                {
+                                // out of order transaction record; ignore
+                                continue;
+                                }
+                            keysByTx.process(lastTx, e ->
+                                {
+                                assert e.exists;
+                                e.value -= key;
+                                });
+                            }
+
+                        closestTx.put(key, txId);
+                        keysByTx.process(txId, e ->
+                            {
+                            e.value = e.exists ? e.value + key : [key];
+                            });
+
+                        if (changeParser.matchKey("v"))
+                            {
+                            (Token first, Token last) = changeParser.skipDoc();
+                            valueLoc.put(key, [first.start.offset .. last.end.offset));
+                            }
+                        else
+                            {
+                            valueLoc.remove(key);
+                            }
+
+                        Token endToken = changeParser.peek();
+                        assert endToken.id == ObjectExit;
+                        entryLoc.put(key, [startOffset .. endToken.end.offset));
                         }
                     }
                 }
@@ -1042,31 +1025,32 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
 
             for ((Int txId, Key[] keys) : keysByTx)
                 {
-                Boolean addedHeader = False;
+                if (keys.empty)
+                    {
+                    continue;
+                    }
                 for (Key key : keys)
                     {
                     if (Range<Int> valueRange := valueLoc.get(key))
                         {
                         assert Range<Int> entryRange := entryLoc.get(key);
 
-                        if (!addedHeader)
+                        if (rebuild)
                             {
-                            buf.append("\n{\"tx\":")
-                               .append(txId)
-                               .append(", \"c\":[");
-                            addedHeader = True;
+                            Int startPos = buf.size + 1;
+
+                            buf.add('\n')
+                               .append(jsonStr.slice(entryRange))
+                               .add(',');
+
+                            entryRange = [startPos..buf.size-1);
+
+                            FileLayout  fileLayout = storageLayout.computeIfAbsent(txId, () -> new HashMap());
+                            EntryLayout layout     = fileLayout.computeIfAbsent(fileName, () -> new HashMap());
+                            layout.put(key, entryRange);
                             }
 
                         String jsonValue = jsonStr.slice(valueRange);
-                        if (rebuild)
-                            {
-                            Int startPos = buf.size;
-                            buf.append(jsonStr.slice(entryRange)).add(',');
-                            Int endPos   = buf.size;
-
-                            entryRange = [startPos..endPos);
-                            }
-
                         using (ObjectInputStream stream = new ObjectInputStream(jsonSchema, jsonValue.toReader()))
                             {
                             Value value = valueMapping.read(stream.ensureElementInput());
@@ -1074,18 +1058,8 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                             History valueHistory = new SkiplistMap();
                             valueHistory.put(txId, value);
                             history.put(key, valueHistory);
-
-                            FileLayout  fileLayout = storageLayout.computeIfAbsent(txId, () -> new HashMap());
-                            EntryLayout layout     = fileLayout.computeIfAbsent(fileName, () -> new HashMap());
-
-                            layout.put(key, entryRange);
                             }
                         }
-                    }
-
-                if (addedHeader)
-                    {
-                    buf.truncate(-1).add(']').add('}').add(',');
                     }
                 }
 
@@ -1276,7 +1250,6 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                 buf.add('[');
                 }
 
-            Int currentTx = NO_TX;
             for (Key key : keys)
                 {
                 assert Int txId := latestTx.get(key);
@@ -1285,25 +1258,12 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                     continue;
                     }
 
-                if (txId == currentTx)
-                    {
-                    buf.add(',').add(' ');
-                    }
-                else
-                    {
-                    if (currentTx != NO_TX)
-                        {
-                        buf.add(']').add('}').add(',');
-                        }
-                    buf.append("\n{\"tx\":")
-                       .append(txId)
-                       .append(", \"c\":[");
-                    currentTx = txId;
-                    }
+                buf.append("\n{\"tx\":")
+                   .append(txId);
 
                 assert Token[] keyTokens := latestKey.get(key);
 
-                buf.append("{\"k\":");
+                buf.append(", \"k\":");
                 for (Token token : keyTokens)
                     {
                     token.appendTo(buf);
@@ -1318,20 +1278,10 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                         token.appendTo(buf);
                         }
                     }
-                buf.add('}');
+                buf.add('}').add(',');
                 }
 
-            if (currentTx == NO_TX)
-                {
-                // we didn't add anything; remove the comma
-                buf.truncate(-1);
-                }
-            else
-                {
-                // close the last "c" object
-                buf.add(']').add('}');
-                }
-            buf.add('\n').add(']');
+            buf.truncate(-1).add('\n').add(']');
             file.contents = buf.toString().utf8();
             }
 
