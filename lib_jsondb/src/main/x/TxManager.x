@@ -3470,7 +3470,8 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         Set<Int> cleanupRetained = byReadId.keys;
         if (cleanupRetained != lastCleanupRetained)
             {
-            immutable ArrayOrderedSet<Int> txSet = new ArrayOrderedSet<Int>(cleanupRetained.toArray()).freeze();
+            immutable ArrayOrderedSet<Int> txSet = new ArrayOrderedSet<Int>(
+                    cleanupRetained.toArray(Constant)).freeze(inPlace=True);
             lastCleanupRetained = txSet;
 
             for (ObjectStore? store : appStores)

@@ -680,9 +680,10 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
 
     /**
      * Inform the ObjectStore of all of the read-transaction-ids that are still being relied upon
-     * by in-flight transactions; any other historical transaction information can be discarded by
-     * the ObjectStore, both in-memory and in the persistent storage. For asynchronous purposes, any
-     * transaction newer than the most recent transaction in the passed set must be retained.
+     * by in-flight transactions. The latest version of the ObjectStore's data must always be
+     * retained, whether or not it is indicated by the passed set of ids. All other historical
+     * transaction information can be discarded by the ObjectStore, both in-memory and in the
+     * persistent storage.
      *
      * @param inUseTxIds  an ordered set of read transaction ids whose information needs to be
      *                    retained by the `ObjectStore`
