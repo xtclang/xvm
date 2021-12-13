@@ -1107,7 +1107,7 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
         Map<Key, Token[]>  latestValue = new HashMap();
         Map<String, Key[]> byFileName  = new HashMap();
 
-        for ((Int tx, Token[] tokens) : sealsByTxId)
+        for ((Int txId, Token[] tokens) : sealsByTxId)
             {
             using (val sealParser = new Parser(tokens.iterator()))
                 {
@@ -1139,8 +1139,8 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                                 valueTokens = []; // empty array represents a "Delete"
                                 }
 
-                            latestTx   .put(key, tx);
-                            latestKey  .put(key, keyTokens);
+                            latestTx   .put(key, txId);
+                            latestKey  .putIfAbsent(key, keyTokens);
                             latestValue.put(key, valueTokens);
                             byFileName .process(nameForKey(key), e ->
                                 {
@@ -1182,7 +1182,7 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                 Byte[]  bytes      = file.contents;
                 String  jsonStr    = bytes.unpackUtf8();
                 Parser  fileParser = new Parser(jsonStr.toReader());
-                Int     offsetEnd  = 0;
+                Int     endOffset  = 0;
                 Boolean corrupted  = False;
 
                 using (val arrayParser = fileParser.expectArray())
@@ -1204,7 +1204,7 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
 
                             assert endToken.id == ObjectExit;
                             lastInFile = currentTx;
-                            offsetEnd  = endToken.end.offset;
+                            endOffset  = endToken.end.offset;
                             }
                         }
                     catch (Exception e)
@@ -1238,7 +1238,7 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                     }
 
                 buf = new StringBuffer();
-                buf.append(jsonStr[0..offsetEnd)).add(',');
+                buf.append(jsonStr[0..endOffset)).add(',');
                 }
             else
                 {

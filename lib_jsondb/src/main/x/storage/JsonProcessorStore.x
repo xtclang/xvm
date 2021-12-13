@@ -488,9 +488,7 @@ service JsonProcessorStore<Message extends immutable Const>
         tx.jsonScheduledEntries = jsonScheduledEntries;
         tx.sealed               = True;
 
-        return buildJsonTx(jsonMessages,
-                           jsonProcessedEntries,
-                           jsonScheduledEntries);
+        return buildJsonTx(jsonMessages, jsonProcessedEntries, jsonScheduledEntries);
         }
 
     @Override
@@ -654,14 +652,16 @@ service JsonProcessorStore<Message extends immutable Const>
                 Int prepareId = tx.readId;
 
                 // the transaction is already sprinkled all over the history
-                assert OrderedMap<Message, PidSet> scheduleMods := scheduleModsByTx.get(prepareId);
-                for ((Message message, PidSet pids) : scheduleMods)
+                if (OrderedMap<Message, PidSet> scheduleMods := scheduleModsByTx.get(prepareId))
                     {
-                    if (History messageHistory := scheduleHistory.get(message))
+                    for ((Message message, PidSet pids) : scheduleMods)
                         {
-                        messageHistory.remove(prepareId);
+                        if (History messageHistory := scheduleHistory.get(message))
+                            {
+                            messageHistory.remove(prepareId);
+                            }
+                        clearSchedules(pids);
                         }
-                    clearSchedules(pids);
                     }
 
                 processModsByTx .remove(prepareId);
@@ -728,17 +728,18 @@ service JsonProcessorStore<Message extends immutable Const>
 
                         Message message;
 
-                        Token first    = changeParser.expectKey("m");
-                        Int   startPos = changeParser.peek().start.offset;
-
+                        changeParser.expectKey("m");
+                        Token[] messageTokens = changeParser.skip(new Token[]);
                         using (ObjectInputStream stream =
-                                new ObjectInputStream(jsonSchema, changeParser))
+                                new ObjectInputStream(jsonSchema, messageTokens.iterator()))
                             {
                             message = messageMapping.read(stream.ensureElementInput());
                             }
-                        Int endPos = changeParser.peek().start.offset - 1;
-                        messageLoc.putIfAbsent(message, [startPos..endPos));
 
+                        Int startPos = messageTokens[0].start.offset;
+                        Int endPos   = messageTokens[messageTokens.size-1].end.offset;
+
+                        messageLoc.putIfAbsent(message, [startPos..endPos));
                         fileNames.putIfAbsent(message, fileName);
 
                         messagesByTx.process(txId, e ->
@@ -921,129 +922,166 @@ service JsonProcessorStore<Message extends immutable Const>
     @Synchronized
     Boolean recover(SkiplistMap<Int, Token[]> sealsByTxId)
         {
-        assert:debug;
+        sealsByTxId = new SkiplistMap(sealsByTxId); // TODO CP: remove this
 
-//        SkiplistMap<Pid, Schedule?> scheduleByPid = new SkiplistMap();
-//
-//        Map<Message, PidSet> scheduledPids = new HashMap();
-//        Map<Message, PidSet> processedPids = new HashMap();
-//
-//        SkiplistMap<Pid, Int> txByPid = new SkiplistMap();
-//
-//        Map<Message, Int>      latestTx    = new HashMap();
-//        Map<Message, Token[]>  latestMessage = new HashMap();
-//        Map<Key, Token[]>  latestValue = new HashMap();
-//        Map<String, Key[]> byFileName  = new HashMap();
-//
-//        for ((Int tx, Token[] tokens) : sealsByTxId)
-//            {
-//            using (val sealParser = new Parser(tokens.iterator()))
-//                {
-//                using (val changeArrayParser = sealParser.expectArray())
-//                    {
-//                    while (!changeArrayParser.eof)
-//                        {
-//                        using (val changeParser = changeArrayParser.expectObject())
-//                            {
-//                            Message message;
-//
-//                            changeParser.expectKey("m");
-//
-//                            using (ObjectInputStream stream =
-//                                    new ObjectInputStream(jsonSchema, changeParser))
-//                                {
-//                                message = messageMapping.read(stream.ensureElementInput());
-//                                }
-//
-//                            if (changeParser.matchKey("p"))
-//                                {
-//                                PidSet pids = Cancel;
-//                                using (val pidsParser = changeParser.expectArray())
-//                                    {
-//                                    while (!pidsParser.eof)
-//                                        {
-//                                        pids = addPid(pids, pidsParser.expectInt());
-//                                        }
-//                                    }
-//
-//                                if (PidSet scheduled := scheduledPids.get(message))
-//                                    {
-//                                    scheduled = removePids(scheduled, pids);
-//                                    }
-//                                }
-//
-//                            latestTx   .put(key, tx);
-//                            latestKey  .put(key, keyTokens);
-//                            latestValue.put(key, valueTokens);
-//                            byFileName .process(nameForKey(key), e ->
-//                                {
-//                                if (e.exists)
-//                                    {
-//                                    if (!e.value.contains(key))
-//                                        {
-//                                        e.value += key;
-//                                        }
-//                                    }
-//                                else
-//                                    {
-//                                    e.value = [key];
-//                                    }
-//                                });
-//                            }
-//                        }
-//                    }
-//                }
-//            }
-//
-//        for ((String fileName, Key[] keys) : byFileName)
-//            {
-//            File file = dataDir.fileFor(fileName);
-//
-//            StringBuffer buf    = new StringBuffer();
-//            Boolean      exists = False;
-//
-//            for (Key key : keys)
-//                {
-//                assert Token[] valueTokens := latestValue.get(key);
-//                if (valueTokens.size == 0)
-//                    {
-//                    continue;
-//                    }
-//
-//                if (!exists)
-//                    {
-//                    assert Int txId := latestTx.get(key);
-//                    buf.append("[\n{\"tx\":")
-//                       .append(txId)
-//                       .append(", \"c\":[");
-//                    exists = True;
-//                    }
-//
-//                assert Token[] keyTokens := latestKey.get(key);
-//
-//                buf.append("{\"k\":");
-//                for (Token token : keyTokens)
-//                    {
-//                    token.appendTo(buf);
-//                    }
-//                buf.append(", \"v\":");
-//                for (Token token : valueTokens)
-//                    {
-//                    token.appendTo(buf);
-//                    }
-//                buf.add('}');
-//                }
-//
-//            if (exists)
-//                {
-//                buf.append("]}\n]");
-//                file.contents = buf.toString().utf8();
-//                }
-//            else
-//                {
-//                file.delete();
-//                }
-//            }
+        // first, collect all the affected files
+        Map<String, Int> latestTxByFile = new HashMap();
+
+        for ((Int txId, Token[] sealTokens) : sealsByTxId)
+            {
+            using (val sealParser = new Parser(sealTokens.iterator()))
+                {
+                using (val changeArrayParser = sealParser.expectArray())
+                    {
+                    while (!changeArrayParser.eof)
+                        {
+                        using (val changeParser = changeArrayParser.expectObject())
+                            {
+                            Message message;
+
+                            changeParser.expectKey("m");
+
+                            using (ObjectInputStream stream =
+                                    new ObjectInputStream(jsonSchema, changeParser))
+                                {
+                                message = messageMapping.read(stream.ensureElementInput());
+                                }
+
+                            latestTxByFile.put(nameForKey(message), txId);
+                            }
+                        }
+                    }
+                }
+            }
+
+        assert Int firstSeal := sealsByTxId.first();
+
+        // now recover all the affected files by adding the info from the seals
+        for ((String fileName, Int lastSeal) : latestTxByFile)
+            {
+            File file = dataDir.fileFor(fileName);
+
+            StringBuffer buf        = new StringBuffer();
+            Boolean      exists     = file.exists;
+            Int          lastInFile = NO_TX;
+
+            if (exists)
+                {
+                // find the last valid transaction in the file by parsing as far as we can
+                Byte[]  bytes      = file.contents;
+                String  jsonStr    = bytes.unpackUtf8();
+                Parser  fileParser = new Parser(jsonStr.toReader());
+                Int     endOffset  = 0;
+                Boolean corrupted  = False;
+
+                using (val arrayParser = fileParser.expectArray())
+                    {
+                    try
+                        {
+                        while (!arrayParser.eof)
+                            {
+                            Token endToken;
+                            Int   currentTx;
+                            using (val txParser = arrayParser.expectObject())
+                                {
+                                txParser.expectKey("tx");
+                                currentTx = txParser.expectInt();
+
+                                txParser.skipRemaining();
+                                endToken = txParser.peek();
+                                }
+
+                            assert endToken.id == ObjectExit;
+                            lastInFile = currentTx;
+                            endOffset  = endToken.end.offset;
+                            }
+                        }
+                    catch (Exception e)
+                        {
+                        corrupted = True;
+                        }
+                    }
+
+                if (lastInFile > lastSeal)
+                    {
+                    // something is really wrong; we should never be ahead of the txlog
+                    catalog.log($|File {fileName} contains transaction {lastInFile},
+                                 | which is beyond the latest recovered transaction {lastSeal}
+                               );
+                    return False;
+                    }
+
+                if (lastInFile == lastSeal)
+                    {
+                    // this file doesn't need any recovery; go to the next one
+                    continue;
+                    }
+
+                if (corrupted && lastInFile < firstSeal)
+                    {
+                    catalog.log($|File {fileName} is corrupted beyond transaction {lastInFile} and
+                                 | may contain transaction data preceeding the earliest recovered
+                                 | transaction {firstSeal}
+                               );
+                    return False;
+                    }
+
+                buf.append(jsonStr[0..endOffset)).add(',');
+                }
+            else
+                {
+                buf.add('[');
+                }
+
+            // we know now that lastInFile < lastSeal, so we can apply just the missing transactions
+            assert firstSeal := sealsByTxId.ceiling(lastInFile + 1);
+
+            for ((Int txId, Token[] tokens) : sealsByTxId[firstSeal..lastSeal])
+                {
+                using (val sealParser = new Parser(tokens.iterator()))
+                    {
+                    using (val changeArrayParser = sealParser.expectArray())
+                        {
+                        while (!changeArrayParser.eof)
+                            {
+                            using (val changeParser = changeArrayParser.expectObject())
+                                {
+                                Message message;
+
+                                changeParser.expectKey("m");
+
+                                Token[] messageTokens = changeParser.skip(new Token[]);
+                                using (ObjectInputStream stream =
+                                        new ObjectInputStream(jsonSchema, messageTokens.iterator()))
+                                    {
+                                    message = messageMapping.read(stream.ensureElementInput());
+                                    }
+
+                                if (nameForKey(message) != fileName)
+                                    {
+                                    continue;
+                                    }
+
+                                if (changeParser.matchKey("p"))
+                                    {
+                                    appendChange(buf, txId, messageTokens, "p",
+                                            changeParser.skip(new Token[]));
+                                    }
+
+                                if (changeParser.matchKey("s"))
+                                    {
+                                    appendChange(buf, txId, messageTokens, "s",
+                                            changeParser.skip(new Token[]));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+            buf.truncate(-1).add('\n').add(']');
+            file.contents = buf.toString().utf8();
+            }
 
         return True;
         }
@@ -1051,6 +1089,12 @@ service JsonProcessorStore<Message extends immutable Const>
     @Override
     void unload()
         {
+        inFlight.clear();
+        scheduleHistory.clear();
+        scheduleByPid.clear();
+        processModsByTx.clear();
+        scheduleModsByTx.clear();
+        fileNames.clear();
         }
 
 
@@ -1210,9 +1254,33 @@ service JsonProcessorStore<Message extends immutable Const>
            .add(',').add(' ')
            .append("\"m\":")
            .append(jsonMsg)
-           .add(',')
+           .add(',').add(' ')
            .append(jsonEntry)
            .add('}');
+        }
+
+    private void appendChange(StringBuffer buf, Int txId, Token[] messageTokens,
+                              String jsonKey, Token[] changeTokens)
+        {
+        buf.append("\n{\"tx\":")
+           .append(txId)
+           .add(',').add(' ')
+           .append("\"m\":");
+
+        for (Token token : messageTokens)
+            {
+            token.appendTo(buf);
+            }
+
+        buf.add(',').add(' ').add('"')
+           .append(jsonKey)
+           .add('"').add(':');
+
+        for (Token token : changeTokens)
+            {
+            token.appendTo(buf);
+            }
+        buf.add('}').add(',');
         }
 
     protected void rotateLog()

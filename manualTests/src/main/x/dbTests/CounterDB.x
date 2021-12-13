@@ -26,8 +26,7 @@ module CounterDB
             Int count = schema.counters.getOrDefault(name, 0);
             schema.counters.put(name, ++count);
 
-
-            if (count % 20 != 0)
+            if (count % 100 != 0)
                 {
                 schedule(name);
                 }
