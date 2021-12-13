@@ -24,7 +24,7 @@ module CounterTest
             console.println($"cranking up schedule \"{name}\"...");
             schema.cranker.schedule(name);
             }
-        wait(schema, Duration:15s);
+        wait(schema, Duration:5s);
         }
 
     void wait(CounterSchema schema, Duration duration)

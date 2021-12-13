@@ -1,7 +1,9 @@
 import model.DBObjectInfo;
 
+import json.Lexer.Token;
+import json.Parser;
 import json.Mapping;
-import json.ObjectOutputStream;
+import json.ObjectInputStream;
 
 import oodb.DBProcessor;
 import oodb.DBProcessor.Pending;
@@ -17,6 +19,19 @@ import TxManager.NO_TX;
 /**
  * Provides the low-level I/O for a DBProcessor, which represents the combination of a queue (with
  * scheduling) and a processor of the messages in the queue.
+ *
+ * The disk format follows this style: (possible multiple line per transaction)
+ *
+ *     [
+ *     {"tx":14, "m":{M1}, "s":[{"pid":N, ...}]},
+ *     {"tx":17, "m":{M2}, "p":[N, ...]},
+ *     {"tx":17, "m":{M2}, "s":[{"pid":N}, ...]}]},
+ *     {"tx":18, "m":{M3}, "s":[{"pid":N, ...}, ...]},
+ *     {"tx":18, "m":{M4}, "s":[{"pid":N, ...}}]}
+ *     ]
+ *
+ * where a "s" (schedule) indicates a scheduling request (empty pids array means "unschedule")
+ * and "p" (process) indicates an executed * processor action.
  */
 @Concurrent
 service JsonProcessorStore<Message extends immutable Const>
@@ -63,15 +78,6 @@ service JsonProcessorStore<Message extends immutable Const>
      * The JSON Mapping for the processor message.
      */
     public/protected Mapping<Message> messageMapping;
-
-    /**
-     * The file owned by this LogStore for purpose of its data storage. The LogStore may
-     * create, modify, and remove this file.
-     */
-    @Lazy public/private File dataFile.calc()
-        {
-        return dataDir.fileFor("processor.json");
-        }
 
     /**
      * The maximum size of queue data to store in any one chunk file of the processor data.
@@ -163,7 +169,9 @@ service JsonProcessorStore<Message extends immutable Const>
          * When the transaction is sealed (or after it is sealed, but before it commits), the
          * changes in the transaction are rendered for the transaction log, and for storage on disk.
          */
-        Map<Message, String>? jsonEntries;
+        Map<Message, String>? jsonMessages;
+        Map<Message, String>? jsonProcessedEntries;
+        Map<Message, String>? jsonScheduledEntries;
         }
 
     @Override
@@ -174,18 +182,12 @@ service JsonProcessorStore<Message extends immutable Const>
      * the same data that is stored on disk.
      */
     typedef SkiplistMap<Int, PidSet> History;
-    protected Map<Message, History> processHistory  = new SkiplistMap();
     protected Map<Message, History> scheduleHistory = new SkiplistMap();
 
     /**
      * A cache of schedules.
      */
     SkiplistMap<Pid, Schedule?> scheduleByPid = new SkiplistMap();
-
-    /**
-     * A record of how all persistent transactions are laid out on disk.
-     */
-    protected SkiplistMap<Int, Range<Int>> storageLayout = new SkiplistMap();
 
     /**
      * Uncommitted transaction information, held temporarily by prepareId. Basically, while a
@@ -220,19 +222,7 @@ service JsonProcessorStore<Message extends immutable Const>
 
         tx.ensureScheduleMods().process(message, e ->
             {
-            if (e.exists)
-                {
-                PidSet pids = e.value;
-                e.value = pids.is(Unschedule)
-                        ? pid
-                        : pids.is(Int)
-                            ? [pids, pid]
-                            : pids + pid;
-                }
-            else
-                {
-                e.value = pid;
-                }
+            e.value = e.exists ? addPid(e.value, pid) : pid;
             });
         }
 
@@ -290,9 +280,7 @@ service JsonProcessorStore<Message extends immutable Const>
                 {
                 PidSet pids = e.value;
                 assert !pids.is(Unschedule);
-                e.value = pids.is(Int)
-                            ? [pids, pid]
-                            : pids + pid;
+                e.value = addPid(pids, pid);
                 }
             else
                 {
@@ -333,16 +321,9 @@ service JsonProcessorStore<Message extends immutable Const>
 
         if (processed)
             {
-            // obtain the transaction modifications (note: we already verified that modifications exist)
+            // obtain and store the transaction modifications (note: we already verified that
+            // modifications exist)
             OrderedMap<Message, PidSet> processMods = tx.processMods ?: assert;
-
-            for ((Message message, PidSet pids) : processMods)
-                {
-                History messageHistory = processHistory.computeIfAbsent(message, () -> new History());
-                messageHistory.put(prepareId, pids);
-                }
-
-            // store off transaction's mods
             processModsByTx.put(prepareId, processMods);
             }
 
@@ -393,100 +374,60 @@ service JsonProcessorStore<Message extends immutable Const>
         }
 
     @Override
+    MergeResult mergePrepare(Int txId, Int prepareId)
+        {
+        MergeResult result;
+        TODO
+        }
+
+    @Override
     String sealPrepare(Int writeId)
         {
-        private String buildJsonTx(Map<Message, String> jsonEntries)
+        private String buildJsonTx(Map<Message, String> jsonMessages,
+                                   Map<Message, String> jsonProcessedEntries,
+                                   Map<Message, String> jsonScheduledEntries)
             {
-            if (jsonEntries.empty)
-                {
-                return "[]";
-                }
-
             StringBuffer buf = new StringBuffer();
             buf.add('[');
-            for (String jsonEntry : jsonEntries.values)
+
+            for ((Message message, String jsonProcessed) : jsonProcessedEntries)
                 {
-                buf.append(jsonEntry).add(',').add(' ');
+                assert String jsonMsg := jsonMessages.get(message);
+                buf.append("{\"m\":").append(jsonMsg)
+                   .add(',').add(' ')
+                   .append(jsonProcessed);
+
+                if (String jsonScheduled := jsonScheduledEntries.get(message))
+                    {
+                    buf.add(',').add(' ')
+                       .append(jsonScheduled);
+                    }
+                buf.add('}').add(',');
                 }
-            return buf.truncate(-2).add(']').toString();
+
+            for ((Message message, String jsonScheduled) : jsonScheduledEntries)
+                {
+                if (jsonProcessedEntries.contains(message))
+                    {
+                    continue;
+                    }
+                assert String jsonMsg := jsonMessages.get(message);
+
+                buf.append("{\"m\":").append(jsonMsg)
+                   .add(',').add(' ')
+                   .append(jsonScheduled)
+                   .add('}').add(',');
+                }
+
+            return buf.truncate(-1).add(']').toString();
             }
 
-        private void appendJsonSchedule(StringBuffer buf, Pid pid, Schedule? schedule)
-            {
-            // {"pid":[Int],"s":{"at":[DateTime],"daily":[Time],"repeat":[Duration],"policy":[Policy],"priority":[Priority]}}
-            if (schedule == Null)
-                {
-                buf.append($"\{\"pid\":{pid}}");
-                return;
-                }
-
-            DateTime? scheduledAt    = schedule.scheduledAt;
-            Time?     scheduledDaily = schedule.scheduledDaily;
-            Duration? repeatInterval = schedule.repeatInterval;
-            Policy    repeatPolicy   = schedule.repeatPolicy;
-            Priority  priority       = schedule.priority;
-
-            buf.append($"\{\"pid\":{pid}, \"s\":\{");
-
-            Boolean needComma = False;
-
-            if (scheduledAt != Null)
-                {
-                buf.append("\"at\":\"");
-                scheduledAt.appendTo(buf, True);
-                buf.add('"');
-                needComma = True;
-                }
-            if (scheduledDaily != Null)
-                {
-                if (needComma)
-                    {
-                    buf.add(',');
-                    }
-                buf.append("\"daily\":\"");
-                scheduledDaily.appendTo(buf);
-                buf.add('"');
-                needComma = True;
-                }
-            if (repeatInterval != Null)
-                {
-                if (needComma)
-                    {
-                    buf.add(',');
-                    }
-                buf.append("\"repeat\":\"");
-                repeatInterval.appendTo(buf);
-                buf.add('"');
-                needComma = True;
-                }
-            if (repeatPolicy != AllowOverlapping)
-                {
-                if (needComma)
-                    {
-                    buf.add(',');
-                    }
-                buf.append("\"repeat\":");
-                repeatPolicy.ordinal.appendTo(buf);
-                needComma = True;
-                }
-            if (priority != Normal)
-                {
-                if (needComma)
-                    {
-                    buf.add(',');
-                    }
-                buf.append("\"priority\":");
-                priority.ordinal.appendTo(buf);
-                needComma = True;
-                }
-            buf.add('}');
-            }
-
-        private void appendProcessPids(StringBuffer buf, PidSet pids)
+        private String buildJsonProcessed(PidSet pids)
             {
             assert !pids.is(Unschedule);
 
-            buf.append(", \"p\":[");
+            StringBuffer buf = new StringBuffer();
+            buf.append("\"p\":[");
             if (pids.is(Int))
                 {
                 pids.appendTo(buf);
@@ -503,38 +444,15 @@ service JsonProcessorStore<Message extends immutable Const>
                     }
                 }
             buf.add(']');
-            }
-
-        private void appendSchedulePids(StringBuffer buf, PidSet pids)
-            {
-            if (!pids.is(Unschedule))
-                {
-                buf.append(", \"s\":[");
-                if (pids.is(Int))
-                    {
-                    assert Schedule? schedule := scheduleByPid.get(pids);
-                    appendJsonSchedule(buf, pids, schedule);
-                    }
-                else
-                    {
-                    Loop: for (Pid pid : pids)
-                        {
-                        assert Schedule? schedule := scheduleByPid.get(pid);
-                        appendJsonSchedule(buf, pid, schedule);
-                        if (!Loop.last)
-                            {
-                            buf.add(',');
-                            }
-                        }
-                    }
-                buf.add(']');
-                }
+            return buf.toString();
             }
 
         assert Changes tx := checkTx(writeId), tx.prepared;
         if (tx.sealed)
             {
-            return buildJsonTx(tx.jsonEntries ?: assert);
+            return buildJsonTx(tx.jsonMessages         ?: assert,
+                               tx.jsonProcessedEntries ?: assert,
+                               tx.jsonScheduledEntries ?: assert);
             }
 
         Int readId = tx.readId;
@@ -544,54 +462,35 @@ service JsonProcessorStore<Message extends immutable Const>
 
         assert !processMods.empty || !scheduleMods.empty;
 
-        HashMap<Message, String> jsonEntries = new HashMap();
-        val                      worker      = tx.worker;
+        HashMap<Message, String> jsonMessages         = new HashMap();
+        HashMap<Message, String> jsonProcessedEntries = new HashMap();
+        HashMap<Message, String> jsonScheduledEntries = new HashMap();
+        val                      worker               = tx.worker;
 
         for ((Message message, PidSet processPids) : processMods)
             {
-            StringBuffer buf = new StringBuffer();
+            jsonMessages.computeIfAbsent(message,
+                    () -> worker.writeUsing(messageMapping, message));
 
-            String jsonMsg = worker.writeUsing(messageMapping, message);
-
-            buf.append("{\"m\":").append(jsonMsg);
-
-            appendProcessPids(buf, processPids);
-            if (PidSet schedulePids := scheduleMods.get(message))
-                {
-                appendSchedulePids(buf, schedulePids);
-                }
-            buf.add('}');
-
-            jsonEntries.put(message, buf.toString());
+            jsonProcessedEntries.put(message, buildJsonProcessed(processPids));
             }
 
         for ((Message message, PidSet schedulePids) : scheduleMods)
             {
-            if (jsonEntries.contains(message))
-                {
-                continue;
-                }
+            jsonMessages.computeIfAbsent(message,
+                    () -> worker.writeUsing(messageMapping, message));
 
-            StringBuffer buf = new StringBuffer();
-
-            String jsonMsg = worker.writeUsing(messageMapping, message);
-
-            buf.append("{\"m\":").append(jsonMsg);
-
-            if (PidSet processPids := processMods.get(message))
-                {
-                appendProcessPids(buf, processPids);
-                }
-            appendSchedulePids(buf, schedulePids);
-            buf.add('}');
-
-            jsonEntries.put(message, buf.toString());
+            jsonScheduledEntries.put(message, buildJsonScheduled(schedulePids));
             }
 
-        tx.jsonEntries = jsonEntries;
-        tx.sealed      = True;
+        tx.jsonMessages         = jsonMessages;
+        tx.jsonProcessedEntries = jsonProcessedEntries;
+        tx.jsonScheduledEntries = jsonScheduledEntries;
+        tx.sealed               = True;
 
-        return buildJsonTx(jsonEntries);
+        return buildJsonTx(jsonMessages,
+                           jsonProcessedEntries,
+                           jsonScheduledEntries);
         }
 
     @Override
@@ -615,29 +514,42 @@ service JsonProcessorStore<Message extends immutable Const>
             // transaction
             if (Changes tx := peekTx(writeId))
                 {
-                assert tx.prepared, tx.sealed, Map<Message, String> jsonEntries ?= tx.jsonEntries;
+                assert tx.prepared, tx.sealed,
+                    Map<Message, String> jsonMessages         ?= tx.jsonMessages,
+                    Map<Message, String> jsonProcessedEntries ?= tx.jsonProcessedEntries,
+                    Map<Message, String> jsonScheduledEntries ?= tx.jsonScheduledEntries;
 
                 Int prepareId = tx.readId;
 
-                for ((Message message, String jsonEntry) : jsonEntries)
+                for ((Message message, String jsonEntry) : jsonProcessedEntries)
                     {
                     StringBuffer buf = buffers.computeIfAbsent(nameForKey(message),
                             () -> new StringBuffer());
 
-                    // build the String that will be appended to the disk file
-                    // format is "{"tx":14, "c":[{"m":{...}, "p":[], "s":{...}}, ...], ...]}"
-                    // (comma is first since we are appending)
-                    if (buf.size == 0)
+                    // build the String that will be appended to the disk file; format is
+                    //      {"tx":14, "m":{...}, "p":[...]}
+                    assert String jsonMsg := jsonMessages.get(message);
+                    appendJsonEntry(buf, prepareId, jsonMsg, jsonEntry);
+                    }
+
+                 // clean up processed schedules (they are no longer "pending")
+                if (Map<Message, PidSet> processMods := processModsByTx.get(prepareId))
+                    {
+                    for (PidSet pids : processMods.values)
                         {
-                        buf.append(",\n{\"tx\":")
-                           .append(prepareId)
-                           .append(", \"c\":[");
+                        clearSchedules(pids);
                         }
-                    else
-                        {
-                        buf.append(", ");
-                        }
-                    buf.append(jsonEntry);
+                    }
+
+                for ((Message message, String jsonEntry) : jsonScheduledEntries)
+                    {
+                    StringBuffer buf = buffers.computeIfAbsent(nameForKey(message),
+                            () -> new StringBuffer());
+
+                    // build the String that will be appended to the disk file; format is
+                    //      {"tx":14, "m":{...}, "s":[...]}
+                    assert String jsonMsg := jsonMessages.get(message);
+                    appendJsonEntry(buf, prepareId, jsonMsg, jsonEntry);
 
                     // register/unregister requests with the scheduler
                     if (Map<Message, PidSet> scheduleMods := scheduleModsByTx.get(prepareId))
@@ -649,7 +561,6 @@ service JsonProcessorStore<Message extends immutable Const>
                             assert Schedule? schedule := scheduleByPid.get(pids);
                             scheduler.registerPid(id, pids, clock.now,
                                     new Pending(path, message, schedule));
-                            scheduleByPid.remove(pids);
                             }
                         else if (pids.is(Int[]))
                             {
@@ -658,10 +569,9 @@ service JsonProcessorStore<Message extends immutable Const>
                                 assert Schedule? schedule := scheduleByPid.get(pid);
                                 scheduler.registerPid(id, pid, clock.now,
                                         new Pending(path, message, schedule));
-                                scheduleByPid.remove(pid);
                                 }
                             }
-                        else
+                        else // Cancel
                             {
                             if (History messageHistory := scheduleHistory.get(message))
                                 {
@@ -678,13 +588,13 @@ service JsonProcessorStore<Message extends immutable Const>
                                 }
                             }
                         }
-
-                    // remember the id of the last transaction that we process here
-                    lastCommitId = prepareId;
                     }
 
                 processModsByTx .remove(prepareId);
                 scheduleModsByTx.remove(prepareId);
+
+                // remember the id of the last transaction that we process here
+                lastCommitId = prepareId;
                 }
             }
 
@@ -693,12 +603,8 @@ service JsonProcessorStore<Message extends immutable Const>
             // the "for" loop below is an exact copy of the corresponding part from JsonMapStore
             for ((String fileName, StringBuffer buf) : buffers)
                 {
-                // update where we will append the next record to, in terms of Chars (not bytes), so
-                // that subsequent storageLayout information can be determined without expanding the
-                // contents of the UTF-8 encoded file into Chars to calculate the "append location"
-
                 // the JSON for entries data is inside an array, so "close" the array
-                buf.append("]}\n]");
+                buf.add('\n').add(']');
 
                 File file = dataDir.fileFor(fileName);
 
@@ -729,12 +635,12 @@ service JsonProcessorStore<Message extends immutable Const>
 
             // remember which is the "current" value
             lastCommit = lastCommitId;
+            }
 
-            // discard the transactional records
-            for (Int writeId : writeIds)
-                {
-                inFlight.remove(writeId);
-                }
+        // discard the transactional records
+        for (Int writeId : writeIds)
+            {
+            inFlight.remove(writeId);
             }
         }
 
@@ -770,22 +676,372 @@ service JsonProcessorStore<Message extends immutable Const>
     // ----- IO operations -------------------------------------------------------------------------
 
     @Override
-    Iterator<File> findFiles()
-        {
-        return (dataFile.exists ? [dataFile] : []).iterator();
-        }
-
-    @Override
     void initializeEmpty()
         {
         assert model == Empty;
-        assert !dataFile.exists;
+        lastCommit = 0;
         }
 
     @Override
     void loadInitial()
         {
-        TODO
+        Int desired = txManager.lastCommitted;
+        assert desired != NO_TX && desired > 0;
+
+        Int totalBytes = 0;
+        Int totalFiles = 0;
+
+        for (File file : dataDir.files())
+            {
+            String  fileName   = file.name;
+            Byte[]  bytes      = file.contents;
+            String  jsonStr    = bytes.unpackUtf8();
+            Boolean rebuild    = False;
+            Parser  fileParser = new Parser(jsonStr.toReader());
+
+            Map<Pid, Int>     closestTx       = new HashMap();
+            Map<Pid, Token[]> closestSchedule = new HashMap();
+
+            Map<Message, Range<Int>> messageLoc         = new HashMap();
+            Map<Message, PidSet>     scheduledByMessage = new HashMap();
+
+            SkiplistMap<Int, Message[]> messagesByTx = new SkiplistMap();
+
+            totalFiles++;
+            totalBytes += bytes.size;
+
+            using (val arrayParser = fileParser.expectArray())
+                {
+                while (!arrayParser.eof)
+                    {
+                    using (val changeParser = arrayParser.expectObject())
+                        {
+                        changeParser.expectKey("tx");
+
+                        Int txId = changeParser.expectInt();
+                        if (txId > desired)
+                            {
+                            // this should not be happening
+                            rebuild = True;
+                            continue;
+                            }
+
+                        Message message;
+
+                        Token first    = changeParser.expectKey("m");
+                        Int   startPos = changeParser.peek().start.offset;
+
+                        using (ObjectInputStream stream =
+                                new ObjectInputStream(jsonSchema, changeParser))
+                            {
+                            message = messageMapping.read(stream.ensureElementInput());
+                            }
+                        Int endPos = changeParser.peek().start.offset - 1;
+                        messageLoc.putIfAbsent(message, [startPos..endPos));
+
+                        fileNames.putIfAbsent(message, fileName);
+
+                        messagesByTx.process(txId, e ->
+                            {
+                            if (e.exists)
+                                {
+                                if (!e.value.contains(message))
+                                    {
+                                    e.value += message;
+                                    }
+                                }
+                            else
+                                {
+                                e.value = [message];
+                                }
+                            });
+
+                        if (changeParser.matchKey("p")) // processed
+                            {
+                            using (val pidParser = changeParser.expectArray())
+                                {
+                                while (!pidParser.eof)
+                                    {
+                                    Pid pid = pidParser.expectInt();
+
+                                    closestTx.remove(pid);
+                                    closestSchedule.remove(pid);
+
+                                    scheduledByMessage.process(message, e ->
+                                        {
+                                        if (e.exists)
+                                            {
+                                            PidSet pids = removePids(e.value, pid);
+                                            if (pids == Cancel)
+                                                {
+                                                e.delete();
+                                                }
+                                            else
+                                                {
+                                                e.value = pids;
+                                                }
+                                            }
+                                        });
+                                    rebuild = True;
+                                    }
+                                }
+                            }
+                        else if (changeParser.matchKey("s")) // scheduled
+                            {
+                            using (val schedulesParser = changeParser.expectArray())
+                                {
+                                if (schedulesParser.eof)
+                                    {
+                                    // this is an "unschedule" request
+                                    scheduledByMessage.remove(message);
+                                    rebuild = True;
+                                    }
+                                else
+                                    {
+                                    do
+                                        {
+                                        using (val scheduleParser = schedulesParser.expectObject())
+                                            {
+                                            scheduleParser.expectKey("pid");
+                                            Pid pid = scheduleParser.expectInt();
+
+                                            Token[] tokens = scheduleParser.skip(new Token[]);
+
+                                            closestTx.put(pid, txId);
+                                            closestSchedule.put(pid, tokens);
+
+                                            scheduledByMessage.process(message, e ->
+                                                {
+                                                e.value = e.exists ? addPid(e.value, pid) : pid;
+                                                });
+                                            }
+                                        }
+                                    while (!schedulesParser.eof);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+            if (scheduledByMessage.empty)
+                {
+                // all the messages were processed; remove the storage
+                file.delete();
+                totalFiles--;
+                bytesUsed -= bytes.size;
+                continue;
+                }
+
+            StringBuffer buf = new StringBuffer();
+            if (rebuild)
+                {
+                buf.append("[");
+                }
+
+            for ((Int txId, Message[] messages) : messagesByTx)
+                {
+                for (Message message : messages)
+                    {
+                    if (PidSet pids := scheduledByMessage.get(message))
+                        {
+                        assert !pids.is(Unschedule);
+
+                        if (pids.is(Int))
+                            {
+                            assert Int txLast := closestTx.get(pids);
+                            if (txLast == txId)
+                                {
+                                assert Token[] tokens := closestSchedule.get(pids);
+                                // TODO: reconstruct the Schedule
+
+                                Schedule? schedule = Null;
+                                scheduleByPid.put(pids, schedule);
+                                }
+                            else
+                                {
+                                continue;
+                                }
+                            }
+                        else
+                            {
+                            for (Pid pid : pids)
+                                {
+                                assert Int txLast := closestTx.get(pid);
+                                if (txLast == txId)
+                                    {
+                                    // TODO: reconstruct the Schedule
+                                    Schedule? schedule = Null;
+                                    scheduleByPid.put(pid, schedule);
+                                    }
+                                else
+                                    {
+                                    pids = pids - pid;
+                                    }
+                                }
+                            if (pids.empty)
+                                {
+                                continue;
+                                }
+                            }
+
+                        History messageHistory = scheduleHistory.computeIfAbsent(
+                                message, () -> new History());
+                        messageHistory.put(txId, pids);
+
+                        if (rebuild)
+                            {
+                            assert Range<Int> loc := messageLoc.get(message);
+                            appendJsonEntry(buf, txId, jsonStr.slice(loc), buildJsonScheduled(pids));
+                            }
+                        }
+                    }
+                }
+
+            if (rebuild)
+                {
+                String jsonNew  = buf.truncate(-1).add('\n').add(']').toString();
+                Byte[] bytesNew = jsonNew.utf8();
+
+                file.contents = bytesNew;
+
+                bytesUsed += bytesNew.size - bytes.size;
+                }
+            }
+
+        filesUsed  = totalFiles;
+        lastCommit = desired;
+        }
+
+    @Override
+    @Synchronized
+    Boolean recover(SkiplistMap<Int, Token[]> sealsByTxId)
+        {
+        assert:debug;
+
+//        SkiplistMap<Pid, Schedule?> scheduleByPid = new SkiplistMap();
+//
+//        Map<Message, PidSet> scheduledPids = new HashMap();
+//        Map<Message, PidSet> processedPids = new HashMap();
+//
+//        SkiplistMap<Pid, Int> txByPid = new SkiplistMap();
+//
+//        Map<Message, Int>      latestTx    = new HashMap();
+//        Map<Message, Token[]>  latestMessage = new HashMap();
+//        Map<Key, Token[]>  latestValue = new HashMap();
+//        Map<String, Key[]> byFileName  = new HashMap();
+//
+//        for ((Int tx, Token[] tokens) : sealsByTxId)
+//            {
+//            using (val sealParser = new Parser(tokens.iterator()))
+//                {
+//                using (val changeArrayParser = sealParser.expectArray())
+//                    {
+//                    while (!changeArrayParser.eof)
+//                        {
+//                        using (val changeParser = changeArrayParser.expectObject())
+//                            {
+//                            Message message;
+//
+//                            changeParser.expectKey("m");
+//
+//                            using (ObjectInputStream stream =
+//                                    new ObjectInputStream(jsonSchema, changeParser))
+//                                {
+//                                message = messageMapping.read(stream.ensureElementInput());
+//                                }
+//
+//                            if (changeParser.matchKey("p"))
+//                                {
+//                                PidSet pids = Cancel;
+//                                using (val pidsParser = changeParser.expectArray())
+//                                    {
+//                                    while (!pidsParser.eof)
+//                                        {
+//                                        pids = addPid(pids, pidsParser.expectInt());
+//                                        }
+//                                    }
+//
+//                                if (PidSet scheduled := scheduledPids.get(message))
+//                                    {
+//                                    scheduled = removePids(scheduled, pids);
+//                                    }
+//                                }
+//
+//                            latestTx   .put(key, tx);
+//                            latestKey  .put(key, keyTokens);
+//                            latestValue.put(key, valueTokens);
+//                            byFileName .process(nameForKey(key), e ->
+//                                {
+//                                if (e.exists)
+//                                    {
+//                                    if (!e.value.contains(key))
+//                                        {
+//                                        e.value += key;
+//                                        }
+//                                    }
+//                                else
+//                                    {
+//                                    e.value = [key];
+//                                    }
+//                                });
+//                            }
+//                        }
+//                    }
+//                }
+//            }
+//
+//        for ((String fileName, Key[] keys) : byFileName)
+//            {
+//            File file = dataDir.fileFor(fileName);
+//
+//            StringBuffer buf    = new StringBuffer();
+//            Boolean      exists = False;
+//
+//            for (Key key : keys)
+//                {
+//                assert Token[] valueTokens := latestValue.get(key);
+//                if (valueTokens.size == 0)
+//                    {
+//                    continue;
+//                    }
+//
+//                if (!exists)
+//                    {
+//                    assert Int txId := latestTx.get(key);
+//                    buf.append("[\n{\"tx\":")
+//                       .append(txId)
+//                       .append(", \"c\":[");
+//                    exists = True;
+//                    }
+//
+//                assert Token[] keyTokens := latestKey.get(key);
+//
+//                buf.append("{\"k\":");
+//                for (Token token : keyTokens)
+//                    {
+//                    token.appendTo(buf);
+//                    }
+//                buf.append(", \"v\":");
+//                for (Token token : valueTokens)
+//                    {
+//                    token.appendTo(buf);
+//                    }
+//                buf.add('}');
+//                }
+//
+//            if (exists)
+//                {
+//                buf.append("]}\n]");
+//                file.contents = buf.toString().utf8();
+//                }
+//            else
+//                {
+//                file.delete();
+//                }
+//            }
+
+        return True;
         }
 
     @Override
@@ -795,6 +1051,42 @@ service JsonProcessorStore<Message extends immutable Const>
 
 
     // ----- internal ------------------------------------------------------------------------------
+
+    protected static PidSet addPid(PidSet pids, Pid pid)
+        {
+        return pids.is(Unschedule)
+                ? pid
+                : pids.is(Int)
+                    ? [pids, pid]
+                    : pids + pid;
+        }
+
+    protected static PidSet removePids(PidSet pidsOrig, PidSet pidsRemove)
+        {
+        if (pidsOrig.is(Unschedule) || pidsRemove.is(Unschedule))
+            {
+            return Cancel;
+            }
+
+        if (pidsOrig.is(Int))
+            {
+            Boolean match = pidsRemove.is(Int)
+                    ? pidsOrig == pidsRemove
+                    : pidsRemove.contains(pidsOrig);
+            return match ? Cancel : pidsOrig;
+            }
+
+        pidsOrig = pidsRemove.is(Int)
+                ? pidsOrig.remove(pidsRemove)
+                : pidsOrig.removeAll(pid -> pidsRemove.contains(pid));
+
+        return switch(pidsOrig.size)
+            {
+            case 0:  Cancel;
+            case 1:  pidsOrig[0];
+            default: pidsOrig;
+            };
+        }
 
     protected void clearSchedules(PidSet pids)
         {
@@ -806,6 +1098,117 @@ service JsonProcessorStore<Message extends immutable Const>
             {
             scheduleByPid.keys.removeAll(pids);
             }
+        }
+
+    private String buildJsonScheduled(PidSet pids)
+        {
+        StringBuffer buf = new StringBuffer();
+        buf.append("\"s\":[");
+        if (!pids.is(Unschedule))
+            {
+            if (pids.is(Int))
+                {
+                assert Schedule? schedule := scheduleByPid.get(pids);
+                appendJsonSchedule(buf, pids, schedule);
+                }
+            else
+                {
+                Loop: for (Pid pid : pids)
+                    {
+                    assert Schedule? schedule := scheduleByPid.get(pid);
+                    appendJsonSchedule(buf, pid, schedule);
+                    if (!Loop.last)
+                        {
+                        buf.add(',');
+                        }
+                    }
+                }
+            }
+        buf.add(']');
+        return buf.toString();
+        }
+
+    private void appendJsonSchedule(StringBuffer buf, Pid pid, Schedule? schedule)
+        {
+        // {"pid":[Int],"s":{"at":[DateTime],"daily":[Time],"repeat":[Duration],"policy":[Policy],"priority":[Priority]}}
+        if (schedule == Null)
+            {
+            buf.append($"\{\"pid\":{pid}}");
+            return;
+            }
+
+        DateTime? scheduledAt    = schedule.scheduledAt;
+        Time?     scheduledDaily = schedule.scheduledDaily;
+        Duration? repeatInterval = schedule.repeatInterval;
+        Policy    repeatPolicy   = schedule.repeatPolicy;
+        Priority  priority       = schedule.priority;
+
+        buf.append($"\{\"pid\":{pid}, \"s\":\{");
+
+        Boolean needComma = False;
+
+        if (scheduledAt != Null)
+            {
+            buf.append("\"at\":\"");
+            scheduledAt.appendTo(buf, True);
+            buf.add('"');
+            needComma = True;
+            }
+        if (scheduledDaily != Null)
+            {
+            if (needComma)
+                {
+                buf.add(',');
+                }
+            buf.append("\"daily\":\"");
+            scheduledDaily.appendTo(buf);
+            buf.add('"');
+            needComma = True;
+            }
+        if (repeatInterval != Null)
+            {
+            if (needComma)
+                {
+                buf.add(',');
+                }
+            buf.append("\"repeat\":\"");
+            repeatInterval.appendTo(buf);
+            buf.add('"');
+            needComma = True;
+            }
+        if (repeatPolicy != AllowOverlapping)
+            {
+            if (needComma)
+                {
+                buf.add(',');
+                }
+            buf.append("\"repeat\":");
+            repeatPolicy.ordinal.appendTo(buf);
+            needComma = True;
+            }
+        if (priority != Normal)
+            {
+            if (needComma)
+                {
+                buf.add(',');
+                }
+            buf.append("\"priority\":");
+            priority.ordinal.appendTo(buf);
+            needComma = True;
+            }
+        buf.add('}');
+        }
+
+    private void appendJsonEntry(StringBuffer buf, Int txId, String jsonMsg, String jsonEntry)
+        {
+        buf.append(",\n{\"tx\":")
+           .append(txId)
+           .add(',').add(' ')
+           .append("\"m\":")
+           .append(jsonMsg)
+           .add(',')
+           .append(jsonEntry)
+           .add('}');
         }
 
     protected void rotateLog()

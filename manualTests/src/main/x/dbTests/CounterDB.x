@@ -23,10 +23,11 @@ module CounterDB
             {
             CounterSchema schema = dbRoot.as(CounterSchema);
 
-            Int total = schema.counters.getOrDefault(name, 0);
-            schema.counters.put(name, ++total);
+            Int count = schema.counters.getOrDefault(name, 0);
+            schema.counters.put(name, ++count);
 
-            if (total < 100)
+
+            if (count % 20 != 0)
                 {
                 schedule(name);
                 }

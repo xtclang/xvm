@@ -783,10 +783,10 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                 lastModified = file.modified;
                 }
             cleanupPending = False;
-            }
 
-        // remember which is the "current" value
-        lastCommit = lastCommitId;
+            // remember which is the "current" value
+            lastCommit = lastCommitId;
+            }
 
         // discard the transactional records
         for (Int writeId : writeIds)
@@ -1025,10 +1025,6 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
 
             for ((Int txId, Key[] keys) : keysByTx)
                 {
-                if (keys.empty)
-                    {
-                    continue;
-                    }
                 for (Key key : keys)
                     {
                     if (Range<Int> valueRange := valueLoc.get(key))
