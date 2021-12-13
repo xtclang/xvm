@@ -192,7 +192,9 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
     protected Boolean defaultWriteable.get()
         {
         return !catalog.readOnly && info.lifeCycle == Current
-                && (info.id > 0 || info.id == Catalog.BuiltIn.TxCounter.id);
+                && (info.id > 0 ||
+                    info.id == Catalog.BuiltIn.TxCounter.id ||
+                    info.id == Catalog.BuiltIn.PidCounter.id);
         }
 
     /**

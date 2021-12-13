@@ -834,10 +834,6 @@ service JsonProcessorStore<Message extends immutable Const>
                 }
 
             StringBuffer buf = new StringBuffer();
-            if (rebuild)
-                {
-                buf.append("[");
-                }
 
             for ((Int txId, Message[] messages) : messagesByTx)
                 {
@@ -857,6 +853,9 @@ service JsonProcessorStore<Message extends immutable Const>
 
                                 Schedule? schedule = Null;
                                 scheduleByPid.put(pids, schedule);
+
+                                scheduler.registerPid(id, pids, clock.now,
+                                        new Pending(path, message, schedule));
                                 }
                             else
                                 {
@@ -873,6 +872,9 @@ service JsonProcessorStore<Message extends immutable Const>
                                     // TODO: reconstruct the Schedule
                                     Schedule? schedule = Null;
                                     scheduleByPid.put(pid, schedule);
+
+                                    scheduler.registerPid(id, pid, clock.now,
+                                            new Pending(path, message, schedule));
                                     }
                                 else
                                     {
@@ -900,7 +902,9 @@ service JsonProcessorStore<Message extends immutable Const>
 
             if (rebuild)
                 {
-                String jsonNew  = buf.truncate(-1).add('\n').add(']').toString();
+                buf[0] = '[';
+
+                String jsonNew  = buf.add('\n').add(']').toString();
                 Byte[] bytesNew = jsonNew.utf8();
 
                 file.contents = bytesNew;

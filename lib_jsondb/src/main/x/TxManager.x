@@ -3515,7 +3515,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         if (id < 0)
             {
             // these are non-transactional, so there is no expectation that this will ever occur
-            return Catalog.BuiltIn.byId(id).info;
+            return BuiltIn.byId(id).info;
             }
 
         Int size = infos.size;
@@ -3546,7 +3546,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         if (id < 0)
             {
             stores = sysStores;
-            index  = Catalog.BuiltIn.byId(id).ordinal;
+            index  = BuiltIn.byId(id).ordinal;
             }
 
         Int size = stores.size;

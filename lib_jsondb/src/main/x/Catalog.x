@@ -115,6 +115,7 @@ service Catalog<Schema extends RootSchema>
         Transactions<DBLog<DBTransaction>>,
         Errors<DBLog<String>>,
         TxCounter<DBCounter>,
+        PidCounter<DBCounter>,
         ;
 
         /**
@@ -190,6 +191,7 @@ service Catalog<Schema extends RootSchema>
         new DBObjectInfo("transactions", Path:/sys/transactions, DBLog,     BuiltIn.Transactions.id, BuiltIn.Sys.id, typeParams=Map:["Element"=DBTransaction]),
         new DBObjectInfo("errors",       Path:/sys/errors,       DBLog,     BuiltIn.Errors.id,       BuiltIn.Sys.id, typeParams=Map:["Element"=String]),
         new DBObjectInfo("txCounter",    Path:/sys/txCounter,    DBCounter, BuiltIn.TxCounter.id,    BuiltIn.Sys.id, transactional=False),
+        new DBObjectInfo("pidCounter",   Path:/sys/pidCounter,   DBCounter, BuiltIn.PidCounter.id,   BuiltIn.Sys.id, transactional=False),
         ];
 
     /**
@@ -545,6 +547,7 @@ service Catalog<Schema extends RootSchema>
 //                case Transactions: TODO new LogStore<DBTransaction>();
 //                case Errors:       TODO new LogStore<String>();
                 case TxCounter:    new JsonNtxCounterStore(this, info);
+                case PidCounter:   new JsonNtxCounterStore(this, info);
                 default:           assert as $"unsupported id={id}, BuiltIn={BuiltIn.byId(id)}, info={info}";
                 };
             }

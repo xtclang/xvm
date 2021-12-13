@@ -1,10 +1,13 @@
 import collections.ArrayDeque;
 import collections.SparseIntSet;
 
+import oodb.DBClosed;
 import oodb.DBProcessor;
 import oodb.DBTransaction.Priority;
 import oodb.RootSchema;
 import oodb.Transaction.CommitResult;
+
+import storage.JsonNtxCounterStore;
 
 import Clock.Cancellable;
 import Clock.Alarm;
@@ -124,10 +127,13 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
     protected/private Set<Int> processors;
 
     /**
-     * A counter used to generate unique PID values. This will be initialized only when all of the
-     * DBProcessor stores have contributed their scheduled items.
+     * The storage implementation for the pid counter.
      */
-    protected/private Int pidCounter = 0;
+    @Lazy
+    protected/private JsonNtxCounterStore pidCounter.calc()
+        {
+        return catalog.storeFor(Catalog.BuiltIn.PidCounter.id).as(JsonNtxCounterStore);
+        }
 
     /**
      * A pool of artificial clients for processing messages.
@@ -284,7 +290,7 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
      */
     Int generatePid(Int dboId, Schedule? schedule)
         {
-        return ++pidCounter;
+        return pidCounter.next();
         }
 
     /**
@@ -729,12 +735,17 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
                                     break;
                                     }
 
+                                if (disabled || result.is(DBClosed))
+                                    {
+                                    return;
+                                    }
+
                                 status = Failed;
                                 Int attempts = process.previousFailures + 1;
                                 process.previousFailures = attempts;
 
                                 // determine if the process should be abandoned
-                                Boolean abandoning = attempts > 8 || disabled;
+                                Boolean abandoning = attempts > 8;
                                 abandoning |= handleFailure(process, elapsed, result, abandoning);
                                 if (abandoning)
                                     {
@@ -823,7 +834,15 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
         try
             {
             // create a transaction
-            client.createProcessTx(process.previousFailures);
+            try
+                {
+                client.createProcessTx(process.previousFailures);
+                }
+            catch (DBClosed e)
+                {
+                DateTime now = clock.now;
+                return (now..now, e);
+                }
 
             // process the message
             (Range<DateTime> elapsed, Exception? failure) = processOne(client, process);
