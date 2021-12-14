@@ -650,6 +650,13 @@ public abstract class RelationalTypeConstant
     // ----- type comparison support ---------------------------------------------------------------
 
     @Override
+    protected boolean isDuckTypeAbleFrom(TypeConstant typeRight)
+        {
+        return getUnderlyingType() .isDuckTypeAbleFrom(typeRight) &&
+               getUnderlyingType2().isDuckTypeAbleFrom(typeRight);
+        }
+
+    @Override
     protected Usage checkProduction(String sTypeName, Access access, List<TypeConstant> listParams)
         {
         assert listParams.isEmpty();

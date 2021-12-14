@@ -150,6 +150,15 @@ public class ImmutableTypeConstant
         }
 
 
+    // ----- type comparison support ---------------------------------------------------------------
+
+    @Override
+    protected boolean isDuckTypeAbleFrom(TypeConstant typeRight)
+        {
+        return typeRight.isImmutable() && super.isDuckTypeAbleFrom(typeRight);
+        }
+
+
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
