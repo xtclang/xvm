@@ -8,19 +8,11 @@ module TestSimple.test.org
         {
         @Inject Directory curDir;
 
-        Map<FileNode, String> files = new HashMap();
+        Map<File|Directory> files = new HashMap();
         for (String name : curDir.names())
             {
             assert File|Directory node := curDir.find(name);
-            files.put(node, name);
-            }
-
-        console.println(files.keys.appendTo(new StringBuffer(), "\n", "", "").toString());
-
-        for (String name : curDir.names())
-            {
-            assert File|Directory node := curDir.find(name);
-            assert files.contains(node);
+            files.put(node, name); // this used to assert
             }
         }
     }

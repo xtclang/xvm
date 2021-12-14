@@ -448,7 +448,10 @@ public abstract class OpCallable extends Op
                     context.setOpInfo(this, Category.Function, function);
                     context.setOpInfo(this, Category.TargetType, typeTarget);
                     context.setOpInfo(this, Category.Template,
-                            context.f_templates.getTemplate(typeTarget));
+                        typeTarget.isSingleDefiningConstant()
+                            ? context.f_templates.getTemplate(typeTarget)
+                            : context.f_templates.getTemplate(
+                                    function.getContainingClass().getIdentityConstant()));
                     }
                 break;
                 }
