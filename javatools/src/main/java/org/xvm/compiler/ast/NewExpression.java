@@ -533,11 +533,18 @@ public class NewExpression
                             fNestMate ? Access.PRIVATE : Access.PROTECTED);
 
                     ClassStructure clzAnon = (ClassStructure) anon.getComponent();
+                    ClassConstant  idAnon  = (ClassConstant) clzAnon.getIdentityConstant();
 
-                    typeResult = pool.ensureAnonymousClassTypeConstant(ctx.getThisType(),
-                            (ClassConstant) clzAnon.getIdentityConstant());
-                    typeResult = typeResult.adoptParameters(pool, clzAnon.getFormalType());
-                    typeResult = typeResult.resolveGenerics(pool, typeTarget);
+                    if (ctx.isFunction())
+                        {
+                        typeResult = pool.ensureAnonymousClassTypeConstant(pool.typeObject(), idAnon);
+                        }
+                    else
+                        {
+                        typeResult = pool.ensureAnonymousClassTypeConstant(ctx.getThisType(), idAnon);
+                        typeResult = typeResult.adoptParameters(pool, clzAnon.getFormalType());
+                        typeResult = typeResult.resolveGenerics(pool, typeTarget);
+                        }
 
                     typeTarget = pool.ensureAccessTypeConstant(typeResult, Access.PRIVATE);
 
@@ -635,7 +642,10 @@ public class NewExpression
             }
 
         List<Expression> listArgs = args;
-        MethodConstant   idConstruct;
+        ErrorListener    errsTemp = errs.branch();
+
+        MethodConstant idConstruct = findMethod(ctx, typeTarget, infoTarget, "construct", listArgs,
+                        MethodKind.Constructor, true, false, null, errsTemp);
         if (fAnon)
             {
             // first, see if the constructor that we're looking for is on the anonymous
@@ -645,9 +655,6 @@ public class NewExpression
             // that we need on the anonymous inner class, then we will simply use that one (and
             // any required dependency that it has one a super class constructor will be handled
             // as if this were any other normal class)
-            ErrorListener errsTemp = errs.branch();
-            idConstruct = findMethod(ctx, typeTarget, infoTarget, "construct", listArgs,
-                            MethodKind.Constructor, true, false, null, errsTemp);
             if (idConstruct == null && !listArgs.isEmpty())
                 {
                 // the constructor that we're looking for is not on the anonymous inner class,
@@ -688,9 +695,6 @@ public class NewExpression
             }
         else
             {
-            ErrorListener errsTemp = errs.branch();
-            idConstruct = findMethod(ctx, typeTarget, infoTarget, "construct", listArgs,
-                            MethodKind.Constructor, true, false, null, errsTemp);
             if (idConstruct == null)
                 {
                 // as the last resort, validate the arguments before looking for the method again
@@ -864,7 +868,7 @@ public class NewExpression
     /**
      * Report one or more reasons why the specified type is "not newable".
      *
-     * @param sType       the name of the type that is being new'ed
+     * @param sType       the name of the type that is being new'd
      * @param infoTarget  the target type info
      * @param sChild      (optional) a child name
      * @param errs        the error listener
@@ -1443,7 +1447,7 @@ public class NewExpression
             }
 
         // we're going to replace the constructor by creating a new constructor that calls the old
-        // one, but that first stores off all of the passed-in binding values
+        // one, but that first stores off all the passed-in binding values
         ConstantPool pool       = pool();
         Parameter[]  aOldParams = m_constructor.getParamArray();
         int          cOldParams = aOldParams.length;

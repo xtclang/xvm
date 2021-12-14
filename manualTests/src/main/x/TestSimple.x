@@ -1,20 +1,33 @@
 module TestSimple.test.org
     {
-    import ecstasy.fs.FileNode;
-
     @Inject Console console;
 
     void run()
         {
-        @Inject Directory curDir;
+        Parent<String> p = new Parent();
+        p.foo();
+        }
 
-        Set<File|Directory> files = new HashSet(); // this used to throw
-        for (String name : curDir.names())
+    class Parent<Element>
+        {
+        void foo()
             {
-            assert File|Directory node := curDir.find(name);
-            files.add(node);
+            // this used to "soft assert" with "ERROR: Unresolved type ..."
+            Work w = FakeWork;
             }
 
-        console.println(files.appendTo(new StringBuffer(), "\n", "", "").toString());
+        protected static interface Work
+            {
+            Int getWork(Int i);
+            }
+
+        protected static Work FakeWork = new Work()
+            {
+            @Override
+            Int getWork(Int i)
+                {
+                assert;
+                }
+            };
         }
     }
