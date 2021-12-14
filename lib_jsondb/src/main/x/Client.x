@@ -471,10 +471,13 @@ service Client<Schema extends RootSchema>
                 }
             catch (Exception e)
                 {
-                log($|While attempting to determine whether a message ({safeToString(message)})\
-                     | should be retried for {dbo.dbPath.toString().substring(1)}, an exception\
-                     | occurred: {e}
-                   );
+                if (!e.is(DBClosed))
+                    {
+                    log($|While attempting to determine whether a message ({safeToString(message)})\
+                         | should be retried for {dbo.dbPath.toString().substring(1)}, an exception\
+                         | occurred: {e}
+                       );
+                    }
                 abandoning = True;
                 }
             }
@@ -488,6 +491,9 @@ service Client<Schema extends RootSchema>
                     dbo.abandoning_(message, pid, elapsed, result);
                     dbo.abandon(message, result, when, elapsed, timesAttempted);
                     }
+                }
+            catch (DBClosed e)
+                {
                 }
             catch (Exception e)
                 {
