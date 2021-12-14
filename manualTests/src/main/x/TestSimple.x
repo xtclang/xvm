@@ -1,22 +1,26 @@
 module TestSimple.test.org
     {
+    import ecstasy.fs.FileNode;
+
     @Inject Console console;
 
     void run()
         {
-        }
+        @Inject Directory curDir;
 
-    class Parent
-        {
-        class Child
+        Map<FileNode, String> files = new HashMap();
+        for (String name : curDir.names())
             {
-            Boolean garbage = False;
+            assert File|Directory node := curDir.find(name);
+            files.put(node, name);
+            }
 
-            // this used to compile without any errors
-            @Override
-            void trash()
-                {
-                }
+        console.println(files.keys.appendTo(new StringBuffer(), "\n", "", "").toString());
+
+        for (String name : curDir.names())
+            {
+            assert File|Directory node := curDir.find(name);
+            assert files.contains(node);
             }
         }
     }

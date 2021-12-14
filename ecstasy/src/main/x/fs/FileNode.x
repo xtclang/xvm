@@ -3,6 +3,7 @@
  * directory or a file.
  */
 interface FileNode
+        extends Hashable
     {
     /**
      * The FileStore that contains this FileNode. Each FileNode object is created by the FileStore
@@ -157,4 +158,23 @@ interface FileNode
      * @param indent     (optional) indentation for this item in the hierarchical listing
      */
     Appender<Char> emitListing(Appender<Char> buf, Boolean recursive = False, String indent = "");
+
+
+    // ----- equality ------------------------------------------------------------------------------
+
+    @Override
+    static <CompileType extends FileNode> Int hashCode(CompileType node)
+        {
+        return node.path.hashCode();
+        }
+
+    /**
+     * Two file nodes are equal iff they belong to the same store, have the same path and both are
+     * files or both are directories.
+     */
+    static <CompileType extends FileNode> Boolean equals(CompileType node1, CompileType node2)
+        {
+        return node1.&store == node2.&store && node1.path == node2.path &&
+               node1.is(File) == node2.is(File);
+        }
     }
