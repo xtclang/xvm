@@ -167,7 +167,7 @@ class SkiplistMap<Key extends Orderable, Value>
             {
             IndexStore nodes    = ensureNodes();
             Boolean    upgraded = False;
-            if ((Int node, Int height) := findNode(key))
+            if ((Int node, Int height) := findNode(key, mutationWork()))
                 {
                 // note: do NOT increment modCount for a value replace, because there are no
                 //       structural changes to the skiplist
@@ -207,7 +207,7 @@ class SkiplistMap<Key extends Orderable, Value>
     @Override
     SkiplistMap remove(Key key)
         {
-        if (!empty, (Int removeNode, Int removeHeight) := findNode(key, True))
+        if (!empty, (Int removeNode, Int removeHeight) := findNode(key, mutationWork(), findFully=True))
             {
             // unlink the node
             unlinkWork(removeNode, removeHeight);
@@ -304,19 +304,21 @@ class SkiplistMap<Key extends Orderable, Value>
         IndexStore nodes = this.nodes;
         Int        nil   = nodes.nil;
 
-        Int node;
-        Int height;
-        if ((node, height) := findNode(key))
+        Int  node;
+        Int  height;
+        Work work = readWriteWork();
+        if ((node, height) := findNode(key, work))
             {
-            // the specified key does exist in the skip list map
+            // the specified key exists in the skip list map
             }
         else
             {
             // the work list contains the nodes that the key would be inserted after
-            node   = nodes.getWork(0);
+            node   = work.getWork(0);
             height = nodes.heightOf(node);
 
-            // there is always a valid insert-after node (although it might be the head node)
+            // there is always a valid insert-after node (although it might be the head node);
+            // because the key was not found, all of the work nodes will have been initialized
             assert node != nil;
             }
 
@@ -335,12 +337,13 @@ class SkiplistMap<Key extends Orderable, Value>
             return False;
             }
 
-        findNode(key, True);
+        Work work = readWriteWork();
+        findNode(key, work, findFully=True);
 
         // the work list contains the nodes that precedes the key, or that the key would be inserted
         // key was not already in the map
         IndexStore nodes = this.nodes;
-        Int        prev  = nodes.getWork(0);
+        Int        prev  = work.getWork(0);
         return prev == nodes.headNode
                 ? False
                 : (True, keyStore.load(prev, nodes.heightOf(prev)));
@@ -354,18 +357,19 @@ class SkiplistMap<Key extends Orderable, Value>
             return False;
             }
 
-        if (findNode(key))
+        Work work = readWriteWork();
+        if (findNode(key, work))
             {
             // the specified key does exist in the skip list map
             return True, key;
             }
 
         // the work list contains the nodes that the key would be inserted after
-        IndexStore nodes = this.nodes;
-        Int        prev  = nodes.getWork(0);
+        Int prev = work.getWork(0);
 
         // return the next node
-        Int next = nodes.getIndex(prev, nodes.heightOf(prev), 0);
+        IndexStore nodes = this.nodes;
+        Int        next  = nodes.getIndex(prev, nodes.heightOf(prev), 0);
         return next == nodes.nil
                 ? False
                 : (True, keyStore.load(next, nodes.heightOf(next)));
@@ -379,15 +383,16 @@ class SkiplistMap<Key extends Orderable, Value>
             return False;
             }
 
-        if (findNode(key))
+        Work work = readWriteWork();
+        if (findNode(key, work))
             {
             // the specified key does exist in the skip list map
             return True, key;
             }
 
         // the work list contains the nodes that the key would be inserted after
+        Int        prev  = work.getWork(0);
         IndexStore nodes = this.nodes;
-        Int        prev  = nodes.getWork(0);
         return prev == nodes.headNode
                 ? False
                 : (True, keyStore.load(prev, nodes.heightOf(prev)));
@@ -511,7 +516,8 @@ class SkiplistMap<Key extends Orderable, Value>
             /**
              * Once iteration has started, this is the previously iterated key.
              */
-            protected/private Key? prevKey = Null;
+            @Unassigned
+            protected/private Key prevKey;
 
             /**
              * Set to true once iteration has begun.
@@ -558,7 +564,8 @@ class SkiplistMap<Key extends Orderable, Value>
                         {
                         // iteration has already begun, so we have a record of the last key that we
                         // iterated; re-initialize this iterator to begin iterations after that key
-                        if ((prevNode, prevHeight) := this.SkiplistMap.findNode(prevKey ?: assert))
+                        Work work = readWriteWork();
+                        if ((prevNode, prevHeight) := this.SkiplistMap.findNode(prevKey, work))
                             {
                             }
                         else
@@ -566,7 +573,7 @@ class SkiplistMap<Key extends Orderable, Value>
                             // we did not find the previous key, but the work area is set to the
                             // nodes after which that key would be inserted, so use those as a
                             // starting point
-                            prevNode   = nodes.getWork(0);
+                            prevNode   = work.getWork(0);
                             prevHeight = nodes.heightOf(prevNode);
                             }
 
@@ -586,7 +593,6 @@ class SkiplistMap<Key extends Orderable, Value>
                 Int next = nodes.getIndex(prevNode, prevHeight, 0);
                 if (next == nodes.nil)
                     {
-                    prevKey  = Null;
                     finished = True;
                     return False;
                     }
@@ -654,10 +660,14 @@ class SkiplistMap<Key extends Orderable, Value>
 
                 that.prevNode      = this.prevNode;
                 that.prevHeight    = this.prevHeight;
-                that.prevKey       = this.prevKey;
                 that.started       = this.started;
                 that.finished      = this.finished;
                 that.expectedCount = this.expectedCount;
+
+                if (started)
+                    {
+                    that.prevKey = this.prevKey;
+                    }
 
                 return that;
                 }
@@ -862,6 +872,7 @@ class SkiplistMap<Key extends Orderable, Value>
      * node (or to where the node _would_ be, if it does not exist).
      *
      * @param key        the key to search for
+     * @param work       the Work structure to hold the found location in
      * @param findFully  pass True to identify (in the work area) the node that precedes the found
      *                   node at each and every level
      *
@@ -869,7 +880,7 @@ class SkiplistMap<Key extends Orderable, Value>
      * @return (conditional) the node containing the key
      * @return (conditional) the height of the node
      */
-    protected conditional (Int node, Int height) findNode(Key key, Boolean findFully = False)
+    protected conditional (Int node, Int height) findNode(Key key, Work? work = Null, Boolean findFully = False)
         {
         Boolean    found      = False;
         IndexStore nodes      = this.nodes;
@@ -880,96 +891,106 @@ class SkiplistMap<Key extends Orderable, Value>
         Int        height     = nil;
         Int        level      = fromHeight-1;
 
-        // check if the cached result is valid
-        CheckCache: if (modCount == cacheModCount)
+        if (work == Null)
             {
-            switch (key <=> cacheKey)
+            work = writeOnlyWork();
+            }
+        else
+            {
+            // check if the cached result is valid
+            CheckCache: if (modCount == cacheModCount)
                 {
-                case Lesser:
-                    // the cache location is past where we are searching, so we have to start
-                    // searching from the very beginning of the skip list
-                    break;
+                switch (key <=> cacheKey)
+                    {
+                    case Lesser:
+                        // the cache location is past where we are searching, so we have to start
+                        // searching from the very beginning of the skip list
+                        break;
 
-                case Equal:
-                    // same exact key that we searched for the previous call to this method
-                    if (cacheMiss)
-                        {
-                        // the previous findNode call resulted in a miss on this same key
-                        return False;
-                        }
-
-                    // we have found the key, and the lowest level index that points to non-nil is
-                    // pointing at the node with the key
-                    found = True;
-                    for (level : [0..fromHeight))
-                        {
-                        fromNode = nodes.getWork(level);
-                        if (fromNode != nil)
+                    case Equal:
+                        // same exact key that we searched for the previous call to this method
+                        if (cacheMiss)
                             {
-                            fromHeight = nodes.heightOf(fromNode);
-                            node       = nodes.getIndex(fromNode, fromHeight, level);
-                            height     = nodes.heightOf(node);
-                            assert keyStore.load(node, height) == key;
-                            if (level == 0 || !findFully)
+                            // the previous findNode call resulted in a miss on this same key
+                            return False;
+                            }
+
+                        // we have found the key, and the lowest level index that points to non-nil
+                        // is pointing at the node with the key
+                        found = True;
+                        for (level : [0..fromHeight))
+                            {
+                            fromNode = work.getWork(level);
+                            if (fromNode != nil)
                                 {
-                                // it was already found fully, or we don't need to find fully
-                                return True, node, height;
+                                fromHeight = nodes.heightOf(fromNode);
+                                node       = nodes.getIndex(fromNode, fromHeight, level);
+                                height     = nodes.heightOf(node);
+                                assert keyStore.load(node, height) == key;
+                                if (level == 0 || !findFully)
+                                    {
+                                    // it was already found fully, or we don't need to find fully
+                                    return True, node, height;
+                                    }
+
+                                // we found the node with the key, but we still need to make sure
+                                // that every work list index from this level down is set (aka "find
+                                // fully")
+                                break CheckCache;
+                                }
+                            }
+                        assert;
+
+                    case Greater:
+                        // we can start searching from the cache location instead of from the
+                        // beginning, but we need to determine which level; the answer is whichever
+                        // level has a next pointer that points to a node that isn't past the key
+                        // that we're finding
+                        Int prevNode = -1;
+                        for (level : fromHeight-1..0)
+                            {
+                            fromNode = work.getWork(level);
+                            assert fromNode != nil;
+                            if (fromNode != prevNode)
+                                {
+                                fromHeight = nodes.heightOf(fromNode);
                                 }
 
-                            // we found the node with the key, but we still need to make sure that
-                            // every work list index from this level down is set (aka "find fully")
-                            break CheckCache;
+                            node = nodes.getIndex(fromNode, fromHeight, level);
+                            if (node == nil)
+                                {
+                                // nothing beyond this in the list at this level; drop to the next
+                                // level
+                                continue;
+                                }
+                            height   = nodes.heightOf(node);
+                            prevNode = fromNode;
+
+                            switch (key <=> keyStore.load(node, height))
+                                {
+                                case Lesser:
+                                    // the key that we're looking for comes before the next key in
+                                    // the linked list at this level, so drop down another level
+                                    break;
+
+                                case Equal:
+                                    // this is unusual, but we accidentally found the key that we
+                                    // were looking for in the cache of information that was used to
+                                    // find a lesser key (obviously which was subsequently found at
+                                    // a lower level); the rest of the work
+                                    found = True;
+                                    break CheckCache;
+
+                                case Greater:
+                                    // we can follow this level's list to get closer to the key that
+                                    // we're looking for
+                                    fromNode   = node;
+                                    fromHeight = height;
+                                    break CheckCache;
+                                }
                             }
-                        }
-                    assert;
-
-                case Greater:
-                    // we can start searching from the cache location instead of from the beginning,
-                    // but we need to determine which level; the answer is whichever level has a
-                    // next pointer that points to a node that isn't past the key that we're finding
-                    Int prevNode = -1;
-                    for (level : fromHeight-1..0)
-                        {
-                        fromNode = nodes.getWork(level);
-                        assert fromNode != nil;
-                        if (fromNode != prevNode)
-                            {
-                            fromHeight = nodes.heightOf(fromNode);
-                            }
-
-                        node = nodes.getIndex(fromNode, fromHeight, level);
-                        if (node == nil)
-                            {
-                            // nothing beyond this in the list at this level; drop to the next level
-                            continue;
-                            }
-                        height   = nodes.heightOf(node);
-                        prevNode = fromNode;
-
-                        switch (key <=> keyStore.load(node, height))
-                            {
-                            case Lesser:
-                                // the key that we're looking for comes before the next key in the
-                                // linked list at this level, so drop down another level
-                                break;
-
-                            case Equal:
-                                // this is unusual, but we accidentally found the key that we were
-                                // looking for in the cache of information that was used to find a
-                                // lesser key (obviously which was subsequently found at a lower
-                                // level); the rest of the work
-                                found = True;
-                                break CheckCache;
-
-                            case Greater:
-                                // we can follow this level's list to get closer to the key that
-                                // we're looking for
-                                fromNode   = node;
-                                fromHeight = height;
-                                break CheckCache;
-                            }
-                        }
-                    return False;
+                        return False;
+                    }
                 }
             }
 
@@ -985,7 +1006,7 @@ class SkiplistMap<Key extends Orderable, Value>
                     // the "from node" is at the end of its linked list for this level; to find the
                     // node we're looking for, drop to the next lower level and follow its linked
                     // list
-                    nodes.setWork(level, fromNode);
+                    work.setWork(level, fromNode);
                     --level;
                     }
                 else
@@ -1004,7 +1025,7 @@ class SkiplistMap<Key extends Orderable, Value>
                         case Equal:
                             // set the remainder of the work pointers to the node(s) that point to
                             // the node that we found
-                            nodes.setWork(level, fromNode);
+                            work.setWork(level, fromNode);
                             found = True;
                             break Loop;
 
@@ -1012,7 +1033,7 @@ class SkiplistMap<Key extends Orderable, Value>
                             // the node's key comes after the key we're looking for, so we can't
                             // follow the current level's linked list any further; drop to the next
                             // level
-                            nodes.setWork(level, fromNode);
+                            work.setWork(level, fromNode);
                             --level;
                             break;
                         }
@@ -1021,10 +1042,13 @@ class SkiplistMap<Key extends Orderable, Value>
             while (level >= 0);
             }
 
-        // update the cache
-        cacheModCount = modCount;
-        cacheKey      = key;
-        cacheMiss     = !found;
+        if (!this.is(immutable Object))
+            {
+            // update the cache
+            cacheModCount = modCount;
+            cacheKey      = key;
+            cacheMiss     = !found;
+            }
 
         if (!found)
             {
@@ -1046,14 +1070,14 @@ class SkiplistMap<Key extends Orderable, Value>
                     fromHeight = nodes.heightOf(fromNode);
                     nextNode   = nodes.getIndex(fromNode, fromHeight, level);
                     }
-                nodes.setWork(level, fromNode);
+                work.setWork(level, fromNode);
                 }
             }
         else
             {
             while (--level >= 0)
                 {
-                nodes.setWork(level, nil);
+                work.setWork(level, nil);
                 }
             }
 
@@ -1061,7 +1085,11 @@ class SkiplistMap<Key extends Orderable, Value>
         }
 
     /**
-     * Whatever nodes are specified in the "work" area, link in the specified node after those nodes.
+     * Whatever nodes are specified in the "work" area, link in the specified node after those
+     * nodes.
+     *
+     * This method assumes that `work == nodes`; the mutability of the SkiplistMap must have already
+     * been verified.
      *
      * @param node    the node index (its identity)
      * @param height  the height of the node, which is the number of indexes it holds
@@ -1082,6 +1110,9 @@ class SkiplistMap<Key extends Orderable, Value>
     /**
      * Whatever nodes are specified in the "work" area, unlink from the specified node, and relink
      * to whatever nodes follow it.
+     *
+     * This method assumes that `work == nodes`; the mutability of the SkiplistMap must have already
+     * been verified.
      *
      * @param removeNode    the node index to remove
      * @param removeHeight  the height of the node being removed
@@ -1401,6 +1432,7 @@ class SkiplistMap<Key extends Orderable, Value>
      * the last "next node" index, and hence implies the height of the node.
      */
     protected static class IndexStore<Index extends IntNumber>
+            implements Work
         {
         assert()
             {
@@ -1655,29 +1687,14 @@ class SkiplistMap<Key extends Orderable, Value>
             return elements[start..end).asByteArray();
             }
 
-        /**
-         * Obtain the worklist item.
-         *
-         * @param i  in the range `0 <= i < maxHeight`, where 0 is the lowest height (corresponding
-         *           to the linked list of all nodes) and `maxHeight-1` is the highest height (such
-         *           that the fewest nodes have this height)
-         *
-         * @return the previously stored worklist item at the specified height `i`
-         */
+        @Override
         Int getWork(Int i)
             {
             assert i >= 0 && i < maxHeight;
             return elements[i].toInt64();
             }
 
-        /**
-         * Store a worklist item.
-         *
-         * @param i  in the range `0 <= i < maxHeight`, where 0 is the lowest height (corresponding
-         *           to the linked list of all nodes) and `maxHeight-1` is the highest height (such
-         *           that the fewest nodes have this height)
-         * @param n  the index to store in the worklist at the specified height `i`
-         */
+        @Override
         void setWork(Int i, Int n)
             {
             assert i >= 0 && i < maxHeight && (n == nil || n >= 0 && n <= elements.size);
@@ -1946,6 +1963,110 @@ class SkiplistMap<Key extends Orderable, Value>
         {
         @Override Int   nil.get()      {return Int64.maxvalue;}
         @Override Int64 toIndex(Int n) {return n;}
+        }
+
+
+    // ----- Work space ----------------------------------------------------------------------------
+
+    /**
+     * Represents a "work" node, which points to some "found" or "next" node.
+     */
+    protected static interface Work
+        {
+        /**
+         * Obtain the worklist item.
+         *
+         * @param i  in the range `0 <= i < maxHeight`, where 0 is the lowest height (corresponding
+         *           to the linked list of all nodes) and `maxHeight-1` is the highest height (such
+         *           that the fewest nodes have this height)
+         *
+         * @return the previously stored worklist item at the specified height `i`
+         */
+        Int getWork(Int i);
+
+        /**
+         * Store a worklist item.
+         *
+         * @param i  in the range `0 <= i < maxHeight`, where 0 is the lowest height (corresponding
+         *           to the linked list of all nodes) and `maxHeight-1` is the highest height (such
+         *           that the fewest nodes have this height)
+         * @param n  the index to store in the worklist at the specified height `i`
+         */
+        void setWork(Int i, Int n);
+        }
+
+    /**
+     * A node that contains only work info.
+     */
+    protected static class WorkNode
+            implements Work
+        {
+        protected construct(Int maxHeight)
+            {
+            this.indexes = new Int[maxHeight];
+            }
+
+        protected Int[] indexes;
+
+        @Override
+        Int getWork(Int i)
+            {
+            return indexes[i];
+            }
+
+        @Override
+        void setWork(Int i, Int n)
+            {
+            indexes[i] = n;
+            }
+        }
+
+    /**
+     * A node that silently ignores work info, and asserts if an attempt is made to retrieve the
+     * previously ignored work info.
+     */
+    protected static Work FakeWork = new Work()
+        {
+        @Override
+        Int getWork(Int i)
+            {
+            assert;
+            }
+
+        @Override
+        void setWork(Int i, Int n)
+            {
+            }
+        };
+
+    /**
+     * @return a read/write Work object that can be used for mutating operations on the SkiplistMap
+     */
+    protected Work mutationWork()
+        {
+        return this.is(immutable SkiplistMap)
+                ? throw new ReadOnly()
+                : nodes;
+        }
+
+    /**
+     * @return a read/write Work object that can be used whether or not the SkiplistMap is mutable
+     */
+    protected Work readWriteWork()
+        {
+        return this.is(immutable SkiplistMap)
+                ? new WorkNode(nodes.maxHeight)
+                : nodes;
+        }
+
+    /**
+     * @return a write-only Work object that can be used whether or not the SkiplistMap is mutable
+     */
+    protected Work writeOnlyWork()
+        {
+        return this.is(immutable SkiplistMap)
+                ? FakeWork
+                : nodes;
         }
 
 

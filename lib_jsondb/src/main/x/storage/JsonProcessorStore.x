@@ -922,8 +922,6 @@ service JsonProcessorStore<Message extends immutable Const>
     @Synchronized
     Boolean recover(SkiplistMap<Int, Token[]> sealsByTxId)
         {
-        sealsByTxId = new SkiplistMap(sealsByTxId); // TODO CP: remove this
-
         // first, collect all the affected files
         Map<String, Int> latestTxByFile = new HashMap();
 
