@@ -3,6 +3,8 @@ import json.Mapping;
 import json.ObjectInputStream;
 import json.Parser;
 
+import TxManager.NO_TX;
+
 
 /**
  * Common functionality for key-based json stores.
@@ -43,13 +45,22 @@ mixin KeyBasedStore<Key>
         }
 
     /**
-     * Collect all file name that are affected by the specifies seals.
+     * Analyze all store files for provided seals and reconstruct their up-to-date contents.
+     *
+     * @param sealsByTxId  a Map, keyed and ordered by transaction id, with the seal information
+     * @param keyName      the name of the key in the json docs used by this store
+     *
+     * @return True iff recovery was successful
+     * @return (conditional) a map of reconstructed StringBuffers per file name
+     * @return (conditional) a map of last transaction id per file name
      */
-    protected Map<String, Int> collectFileNames(SkiplistMap<Int, Token[]> sealsByTxId,
-                                                String keyName, Mapping<Key> keyMapping,
-                                                json.Schema jsonSchema)
+    conditional (Map<String, StringBuffer>, Map<String, Int>) recoverContents(
+            SkiplistMap<Int, Token[]> sealsByTxId,
+            String keyName, Mapping<Key> keyMapping, json.Schema jsonSchema
+            )
         {
-        Map<String, Int> latestTxByFile = new HashMap();
+        // first, collect all file name that are affected by the specifies seals.
+        Map<String, Int> lastSealByFile = new HashMap();
 
         for ((Int txId, Token[] sealTokens) : sealsByTxId)
             {
@@ -71,13 +82,101 @@ mixin KeyBasedStore<Key>
                                 key = keyMapping.read(stream.ensureElementInput());
                                 }
 
-                            latestTxByFile.put(nameForKey(key), txId);
+                            lastSealByFile.put(nameForKey(key), txId);
                             }
                         }
                     }
                 }
             }
-        return latestTxByFile;
+
+        assert Int firstSeal := sealsByTxId.first();
+
+        // now find the last valid transaction in each file by parsing as far as we can
+
+        Map<String, StringBuffer> recoveredContents = new HashMap();
+        Map<String, Int>          lastTxInFile      = new HashMap();
+
+        for ((String fileName, Int lastSeal) : lastSealByFile)
+            {
+            File file = dataDir.fileFor(fileName);
+
+            StringBuffer buf        = new StringBuffer();
+            Boolean      exists     = file.exists;
+            Int          lastInFile = NO_TX;
+
+            if (exists)
+                {
+                // find the last valid transaction in the file by parsing as far as we can
+                Byte[]  bytes      = file.contents;
+                String  jsonStr    = bytes.unpackUtf8();
+                Parser  fileParser = new Parser(jsonStr.toReader());
+                Int     endOffset  = 0;
+                Boolean corrupted  = False;
+
+                using (val arrayParser = fileParser.expectArray())
+                    {
+                    try
+                        {
+                        while (!arrayParser.eof)
+                            {
+                            Token endToken;
+                            Int   currentTx;
+                            using (val txParser = arrayParser.expectObject())
+                                {
+                                txParser.expectKey("tx");
+                                currentTx = txParser.expectInt();
+
+                                txParser.skipRemaining();
+                                endToken = txParser.peek();
+                                }
+
+                            assert endToken.id == ObjectExit;
+                            lastInFile = currentTx;
+                            endOffset  = endToken.end.offset;
+                            }
+                        }
+                    catch (Exception e)
+                        {
+                        corrupted = True;
+                        }
+                    }
+
+                if (lastInFile > lastSeal)
+                    {
+                    // something is really wrong; we should never be ahead of the txlog
+                    catalog.log($|File {fileName} contains transaction {lastInFile},
+                                 | which is beyond the latest recovered transaction {lastSeal}
+                               );
+                    return False;
+                    }
+
+                if (lastInFile == lastSeal)
+                    {
+                    // this file doesn't need any recovery; go to the next one
+                    continue;
+                    }
+
+                if (corrupted && lastInFile < firstSeal)
+                    {
+                    catalog.log($|File {fileName} is corrupted beyond transaction {lastInFile} and
+                                 | may contain transaction data preceeding the earliest recovered
+                                 | transaction {firstSeal}
+                               );
+                    return False;
+                    }
+
+                buf.append(jsonStr[0..endOffset)).add(',');
+                }
+            else
+                {
+                buf.add('[');
+                }
+
+            recoveredContents.put(fileName, buf);
+            lastTxInFile     .put(fileName, lastInFile);
+            }
+
+        return True, recoveredContents, lastTxInFile;
         }
 
     /**

@@ -1102,116 +1102,44 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
     @Synchronized
     Boolean recover(SkiplistMap<Int, Token[]> sealsByTxId)
         {
-        Map<String, Int> latestTxByFile =
-                collectFileNames(sealsByTxId, "k", keyMapping, jsonSchema);
+        Map<String, StringBuffer> recoveredContents;
+        Map<String, Int>          lastTxInFile;
 
-        assert Int firstSeal := sealsByTxId.first();
-
-        // now recover all the affected files by adding the info from the seals
-        for ((String fileName, Int lastSeal) : latestTxByFile)
+        if ((recoveredContents, lastTxInFile) :=
+                recoverContents(sealsByTxId, "k", keyMapping, jsonSchema)) {}
+        else
             {
-            File file = dataDir.fileFor(fileName);
+            return False;
+            }
 
-            StringBuffer buf        = new StringBuffer();
-            Boolean      exists     = file.exists;
-            Int          lastInFile = NO_TX;
-
-            if (exists)
+        for ((Int txId, Token[] tokens) : sealsByTxId)
+            {
+            using (val sealParser = new Parser(tokens.iterator()))
                 {
-                // find the last valid transaction in the file by parsing as far as we can
-                Byte[]  bytes      = file.contents;
-                String  jsonStr    = bytes.unpackUtf8();
-                Parser  fileParser = new Parser(jsonStr.toReader());
-                Int     endOffset  = 0;
-                Boolean corrupted  = False;
-
-                using (val arrayParser = fileParser.expectArray())
+                using (val changeArrayParser = sealParser.expectArray())
                     {
-                    try
+                    while (!changeArrayParser.eof)
                         {
-                        while (!arrayParser.eof)
+                        using (val changeParser = changeArrayParser.expectObject())
                             {
-                            Token endToken;
-                            Int   currentTx;
-                            using (val txParser = arrayParser.expectObject())
-                                {
-                                txParser.expectKey("tx");
-                                currentTx = txParser.expectInt();
+                            String fileName;
 
-                                txParser.skipRemaining();
-                                endToken = txParser.peek();
+                            changeParser.expectKey("k");
+
+                            Token[] keyTokens = changeParser.skip(new Token[]);
+                            using (ObjectInputStream stream =
+                                    new ObjectInputStream(jsonSchema, keyTokens.iterator()))
+                                {
+                                Key key = keyMapping.read(stream.ensureElementInput());
+
+                                fileName = nameForKey(key);
                                 }
 
-                            assert endToken.id == ObjectExit;
-                            lastInFile = currentTx;
-                            endOffset  = endToken.end.offset;
-                            }
-                        }
-                    catch (Exception e)
-                        {
-                        corrupted = True;
-                        }
-                    }
-
-                if (lastInFile > lastSeal)
-                    {
-                    // something is really wrong; we should never be ahead of the txlog
-                    catalog.log($|File {fileName} contains transaction {lastInFile},
-                                 | which is beyond the latest recovered transaction {lastSeal}
-                               );
-                    return False;
-                    }
-
-                if (lastInFile == lastSeal)
-                    {
-                    // this file doesn't need any recovery; go to the next one
-                    continue;
-                    }
-
-                if (corrupted && lastInFile < firstSeal)
-                    {
-                    catalog.log($|File {fileName} is corrupted beyond transaction {lastInFile} and
-                                 | may contain transaction data preceeding the earliest recovered
-                                 | transaction {firstSeal}
-                               );
-                    return False;
-                    }
-
-                buf.append(jsonStr[0..endOffset)).add(',');
-                }
-            else
-                {
-                buf.add('[');
-                }
-
-            // we know now that lastInFile < lastSeal, so we can apply just the missing transactions
-            assert firstSeal := sealsByTxId.ceiling(lastInFile + 1);
-
-            for ((Int txId, Token[] tokens) : sealsByTxId[firstSeal..lastSeal])
-                {
-                using (val sealParser = new Parser(tokens.iterator()))
-                    {
-                    using (val changeArrayParser = sealParser.expectArray())
-                        {
-                        while (!changeArrayParser.eof)
-                            {
-                            using (val changeParser = changeArrayParser.expectObject())
+                            // apply just the missing transactions
+                            if (Int lastInFile := lastTxInFile.get(fileName),
+                                    lastInFile < txId || lastInFile == NO_TX)
                                 {
-                                Key key;
-
-                                changeParser.expectKey("k");
-
-                                Token[] keyTokens = changeParser.skip(new Token[]);
-                                using (ObjectInputStream stream =
-                                        new ObjectInputStream(jsonSchema, keyTokens.iterator()))
-                                    {
-                                    key = keyMapping.read(stream.ensureElementInput());
-                                    }
-
-                                if (nameForKey(key) != fileName)
-                                    {
-                                    continue;
-                                    }
+                                assert StringBuffer buf := recoveredContents.get(fileName);
 
                                 appendChange(buf, txId, "k", keyTokens, "v",
                                         changeParser.matchKey("v")
@@ -1222,9 +1150,12 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                         }
                     }
                 }
+            }
 
+        for ((String fileName, StringBuffer buf) : recoveredContents)
+            {
             buf.truncate(-1).add('\n').add(']');
-            file.contents = buf.toString().utf8();
+            dataDir.fileFor(fileName).contents = buf.toString().utf8();
             }
 
         return True;
