@@ -23,12 +23,19 @@ module CounterDB
             {
             CounterSchema schema = dbRoot.as(CounterSchema);
 
-            Int count = schema.counters.getOrDefault(name, 0);
-            schema.counters.put(name, ++count);
+            DBMap<String, Int> counters = schema.counters;
 
-            if (count % 100 != 0)
+            Int count = counters.getOrDefault(name, 0);
+            counters.put(name, ++count);
+
+            if (count % 20 != 0)
                 {
                 schedule(name);
+                }
+
+            if (count % 60 == 0)
+                {
+                counters.remove(name);
                 }
             }
         }

@@ -1102,79 +1102,19 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
     @Synchronized
     Boolean recover(SkiplistMap<Int, Token[]> sealsByTxId)
         {
-        Map<Key, Int>      latestTx    = new HashMap();
-        Map<Key, Token[]>  latestKey   = new HashMap();
-        Map<Key, Token[]>  latestValue = new HashMap();
-        Map<String, Key[]> byFileName  = new HashMap();
-
-        for ((Int txId, Token[] tokens) : sealsByTxId)
-            {
-            using (val sealParser = new Parser(tokens.iterator()))
-                {
-                using (val changeArrayParser = sealParser.expectArray())
-                    {
-                    while (!changeArrayParser.eof)
-                        {
-                        using (val changeParser = changeArrayParser.expectObject())
-                            {
-                            Key key;
-
-                            changeParser.expectKey("k");
-
-                            Token[] keyTokens = changeParser.skip(new Token[]);
-
-                            using (ObjectInputStream stream =
-                                    new ObjectInputStream(jsonSchema, keyTokens.iterator()))
-                                {
-                                key = keyMapping.read(stream.ensureElementInput());
-                                }
-
-                            Token[] valueTokens;
-                            if (changeParser.matchKey("v"))
-                                {
-                                valueTokens = changeParser.skip(new Token[]);
-                                }
-                            else
-                                {
-                                valueTokens = []; // empty array represents a "Delete"
-                                }
-
-                            latestTx   .put(key, txId);
-                            latestKey  .putIfAbsent(key, keyTokens);
-                            latestValue.put(key, valueTokens);
-                            byFileName .process(nameForKey(key), e ->
-                                {
-                                if (e.exists)
-                                    {
-                                    // make sure the keys are sorted according to the last
-                                    // corresponding transaction
-                                    Key[] keys = e.value;
-                                    if (keys.contains(key))
-                                        {
-                                        keys -= key;
-                                        }
-                                    e.value = keys + key;
-                                    }
-                                else
-                                    {
-                                    e.value = [key];
-                                    }
-                                });
-                            }
-                        }
-                    }
-                }
-            }
+        Map<String, Int> latestTxByFile =
+                collectFileNames(sealsByTxId, "k", keyMapping, jsonSchema);
 
         assert Int firstSeal := sealsByTxId.first();
-        assert Int lastSeal  := sealsByTxId.last();
 
-        for ((String fileName, Key[] keys) : byFileName)
+        // now recover all the affected files by adding the info from the seals
+        for ((String fileName, Int lastSeal) : latestTxByFile)
             {
-            File         file       = dataDir.fileFor(fileName);
+            File file = dataDir.fileFor(fileName);
+
+            StringBuffer buf        = new StringBuffer();
             Boolean      exists     = file.exists;
             Int          lastInFile = NO_TX;
-            StringBuffer buf;
 
             if (exists)
                 {
@@ -1237,44 +1177,50 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                     return False;
                     }
 
-                buf = new StringBuffer();
                 buf.append(jsonStr[0..endOffset)).add(',');
                 }
             else
                 {
-                buf = new StringBuffer();
                 buf.add('[');
                 }
 
-            for (Key key : keys)
+            // we know now that lastInFile < lastSeal, so we can apply just the missing transactions
+            assert firstSeal := sealsByTxId.ceiling(lastInFile + 1);
+
+            for ((Int txId, Token[] tokens) : sealsByTxId[firstSeal..lastSeal])
                 {
-                assert Int txId := latestTx.get(key);
-                if (lastInFile != NO_TX && txId <= lastInFile)
+                using (val sealParser = new Parser(tokens.iterator()))
                     {
-                    continue;
-                    }
-
-                buf.append("\n{\"tx\":")
-                   .append(txId);
-
-                assert Token[] keyTokens := latestKey.get(key);
-
-                buf.append(", \"k\":");
-                for (Token token : keyTokens)
-                    {
-                    token.appendTo(buf);
-                    }
-
-                assert Token[] valueTokens := latestValue.get(key);
-                if (valueTokens.size > 0)
-                    {
-                    buf.append(", \"v\":");
-                    for (Token token : valueTokens)
+                    using (val changeArrayParser = sealParser.expectArray())
                         {
-                        token.appendTo(buf);
+                        while (!changeArrayParser.eof)
+                            {
+                            using (val changeParser = changeArrayParser.expectObject())
+                                {
+                                Key key;
+
+                                changeParser.expectKey("k");
+
+                                Token[] keyTokens = changeParser.skip(new Token[]);
+                                using (ObjectInputStream stream =
+                                        new ObjectInputStream(jsonSchema, keyTokens.iterator()))
+                                    {
+                                    key = keyMapping.read(stream.ensureElementInput());
+                                    }
+
+                                if (nameForKey(key) != fileName)
+                                    {
+                                    continue;
+                                    }
+
+                                appendChange(buf, txId, "k", keyTokens, "v",
+                                        changeParser.matchKey("v")
+                                            ? changeParser.skip(new Token[])
+                                            : []);
+                                }
+                            }
                         }
                     }
-                buf.add('}').add(',');
                 }
 
             buf.truncate(-1).add('\n').add(']');

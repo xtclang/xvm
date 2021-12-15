@@ -923,34 +923,8 @@ service JsonProcessorStore<Message extends immutable Const>
     Boolean recover(SkiplistMap<Int, Token[]> sealsByTxId)
         {
         // first, collect all the affected files
-        Map<String, Int> latestTxByFile = new HashMap();
-
-        for ((Int txId, Token[] sealTokens) : sealsByTxId)
-            {
-            using (val sealParser = new Parser(sealTokens.iterator()))
-                {
-                using (val changeArrayParser = sealParser.expectArray())
-                    {
-                    while (!changeArrayParser.eof)
-                        {
-                        using (val changeParser = changeArrayParser.expectObject())
-                            {
-                            Message message;
-
-                            changeParser.expectKey("m");
-
-                            using (ObjectInputStream stream =
-                                    new ObjectInputStream(jsonSchema, changeParser))
-                                {
-                                message = messageMapping.read(stream.ensureElementInput());
-                                }
-
-                            latestTxByFile.put(nameForKey(message), txId);
-                            }
-                        }
-                    }
-                }
-            }
+        Map<String, Int> latestTxByFile =
+                collectFileNames(sealsByTxId, "m", messageMapping, jsonSchema);
 
         assert Int firstSeal := sealsByTxId.first();
 
@@ -1062,14 +1036,14 @@ service JsonProcessorStore<Message extends immutable Const>
 
                                 if (changeParser.matchKey("p"))
                                     {
-                                    appendChange(buf, txId, messageTokens, "p",
-                                            changeParser.skip(new Token[]));
+                                    appendChange(buf, txId, "m", messageTokens,
+                                            "p", changeParser.skip(new Token[]));
                                     }
 
                                 if (changeParser.matchKey("s"))
                                     {
-                                    appendChange(buf, txId, messageTokens, "s",
-                                            changeParser.skip(new Token[]));
+                                    appendChange(buf, txId, "m", messageTokens,
+                                            "s", changeParser.skip(new Token[]));
                                     }
                                 }
                             }
@@ -1255,30 +1229,6 @@ service JsonProcessorStore<Message extends immutable Const>
            .add(',').add(' ')
            .append(jsonEntry)
            .add('}');
-        }
-
-    private void appendChange(StringBuffer buf, Int txId, Token[] messageTokens,
-                              String jsonKey, Token[] changeTokens)
-        {
-        buf.append("\n{\"tx\":")
-           .append(txId)
-           .add(',').add(' ')
-           .append("\"m\":");
-
-        for (Token token : messageTokens)
-            {
-            token.appendTo(buf);
-            }
-
-        buf.add(',').add(' ').add('"')
-           .append(jsonKey)
-           .add('"').add(':');
-
-        for (Token token : changeTokens)
-            {
-            token.appendTo(buf);
-            }
-        buf.add('}').add(',');
         }
 
     protected void rotateLog()
