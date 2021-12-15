@@ -23,6 +23,7 @@ mixin KeySetBasedMap<Key, Value>
      */
     protected class KeyEntries
             implements Collection<Map.Entry>
+            implements Freezable
         {
         Map<Key, Value> contents.get()
             {
@@ -119,6 +120,13 @@ mixin KeySetBasedMap<Key, Value>
             contents.clear();
             return this;
             }
+
+        @Override
+        immutable KeyEntries freeze(Boolean inPlace = False)
+            {
+            assert outer.is(immutable Map);
+            return makeImmutable();
+            }
         }
 
     /**
@@ -127,6 +135,7 @@ mixin KeySetBasedMap<Key, Value>
      */
     protected class KeyValues
             implements Collection<Value>
+            implements Freezable
         {
         Map<Key, Value> contents.get()
             {
@@ -230,6 +239,13 @@ mixin KeySetBasedMap<Key, Value>
             verifyInPlace();
             contents.clear();
             return this;
+            }
+
+        @Override
+        immutable KeyValues freeze(Boolean inPlace = False)
+            {
+            assert outer.is(immutable Map);
+            return makeImmutable();
             }
         }
 

@@ -417,6 +417,7 @@ class OrderedMapSlice<Key extends Orderable, Value>
      */
     protected class KeySet
             implements OrderedSet<Key>
+            implements Freezable
         {
         @Override
         conditional Orderer ordered()
@@ -643,6 +644,13 @@ class OrderedMapSlice<Key extends Orderable, Value>
             {
             outer.remove(key);
             return this;
+            }
+
+        @Override
+        immutable KeySet freeze(Boolean inPlace = False)
+            {
+            assert outer.is(immutable Map);
+            return makeImmutable();
             }
         }
     }
