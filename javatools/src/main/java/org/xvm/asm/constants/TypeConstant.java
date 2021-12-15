@@ -1592,7 +1592,7 @@ public abstract class TypeConstant
             getConstantPool().invalidateTypeInfos(getSingleUnderlyingClass(true));
             }
 
-        if (!isAccessSpecified())
+        if (isSingleDefiningConstant() && !isAccessSpecified())
             {
             // clear the TypeInfo for the PRIVATE type
             getConstantPool().ensureAccessTypeConstant(this, Access.PRIVATE).clearTypeInfo();
