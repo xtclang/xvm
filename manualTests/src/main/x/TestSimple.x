@@ -4,30 +4,19 @@ module TestSimple.test.org
 
     void run()
         {
-        Parent<String> p = new Parent();
-        p.foo();
+        String s = ""; // TODO should not need to be assigned here
+
+        if (!(s := foo()))
+            {
+            console.println("no string to print");
+            return;
+            }
+
+        console.println($"s={s}");
         }
 
-    class Parent<Element>
+    conditional String foo()
         {
-        void foo()
-            {
-            // this used to "soft assert" with "ERROR: Unresolved type ..."
-            Work w = FakeWork;
-            }
-
-        protected static interface Work
-            {
-            Int getWork(Int i);
-            }
-
-        protected static Work FakeWork = new Work()
-            {
-            @Override
-            Int getWork(Int i)
-                {
-                assert;
-                }
-            };
+        return True, "hello";
         }
     }

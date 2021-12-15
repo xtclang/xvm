@@ -1950,16 +1950,43 @@ public class Parser
     List<AstNode> parseConditionList()
         {
         List<AstNode> list = new ArrayList<>(4);
-        list.add(parseCondition());
+        list.add(parseCondition(false));
         while (match(Id.COMMA) != null)
             {
-            list.add(parseCondition());
+            list.add(parseCondition(false));
             }
         return list;
         }
 
-    AstNode parseCondition()
+    AstNode parseCondition(boolean fNegated)
         {
+        if (!fNegated && peek(Id.NOT) != null)
+            {
+            // test for a negated conditional assignment
+            Token               tokNot  = peek();
+            AssignmentStatement stmtAsn = null;
+            try (SafeLookAhead attempt = new SafeLookAhead())
+                {
+                expect(Id.NOT);
+                if (match(Id.L_PAREN) != null)
+                    {
+                    AstNode stmtPeek = parseCondition(true);
+                    if (attempt.isClean() && stmtPeek instanceof AssignmentStatement)
+                        {
+                        stmtAsn = (AssignmentStatement) stmtPeek;
+                        attempt.keepResults();
+                        }
+                    }
+                }
+            catch (CompilerException e) {}
+
+            if (stmtAsn != null)
+                {
+                stmtAsn.negate(tokNot, expect(Id.R_PAREN));
+                return stmtAsn;
+                }
+            }
+
         // it could be an OptionalDeclarationList
         AstNode LVal = peekMultiVariableInitializer();
 
@@ -2002,8 +2029,10 @@ public class Parser
                             break;
 
                         default:
-                            // the condition is just an expression
-                            return expr;
+                            // if we're testing for a negated conditional assignment, then an
+                            // expression isn't what we're looking for, so return null; otherwise,
+                            // the expression is the condition, so return it
+                            return fNegated ? null : expr;
                         }
                     }
                 }
@@ -3559,10 +3588,13 @@ public class Parser
      *     SwitchExpression
      *     LambdaExpression
      *     "_"
-     *     "throw" Expression
-     *     "T0D0" TodoFinish-opt
-     *     "assert"
      *     Literal
+     *
+     * StatementExpression
+     *     StatementBlock                  # a "block expression"
+     *     "throw" TernaryExpression       # non-completing
+     *     "T0D0" TodoFinish-opt           # non-completing
+     *     "assert"                        # non-completing
      * </pre></code>
      *
      * @return an expression

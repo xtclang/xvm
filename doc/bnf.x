@@ -308,7 +308,7 @@ Statement
     AssertStatement
     BreakStatement
     ContinueStatement
-    "do" StatementBlock "while" "(" ConditionList ")" ";"
+    DoStatement
     ForStatement
     IfStatement
 	ImportStatement
@@ -316,8 +316,8 @@ Statement
     SwitchStatement
     TryStatement
 	TypeDefStatement
-    "using" "(" UsingResources ")" StatementBlock
-    "while" "(" ConditionList ")" StatementBlock
+    UsingStatement
+    WhileStatement
     StatementBlock
 	Expression ";"      // for parsing purposes (compilation will only allow specific expression forms)
 
@@ -432,22 +432,32 @@ VariableModification
 IfStatement
     "if" "(" ConditionList ")" StatementBlock ElseStatement-opt
 
+ElseStatement
+    "else" IfStatement
+    "else" StatementBlock
+
+DoStatement
+    "do" StatementBlock "while" "(" ConditionList ")" ";"
+
+WhileStatement
+    "while" "(" ConditionList ")" StatementBlock
+
 ConditionList
     Condition
     ConditionList, Condition
 
 Condition
+    ConditionalAssignmentCondition
+    "!" "(" ConditionalAssignmentCondition ")"
     Expression
+
+ConditionalAssignmentCondition
     OptionalDeclaration ConditionalAssignmentOp Expression
-    ( OptionalDeclarationList, OptionalDeclaration ) ConditionalAssignmentOp Expression
+    "(" OptionalDeclarationList "," OptionalDeclaration ")" ConditionalAssignmentOp Expression
 
 ConditionalAssignmentOp
     :=
     ?=
-
-ElseStatement
-    "else" IfStatement
-    "else" StatementBlock
 
 ImportStatement
     "import" QualifiedName ImportFinish
@@ -565,6 +575,9 @@ UsingResource
     "(" OptionalDeclarationList "," OptionalDeclaration ")" "=" Expression
     Expression                                          # implicitly "val _ = Expression"
 
+UsingStatement
+    "using" "(" UsingResources ")" StatementBlock
+
 TypeDefStatement
     "typedef" TypeExpression "as"-opt Name ";"
 
@@ -611,21 +624,23 @@ TypeDefStatement
 #
 #   ..              range/interval            8     left to right
 #
-#   <  <=           relational                9     left to right
+#   <-              assignment                9     right to left
+#
+#   <  <=           relational               10     left to right
 #   >  >=
 #   <=>             order ("star-trek")
 #
-#   ==              equality                 10     left to right
+#   ==              equality                 11     left to right
 #   !=
 #
-#   &&              conditional AND          11     left to right
+#   &&              conditional AND          12     left to right
 #
-#   ^^              conditional XOR          12     left to right
+#   ^^              conditional XOR          13     left to right
 #   ||              conditional OR
 #
-#   ? :             conditional ternary      13     right to left
+#   ? :             conditional ternary      14     right to left
 #
-#   :               conditional ELSE         14     right to left
+#   :               conditional ELSE         15     right to left
 
 Expression
     ElseExpression
@@ -654,12 +669,16 @@ EqualityExpression
     EqualityExpression "!=" RelationalExpression
 
 RelationalExpression
+    AssignmentExpression
+    AssignmentExpression "<=>" AssignmentExpression
+    RelationalExpression "<"   AssignmentExpression
+    RelationalExpression "<="  AssignmentExpression
+    RelationalExpression ">"   AssignmentExpression
+    RelationalExpression ">="  AssignmentExpression
+
+AssignmentExpression
     RangeExpression
-    RangeExpression      "<=>" RangeExpression
-    RelationalExpression "<"   RangeExpression
-    RelationalExpression "<="  RangeExpression
-    RelationalExpression ">"   RangeExpression
-    RelationalExpression ">="  RangeExpression
+    RangeExpression "<-" AssignmentExpression
 
 RangeExpression
     BitwiseExpression
@@ -753,9 +772,6 @@ NewArguments
 PrimaryExpression
     "(" Expression ")"
     "new" NewFinish
-    "throw" TernaryExpression
-    "T0D0" TodoFinish-opt
-    "assert"
     "&"-opt "construct"-opt QualifiedName TypeParameterTypeList-opt
     StatementExpression
     SwitchExpression
@@ -766,11 +782,14 @@ PrimaryExpression
 AnonClassBody
     "{" TypeCompositionComponents "}"
 
-# a statement expression is a lambda with an implicit "()->" preamble and with an implicit "()"
+# a "block expression" is a lambda with an implicit "()->" preamble and with an implicit "()"
 # trailing invocation, i.e. it is a block of statements that executes, and at the end, it must
 # return a value (unlike a "naked" lambda, it can not just be an expression)
 StatementExpression
-    StatementBlock
+    StatementBlock                  # a "block expression"
+    "throw" TernaryExpression       # non-completing
+    "T0D0" TodoFinish-opt           # non-completing
+    "assert"                        # non-completing
 
 SwitchExpression
     "switch" "(" SwitchCondition-opt ")" "{" SwitchExpressionBlocks "}"

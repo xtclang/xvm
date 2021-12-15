@@ -187,6 +187,19 @@ public class AssignmentStatement
         }
 
     /**
+     * Negate the conditional assignment condition.
+     *
+     * @param tokNegate  the opening '!'
+     * @param tokEnd     the closing ')'
+     */
+    public void negate(Token tokNegate, Token tokEnd)
+        {
+        assert !isNegated() && tokNegate.getId() == Id.NOT && tokEnd.getId() == Id.R_PAREN;
+        this.tokNegate = tokNegate;
+        this.endNegate = tokEnd.getEndPosition();
+        }
+
+    /**
      * @return true iff this assignment statement is a for-each-condition
      */
     public boolean isForEachCondition()
@@ -296,6 +309,14 @@ public class AssignmentStatement
         }
 
     /**
+     * @return true iff the assignment is a condition in an if/for/while/do/assert and is negated
+     */
+    public boolean isNegated()
+        {
+        return tokNegate != null;
+        }
+
+    /**
      * @return the RValue expression that will be assigned to the LValue
      */
     public Expression getRValue()
@@ -331,13 +352,17 @@ public class AssignmentStatement
     @Override
     public long getStartPosition()
         {
-        return lvalue.getStartPosition();
+        return tokNegate == null
+                ? lvalue.getStartPosition()
+                : tokNegate.getStartPosition();
         }
 
     @Override
     public long getEndPosition()
         {
-        return rvalue.getEndPosition();
+        return tokNegate == null
+            ? rvalue.getEndPosition()
+            : endNegate;
         }
 
     @Override
@@ -1031,11 +1056,22 @@ public class AssignmentStatement
     public String toString()
         {
         StringBuilder sb = new StringBuilder();
+
+        if (isNegated())
+            {
+            sb.append("!(");
+            }
+
         sb.append(lvalue)
           .append(' ')
           .append(op.getId().TEXT)
           .append(' ')
           .append(rvalue);
+
+        if (isNegated())
+            {
+            sb.append(')');
+            }
 
         if (term)
             {
@@ -1081,6 +1117,8 @@ public class AssignmentStatement
     protected Token      op;
     protected Expression rvalue;
     protected boolean    term;
+    protected Token      tokNegate;
+    protected long       endNegate;
 
     private transient VariableDeclarationStatement[] m_decls;
     private transient Register                       m_regCond;
