@@ -121,8 +121,7 @@ class DbHost(String dbModuleName)
         moduleDir.create();
 
         ClassTemplate appSchemaTemplate;
-        if (appSchemaTemplate := findSchema(dbModule)) {}
-        else
+        if (!(appSchemaTemplate := findSchema(dbModule)))
             {
             errors.add($"Error: Schema is not found in module '{dbModuleName}'");
             return False;
@@ -148,8 +147,7 @@ class DbHost(String dbModuleName)
         String appSchema = appSchemaTemplate.name;
 
         Tuple<PropertyTemplate, DBCategory>[] dbProps;
-        if (dbProps := collectDBProps(appSchemaTemplate, errors)) {}
-        else
+        if (!(dbProps := collectDBProps(appSchemaTemplate, errors)))
             {
             return False;
             }

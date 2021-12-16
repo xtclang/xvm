@@ -76,8 +76,7 @@ module host.xtclang.org
     Tuple<FutureVar, Buffer>? loadAndRun(String path)
         {
         File fileXtc;
-        if (fileXtc := curDir.findFile(path)) {}
-        else
+        if (!(fileXtc := curDir.findFile(path)))
             {
             console.println($"'{path}' - not found");
             return Null;

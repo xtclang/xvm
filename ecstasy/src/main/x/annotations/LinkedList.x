@@ -1041,10 +1041,7 @@ mixin LinkedList<Element>
                 // make sure that the current position in actually in the list; the cursor is
                 // allowed to be past the end of the list, which means the current node is Null
                 Element curNode;
-                if (curNode ?= node)
-                    {
-                    }
-                else
+                if (!(curNode ?= node))
                     {
                     // the cursor is actually *past* the tail, so first we need to rewind *to* the
                     // tail; there is a pointer (i.e. nodeVar) to where we are (humorously, it's

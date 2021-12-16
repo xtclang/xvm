@@ -23,6 +23,7 @@ import org.xvm.asm.op.Exit;
 import org.xvm.asm.op.IP_Inc;
 import org.xvm.asm.op.Jump;
 import org.xvm.asm.op.JumpFalse;
+import org.xvm.asm.op.JumpTrue;
 import org.xvm.asm.op.Label;
 import org.xvm.asm.op.Move;
 import org.xvm.asm.op.Var_IN;
@@ -333,7 +334,18 @@ public class ForStatement
             if (cond instanceof AssignmentStatement)
                 {
                 AssignmentStatement stmtOld = (AssignmentStatement) cond;
+                if (stmtOld.isNegated())
+                    {
+                    ctx = ctx.enterNot();
+                    }
+
                 AssignmentStatement stmtNew = (AssignmentStatement) stmtOld.validate(ctx, errs);
+
+                if (stmtOld.isNegated())
+                    {
+                    ctx = ctx.exit();
+                    }
+
                 if (stmtNew == null)
                     {
                     fValid = false;
@@ -550,7 +562,10 @@ public class ForStatement
                     {
                     AssignmentStatement stmtCond = (AssignmentStatement) cond;
                     fBlockReachable &= stmtCond.completes(ctx, fCompletes, code, errs);
-                    code.add(new JumpFalse(stmtCond.getConditionRegister(), getEndLabel()));
+
+                    code.add(stmtCond.isNegated()
+                            ? new JumpTrue (stmtCond.getConditionRegister(), getEndLabel())
+                            : new JumpFalse(stmtCond.getConditionRegister(), getEndLabel()));
                     }
                 else
                     {

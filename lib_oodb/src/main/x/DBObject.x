@@ -172,10 +172,7 @@ interface DBObject
                     break;
 
                 case Name:
-                    if (result := dbChildren.get(sub.name))
-                        {
-                        }
-                    else
+                    if (!(result := dbChildren.get(sub.name)))
                         {
                         return Null;
                         }

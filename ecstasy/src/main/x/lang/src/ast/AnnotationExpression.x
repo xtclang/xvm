@@ -29,9 +29,7 @@ const AnnotationExpression(TypeExpression name,
         {
         Class mixinClass;
         if (Type mixinType  := name.resolveType(typeSystem, hideExceptions),
-                 mixinClass := mixinType.fromClass())
-            {
-            }
+                 mixinClass := mixinType.fromClass()) {}
         else
             {
             return False;

@@ -925,9 +925,8 @@ service JsonProcessorStore<Message extends immutable Const>
         Map<String, StringBuffer> recoveredContents;
         Map<String, Int>          lastTxInFile;
 
-        if ((recoveredContents, lastTxInFile) :=
-                recoverContents(sealsByTxId, "m", messageMapping, jsonSchema)) {}
-        else
+        if (!((recoveredContents, lastTxInFile) :=
+                recoverContents(sealsByTxId, "m", messageMapping, jsonSchema)))
             {
             return False;
             }

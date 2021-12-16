@@ -35,10 +35,7 @@ const ChildTypeExpression(TypeExpression          parent,
             assert !names.empty;
             for (Token name : names)
                 {
-                if (type := type.childTypes.get(name.valueText))
-                    {
-                    }
-                else
+                if (!(type := type.childTypes.get(name.valueText)))
                     {
                     return False;
                     }

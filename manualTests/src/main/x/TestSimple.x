@@ -4,19 +4,31 @@ module TestSimple.test.org
 
     void run()
         {
-        String s = ""; // TODO should not need to be assigned here
+        Boolean f = True;
+        String? p = "hello";
+        String s;
 
-        if (!(s := foo()))
+        while (!(s := foo()))
             {
-            console.println("no string to print");
+            console.println("no foo to print");
             return;
             }
+        console.println($"foo={s}");
 
-        console.println($"s={s}");
+        while (!(s := bar()))
+            {
+            console.println("no bar to print");
+            return;
+            }
         }
 
     conditional String foo()
         {
         return True, "hello";
+        }
+
+    conditional String bar()
+        {
+        return False;
         }
     }

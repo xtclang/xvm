@@ -243,7 +243,19 @@ public class AssertStatement
             if (cond instanceof AssignmentStatement)
                 {
                 AssignmentStatement stmtOld = (AssignmentStatement) cond;
+
+                if (stmtOld.isNegated())
+                    {
+                    ctx = ctx.enterNot();
+                    }
+
                 AssignmentStatement stmtNew = (AssignmentStatement) stmtOld.validate(ctx, errs);
+
+                if (stmtOld.isNegated())
+                    {
+                    ctx = ctx.exit();
+                    }
+
                 if (stmtNew == null)
                     {
                     fValid = false;
@@ -444,9 +456,11 @@ public class AssertStatement
                 }
 
             Argument argCond;
+            boolean  fNegated = false;
             if (cond instanceof AssignmentStatement)
                 {
                 AssignmentStatement stmtCond = (AssignmentStatement) cond;
+                fNegated = stmtCond.isNegated();
                 fCompletes &= stmtCond.completes(ctx, fCompletes, code, errs);
                 argCond = stmtCond.getConditionRegister();
                 }
@@ -497,12 +511,16 @@ public class AssertStatement
                 if (i == cConds - 1)
                     {
                     // last one, so get out of the assertion if everything was true
-                    code.add(new JumpTrue(argCond, getEndLabel()));
+                    code.add(fNegated
+                        ? new JumpFalse(argCond, getEndLabel())
+                        : new JumpTrue(argCond, getEndLabel()));
                     }
                 else
                     {
                     // in the middle, so check for the current condition to have failed
-                    code.add(new JumpFalse(argCond, labelMessage));
+                    code.add(fNegated
+                            ? new JumpTrue(argCond, labelMessage)
+                            : new JumpFalse(argCond, labelMessage));
                     }
                 }
             }

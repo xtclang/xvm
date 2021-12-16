@@ -1105,9 +1105,8 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
         Map<String, StringBuffer> recoveredContents;
         Map<String, Int>          lastTxInFile;
 
-        if ((recoveredContents, lastTxInFile) :=
-                recoverContents(sealsByTxId, "k", keyMapping, jsonSchema)) {}
-        else
+        if (!((recoveredContents, lastTxInFile) :=
+                recoverContents(sealsByTxId, "k", keyMapping, jsonSchema)))
             {
             return False;
             }

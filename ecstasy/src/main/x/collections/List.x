@@ -1384,9 +1384,7 @@ interface List<Element>
             {
             while (val value1 := iter1.next())
                 {
-                if (val value2 := iter2.next(), value1 == value2)
-                    {
-                    }
+                if (val value2 := iter2.next(), value1 == value2) {}
                 else
                     {
                     return False;
@@ -1412,8 +1410,7 @@ interface List<Element>
         {
         if (order == Null)
             {
-            if (order := Element.ordered()) {}
-            else
+            if (!(order := Element.ordered()))
                 {
                 throw new TypeMismatch($"Element type {Element} is not Orderable");
                 }

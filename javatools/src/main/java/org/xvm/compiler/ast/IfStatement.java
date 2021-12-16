@@ -17,6 +17,7 @@ import org.xvm.asm.op.Enter;
 import org.xvm.asm.op.Exit;
 import org.xvm.asm.op.Jump;
 import org.xvm.asm.op.JumpFalse;
+import org.xvm.asm.op.JumpTrue;
 import org.xvm.asm.op.Label;
 
 import org.xvm.compiler.Token;
@@ -123,7 +124,18 @@ public class IfStatement
             if (cond instanceof AssignmentStatement)
                 {
                 AssignmentStatement stmtOld = (AssignmentStatement) cond;
+
+                if (stmtOld.isNegated())
+                    {
+                    ctx = ctx.enterNot();
+                    }
+
                 AssignmentStatement stmtNew = (AssignmentStatement) stmtOld.validate(ctx, errs);
+
+                if (stmtOld.isNegated())
+                    {
+                    ctx = ctx.exit();
+                    }
                 if (stmtNew == null)
                     {
                     fValid = false;
@@ -290,9 +302,16 @@ public class IfStatement
             boolean fCompletes;
             if (cond instanceof AssignmentStatement)
                 {
-                AssignmentStatement stmtCond   = (AssignmentStatement) cond;
+                AssignmentStatement stmtCond = (AssignmentStatement) cond;
                 fCompletes = stmtCond.completes(ctx, fReachable, code, errs);
-                code.add(new JumpFalse(stmtCond.getConditionRegister(), labelElse));
+                if (stmtCond.isNegated())
+                    {
+                    code.add(new JumpTrue(stmtCond.getConditionRegister(), labelElse));
+                    }
+                else
+                    {
+                    code.add(new JumpFalse(stmtCond.getConditionRegister(), labelElse));
+                    }
                 }
             else
                 {

@@ -397,8 +397,7 @@ service JsonValueStore<Value extends immutable Const>
         {
         Iterator<Int> eachInUse = inUseTxIds.iterator();
         Int inUseId;
-        if (inUseId := eachInUse.next()) {}
-        else
+        if (!(inUseId := eachInUse.next()))
             {
             assert inUseTxIds.empty;
             inUseId = lastCommit;

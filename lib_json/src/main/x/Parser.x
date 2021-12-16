@@ -536,10 +536,7 @@ class Parser
         Token first = expect(ArrayEnter, skipped);
         Token last;
 
-        if (last := match(ArrayExit, skipped))
-            {
-            }
-        else
+        if (!(last := match(ArrayExit, skipped)))
             {
             do
                 {
@@ -680,10 +677,7 @@ class Parser
         Token first = expect(ObjectEnter, skipped);
         Token last;
 
-        if (last := match(ObjectExit, skipped))
-            {
-            }
-        else
+        if (!(last := match(ObjectExit, skipped)))
             {
             do
                 {

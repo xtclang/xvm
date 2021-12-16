@@ -296,16 +296,33 @@ public class WhileStatement
                     // validate the condition(s)
                     for (int i = 0; i < cConds; ++i)
                         {
-                        // the node must be cloned, because we may end up repeating this
-                        // validation process with a different set of assumptions
                         AstNode condOld = conds.get(i);
+                        AstNode condNew;
 
                         // the condition is either a boolean expression or an assignment
                         // statement whose R-value is a multi-value with the first value
                         // being a boolean
-                        AstNode condNew = condOld instanceof AssignmentStatement
-                                ? ((AssignmentStatement) condOld).validate(ctx, errs)
-                                : ((Expression) condOld).validate(ctx, pool().typeBoolean(), errs);
+                        if (condOld instanceof AssignmentStatement)
+                            {
+                            AssignmentStatement stmtCond = (AssignmentStatement) condOld;
+                            if (stmtCond.isNegated())
+                                {
+                                ctx = ctx.enterNot();
+                                }
+
+                            condNew = stmtCond.validate(ctx, errs);
+
+                            if (stmtCond.isNegated())
+                                {
+                                ctx = ctx.exit();
+                                }
+                            }
+                        else
+                            {
+                            // the node must be cloned, because we may end up repeating this
+                            // validation process with a different set of assumptions
+                            condNew = ((Expression) condOld).validate(ctx, pool().typeBoolean(), errs);
+                            }
 
                         if (condNew == null)
                             {
@@ -664,7 +681,9 @@ public class WhileStatement
                 {
                 if (cond instanceof AssignmentStatement)
                     {
-                    for (VariableDeclarationStatement stmtDecl : ((AssignmentStatement) cond).takeDeclarations())
+                    AssignmentStatement stmtCond = (AssignmentStatement) cond;
+
+                    for (VariableDeclarationStatement stmtDecl : stmtCond.takeDeclarations())
                         {
                         fCompletes &= stmtDecl.completes(ctx, fCompletes, code, errs);
                         }
@@ -756,14 +775,20 @@ public class WhileStatement
             if (cond instanceof AssignmentStatement)
                 {
                 AssignmentStatement stmtCond = (AssignmentStatement) cond;
+
                 fCompletes &= stmtCond.completes(ctx, fCompletes, code, errs);
+
                 if (fLast)
                     {
-                    code.add(new JumpTrue(stmtCond.getConditionRegister(), getRepeatLabel()));
+                    code.add(stmtCond.isNegated()
+                        ? new JumpFalse(stmtCond.getConditionRegister(), getRepeatLabel())
+                        : new JumpTrue (stmtCond.getConditionRegister(), getRepeatLabel()));
                     }
                 else
                     {
-                    code.add(new JumpFalse(stmtCond.getConditionRegister(), getEndLabel()));
+                    code.add(stmtCond.isNegated()
+                        ? new JumpTrue (stmtCond.getConditionRegister(), getEndLabel())
+                        : new JumpFalse(stmtCond.getConditionRegister(), getEndLabel()));
                     }
                 }
             else

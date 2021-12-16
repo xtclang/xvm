@@ -565,10 +565,7 @@ class SkiplistMap<Key extends Orderable, Value>
                         // iteration has already begun, so we have a record of the last key that we
                         // iterated; re-initialize this iterator to begin iterations after that key
                         Work work = readWriteWork();
-                        if ((prevNode, prevHeight) := this.SkiplistMap.findNode(prevKey, work))
-                            {
-                            }
-                        else
+                        if (!((prevNode, prevHeight) := this.SkiplistMap.findNode(prevKey, work)))
                             {
                             // we did not find the previous key, but the work area is set to the
                             // nodes after which that key would be inserted, so use those as a
