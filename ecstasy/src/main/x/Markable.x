@@ -2,7 +2,7 @@
  * Represents the ability to mark and later restore a position.
  *
  * @see Iterator.ensureMarkable()
- * @see MarkedIterator
+ * @see iterators.MarkedIterator
  */
 interface Markable
     {

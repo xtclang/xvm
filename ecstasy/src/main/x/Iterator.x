@@ -721,6 +721,6 @@ interface Iterator<Element>
             return this;
             }
 
-        return new MarkedIterator<Element>(this);
+        return new iterators.MarkedIterator<Element>(this);
         }
     }
