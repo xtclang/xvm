@@ -4,31 +4,20 @@ module TestSimple.test.org
 
     void run()
         {
-        Boolean f = True;
-        String? p = "hello";
-        String s;
+        Int[] elements = [];
 
-        while (!(s := foo()))
+        assert:test
             {
-            console.println("no foo to print");
-            return;
-            }
-        console.println($"foo={s}");
+            if (elements.size <= 1)
+                {
+                return False;
+                }
 
-        while (!(s := bar()))
-            {
-            console.println("no bar to print");
-            return;
-            }
-        }
+            val iter = elements.iterator();
+            assert iter.next();
+            return True;
+            } as $"elements are not provided in order: {elements}";
 
-    conditional String foo()
-        {
-        return True, "hello";
-        }
-
-    conditional String bar()
-        {
-        return False;
+        console.println("all good");
         }
     }

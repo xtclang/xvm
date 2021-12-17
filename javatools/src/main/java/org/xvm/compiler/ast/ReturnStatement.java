@@ -15,6 +15,7 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.asm.op.Jump;
 import org.xvm.asm.op.JumpFalse;
 import org.xvm.asm.op.Label;
 import org.xvm.asm.op.Move;
@@ -333,10 +334,12 @@ public class ReturnStatement
             {
             assert !fConditional;
 
+            StatementExpression expr = ((StatementExpression) container);
+
             // emit() for a return inside a StatementExpression produces an assignment from the
             // expression
-            // TODO m_fTupleReturn
-            Assignable[] aLVals = ((StatementExpression) container).getAssignables();
+            // TODO m_fTupleReturn, m_fConditionalTernary, m_fFutureReturn
+            Assignable[] aLVals = expr.getAssignables();
             int          cLVals = aLVals.length;
             for (int i = 0, cExprs = exprs == null ? 0 : exprs.size(); i < cExprs; ++i)
                 {
@@ -349,6 +352,7 @@ public class ReturnStatement
                     exprs.get(i).generateVoid(ctx, code, errs);
                     }
                 }
+            code.add(new Jump(expr.body.getEndLabel()));
 
             // "return" does not complete
             return false;
