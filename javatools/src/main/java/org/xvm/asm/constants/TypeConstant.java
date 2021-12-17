@@ -3961,6 +3961,7 @@ public abstract class TypeConstant
                 MethodInfo methodBase = mapVirtMethods.get(nidContrib);
                 if (methodBase == null || methodBase.isCapped())
                     {
+                    Object nidBase = null;
                     for (Object nid : listMatches)
                         {
                         MethodInfo methodMatch = mapVirtMethods.get(nid);
@@ -3972,14 +3973,24 @@ public abstract class TypeConstant
                                     {
                                     // take a possible match, but keep looking
                                     methodBase = methodMatch;
+                                    nidBase    = nid;
                                     }
                                 }
                             else
                                 {
                                 methodBase = methodMatch;
+                                nidBase    = nid;
                                 break;
                                 }
                             }
+                        }
+
+                    if (methodBase != null &&
+                            methodBase.getHead().getImplementation() == Implementation.Implicit)
+                        {
+                        // we are replacing an implicit base, which could be just a remnant of
+                        // the "asInto" transformation; no need to keep it any longer
+                        mapMethods.remove((MethodConstant) constId.appendNestedIdentity(pool, nidBase));
                         }
                     }
                 else
