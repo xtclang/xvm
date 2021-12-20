@@ -909,6 +909,119 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
         }
 
 
+    // ----- helper methods ------------------------------------------------------------------------
+
+    /**
+     * Choose what transactions from `eachPresent` iterator could be discarded, based on the content
+     * of `eachInUse` iterator.
+     *
+     * @param lastCommit   the latest known committed transaction ID for this ObjectStore
+     * @param eachPresent  the iterator of all transaction IDs recorded by this store
+     * @param eachInUse    the iterator of transaction IDs that are currently in use
+     * @param discard      the callback function to call to discard a transaction
+     *
+     * @return True iff any transaction were discarded
+     */
+    protected Boolean processDiscarded(
+            Int                 lastCommit,
+            Iterator<Int>       eachPresent,
+            Iterator<Int>       eachInUse,
+            function void (Int) discard)
+        {
+        assert Int presentId := eachPresent.next();
+        if (presentId == lastCommit)
+            {
+            return False;
+            }
+
+        Int inUseId = lastCommit;
+        inUseId := eachInUse.next();
+
+        Boolean discarded        = False;
+        Int     discardCandidate = -1;
+
+        while (True)
+            {
+            Boolean loadNextPresent;
+            Boolean loadNextInUse;
+            switch (presentId <=> inUseId)
+                {
+                case Lesser:
+                    if (discardCandidate >= 0)
+                        {
+                        discard(discardCandidate);
+                        discarded = True;
+                        }
+
+                    // advance to the next transaction in our history log
+                    discardCandidate = presentId;
+                    loadNextInUse    = False;
+                    loadNextPresent  = True;
+                    break;
+
+                case Equal:
+                    if (discardCandidate >= 0)
+                        {
+                        discard(discardCandidate);
+                        discarded = True;
+                        }
+
+                    // the current one that we're examining in our history is still in use; advance
+                    // to the next of each list
+                    discardCandidate = -1;
+                    loadNextInUse   = True;
+                    loadNextPresent = True;
+                    break;
+
+                case Greater:
+                    // determine the next transaction that we're being instructed to keep
+                    discardCandidate = -1;
+                    loadNextInUse   = True;
+                    loadNextPresent = False;
+                    break;
+                }
+
+            if (loadNextPresent)
+                {
+                if (presentId := eachPresent.next())
+                    {
+                    if (presentId >= lastCommit)
+                        {
+                        // we need to keep this one (it's our "current" history), so we're done
+                        return discarded;
+                        }
+                    }
+                else
+                    {
+                    // no more transactions to evaluate; we're done
+                    return discarded;
+                    }
+                }
+
+            if (loadNextInUse)
+                {
+                if (inUseId == lastCommit)
+                    {
+                    // we already moved past our last transaction; we're done
+                    return discarded;
+                    }
+
+                if (inUseId := eachInUse.next())
+                    {
+                    if (inUseId > lastCommit)
+                        {
+                        // we don't have any transactions in this range
+                        inUseId = lastCommit;
+                        }
+                    }
+                else
+                    {
+                    return discarded;
+                    }
+                }
+            }
+        }
+
     // ----- Hashable funky interface --------------------------------------------------------------
 
     @Override

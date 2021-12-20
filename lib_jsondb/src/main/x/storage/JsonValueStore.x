@@ -108,9 +108,8 @@ service JsonValueStore<Value extends immutable Const>
 
     /**
      * The append offset, measured in Chars, within the data file.
-     * (Initialized to an obviously illegal value.)
      */
-    protected Int storageOffset = Int.minvalue;
+    protected Int storageOffset = 0;
 
     /**
      * The ID of the latest known commit for this ObjectStore.
@@ -274,25 +273,20 @@ service JsonValueStore<Value extends immutable Const>
         {
         assert !writeIds.empty;
 
-        StringBuffer buf = new StringBuffer();
-        Int offset;
         if (cleanupPending)
             {
             // rebuild the contents of the file, keeping only the transactions that we need
             (String json, storageLayout) = rebuildJson(dataFile.contents.unpackUtf8(), storageLayout);
 
-            // we don't want the closing "\n]"
-            offset = json.size-2;
-            buf.append(json[0..offset));
+            dataFile.contents = json.utf8();
 
-            // everything is getting replaced, and has now been moved into the buffer, so the
-            // storage offset of what we are keeping from the existing file is 0
-            this.storageOffset = 0;
+            // we don't want the closing "\n]"
+            storageOffset  = json.size - 2;
+            cleanupPending = False;
             }
-        else
-            {
-            offset = this.storageOffset;
-            }
+
+        StringBuffer buf    = new StringBuffer();
+        Int          offset = storageOffset;
 
         Int lastCommitId = NO_TX;
         for (Int writeId : writeIds)
@@ -312,9 +306,9 @@ service JsonValueStore<Value extends immutable Const>
                    .append(prepareId)
                    .append(", \"value\":");
 
-                Int start = buf.size;
+                Int startPos = buf.size;
                 buf.append(json);
-                Int end   = buf.size;
+                Int endPos   = buf.size;
 
                 buf.add('}');
 
@@ -322,23 +316,23 @@ service JsonValueStore<Value extends immutable Const>
                 lastCommitId = prepareId;
 
                 // remember the transaction location
-                storageLayout.put(lastCommitId, [offset+start .. offset+end));
+                storageLayout.put(lastCommitId, [offset+startPos .. offset+endPos));
                 }
             }
 
-        if (lastCommitId != NO_TX || cleanupPending)
+        if (lastCommitId != NO_TX)
             {
             // update where we will append the next record to, in terms of Chars (not bytes), so
             // that subsequent storageLayout information can be determined without expanding the
             // contents of the UTF-8 encoded file into Chars to calculate the "append location"
-            this.storageOffset += buf.size;
+            storageOffset += buf.size;
 
             // the JSON value data is inside an array, so "close" the array
-            buf.append("\n]");
+            buf.add('\n').add(']');
 
             // write the changes to disk
             File file = dataFile;
-            if (file.exists && !cleanupPending)
+            if (file.exists)
                 {
                 Int length = file.size;
 
@@ -354,7 +348,6 @@ service JsonValueStore<Value extends immutable Const>
                 // replace the opening "," with an array begin "["
                 buf[0]         = '[';
                 file.contents  = buf.toString().utf8();
-                cleanupPending = False;
                 }
 
             // remember which is the "current" value
@@ -395,100 +388,24 @@ service JsonValueStore<Value extends immutable Const>
     @Override
     void retainTx(OrderedSet<Int> inUseTxIds, Boolean force = False)
         {
-        Iterator<Int> eachInUse = inUseTxIds.iterator();
-        Int inUseId;
-        if (!(inUseId := eachInUse.next()))
+        function void (Int) discard = txId ->
             {
-            assert inUseTxIds.empty;
-            inUseId = lastCommit;
-            }
+            history.remove(txId);
+            storageLayout.remove(txId);
+            };
 
-        Iterator<Int> eachPresent = history.keys.iterator();
-        assert Int presentId := eachPresent.next();
-        if (presentId == lastCommit)
-            {
-            return;
-            }
-
-        Boolean discarded = False;
-        Loop: while (True)
-            {
-            Boolean loadNextPresent = False;
-            Boolean loadNextInUse   = False;
-
-            switch (presentId <=> inUseId)
-                {
-                case Lesser:
-                    // discard the transaction
-                    history.remove(presentId);
-                    storageLayout.remove(presentId);
-                    discarded = True;
-
-                    // advance to the next transaction in our history log
-                    loadNextPresent = True;
-                    break;
-
-                case Equal:
-                    // the current one that we're examining in our history is still in use; advance
-                    // to the next of each list
-                    loadNextInUse   = True;
-                    loadNextPresent = True;
-                    break;
-
-                case Greater:
-                    // determine the next transaction that we're being instructed to keep
-                    loadNextInUse = True;
-                    break;
-                }
-
-            if (loadNextInUse)
-                {
-                if (inUseId := eachInUse.next())
-                    {
-                    if (inUseId > lastCommit)
-                        {
-                        // we don't have any transactions in this range
-                        inUseId = lastCommit;
-                        }
-                    }
-                else if (inUseId >= lastCommit)
-                    {
-                    // we already moved past our last transaction; we're done
-                    break Loop;
-                    }
-                else
-                    {
-                    // we're *almost* done; pretend that the only other transaction that we need to
-                    // keep is our "current" one
-                    inUseId = lastCommit;
-                    }
-                }
-
-            if (loadNextPresent)
-                {
-                if (presentId := eachPresent.next())
-                    {
-                    if (presentId >= lastCommit)
-                        {
-                        // we need to keep this one (it's our "current" history), so we're done
-                        break Loop;
-                        }
-                    }
-                else
-                    {
-                    // no more transactions to evaluate; we're done
-                    break Loop;
-                    }
-                }
-            }
-
-        if (discarded)
+        if (processDiscarded(lastCommit, history.keys.iterator(), inUseTxIds.iterator(), discard))
             {
             if (force)
                 {
-                (String json, storageLayout) = rebuildJson(dataFile.contents.unpackUtf8(), storageLayout);
-                this.storageOffset += json.size - 2; // appends will occur before the closing "\n]"
-                dataFile.contents = json.utf8();
+                using (new SynchronizedSection())
+                    {
+                    (String json, storageLayout) =
+                        rebuildJson(dataFile.contents.unpackUtf8(), storageLayout);
+
+                    storageOffset += json.size - 2; // appends will occur before the closing "\n]"
+                    dataFile.contents = json.utf8();
+                    }
                 cleanupPending = False;
 
                 updateWriteStats();
@@ -777,14 +694,15 @@ service JsonValueStore<Value extends immutable Const>
 
         buf.append("}\n]");
 
-        return buf.toString(), [startPos..endPos);
+        return buf.toString(), [startPos .. endPos);
         }
 
     /**
      * Re-format the JSON structure that is stored on disk, to contain only the transactions
      * specified in the passed map, pulled from the passed JSON structure.
      */
-    (String newJson, SkiplistMap<Int, Range<Int>> newLocationsByTx) rebuildJson(String json, SkiplistMap<Int, Range<Int>> byTx)
+    (String newJson, SkiplistMap<Int, Range<Int>> newLocationsByTx)
+            rebuildJson(String json, SkiplistMap<Int, Range<Int>> byTx)
         {
         StringBuffer                 buf    = new StringBuffer(json.size);
         SkiplistMap<Int, Range<Int>> newLoc = new SkiplistMap();
@@ -799,9 +717,10 @@ service JsonValueStore<Value extends immutable Const>
                .append(", \"value\":");
 
             Int startPos = buf.size;
+
             buf.append(json[txLoc]);
-            Int endPos = buf.size;
-            newLoc.put(txId, [startPos..endPos));
+
+            newLoc.put(txId, [startPos .. buf.size));
 
             buf.add('}').add(',');
             }

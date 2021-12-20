@@ -158,9 +158,9 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
     public/protected Int lastCommit = NO_TX;
 
     /**
-     * True iff there are transactions on disk that could now be safely deleted.
+     * Set of file names that contain transactions that could now be safely deleted.
      */
-    public/protected Boolean cleanupPending = False;
+    public/protected Set<String> cleanupPending = new HashSet();
 
 
     // ----- storage API exposed to the client -----------------------------------------------------
@@ -702,12 +702,8 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
         {
         assert !writeIds.empty;
 
-        if (cleanupPending)
-            {
-            TODO
-            }
-
-        Int lastCommitId = NO_TX;
+        Boolean cleanup      = !cleanupPending.empty;
+        Int     lastCommitId = NO_TX;
 
         Map<String, StringBuffer> buffers = new HashMap();
         for (Int writeId : writeIds)
@@ -723,11 +719,23 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
 
                 for ((Key key, String jsonEntry) : jsonEntries)
                     {
-                    String       name = nameForKey(key);
-                    StringBuffer buf  = buffers.computeIfAbsent(name, () -> new StringBuffer());
+                    String fileName = nameForKey(key);
+
+                    if (cleanup && cleanupPending.contains(fileName))
+                        {
+                        rebuildFile(fileName);
+
+                        cleanupPending.remove(fileName);
+                        cleanup = !cleanupPending.empty;
+                        }
+
+                    Int fileOffset = storageOffset.getOrDefault(fileName, 0);
+
+                    StringBuffer buf = buffers.computeIfAbsent(fileName, () -> new StringBuffer());
 
                     // build the String that will be appended to the disk file; format is:
                     //     {"tx":14, "k":{...}, "v":{...}}
+                    Int startOffset = fileOffset + buf.size + 2;
                     buf.append(",\n{\"tx\":")
                        .append(prepareId)
                        .add(',').add(' ')
@@ -735,11 +743,10 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                        .add('}');
 
                     // remember the transaction location
-                    Int         startOffset = storageOffset.getOrDefault(name, 2);
-                    Int         endOffset   = startOffset + buf.size - 2;
                     FileLayout  fileLayout  = storageLayout.computeIfAbsent(prepareId, () -> new HashMap());
-                    EntryLayout layout      = fileLayout.computeIfAbsent(name, () -> new HashMap());
-                    layout.put(key, [startOffset..endOffset));
+                    EntryLayout entryLayout = fileLayout.computeIfAbsent(fileName, () -> new HashMap());
+
+                    entryLayout.put(key, [startOffset .. fileOffset + buf.size));
                     }
 
                 modsByTx.remove(prepareId);
@@ -749,10 +756,15 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                 }
             }
 
-        if (lastCommitId != NO_TX || cleanupPending)
+        if (lastCommitId != NO_TX)
             {
             for ((String fileName, StringBuffer buf) : buffers)
                 {
+                storageOffset.process(fileName, e ->
+                    {
+                    e.value = (e.exists ? e.value : 0) + buf.size;
+                    });
+
                 // the JSON for entries data is inside an array, so "close" the array
                 buf.add('\n').add(']');
 
@@ -767,22 +779,26 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                     //      update timestamp" and rebuild file if someone else changed it
                     assert length >= 6;
 
+                    Byte[] bytes = buf.toString().utf8();
                     file.truncate(length-2)
-                        .append(buf.toString().utf8());
+                        .append(bytes);
+                    bytesUsed += bytes.size;
                     }
                 else
                     {
                     // replace the opening "," with an array begin "["
-                    buf[0]         = '[';
-                    file.contents  = buf.toString().utf8();
+                    buf[0] = '[';
+
+                    Byte[] bytes = buf.toString().utf8();
+                    file.contents = bytes;
+
+                    bytesUsed += bytes.size;
                     filesUsed++;
                     }
 
                 // update the stats
-                bytesUsed    += buf.size;
                 lastModified = file.modified;
                 }
-            cleanupPending = False;
 
             // remember which is the "current" value
             lastCommit = lastCommitId;
@@ -825,7 +841,44 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
     @Override
     void retainTx(OrderedSet<Int> inUseTxIds, Boolean force = False)
         {
-        // TODO
+        for ((Key key, History valueHistory) : history)
+            {
+            String fileName = nameForKey(key);
+
+            function void (Int) discard = txId ->
+                {
+                valueHistory.remove(txId);
+                sizeByTx    .remove(txId);
+
+                assert FileLayout  fileLayout  := storageLayout.get(txId),
+                       EntryLayout entryLayout := fileLayout.get(fileName);
+                entryLayout.remove(key);
+                if (entryLayout.empty)
+                    {
+                    fileLayout.remove(fileName);
+                    if (fileLayout.empty)
+                        {
+                        storageLayout.remove(txId);
+                        }
+                    }
+
+                cleanupPending.add(fileName);
+                };
+
+            processDiscarded(lastCommit, valueHistory.keys.iterator(), inUseTxIds.iterator(), discard);
+            }
+
+        if (force && !cleanupPending.empty)
+            {
+            using (new SynchronizedSection())
+                {
+                for (String fileName : cleanupPending)
+                    {
+                    rebuildFile(fileName);
+                    }
+                }
+            cleanupPending.clear();
+            }
         }
 
 
@@ -938,9 +991,6 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
             Map<Key, Int>           closestTx  = new HashMap();
             SkiplistMap<Int, Key[]> keysByTx   = new SkiplistMap();
 
-            totalFiles++;
-            totalBytes += bytes.size;
-
             using (val arrayParser = fileParser.expectArray())
                 {
                 while (!arrayParser.eof)
@@ -1012,10 +1062,11 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                 {
                 // all the keys were removed; remove the storage
                 file.delete();
-                totalFiles--;
-                bytesUsed -= bytes.size;
                 continue;
                 }
+
+            totalFiles++;
+            totalBytes += bytes.size;
 
             StringBuffer buf = new StringBuffer();
             if (rebuild)
@@ -1033,17 +1084,17 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
 
                         if (rebuild)
                             {
-                            Int startPos = buf.size + 1;
+                            Int startOffset = buf.size + 1;
 
                             buf.add('\n')
                                .append(jsonStr.slice(entryRange))
                                .add(',');
 
-                            entryRange = [startPos..buf.size-1);
+                            entryRange = [startOffset .. buf.size-1);
 
-                            FileLayout  fileLayout = storageLayout.computeIfAbsent(txId, () -> new HashMap());
-                            EntryLayout layout     = fileLayout.computeIfAbsent(fileName, () -> new HashMap());
-                            layout.put(key, entryRange);
+                            FileLayout  fileLayout  = storageLayout.computeIfAbsent(txId, () -> new HashMap());
+                            EntryLayout entryLayout = fileLayout.computeIfAbsent(fileName, () -> new HashMap());
+                            entryLayout.put(key, entryRange);
                             }
 
                         String jsonValue = jsonStr.slice(valueRange);
@@ -1064,15 +1115,22 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
             if (rebuild)
                 {
                 String jsonNew  = buf.truncate(-1).add('\n').add(']').toString();
-                Byte[] bytesNew = jsonNew.utf8();
+                Byte[] newBytes = jsonNew.utf8();
 
-                file.contents = bytesNew;
+                file.contents = newBytes;
 
-                bytesUsed += bytesNew.size - bytes.size;
+                totalBytes += newBytes.size - bytes.size;
+                storageOffset.put(fileName, jsonNew.size - 2);
+                }
+            else
+                {
+                // append position is before the closing "\n]"
+                storageOffset.put(fileName, jsonStr.size - 2);
                 }
             }
 
         filesUsed  = totalFiles;
+        bytesUsed  = totalBytes;
         lastCommit = desired;
         }
 
@@ -1195,5 +1253,50 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
         storageOffset.clear();
         fileNames.clear();
         sizeByTx.clear();
+        }
+
+
+    // ----- helper methods ------------------------------------------------------------------------
+
+    /**
+     * Rebuild the content of the specified file.
+     */
+    private void rebuildFile(String fileName)
+        {
+        StringBuffer buf  = new StringBuffer();
+        File         file = dataDir.fileFor(fileName);
+
+        assert file.exists;
+
+        Byte[] oldBytes = file.contents;
+        String jsonStr  = oldBytes.unpackUtf8();
+
+        for ((Int txId, FileLayout fileLayout) : storageLayout)
+            {
+            if (EntryLayout entryLayout := fileLayout.get(fileName))
+                {
+                for ((Key key, Range<Int> entryRange) : entryLayout)
+                    {
+                    Int startPos = buf.size + 2;
+
+                    buf.add(',').add('\n')
+                       .append(jsonStr.slice(entryRange));
+
+                    entryLayout.put(key, [startPos .. buf.size));
+                    }
+                }
+            }
+
+        Int fileOffset = buf.size;
+        storageOffset.put(fileName, fileOffset);
+
+        buf[0] = '[';
+        buf.add('\n').add(']');
+
+        Byte[] newBytes = buf.toString().utf8();
+        file.contents = newBytes;
+
+        bytesUsed   += newBytes.size - oldBytes.size;
+        lastModified = file.modified;
         }
     }

@@ -672,6 +672,12 @@ service JsonProcessorStore<Message extends immutable Const>
             }
         }
 
+    @Override
+    void retainTx(OrderedSet<Int> inUseTxIds, Boolean force = False)
+        {
+        // TODO
+        }
+
 
     // ----- IO operations -------------------------------------------------------------------------
 
