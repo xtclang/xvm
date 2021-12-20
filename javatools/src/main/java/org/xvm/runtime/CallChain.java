@@ -138,7 +138,7 @@ public class CallChain
                 invokeNative1(frame, getTop(), hTarget, hArg, iReturn);
             }
 
-        ObjectHandle[] ahVar = new ObjectHandle[getTop().getMaxVars()];
+        ObjectHandle[] ahVar = new ObjectHandle[Math.max(getTop().getMaxVars(), 1)];
         ahVar[0] = hArg;
 
         return hTarget.getTemplate().invoke1(frame, this, hTarget, ahVar, iReturn);
@@ -155,7 +155,7 @@ public class CallChain
                 invokeNativeNN(frame, getTop(), hTarget, new ObjectHandle[]{hArg}, aiReturn);
             }
 
-        ObjectHandle[] ahVar = new ObjectHandle[getTop().getMaxVars()];
+        ObjectHandle[] ahVar = new ObjectHandle[Math.max(getTop().getMaxVars(), 1)];
         ahVar[0] = hArg;
 
         return hTarget.getTemplate().invokeN(frame, this, hTarget, ahVar, aiReturn);
@@ -206,7 +206,7 @@ public class CallChain
                 invokeNativeT(frame, getTop(), hTarget, new ObjectHandle[] {hArg}, iReturn);
             }
 
-        ObjectHandle[] ahVar = new ObjectHandle[getTop().getMaxVars()];
+        ObjectHandle[] ahVar = new ObjectHandle[Math.max(getTop().getMaxVars(), 1)];
         ahVar[0] = hArg;
 
         return hTarget.getTemplate().invokeT(frame, this, hTarget, ahVar, iReturn);
@@ -298,7 +298,7 @@ public class CallChain
             case Explicit:
                 {
                 MethodStructure methodSuper = bodySuper.getMethodStructure();
-                ObjectHandle[]  ahVar       = new ObjectHandle[methodSuper.getMaxVars()];
+                ObjectHandle[]  ahVar       = new ObjectHandle[Math.max(methodSuper.getMaxVars(), 1)];
                 ahVar[0] = hArg;
 
                 return frame.invoke1(this, nDepth, hThis, ahVar, Op.A_IGNORE);
