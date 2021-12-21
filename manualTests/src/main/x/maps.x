@@ -46,7 +46,7 @@ module TestMaps
         testProcess(new SkiplistMap());
         testProcess(new ConcurrentHashMap());
 
-// TODO GG: deadlocks testConcurrentProcess(new SafeHashMap());
+        testConcurrentProcess(new SafeHashMap());
         testConcurrentProcess(new ConcurrentHashMap());
 
         // concurrency performance comparison of maps
@@ -465,7 +465,7 @@ module TestMaps
 
     void testConcurrentProcess(Map<Int, Int> map)
         {
-        console.println("\n** testConcurrentProcess()");
+        console.println($"\n** testConcurrentProcess({&map.actualClass.name})");
         map.put(0, 0);
 
         Int count = 0;
