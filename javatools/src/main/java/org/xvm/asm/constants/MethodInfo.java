@@ -658,8 +658,10 @@ public class MethodInfo
      */
     public boolean isAbstract()
         {
-        MethodBody[] aBody = m_aBody;
-        boolean fIgnoreAbstract = false;
+        MethodBody[] aBody           = m_aBody;
+        boolean      fIgnoreAbstract = false;
+        int          cDeclParams     = -1;
+        int          cDeclReturns    = -1;
         for (int i = 0, c = aBody.length; i < c; ++i)
             {
             MethodBody body = aBody[i];
@@ -672,7 +674,11 @@ public class MethodInfo
                         // by TypeConstant#layerOnMethods (see an extended explanation there)
                         return false;
                         }
+                    break;
+
                 case Declared:
+                    cDeclParams  = Math.max(cDeclParams , body.getSignature().getParamCount());
+                    cDeclReturns = Math.max(cDeclReturns, body.getSignature().getReturnCount());
                     break;
 
                 case Abstract:
@@ -692,6 +698,16 @@ public class MethodInfo
                 case Field:
                 case Native:
                 case Explicit:
+                    if (cDeclParams != -1)
+                        {
+                        // a non-abstract implementation must have at least as many parameters and
+                        // return values as the narrowest declaration
+                        if (body.getSignature().getParamCount()  < cDeclParams ||
+                            body.getSignature().getReturnCount() < cDeclReturns)
+                            {
+                            break;
+                            }
+                        }
                     return false;
                 }
             }
@@ -1044,32 +1060,6 @@ public class MethodInfo
             }
 
         return chain;
-        }
-
-    /**
-     * @return true iff the method chain contains no redirections, abstract bodies, etc.
-     */
-    public boolean isChainOptimized()
-        {
-        boolean fHasDefault = false;
-        for (MethodBody body : getChain())
-            {
-            if (!body.isOptimized())
-                {
-                return false;
-                }
-
-            if (body.getImplementation() == Implementation.Default)
-                {
-                if (fHasDefault)
-                    {
-                    return false;
-                    }
-                fHasDefault = true;
-                }
-            }
-
-        return true;
         }
 
     /**
