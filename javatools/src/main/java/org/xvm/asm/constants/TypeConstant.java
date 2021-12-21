@@ -3664,7 +3664,7 @@ public abstract class TypeConstant
                         // implements an interface that declares a virtual constructor or the class
                         // is a virtual child.
                         //
-                        // We keep constructors in the map of methods only for"self" and not
+                        // We keep constructors in the map of methods only for "self" and not
                         // any "super" contributions, except for: i) virtual constructors that are
                         // retained "as is" to enforce the corresponding constructor contracts or
                         // ii) virtual child constructors, that are then marked as "implicit".
@@ -5722,6 +5722,8 @@ public abstract class TypeConstant
             case Package:
             case Property:
             case TypeParameter:
+            case FormalTypeChild:
+            case DynamicFormal:
                 return Relation.INCOMPATIBLE;
 
             case Class:
