@@ -2,22 +2,32 @@ module TestSimple.test.org
     {
     @Inject Console console;
 
+    package collections import collections.xtclang.org;
+
+    import collections.ArrayOrderedSet;
+
     void run()
         {
-        Int[] elements = [];
+        new Test().test();
+        }
 
-        assert:test
+    class Test
+        {
+        void test()
             {
-            if (elements.size <= 1)
-                {
-                return False;
-                }
+            Map<Int, Int> byReadId = new SkiplistMap();
+            byReadId.put(1, 1);
+            byReadId.put(2, 1);
 
-            val iter = elements.iterator();
-            assert iter.next();
-            return True;
-            } as $"elements are not provided in order: {elements}";
+            Set<Int> cleanupRetained = byReadId.keys;
 
-        console.println("all good");
+            Set<Int> lastCleanupRetained = new ArrayOrderedSet<Int>(
+                    cleanupRetained.toArray(Constant)).freeze(inPlace=True);
+
+            // the comparison below used to blow up with
+            // *** Exception occurred during background maintenance: Exception: Missing method "Boolean containsAll(Collection<Object>)" on this:SkiplistMap<Int, Int>.KeySet
+            //   at collections.Collection.equals(Type<this:class(Collection)>, equals(?)#CompileType, equals(?)#CompileType) (Collection.x:959)
+            console.println(cleanupRetained == lastCleanupRetained);
+            }
         }
     }

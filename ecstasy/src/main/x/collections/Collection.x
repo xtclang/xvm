@@ -960,11 +960,11 @@ interface Collection<Element>
             }
 
         // in theory, sets may execute in O(N) time
-        if (collection1.is(Set))
+        if (collection1.is(Set<CompileType.Element>))
             {
             return collection1.containsAll(collection2);
             }
-        else if (collection2.is(Set))
+        else if (collection2.is(Set<CompileType.Element>))
             {
             return collection2.containsAll(collection1);
             }
