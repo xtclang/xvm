@@ -422,7 +422,7 @@ public class AssignmentStatement
 
             LValueContext ctxLV = new LValueContext(ctx);
 
-            errs = errs.branch();
+            errs = errs.branch(this);
 
             Statement lvalueOld = (Statement) nodeLeft;
             Statement lvalueNew = lvalueOld.validate(ctxLV, errs);

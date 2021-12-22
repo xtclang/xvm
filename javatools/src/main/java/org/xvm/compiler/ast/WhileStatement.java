@@ -257,7 +257,7 @@ public class WhileStatement
             block = (StatementBlock) blockOrig.clone();
 
             // create a temporary error list
-            errs = errsOrig.branch();
+            errs = errsOrig.branch(this);
 
             // we use a potentially unnecessary context here as a place to jam in any assumptions
             // that we learned on a previous trial run through the loop
@@ -432,7 +432,7 @@ public class WhileStatement
                             }
                         }
 
-                    // if the block was reachable but it didn't complete, and there are no
+                    // if the block was reachable, but it didn't complete, and there are no
                     // "continue" statements, then this loop doesn't actually loop
                     if (fLoops && fReachable && !ctx.isReachable() && !fContinues)
                         {

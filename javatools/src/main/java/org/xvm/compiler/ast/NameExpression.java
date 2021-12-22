@@ -74,19 +74,19 @@ import org.xvm.util.Severity;
  * </ul>
  *
  * <p/>
- * The context either has a "this" (i.e. context from inside of an instance method), or it
- * doesn't (i.e. context from inside of a function). Even a lambda within a method has a "this",
+ * The context either has a "this" (i.e. context from inside an instance method), or it
+ * doesn't (i.e. context from inside a function). Even a lambda within a method has a "this",
  * since it can conceptually capture the "this" of the method. The presence of a "this" has to
  * be tracked, because the interpretation of a name will differ in some cases based on whether
  * there is a "this" or not.
  * <p/>
  * A name resolution also has an implicit de-reference, or an explicit non-dereference (a
- * suppression of the dereference using the "&" symbol). The result of the name being resolved
- * will differ based on whether the name is implicitly dereferenced, or explicitly not
- * dereferenced.
+ * suppression of the de-reference using the "&" symbol). The result of the name being resolved
+ * will differ based on whether the name is implicitly de-referenced, or explicitly not
+ * de-referenced.
  *
  * <p/>
- * The starting point for dereferencing is within a "method body", which is one of:
+ * The starting point for de-referencing is within a "method body", which is one of:
  * <ul>
  * <li>A method;</li>
  * <li>A function;</li>
@@ -144,7 +144,7 @@ import org.xvm.util.Severity;
  * <p/>
  * Note: '*' signifies potential "identity mode"
  * <p/>
- * [1] must have a left hand side in identity mode; otherwise it is an Error
+ * [1] must have a left-hand side in identity mode; otherwise it is an Error
  * <p/>
  * Method and function evaluation is the most complex of these scenarios, because the no-de-ref
  * flag is on the name expression, but can also be implied by an argument of the
@@ -327,7 +327,7 @@ public class NameExpression
         }
 
     /**
-     * Build an list of name tokens for the name expression.
+     * Build a list of name tokens for the name expression.
      *
      * @param cNames  how many names so far (recursing right to left)
      *
@@ -367,7 +367,7 @@ public class NameExpression
 
     /**
      * @return true iff the expression is explicitly non-de-referencing, as with the '&' pre-fix on
-     *         a class, property, or method name, or if the left expression is a name expression and
+     *         a class, property, or method name, or if the left expression is a name expression, and
      *         it has any suppressed dereference
      */
     public boolean hasAnySuppressDeref()
@@ -468,9 +468,9 @@ public class NameExpression
                 Expression expr = exprLeft.left;
                 if (!(expr instanceof NameExpression))
                     {
-                    // if expr is null, there is no left named type and therefore no reason to split
+                    // if expr is null, there is no left-named type and therefore no reason to split
                     // this into a chain of NamedTypeExpressions;
-                    // otherwise this should be an error and if will be reported later
+                    // otherwise this should be an error and it will be reported later
                     break NameExpressions;
                     }
                 exprLeft = (NameExpression) expr;
@@ -1589,7 +1589,7 @@ public class NameExpression
         if (left == null)
             {
             // resolve the initial name; try to avoid double-reporting
-            ErrorListener errsTemp = errs.branch();
+            ErrorListener errsTemp = errs.branch(this);
 
             Argument arg = ctx.resolveName(name, errsTemp);
             if (arg == null)
@@ -1847,7 +1847,7 @@ public class NameExpression
                             //       return hash;
                             //       }
                             //
-                            // typeLeft is a type of the "CompileType" type parameter and we need to
+                            // typeLeft is a type of the "CompileType" type parameter, and we need to
                             // produce "CompileType.Element" formal child constant
                             //
                             // Another example is:
@@ -2010,7 +2010,7 @@ public class NameExpression
                     case Method:
                         // fall through
                     case MultiMethod:
-                        // there are more then one method by that name;
+                        // there are more than one method by that name;
                         // return the MultiMethod; let the caller decide
                         m_arg = idChild;
                         break;
@@ -2264,7 +2264,7 @@ public class NameExpression
                 PropertyInfo      infoProp;
                 TypeConstant      typeLeft;
 
-                // use the type inference to differentiate between a property dereferencing
+                // use the type inference to differentiate between a property de-referencing
                 // and the Property instance itself (check for both Property and Property? types)
                 if (typeDesired != null && typeDesired.removeNullable().isA(pool.typeProperty()) &&
                         !type.removeNullable().isA(pool.typeProperty()))
@@ -2812,7 +2812,7 @@ public class NameExpression
                 // - type param T       <- Ref     PropertyConstant*[1] PropertyConstant*
                 // Constant     T       <- Ref     T                    <- Ref
                 //
-                // *[1] must have a left hand side in identity mode; otherwise it is an Error
+                // *[1] must have a left-hand side in identity mode; otherwise it is an Error
                 PropertyStructure prop = (PropertyStructure) getIdentity(ctx).getComponent();
 
                 return !prop.isConstant() && !m_fClassAttribute && left != null

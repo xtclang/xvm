@@ -5,6 +5,8 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 
+import org.xvm.compiler.ast.AstNode;
+
 import org.xvm.util.Severity;
 
 
@@ -26,9 +28,9 @@ public class ErrorList
     // ----- ErrorListener methods -----------------------------------------------------------------
 
     @Override
-    public ErrorListener branch()
+    public ErrorListener branch(AstNode node)
         {
-        return new BranchedErrorListener(this, f_cMaxErrors);
+        return new BranchedErrorListener(this, f_cMaxErrors, node);
         }
 
     @Override
@@ -154,7 +156,7 @@ public class ErrorList
     /**
      * Log the errors from this ErrorList into another ErrorListener.
      *
-     * @param errs  the ErrorListener to log all of the errors from this ErrorList to
+     * @param errs  the ErrorListener to log all the errors from this ErrorList to
      */
     public void logTo(ErrorListener errs)
         {
@@ -186,17 +188,28 @@ public class ErrorList
     public static class BranchedErrorListener
             extends ErrorList
         {
-        public BranchedErrorListener(ErrorListener listener, int cMaxErrors)
+        public BranchedErrorListener(ErrorListener listener, int cMaxErrors, AstNode node)
             {
             super(cMaxErrors);
 
             f_listener = listener;
+            f_node     = node;
             }
 
         @Override
-        public ErrorListener branch()
+        public ErrorListener branch(AstNode node)
             {
-            return new BranchedErrorListener(this, getSeriousErrorMax());
+            return new BranchedErrorListener(this, getSeriousErrorMax(),
+                    node == null ? f_node : node);
+            }
+
+        @Override
+        public boolean log(Severity severity, String sCode, Object[] aoParam, XvmStructure xs)
+            {
+            return f_node == null
+                ? super.log(severity, sCode, aoParam, xs)
+                : log(severity, sCode, aoParam,
+                        f_node.getSource(), f_node.getStartPosition(), f_node.getEndPosition());
             }
 
         @Override
@@ -220,6 +233,7 @@ public class ErrorList
             }
 
         private final ErrorListener f_listener;
+        private final AstNode       f_node;
         }
 
 

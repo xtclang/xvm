@@ -319,7 +319,7 @@ public class NewExpression
         boolean fVirt = isVirtualNew();
         if (fAnon)
             {
-            ErrorListener errsTemp = errs.branch();
+            ErrorListener errsTemp = errs.branch(this);
 
             ensureInnerClass(ctx, AnonPurpose.RoughDraft, errsTemp);
 
@@ -515,7 +515,7 @@ public class NewExpression
                 // now we should have enough type information to create the real anon inner class
                 if (fAnon)
                     {
-                    ErrorListener errsTemp = errs.branch();
+                    ErrorListener errsTemp = errs.branch(this);
 
                     ensureInnerClass(ctx, AnonPurpose.Actual, errsTemp);
 
@@ -629,9 +629,10 @@ public class NewExpression
                 }
             }
 
+        ErrorListener errsTemp = errs.branch(this);
         TypeInfo infoTarget = fAnon
-                ? typeTarget.ensureTypeInfo(errs)
-                : getTypeInfo(ctx, typeTarget, errs);
+                ? typeTarget.ensureTypeInfo(errsTemp)
+                : getTypeInfo(ctx, typeTarget, errsTemp);
 
         // unless it's a virtual new, the target type must be new-able
         if (!fVirt && !infoTarget.isNewable())
@@ -641,8 +642,14 @@ public class NewExpression
             return null;
             }
 
+        if (errsTemp.hasSeriousErrors())
+            {
+            // no reason to proceed
+            errsTemp.merge();
+            return null;
+            }
+
         List<Expression> listArgs = args;
-        ErrorListener    errsTemp = errs.branch();
 
         MethodConstant idConstruct = findMethod(ctx, typeTarget, infoTarget, "construct", listArgs,
                         MethodKind.Constructor, true, false, null, errsTemp);
@@ -698,7 +705,7 @@ public class NewExpression
             if (idConstruct == null)
                 {
                 // as the last resort, validate the arguments before looking for the method again
-                ErrorListener  errsTemp2 = errs.branch();
+                ErrorListener  errsTemp2 = errs.branch(this);
                 TypeConstant[] atypeArgs = validateExpressions(ctx, listArgs, null, errsTemp2);
                 if (atypeArgs == null)
                     {

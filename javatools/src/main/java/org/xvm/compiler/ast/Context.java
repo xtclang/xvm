@@ -2461,7 +2461,7 @@ public class Context
         protected Argument resolveRegularName(Context ctxFrom, String sName, Token name, ErrorListener errs)
             {
             // hold off on logging the errors from the first attempt until the second attempt fails
-            errs = errs.branch();
+            errs = errs.branch(null);
 
             Argument arg = super.resolveRegularName(ctxFrom, sName, name, errs);
 

@@ -805,7 +805,7 @@ public abstract class AstNode
             return true;
             }
 
-        ErrorListener errsTemp = errs.branch();
+        ErrorListener errsTemp = errs.branch(this);
         while (stageOldest.compareTo(stageTarget) < 0)
             {
             Stage    stageNext = stageOldest.nextTarget();
@@ -1027,7 +1027,7 @@ public abstract class AstNode
 
         int                 cArgs      = fCall ? cExpr : -1;
         Set<MethodConstant> setMethods = infoTarget.findMethods(sMethodName, cArgs, kind);
-        ErrorListener       errsTemp   = errs.branch();
+        ErrorListener       errsTemp   = errs.branch(this);
 
         if (fAllowNested)
             {
@@ -1194,7 +1194,7 @@ public abstract class AstNode
         int           cExprs   = listExprArgs == null ? 0 : listExprArgs.size();
         int           cReturns = atypeReturn  == null ? 0 : atypeReturn.length;
         int           cNamed   = mapNamedExpr.size();
-        ErrorListener errsTemp = errs.branch();
+        ErrorListener errsTemp = errs.branch(this);
         ErrorListener errsKeep = null;
 
         NextMethod: for (MethodConstant idMethod : setMethods)
@@ -1388,7 +1388,7 @@ public abstract class AstNode
                     else
                         {
                         // discard the errors
-                        errsTemp = errs.branch();
+                        errsTemp = errs.branch(this);
                         }
                     }
                 continue; // NextMethod

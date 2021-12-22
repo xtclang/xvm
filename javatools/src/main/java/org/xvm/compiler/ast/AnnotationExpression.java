@@ -226,7 +226,7 @@ public class AnnotationExpression
         List<Expression>  listArgs = args;
         int               cArgs    = listArgs == null ? 0 : listArgs.size();
         ValidatingContext ctx      = new ValidatingContext(getComponent().getContainingClass());
-        ErrorListener     errsTemp = errs.branch();
+        ErrorListener     errsTemp = errs.branch(this);
 
         // find a matching constructor on the annotation class
         MethodConstant idConstruct = findMethod(ctx, typeAnno, infoAnno,
@@ -257,8 +257,8 @@ public class AnnotationExpression
                 cArgs = listArgs.size();
                 }
 
-            // validate the argument expressions and fix up all of the constants used as
-            // arguments to construct the annotation
+            // validate the argument expressions and fix up all the constants used as arguments to
+            // construct the annotation
             TypeConstant[] atypeParams = idConstruct.getRawParams();
             int            cAll        = constructor.getParamCount();
             int            cDefault    = constructor.getDefaultParamCount();

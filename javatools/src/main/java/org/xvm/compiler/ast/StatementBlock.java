@@ -312,7 +312,7 @@ public class StatementBlock
         {
         RootContext ctx = new RootContext(code.getMethodStructure());
 
-        ErrorListener errsValidation = errs.branch();
+        ErrorListener errsValidation = errs.branch(this);
 
         Statement that = this.validate(ctx.validatingContext(), errsValidation);
 
@@ -900,7 +900,7 @@ public class StatementBlock
             Access           access    = Access.PRIVATE;
             IdentityConstant idPrev    = null;
             TypeInfo         infoPrev  = null;
-            ErrorListener    errsTemp  = errs.branch();
+            ErrorListener    errsTemp  = errs.branch(null);
             IdentityConstant idOuter   = getEnclosingClass().getIdentityConstant();
             if (idOuter instanceof ClassConstant)
                 {

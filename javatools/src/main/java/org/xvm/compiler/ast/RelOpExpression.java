@@ -227,7 +227,7 @@ public class RelOpExpression
         TypeConstant typeLeft = expr1.getImplicitType(ctx);
         if (typeLeft == null)
             {
-            // if the type of the left hand expression cannot be determined, then the result of the
+            // if the type of the left-hand expression cannot be determined, then the result of the
             // op cannot be determined
             return null;
             }
@@ -237,7 +237,7 @@ public class RelOpExpression
 
         MethodConstant idBestLeft = setOpsLeft.size() == 1 ? setOpsLeft.iterator().next() : null;
 
-        // use the right hand expression to reduce the potential ops
+        // use the right-hand expression to reduce the potential ops
         TypeConstant typeRight = expr2.getImplicitType(ctx);
         if (typeRight == null)
             {
@@ -547,7 +547,7 @@ public class RelOpExpression
         int            cExpected    = fMulti ? 2 : 1;
         int            cResults     = cExpected;
         TypeConstant[] atypeResults = null;
-        ErrorListener  errsAct      = errs.branch(); // if nothing else works, report these
+        ErrorListener  errsAct      = errs.branch(this); // if nothing else works, report these
         MethodConstant idOp         = findOpMethod(type1Act, type2Act, typeRequired, errsAct);
 
         findAlternative:
@@ -559,7 +559,7 @@ public class RelOpExpression
                 type1Act = type1Act.resolveConstraints();
                 type2Act = type2Act.resolveConstraints();
 
-                ErrorListener errsAlt = errs.branch();
+                ErrorListener errsAlt = errs.branch(this);
                 idOp = findOpMethod(type1Act, type2Act, typeRequired, errsAlt);
                 if (idOp != null)
                     {
@@ -572,7 +572,7 @@ public class RelOpExpression
                 {
                 // there is new knowledge about the type of the expr2 that we didn't have
                 // when validated expr1; let's try to re-validate it using the saved off copy
-                ErrorListener errsAlt = errs.branch();
+                ErrorListener errsAlt = errs.branch(this);
                 if (!new StageMgr(expr1Copy, Stage.Validated, errsAlt).fastForward(20))
                     {
                     break findAlternative;
@@ -857,7 +857,7 @@ public class RelOpExpression
                 }
             }
 
-        // having collected all of the possible ops that could be used, select the one method to use
+        // having collected all the possible ops that could be used, select the one method to use
         if (idBest != null)
             {
             return idBest;

@@ -8,6 +8,8 @@ import java.util.ResourceBundle;
 
 import org.xvm.compiler.Source;
 
+import org.xvm.compiler.ast.AstNode;
+
 import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.quotedString;
@@ -27,7 +29,7 @@ public interface ErrorListener
      * @param err  the error info
      *
      * @return true to attempt to abort the process that reported the error, or
-     *         false to attempt continue the process*
+     *         false to attempt to continue the process
      */
     boolean log(ErrorInfo err);
 
@@ -44,7 +46,7 @@ public interface ErrorListener
      * @param lPosEnd     the position in the source at which the error concluded
      *
      * @return true to attempt to abort the process that reported the error, or
-     *         false to attempt continue the process
+     *         false to attempt to continue the process
      */
     default boolean log(Severity severity, String sCode, Object[] aoParam,
             Source source, long lPosStart, long lPosEnd)
@@ -73,19 +75,22 @@ public interface ErrorListener
 
     /**
      * Branch this ErrorListener by creating a new one that will collect subsequent errors
-     * in the same manner as this one until it is {@link #merge() merged} or discarded.
+     * in the same manner as this one until it is {@link #merge() merged} or discarded in the
+     * (optional) context of the specified node.
+     *
+     * @param node  (optional) the context ast node
      *
      * @return the branched-out ErrorListener
      */
-    default ErrorListener branch()
+    default ErrorListener branch(AstNode node)
         {
-        return new ErrorList.BranchedErrorListener(this, 1);
+        return new ErrorList.BranchedErrorListener(this, 1, node);
         }
 
     /**
      * Merge all errors collected by this ErrorListener into the one it was branched out of.
      *
-     * @return the ErrorListener this one was {@link #branch() branched out} of
+     * @return the ErrorListener this one was {@link #branch branched out} of
      */
     default ErrorListener merge()
         {
@@ -191,7 +196,7 @@ public interface ErrorListener
             {
             return "(Runtime error listener)";
             }
-        };
+        }
 
 
     // ----- inner class: ErrorInfo ----------------------------------------------------------------
@@ -287,14 +292,6 @@ public interface ErrorListener
             }
 
         /**
-         * @return the starting position in the source (opaque)
-         */
-        public long getPos()
-            {
-            return m_lPosStart;
-            }
-
-        /**
          * @return the line number (zero based) at which the error occurred
          */
         public int getLine()
@@ -308,14 +305,6 @@ public interface ErrorListener
         public int getOffset()
             {
             return Source.calculateOffset(m_lPosStart);
-            }
-
-        /**
-         * @return the ending position in the source (opaque)
-         */
-        public long getEndPos()
-            {
-            return m_lPosEnd;
             }
 
         /**
@@ -448,13 +437,13 @@ public interface ErrorListener
             return sb.toString();
             }
 
-        private Severity     m_severity;
-        private String       m_sCode;
-        private Object[]     m_aoParam;
-        private Source       m_source;
-        private long         m_lPosStart;
-        private long         m_lPosEnd;
-        private XvmStructure m_xs;
+        private final Severity     m_severity;
+        private final String       m_sCode;
+        private final Object[]     m_aoParam;
+        private       Source       m_source;
+        private       long         m_lPosStart;
+        private       long         m_lPosEnd;
+        private       XvmStructure m_xs;
         }
 
     // ----- constants -----------------------------------------------------------------------------

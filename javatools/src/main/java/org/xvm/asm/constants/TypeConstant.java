@@ -1397,7 +1397,7 @@ public abstract class TypeConstant
                     + this + "; deferred types=" + takeDeferredTypeInfo());
             }
 
-        errs = errs.branch();
+        errs = errs.branch(null);
 
         try
             {

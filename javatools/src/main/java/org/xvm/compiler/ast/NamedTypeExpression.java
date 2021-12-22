@@ -524,7 +524,7 @@ public class NamedTypeExpression
                             {
                             // mixins naturally imply formal type parameters from their contributions
                             // (most likely the "into"s); there is logic in TypeCompositionStatement that
-                            // adds implicit type parameters and we need to defer the resolution util
+                            // adds implicit type parameters, and we need to defer the resolution util
                             // then - see TypeCompositionStatement.addImplicitTypeParameters()
                             if (clz != null && clz.getFormat() == Component.Format.MIXIN &&
                                     !clz.isParameterized())
@@ -559,7 +559,7 @@ public class NamedTypeExpression
                 }
             }
 
-        ErrorListener errsTemp = errs.branch();
+        ErrorListener errsTemp = errs.branch(this);
         NameResolver  resolver = getNameResolver();
         switch (resolver.resolve(errsTemp))
             {
@@ -700,7 +700,7 @@ public class NamedTypeExpression
         if (m_constId == null || m_constId.containsUnresolved())
             {
             // first, try to re-resolve the type
-            ErrorListener errsTemp = errs.branch();
+            ErrorListener errsTemp = errs.branch(this);
             NameResolver  resolver = getNameResolver();
             switch (resolver.resolve(errsTemp))
                 {

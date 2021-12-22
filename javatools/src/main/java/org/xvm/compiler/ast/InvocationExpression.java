@@ -739,13 +739,13 @@ public class InvocationExpression
             // to yield a function, such as a property or variable that holds a function or
             // something that can be converted to a function
             List<Expression> listArgs = args;
-            ErrorListener    errsTemp = errs.branch();
+            ErrorListener    errsTemp = errs.branch(this);
 
             Argument argMethod = resolveName(ctx, true, typeLeft, atypeReturn, errsTemp);
             if (argMethod == null)
                 {
                 // as the last resort, validate the arguments before trying to resolve the name again
-                ErrorListener  errsTemp2 = errs.branch();
+                ErrorListener  errsTemp2 = errs.branch(this);
                 TypeConstant[] atypeArgs = validateExpressions(ctx, listArgs, null, errsTemp2);
                 if (atypeArgs == null)
                     {
@@ -2191,7 +2191,7 @@ public class InvocationExpression
                             fConstruct                                ? MethodKind.Constructor :
                             (fNoCall && fNoFBind) || target.hasThis() ? MethodKind.Any :
                                                                         MethodKind.Function;
-                    ErrorListener    errsTemp   = errs.branch();
+                    ErrorListener    errsTemp   = errs.branch(this);
                     IdentityConstant idCallable = findMethod(ctx, typeTarget, info, sName,
                             args, kind, !fNoCall, id.isNested(), atypeReturn, errsTemp);
                     if (idCallable == null)
@@ -2403,7 +2403,7 @@ public class InvocationExpression
                                         fNoFBind && fNoCall || fSingleton ? MethodKind.Any :
                                                                             MethodKind.Function;
 
-                ErrorListener errsTemp = errs.branch();
+                ErrorListener errsTemp = errs.branch(this);
                 Argument      arg      = findCallable(ctx, infoLeft.getType(), infoLeft, sName,
                         kind, false, atypeReturn, errsTemp);
 
@@ -2461,7 +2461,7 @@ public class InvocationExpression
                         TypeConstant type     = nameLeft.getImplicitType(ctx).getParamType(0);
                         TypeInfo     infoType = getTypeInfo(ctx, type, errs);
 
-                        ErrorListener errsTemp = errs.branch();
+                        ErrorListener errsTemp = errs.branch(this);
 
                         Argument arg = findCallable(ctx, type, infoType, sName, MethodKind.Function,
                             false, atypeReturn, errsTemp);
@@ -2495,7 +2495,7 @@ public class InvocationExpression
 
                     assert typeLeft.isTypeOfType();
                     TypeInfo      infoLeft = typeLeft.getParamType(0).ensureTypeInfo(errs);
-                    ErrorListener errsTemp = errs.branch();
+                    ErrorListener errsTemp = errs.branch(this);
 
                     Argument arg = findCallable(ctx, typeLeft, infoLeft, sName, MethodKind.Function,
                         false, atypeReturn, errsTemp);
@@ -2518,7 +2518,7 @@ public class InvocationExpression
         // - methods are included because there is a left, and it is NOT identity-mode
         // - functions are NOT included because the left is NOT identity-mode
         TypeInfo      infoLeft = getTypeInfo(ctx, typeLeft, errs);
-        ErrorListener errsMain = errs.branch();
+        ErrorListener errsMain = errs.branch(this);
         MethodKind    kind     = fConstruct ? MethodKind.Constructor : MethodKind.Method;
 
         Argument arg = findCallable(ctx, typeLeft, infoLeft, sName, kind, false, atypeReturn, errsMain);
@@ -2547,7 +2547,7 @@ public class InvocationExpression
             TypeConstant   typeConstraint = idFormal.getConstraintType();
             TypeInfo       infoConstraint = typeConstraint.ensureTypeInfo(ErrorListener.BLACKHOLE);
 
-            ErrorListener errsAlt = errs.branch();
+            ErrorListener errsAlt = errs.branch(this);
 
             arg = findMethod(ctx, typeConstraint, infoConstraint, sName, args, MethodKind.Function,
                         !fNoCall, false, atypeReturn, errsAlt);
@@ -2571,7 +2571,7 @@ public class InvocationExpression
             TypeConstant typeDataType = typeLeft.getParamType(0);
             TypeInfo     infoDataType = typeDataType.ensureTypeInfo(ErrorListener.BLACKHOLE);
 
-            ErrorListener errsAlt = errs.branch();
+            ErrorListener errsAlt = errs.branch(this);
 
             arg = findMethod(ctx, typeDataType, infoDataType, sName, args, MethodKind.Function,
                         !fNoCall, false, atypeReturn, errsAlt);
@@ -2593,7 +2593,7 @@ public class InvocationExpression
             List<Expression> listArgs = new ArrayList<>(args);
             listArgs.add(0, exprLeft);
 
-            ErrorListener errsAlt = errs.branch();
+            ErrorListener errsAlt = errs.branch(this);
 
             arg = findMethod(ctx, typeLeft, infoLeft, sName, listArgs, MethodKind.Function,
                         !fNoCall, false, atypeReturn, errsAlt);

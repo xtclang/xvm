@@ -456,7 +456,7 @@ public abstract class Expression
 
         if (new StageMgr(exprType, Compiler.Stage.Validated, ErrorListener.BLACKHOLE).fastForward(20))
             {
-            ErrorListener errsTemp = errs.branch();
+            ErrorListener errsTemp = errs.branch(this);
             Expression    exprNew  = exprType.validate(ctx, typeRequired, errsTemp);
             if (exprNew != null)
                 {
@@ -1030,7 +1030,7 @@ public abstract class Expression
      * (Post-validation) Determine the type of the expression. For a multi-value expression, the
      * first TypeConstant is returned. For a void expression, the result is null.
      *
-     * @return the type of the validated Expression, which is null for a Expression that yields a
+     * @return the type of the validated Expression, which is null for an Expression that yields a
      *         void result, otherwise the type of the <i>first</i> (and typically <i>only</i>) value
      *         resulting from the Expression
      */
@@ -1259,7 +1259,7 @@ public abstract class Expression
         }
 
     /**
-     * (Post-validation) Determine if the expression needs to generate code, even if if it yields
+     * (Post-validation) Determine if the expression needs to generate code, even if it yields
      * a compile-time constant value.
      *
      * @return true iff the expression needs to produce code, regardless of whether it yields a
@@ -1268,7 +1268,7 @@ public abstract class Expression
     public boolean hasSideEffects()
         {
         // generally, an expression that yields a compile-time constant value does not have
-        // side-effects; this must be overridden by any expression that violates this assumption
+        // side effects; this must be overridden by any expression that violates this assumption
         return !isConstant();
         }
 
@@ -1289,7 +1289,7 @@ public abstract class Expression
         }
 
     /**
-     * (Post-validation) For a expression that provides a compile-time constant, indicated by the
+     * (Post-validation) For an expression that provides a compile-time constant, indicated by the
      * {@link #isConstant()} method returning true, obtain a constant representation of the value.
      * <p/>
      * If the Expression has more than one value, then this will return the first constant value. If
@@ -1314,7 +1314,7 @@ public abstract class Expression
         }
 
     /**
-     * (Post-validation) For a expression that provides compile-time constants, indicated by the
+     * (Post-validation) For an expression that provides compile-time constants, indicated by the
      * {@link #isConstant()} method returning true, obtain an array of constants that represent the
      * value of the Expression.
      * <p/>
@@ -1367,7 +1367,7 @@ public abstract class Expression
         }
 
     /**
-     * Generate the necessary code that initializes an lvalue variable.
+     * Generate the necessary code that initializes an l-value variable.
      * <p/>
      * This method should be overridden by any expression that overrides
      * {@link #supportsCompactInit} method.
@@ -1616,7 +1616,7 @@ public abstract class Expression
             return;
             }
 
-        // this is just a generic implementation; sub-classes should override this simplify the
+        // this is just a generic implementation; sub-classes should override this to simplify the
         // generated code (e.g. by not having to always generate a separate boolean value)
         Argument arg = generateArgument(ctx, code, true, true, errs);
         code.add(fWhenTrue
@@ -1776,7 +1776,7 @@ public abstract class Expression
         }
 
     /**
-     * Given an constant, attempt to convert it to the specified type.
+     * Given a constant, attempt to convert it to the specified type.
      *
      * @param constIn  the constant
      * @param typeOut  the type that the constant must be assignable to
@@ -1803,7 +1803,7 @@ public abstract class Expression
         }
 
     /**
-     * Given an constant, verify that it can be assigned to (or somehow converted to) the specified
+     * Given a constant, verify that it can be assigned to (or somehow converted to) the specified
      * type, and do so.
      *
      * @param constIn  the constant that needs to be validated as assignable
@@ -1835,7 +1835,7 @@ public abstract class Expression
         }
 
     /**
-     * Given an constant, verify that it can be assigned to (or somehow converted to) the specified
+     * Given a constant, verify that it can be assigned to (or somehow converted to) the specified
      * type, and do so.
      *
      * @param constIn  the constant that needs to be validated as assignable
@@ -3276,12 +3276,12 @@ public abstract class Expression
             }
 
         /**
-         * All of the TypeFit enums, by ordinal.
+         * All the TypeFit enums, by ordinal.
          */
         private static final TypeFit[] BY_ORDINAL = TypeFit.values();
 
         /**
-         * All of the TypeFit enums, by flags.
+         * All the TypeFit enums, by flags.
          */
         private static final TypeFit[] BY_FLAGS = new TypeFit[0b10000];
 
