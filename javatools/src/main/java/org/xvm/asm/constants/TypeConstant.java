@@ -1418,8 +1418,9 @@ public abstract class TypeConstant
                 int                cDeferred    = listDeferred.size();
                 if (iTry > 2 && cDeferred >= cDeferredPrev)
                     {
+                    errs.merge();
                     throw new IllegalStateException("Failure to make progress on a TypeInfo for "
-                            + this + "; deferred types=" + listDeferred);
+                            + this + "; deferred types=" + listDeferred + "\nErrors: " + errs);
                     }
                 cDeferredPrev = cDeferred;
 

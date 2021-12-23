@@ -462,7 +462,7 @@ public abstract class Component
      */
     public String getName()
         {
-        return ((NamedConstant) getIdentityConstant()).getName();
+        return getIdentityConstant().getName();
         }
 
     /**
@@ -2456,7 +2456,7 @@ public abstract class Component
     protected void dump(PrintWriter out, String sIndent)
         {
         out.print(sIndent);
-        out.println(toString());
+        out.println(this);
 
         sIndent = nextIndent(sIndent);
 
@@ -2489,7 +2489,7 @@ public abstract class Component
     /**
      * Dump a child and all of its siblings, and then its children under it.
      *
-     * @param child    a child (an eldest sibling)
+     * @param child    a child (the eldest sibling)
      * @param out      the PrintWriter to dump to
      * @param sIndent  the indentation to use for this level
      */
@@ -2533,7 +2533,7 @@ public abstract class Component
             return errs.toString();
             }
 
-        return info.toString() + "\n\n" + errs.toString();
+        return info + "\n\n" + errs;
         }
 
 
@@ -2806,7 +2806,7 @@ public abstract class Component
         /**
          * Represents interface inheritance plus default delegation of interface functionality.
          * <p/>
-         * The constant is a TypeConstant. A delegates composition must specify a property that
+         * The constant is a TypeConstant. A "delegates" composition must specify a property that
          * provides the reference to which it delegates; this is represented by a PropertyConstant.
          */
         Delegates,
@@ -3266,7 +3266,7 @@ public abstract class Component
                 }
 
             return getComposition() != Composition.Incorporates ||
-                    checkConditionalIncorporate(typeContrib.getParamTypesArray()) ?
+                    checkConditionalIncorporate(typeContrib) ?
                 typeContrib : null;
             }
 
@@ -3299,7 +3299,7 @@ public abstract class Component
             typeContrib = typeContrib.resolveGenerics(pool, resolver);
 
             return getComposition() != Composition.Incorporates ||
-                        checkConditionalIncorporate(typeContrib.getParamTypesArray())
+                        checkConditionalIncorporate(typeContrib)
                     ? typeContrib
                     : null;
             }
@@ -3308,29 +3308,31 @@ public abstract class Component
          * Check if this "incorporate" contribution is conditional and if so,
          * whether or not it applies to this type
          *
-         * @param atypeParams  actual parameter types
+         * @param typeContrib  the actual (resolved) contribution type
          *
          * @return true iff the contribution is unconditional or applies to this type
          */
-        protected boolean checkConditionalIncorporate(TypeConstant[] atypeParams)
+        protected boolean checkConditionalIncorporate(TypeConstant typeContrib)
             {
             assert getComposition() == Composition.Incorporates;
 
             Map<StringConstant, TypeConstant> mapConditional = getTypeParams();
-            if (mapConditional != null && !mapConditional.isEmpty())
+            if (mapConditional != null)
                 {
                 // conditional incorporation; check if the actual parameters apply
-                assert atypeParams.length == mapConditional.size();
-
-                Iterator<TypeConstant> iterConstraint = mapConditional.values().iterator();
-                for (TypeConstant typeParam : atypeParams)
+                for (Map.Entry<StringConstant, TypeConstant> entry : mapConditional.entrySet())
                     {
-                    TypeConstant typeConstraint = iterConstraint.next();
-
-                    if (typeConstraint != null && !typeParam.isA(typeConstraint))
+                    TypeConstant typeConstraint = entry.getValue();
+                    if (typeConstraint != null)
                         {
-                        // this contribution doesn't apply
-                        return false;
+                        String       sName      = entry.getKey().getValue();
+                        TypeConstant typeActual = typeContrib.resolveGenericType(sName);
+
+                        if (typeActual == null || !typeActual.isA(typeConstraint))
+                            {
+                            // this contribution doesn't apply
+                            return false;
+                            }
                         }
                     }
                 }
@@ -3464,7 +3466,7 @@ public abstract class Component
                     break;
 
                 case Equal:
-                    sb.append(m_composition.toString())
+                    sb.append(m_composition)
                       .append(' ');
                     break;
 
@@ -3743,7 +3745,7 @@ public abstract class Component
      * siblings only when conditions kick in; consider a module that contains a class named "util"
      * in version 1 that is replaced with a package in version 2 and version 3. Some arbitrary first
      * sibling would have the identity of Class:(ModuleConstant, "util") and a format of CLASS, with
-     * a sibling with the identify of Package:(ModuleConstant, "util") and a format of PACKAGE (and
+     * a sibling with the identity of Package:(ModuleConstant, "util") and a format of PACKAGE (and
      * possibly one further sibling if there were changes to the package structure between version
      * 2 and 3.)
      */
