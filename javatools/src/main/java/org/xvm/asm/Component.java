@@ -3316,23 +3316,23 @@ public abstract class Component
             {
             assert getComposition() == Composition.Incorporates;
 
+            TypeConstant[] atypeParams = typeContrib.getParamTypesArray();
+
             Map<StringConstant, TypeConstant> mapConditional = getTypeParams();
-            if (mapConditional != null)
+            if (mapConditional != null && !mapConditional.isEmpty())
                 {
                 // conditional incorporation; check if the actual parameters apply
-                for (Map.Entry<StringConstant, TypeConstant> entry : mapConditional.entrySet())
-                    {
-                    TypeConstant typeConstraint = entry.getValue();
-                    if (typeConstraint != null)
-                        {
-                        String       sName      = entry.getKey().getValue();
-                        TypeConstant typeActual = typeContrib.resolveGenericType(sName);
+                assert atypeParams.length == mapConditional.size();
 
-                        if (typeActual == null || !typeActual.isA(typeConstraint))
-                            {
-                            // this contribution doesn't apply
-                            return false;
-                            }
+                Iterator<TypeConstant> iterConstraint = mapConditional.values().iterator();
+                for (TypeConstant typeParam : atypeParams)
+                    {
+                    TypeConstant typeConstraint = iterConstraint.next();
+
+                    if (typeConstraint != null && !typeParam.isA(typeConstraint))
+                        {
+                        // this contribution doesn't apply
+                        return false;
                         }
                     }
                 }
