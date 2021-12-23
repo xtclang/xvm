@@ -21,6 +21,7 @@ import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.PropertyStructure;
@@ -609,7 +610,7 @@ public class TypeInfo
      *
      * @return true iff this is a type that can be instantiated
      */
-    public boolean isNewable()
+    public boolean isNewable(ErrorListener errs)
         {
         if (isVirtualChildClass())
             {
@@ -639,7 +640,7 @@ public class TypeInfo
                             clz.getFormalType().getParamTypesArray());
                         }
 
-                    TypeInfo info = type.ensureTypeInfo();
+                    TypeInfo info = type.ensureTypeInfo(errs);
                     if (!info.isExplicitlyAbstract() && info.isAbstract())
                         {
                         return false;

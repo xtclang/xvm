@@ -1399,6 +1399,7 @@ public abstract class TypeConstant
 
         errs = errs.branch(null);
 
+        Set<TypeConstant> setInvalidate = null;
         try
             {
             // build the TypeInfo for this type
@@ -1446,11 +1447,24 @@ public abstract class TypeConstant
                                 throw new IllegalStateException("Infinite loop while producing a TypeInfo for "
                                         + this + "; deferred type=" + typeDeferred);
                                 }
-                            infoDeferred = typeDeferred.buildTypeInfo(errs);
+
+                            // merge the errors only after the completed "buildTypeInfo" run
+                            ErrorListener errsTemp = errs.branch(null);
+
+                            infoDeferred = typeDeferred.buildTypeInfo(errsTemp);
                             --m_cRecursiveDepth;
 
-                            if (isComplete(infoDeferred) && !errs.hasSeriousErrors())
+                            if (isComplete(infoDeferred))
                                 {
+                                if (errsTemp.hasSeriousErrors())
+                                    {
+                                    if (setInvalidate == null)
+                                        {
+                                        setInvalidate = new HashSet<>();
+                                        }
+                                    setInvalidate.add(typeDeferred);
+                                    }
+                                errsTemp.merge();
                                 typeDeferred.setTypeInfo(infoDeferred);
                                 }
                             }
@@ -1479,6 +1493,10 @@ public abstract class TypeConstant
             {
             // we need to return what we've got, but don't cache it
             invalidateTypeInfo();
+            if (setInvalidate != null)
+                {
+                setInvalidate.forEach(TypeConstant::invalidateTypeInfo);
+                }
             }
         errs.merge();
         return info;

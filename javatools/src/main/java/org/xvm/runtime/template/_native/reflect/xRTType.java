@@ -11,6 +11,7 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.PackageStructure;
@@ -602,7 +603,7 @@ public class xRTType
             }
 
         FunctionHandle[] ahFunctions;
-        if (infoTarget.isNewable())
+        if (infoTarget.isNewable(ErrorListener.BLACKHOLE))
             {
             ConstantPool    pool       = frame.poolContext();
             TypeConstant    typeStruct = pool.ensureAccessTypeConstant(typeTarget, Access.STRUCT);

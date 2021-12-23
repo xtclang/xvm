@@ -635,7 +635,7 @@ public class NewExpression
                 : getTypeInfo(ctx, typeTarget, errsTemp);
 
         // unless it's a virtual new, the target type must be new-able
-        if (!fVirt && !infoTarget.isNewable())
+        if (!fVirt && !infoTarget.isNewable(errs))
             {
             String sTarget = infoTarget.getType().removeAccess().getValueString();
             reportNotNewable(sTarget, infoTarget, null, errs);
@@ -966,11 +966,21 @@ public class NewExpression
             ChildInfo infoChild = entry.getValue();
             if (infoChild.isVirtualClass())
                 {
-                ClassStructure clzChild = (ClassStructure) infoChild.getIdentity().getComponent();
-                TypeInfo       info     = clzChild.getFormalType().ensureTypeInfo();
+                // use the same child type computation logic as TypeInfo.isNewable()
+                String         sName     = entry.getKey();
+                ClassStructure clzChild  = (ClassStructure) infoChild.getIdentity().getComponent();
+                TypeConstant   typeChild = pool().ensureVirtualChildTypeConstant(
+                                                infoTarget.getType(), sName);
+                if (clzChild.isParameterized())
+                    {
+                    typeChild = pool().ensureParameterizedTypeConstant(typeChild,
+                        clzChild.getFormalType().getParamTypesArray());
+                    }
+
+                TypeInfo info = typeChild.ensureTypeInfo(errs);
                 if (!info.isExplicitlyAbstract() && info.isAbstract())
                     {
-                    reportNotNewable(sType, info, entry.getKey(), errs);
+                    reportNotNewable(sType, info, sName, errs);
                     break;
                     }
                 }
