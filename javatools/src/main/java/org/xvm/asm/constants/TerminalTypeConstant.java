@@ -377,8 +377,13 @@ public class TerminalTypeConstant
 
         // because isA() uses this method, there is a chicken-and-egg problem, so instead of
         // materializing the TypeInfo at this point, just answer the question without it
-        ClassStructure clz = (ClassStructure) idClz.getComponent();
-        return clz.getGenericParamType(getConstantPool(), sName, listParams);
+        ClassStructure clz        = (ClassStructure) idClz.getComponent();
+        ConstantPool   pool       = getConstantPool();
+        TypeConstant   typeActual = listParams.isEmpty()
+                ? this
+                : pool.ensureParameterizedTypeConstant(this, listParams.toArray(TypeConstant.NO_TYPES));
+
+        return clz.getGenericParamType(pool, sName, typeActual);
         }
 
     @Override

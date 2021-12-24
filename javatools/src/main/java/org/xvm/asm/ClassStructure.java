@@ -1836,10 +1836,9 @@ public class ClassStructure
      *
      * @return the corresponding actual type or null if there is no matching formal type
      */
-    public TypeConstant getGenericParamType(ConstantPool pool, String sName,
-                                            List<TypeConstant> listActual)
+    public TypeConstant getGenericParamType(ConstantPool pool, String sName, TypeConstant typeActual)
         {
-        return getGenericParamTypeImpl(pool, sName, listActual, true);
+        return getGenericParamTypeImpl(pool, sName, typeActual, true);
         }
 
     /**
@@ -1851,13 +1850,13 @@ public class ClassStructure
      * @return the corresponding actual type or null if there is no matching formal type
      */
     protected TypeConstant getGenericParamTypeImpl(ConstantPool pool, String sName,
-                                                   List<TypeConstant> listActual, boolean fAllowInto)
+                                                   TypeConstant typeActual, boolean fAllowInto)
         {
         int ix = indexOfGenericParameter(sName);
         if (ix >= 0)
             {
             // the formal name is declared at this level; don't traverse the contributions
-            return extractGenericType(pool, ix, listActual);
+            return extractGenericType(pool, ix, typeActual.getParamTypes());
             }
 
         for (Contribution contrib : getContributionsAsList())
@@ -1870,7 +1869,7 @@ public class ClassStructure
                 continue;
                 }
 
-            TypeConstant typeResolved = contrib.resolveType(pool, this, listActual);
+            TypeConstant typeResolved = contrib.resolveType(pool, this, typeActual);
             if (typeResolved == null)
                 {
                 // conditional incorporation
@@ -1903,8 +1902,9 @@ public class ClassStructure
                 {
                 ClassStructure clzContrib = (ClassStructure)
                         typeContrib.getSingleUnderlyingClass(true).getComponent();
+
                 TypeConstant type = clzContrib.getGenericParamTypeImpl(
-                                        pool, sName, typeResolved.getParamTypes(), false);
+                        pool, sName, typeResolved, false);
                 if (type != null)
                     {
                     return type;
@@ -1913,7 +1913,7 @@ public class ClassStructure
                 if (clzContrib.isVirtualChild() && typeResolved.isVirtualChild())
                     {
                     type = clzContrib.getVirtualParent().getGenericParamTypeImpl(pool, sName,
-                                typeResolved.getParentType().getParamTypes(), true);
+                            typeResolved.getParentType(), true);
                     if (type != null)
                         {
                         return type;
@@ -2509,7 +2509,7 @@ public class ClassStructure
                     // does not deal with virtual parent's formal types parameters, so we use it
                     // only to filter out inapplicable conditional incorporates
                     if (composition == Composition.Incorporates &&
-                            contrib.resolveType(pool, this, typeRight.getParamTypes()) == null)
+                            contrib.resolveType(pool, this, typeRight) == null)
                         {
                         break;
                         }

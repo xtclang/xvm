@@ -3271,8 +3271,7 @@ public abstract class Component
             }
 
         /**
-         * Resolve the type of this contribution based on the specified list of actual types for
-         * the specified class based on this contribution definition.
+         * Resolve the type of this contribution based on the specified list of actual types.
          *
          * @param pool        the ConstantPool to place a potentially created new constant into
          * @param clzParent   the parent class structure
@@ -3281,8 +3280,8 @@ public abstract class Component
          * @return the resolved contribution type or null if the conditional incorporation
          *         does not apply for the specified types
          */
-        public TypeConstant resolveType(ConstantPool pool, ClassStructure clzParent,
-                                        List<TypeConstant> listActual)
+        protected TypeConstant resolveType(ConstantPool pool, ClassStructure clzParent,
+                                           List<TypeConstant> listActual)
             {
             TypeConstant typeContrib = getTypeConstant();
 
@@ -3295,6 +3294,43 @@ public abstract class Component
                 }
 
             GenericTypeResolver resolver = clzParent.new SimpleTypeResolver(pool, listActual);
+
+            typeContrib = typeContrib.resolveGenerics(pool, resolver);
+
+            return getComposition() != Composition.Incorporates ||
+                        checkConditionalIncorporate(typeContrib)
+                    ? typeContrib
+                    : null;
+            }
+
+        /**
+         * Resolve the type of this contribution based on the specified actual type.
+         *
+         * @param pool        the ConstantPool to place a potentially created new constant into
+         * @param typeActual  the actual type
+         *
+         * @return the resolved contribution type or null if the conditional incorporation
+         *         does not apply for the specified type
+         */
+        protected TypeConstant resolveType(ConstantPool pool, ClassStructure clzParent,
+                                           TypeConstant typeActual)
+            {
+            TypeConstant typeContrib = getTypeConstant();
+
+            assert typeContrib.isSingleDefiningConstant();
+
+            typeContrib = typeContrib.normalizeParameters();
+            if (!typeContrib.isParameterizedDeep())
+                {
+                return typeContrib;
+                }
+
+            // Note: this method is called by ClassStructure.getGenericParamTypeImpl(),
+            //       that iterates over all the contributions; as a result, to avoid the infinite
+            //       recursion, the resolver must check only the specified class's formal types
+            GenericTypeResolver resolver = typeActual.isVirtualChild()
+                ? typeActual
+                : clzParent.new SimpleTypeResolver(pool, typeActual.getParamTypes());
 
             typeContrib = typeContrib.resolveGenerics(pool, resolver);
 

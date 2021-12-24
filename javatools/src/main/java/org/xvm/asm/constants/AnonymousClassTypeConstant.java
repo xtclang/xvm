@@ -277,17 +277,28 @@ public class AnonymousClassTypeConstant
     @Override
     protected TypeConstant getGenericParamType(String sName, List<TypeConstant> listParams)
         {
-        ConstantPool pool = getConstantPool();
-        TypeConstant type = getChildStructure().getGenericParamType(pool, sName, listParams);
-        if (type != null)
-            {
-            return type.isGenericType()
-                    ? type.resolveGenerics(pool, m_typeParent)
-                    : type;
-            }
+        ConstantPool pool       = getConstantPool();
+        TypeConstant typeParent = m_typeParent;
 
-        // the passed in list represents the "child" and should not be used by the parent
-        return m_typeParent.getGenericParamType(sName, Collections.EMPTY_LIST);
+        TypeConstant type;
+        if (typeParent.containsGenericParam(sName))
+            {
+            // the passed in list applies only to the child and should not be used by the parent
+            type = typeParent.getGenericParamType(sName, Collections.EMPTY_LIST);
+            }
+        else
+            {
+            TypeConstant typeActual = listParams.isEmpty()
+                    ? this
+                    : pool.ensureParameterizedTypeConstant(this,
+                        listParams.toArray(TypeConstant.NO_TYPES));
+            type = getChildStructure().getGenericParamType(pool, sName, typeActual);
+            if (type != null)
+                {
+                type = type.resolveGenerics(pool, m_typeParent);
+                }
+            }
+        return type;
         }
 
 

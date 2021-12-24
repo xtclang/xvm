@@ -432,23 +432,29 @@ public class VirtualChildTypeConstant
     @Override
     protected TypeConstant getGenericParamType(String sName, List<TypeConstant> listParams)
         {
-        ConstantPool   pool     = getConstantPool();
-        ClassStructure clzChild = getChildStructure();
+        ConstantPool pool       = getConstantPool();
+        TypeConstant typeParent = m_typeParent;
 
-        if (clzChild.containsGenericParamType(sName))
+        TypeConstant type;
+        if (typeParent.containsGenericParam(sName))
             {
-            TypeConstant type = clzChild.getGenericParamType(pool, sName, listParams);
+            // the passed in list applies only to the child and should not be used by the parent
+            type = typeParent.getGenericParamType(sName, Collections.EMPTY_LIST);
+            }
+        else
+            {
+            TypeConstant typeActual = listParams.isEmpty()
+                    ? this
+                    : pool.ensureParameterizedTypeConstant(this,
+                            listParams.toArray(TypeConstant.NO_TYPES));
+            type = getChildStructure().getGenericParamType(pool, sName, typeActual);
             if (type != null)
                 {
-                type = type.resolveGenerics(pool, m_typeParent);
+                type = type.resolveGenerics(pool, typeParent);
                 }
-            return type;
             }
-
-        // the passed in list applies only to the child and should not be used by the parent
-        return m_typeParent.getGenericParamType(sName, Collections.EMPTY_LIST);
+        return type;
         }
-
 
     // ----- type comparison support ---------------------------------------------------------------
 
