@@ -129,9 +129,7 @@ class Array<Element>
             Iterator<Element> iter = elements.iterator();
             if (mutability == Constant)
                 {
-                iter = iter.map(e -> &e.isImmutable || &e.isService
-                        ? e
-                        : e.as(Element + Freezable).freeze());
+                iter = iter.map(e -> frozen(e));
                 }
             delegate = new Element[elements.size](_ -> iter.take());
             assert !iter.next();
@@ -339,9 +337,9 @@ class Array<Element>
             {
             loop: for (Element element : this)
                 {
-                if (requiresFreeze(element))
+                if (Element+Freezable notYetFrozen := requiresFreeze(element))
                     {
-                    this[loop.count] = element.as(Freezable).freeze();
+                    this[loop.count] = notYetFrozen.freeze();
                     }
                 }
             }

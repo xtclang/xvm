@@ -5,16 +5,36 @@
  * TODO persistent mode
  */
 class MapSet<Element>
+        implements Duplicable
         implements Set<Element>
-        incorporates conditional MapSetFreezer<Element extends ImmutableAble>
+        incorporates conditional MapSetFreezer<Element extends Shareable>
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    construct(Map<Element, Nullable> map)
+    /**
+     * Construct a `MapSet` that provides `Set` capabilities by delegating to the specified `Map`.
+     *
+     * @param map   the Map to construct the `MapSet` on top of
+     */
+    construct(CopyableMap<Element, Nullable> map)
         {
         assert map.inPlace;
-        assert map.is(Freezable) || !Element.is(Type<Freezable>);
+
+        // since this implementation auto-incorporates a freezer if the Element is a Shareable type,
+        // the underlying map must also be Freezable
+        assert map.is(Freezable) || !Element.is(Type<Shareable>);
+
         contents = map;
+        }
+
+    /**
+     * [Duplicable] constructor.
+     *
+     * @param that  the [Duplicable] `MapSet` object to duplicate from
+     */
+    construct(MapSet<Element> that)
+        {
+        this.contents = that.contents.duplicate();
         }
 
 
@@ -23,7 +43,7 @@ class MapSet<Element>
     /**
      * The underlying Map.
      */
-    protected Map<Element, Nullable> contents;
+    protected CopyableMap<Element, Nullable> contents;
 
 
     // ----- read operations -----------------------------------------------------------------------
@@ -107,7 +127,7 @@ class MapSet<Element>
     /**
      * Conditional Freezable implementation.
      */
-    static mixin MapSetFreezer<Element extends ImmutableAble>
+    static mixin MapSetFreezer<Element extends Shareable>
             into MapSet<Element>
             implements Freezable
         {
@@ -125,8 +145,14 @@ class MapSet<Element>
                 return makeImmutable();
                 }
 
-            return new MapSet<Element>(contents.as(Map<Element, Nullable> + Freezable).freeze(False))
-                    .makeImmutable();
+            // duplicate the MapSet, which must also duplicate the underlying Map
+            MapSetFreezer<Element> that = this.duplicate();
+            assert this.&contents != that.&contents;
+
+            // since the underlying Map has been duplicated already, freeze its contents in place
+            that.contents = that.contents.as(Freezable).freeze(inPlace=True);
+
+            return that.makeImmutable();
             }
         }
     }

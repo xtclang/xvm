@@ -9,7 +9,7 @@ import TxManager.NO_TX;
 /**
  * Common functionality for key-based json stores.
  */
-mixin KeyBasedStore<Key>
+mixin KeyBasedStore<Key extends Hashable>
         into ObjectStore
     {
     /**

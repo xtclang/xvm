@@ -81,11 +81,4 @@ mixin ConditionalTuple
         assert this[0];
         return super(mutability, inPlace);
         }
-
-    @Override
-    immutable ConditionalTuple freeze(Boolean inPlace = False)
-        {
-        assert this[0];
-        return super(inPlace);
-        }
     }

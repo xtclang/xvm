@@ -20,7 +20,7 @@ class SkiplistSet<Element extends Orderable>
      */
     construct(Int initialCapacity = 0, Orderer? orderer = Null)
         {
-        construct MapSet(new SkiplistMap<Element, Nullable>(initialCapacity, orderer));
+        construct OrderedMapSet(new SkiplistMap<Element, Nullable>(initialCapacity, orderer));
         }
 
     /**
@@ -30,6 +30,6 @@ class SkiplistSet<Element extends Orderable>
      */
     construct(SkiplistSet<Element> that)
         {
-        construct MapSet(new SkiplistMap<Element, Nullable>(that.contents.as(SkiplistMap<Element, Nullable>)));
+        construct OrderedMapSet(that);
         }
     }

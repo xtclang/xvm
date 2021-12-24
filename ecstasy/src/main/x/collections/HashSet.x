@@ -1,37 +1,50 @@
 /**
  * An implementation of a Set that is backed by a HashMap.
+ *
+ * TODO variably mutable implementations to match HashMap
  */
-class HashSet<Element>
+class HashSet<Element extends Hashable>
         extends MapSet<Element>
-        // TODO variably mutable implementations to match HashMap
-        // TODO make "freeze" virtual - to return HashSet, not MapSet
     {
     /**
-     * Construct a HashSet that optionally contains an initial set of values. The [NaturalHasher]
-     * implementation will be used.
+     * Construct the HashSet with an (optional) initial capacity.
      *
-     * @param values (optional) initial values to store in the HashSet
+     * @param initCapacity  (optional) the number of expected element values
      */
-    construct(Iterable<Element+Hashable>? values = Null)
+    construct(Int initCapacity = 0)
         {
-        assert(Element.is(Type<Hashable>));
-        construct HashSet(new NaturalHasher<Element>(), values);
+        construct MapSet(new HashMap<Element, Nullable>(initCapacity));
         }
 
     /**
-     * Construct a HashSet that relies on an external hasher, and optionally contains an initial set
-     * of values.
+     * Construct a HashSet that optionally contains an initial set of values.
      *
-     * @param hasher  the [Hasher] to use for the values stored in the set
-     * @param values  (optional) initial values to store in the HashSet
+     * @param values  initial values to store in the HashSet
      */
-    construct(Hasher<Element> hasher, Iterable<Element>? values = Null)
+    construct(Iterable<Element> values)
         {
-        HashMap<Element, Nullable> map = new HashMap(hasher, values?.size : 0);
-        for (Element value : values?)
+        if (values.is(HashSet<Element>))
             {
-            map.put(value, Null);
+            construct HashSet(values);
             }
-        construct MapSet(map);
+        else
+            {
+            HashMap<Element, Nullable> map = new HashMap(values.size);
+            for (Element value : values)
+                {
+                map.put(value, Null);
+                }
+            construct MapSet(map);
+            }
+        }
+
+    /**
+     * [Duplicable] constructor.
+     *
+     * @param that  another HashSet to copy the contents from when constructing this HashSet
+     */
+    construct(HashSet<Element> that)
+        {
+        construct MapSet(that);
         }
     }

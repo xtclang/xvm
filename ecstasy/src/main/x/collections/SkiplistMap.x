@@ -10,8 +10,9 @@ import maps.OrderedMapSlice;
  */
 class SkiplistMap<Key extends Orderable, Value>
         implements OrderedMap<Key, Value>
-        implements CopyableMap<Key, Value>
-        incorporates conditional MapFreezer<Key extends immutable Object, Value extends ImmutableAble>
+        implements Replicable
+        incorporates CopyableMap.ReplicableCopier<Key, Value>
+        incorporates conditional MapFreezer<Key extends immutable Object, Value extends Shareable>
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -38,7 +39,7 @@ class SkiplistMap<Key extends Orderable, Value>
         }
 
     /**
-     * Copy constructor.
+     * [Duplicable] constructor.
      */
     construct(SkiplistMap<Key, Value> that)
         {

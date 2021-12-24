@@ -65,8 +65,6 @@ class ConstHelper
      */
     static void freeze(Object[] fields)
         {
-        import ecstasy.collections.Freezable;
-
         Freeze:
         for (Object field : fields)
             {

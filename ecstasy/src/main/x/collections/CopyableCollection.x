@@ -4,33 +4,47 @@
  */
 interface CopyableCollection<Element>
         extends Collection<Element>
-        extends Replicable
         extends Duplicable
     {
     /**
      * @param transform  an optional element transformer
      */
     @Override
-    CopyableCollection duplicate(function Element(Element)? transform = Null)
+    CopyableCollection duplicate(function Element(Element)? transform = Null);
+
+    /**
+     * An mix-in implementation of [CopyableCollection] that requires the underlying [Collection] to
+     * be [Replicable].
+     */
+    static mixin ReplicableCopier<Element>
+            into Replicable + Collection<Element>
+            implements CopyableCollection<Element>
         {
-        if (this.is(immutable CopyableCollection) && transform == Null)
+        /**
+         * @param transform  an optional element transformer
+         */
+        @Override
+        ReplicableCopier duplicate(function Element(Element)? transform = Null)
             {
-            return this;
+            if (this.is(immutable ReplicableCopier) && transform == Null)
+                {
+                return this;
+                }
+
+            if (transform == Null)
+                {
+                return this.new(this);
+                }
+
+            ReplicableCopier<Element> that = this.new();
+            this.map(transform, that);
+            return that;
             }
 
-        if (transform == Null)
+        @Override
+        ReplicableCopier clear()
             {
-            return this.new(this);
+            return inPlace ? super() : this.new();
             }
-
-        CopyableCollection<Element> that = this.new();
-        this.map(transform, that);
-        return that;
-        }
-
-    @Override
-    CopyableCollection clear()
-        {
-        return inPlace ? super() : this.new();
         }
     }

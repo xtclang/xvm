@@ -179,38 +179,36 @@ interface Collection<Element>
                 Orderer? thatOrder := values.ordered(),
                 thisOrder? == thatOrder?)
             {
-            Iterator<Element> iterThat = values.iterator();
-            Iterator<Element> iterThis = this  .iterator();
-            assert Element    valThis := iterThis.next();
-            for (val valThat : iterThat)
+            using (Iterator<Element> iterThat = values.iterator(),
+                   Iterator<Element> iterThis = this  .iterator())
                 {
-                switch (thisOrder(valThis, valThat))
+                assert Element valThat := iterThat.next();
+                for (Element valThis : iterThis)
                     {
-                    case Lesser:
-                        if (valThis := iterThis.next())
-                            {
+                    switch (thisOrder(valThis, valThat))
+                        {
+                        case Lesser:
+                            // the current element in "this" is not one that we are looking for
                             break;
-                            }
-                        else
-                            {
+
+                        case Equal:
+                            // found it! advance to the next element in "that" to find
+                            if (!(valThat := iterThat.next()))
+                                {
+                                // we found everything!
+                                return True;
+                                }
+                            break;
+
+                        case Greater:
+                            // "this" was missing the element from "that" that we were looking for
                             return False;
-                            }
-
-                    case Equal:
-                        if (valThat := iterThat.next())
-                            {
-                            break;
-                            }
-                        else
-                            {
-                            return True;
-                            }
-
-                    case Greater:
-                        return False;
+                        }
                     }
                 }
-            return True;
+
+            // we ran out of elements before finding the element from "that"
+            return False;
             }
 
         // assume that sets have O(N) time with fast e.g. O(1) look-ups
@@ -225,7 +223,10 @@ interface Collection<Element>
             }
 
         // brute force search for each value from the passed-in values collection
-        return values.iterator().whileEach(contains(_));
+        using (val iter = values.iterator())
+            {
+            return iter.whileEach(contains(_));
+            }
         }
 
     /**
@@ -239,7 +240,10 @@ interface Collection<Element>
     @Concurrent
     conditional Element any(function Boolean(Element) match = _ -> True)
         {
-        return iterator().untilAny(match);
+        using (val iter = iterator())
+            {
+            return iter.untilAny(match);
+            }
         }
 
     /**
@@ -252,7 +256,10 @@ interface Collection<Element>
     @Concurrent
     Boolean all(function Boolean(Element) match)
         {
-        return iterator().whileEach(match);
+        using (val iter = iterator())
+            {
+            return iter.whileEach(match);
+            }
         }
 
     /**
@@ -976,7 +983,7 @@ interface Collection<Element>
             Map<CompileType.Element, Int> map = collection1.groupWith(
                     (_, n) -> (n + 1),
                     (_) -> 1,
-                    new HashMap());
+                    new HashMap<Hashable+CompileType.Element, Int>()); // TODO GG: new HashMap());
             if (map.size == size)
                 {
                 return collection1.containsAll(collection2);

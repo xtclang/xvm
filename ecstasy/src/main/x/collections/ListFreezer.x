@@ -1,21 +1,23 @@
 /**
- * Simple List implementations that need to implement Freezable can use this mix-in to do so:
+ * Implementations of [List] that need to implement [Freezable] can use this mix-in to do so:
  *
  *     incorporates conditional ListFreezer<Element extends immutable Object | Freezable>
  */
-mixin ListFreezer<Element extends ImmutableAble>
+mixin ListFreezer<Element extends Shareable>
         into List<Element> + CopyableCollection<Element>
         implements Freezable
     {
     @Override
     immutable ListFreezer freeze(Boolean inPlace = False)
         {
+        // don't freeze the list if it is already frozen
         if (this.is(immutable ListFreezer))
             {
             return this;
             }
 
-        if (inPlace && all(e -> e.is(immutable Object)))
+        // if the only thing not frozen is the list itself, then just make it immutable
+        if (inPlace && all(e -> e.is(immutable Object)))  // TODO CP (immutable|service)
             {
             return this.makeImmutable();
             }
@@ -41,8 +43,7 @@ mixin ListFreezer<Element extends ImmutableAble>
                 {
                 for (Int i = 0, Int c = size; i < c; ++i)
                     {
-                    Element e = this[i];
-                    if (!e.is(immutable Object))
+                    if (Element+Freezable e := requiresFreeze(this[i]))
                         {
                         this[i] = e.freeze();
                         }
@@ -53,8 +54,7 @@ mixin ListFreezer<Element extends ImmutableAble>
                 Cursor cur = cursor();
                 while (cur.exists)
                     {
-                    Element e = cur.value;
-                    if (!e.is(immutable Object))
+                    if (Element+Freezable e := requiresFreeze(cur.value))
                         {
                         cur.value = e.freeze();
                         }
@@ -64,6 +64,7 @@ mixin ListFreezer<Element extends ImmutableAble>
             return makeImmutable();
             }
 
-        return duplicate(e -> e.is(immutable Element) ? e : e.freeze()).makeImmutable();
+        // otherwise, just duplicate the list, freezing each item as necessary
+        return duplicate(e -> frozen(e)).makeImmutable();
         }
     }

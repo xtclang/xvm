@@ -2,14 +2,39 @@
  * The OrderedMapSet is simple implementation of the [OrderedSet] interface that uses an underlying
  * [OrderedMap] instance as its storage.
  */
-class OrderedMapSet<Element extends Orderable>(OrderedMap<Element, Nullable> contents)
+class OrderedMapSet<Element extends Orderable>
         extends MapSet<Element>(contents)
         implements OrderedSet<Element>
     {
+    typedef CopyableMap<Element, Nullable>+OrderedMap<Element, Nullable> as CopyableOrderedMap;
+
+    // ----- constructors --------------------------------------------------------------------------
+
+    /**
+     * Construct a `MapSet` that provides `Set` capabilities by delegating to the specified `Map`.
+     *
+     * @param map   the Map to construct the `MapSet` on top of
+     */
+    construct(CopyableOrderedMap map)
+        {
+        construct MapSet(map);
+        }
+
+    /**
+     * [Duplicable] constructor.
+     *
+     * @param that  the [Duplicable] `MapSet` object to duplicate from
+     */
+    construct(OrderedMapSet<Element> that)
+        {
+        construct MapSet(that);
+        }
+
+
     // ----- properties ----------------------------------------------------------------------------
 
     @Override
-    protected OrderedMap<Element, Nullable> contents;
+    protected CopyableOrderedMap contents;
 
 
     // ----- read operations -----------------------------------------------------------------------
@@ -59,19 +84,22 @@ class OrderedMapSet<Element extends Orderable>(OrderedMap<Element, Nullable> con
     @Override
     @Op("[..]") OrderedSet<Element> slice(Range<Element> keys)
         {
-        return contents.slice(keys).keys;
+        // TODO GG remove as()
+        return contents.slice(keys).keys.as(OrderedSet<Element>);
         }
 
     @Override
     @Op("[[..]]") OrderedSet<Element> sliceInclusive(Range<Element> keys)
         {
-        return contents.sliceInclusive(keys).keys;
+        // TODO GG remove as()
+        return contents.sliceInclusive(keys).keys.as(OrderedSet<Element>);
         }
 
     @Override
     @Op("[[..)]") OrderedSet<Element> sliceExclusive(Range<Element> keys)
         {
-        return contents.sliceExclusive(keys).keys;
+        // TODO GG remove as()
+        return contents.sliceExclusive(keys).keys.as(OrderedSet<Element>);
         }
 
     @Override

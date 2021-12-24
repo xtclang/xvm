@@ -13,9 +13,11 @@
  * hashing lookup data structure when the first such search occurs.
  */
 class ListMap<Key, Value>
-        implements CopyableMap<Key, Value>
+        implements Map<Key, Value>
+        implements Replicable
+        incorporates CopyableMap.ReplicableCopier<Key, Value>
         incorporates conditional ListMapIndex<Key extends immutable Hashable, Value>
-        incorporates conditional MapFreezer<Key extends immutable Object, Value extends ImmutableAble>
+        incorporates conditional MapFreezer<Key extends immutable Object, Value extends Shareable>
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -27,9 +29,9 @@ class ListMap<Key, Value>
      */
     construct(Int initCapacity = 0)
         {
-        listKeys = new Array(initCapacity);
-        listVals = new Array(initCapacity);
-        inPlace  = True;
+        this.keyArray = new Array(initCapacity);
+        this.valArray = new Array(initCapacity);
+        this.inPlace  = True;
         }
 
     /**
@@ -41,40 +43,46 @@ class ListMap<Key, Value>
      */
     construct(Key[] keys, Value[] vals)
         {
-        listKeys = keys;
-        listVals = vals;
-        inPlace  = False;
+        this.keyArray = keys;
+        this.valArray = vals;
+        this.inPlace  = False;
 
         // TODO various checks, and do we need to copy the array(s) if they aren't immutable?
         assert keys.size == vals.size;
         }
     finally
         {
-        if (listKeys.is(immutable Array) && listVals.is(immutable Array))
+        if (this.keyArray.is(immutable Array) && this.valArray.is(immutable Array))
             {
             makeImmutable();
             }
         }
 
-    construct(ListMap that)
+    /**
+     * [Duplicable] constructor, which produces a mutable copy of the passed ListMap.
+     */
+    construct(ListMap<Key, Value> that) // TODO GG isn't "<Key, Value>" implied?
         {
-        TODO
+        this.keyArray = that.keyArray.toArray(Mutable);
+        this.valArray = that.valArray.toArray(Mutable);
+        this.inPlace  = True;
         }
 
 
     // ----- internal ------------------------------------------------------------------------------
 
-    @Override public/private Boolean inPlace;
+    @Override
+    public/private Boolean inPlace;
 
     /**
      * The list of keys in the map, in order of insertion.
      */
-    protected Key[]   listKeys;
+    protected Key[]   keyArray;
 
     /**
-     * The values in the map, corresponding by index to [listKeys].
+     * The values in the map, corresponding by index to [keyArray].
      */
-    protected Value[] listVals;
+    protected Value[] valArray;
 
     /**
      * A counter of the number of items added to the map. Used to detect illegal concurrent
@@ -98,7 +106,7 @@ class ListMap<Key, Value>
      */
     protected conditional Int indexOf(Key key)
         {
-        loop: for (Key eachKey : listKeys)
+        loop: for (Key eachKey : keyArray)
             {
             if (eachKey == key)
                 {
@@ -115,8 +123,8 @@ class ListMap<Key, Value>
      */
     protected void deleteEntryAt(Int index)
         {
-        listKeys.delete(index);
-        listVals.delete(index);
+        keyArray.delete(index);
+        valArray.delete(index);
         ++deletes;
         }
 
@@ -128,8 +136,8 @@ class ListMap<Key, Value>
      */
     protected void appendEntry(Key key, Value value)
         {
-        listKeys += key;
-        listVals += value;
+        keyArray += key;
+        valArray += value;
         ++appends;
         }
 
@@ -160,7 +168,7 @@ class ListMap<Key, Value>
     @Override
     Int size.get()
         {
-        return listKeys.size;
+        return keyArray.size;
         }
 
     @Override
@@ -174,7 +182,7 @@ class ListMap<Key, Value>
         {
         if (Int index := indexOf(key))
             {
-            return True, listVals[index];
+            return True, valArray[index];
             }
         return False;
         }
@@ -202,7 +210,7 @@ class ListMap<Key, Value>
         {
         if (Int index := indexOf(key))
             {
-            listVals[index] = value;
+            valArray[index] = value;
             }
         else
             {
@@ -228,7 +236,7 @@ class ListMap<Key, Value>
         {
         if (Int index := indexOf(key))
             {
-            if (listVals[index] == value)
+            if (valArray[index] == value)
                 {
                 deleteEntryAt(index);
                 return True, this;
@@ -244,8 +252,8 @@ class ListMap<Key, Value>
         Int count = size;
         if (count > 0)
             {
-            listKeys.clear();
-            listVals.clear();
+            keyArray.clear();
+            valArray.clear();
             deletes += count;
             }
 
@@ -287,8 +295,8 @@ class ListMap<Key, Value>
 //    @Override
 //    immutable ListMap freeze(Boolean inPlace = False)
 //        {
-//        immutable Key[]   keys = listKeys.freeze(inPlace);
-//        immutable Value[] vals = listVals.freeze(inPlace);
+//        immutable Key[]   keys = keyArray.freeze(inPlace);
+//        immutable Value[] vals = valArray.freeze(inPlace);
 //
 //        return inPlace
 //                ? makeImmutable()
@@ -298,7 +306,7 @@ class ListMap<Key, Value>
     // ----- Keys Set ------------------------------------------------------------------------------
 
     /**
-     * A custom implementation of the [keys] property.
+     * A set of keys in the map. This is used to implement the [keys] property.
      */
     class Keys
             implements Set<Key>
@@ -307,7 +315,7 @@ class ListMap<Key, Value>
         @Override
         Int size.get()
             {
-            return listKeys.size;
+            return keyArray.size;
             }
 
         @Override
@@ -326,7 +334,7 @@ class ListMap<Key, Value>
                     // the immediately previously iterated key is allowed to be deleted
                     if (deletes != prevDeletes)
                         {
-                        if (deletes - prevDeletes == 1 && 0 < index < stop && listKeys[index-1] != key)
+                        if (deletes - prevDeletes == 1 && 0 < index < stop && keyArray[index-1] != key)
                             {
                             --stop;
                             --index;
@@ -340,7 +348,7 @@ class ListMap<Key, Value>
 
                     if (index < stop)
                         {
-                        key = listKeys[index++];
+                        key = keyArray[index++];
                         return True, key;
                         }
 
@@ -370,7 +378,7 @@ class ListMap<Key, Value>
             Int removed = 0;
             for (Int i = 0, Int c = size; i < c; ++i)
                 {
-                if (shouldRemove(listKeys[i-removed]))
+                if (shouldRemove(keyArray[i-removed]))
                     {
                     deleteEntryAt(i-removed);
                     ++removed;
@@ -391,7 +399,7 @@ class ListMap<Key, Value>
         @Override
         Key[] toArray(Array.Mutability? mutability = Null)
             {
-            return listKeys.toArray(mutability);
+            return keyArray.toArray(mutability);
             }
 
         @Override
@@ -452,7 +460,7 @@ class ListMap<Key, Value>
         protected CursorEntry advance(Int index)
             {
             assert cursor;
-            this.key    = listKeys[index];
+            this.key    = keyArray[index];
             this.index  = index;
             this.exists = True;
             this.expect = appends + deletes;
@@ -494,7 +502,7 @@ class ListMap<Key, Value>
                 {
                 if (exists)
                     {
-                    return listVals[index];
+                    return valArray[index];
                     }
 
                 throw new OutOfBounds("key=" + key);
@@ -506,7 +514,7 @@ class ListMap<Key, Value>
                 verifyInPlace();
                 if (exists)
                     {
-                    listVals[index] = value;
+                    valArray[index] = value;
                     }
                 else if (cursor)
                     {
@@ -516,7 +524,7 @@ class ListMap<Key, Value>
                 else
                     {
                     appendEntry(key, value);
-                    index  = listKeys.size - 1;
+                    index  = keyArray.size - 1;
                     exists = True;
                     ++expect;
                     }
@@ -563,6 +571,9 @@ class ListMap<Key, Value>
 
     // ----- Entries Set ---------------------------------------------------------------------------
 
+    /**
+     * The collection of map entries. This is used to implement the [entries] property.
+     */
     class Entries
             implements Collection<Entry>
             implements Freezable
@@ -570,7 +581,7 @@ class ListMap<Key, Value>
         @Override
         Int size.get()
             {
-            return listKeys.size;
+            return keyArray.size;
             }
 
         @Override
@@ -653,7 +664,12 @@ class ListMap<Key, Value>
             }
 
         /**
-         * TODO
+         * Find the specified entry in the [ListMap], and return its position.
+         *
+         * @param entry  the entry to find
+         *
+         * @return True iff the entry is in the ListMap
+         * @return (conditional) the position in the ListMap of the found Entry
          */
         protected conditional Int indexOf(Entry entry)
             {
@@ -664,7 +680,7 @@ class ListMap<Key, Value>
             if (entry.is(CursorEntry))
                 {
                 index = entry.index;
-                if (0 <= index < size && listKeys[index] == key)
+                if (0 <= index < size && keyArray[index] == key)
                     {
                     found = True;
                     }
@@ -680,7 +696,7 @@ class ListMap<Key, Value>
                 }
 
             // lastly, verify that the values match
-            found &&= listVals[index] == entry.value;
+            found &&= valArray[index] == entry.value;
 
             return found, index;
             }
@@ -696,6 +712,9 @@ class ListMap<Key, Value>
 
     // ----- Values Collection ---------------------------------------------------------------------
 
+    /**
+     * The collection of values in the map.  This is used to implement the [values] property.
+     */
     class Values
             implements Collection<Value>
             implements Freezable
@@ -703,7 +722,7 @@ class ListMap<Key, Value>
         @Override
         Int size.get()
             {
-            return listVals.size;
+            return valArray.size;
             }
 
         @Override
@@ -722,7 +741,7 @@ class ListMap<Key, Value>
                     // the immediately previously iterated key is allowed to be deleted
                     if (deletes != prevDeletes)
                         {
-                        if (deletes - prevDeletes == 1 && 0 < index < stop && listKeys[index-1] != key)
+                        if (deletes - prevDeletes == 1 && 0 < index < stop && keyArray[index-1] != key)
                             {
                             --stop;
                             --index;
@@ -736,8 +755,8 @@ class ListMap<Key, Value>
 
                     if (index < stop)
                         {
-                        key = listKeys[index];
-                        return True, listVals[index++];
+                        key = keyArray[index];
+                        return True, valArray[index++];
                         }
 
                     return False;
@@ -750,7 +769,7 @@ class ListMap<Key, Value>
             {
             verifyInPlace();
 
-            if (Int index := listVals.indexOf(value))
+            if (Int index := valArray.indexOf(value))
                 {
                 deleteEntryAt(index);
                 }
@@ -766,7 +785,7 @@ class ListMap<Key, Value>
             Int removed = 0;
             for (Int i = 0, Int c = size; i < c; ++i)
                 {
-                if (shouldRemove(listVals[i-removed]))
+                if (shouldRemove(valArray[i-removed]))
                     {
                     deleteEntryAt(i-removed);
                     ++removed;
@@ -787,7 +806,7 @@ class ListMap<Key, Value>
         @Override
         Value[] toArray(Array.Mutability? mutability = Null)
             {
-            return listVals.toArray(mutability);
+            return valArray.toArray(mutability);
             }
 
         @Override
@@ -803,6 +822,10 @@ class ListMap<Key, Value>
 
     /**
      * Instantiate a reified entry, which must be a child of the map.
+     *
+     * @param key  the key to obtain a reified `Entry` for
+     *
+     * @return a newly reified `Entry`
      */
     private Entry reifyEntry(Key key)
         {

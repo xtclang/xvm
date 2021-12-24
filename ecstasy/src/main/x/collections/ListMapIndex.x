@@ -73,7 +73,7 @@ mixin ListMapIndex<Key extends Hashable, Value>
                 {
                 for (Int index : indexes)
                     {
-                    if (listKeys[index] == key)
+                    if (keyArray[index] == key)
                         {
                         return True, index;
                         }
@@ -82,7 +82,7 @@ mixin ListMapIndex<Key extends Hashable, Value>
             else
                 {
                 Int index = indexes;
-                if (listKeys[index] == key)
+                if (keyArray[index] == key)
                     {
                     return True, index;
                     }
@@ -131,7 +131,7 @@ mixin ListMapIndex<Key extends Hashable, Value>
             else
                 {
                 // update the index
-                Int keyhash  = Key.hashCode(listKeys[index]);
+                Int keyhash  = Key.hashCode(keyArray[index]);
                 Int bucketid = keyhash % buckets.size;
                 buckets[bucketid] = removeKeyFrom(buckets[bucketid], keyhash, index);
 
@@ -158,7 +158,7 @@ mixin ListMapIndex<Key extends Hashable, Value>
             // update the index
             Int keyhash  = Key.hashCode(key);
             Int bucketid = keyhash % buckets.size;
-            buckets[bucketid] = addKeyTo(buckets[bucketid], keyhash, listKeys.size-1);
+            buckets[bucketid] = addKeyTo(buckets[bucketid], keyhash, keyArray.size-1);
 
             if (size > buckets.size)
                 {
@@ -193,7 +193,7 @@ mixin ListMapIndex<Key extends Hashable, Value>
         {
         Int bucketCount = HashMap.calcBucketCount(size);
         Bucket[] buckets = new Bucket[bucketCount];
-        loop: for (Key key : listKeys)
+        loop: for (Key key : keyArray)
             {
             Int keyhash  = Key.hashCode(key);
             Int bucketid = keyhash % bucketCount;
@@ -215,7 +215,7 @@ mixin ListMapIndex<Key extends Hashable, Value>
         Int index = indexes.is(Int)
                 ? indexes
                 : indexes[0];
-        return Key.hashCode(listKeys[index]);
+        return Key.hashCode(keyArray[index]);
         }
 
     /**

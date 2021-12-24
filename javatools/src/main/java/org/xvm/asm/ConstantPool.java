@@ -2371,7 +2371,7 @@ public class ConstantPool
     protected ClassConstant  clzRange()        {return (ClassConstant) getImplicitlyImportedIdentity("Range"                );}
     protected ClassConstant  clzSequential()   {return (ClassConstant) getImplicitlyImportedIdentity("Sequential"           );}
     protected ClassConstant  clzHashable()     {return (ClassConstant) getImplicitlyImportedIdentity("Hashable"             );}
-    protected ClassConstant  clzFreezable()    {return                 ensureEcstasyClassConstant   ("collections.Freezable");}
+    protected ClassConstant  clzFreezable()    {return (ClassConstant) getImplicitlyImportedIdentity("Freezable"            );}
     protected ClassConstant  clzDate()         {return (ClassConstant) getImplicitlyImportedIdentity("Date"                 );}
     protected ClassConstant  clzDateTime()     {return (ClassConstant) getImplicitlyImportedIdentity("DateTime"             );}
     protected ClassConstant  clzDuration()     {return (ClassConstant) getImplicitlyImportedIdentity("Duration"             );}

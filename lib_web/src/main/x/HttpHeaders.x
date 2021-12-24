@@ -1,3 +1,4 @@
+import ecstasy.collections.HasherMap;
 import ecstasy.collections.CaseInsensitiveHasher;
 
 /**
@@ -8,15 +9,10 @@ import ecstasy.collections.CaseInsensitiveHasher;
 class HttpHeaders
         delegates Stringable(headers)
     {
-    construct()
-        {
-        headers = new HashMap(new CaseInsensitiveHasher());
-        }
-
     /**
      * The map of headers.
      */
-    private HashMap<String, String[]> headers;
+    private HasherMap<String, String[]> headers = new HasherMap(new CaseInsensitiveHasher());
 
     /**
      * Add the specified header value.
