@@ -112,8 +112,14 @@ const TypeSystem
                 {
                 assert type := type.childTypes.get(name.valueText);
                 }
-            assert Class clz := type.fromClass();
-            implicits.put(stmt.aliasName, clz.PublicType);
+            if (Class clz := type.fromClass())
+                {
+                implicits.put(stmt.aliasName, clz.PublicType);
+                }
+            else
+                {
+                implicits.put(stmt.aliasName, type);
+                }
             }
 
         return implicits.makeImmutable();
