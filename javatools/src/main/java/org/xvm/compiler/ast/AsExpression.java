@@ -88,7 +88,12 @@ public class AsExpression
         else
             {
             expr1 = exprTarget;
-            type  = new CastTypeConstant(pool(), exprTarget.getType(), type);
+
+            TypeConstant typeTarget = exprTarget.getType();
+            if (!type.isA(typeTarget))
+                {
+                type = new CastTypeConstant(pool(), typeTarget, type);
+                }
             }
 
         if (fValid)
@@ -109,7 +114,7 @@ public class AsExpression
             Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
         {
         Argument     argBefore = expr1.generateArgument(ctx, code, true, true, errs);
-        TypeConstant type      = getType().getUnderlyingType2();
+        TypeConstant type      = getTargetType();
 
         if (m_fCastRequired || !argBefore.getType().equals(type))
             {
@@ -132,8 +137,7 @@ public class AsExpression
             Argument argTarget = expr1.generateArgument(ctx, code, true, true, errs);
             if (m_fCastRequired)
                 {
-                code.add(new MoveCast(argTarget, LVal.getLocalArgument(),
-                        getType().getUnderlyingType2()));
+                code.add(new MoveCast(argTarget, LVal.getLocalArgument(), getTargetType()));
                 }
             else
                 {
@@ -144,6 +148,14 @@ public class AsExpression
             {
             super.generateAssignment(ctx, code, LVal, errs);
             }
+        }
+
+    private TypeConstant getTargetType()
+        {
+        TypeConstant typeTarget = getType();
+        return typeTarget instanceof CastTypeConstant
+                ? typeTarget.getUnderlyingType2()
+                : typeTarget;
         }
 
 
