@@ -1838,7 +1838,7 @@ public abstract class TypeConstant
 
         // validate the type parameters against the properties
         checkTypeParameterProperties(mapTypeParams, mapVirtProps,
-            fComplete ? errs : ErrorListener.BLACKHOLE);
+            fComplete && !errs.hasSeriousErrors() ? errs : ErrorListener.BLACKHOLE);
 
         Annotation[] aAnnoMixin = fComplete
                 ? collectMixinAnnotations(listProcess)

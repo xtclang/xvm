@@ -634,18 +634,18 @@ public class NewExpression
                 ? typeTarget.ensureTypeInfo(errsTemp)
                 : getTypeInfo(ctx, typeTarget, errsTemp);
 
+        if (errsTemp.hasSeriousErrors())
+            {
+            // no reason to proceed
+            errsTemp.merge();
+            return null;
+            }
+
         // unless it's a virtual new, the target type must be new-able
         if (!fVirt && !infoTarget.isNewable(errs))
             {
             String sTarget = infoTarget.getType().removeAccess().getValueString();
             reportNotNewable(sTarget, infoTarget, null, errs);
-            return null;
-            }
-
-        if (errsTemp.hasSeriousErrors())
-            {
-            // no reason to proceed
-            errsTemp.merge();
             return null;
             }
 
