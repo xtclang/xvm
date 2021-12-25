@@ -334,8 +334,7 @@ class HasherMap<Key, Value>
         }
 
     @Override
-    // TODO GG @Lazy public/private EntrySet entries.calc()
-    @Lazy public/private Collection<Entry> entries.calc()
+    @Lazy public/private EntrySet entries.calc()
         {
         return new EntrySet();
         }
@@ -433,8 +432,7 @@ class HasherMap<Key, Value>
      * A representation of all of the HashEntry objects in the Map.
      */
     class EntrySet
-            // TODO GG implements Collection<Entry>
-            implements Collection<Map<Key,Value>.Entry>
+            implements Collection<Entry>
             incorporates conditional EntrySetFreezer<Key extends immutable Object, Value extends Shareable>
         {
         @Override
@@ -444,8 +442,7 @@ class HasherMap<Key, Value>
             }
 
         @Override
-        // TODO GG Iterator<Entry> iterator()
-        Iterator<Map<Key,Value>.Entry> iterator()
+        Iterator<Entry> iterator()
             {
             return new StableEntryIterator();
             }
@@ -455,8 +452,7 @@ class HasherMap<Key, Value>
          */
         class StableEntryIterator
                 // TODO MF: extends CursorEntry
-                // TODO GG implements Iterator<Entry>
-                implements Iterator<Map<Key,Value>.Entry>
+                implements Iterator<Entry>
             {
             /**
              * Construct an iterator over all of the entries in the HasherMap.
@@ -842,12 +838,10 @@ class HasherMap<Key, Value>
         @Override
         immutable EntrySetFreezer freeze(Boolean inPlace = False)
             {
-            // TODO GG get rid of explicit "outer" usage
-            HasherMap<MapKey, MapValue> map = this.as(HasherMap<MapKey, MapValue>.EntrySet).outer.as(HasherMap<MapKey, MapValue>);
+            HasherMap<MapKey, MapValue> map = outer.as(HasherMap<MapKey, MapValue>);
             return map.is(immutable HasherMap) // TODO CP: is(immutable)
                     ? makeImmutable()
-                    // TODO GG get rid of as's
-                    : map.freeze(inPlace).entries.as(HasherMap<MapKey, MapValue>.EntrySet).makeImmutable().as(immutable EntrySetFreezer);
+                    : map.freeze(inPlace).entries.makeImmutable().as(immutable EntrySetFreezer);
             }
         }
 

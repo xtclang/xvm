@@ -415,8 +415,7 @@ const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
             Partition[] partitions = this.ConcurrentHasherMap.partitions;
             if (partitions.size == 1)
                 {
-                // TODO GG get rid of as()
-                return partitions[0].entries.iterator().as(Iterator<Map.Entry>);
+                return partitions[0].entries.iterator();
                 }
 
             Int step = computeRandomStep();
@@ -424,14 +423,12 @@ const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
             Int second = (first + step) % partitions.size;
 
             GrowableCompoundIterator<Map.Entry> iter = new GrowableCompoundIterator(
-                    // TODO GG get rid of as()'s
-                    partitions[first].entries.iterator().as(Iterator<Map.Entry>),
-                    partitions[second].entries.iterator().as(Iterator<Map.Entry>));
+                    partitions[first].entries.iterator(),
+                    partitions[second].entries.iterator());
 
             for (Int i = (second + step) % partitions.size; i != first; i = (i + step) % partitions.size)
                 {
-                // TODO GG get rid of as()
-                iter.add(partitions[i].entries.iterator().as(Iterator<Map.Entry>));
+                iter.add(partitions[i].entries.iterator());
                 }
 
             return iter;
