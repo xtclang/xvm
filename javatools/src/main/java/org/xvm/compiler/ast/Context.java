@@ -73,6 +73,16 @@ public class Context
         }
 
     /**
+     * @return the outer branch to use for {@link #getVar(String, Token, Branch, ErrorListener)}
+     *         and {@link #resolveFormalType(TypeConstant, Branch)} implementations
+     *         based on the current branch
+     */
+    protected Branch getOuterBranch(Branch branch)
+        {
+        return Branch.Always;
+        }
+
+    /**
      * @return true iff this context demuxes assignment data as it pushes it outwards
      */
     protected boolean isDemuxing()
@@ -681,36 +691,16 @@ public class Context
      */
     protected Argument getVar(String sName, Token name, Branch branch, ErrorListener errs)
         {
-        return getVarImpl(sName, name, branch, Branch.Always, errs);
-        }
-
-    /**
-     * Internal implementation of getVar() that allows the lookup to be done with or without a
-     * token and uses the specified outer branch.
-     * <p/>
-     * Note: this implementation recurses into outer context getVar() and is not meant to be
-     *       overridden.
-     *
-     * @param sName       the name to look up
-     * @param name        the token to use for error reporting (optional)
-     * @param branch      the branch to look at
-     * @param branchOuter the branch to look at when recursing to the outer branch
-     * @param errs        the error list to use for error reporting (optional)
-     *
-     * @return the argument for the variable, or null
-     */
-    protected Argument getVarImpl(String sName, Token name, Branch branch, Branch branchOuter,
-                                  ErrorListener errs)
-        {
         Argument arg = getLocalVar(sName, branch);
         if (arg == null)
             {
             Context ctxOuter = getOuterContext();
             if (ctxOuter != null)
                 {
-                arg = ctxOuter.getVar(sName, name, branchOuter, errs);
+                arg = ctxOuter.getVar(sName, name, getOuterBranch(branch), errs);
                 }
             }
+
         // we need to call resolveRegisterType() even on registers that are local
         // since some formal types could have been narrowed afterwards
         if (arg instanceof Register)
@@ -1569,24 +1559,6 @@ public class Context
      */
     protected TypeConstant resolveFormalType(TypeConstant typeFormal, Branch branch)
         {
-        return resolveFormalTypeImpl(typeFormal, branch, Branch.Always);
-        }
-
-    /**
-     * Internal implementation of {@link #resolveFormalType(TypeConstant, Branch)}.
-     *
-     * Note: this implementation recurses into the outer context and is not meant to be
-     *       overridden.
-     *
-     * @param typeFormal  the formal type to resolve
-     * @param branch      the branch to use
-     * @param branchOuter the branch to look at when recursing to the outer branch
-     *
-     * @return the resolved formal type if possible, or the passed in type
-     */
-    protected TypeConstant resolveFormalTypeImpl(TypeConstant typeFormal,
-                                                 Branch branch, Branch branchOuter)
-        {
         GenericTypeResolver resolver = getLocalResolver(branch);
         if (resolver != null)
             {
@@ -1606,7 +1578,7 @@ public class Context
         Context ctxOuter = getOuterContext();
         return ctxOuter == null
                 ? typeFormal
-                : ctxOuter.resolveFormalType(typeFormal, branchOuter);
+                : ctxOuter.resolveFormalType(typeFormal, getOuterBranch(branch));
         }
 
     /**
@@ -2094,6 +2066,12 @@ public class Context
             }
 
         @Override
+        protected Branch getOuterBranch(Branch branch)
+            {
+            return Branch.of(m_fWhenTrue);
+            }
+
+        @Override
         public Context exit()
             {
             Context ctxOuter = super.exit();
@@ -2106,19 +2084,6 @@ public class Context
                 ctxFalse.exit();
                 }
             return ctxOuter;
-            }
-
-        @Override
-        protected Argument getVar(String sName, Token name, Branch branch, ErrorListener errs)
-            {
-            // we only use the forked parent's branch
-            return getVarImpl(sName, name, branch, Branch.of(m_fWhenTrue), errs);
-            }
-
-        @Override
-        protected TypeConstant resolveFormalType(TypeConstant typeFormal, Branch branch)
-            {
-            return resolveFormalTypeImpl(typeFormal, branch, Branch.of(m_fWhenTrue));
             }
 
         @Override
@@ -2180,6 +2145,13 @@ public class Context
             }
 
         @Override
+        protected Branch getOuterBranch(Branch branch)
+            {
+            // we only use the parent's "true" branch
+            return Branch.WhenTrue;
+            }
+
+        @Override
         public Assignment getVarAssignment(String sName)
             {
             Assignment asn = super.getVarAssignment(sName);
@@ -2197,20 +2169,6 @@ public class Context
             Assignment asnFalse = Assignment.join(asnOuter.whenFalse(), asnInner.whenFalse());
             Assignment asnJoin  = Assignment.join(asnFalse, asnInner.whenTrue());
             return asnJoin;
-            }
-
-        @Override
-        protected Argument getVar(String sName, Token name, Branch branch, ErrorListener errs)
-            {
-            // we only use the parent's "true" branch
-            return getVarImpl(sName, name, branch, Branch.WhenTrue, errs);
-            }
-
-        @Override
-        protected TypeConstant resolveFormalType(TypeConstant typeFormal, Branch branch)
-            {
-            // we only use the parent's "true" branch
-            return resolveFormalTypeImpl(typeFormal, branch, Branch.WhenTrue);
             }
 
         @Override
@@ -2310,6 +2268,13 @@ public class Context
             }
 
         @Override
+        protected Branch getOuterBranch(Branch branch)
+            {
+            // we only use the parent's "false" branch
+            return Branch.WhenFalse;
+            }
+
+        @Override
         public Assignment getVarAssignment(String sName)
             {
             Assignment asn = super.getVarAssignment(sName);
@@ -2327,20 +2292,6 @@ public class Context
             Assignment asnTrue = Assignment.join(asnOuter.whenTrue(), asnInner.whenTrue());
             Assignment asnJoin = Assignment.join(asnInner.whenFalse(), asnTrue);
             return asnJoin;
-            }
-
-        @Override
-        protected Argument getVar(String sName, Token name, Branch branch, ErrorListener errs)
-            {
-            // we only use the parent's "false" branch (logical short-circuit)
-            return getVarImpl(sName, name, branch, Branch.WhenFalse, errs);
-            }
-
-        @Override
-        protected TypeConstant resolveFormalType(TypeConstant typeFormal, Branch branch)
-            {
-            // we only use the parent's "false" branch
-            return resolveFormalTypeImpl(typeFormal, branch, Branch.WhenFalse);
             }
 
         @Override
@@ -2428,6 +2379,12 @@ public class Context
             }
 
         @Override
+        protected Branch getOuterBranch(Branch branch)
+            {
+            return branch.complement();
+            }
+
+        @Override
         public Assignment getVarAssignment(String sName)
             {
             Assignment asn = super.getVarAssignment(sName);
@@ -2440,18 +2397,6 @@ public class Context
         protected Assignment promote(String sName, Assignment asnInner, Assignment asnOuter)
             {
             return asnInner.negate();
-            }
-
-        @Override
-        protected Argument getVar(String sName, Token name, Branch branch, ErrorListener errs)
-            {
-            return getVarImpl(sName, name, branch, branch.complement(), errs);
-            }
-
-        @Override
-        protected TypeConstant resolveFormalType(TypeConstant typeFormal, Branch branch)
-            {
-            return resolveFormalTypeImpl(typeFormal, branch, branch.complement());
             }
 
         @Override
