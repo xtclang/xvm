@@ -2935,17 +2935,23 @@ public class NameExpression
             {
             assert isValidated();
 
+            Argument arg = resolveRawArgument(ctx, false, ErrorListener.BLACKHOLE);
+
             if (left != null)
                 {
+                if (arg instanceof FormalTypeChildConstant)
+                    {
+                    // e.g.: CompileType.Element
+                    ctx.replaceGenericType((FormalConstant) arg, branch, typeNarrow);
+                    }
+
                 // TODO: to allow an expression "a.b.c" to be narrowed, all parents have to be immutable
                 return;
                 }
 
-            String   sName = getName();
-            Argument arg   = resolveRawArgument(ctx, false, ErrorListener.BLACKHOLE);
-
             // we are only concerned with registers and type parameters;
             // properties and constants are ignored
+            String sName = getName();
             if (arg instanceof Register)
                 {
                 ctx.narrowLocalRegister(sName, (Register) arg, branch, typeNarrow);
@@ -2964,7 +2970,7 @@ public class NameExpression
 
                         if (idProp.isFormalType())
                             {
-                            ctx.replaceGenericArgument(sName, branch, new TargetInfo(info, typeNarrow));
+                            ctx.replaceGenericArgument(idProp, branch, new TargetInfo(info, typeNarrow));
                             }
                         else  // allow narrowing for immutable properties
                             {
@@ -2994,7 +3000,7 @@ public class NameExpression
                         assert typeNarrow.isTypeOfType();
 
                         TargetInfo info = new TargetInfo(sName, idProp, true, idProp.getNamespace().getType(), 0);
-                        ctx.replaceGenericArgument(sName, branch, new TargetInfo(info, typeNarrow));
+                        ctx.replaceGenericArgument(idProp, branch, new TargetInfo(info, typeNarrow));
                         }
                     else // allow narrowing for immutable properties
                         {
@@ -3012,16 +3018,12 @@ public class NameExpression
                     }
                 else if (arg instanceof TypeParameterConstant)
                     {
-                    TypeParameterConstant contParam = (TypeParameterConstant) arg;
-                    MethodConstant        idMethod  = contParam.getMethod();
-                    int                   nParam    = contParam.getRegister();
-                    MethodStructure       method    = (MethodStructure) idMethod.getComponent();
-
-                    // ctx.narrowTypeParameter(sName, branch, typeNarrow);
+                    ctx.replaceGenericType((TypeParameterConstant) arg, branch, typeNarrow);
                     }
                 }
             }
         }
+
 
     // ----- debugging assistance ------------------------------------------------------------------
 

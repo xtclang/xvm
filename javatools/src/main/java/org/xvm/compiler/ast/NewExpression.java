@@ -455,6 +455,11 @@ public class NewExpression
                 TypeConstant typeInferred = inferTypeFromRequired(typeResult, typeRequired);
                 if (typeInferred != null)
                     {
+                    if (typeInferred.containsFormalType(true))
+                        {
+                        typeInferred = ctx.resolveFormalType(typeInferred);
+                        }
+
                     type.setTypeConstant(typeResult = typeInferred);
 
                     // the inferred type can contain generic types that need to be registered

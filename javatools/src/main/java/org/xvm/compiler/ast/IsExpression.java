@@ -110,8 +110,7 @@ public class IsExpression
                 {
                 constVal = pool.valOf(typeTarget.isA(typeTest));
                 }
-            else if (exprTarget instanceof NameExpression &&
-                    ((NameExpression) exprTarget).left == null)
+            else if (exprTarget instanceof NameExpression)
                 {
                 NameExpression exprName = (NameExpression) exprTarget;
 

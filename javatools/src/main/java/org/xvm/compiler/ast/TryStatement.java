@@ -13,6 +13,7 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Register;
 
+import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -194,7 +195,8 @@ public class TryStatement
                     }
 
                 @Override
-                protected void promoteNarrowedGenericType(String sName, TypeConstant type, Branch branch)
+                protected void promoteNarrowedGenericType(FormalConstant constFormal, TypeConstant type,
+                                                          Branch branch)
                     {
                     }
                 };

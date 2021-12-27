@@ -16,6 +16,7 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -641,14 +642,15 @@ public class AssertStatement
             }
 
         @Override
-        protected void promoteNarrowedGenericType(String sName, TypeConstant typeNarrowed, Branch branch)
+        protected void promoteNarrowedGenericType(FormalConstant constFormal, TypeConstant typeNarrowed,
+                                                  Branch branch)
             {
-            super.promoteNarrowedGenericType(sName, typeNarrowed, branch);
+            super.promoteNarrowedGenericType(constFormal, typeNarrowed, branch);
 
             // promote our "true" into the parent's "always" branch
             if (branch == Branch.WhenTrue)
                 {
-                getOuterContext().replaceGenericType(sName, Branch.Always, typeNarrowed);
+                getOuterContext().replaceGenericType(constFormal, Branch.Always, typeNarrowed);
                 }
             }
         }

@@ -1836,7 +1836,9 @@ public class Frame
                 }
 
             case FormalTypeChild:
-                throw new UnsupportedOperationException("TODO");
+                // REVIEW: can we do anything else here aside of the logic in
+                //         FormalTypeChildConstant.resolve()?
+                return null;
 
             default:
                 throw new IllegalStateException();

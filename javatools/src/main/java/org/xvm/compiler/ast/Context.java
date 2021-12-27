@@ -573,15 +573,15 @@ public class Context
      */
     protected void promoteNarrowedGenericTypes()
         {
-        for (Entry<String, TypeConstant> entry : getGenericTypeMap(Branch.Always).entrySet())
+        for (Entry<FormalConstant, TypeConstant> entry : getFormalTypeMap(Branch.Always).entrySet())
             {
             promoteNarrowedGenericType(entry.getKey(), entry.getValue(), Branch.Always);
             }
-        for (Entry<String, TypeConstant> entry : getGenericTypeMap(Branch.WhenTrue).entrySet())
+        for (Entry<FormalConstant, TypeConstant> entry : getFormalTypeMap(Branch.WhenTrue).entrySet())
             {
             promoteNarrowedGenericType(entry.getKey(), entry.getValue(), Branch.WhenTrue);
             }
-        for (Entry<String, TypeConstant> entry : getGenericTypeMap(Branch.WhenFalse).entrySet())
+        for (Entry<FormalConstant, TypeConstant> entry : getFormalTypeMap(Branch.WhenFalse).entrySet())
             {
             promoteNarrowedGenericType(entry.getKey(), entry.getValue(), Branch.WhenFalse);
             }
@@ -591,15 +591,16 @@ public class Context
      * Promote narrowing type information for the specified generic type from this context to its
      * enclosing context.
      *
-     * @param sName       the generic type name
-     * @param typeNarrow  the corresponding narrowed type
-     * @param branch      the branch this narrowing comes from
+     * @param constFormal  the generic type name
+     * @param typeNarrow   the corresponding narrowed type
+     * @param branch       the branch this narrowing comes from
      */
-    protected void promoteNarrowedGenericType(String sName, TypeConstant typeNarrow, Branch branch)
+    protected void promoteNarrowedGenericType(FormalConstant constFormal, TypeConstant typeNarrow,
+                                              Branch branch)
         {
         if (branch == Branch.Always)
             {
-            getOuterContext().replaceGenericType(sName, branch, typeNarrow);
+            getOuterContext().replaceGenericType(constFormal, branch, typeNarrow);
             }
         }
 
@@ -845,16 +846,6 @@ public class Context
         // the only other readable variable names are reserved variables, and we need to ask
         // the containing context whether those are readable
         return isReservedName(sName) && getOuterContext().isVarReadable(sName);
-        }
-
-    /**
-     * Mark the specified variable as being read from within this context.
-     *
-     * @param sName  the variable name
-     */
-    public final void markVarRead(String sName)
-        {
-        markVarRead(false, sName, null, null);
         }
 
     /**
@@ -1179,19 +1170,6 @@ public class Context
     /**
      * Resolve a name (other than a reserved name) to an argument.
      *
-     * @param name  the name token
-     * @param errs  the error list to log errors to
-     *
-     * @return an Argument iff the name is registered to an argument; otherwise null
-     */
-    public final Argument resolveRegularName(Token name, ErrorListener errs)
-        {
-        return resolveRegularName(this, name.getValueText(), name, errs);
-        }
-
-    /**
-     * Resolve a name (other than a reserved name) to an argument.
-     *
      * @param ctxFrom  the context from which the name resolution began
      * @param sName    the name to resolve
      * @param name     the name token for error reporting (optional)
@@ -1329,35 +1307,44 @@ public class Context
      * Replace (narrow) the generic type of the specified name in this context with the specified
      * target's type.
      */
-    protected void replaceGenericArgument(String sName, Branch branch, TargetInfo infoNew)
+    protected void replaceGenericArgument(FormalConstant constFormal, Branch branch, TargetInfo infoNew)
         {
         // place the info with the narrowed generic type (used by NamedTypeExpression)
         switch (branch)
             {
             case WhenTrue:
-                ensureNarrowingMap(true).put(sName, infoNew);
+                if (constFormal instanceof PropertyConstant)
+                    {
+                    ensureNarrowingMap(true).put(constFormal.getName(), infoNew);
+                    }
                 break;
 
             case WhenFalse:
-                ensureNarrowingMap(false).put(sName, infoNew);
+                if (constFormal instanceof PropertyConstant)
+                    {
+                    ensureNarrowingMap(false).put(constFormal.getName(), infoNew);
+                    }
                 break;
 
             default:
-                ensureNameMap().put(sName, infoNew);
+                if (constFormal instanceof PropertyConstant)
+                    {
+                    ensureNameMap().put(constFormal.getName(), infoNew);
+                    }
                 break;
             }
 
-        replaceGenericType(sName, branch, infoNew.getType());
+        replaceGenericType(constFormal, branch, infoNew.getType());
         }
 
     /**
      * Replace (narrow) the generic type of the specified name in this context.
      */
-    protected void replaceGenericType(String sName, Branch branch, TypeConstant typeNew)
+    protected void replaceGenericType(FormalConstant constFormal, Branch branch, TypeConstant typeNew)
         {
         assert typeNew.isTypeOfType();
 
-        ensureGenericTypeMap(branch).put(sName, typeNew);
+        ensureFormalTypeMap(branch).put(constFormal, typeNew);
         }
 
     /**
@@ -1401,21 +1388,21 @@ public class Context
     /**
      * Merge the types of the existing argument with the specified one for the given branch.
      */
-    protected void joinGenericType(String sName, Branch branch, Argument argNew)
+    protected void joinGenericType(FormalConstant constFormal, Branch branch, Argument argNew)
         {
-        Map<String, TypeConstant> map = ensureGenericTypeMap(branch);
+        Map<FormalConstant, TypeConstant> map = ensureFormalTypeMap(branch);
 
-        TypeConstant typeOld = map.get(sName);
+        TypeConstant typeOld = map.get(constFormal);
         if (typeOld != null)
             {
             TypeConstant typeNew = argNew.getType();
 
             TypeConstant typeJoin = typeNew.intersect(pool(), typeOld);
-            map.put(sName, typeJoin);
+            map.put(constFormal, typeJoin);
             }
         else
             {
-            map.remove(sName);
+            map.remove(constFormal);
             }
         }
 
@@ -1452,47 +1439,47 @@ public class Context
         }
 
     /**
-     * @return the read-only map that provides a name-to-narrowed generic type lookup
+     * @return the read-only map that provides a formal constant-to-narrowed generic type lookup
      */
-    protected Map<String, TypeConstant> getGenericTypeMap(Branch branch)
+    protected Map<FormalConstant, TypeConstant> getFormalTypeMap(Branch branch)
         {
-        Map<String, TypeConstant> map;
+        Map<FormalConstant, TypeConstant> map;
         switch (branch)
             {
             case WhenTrue:
-                map = m_mapGenericWhenTrue;
+                map = m_mapFormalWhenTrue;
                 break;
 
             case WhenFalse:
-                map = m_mapGenericWhenFalse;
+                map = m_mapFormalWhenFalse;
                 break;
 
             default:
-                map = m_mapGeneric;
+                map = m_mapFormal;
                 break;
             }
         return map == null ? Collections.EMPTY_MAP : map;
         }
 
     /**
-     * @return the map that provides a name-to-narrowed generic type lookup
+     * @return the map that provides a formal constant-to-narrowed generic type lookup
      */
-    protected Map<String, TypeConstant> ensureGenericTypeMap(Branch branch)
+    protected Map<FormalConstant, TypeConstant> ensureFormalTypeMap(Branch branch)
         {
-        Map<String, TypeConstant> map = getGenericTypeMap(branch);
+        Map<FormalConstant, TypeConstant> map = getFormalTypeMap(branch);
 
         if (map == Collections.EMPTY_MAP)
             {
             switch (branch)
                 {
                 case WhenTrue:
-                    return m_mapGenericWhenTrue = new HashMap<>();
+                    return m_mapFormalWhenTrue = new HashMap<>();
 
                 case WhenFalse:
-                    return m_mapGenericWhenFalse = new HashMap<>();
+                    return m_mapFormalWhenFalse = new HashMap<>();
 
                 default:
-                    return m_mapGeneric = new HashMap<>();
+                    return m_mapFormal = new HashMap<>();
                 }
             }
         return map;
@@ -1503,19 +1490,39 @@ public class Context
      */
     protected GenericTypeResolver getLocalResolver(Branch branch)
         {
-        Map<String, TypeConstant> map = getGenericTypeMap(branch);
+        Map<FormalConstant, TypeConstant> map = getFormalTypeMap(branch);
 
         return map == Collections.EMPTY_MAP
                 ? null
-                : sFormalName ->
+                : new GenericTypeResolver()
                     {
-                    TypeConstant typeType = map.get(sFormalName);
-                    if (typeType == null)
+                    @Override
+                    public TypeConstant resolveFormalType(FormalConstant constFormal)
                         {
+                        TypeConstant typeType = map.get(constFormal);
+                        if (typeType == null)
+                            {
+                            return null;
+                            }
+                        assert typeType.isTypeOfType();
+                        return typeType.getParamType(0);
+                        }
+
+                    @Override
+                    public TypeConstant resolveGenericType(String sFormalName)
+                        {
+                        // in the absence of any additional information, only pick generic types
+                        for (Map.Entry<FormalConstant, TypeConstant> entry : map.entrySet())
+                            {
+                            FormalConstant constFormal = entry.getKey();
+                            if (constFormal instanceof PropertyConstant &&
+                                constFormal.getName().equals(sFormalName))
+                                {
+                                return entry.getValue();
+                                }
+                            }
                         return null;
                         }
-                    assert typeType.isTypeOfType();
-                    return typeType.getParamType(0);
                     };
         }
 
@@ -1538,6 +1545,68 @@ public class Context
                 }
             }
         return reg;
+        }
+
+    /**
+     * Resolve the specified formal type within this context if possible.
+     *
+     * @param typeFormal  the formal type to resolve
+     *
+     * @return the resolved formal type if possible, or the passed in type
+     */
+    public TypeConstant resolveFormalType(TypeConstant typeFormal)
+        {
+        return resolveFormalType(typeFormal, Branch.Always);
+        }
+
+    /**
+     * Resolve the specified formal type within this context on the specified branch.
+     *
+     * @param typeFormal  the formal type to resolve
+     * @param branch      the branch to use
+     *
+     * @return the resolved formal type if possible, or the passed in type
+     */
+    protected TypeConstant resolveFormalType(TypeConstant typeFormal, Branch branch)
+        {
+        return resolveFormalTypeImpl(typeFormal, branch, Branch.Always);
+        }
+
+    /**
+     * Internal implementation of {@link #resolveFormalType(TypeConstant, Branch)}.
+     *
+     * Note: this implementation recurses into the outer context and is not meant to be
+     *       overridden.
+     *
+     * @param typeFormal  the formal type to resolve
+     * @param branch      the branch to use
+     * @param branchOuter the branch to look at when recursing to the outer branch
+     *
+     * @return the resolved formal type if possible, or the passed in type
+     */
+    protected TypeConstant resolveFormalTypeImpl(TypeConstant typeFormal,
+                                                 Branch branch, Branch branchOuter)
+        {
+        GenericTypeResolver resolver = getLocalResolver(branch);
+        if (resolver != null)
+            {
+            TypeConstant typeResolved = typeFormal.resolveGenerics(pool(), resolver);
+
+            if (typeResolved.containsFormalType(true))
+                 {
+                 // the type could be partially resolved; take it and keep going
+                 typeFormal = typeResolved;
+                 }
+            else
+                 {
+                 return typeResolved;
+                 }
+            }
+
+        Context ctxOuter = getOuterContext();
+        return ctxOuter == null
+                ? typeFormal
+                : ctxOuter.resolveFormalType(typeFormal, branchOuter);
         }
 
     /**
@@ -1852,31 +1921,32 @@ public class Context
             }
 
         @Override
-        protected void promoteNarrowedGenericType(String sName, TypeConstant typeNarrowed, Branch branch)
+        protected void promoteNarrowedGenericType(FormalConstant constFormal, TypeConstant typeNarrowed,
+                                                  Branch branch)
             {
-            super.promoteNarrowedGenericType(sName, typeNarrowed, branch);
+            super.promoteNarrowedGenericType(constFormal, typeNarrowed, branch);
 
             // choose the wider type of the two branches and promote to "Always"
             if (branch == Branch.WhenTrue)
                 {
                 TypeConstant typeTrue  = typeNarrowed;
-                TypeConstant typeFalse = getGenericTypeMap(Branch.WhenFalse).get(sName);
+                TypeConstant typeFalse = getFormalTypeMap(Branch.WhenFalse).get(constFormal);
                 if (typeFalse != null)
                     {
                     Context      ctxOuter = getOuterContext();
-                    TypeConstant typeOrig = ctxOuter.getGenericTypeMap(Branch.Always).get(sName);
+                    TypeConstant typeOrig = ctxOuter.getFormalTypeMap(Branch.Always).get(constFormal);
                     if (typeFalse.isA(typeTrue))
                         {
                         if (!typeTrue.equals(typeOrig))
                             {
-                            ctxOuter.replaceGenericType(sName, Branch.Always, typeTrue);
+                            ctxOuter.replaceGenericType(constFormal, Branch.Always, typeTrue);
                             }
                         }
                     else if (typeTrue.isA(typeFalse))
                         {
                         if (!typeFalse.equals(typeOrig))
                             {
-                            ctxOuter.replaceGenericType(sName, Branch.Always, typeFalse);
+                            ctxOuter.replaceGenericType(constFormal, Branch.Always, typeFalse);
                             }
                         }
                     }
@@ -1943,7 +2013,7 @@ public class Context
                 {
                 mapBranch.clear();
                 }
-            mapBranch = getGenericTypeMap(Branch.of(fWhenTrue));
+            mapBranch = getFormalTypeMap(Branch.of(fWhenTrue));
             if (!mapBranch.isEmpty())
                 {
                 mapBranch.clear();
@@ -1956,10 +2026,10 @@ public class Context
                 ensureNarrowingMap(fWhenTrue).putAll(mapBranch);
                 }
 
-            mapBranch = getGenericTypeMap(Branch.of(!fWhenTrue));
+            mapBranch = getFormalTypeMap(Branch.of(!fWhenTrue));
             if (!mapBranch.isEmpty())
                 {
-                ensureGenericTypeMap(Branch.of(fWhenTrue)).putAll(mapBranch);
+                ensureFormalTypeMap(Branch.of(fWhenTrue)).putAll(mapBranch);
                 }
 
             // promote the other branch's assignments
@@ -2046,6 +2116,12 @@ public class Context
             }
 
         @Override
+        protected TypeConstant resolveFormalType(TypeConstant typeFormal, Branch branch)
+            {
+            return resolveFormalTypeImpl(typeFormal, branch, Branch.of(m_fWhenTrue));
+            }
+
+        @Override
         public Assignment getVarAssignment(String sName)
             {
             Assignment asn = super.getVarAssignment(sName);
@@ -2075,12 +2151,13 @@ public class Context
             }
 
         @Override
-        protected void promoteNarrowedGenericType(String sName, TypeConstant typeNarrowed, Branch branch)
+        protected void promoteNarrowedGenericType(FormalConstant constFormal, TypeConstant typeNarrowed,
+                                                  Branch branch)
             {
             // promote our "always" into the corresponding parent's branch
             if (branch == Branch.Always)
                 {
-                getOuterContext().replaceGenericType(sName, Branch.of(m_fWhenTrue), typeNarrowed);
+                getOuterContext().replaceGenericType(constFormal, Branch.of(m_fWhenTrue), typeNarrowed);
                 }
             }
 
@@ -2127,6 +2204,13 @@ public class Context
             {
             // we only use the parent's "true" branch
             return getVarImpl(sName, name, branch, Branch.WhenTrue, errs);
+            }
+
+        @Override
+        protected TypeConstant resolveFormalType(TypeConstant typeFormal, Branch branch)
+            {
+            // we only use the parent's "true" branch
+            return resolveFormalTypeImpl(typeFormal, branch, Branch.WhenTrue);
             }
 
         @Override
@@ -2181,30 +2265,31 @@ public class Context
         protected void promoteNarrowedGenericTypes()
             {
             // retain only our "false" entries in the parent's "false" context
-            Map<String, TypeConstant> map = getGenericTypeMap(Branch.WhenFalse);
+            Map<FormalConstant, TypeConstant> map = getFormalTypeMap(Branch.WhenFalse);
             if (!map.isEmpty())
                 {
-                getOuterContext().ensureGenericTypeMap(Branch.WhenFalse).keySet().
+                getOuterContext().ensureFormalTypeMap(Branch.WhenFalse).keySet().
                     retainAll(map.keySet());
                 }
             super.promoteNarrowedGenericTypes();
             }
 
         @Override
-        protected void promoteNarrowedGenericType(String sName, TypeConstant typeNarrowed, Branch branch)
+        protected void promoteNarrowedGenericType(FormalConstant constFormal, TypeConstant typeNarrowed,
+                                                  Branch branch)
             {
-            super.promoteNarrowedGenericType(sName, typeNarrowed, branch);
+            super.promoteNarrowedGenericType(constFormal, typeNarrowed, branch);
 
             // promote our "true" into the parent's "true" branch and
             // join our "false" with the parent's "false"
             switch (branch)
                 {
                 case WhenTrue:
-                    getOuterContext().replaceGenericType(sName, branch, typeNarrowed);
+                    getOuterContext().replaceGenericType(constFormal, branch, typeNarrowed);
                     break;
 
                 case WhenFalse:
-                    getOuterContext().joinGenericType(sName, branch, typeNarrowed);
+                    getOuterContext().joinGenericType(constFormal, branch, typeNarrowed);
                     break;
                 }
             }
@@ -2252,6 +2337,13 @@ public class Context
             }
 
         @Override
+        protected TypeConstant resolveFormalType(TypeConstant typeFormal, Branch branch)
+            {
+            // we only use the parent's "false" branch
+            return resolveFormalTypeImpl(typeFormal, branch, Branch.WhenFalse);
+            }
+
+        @Override
         protected void promoteNarrowedTypes()
             {
             // inversely to the AndContext, retain only our "true" entries in the parent's "true"
@@ -2291,30 +2383,31 @@ public class Context
         protected void promoteNarrowedGenericTypes()
             {
             // retain only our "true" entries in the parent's "true" context
-            Map<String, TypeConstant> map = getGenericTypeMap(Branch.WhenTrue);
+            Map<FormalConstant, TypeConstant> map = getFormalTypeMap(Branch.WhenTrue);
             if (!map.isEmpty())
                 {
-                getOuterContext().ensureGenericTypeMap(Branch.WhenTrue).keySet().
+                getOuterContext().ensureFormalTypeMap(Branch.WhenTrue).keySet().
                     retainAll(map.keySet());
                 }
             super.promoteNarrowedGenericTypes();
             }
 
         @Override
-        protected void promoteNarrowedGenericType(String sName, TypeConstant typeNarrowed, Branch branch)
+        protected void promoteNarrowedGenericType(FormalConstant constFormal, TypeConstant typeNarrowed,
+                                                  Branch branch)
             {
-            super.promoteNarrowedGenericType(sName, typeNarrowed, branch);
+            super.promoteNarrowedGenericType(constFormal, typeNarrowed, branch);
 
             // promote our "false" into the parent's "false" branch and
             // join our "true" with the parent's "true"
             switch (branch)
                 {
                 case WhenFalse:
-                    getOuterContext().replaceGenericType(sName, branch, typeNarrowed);
+                    getOuterContext().replaceGenericType(constFormal, branch, typeNarrowed);
                     break;
 
                 case WhenTrue:
-                    getOuterContext().joinGenericType(sName, branch, typeNarrowed);
+                    getOuterContext().joinGenericType(constFormal, branch, typeNarrowed);
                     break;
                 }
             }
@@ -2356,6 +2449,12 @@ public class Context
             }
 
         @Override
+        protected TypeConstant resolveFormalType(TypeConstant typeFormal, Branch branch)
+            {
+            return resolveFormalTypeImpl(typeFormal, branch, branch.complement());
+            }
+
+        @Override
         protected void promoteNarrowedType(String sName, Argument arg, Branch branch)
             {
             if (branch == Branch.Always)
@@ -2369,15 +2468,16 @@ public class Context
             }
 
         @Override
-        protected void promoteNarrowedGenericType(String sName, TypeConstant typeNarrowed, Branch branch)
+        protected void promoteNarrowedGenericType(FormalConstant constFormal, TypeConstant typeNarrowed,
+                                                  Branch branch)
             {
             if (branch == Branch.Always)
                 {
-                super.promoteNarrowedGenericType(sName, typeNarrowed, branch);
+                super.promoteNarrowedGenericType(constFormal, typeNarrowed, branch);
                 }
             else
                 {
-                getOuterContext().replaceGenericType(sName, branch.complement(), typeNarrowed);
+                getOuterContext().replaceGenericType(constFormal, branch.complement(), typeNarrowed);
                 }
             }
         }
@@ -2517,10 +2617,11 @@ public class Context
             }
 
         @Override
-        protected void promoteNarrowedGenericType(String sName, TypeConstant typeNarrowed, Branch branch)
+        protected void promoteNarrowedGenericType(FormalConstant constFormal, TypeConstant typeNarrowed,
+                                                  Branch branch)
             {
             // promote all
-            getOuterContext().replaceGenericType(sName, branch, typeNarrowed);
+            getOuterContext().replaceGenericType(constFormal, branch, typeNarrowed);
             }
 
         private final TypeConstant f_typeLeft;
@@ -2826,22 +2927,22 @@ public class Context
     private Map<String, Argument> m_mapWhenFalse;
 
     /**
-     * Each generic type narrowed within this context is registered in this map, along with the
+     * Each formal type narrowed within this context is registered in this map, along with the
      * narrowing TypeConstant.
      */
-    private Map<String, TypeConstant> m_mapGeneric;
+    private Map<FormalConstant, TypeConstant> m_mapFormal;
 
     /**
-     * Each generic type declared within a parent context, may narrow its type in a child context
+     * Each formal type declared within a parent context, may narrow its type in a child context
      * for a "true" branch.
      */
-    private Map<String, TypeConstant> m_mapGenericWhenTrue;
+    private Map<FormalConstant, TypeConstant> m_mapFormalWhenTrue;
 
     /**
-     * Each generic type declared within a parent context, may narrow its type in a child context
+     * Each formal type declared within a parent context, may narrow its type in a child context
      * for a "false" branch.
      */
-    private Map<String, TypeConstant> m_mapGenericWhenFalse;
+    private Map<FormalConstant, TypeConstant> m_mapFormalWhenFalse;
 
     /**
      * Each variable assigned within this context is registered in this map. The corresponding value
