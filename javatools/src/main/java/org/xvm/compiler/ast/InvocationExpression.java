@@ -441,9 +441,9 @@ public class InvocationExpression
                         }
                     if (typeLeft == null)
                         {
-                        typeLeft = m_targetinfo == null
+                        typeLeft = m_targetInfo == null
                                 ? ctx.getVar("this").getType() // "this" could be narrowed
-                                : m_targetinfo.getTargetType();
+                                : m_targetInfo.getTargetType();
                         }
                     SignatureConstant sigMethod = idMethod.getSignature();
                     IdentityConstant  idCtx     = typeLeft.isA(ctx.getThisType())
@@ -507,7 +507,6 @@ public class InvocationExpression
                 log(errs, Severity.ERROR, Compiler.SUSPICIOUS_PROPERTY_USE,
                         exprName.getName(), typeLeft.getValueString());
                 }
-            return TypeConstant.NO_TYPES;
             }
         else // not a NameExpression
             {
@@ -527,8 +526,8 @@ public class InvocationExpression
                     return calculateReturnType(typeFn);
                     }
                 }
-            return TypeConstant.NO_TYPES;
             }
+        return TypeConstant.NO_TYPES;
         }
 
     /**
@@ -790,7 +789,7 @@ public class InvocationExpression
                     boolean   fStatic;
                     if (component == null)
                         {
-                        TypeConstant type = m_targetinfo.getTargetType();
+                        TypeConstant type = m_targetInfo.getTargetType();
                         TypeInfo     info = getTypeInfo(ctx, type, errs);
                         fStatic = argMethod instanceof MethodConstant
                                 ? info.getMethodById((MethodConstant) argMethod).isFunction()
@@ -878,9 +877,9 @@ public class InvocationExpression
 
                 if (typeLeft == null && !m_method.isFunction())
                     {
-                    typeLeft = m_targetinfo == null
+                    typeLeft = m_targetInfo == null
                             ? ctx.getVar("this").getType() // "this" could be narrowed
-                            : m_targetinfo.getTargetType();
+                            : m_targetInfo.getTargetType();
                     }
 
                 TypeConstant[] atypeArgs = validateExpressions(ctx, listArgs, atypeParams, errs);
@@ -1018,9 +1017,9 @@ public class InvocationExpression
                 if (argMethod instanceof PropertyConstant)
                     {
                     PropertyConstant idProp = (PropertyConstant) argMethod;
-                    if (m_targetinfo != null)
+                    if (m_targetInfo != null)
                         {
-                        typeLeft = m_targetinfo.getTargetType();
+                        typeLeft = m_targetInfo.getTargetType();
                         }
                     else if (m_typeTarget != null)
                         {
@@ -1909,19 +1908,19 @@ public class InvocationExpression
         if (exprLeft == null)
             {
             MethodStructure method = code.getMethodStructure();
-            if (m_targetinfo == null)
+            if (m_targetInfo == null)
                 {
                 argTarget = ctx.generateThisRegister(code, method.isConstructor(), errs);
                 }
             else
                 {
-                TypeConstant typeTarget = m_targetinfo.getTargetType();
-                int          cStepsOut  = m_targetinfo.getStepsOut();
+                TypeConstant typeTarget = m_targetInfo.getTargetType();
+                int          cStepsOut  = m_targetInfo.getStepsOut();
 
                 if (cStepsOut > 0)
                     {
                     argTarget = createRegister(typeTarget, fTargetOnStack);
-                    code.add(new MoveThis(m_targetinfo.getStepsOut(), argTarget));
+                    code.add(new MoveThis(m_targetInfo.getStepsOut(), argTarget));
                     }
                 else
                     {
@@ -2029,7 +2028,7 @@ public class InvocationExpression
         boolean fNoCall    = isSuppressCall();
         boolean fNamedArgs = containsNamedArgs(args);
 
-        m_targetinfo  = null;
+        m_targetInfo  = null;
         m_argMethod   = null;
         m_idConvert   = null;
         m_fBindTarget = false;
@@ -2098,7 +2097,7 @@ public class InvocationExpression
                         m_argMethod   = arg;
                         m_method      = method;
                         m_fBindTarget = !method.isFunction();
-                        m_targetinfo  = new TargetInfo(sName, method, typeLeft, 0);
+                        m_targetInfo  = new TargetInfo(sName, method, typeLeft, 0);
                         return arg;
                         }
                     }
@@ -2221,7 +2220,7 @@ public class InvocationExpression
                         }
                     else
                         {
-                        m_targetinfo  = target; // (only used for non-constants)
+                        m_targetInfo  = target; // (only used for non-constants)
                         m_argMethod   = idCallable;
                         m_method      = getMethod(info, idCallable);
                         m_fBindTarget = m_method != null && !m_method.isFunction();
@@ -2245,7 +2244,7 @@ public class InvocationExpression
 
                     if (prop.isConstant() || target.hasThis())
                         {
-                        m_targetinfo = target; // (only used for non-constants)
+                        m_targetInfo = target; // (only used for non-constants)
                         m_argMethod  = id;
                         return id;
                         }
@@ -3136,7 +3135,7 @@ public class InvocationExpression
     private transient boolean         m_fTupleArg;       // indicates that arguments come from a tuple
                                                          // (currently not supported)
     private transient boolean         m_fNamedArgs;      // are there named arguments
-    private transient TargetInfo      m_targetinfo;      // for left==null with prop or method name
+    private transient TargetInfo      m_targetInfo;      // for left==null with prop or method name
     private transient Argument        m_argMethod;
     private transient MethodStructure m_method;          // if m_argMethod is a MethodConstant,
                                                          // this holds the corresponding structure

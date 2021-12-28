@@ -8,7 +8,6 @@ import java.util.List;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
-import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure.Code;
 
 import org.xvm.asm.constants.TypeCollector;

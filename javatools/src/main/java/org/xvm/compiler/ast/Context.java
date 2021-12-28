@@ -28,7 +28,6 @@ import org.xvm.asm.Register;
 import org.xvm.asm.Assignment;
 
 import org.xvm.asm.constants.FormalConstant;
-import org.xvm.asm.constants.FormalTypeChildConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
