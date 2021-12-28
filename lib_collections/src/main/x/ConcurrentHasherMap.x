@@ -467,6 +467,17 @@ const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
             construct HasherMap(hasher, initCapacity);
             }
 
+        /**
+         * Duplicable constructor.
+         *
+         * @param that  the Partition to duplicate
+         */
+        construct(Partition<Key, Value> that)
+            {
+            this.partitionCount = that.partitionCount;
+            construct HasherMap(that);
+            }
+
 
         // ----- properties ------------------------------------------------------------------------
 

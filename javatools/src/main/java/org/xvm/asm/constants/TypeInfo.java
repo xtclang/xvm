@@ -2351,6 +2351,13 @@ public class TypeInfo
                     fImplicitAbstract = true;
                     break;
                     }
+
+                if (info.containsVirtualConstructor() && !info.isCapped() &&
+                        info.getTopmostMethodStructure(this).getContainingClass() != f_struct)
+                    {
+                    fImplicitAbstract = true;
+                    break;
+                    }
                 }
 
             m_fImplicitAbstract = fImplicitAbstract ||

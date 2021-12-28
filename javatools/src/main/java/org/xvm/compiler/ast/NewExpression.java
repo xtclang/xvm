@@ -958,7 +958,7 @@ public class NewExpression
         for (MethodConstant id : setConstruct)
             {
             MethodInfo infoMethod = infoTarget.getMethodById(id);
-            if (infoMethod.isVirtualConstructor())
+            if (infoMethod.containsVirtualConstructor())
                 {
                 log(errs, Severity.ERROR, Constants.VE_NEW_VIRTUAL_CONSTRUCT,
                     sType, infoMethod.getIdentity().getValueString());

@@ -3695,35 +3695,30 @@ public abstract class TypeConstant
                         // the "implicit" origin is removed. Otherwise, the constructors marked as
                         // implicit remain as a part of the TypeInfo and are exempt from "isAbstract"
                         // computation logic (see MethodInfo#isAbstract)
-                        fKeep = fSelf || methodContrib.isVirtualConstructor();
+                        fKeep = fSelf || methodContrib.containsVirtualConstructor();
 
                         List<MethodConstant> listMatches =
                                 collectConstructors(methodContrib, mapMethods);
                         if (!listMatches.isEmpty())
                             {
-                            MethodInfo ctorBase = null;
                             for (MethodConstant idBase : listMatches)
                                 {
                                 MethodInfo ctor = mapMethods.get(idBase);
-                                if (ctor.isVirtualConstructor())
+                                if (ctor.containsVirtualConstructor())
                                     {
-                                    if (ctorBase != null)
+                                    if (ctor.containsBody(idContrib))
                                         {
-                                        log(errs, Severity.ERROR, VE_METHOD_NARROWING_AMBIGUOUS,
-                                                typeContrib.getValueString(),
-                                                idContrib.getValueString(),
-                                                listMatches.get(0).getValueString());
-                                        break;
+                                        // it's a duplicate; ignore
+                                        continue;
                                         }
 
                                     methodContrib = ctor.layerOnVirtualConstructor(methodContrib);
-                                    ctorBase      = ctor;
                                     fKeep         = true;
 
                                     if (!idBase.equals(idContrib))
                                         {
-                                        Object nidBase  = idBase.resolveNestedIdentity(pool, this);
-                                        mapNarrowedNids = addNarrowingNid(mapNarrowedNids, nidBase, nidContrib);
+                                        mapNarrowedNids = addNarrowingNid(mapNarrowedNids,
+                                                            idBase.getSignature(), nidContrib);
                                         }
                                     }
                                 else if (isVirtualChild() && fSelf &&

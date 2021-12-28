@@ -64,7 +64,7 @@ public class MethodInfo
     MethodInfo capWith(TypeConstant typeCtx, MethodInfo that)
         {
         // both method chains must be virtual, and neither can already be capped
-        assert this.isOverridable();
+        assert this.isOverridable() || this.containsVirtualConstructor();
         assert that.isOverridable() || that.isPotentialPropertyOverlay()
                                     || that.containsVirtualConstructor();
 

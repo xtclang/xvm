@@ -573,8 +573,23 @@ module TestMaps
         }
 
     service SafeHashMap<Key, Value>
-        extends HashMap<Key, Value>
+            extends HashMap<Key, Value>
         {
+        /**
+         * Replicable constructor.
+         */
+        construct(Int capacity = 0)
+            {
+            construct HashMap(capacity);
+            }
+
+        /**
+         * Duplicable constructor.
+         */
+        construct(SafeHashMap<Key, Value> that)
+            {
+            construct HashMap(that);
+            }
         }
 
     static DateTime now()

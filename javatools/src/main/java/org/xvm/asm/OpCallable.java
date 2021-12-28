@@ -294,10 +294,14 @@ public abstract class OpCallable extends Op
      */
     protected int reportMissingConstructor(Frame frame, ObjectHandle hParent)
         {
-        IdentityConstant idParent    = hParent.getTemplate().getClassConstant();
-        MethodStructure  constructor = getMethodStructure(frame);
+        IdentityConstant idParent = hParent instanceof TypeHandle
+                ? ((TypeHandle) hParent).getDataType().getSingleUnderlyingClass(false)
+                : hParent.getType().getSingleUnderlyingClass(false);
+
+        MethodStructure constructor = getMethodStructure(frame);
         if (constructor == null)
             {
+            // getMethodStructure() must've already created an exception
             return R_EXCEPTION;
             }
 
