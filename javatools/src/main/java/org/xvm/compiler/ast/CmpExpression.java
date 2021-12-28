@@ -226,9 +226,8 @@ public class CmpExpression
                 if (typeCommon == null)
                     {
                     // try to resolve the types using the current context
-                    GenericTypeResolver resolver = ctx.getFormalTypeResolver();
-                    TypeConstant        type1R   = type1.resolveGenerics(pool, resolver);
-                    TypeConstant        type2R   = type2.resolveGenerics(pool, resolver);
+                    TypeConstant type1R = ctx.resolveFormalType(type1);
+                    TypeConstant type2R = ctx.resolveFormalType(type2);
 
                     typeCommon = chooseCommonType(pool, fEqual, type1R, fConst1, type2R, fConst2, true);
                     }

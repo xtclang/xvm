@@ -1472,9 +1472,7 @@ public class LambdaExpression
         @Override
         protected void initNameMap(Map<String, Argument> mapByName)
             {
-            ConstantPool        pool     = pool();
-            GenericTypeResolver resolver = getOuterContext().getFormalTypeResolver();
-
+            Context        ctxOuter    = getOuterContext();
             TypeConstant[] atypeParams = f_atypeParams;
             String[]       asParams    = f_asParams;
             int            cParams     = atypeParams == null ? 0 : atypeParams.length;
@@ -1485,7 +1483,7 @@ public class LambdaExpression
                 if (!sName.equals(Id.ANY.TEXT) && type != null)
                     {
                     Register     reg          = new Register(type);
-                    TypeConstant typeNarrowed = type.resolveGenerics(pool, resolver);
+                    TypeConstant typeNarrowed = ctxOuter.resolveFormalType(type);
                     if (typeNarrowed != type)
                         {
                         reg = reg.narrowType(typeNarrowed);

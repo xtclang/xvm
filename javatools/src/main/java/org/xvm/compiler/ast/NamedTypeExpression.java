@@ -774,10 +774,6 @@ public class NamedTypeExpression
                     type = type.resolveGenerics(pool, typeParent.normalizeParameters());
                     }
                 }
-            else
-                {
-                type = type.resolveGenerics(pool, ctx.getFormalTypeResolver());
-                }
             }
         else
             {
@@ -1104,7 +1100,7 @@ public class NamedTypeExpression
 
                     if (ctx != null && typeTarget != null)
                         {
-                        typeTarget = typeTarget.resolveGenerics(pool, ctx.getFormalTypeResolver());
+                        typeTarget = ctx.resolveFormalType(typeTarget);
                         }
                     }
                 else if (clzTarget.isVirtualChild())

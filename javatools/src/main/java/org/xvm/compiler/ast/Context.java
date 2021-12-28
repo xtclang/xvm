@@ -28,6 +28,7 @@ import org.xvm.asm.Register;
 import org.xvm.asm.Assignment;
 
 import org.xvm.asm.constants.FormalConstant;
+import org.xvm.asm.constants.FormalTypeChildConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
@@ -154,27 +155,6 @@ public class Context
     public TypeConstant getThisType()
         {
         return getThisClass().getFormalType();
-        }
-
-    /**
-     * @return the generic type resolver based on the data in this context
-     */
-    public GenericTypeResolver getFormalTypeResolver()
-        {
-        return sFormalName ->
-            {
-            Argument arg = getVar(sFormalName);
-            if (arg == null)
-                {
-                return isFunction()
-                        ? null
-                        : getThisType().resolveGenericType(sFormalName);
-                }
-
-            TypeConstant typeType = arg.getType();
-            assert typeType.isTypeOfType();
-            return typeType.getParamType(0);
-            };
         }
 
     /**
@@ -720,25 +700,16 @@ public class Context
      */
     protected Argument getLocalVar(String sName, Branch branch)
         {
-        Argument arg;
-        switch (branch)
+        if (branch != Branch.Always)
             {
-            case WhenTrue:
-                arg = getNarrowingMap(true).get(sName);
-                break;
-
-            case WhenFalse:
-                arg = getNarrowingMap(false).get(sName);
-                break;
-
-            default:
-                arg = null;
-                break;
+            Argument arg = getNarrowingMap(branch == Branch.WhenTrue).get(sName);
+            if (arg != null)
+                {
+                return arg;
+                }
             }
 
-        return arg == null
-                ? getNameMap().get(sName)
-                : arg;
+        return getNameMap().get(sName);
         }
 
     /**
@@ -1480,41 +1451,56 @@ public class Context
      */
     protected GenericTypeResolver getLocalResolver(Branch branch)
         {
-        Map<FormalConstant, TypeConstant> map = getFormalTypeMap(branch);
-
-        return map == Collections.EMPTY_MAP
-                ? null
-                : new GenericTypeResolver()
+        return new GenericTypeResolver()
+            {
+            @Override
+            public TypeConstant resolveFormalType(FormalConstant constFormal)
+                {
+                TypeConstant typeType = getFormalTypeMap(branch).get(constFormal);
+                if (typeType == null)
                     {
-                    @Override
-                    public TypeConstant resolveFormalType(FormalConstant constFormal)
-                        {
-                        TypeConstant typeType = map.get(constFormal);
-                        if (typeType == null)
-                            {
-                            return null;
-                            }
-                        assert typeType.isTypeOfType();
-                        return typeType.getParamType(0);
-                        }
+                    return resolveLocalVar(constFormal.getName(), branch);
+                    }
+                assert typeType.isTypeOfType();
+                return typeType.getParamType(0);
+                }
 
-                    @Override
-                    public TypeConstant resolveGenericType(String sFormalName)
+            @Override
+            public TypeConstant resolveGenericType(String sFormalName)
+                {
+                // in the absence of any additional information, only pick generic types
+                for (Map.Entry<FormalConstant, TypeConstant> entry :
+                            getFormalTypeMap(branch).entrySet())
+                    {
+                    FormalConstant constFormal = entry.getKey();
+                    if (constFormal instanceof PropertyConstant &&
+                        constFormal.getName().equals(sFormalName))
                         {
-                        // in the absence of any additional information, only pick generic types
-                        for (Map.Entry<FormalConstant, TypeConstant> entry : map.entrySet())
-                            {
-                            FormalConstant constFormal = entry.getKey();
-                            if (constFormal instanceof PropertyConstant &&
-                                constFormal.getName().equals(sFormalName))
-                                {
-                                return entry.getValue();
-                                }
-                            }
-                        return null;
+                        return entry.getValue();
                         }
-                    };
+                    }
+
+                return resolveLocalVar(sFormalName, branch);
+                }
+
+            private TypeConstant resolveLocalVar(String sFormalName, Branch branch)
+                {
+                Argument arg = getLocalVar(sFormalName, branch);
+                if (arg == null)
+                    {
+                    return isFunction()
+                            ? null
+                            : getThisType().resolveGenericType(sFormalName);
+                    }
+
+                TypeConstant typeType = arg.getType();
+                return typeType.isTypeOfType()
+                        ? typeType.getParamType(0)
+                        : null;
+                }
+            };
         }
+
 
     /**
      * Resolve the specified register's type on the specified branch.
@@ -1523,18 +1509,12 @@ public class Context
      */
     protected Argument resolveRegisterType(Branch branch, Register reg)
         {
-        GenericTypeResolver resolver = getLocalResolver(branch);
-        if (resolver != null)
-            {
-            TypeConstant typeOriginal = reg.getType();
-            TypeConstant typeResolved = typeOriginal.resolveGenerics(pool(), resolver);
+        TypeConstant typeOriginal = reg.getType();
+        TypeConstant typeResolved = typeOriginal.resolveGenerics(pool(), getLocalResolver(branch));
 
-            if (typeResolved != typeOriginal)
-                {
-                return reg.narrowType(typeResolved);
-                }
-            }
-        return reg;
+        return typeResolved == typeOriginal
+                ? reg
+                : reg.narrowType(typeResolved);
         }
 
     /**
@@ -1559,21 +1539,17 @@ public class Context
      */
     protected TypeConstant resolveFormalType(TypeConstant typeFormal, Branch branch)
         {
-        GenericTypeResolver resolver = getLocalResolver(branch);
-        if (resolver != null)
-            {
-            TypeConstant typeResolved = typeFormal.resolveGenerics(pool(), resolver);
+        TypeConstant typeResolved = typeFormal.resolveGenerics(pool(), getLocalResolver(branch));
 
-            if (typeResolved.containsFormalType(true))
-                 {
-                 // the type could be partially resolved; take it and keep going
-                 typeFormal = typeResolved;
-                 }
-            else
-                 {
-                 return typeResolved;
-                 }
-            }
+        if (typeResolved.containsFormalType(true))
+             {
+             // the type could be partially resolved; take it and keep going
+             typeFormal = typeResolved;
+             }
+        else
+             {
+             return typeResolved;
+             }
 
         Context ctxOuter = getOuterContext();
         return ctxOuter == null

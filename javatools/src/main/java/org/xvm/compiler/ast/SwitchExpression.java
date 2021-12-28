@@ -188,10 +188,9 @@ public class SwitchExpression
                         {
                         atypeReqScoped = atypeReqScoped.clone();
 
-                        GenericTypeResolver resolver = ctxScope.getFormalTypeResolver();
                         for (int i = 0, c = atypeReqScoped.length; i < c; i++)
                             {
-                            atypeReqScoped[i] = atypeReqScoped[i].resolveGenerics(pool, resolver);
+                            atypeReqScoped[i] = ctxScope.resolveFormalType(atypeReqScoped[i]);
                             }
                         }
                     }
