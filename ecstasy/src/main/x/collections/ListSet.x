@@ -26,10 +26,6 @@ class ListSet<Element>
     /**
      * [Duplicable] constructor.
      *
-     * TODO GG compilation succeeded without this constructor existing; that _seems_ wrong (since
-     *         there's code that says "new ListSet(..)") ... or is it allowed because it finds the
-     *         above-constructor and assumes that's good enough to support the Duplicable contract?
-     *
      * @param that  the [Duplicable] `MapSet` object to duplicate from
      */
     construct(ListSet<Element> that)
