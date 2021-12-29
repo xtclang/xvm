@@ -84,22 +84,19 @@ class OrderedMapSet<Element extends Orderable>
     @Override
     @Op("[..]") OrderedSet<Element> slice(Range<Element> keys)
         {
-        // TODO GG remove as()
-        return contents.slice(keys).keys.as(OrderedSet<Element>);
+        return contents.slice(keys).keys;
         }
 
     @Override
     @Op("[[..]]") OrderedSet<Element> sliceInclusive(Range<Element> keys)
         {
-        // TODO GG remove as()
-        return contents.sliceInclusive(keys).keys.as(OrderedSet<Element>);
+        return contents.sliceInclusive(keys).keys;
         }
 
     @Override
     @Op("[[..)]") OrderedSet<Element> sliceExclusive(Range<Element> keys)
         {
-        // TODO GG remove as()
-        return contents.sliceExclusive(keys).keys.as(OrderedSet<Element>);
+        return contents.sliceExclusive(keys).keys;
         }
 
     @Override

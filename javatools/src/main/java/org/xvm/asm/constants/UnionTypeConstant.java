@@ -391,11 +391,16 @@ public class UnionTypeConstant
                 }
             else
                 {
-                // the property exists in both maps;
-                // TODO: check for the type compatibility and maybe a "common" structure
-                //       and then choose/build the best PropertyInfo
-
-                map.put(prop1.getIdentity(), prop1);
+                // the property exists in both maps
+                if (prop2.containsBody(prop1.getIdentity()))
+                    {
+                    map.put(prop2.getIdentity(), prop2);
+                    }
+                else
+                    {
+                    // TODO: if neither "contains" the other, choose the best PropertyInfo
+                    map.put(prop1.getIdentity(), prop1);
+                    }
                 }
             }
 
@@ -450,10 +455,16 @@ public class UnionTypeConstant
                 }
             else
                 {
-                // the method exists in both maps;
-                // TODO: check for the compatibility and choose the best MethodInfo
-
-                map.put(method1.getIdentity(), method1);
+                // the method exists in both maps
+                if (method2.containsBody(method1.getIdentity()))
+                    {
+                    map.put(method2.getIdentity(), method2);
+                    }
+                else
+                    {
+                    // TODO: if neither contains the other, choose the best MethodInfo
+                    map.put(method1.getIdentity(), method1);
+                    }
                 }
             }
 
@@ -470,7 +481,7 @@ public class UnionTypeConstant
             MethodInfo method1 = info1.getMethodBySignature(sig);
             if (method1 == null)
                 {
-                // the method is only in the first map
+                // the method is only in the second map
                 map.put(method2.getIdentity(), method2);
                 }
             }
