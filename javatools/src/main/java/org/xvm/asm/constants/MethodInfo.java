@@ -825,6 +825,16 @@ public class MethodInfo
         }
 
     /**
+     * @return true iff this method is a virtual constructor that <b>is not implemented</b>
+     *         by the class represented by the specified TypeInfo
+     */
+    public boolean isUncoveredVirtualConstructor(TypeInfo info)
+        {
+        return containsVirtualConstructor() && !isCapped() &&
+            getTopmostMethodStructure(info).getContainingClass() != info.getClassStructure();
+        }
+
+    /**
      * @return true iff this is an abstract function (declared on an interface)
      */
     public boolean isAbstractFunction()

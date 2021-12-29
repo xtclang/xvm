@@ -2352,8 +2352,7 @@ public class TypeInfo
                     break;
                     }
 
-                if (info.containsVirtualConstructor() && !info.isCapped() &&
-                        info.getTopmostMethodStructure(this).getContainingClass() != f_struct)
+                if (info.isUncoveredVirtualConstructor(this))
                     {
                     fImplicitAbstract = true;
                     break;
