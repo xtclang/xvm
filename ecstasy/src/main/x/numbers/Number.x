@@ -373,6 +373,9 @@
      * Convert the number to a variable-length signed integer.
      *
      * @return the number as a signed integer of variable length
+     *
+     * @throws OutOfBounds  if the resulting value is out of the integer range supported by the
+     *         variable-length signed integer type
      */
     IntN toIntN();
 
@@ -447,6 +450,9 @@
      * Convert the number to a variable-length unsigned integer.
      *
      * @return the number as an unsigned integer of variable length
+     *
+     * @throws OutOfBounds  if the resulting value is out of the integer range supported by the
+     *         variable-length unsigned integer type
      */
     UIntN toUIntN();
 

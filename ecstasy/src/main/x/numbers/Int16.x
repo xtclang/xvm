@@ -112,56 +112,56 @@ const Int16
 
     @Override
     @Op("+")
-    Int16 add(Int16 n)
+    Int16 add(Int16! n)
         {
         TODO return new Int16(bitAdd(bits, n.bits));
         }
 
     @Override
     @Op("-")
-    Int16 sub(Int16 n)
+    Int16 sub(Int16! n)
         {
         return this + ~n + 1;
         }
 
     @Override
     @Op("*")
-    Int16 mul(Int16 n)
+    Int16 mul(Int16! n)
         {
         return this * n;
         }
 
     @Override
     @Op("/")
-    Int16 div(Int16 n)
+    Int16 div(Int16! n)
         {
         return this / n;
         }
 
     @Override
     @Op("%")
-    Int16 mod(Int16 n)
+    Int16 mod(Int16! n)
         {
         return this % n;
         }
 
     @Override
     @Op("&")
-    Int16 and(Int16 n)
+    Int16 and(Int16! n)
         {
         return new Int16(this.bits & n.bits);
         }
 
     @Override
     @Op("|")
-    Int16 or(Int16 n)
+    Int16 or(Int16! n)
         {
         return new Int16(this.bits | n.bits);
         }
 
     @Override
     @Op("^")
-    Int16 xor(Int16 n)
+    Int16 xor(Int16! n)
         {
         return new Int16(this.bits ^ n.bits);
         }
@@ -257,7 +257,7 @@ const Int16
         }
 
     @Override
-    Int16 pow(Int16 n)
+    Int16 pow(Int16! n)
         {
         Int16 result = 1;
 

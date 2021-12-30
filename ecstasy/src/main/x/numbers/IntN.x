@@ -91,56 +91,56 @@ const IntN
 
     @Override
     @Op("+")
-    IntN add(IntN n)
+    IntN add(IntN! n)
         {
         TODO return new IntN(bitAdd(bits, n.bits));
         }
 
     @Override
     @Op("-")
-    IntN sub(IntN n)
+    IntN sub(IntN! n)
         {
         return this + ~n + 1;
         }
 
     @Override
     @Op("*")
-    IntN mul(IntN n)
+    IntN mul(IntN! n)
         {
         return this * n;
         }
 
     @Override
     @Op("/")
-    IntN div(IntN n)
+    IntN div(IntN! n)
         {
         return this / n;
         }
 
     @Override
     @Op("%")
-    IntN mod(IntN n)
+    IntN mod(IntN! n)
         {
         return this % n;
         }
 
     @Override
     @Op("&")
-    IntN and(IntN n)
+    IntN and(IntN! n)
         {
         return new IntN(this.bits & n.bits);
         }
 
     @Override
     @Op("|")
-    IntN or(IntN n)
+    IntN or(IntN! n)
         {
         return new IntN(this.bits | n.bits);
         }
 
     @Override
     @Op("^")
-    IntN xor(IntN n)
+    IntN xor(IntN! n)
         {
         return new IntN(this.bits ^ n.bits);
         }
@@ -236,7 +236,7 @@ const IntN
         }
 
     @Override
-    IntN pow(IntN n)
+    IntN pow(IntN! n)
         {
         IntN result = 1;
 

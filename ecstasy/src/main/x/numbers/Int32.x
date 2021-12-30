@@ -112,56 +112,56 @@ const Int32
 
     @Override
     @Op("+")
-    Int32 add(Int32 n)
+    Int32 add(Int32! n)
         {
         TODO return new Int32(bitAdd(bits, n.bits));
         }
 
     @Override
     @Op("-")
-    Int32 sub(Int32 n)
+    Int32 sub(Int32! n)
         {
         return this + ~n + 1;
         }
 
     @Override
     @Op("*")
-    Int32 mul(Int32 n)
+    Int32 mul(Int32! n)
         {
         return this * n;
         }
 
     @Override
     @Op("/")
-    Int32 div(Int32 n)
+    Int32 div(Int32! n)
         {
         return this / n;
         }
 
     @Override
     @Op("%")
-    Int32 mod(Int32 n)
+    Int32 mod(Int32! n)
         {
         return this % n;
         }
 
     @Override
     @Op("&")
-    Int32 and(Int32 n)
+    Int32 and(Int32! n)
         {
         return new Int32(this.bits & n.bits);
         }
 
     @Override
     @Op("|")
-    Int32 or(Int32 n)
+    Int32 or(Int32! n)
         {
         return new Int32(this.bits | n.bits);
         }
 
     @Override
     @Op("^")
-    Int32 xor(Int32 n)
+    Int32 xor(Int32! n)
         {
         return new Int32(this.bits ^ n.bits);
         }
@@ -257,7 +257,7 @@ const Int32
         }
 
     @Override
-    Int32 pow(Int32 n)
+    Int32 pow(Int32! n)
         {
         Int32 result = 1;
 

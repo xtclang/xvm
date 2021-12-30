@@ -121,49 +121,49 @@ const UInt8
     // ----- operations ----------------------------------------------------------------------------
 
     @Override
-    @Op("+") UInt8 add(UInt8 n)
+    @Op("+") UInt8 add(UInt8! n)
         {
         return this + n;
         }
 
     @Override
-    @Op("-") UInt8 sub(UInt8 n)
+    @Op("-") UInt8 sub(UInt8! n)
         {
         return this - n;
         }
 
     @Override
-    @Op("*") UInt8 mul(UInt8 n)
+    @Op("*") UInt8 mul(UInt8! n)
         {
         return this * n;
         }
 
     @Override
-    @Op("/") UInt8 div(UInt8 n)
+    @Op("/") UInt8 div(UInt8! n)
         {
         return this / n;
         }
 
     @Override
-    @Op("%") UInt8 mod(UInt8 n)
+    @Op("%") UInt8 mod(UInt8! n)
         {
         return this % n;
         }
 
     @Override
-    @Op("&") UInt8 and(UInt8 n)
+    @Op("&") UInt8 and(UInt8! n)
         {
         return new UInt8(this.bits & n.bits);
         }
 
     @Override
-    @Op("|") UInt8 or(UInt8 n)
+    @Op("|") UInt8 or(UInt8! n)
         {
         return new UInt8(this.bits | n.bits);
         }
 
     @Override
-    @Op("^") UInt8 xor(UInt8 n)
+    @Op("^") UInt8 xor(UInt8! n)
         {
         return new UInt8(this.bits ^ n.bits);
         }
@@ -249,7 +249,7 @@ const UInt8
         }
 
     @Override
-    UInt8 pow(UInt8 n)
+    UInt8 pow(UInt8! n)
         {
         UInt8 result = 1;
 

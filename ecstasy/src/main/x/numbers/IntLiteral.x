@@ -416,6 +416,8 @@ const IntLiteral(String text)
 
     /**
      * Convert the number to a variable-length signed integer.
+     *
+     * @return the variable-length signed integer value
      */
     @Auto IntN toIntN()
         {
@@ -423,8 +425,21 @@ const IntLiteral(String text)
         }
 
     /**
+     * Convert the number to an unchecked, variable-length signed integer.
+     *
+     * @return the unchecked, variable-length signed integer value
+     */
+    @Auto @Unchecked IntN toUncheckedIntN()
+        {
+        return toIntN().toUnchecked();
+        }
+
+    /**
      * Convert the number to a signed 8-bit integer.
-     * Any additional magnitude is discarded.
+     *
+     * @return the signed 8-bit integer value
+     *
+     * @throws OutOfBounds  if the resulting value is out of the signed 8-bit integer range
      */
     @Auto Int8 toInt8()
         {
@@ -432,8 +447,22 @@ const IntLiteral(String text)
         }
 
     /**
-     * Convert the number to a signed 16-bit integer.
+     * Convert the number to an unchecked, signed 8-bit integer.
      * Any additional magnitude is discarded.
+     *
+     * @return the signed 8-bit integer value
+     */
+    @Auto @Unchecked Int8 toUncheckedInt8()
+        {
+        return toIntN().toUnchecked().toInt8().toUnchecked();
+        }
+
+    /**
+     * Convert the number to a signed 16-bit integer.
+     *
+     * @return the signed 16-bit integer value
+     *
+     * @throws OutOfBounds  if the resulting value is out of the signed 16-bit integer range
      */
     @Auto Int16 toInt16()
         {
@@ -441,8 +470,22 @@ const IntLiteral(String text)
         }
 
     /**
-     * Convert the number to a signed 32-bit integer.
+     * Convert the number to an unchecked, signed 16-bit integer.
      * Any additional magnitude is discarded.
+     *
+     * @return the signed 16-bit integer value
+     */
+    @Auto @Unchecked Int16 toUncheckedInt16()
+        {
+        return toIntN().toUnchecked().toInt16().toUnchecked();
+        }
+
+    /**
+     * Convert the number to a signed 32-bit integer.
+     *
+     * @return the signed 32-bit integer value
+     *
+     * @throws OutOfBounds  if the resulting value is out of the signed 32-bit integer range
      */
     @Auto Int32 toInt32()
         {
@@ -450,8 +493,22 @@ const IntLiteral(String text)
         }
 
     /**
-     * Convert the number to a signed 64-bit integer.
+     * Convert the number to an unchecked, signed 32-bit integer.
      * Any additional magnitude is discarded.
+     *
+     * @return the signed 32-bit integer value
+     */
+    @Auto @Unchecked Int32 toUncheckedInt32()
+        {
+        return toIntN().toUnchecked().toInt32().toUnchecked();
+        }
+
+    /**
+     * Convert the number to a signed 64-bit integer.
+     *
+     * @return the signed 64-bit integer value
+     *
+     * @throws OutOfBounds  if the resulting value is out of the signed 64-bit integer range
      */
     @Auto Int64 toInt64()
         {
@@ -459,8 +516,22 @@ const IntLiteral(String text)
         }
 
     /**
-     * Convert the number to a signed 128-bit integer.
+     * Convert the number to an unchecked, signed 64-bit integer.
      * Any additional magnitude is discarded.
+     *
+     * @return the signed 64-bit integer value
+     */
+    @Auto @Unchecked Int64 toUncheckedInt64()
+        {
+        return toIntN().toUnchecked().toInt64().toUnchecked();
+        }
+
+    /**
+     * Convert the number to a signed 128-bit integer.
+     *
+     * @return the signed 128-bit integer value
+     *
+     * @throws OutOfBounds  if the resulting value is out of the signed 128-bit integer range
      */
     @Auto Int128 toInt128()
         {
@@ -468,7 +539,20 @@ const IntLiteral(String text)
         }
 
     /**
+     * Convert the number to an unchecked, signed 128-bit integer.
+     * Any additional magnitude is discarded.
+     *
+     * @return the signed 128-bit integer value
+     */
+    @Auto @Unchecked Int128 toUncheckedInt128()
+        {
+        return toIntN().toUnchecked().toInt128().toUnchecked();
+        }
+
+    /**
      * Convert the number to a variable-length unsigned integer.
+     *
+     * @return the variable-length unsigned integer value
      */
     @Auto UIntN toUIntN()
         {
@@ -476,8 +560,21 @@ const IntLiteral(String text)
         }
 
     /**
+     * Convert the number to an unchecked, variable-length unsigned integer.
+     *
+     * @return the unchecked, variable-length unsigned integer value
+     */
+    @Auto @Unchecked UIntN toUncheckedUIntN()
+        {
+        return toUIntN().toUnchecked();
+        }
+
+    /**
      * Convert the number to an unsigned 8-bit integer.
-     * Any additional magnitude is discarded.
+     *
+     * @return the unsigned 8-bit integer value
+     *
+     * @throws OutOfBounds  if the resulting value is out of the unsigned 8-bit integer range
      */
     @Auto UInt8 toUInt8()
         {
@@ -485,8 +582,22 @@ const IntLiteral(String text)
         }
 
     /**
-     * Convert the number to an unsigned 16-bit integer.
+     * Convert the number to an unchecked, unsigned 8-bit integer.
      * Any additional magnitude is discarded.
+     *
+     * @return the unsigned 8-bit integer value
+     */
+    @Auto @Unchecked UInt8 toUncheckedUInt8()
+        {
+        return toUIntN().toUnchecked().toUInt8().toUnchecked();
+        }
+
+    /**
+     * Convert the number to an unsigned 16-bit integer.
+     *
+     * @return the unsigned 16-bit integer value
+     *
+     * @throws OutOfBounds  if the resulting value is out of the unsigned 16-bit integer range
      */
     @Auto UInt16 toUInt16()
         {
@@ -494,8 +605,22 @@ const IntLiteral(String text)
         }
 
     /**
-     * Convert the number to an unsigned 32-bit integer.
+     * Convert the number to an unchecked, unsigned 16-bit integer.
      * Any additional magnitude is discarded.
+     *
+     * @return the unsigned 16-bit integer value
+     */
+    @Auto @Unchecked UInt16 toUncheckedUInt16()
+        {
+        return toUIntN().toUnchecked().toUInt16().toUnchecked();
+        }
+
+    /**
+     * Convert the number to an unsigned 32-bit integer.
+     *
+     * @return the unsigned 32-bit integer value
+     *
+     * @throws OutOfBounds  if the resulting value is out of the unsigned 32-bit integer range
      */
     @Auto UInt32 toUInt32()
         {
@@ -503,8 +628,22 @@ const IntLiteral(String text)
         }
 
     /**
-     * Convert the number to an unsigned 64-bit integer.
+     * Convert the number to an unchecked, unsigned 32-bit integer.
      * Any additional magnitude is discarded.
+     *
+     * @return the unsigned 32-bit integer value
+     */
+    @Auto @Unchecked UInt32 toUncheckedUInt32()
+        {
+        return toUIntN().toUnchecked().toUInt32().toUnchecked();
+        }
+
+    /**
+     * Convert the number to an unsigned 64-bit integer.
+     *
+     * @return the unsigned 64-bit integer value
+     *
+     * @throws OutOfBounds  if the resulting value is out of the unsigned 64-bit integer range
      */
     @Auto UInt64 toUInt64()
         {
@@ -512,12 +651,37 @@ const IntLiteral(String text)
         }
 
     /**
-     * Convert the number to an unsigned 128-bit integer.
+     * Convert the number to an unchecked, unsigned 64-bit integer.
      * Any additional magnitude is discarded.
+     *
+     * @return the unsigned 64-bit integer value
+     */
+    @Auto @Unchecked UInt64 toUncheckedUInt64()
+        {
+        return toUIntN().toUnchecked().toUInt64().toUnchecked();
+        }
+
+    /**
+     * Convert the number to an unsigned 128-bit integer.
+     *
+     * @return the unsigned 128-bit integer value
+     *
+     * @throws OutOfBounds  if the resulting value is out of the unsigned 128-bit integer range
      */
     @Auto UInt128 toUInt128()
         {
         return toIntN().toUInt128();
+        }
+
+    /**
+     * Convert the number to an unchecked, unsigned 128-bit integer.
+     * Any additional magnitude is discarded.
+     *
+     * @return the unsigned 128-bit integer value
+     */
+    @Auto @Unchecked UInt128 toUncheckedUInt128()
+        {
+        return toUIntN().toUnchecked().toUInt128().toUnchecked();
         }
 
     /**

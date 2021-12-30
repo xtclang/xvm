@@ -94,56 +94,56 @@ const UInt16
 
     @Override
     @Op("+")
-    UInt16 add(UInt16 n)
+    UInt16 add(UInt16! n)
         {
         return this + n;
         }
 
     @Override
     @Op("-")
-    UInt16 sub(UInt16 n)
+    UInt16 sub(UInt16! n)
         {
         return this - n;
         }
 
     @Override
     @Op("*")
-    UInt16 mul(UInt16 n)
+    UInt16 mul(UInt16! n)
         {
         return this * n;
         }
 
     @Override
     @Op("/")
-    UInt16 div(UInt16 n)
+    UInt16 div(UInt16! n)
         {
         return this / n;
         }
 
     @Override
     @Op("%")
-    UInt16 mod(UInt16 n)
+    UInt16 mod(UInt16! n)
         {
         return this % n;
         }
 
     @Override
     @Op("&")
-    UInt16 and(UInt16 n)
+    UInt16 and(UInt16! n)
         {
         return new UInt16(this.bits & n.bits);
         }
 
     @Override
     @Op("|")
-    UInt16 or(UInt16 n)
+    UInt16 or(UInt16! n)
         {
         return new UInt16(this.bits | n.bits);
         }
 
     @Override
     @Op("^")
-    UInt16 xor(UInt16 n)
+    UInt16 xor(UInt16! n)
         {
         return new UInt16(this.bits ^ n.bits);
         }
@@ -233,7 +233,7 @@ const UInt16
         }
 
     @Override
-    UInt16 pow(UInt16 n)
+    UInt16 pow(UInt16! n)
         {
         UInt16 result = 1;
 

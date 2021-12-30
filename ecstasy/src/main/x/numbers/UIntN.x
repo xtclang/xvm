@@ -70,56 +70,56 @@ const UIntN
 
     @Override
     @Op("+")
-    UIntN add(UIntN n)
+    UIntN add(UIntN! n)
         {
         return this + n;
         }
 
     @Override
     @Op("-")
-    UIntN sub(UIntN n)
+    UIntN sub(UIntN! n)
         {
         return this - n;
         }
 
     @Override
     @Op("*")
-    UIntN mul(UIntN n)
+    UIntN mul(UIntN! n)
         {
         return this * n;
         }
 
     @Override
     @Op("/")
-    UIntN div(UIntN n)
+    UIntN div(UIntN! n)
         {
         return this / n;
         }
 
     @Override
     @Op("%")
-    UIntN mod(UIntN n)
+    UIntN mod(UIntN! n)
         {
         return this % n;
         }
 
     @Override
     @Op("&")
-    UIntN and(UIntN n)
+    UIntN and(UIntN! n)
         {
         return new UIntN(this.bits & n.bits);
         }
 
     @Override
     @Op("|")
-    UIntN or(UIntN n)
+    UIntN or(UIntN! n)
         {
         return new UIntN(this.bits | n.bits);
         }
 
     @Override
     @Op("^")
-    UIntN xor(UIntN n)
+    UIntN xor(UIntN! n)
         {
         return new UIntN(this.bits ^ n.bits);
         }
@@ -209,7 +209,7 @@ const UIntN
         }
 
     @Override
-    UIntN pow(UIntN n)
+    UIntN pow(UIntN! n)
         {
         UIntN result = 1;
 

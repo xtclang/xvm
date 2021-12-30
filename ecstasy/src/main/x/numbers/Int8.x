@@ -112,56 +112,56 @@ const Int8
 
     @Override
     @Op("+")
-    Int8 add(Int8 n)
+    Int8 add(Int8! n)
         {
         TODO return new Int8(bitAdd(bits, n.bits));
         }
 
     @Override
     @Op("-")
-    Int8 sub(Int8 n)
+    Int8 sub(Int8! n)
         {
         return this + ~n + 1;
         }
 
     @Override
     @Op("*")
-    Int8 mul(Int8 n)
+    Int8 mul(Int8! n)
         {
         return this * n;
         }
 
     @Override
     @Op("/")
-    Int8 div(Int8 n)
+    Int8 div(Int8! n)
         {
         return this / n;
         }
 
     @Override
     @Op("%")
-    Int8 mod(Int8 n)
+    Int8 mod(Int8! n)
         {
         return this % n;
         }
 
     @Override
     @Op("&")
-    Int8 and(Int8 n)
+    Int8 and(Int8! n)
         {
         return new Int8(this.bits & n.bits);
         }
 
     @Override
     @Op("|")
-    Int8 or(Int8 n)
+    Int8 or(Int8! n)
         {
         return new Int8(this.bits | n.bits);
         }
 
     @Override
     @Op("^")
-    Int8 xor(Int8 n)
+    Int8 xor(Int8! n)
         {
         return new Int8(this.bits ^ n.bits);
         }
@@ -257,7 +257,7 @@ const Int8
         }
 
     @Override
-    Int8 pow(Int8 n)
+    Int8 pow(Int8! n)
         {
         Int8 result = 1;
 

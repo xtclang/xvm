@@ -94,56 +94,56 @@ const UInt128
 
     @Override
     @Op("+")
-    UInt128 add(UInt128 n)
+    UInt128 add(UInt128! n)
         {
         return this + n;
         }
 
     @Override
     @Op("-")
-    UInt128 sub(UInt128 n)
+    UInt128 sub(UInt128! n)
         {
         return this - n;
         }
 
     @Override
     @Op("*")
-    UInt128 mul(UInt128 n)
+    UInt128 mul(UInt128! n)
         {
         return this * n;
         }
 
     @Override
     @Op("/")
-    UInt128 div(UInt128 n)
+    UInt128 div(UInt128! n)
         {
         return this / n;
         }
 
     @Override
     @Op("%")
-    UInt128 mod(UInt128 n)
+    UInt128 mod(UInt128! n)
         {
         return this % n;
         }
 
     @Override
     @Op("&")
-    UInt128 and(UInt128 n)
+    UInt128 and(UInt128! n)
         {
         return new UInt128(this.bits & n.bits);
         }
 
     @Override
     @Op("|")
-    UInt128 or(UInt128 n)
+    UInt128 or(UInt128! n)
         {
         return new UInt128(this.bits | n.bits);
         }
 
     @Override
     @Op("^")
-    UInt128 xor(UInt128 n)
+    UInt128 xor(UInt128! n)
         {
         return new UInt128(this.bits ^ n.bits);
         }
@@ -233,7 +233,7 @@ const UInt128
         }
 
     @Override
-    UInt128 pow(UInt128 n)
+    UInt128 pow(UInt128! n)
         {
         UInt128 result = 1;
 

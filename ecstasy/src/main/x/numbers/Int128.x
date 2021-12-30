@@ -112,56 +112,56 @@ const Int128
 
     @Override
     @Op("+")
-    Int128 add(Int128 n)
+    Int128 add(Int128! n)
         {
         TODO return new Int128(bitAdd(bits, n.bits));
         }
 
     @Override
     @Op("-")
-    Int128 sub(Int128 n)
+    Int128 sub(Int128! n)
         {
         return this + ~n + 1;
         }
 
     @Override
     @Op("*")
-    Int128 mul(Int128 n)
+    Int128 mul(Int128! n)
         {
         return this * n;
         }
 
     @Override
     @Op("/")
-    Int128 div(Int128 n)
+    Int128 div(Int128! n)
         {
         return this / n;
         }
 
     @Override
     @Op("%")
-    Int128 mod(Int128 n)
+    Int128 mod(Int128! n)
         {
         return this % n;
         }
 
     @Override
     @Op("&")
-    Int128 and(Int128 n)
+    Int128 and(Int128! n)
         {
         return new Int128(this.bits & n.bits);
         }
 
     @Override
     @Op("|")
-    Int128 or(Int128 n)
+    Int128 or(Int128! n)
         {
         return new Int128(this.bits | n.bits);
         }
 
     @Override
     @Op("^")
-    Int128 xor(Int128 n)
+    Int128 xor(Int128! n)
         {
         return new Int128(this.bits ^ n.bits);
         }
@@ -257,7 +257,7 @@ const Int128
         }
 
     @Override
-    Int128 pow(Int128 n)
+    Int128 pow(Int128! n)
         {
         Int128 result = 1;
 
