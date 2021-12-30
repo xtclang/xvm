@@ -22,7 +22,7 @@ class HashMap<Key extends Hashable, Value>
     construct(Int initCapacity = 0)
         {
         assert Hasher<Key> hasher := Key.hashed();
-        construct HasherMap(hasher, initCapacity);
+        construct HashMap(hasher, initCapacity);
         }
 
     /**
@@ -44,5 +44,17 @@ class HashMap<Key extends Hashable, Value>
     construct(HashMap<Key, Value> that)
         {
         construct HasherMap(that);
+        }
+
+    /**
+     * [HasherMap] virtual constructor: Construct the HashMap with the specified hasher and
+     * (optional) initial capacity.
+     *
+     * @param hasher        the [Hasher] to use
+     * @param initCapacity  the number of expected entries
+     */
+    construct(Hasher<Key> hasher, Int initCapacity = 0)
+        {
+        construct HasherMap(hasher, initCapacity);
         }
     }

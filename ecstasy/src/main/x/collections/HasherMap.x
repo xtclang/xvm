@@ -13,6 +13,7 @@ import maps.KeyEntry;
  * the creation of the iterator.
  */
 class HasherMap<Key, Value>
+        implements HasherReplicable<Key>
         implements CopyableMap<Key, Value>
         incorporates conditional MapFreezer<Key extends immutable Object, Value extends Shareable>
     {
@@ -148,6 +149,25 @@ class HasherMap<Key, Value>
         }
 
 
+    // ----- HasherReplicable interface ------------------------------------------------------------
+
+    /**
+     * This is the equivalent of the [Replicable] interface, but specific to the HasherMap, because
+     * it requires a Hasher for its construction. It allows a HasherMap to replicate itself without
+     * having to resort to reflection, and enforces the contract on sub-classes.
+     */
+    static interface HasherReplicable<Key>
+        {
+        /**
+         * Construct the HasherMap with the specified hasher and (optional) initial capacity.
+         *
+         * @param hasher        the [Hasher] to use
+         * @param initCapacity  the number of expected entries
+         */
+        construct(Hasher<Key> hasher, Int initCapacity = 0);
+        }
+
+
     // ----- Duplicable interface ------------------------------------------------------------------
 
     @Override
@@ -163,13 +183,7 @@ class HasherMap<Key, Value>
             return this.new(this);
             }
 
-        // TODO CP this implementation is not virtual
-        assert &this.actualClass == HasherMap;
-
-        HasherMap<Key, Value> that = inPlace
-                ? new HasherMap(hasher, size)
-                : clear();
-
+        HasherMap<Key, Value> that = this.new(hasher);
         for ((Key key, Value value) : this)
             {
             (key, value) = transform(key, value); // TODO GG: inline
