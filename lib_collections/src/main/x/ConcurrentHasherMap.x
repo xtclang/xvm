@@ -461,8 +461,18 @@ const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
         {
         // ----- constructors ----------------------------------------------------------------------
 
-        construct(Hasher<Key> hasher, Int initCapacity, Int partitionCount)
+        /**
+         * [HasherReplicable] virtual constructor: Construct the Partition with the specified hasher
+         * and (optional) initial capacity.
+         *
+         * @param hasher          the [Hasher] to use
+         * @param initCapacity    the number of expected entries
+         * @param partitionCount  the number of partitions (must be specified)
+         */
+        construct(Hasher<Key> hasher, Int initCapacity = 0, Int partitionCount = 0)
             {
+            assert partitionCount > 0 as "Partition count must be specified";
+
             this.partitionCount = partitionCount;
             construct HasherMap(hasher, initCapacity);
             }

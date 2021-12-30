@@ -575,6 +575,8 @@ module TestMaps
     service SafeHashMap<Key, Value>
             extends HashMap<Key, Value>
         {
+        import ecstasy.collections.Hasher;
+
         /**
          * Replicable constructor.
          */
@@ -589,6 +591,14 @@ module TestMaps
         construct(SafeHashMap<Key, Value> that)
             {
             construct HashMap(that);
+            }
+
+        /**
+         * [HasherReplicable] virtual constructor.
+         */
+        construct(Hasher<Key> hasher, Int initCapacity = 0)
+            {
+            construct HashMap(hasher, initCapacity);
             }
         }
 
