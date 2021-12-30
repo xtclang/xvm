@@ -7,11 +7,25 @@ const CaseInsensitiveHasher
     @Override
     Int hashOf(String value)
         {
-        Int hash = 0;
-        for (Char c : value.toCharArray())
+        @Unchecked Int hash = 982_451_653;      // start with a prime number
+
+        Int len  = value.size;
+        if (len <= 0x40)
             {
-            hash += c.lowercase.toInt64();
+            for (Char c : value)
+                {
+                hash = hash * 31 + c.lowercase.toInt64();
+                }
             }
+        else
+            {
+            // just sample ~60 characters from across the entire length of the string
+            for (Int offset = 0, Int step = (len >>> 6) + 1; offset < len; offset += step)
+                {
+                hash = hash * 31 + value[offset].lowercase.toInt64();
+                }
+            }
+
         return hash;
         }
 
