@@ -141,8 +141,8 @@ public abstract class Component
     protected Component(XvmStructure xsParent, int nFlags, IdentityConstant constId, ConditionalConstant condition)
         {
         super(xsParent);
-        assert (xsParent == null) == (this instanceof FileStructure);   // file doesn't have parent
-        assert (constId == null) == (this instanceof FileStructure);    // file doesn't have constid
+        assert (xsParent == null) == (this instanceof FileStructure);   // file doesn't have a parent
+        assert (constId == null) == (this instanceof FileStructure);    // file doesn't have constId
         assert condition == null || !(this instanceof FileStructure);   // file can't be conditional
 
         if (constId != null)
@@ -737,7 +737,7 @@ public abstract class Component
         {
         if (!isSiblingAllowed())
             {
-            return new Iterator()
+            return new Iterator<>()
                 {
                 private boolean first = true;
 
@@ -761,7 +761,7 @@ public abstract class Component
                 };
             }
 
-        return new Iterator<Component>()
+        return new Iterator<>()
             {
             private Component nextSibling = getEldestSibling();
 
@@ -2091,9 +2091,16 @@ public abstract class Component
             if (typeContrib.isVirtualChild())
                 {
                 // check the parent's formal type
-                TypeConstant typeFormal = typeContrib.getParentType().resolveGenericType(sName);
+                TypeConstant typeParent = typeContrib.getParentType();
+                TypeConstant typeFormal = typeParent.resolveGenericType(sName);
                 if (typeFormal != null)
                     {
+                    if (!typeFormal.isGenericType())
+                        {
+                        ClassStructure clzParent = (ClassStructure)
+                                typeParent.getSingleUnderlyingClass(true).getComponent();
+                        typeFormal = clzParent.getFormalType().resolveGenericType(sName);
+                        }
                     collector.resolvedConstant(typeFormal.getDefiningConstant());
                     return ResolutionResult.RESOLVED;
                     }
