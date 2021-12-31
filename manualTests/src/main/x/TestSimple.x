@@ -13,6 +13,10 @@ module TestSimple.test.org
         map.put("hello", "world");
         map.put("Hello", "World");
         map.put("hELLO", "wORLD");
+
+        map.put("hello this is a long string of characters that is at least 64 characters long! yay 12345!", "first");
+        map.put("Hello this is a long string of characters that is at least 64 characters long! yay 12345!", "second");
+        map.put("hello this is a LONG string of characters that is at least 64 characters long! yay 12345!", "third");
         console.println($"map={map}");
         }
     }

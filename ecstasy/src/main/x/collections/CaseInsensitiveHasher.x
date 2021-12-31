@@ -7,7 +7,9 @@ const CaseInsensitiveHasher
     @Override
     Int hashOf(String value)
         {
-        @Unchecked Int hash = 982_451_653;      // start with a prime number
+        // TODO GG @Unchecked Int hash = 982_451_653;      // start with a prime number
+        Int seed = 982_451_653;
+        @Unchecked Int hash = seed.toUnchecked();
 
         Int len  = value.size;
         if (len <= 0x40)
@@ -43,7 +45,7 @@ const CaseInsensitiveHasher
             {
             if (Char c2 := it2.next())
                 {
-                return c1.lowercase == c2.lowercase;
+                return c1 == c2 || c1.lowercase == c2.lowercase;
                 }
             else
                 {
