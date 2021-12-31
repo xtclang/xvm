@@ -68,22 +68,34 @@ public class xIntLiteral
 
         markNativeMethod("toString", VOID, STRING);
 
-        markNativeMethod("toInt8"    , VOID, new String[]{"numbers.Int8"});
-        markNativeMethod("toInt16"   , VOID, new String[]{"numbers.Int16"});
-        markNativeMethod("toInt32"   , VOID, new String[]{"numbers.Int32"});
-        markNativeMethod("toInt64"   , VOID, new String[]{"numbers.Int64"});
-        markNativeMethod("toInt128"  , VOID, new String[]{"numbers.Int128"});
+        markNativeMethod("toInt8"            , VOID, new String[]{"numbers.Int8"});
+        markNativeMethod("toUncheckedInt8"   , VOID, new String[]{"@annotations.UncheckedInt numbers.Int8"});
+        markNativeMethod("toInt16"           , VOID, new String[]{"numbers.Int16"});
+        markNativeMethod("toUncheckedInt16"  , VOID, new String[]{"@annotations.UncheckedInt numbers.Int16"});
+        markNativeMethod("toInt32"           , VOID, new String[]{"numbers.Int32"});
+        markNativeMethod("toUncheckedInt32"  , VOID, new String[]{"@annotations.UncheckedInt numbers.Int32"});
+        markNativeMethod("toInt64"           , VOID, new String[]{"numbers.Int64"});
+        markNativeMethod("toUncheckedInt64"  , VOID, new String[]{"@annotations.UncheckedInt numbers.Int64"});
+        markNativeMethod("toInt128"          , VOID, new String[]{"numbers.Int128"});
+        markNativeMethod("toUncheckedInt128" , VOID, new String[]{"@annotations.UncheckedInt numbers.Int128"});
 
-        markNativeMethod("toUInt8"    , VOID, new String[]{"numbers.UInt8"});
-        markNativeMethod("toUInt16"  , VOID, new String[]{"numbers.UInt16"});
-        markNativeMethod("toUInt32"  , VOID, new String[]{"numbers.UInt32"});
-        markNativeMethod("toUInt64"  , VOID, new String[]{"numbers.UInt64"});
-        markNativeMethod("toUInt128" , VOID, new String[]{"numbers.UInt128"});
+        markNativeMethod("toUInt8"           , VOID, new String[]{"numbers.UInt8"});
+        markNativeMethod("toUncheckedUInt8"  , VOID, new String[]{"@annotations.UncheckedInt numbers.UInt8"});
+        markNativeMethod("toUInt16"          , VOID, new String[]{"numbers.UInt16"});
+        markNativeMethod("toUncheckedUInt16" , VOID, new String[]{"@annotations.UncheckedInt numbers.UInt16"});
+        markNativeMethod("toUInt32"          , VOID, new String[]{"numbers.UInt32"});
+        markNativeMethod("toUncheckedUInt32" , VOID, new String[]{"@annotations.UncheckedInt numbers.UInt32"});
+        markNativeMethod("toUInt64"          , VOID, new String[]{"numbers.UInt64"});
+        markNativeMethod("toUncheckedUInt64" , VOID, new String[]{"@annotations.UncheckedInt numbers.UInt64"});
+        markNativeMethod("toUInt128"         , VOID, new String[]{"numbers.UInt128"});
+        markNativeMethod("toUncheckedUInt128", VOID, new String[]{"@annotations.UncheckedInt numbers.UInt128"});
 
-        markNativeMethod("toIntN"  , VOID, new String[]{"numbers.IntN"});
-        markNativeMethod("toUIntN" , VOID, new String[]{"numbers.UIntN"});
-        markNativeMethod("toFloatN", VOID, new String[]{"numbers.FloatN"});
-        markNativeMethod("toDecN"  , VOID, new String[]{"numbers.DecN"});
+        markNativeMethod("toIntN"            , VOID, new String[]{"numbers.IntN"});
+        markNativeMethod("toUncheckedIntN"   , VOID, new String[]{"@annotations.UncheckedInt numbers.IntN"});
+        markNativeMethod("toUIntN"           , VOID, new String[]{"numbers.UIntN"});
+        markNativeMethod("toUncheckedUIntN"  , VOID, new String[]{"@annotations.UncheckedInt numbers.UIntN"});
+        markNativeMethod("toFloatN"          , VOID, new String[]{"numbers.FloatN"});
+        markNativeMethod("toDecN"            , VOID, new String[]{"numbers.DecN"});
 
         getCanonicalType().invalidateTypeInfo();
         }
@@ -317,22 +329,36 @@ public class xIntLiteral
                 return invokeCompl(frame, hTarget, iReturn);
 
             case "toInt8":
+            case "toUncheckedInt8":
             case "toInt16":
+            case "toUncheckedInt16":
             case "toInt32":
+            case "toUncheckedInt32":
             case "toInt64":
+            case "toUncheckedInt64":
             case "toInt128":
+            case "toUncheckedInt128":
             case "toUInt8":
+            case "toUncheckedUInt8":
             case "toUInt16":
+            case "toUncheckedUInt16":
             case "toUInt32":
+            case "toUncheckedUInt32":
             case "toUInt64":
+            case "toUncheckedUInt64":
             case "toUInt128":
+            case "toUncheckedUInt128":
             case "toIntN":
+            case "toUncheckedIntN":
             case "toUIntN":
+            case "toUncheckedUIntN":
             case "toFloatN":
             case "toDecN":
                 TypeConstant  typeRet  = method.getReturn(0).getType();
                 ClassTemplate template = f_templates.getTemplate(typeRet);
                 PackedInteger piValue  = hLiteral.getValue();
+
+                // REVIEW GG for unchecked use case
 
                 if (template instanceof xConstrainedInteger)
                     {
