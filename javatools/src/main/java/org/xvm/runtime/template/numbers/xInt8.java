@@ -3,7 +3,7 @@ package org.xvm.runtime.template.numbers;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
-import org.xvm.asm.constants.Int8Constant;
+import org.xvm.asm.constants.ByteConstant;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.TemplateRegistry;
@@ -49,10 +49,10 @@ public class xInt8
     @Override
     public int createConstHandle(Frame frame, Constant constant)
         {
-        if (constant instanceof Int8Constant)
+        if (constant instanceof ByteConstant)
             {
             return frame.pushStack(
-                    makeJavaLong(((Int8Constant) constant).getValue().longValue()));
+                    makeJavaLong(((ByteConstant) constant).getValue().longValue()));
             }
 
         return super.createConstHandle(frame, constant);

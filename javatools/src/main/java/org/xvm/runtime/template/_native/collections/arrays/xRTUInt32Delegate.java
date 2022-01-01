@@ -42,7 +42,7 @@ public class xRTUInt32Delegate
         ConstantPool pool = pool();
         return pool.ensureParameterizedTypeConstant(
                 getInceptionClassConstant().getType(),
-                pool.ensureEcstasyTypeConstant("numbers.UInt32"));
+                pool.typeCUInt32());
         }
 
     @Override

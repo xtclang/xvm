@@ -1234,7 +1234,7 @@ public class CaseManager<CookieType>
                 }
 
             if (usesJmpInt() && (!getJmpIntOffset().equals(PackedInteger.ZERO)
-                    || !exprCond.getType().isA(pool().typeInt())))
+                    || !exprCond.getType().isA(pool().typeCInt64())))
                 {
                 // either the offset is non-zero of the type is non-int; either way, convert it to a
                 // zero-based int

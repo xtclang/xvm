@@ -18,7 +18,7 @@ import org.xvm.asm.constants.RangeConstant;
 import org.xvm.asm.constants.LiteralConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
-import org.xvm.asm.constants.UInt8Constant;
+import org.xvm.asm.constants.ByteConstant;
 
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
@@ -206,7 +206,7 @@ public class xConst
 
         if (constant.getFormat() == Format.Nibble)
             {
-            byte[] abValue = new byte[] {(byte) (((UInt8Constant) constant).getValue().byteValue() << 4)};
+            byte[] abValue = new byte[] {(byte) (((ByteConstant) constant).getValue().byteValue() << 4)};
 
             ObjectHandle[] ahArg = new ObjectHandle[NIBBLE_CONSTRUCT.getMaxVars()];
             ahArg[0] = xArray.makeBitArrayHandle(abValue, 4, Mutability.Constant);

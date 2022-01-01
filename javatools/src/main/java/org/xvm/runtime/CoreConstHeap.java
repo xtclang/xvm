@@ -43,17 +43,29 @@ public class CoreConstHeap
             case IntLiteral:
             case Bit:
             case Nibble:
+            case CInt8:
             case Int8:
+            case CInt16:
             case Int16:
+            case CInt32:
             case Int32:
+            case CInt64:
             case Int64:
+            case CInt128:
             case Int128:
+            case CIntN:
             case IntN:
+            case CUInt8:
             case UInt8:
+            case CUInt16:
             case UInt16:
+            case CUInt32:
             case UInt32:
+            case CUInt64:
             case UInt64:
+            case CUInt128:
             case UInt128:
+            case CUIntN:
             case UIntN:
             case FPLiteral:
             case BFloat16:

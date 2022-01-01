@@ -280,7 +280,7 @@ public class ForEachStatement
                 {
                 case "first":
                 case "last" : type = pool.typeBoolean()      ; break;
-                case "count": type = pool.typeInt()          ; break;
+                case "count": type = pool.typeCInt64()          ; break;
                 case "entry": type = getEntryType()          ; break;
                 case "Key"  : type = getKeyType().getType()  ; break;
                 case "Value": type = getValueType().getType(); break;
@@ -832,11 +832,11 @@ public class ForEachStatement
         Register regCount = m_regCount;
         if (regCount == null)
             {
-            code.add(new Var_I(pool.typeInt(), pool.val0()));
+            code.add(new Var_I(pool.typeCInt64(), pool.val0()));
             regCount = code.lastRegister();
             }
 
-        code.add((new Var(pool.typeInt())));
+        code.add((new Var(pool.typeCInt64())));
         Register regEnd = code.lastRegister();
 
         code.add(new Var(typeSeq));
@@ -844,7 +844,7 @@ public class ForEachStatement
         m_exprRValue.generateAssignment(ctx, code, m_exprRValue.new Assignable(regSeq), errs);
 
         code.add(new P_Get(idSize, regSeq, regEnd));
-        code.add(new JumpGte(regCount, regEnd, getEndLabel(), pool.typeInt()));
+        code.add(new JumpGte(regCount, regEnd, getEndLabel(), pool.typeCInt64()));
         code.add(new IP_Dec(regEnd));
 
         Assignable lvalVal  = m_exprLValue.generateAssignable(ctx, code, errs);
@@ -862,7 +862,7 @@ public class ForEachStatement
 
         Label lblRepeat = new Label("repeat_foreach_" + getLabelId());
         code.add(lblRepeat);
-        code.add(new IsEq(regCount, regEnd, regLast, pool.typeInt()));
+        code.add(new IsEq(regCount, regEnd, regLast, pool.typeCInt64()));
 
         code.add(new I_Get(regSeq, regCount, argVal));
         if (fTempVal)

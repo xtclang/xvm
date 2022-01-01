@@ -98,17 +98,30 @@ public class LiteralExpression
                 return pool.typeFPLiteral();
 
             case LIT_INT8:
+                return pool.typeCInt8();
             case LIT_INT16:
+                return pool.typeCInt16();
             case LIT_INT32:
+                return pool.typeCInt32();
             case LIT_INT64:
+                return pool.typeCInt64();
             case LIT_INT128:
+                return pool.typeCInt128();
             case LIT_INTN:
+                return pool.typeCIntN();
             case LIT_UINT8:
+                return pool.typeCUInt8();
             case LIT_UINT16:
+                return pool.typeCUInt16();
             case LIT_UINT32:
+                return pool.typeCUInt32();
             case LIT_UINT64:
+                return pool.typeCUInt64();
             case LIT_UINT128:
+                return pool.typeCUInt128();
             case LIT_UINTN:
+                return pool.typeCUIntN();
+
             case LIT_DEC32:
             case LIT_DEC64:
             case LIT_DEC128:
@@ -278,51 +291,51 @@ public class LiteralExpression
                 break;
 
             case LIT_INT8:
-                format = Format.Int8;
+                format = Format.CInt8;
                 break;
 
             case LIT_INT16:
-                format = Format.Int16;
+                format = Format.CInt16;
                 break;
 
             case LIT_INT32:
-                format = Format.Int32;
+                format = Format.CInt32;
                 break;
 
             case LIT_INT64:
-                format = Format.Int64;
+                format = Format.CInt64;
                 break;
 
             case LIT_INT128:
-                format = Format.Int128;
+                format = Format.CInt128;
                 break;
 
             case LIT_INTN:
-                format = Format.IntN;
+                format = Format.CIntN;
                 break;
 
             case LIT_UINT8:
-                format = Format.UInt8;
+                format = Format.CUInt8;
                 break;
 
             case LIT_UINT16:
-                format = Format.UInt16;
+                format = Format.CUInt16;
                 break;
 
             case LIT_UINT32:
-                format = Format.UInt32;
+                format = Format.CUInt32;
                 break;
 
             case LIT_UINT64:
-                format = Format.UInt64;
+                format = Format.CUInt64;
                 break;
 
             case LIT_UINT128:
-                format = Format.UInt128;
+                format = Format.CUInt128;
                 break;
 
             case LIT_UINTN:
-                format = Format.UIntN;
+                format = Format.CUIntN;
                 break;
 
             case LIT_DEC:

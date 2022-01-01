@@ -30,7 +30,7 @@ public abstract class ValueConstant
     public TypeConstant getType()
         {
         // default implementation assumes that the Ecstasy class name is the same as the format name
-        return getConstantPool().ensureEcstasyTypeConstant(getFormat().getEcstasyName());
+        return getFormat().getType(getConstantPool());
         }
 
     /**

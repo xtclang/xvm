@@ -14,7 +14,6 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
 import org.xvm.compiler.Token;
-import org.xvm.compiler.Token.Id;
 
 import org.xvm.type.Decimal;
 import org.xvm.type.Decimal128;
@@ -411,7 +410,7 @@ public class LiteralConstant
      *
      * @throws ArithmeticException  on overflow
      */
-    public UInt8Constant toBitConstant()
+    public ByteConstant toBitConstant()
         {
         if (getFormat() != Format.IntLiteral)
             {
@@ -435,7 +434,7 @@ public class LiteralConstant
      *
      * @throws ArithmeticException  on overflow
      */
-    public UInt8Constant toNibbleConstant()
+    public ByteConstant toNibbleConstant()
         {
         if (getFormat() != Format.IntLiteral)
             {
@@ -452,14 +451,14 @@ public class LiteralConstant
         }
 
     /**
-     * Convert the LiteralConstant to an Int8Constant, iff the LiteralConstant is an IntLiteral
-     * whose value is in the range -128..127.
+     * Convert the LiteralConstant to an CInt8 ByteConstant, iff the LiteralConstant is an
+     * IntLiteral whose value is in the range -128..127.
      *
-     * @return an Int8Constant
+     * @return a CInt8 ByteConstant
      *
      * @throws ArithmeticException  on overflow
      */
-    public Int8Constant toInt8Constant()
+    public ByteConstant toCInt8Constant()
         {
         if (getFormat() != Format.IntLiteral)
             {
@@ -472,18 +471,18 @@ public class LiteralConstant
             throw new ArithmeticException("out of range: " + pi);
             }
 
-        return getConstantPool().ensureInt8Constant(pi.getInt());
+        return getConstantPool().ensureByteConstant(Format.CInt8, pi.getInt());
         }
 
     /**
-     * Convert the LiteralConstant to an UInt8Constant, iff the LiteralConstant is an IntLiteral
-     * whose value is in the range 0..255.
+     * Convert the LiteralConstant to an CUInt8 ByteConstant, iff the LiteralConstant is an
+     * IntLiteral whose value is in the range 0..255.
      *
-     * @return a UInt8Constant
+     * @return a CUInt8 ByteConstant
      *
      * @throws ArithmeticException  on overflow
      */
-    public UInt8Constant toUInt8Constant()
+    public ByteConstant toCUInt8Constant()
         {
         if (getFormat() != Format.IntLiteral)
             {
@@ -496,7 +495,7 @@ public class LiteralConstant
             throw new ArithmeticException("out of range: " + pi);
             }
 
-        return getConstantPool().ensureUInt8Constant(pi.getInt());
+        return getConstantPool().ensureByteConstant(Format.CUInt8, pi.getInt());
         }
 
     /**
@@ -697,24 +696,6 @@ public class LiteralConstant
         }
 
     @Override
-    public TypeConstant resultType(Id op, Constant that)
-        {
-        // order of automatic type promotion is from IntLiteral to FPLiteral to any "actual" types
-        if (this.getFormat() == Format.IntLiteral && that.getFormat() != Format.IntLiteral)
-            {
-            return that.getType();
-            }
-
-        if (this.getFormat() == Format.FPLiteral && that.getFormat() != Format.IntLiteral
-                                                 && that.getFormat() != Format.FPLiteral)
-            {
-            return that.getType();
-            }
-
-        return super.resultType(op, that);
-        }
-
-    @Override
     public Constant apply(Token.Id op, Constant that)
         {
         ConstantPool pool = getConstantPool();
@@ -867,6 +848,22 @@ public class LiteralConstant
                 return translateOrder(nOrd, op);
                 }
 
+            case "IntLiteral+CInt8":
+            case "IntLiteral-CInt8":
+            case "IntLiteral*CInt8":
+            case "IntLiteral/CInt8":
+            case "IntLiteral%CInt8":
+            case "IntLiteral&CInt8":
+            case "IntLiteral|CInt8":
+            case "IntLiteral^CInt8":
+            case "IntLiteral==CInt8":
+            case "IntLiteral!=CInt8":
+            case "IntLiteral<CInt8":
+            case "IntLiteral<=CInt8":
+            case "IntLiteral>CInt8":
+            case "IntLiteral>=CInt8":
+            case "IntLiteral<=>CInt8":
+
             case "IntLiteral+Int8":
             case "IntLiteral-Int8":
             case "IntLiteral*Int8":
@@ -882,7 +879,23 @@ public class LiteralConstant
             case "IntLiteral>Int8":
             case "IntLiteral>=Int8":
             case "IntLiteral<=>Int8":
-                return this.toInt8Constant().apply(op, that);
+                return this.toCInt8Constant().apply(op, that);
+
+            case "IntLiteral+CUInt8":
+            case "IntLiteral-CUInt8":
+            case "IntLiteral*CUInt8":
+            case "IntLiteral/CUInt8":
+            case "IntLiteral%CUInt8":
+            case "IntLiteral&CUInt8":
+            case "IntLiteral|CUInt8":
+            case "IntLiteral^CUInt8":
+            case "IntLiteral==CUInt8":
+            case "IntLiteral!=CUInt8":
+            case "IntLiteral<CUInt8":
+            case "IntLiteral<=CUInt8":
+            case "IntLiteral>CUInt8":
+            case "IntLiteral>=CUInt8":
+            case "IntLiteral<=>CUInt8":
 
             case "IntLiteral+UInt8":
             case "IntLiteral-UInt8":
@@ -899,7 +912,167 @@ public class LiteralConstant
             case "IntLiteral>UInt8":
             case "IntLiteral>=UInt8":
             case "IntLiteral<=>UInt8":
-                return this.toUInt8Constant().apply(op, that);
+                return this.toCUInt8Constant().apply(op, that);
+
+            case "IntLiteral+CInt16":
+            case "IntLiteral-CInt16":
+            case "IntLiteral*CInt16":
+            case "IntLiteral/CInt16":
+            case "IntLiteral%CInt16":
+            case "IntLiteral&CInt16":
+            case "IntLiteral|CInt16":
+            case "IntLiteral^CInt16":
+            case "IntLiteral==CInt16":
+            case "IntLiteral!=CInt16":
+            case "IntLiteral<CInt16":
+            case "IntLiteral<=CInt16":
+            case "IntLiteral>CInt16":
+            case "IntLiteral>=CInt16":
+            case "IntLiteral<=>CInt16":
+
+            case "IntLiteral+CInt32":
+            case "IntLiteral-CInt32":
+            case "IntLiteral*CInt32":
+            case "IntLiteral/CInt32":
+            case "IntLiteral%CInt32":
+            case "IntLiteral&CInt32":
+            case "IntLiteral|CInt32":
+            case "IntLiteral^CInt32":
+            case "IntLiteral==CInt32":
+            case "IntLiteral!=CInt32":
+            case "IntLiteral<CInt32":
+            case "IntLiteral<=CInt32":
+            case "IntLiteral>CInt32":
+            case "IntLiteral>=CInt32":
+            case "IntLiteral<=>CInt32":
+
+            case "IntLiteral+CInt64":
+            case "IntLiteral-CInt64":
+            case "IntLiteral*CInt64":
+            case "IntLiteral/CInt64":
+            case "IntLiteral%CInt64":
+            case "IntLiteral&CInt64":
+            case "IntLiteral|CInt64":
+            case "IntLiteral^CInt64":
+            case "IntLiteral==CInt64":
+            case "IntLiteral!=CInt64":
+            case "IntLiteral<CInt64":
+            case "IntLiteral<=CInt64":
+            case "IntLiteral>CInt64":
+            case "IntLiteral>=CInt64":
+            case "IntLiteral<=>CInt64":
+
+            case "IntLiteral+CInt128":
+            case "IntLiteral-CInt128":
+            case "IntLiteral*CInt128":
+            case "IntLiteral/CInt128":
+            case "IntLiteral%CInt128":
+            case "IntLiteral&CInt128":
+            case "IntLiteral|CInt128":
+            case "IntLiteral^CInt128":
+            case "IntLiteral==CInt128":
+            case "IntLiteral!=CInt128":
+            case "IntLiteral<CInt128":
+            case "IntLiteral<=CInt128":
+            case "IntLiteral>CInt128":
+            case "IntLiteral>=CInt128":
+            case "IntLiteral<=>CInt128":
+
+            case "IntLiteral+CIntN":
+            case "IntLiteral-CIntN":
+            case "IntLiteral*CIntN":
+            case "IntLiteral/CIntN":
+            case "IntLiteral%CIntN":
+            case "IntLiteral&CIntN":
+            case "IntLiteral|CIntN":
+            case "IntLiteral^CIntN":
+            case "IntLiteral==CIntN":
+            case "IntLiteral!=CIntN":
+            case "IntLiteral<CIntN":
+            case "IntLiteral<=CIntN":
+            case "IntLiteral>CIntN":
+            case "IntLiteral>=CIntN":
+            case "IntLiteral<=>CIntN":
+
+            case "IntLiteral+CUInt16":
+            case "IntLiteral-CUInt16":
+            case "IntLiteral*CUInt16":
+            case "IntLiteral/CUInt16":
+            case "IntLiteral%CUInt16":
+            case "IntLiteral&CUInt16":
+            case "IntLiteral|CUInt16":
+            case "IntLiteral^CUInt16":
+            case "IntLiteral==CUInt16":
+            case "IntLiteral!=CUInt16":
+            case "IntLiteral<CUInt16":
+            case "IntLiteral<=CUInt16":
+            case "IntLiteral>CUInt16":
+            case "IntLiteral>=CUInt16":
+            case "IntLiteral<=>CUInt16":
+
+            case "IntLiteral+CUInt32":
+            case "IntLiteral-CUInt32":
+            case "IntLiteral*CUInt32":
+            case "IntLiteral/CUInt32":
+            case "IntLiteral%CUInt32":
+            case "IntLiteral&CUInt32":
+            case "IntLiteral|CUInt32":
+            case "IntLiteral^CUInt32":
+            case "IntLiteral==CUInt32":
+            case "IntLiteral!=CUInt32":
+            case "IntLiteral<CUInt32":
+            case "IntLiteral<=CUInt32":
+            case "IntLiteral>CUInt32":
+            case "IntLiteral>=CUInt32":
+            case "IntLiteral<=>CUInt32":
+
+            case "IntLiteral+CUInt64":
+            case "IntLiteral-CUInt64":
+            case "IntLiteral*CUInt64":
+            case "IntLiteral/CUInt64":
+            case "IntLiteral%CUInt64":
+            case "IntLiteral&CUInt64":
+            case "IntLiteral|CUInt64":
+            case "IntLiteral^CUInt64":
+            case "IntLiteral==CUInt64":
+            case "IntLiteral!=CUInt64":
+            case "IntLiteral<CUInt64":
+            case "IntLiteral<=CUInt64":
+            case "IntLiteral>CUInt64":
+            case "IntLiteral>=CUInt64":
+            case "IntLiteral<=>CUInt64":
+
+            case "IntLiteral+CUInt128":
+            case "IntLiteral-CUInt128":
+            case "IntLiteral*CUInt128":
+            case "IntLiteral/CUInt128":
+            case "IntLiteral%CUInt128":
+            case "IntLiteral&CUInt128":
+            case "IntLiteral|CUInt128":
+            case "IntLiteral^CUInt128":
+            case "IntLiteral==CUInt128":
+            case "IntLiteral!=CUInt128":
+            case "IntLiteral<CUInt128":
+            case "IntLiteral<=CUInt128":
+            case "IntLiteral>CUInt128":
+            case "IntLiteral>=CUInt128":
+            case "IntLiteral<=>CUInt128":
+
+            case "IntLiteral+CUIntN":
+            case "IntLiteral-CUIntN":
+            case "IntLiteral*CUIntN":
+            case "IntLiteral/CUIntN":
+            case "IntLiteral%CUIntN":
+            case "IntLiteral&CUIntN":
+            case "IntLiteral|CUIntN":
+            case "IntLiteral^CUIntN":
+            case "IntLiteral==CUIntN":
+            case "IntLiteral!=CUIntN":
+            case "IntLiteral<CUIntN":
+            case "IntLiteral<=CUIntN":
+            case "IntLiteral>CUIntN":
+            case "IntLiteral>=CUIntN":
+            case "IntLiteral<=>CUIntN":
 
             case "IntLiteral+Int16":
             case "IntLiteral-Int16":
@@ -1329,10 +1502,10 @@ public class LiteralConstant
                 return toNibbleConstant();
 
             case "IntLiteral->Int8":
-                return toInt8Constant();
+                return toCInt8Constant();
 
             case "IntLiteral->UInt8":
-                return toUInt8Constant();
+                return toCUInt8Constant();
 
             case "IntLiteral->Int16":
             case "IntLiteral->Int32":
@@ -1344,7 +1517,7 @@ public class LiteralConstant
             case "IntLiteral->UInt64":
             case "IntLiteral->UInt128":
             case "IntLiteral->UIntN":
-                return toIntConstant(Format.valueOf(sSimpleName));
+                return toIntConstant(Format.valueOf("C" + sSimpleName));
 
             case "IntLiteral->FPLiteral":
                 return getConstantPool().ensureLiteralConstant(Format.FPLiteral, getValue());
@@ -1391,13 +1564,13 @@ public class LiteralConstant
         switch (this.getFormat().name())
             {
             case "IntLiteral":
-                if (pool.typeInt().isA(typeOut))
+                if (pool.typeCInt64().isA(typeOut))
                     {
-                    return toIntConstant(Format.Int64);
+                    return toIntConstant(Format.CInt64);
                     }
                 else if (pool.typeByte().isA(typeOut))
                     {
-                    return toUInt8Constant();
+                    return toCUInt8Constant();
                     }
                 else
                     {
@@ -1405,8 +1578,7 @@ public class LiteralConstant
                     for (Format format = Format.Bit;
                             format.ordinal() <= Format.DecN.ordinal(); format = format.next())
                         {
-                        TypeConstant typeSupported = pool.ensureEcstasyTypeConstant(
-                                format.getEcstasyName());
+                        TypeConstant typeSupported = format.getType(pool);
                         if (typeSupported.isA(typeOut))
                             {
                             return convertTo(typeSupported);
@@ -1420,8 +1592,7 @@ public class LiteralConstant
                 for (Format format = Format.Float16;
                         format.ordinal() <= Format.DecN.ordinal(); format = format.next())
                     {
-                    TypeConstant typeSupported = pool.ensureEcstasyTypeConstant(
-                            format.getEcstasyName());
+                    TypeConstant typeSupported = format.getType(pool);
                     if (typeSupported.isA(typeOut))
                         {
                         return convertTo(typeSupported);

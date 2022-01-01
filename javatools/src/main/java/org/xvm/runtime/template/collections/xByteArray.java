@@ -239,7 +239,7 @@ public class xByteArray
         TypeComposition clz = INT8_ARRAY_CLZ;
         if (clz == null)
             {
-            TypeConstant typeInt8 = pool().ensureEcstasyTypeConstant("numbers.Int8");
+            TypeConstant typeInt8 = pool().typeCInt8();
 
             INT8_ARRAY_CLZ = clz = f_templates.resolveClass(pool().ensureArrayType(typeInt8));
             }
@@ -251,7 +251,7 @@ public class xByteArray
         TypeComposition clz = INT16_ARRAY_CLZ;
         if (clz == null)
             {
-            TypeConstant typeInt16 = pool().ensureEcstasyTypeConstant("numbers.Int16");
+            TypeConstant typeInt16 = pool().typeCInt16();
             INT16_ARRAY_CLZ = clz = f_templates.resolveClass(pool().ensureArrayType(typeInt16));
             }
         return clz;
@@ -262,7 +262,7 @@ public class xByteArray
         TypeComposition clz = INT64_ARRAY_CLZ;
         if (clz == null)
             {
-            INT64_ARRAY_CLZ = clz = f_templates.resolveClass(pool().ensureArrayType(pool().typeInt()));
+            INT64_ARRAY_CLZ = clz = f_templates.resolveClass(pool().ensureArrayType(pool().typeCInt64()));
             }
         return clz;
         }

@@ -65,7 +65,7 @@ public class xRegEx
         TypeComposition  typeMatch         = clzTempMatch.getCanonicalClass();
         ClassStructure   clzStructMatch    = f_templates.getClassStructure("text.Match");
         ConstantPool     pool              = pool();
-        TypeConstant     typeRangeInt      = pool.ensureParameterizedTypeConstant(pool.typeRange(), pool.typeInt());
+        TypeConstant     typeRangeInt      = pool.ensureParameterizedTypeConstant(pool.typeRange(), pool.typeCInt64());
         TypeConstant     typeNullableRange = pool.ensureIntersectionTypeConstant(pool.typeNullable(), typeRangeInt);
         TypeConstant     typeArray         = pool.ensureParameterizedTypeConstant(pool.typeArray(), typeNullableRange);
         ClassComposition clzRange          = f_templates.getTemplate("Range").getCanonicalClass();

@@ -57,23 +57,15 @@ public class xRTViewToBit
         ConstantPool                    pool     = pool();
         Map<TypeConstant, xRTViewToBit> mapViews = new HashMap<>();
 
-        TypeConstant typeInt8   = pool.ensureEcstasyTypeConstant("numbers.Int8");
-        TypeConstant typeInt16  = pool.ensureEcstasyTypeConstant("numbers.Int16");
-        TypeConstant typeInt32  = pool.ensureEcstasyTypeConstant("numbers.Int32");
+        mapViews.put(pool.typeCInt8() , xRTViewToBitFromInt8  .INSTANCE);
+        mapViews.put(pool.typeCInt16(), xRTViewToBitFromInt16 .INSTANCE);
+        mapViews.put(pool.typeCInt32(), xRTViewToBitFromInt32 .INSTANCE);
+        mapViews.put(pool.typeCInt64(), xRTViewToBitFromInt64 .INSTANCE);
 
-        TypeConstant typeUInt16 = pool.ensureEcstasyTypeConstant("numbers.UInt16");
-        TypeConstant typeUInt32 = pool.ensureEcstasyTypeConstant("numbers.UInt32");
-        TypeConstant typeUInt64 = pool.ensureEcstasyTypeConstant("numbers.UInt64");
-
-        mapViews.put(typeInt8       , xRTViewToBitFromInt8  .INSTANCE);
-        mapViews.put(typeInt16      , xRTViewToBitFromInt16 .INSTANCE);
-        mapViews.put(typeInt32      , xRTViewToBitFromInt32 .INSTANCE);
-        mapViews.put(pool.typeInt() , xRTViewToBitFromInt64 .INSTANCE);
-
-        mapViews.put(pool.typeByte(), xRTViewToBitFromUInt8 .INSTANCE);
-        mapViews.put(typeUInt16     , xRTViewToBitFromUInt16.INSTANCE);
-        mapViews.put(typeUInt32     , xRTViewToBitFromUInt32.INSTANCE);
-        mapViews.put(typeUInt64     , xRTViewToBitFromUInt64.INSTANCE);
+        mapViews.put(pool.typeCUInt8() , xRTViewToBitFromUInt8 .INSTANCE);
+        mapViews.put(pool.typeCUInt16(), xRTViewToBitFromUInt16.INSTANCE);
+        mapViews.put(pool.typeCUInt32(), xRTViewToBitFromUInt32.INSTANCE);
+        mapViews.put(pool.typeCUInt64(), xRTViewToBitFromUInt64.INSTANCE);
 
         VIEWS = mapViews;
         }

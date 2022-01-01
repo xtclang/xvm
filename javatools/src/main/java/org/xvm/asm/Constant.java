@@ -167,19 +167,6 @@ public abstract class Constant
         }
 
     /**
-     * Determine the type of a binary operator on two constant values.
-     *
-     * @param op    the token id representing the operation
-     * @param that  the Constant on the right side of the operation
-     *
-     * @return the type of the resulting constant value
-     */
-    public TypeConstant resultType(Token.Id op, Constant that)
-        {
-        return getType();
-        }
-
-    /**
      * Generate some default constant value for the specified type, which should be the type of a
      * particular constant.
      *
@@ -227,10 +214,10 @@ public abstract class Constant
                 return pool.ensureNibbleConstant(0);
 
             case "numbers.Int8":
-                return pool.ensureInt8Constant(0);
+                return pool.ensureByteConstant(Format.CInt8, 0);
 
             case "numbers.UInt8":
-                return pool.ensureUInt8Constant(0);
+                return pool.ensureByteConstant(Format.CUInt8, 0);
 
             case "numbers.Int16":
             case "numbers.Int32":
@@ -243,7 +230,8 @@ public abstract class Constant
             case "numbers.UInt128":
             case "numbers.UIntN":
                 return pool.ensureIntConstant(PackedInteger.ZERO, Format.valueOf(
-                        type.getEcstasyClassName().substring(8))); // omit "numbers."
+                        // omit "numbers.", add "checked"
+                        "C" + type.getEcstasyClassName().substring(8)));
 
             case "numbers.Dec32":
                 return pool.ensureDecConstant(Decimal32.POS_ZERO);
@@ -776,17 +764,29 @@ public abstract class Constant
         IntLiteral("numbers"),
         Bit       ("numbers"),
         Nibble    ("numbers"),
-        Int8      ("numbers"),
+        CInt8     ("numbers"),  // C=Checked (aka a constrained integer)
+        Int8      ("numbers"),  // no "C" means @Unchecked
+        CInt16    ("numbers"),
         Int16     ("numbers"),
+        CInt32    ("numbers"),
         Int32     ("numbers"),
+        CInt64    ("numbers"),
         Int64     ("numbers"),
+        CInt128   ("numbers"),
         Int128    ("numbers"),
+        CIntN     ("numbers"),
         IntN      ("numbers"),
+        CUInt8    ("numbers"),
         UInt8     ("numbers"),
+        CUInt16   ("numbers"),
         UInt16    ("numbers"),
+        CUInt32   ("numbers"),
         UInt32    ("numbers"),
+        CUInt64   ("numbers"),
         UInt64    ("numbers"),
+        CUInt128  ("numbers"),
         UInt128   ("numbers"),
+        CUIntN    ("numbers"),
         UIntN     ("numbers"),
         FPLiteral ("numbers"),
         BFloat16  ("numbers"),
@@ -937,6 +937,43 @@ public abstract class Constant
             return f_sPackage == null
                 ? name()
                 : f_sPackage + '.' + name();
+            }
+
+        /**
+         * @param pool the ConstantPool to use
+         *
+         * @return the Ecstasy type for this format enum value
+         */
+        public TypeConstant getType(ConstantPool pool)
+            {
+            return switch (this)
+                {
+                case CInt8    -> pool.typeCInt8();
+                case Int8     -> pool.typeInt8();
+                case CInt16   -> pool.typeCInt16();
+                case Int16    -> pool.typeInt16();
+                case CInt32   -> pool.typeCInt32();
+                case Int32    -> pool.typeInt32();
+                case CInt64   -> pool.typeCInt64();
+                case Int64    -> pool.typeInt64();
+                case CInt128  -> pool.typeCInt128();
+                case Int128   -> pool.typeInt128();
+                case CIntN    -> pool.typeCIntN();
+                case IntN     -> pool.typeIntN();
+                case CUInt8   -> pool.typeCUInt8();
+                case UInt8    -> pool.typeUInt8();
+                case CUInt16  -> pool.typeCUInt16();
+                case UInt16   -> pool.typeUInt16();
+                case CUInt32  -> pool.typeCUInt32();
+                case UInt32   -> pool.typeUInt32();
+                case CUInt64  -> pool.typeCUInt64();
+                case UInt64   -> pool.typeUInt64();
+                case CUInt128 -> pool.typeCUInt128();
+                case UInt128  -> pool.typeUInt128();
+                case CUIntN   -> pool.typeCUIntN();
+                case UIntN    -> pool.typeUIntN();
+                default       -> pool.ensureEcstasyTypeConstant(getEcstasyName());
+                };
             }
 
         /**

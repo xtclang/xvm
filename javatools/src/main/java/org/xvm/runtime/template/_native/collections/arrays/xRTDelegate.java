@@ -80,27 +80,19 @@ public class xRTDelegate
         ConstantPool                   pool         = pool();
         Map<TypeConstant, xRTDelegate> mapDelegates = new HashMap<>();
 
-        TypeConstant typeInt8   = pool.ensureEcstasyTypeConstant("numbers.Int8");
-        TypeConstant typeInt16  = pool.ensureEcstasyTypeConstant("numbers.Int16");
-        TypeConstant typeInt32  = pool.ensureEcstasyTypeConstant("numbers.Int32");
-
-        TypeConstant typeUInt16 = pool.ensureEcstasyTypeConstant("numbers.UInt16");
-        TypeConstant typeUInt32 = pool.ensureEcstasyTypeConstant("numbers.UInt32");
-        TypeConstant typeUInt64 = pool.ensureEcstasyTypeConstant("numbers.UInt64");
-
         mapDelegates.put(pool.typeBoolean(), xRTBooleanDelegate.INSTANCE);
         mapDelegates.put(pool.typeBit(),     xRTBitDelegate    .INSTANCE);
         mapDelegates.put(pool.typeChar(),    xRTCharDelegate   .INSTANCE);
 
-        mapDelegates.put(typeInt8,           xRTInt8Delegate   .INSTANCE);
-        mapDelegates.put(typeInt16,          xRTInt16Delegate  .INSTANCE);
-        mapDelegates.put(typeInt32,          xRTInt32Delegate  .INSTANCE);
-        mapDelegates.put(pool.typeInt(),     xRTInt64Delegate  .INSTANCE);
+        mapDelegates.put(pool.typeCInt8(),   xRTInt8Delegate   .INSTANCE);
+        mapDelegates.put(pool.typeCInt16(),  xRTInt16Delegate  .INSTANCE);
+        mapDelegates.put(pool.typeCInt32(),  xRTInt32Delegate  .INSTANCE);
+        mapDelegates.put(pool.typeCInt64(),  xRTInt64Delegate  .INSTANCE);
 
-        mapDelegates.put(pool.typeByte(),    xRTUInt8Delegate  .INSTANCE);
-        mapDelegates.put(typeUInt16,         xRTUInt16Delegate .INSTANCE);
-        mapDelegates.put(typeUInt32,         xRTUInt32Delegate .INSTANCE);
-        mapDelegates.put(typeUInt64,         xRTUInt64Delegate .INSTANCE);
+        mapDelegates.put(pool.typeCUInt8(),  xRTUInt8Delegate  .INSTANCE);
+        mapDelegates.put(pool.typeCUInt16(), xRTUInt16Delegate .INSTANCE);
+        mapDelegates.put(pool.typeCUInt32(), xRTUInt32Delegate .INSTANCE);
+        mapDelegates.put(pool.typeCUInt64(), xRTUInt64Delegate .INSTANCE);
 
         DELEGATES = mapDelegates;
 

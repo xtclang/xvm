@@ -8,7 +8,7 @@ import org.xvm.asm.MethodStructure;
 
 import org.xvm.asm.constants.IntConstant;
 import org.xvm.asm.constants.TypeConstant;
-import org.xvm.asm.constants.UInt8Constant;
+import org.xvm.asm.constants.ByteConstant;
 
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
@@ -69,7 +69,7 @@ public class xBit
             }
         if (constant.getFormat() == Format.Bit)
             {
-            return frame.pushStack(makeHandle(((UInt8Constant) constant).getValue().intValue() != 0));
+            return frame.pushStack(makeHandle(((ByteConstant) constant).getValue().intValue() != 0));
             }
         return super.createConstHandle(frame, constant);
         }

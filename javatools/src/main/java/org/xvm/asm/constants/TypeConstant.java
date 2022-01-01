@@ -6401,16 +6401,16 @@ public abstract class TypeConstant
                 return pool.ensureCharConstant(0);
 
             case "numbers.Int8":
-                return pool.ensureIntConstant(PackedInteger.valueOf(-255), Format.Int8);
+                return pool.ensureIntConstant(PackedInteger.valueOf(Byte.MIN_VALUE), Format.CInt8);
 
             case "numbers.UInt8":
-                return pool.ensureIntConstant(PackedInteger.valueOf(0), Format.UInt8);
+                return pool.ensureIntConstant(PackedInteger.valueOf(0), Format.CUInt8);
 
             case "numbers.Int16":
-                return pool.ensureIntConstant(PackedInteger.valueOf(Short.MIN_VALUE), Format.Int16);
+                return pool.ensureIntConstant(PackedInteger.valueOf(Short.MIN_VALUE), Format.CInt16);
 
             case "numbers.UInt16":
-                return pool.ensureIntConstant(PackedInteger.valueOf(0), Format.UInt16);
+                return pool.ensureIntConstant(PackedInteger.valueOf(0), Format.CUInt16);
 
             case "numbers.Int32":
             case "numbers.UInt32":

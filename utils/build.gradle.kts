@@ -22,8 +22,8 @@ tasks.withType(Jar::class) {
 
 java {
     // Java 11 is the latest "Long Term Support" (LTS) release, as of 2020
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
 }
 
 tasks.test {

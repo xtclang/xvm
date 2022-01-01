@@ -47,7 +47,7 @@ public class xRTViewFromByteToInt16
         ConstantPool pool = pool();
         return pool.ensureParameterizedTypeConstant(
                 getInceptionClassConstant().getType(),
-                pool.ensureEcstasyTypeConstant("numbers.Int16"));
+                pool.typeCInt16());
         }
 
 

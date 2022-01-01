@@ -66,7 +66,7 @@ public class ToIntExpression
             }
 
         m_pintOffset = pintOffset;
-        finishValidation(null, null, expr.pool().typeInt(), expr.getTypeFit().addConversion(), val, errs);
+        finishValidation(null, null, expr.pool().typeCInt64(), expr.getTypeFit().addConversion(), val, errs);
         }
 
 
@@ -136,30 +136,39 @@ public class ToIntExpression
             }
 
         ConstantPool pool    = pool();
-        String       sFormat = expr.getType().getEcstasyClassName();
+        String       sFormat = expr.getType().getEcstasyClassName(); // REVIEW CP
         switch (sFormat)
             {
             case "numbers.Int8":
-                return pool.ensureInt8Constant(pint.getInt());
+                return pool.ensureByteConstant(Format.CInt8, pint.getInt());
 
             case "numbers.UInt8":
-                return pool.ensureUInt8Constant(pint.getInt());
+                return pool.ensureByteConstant(Format.CUInt8, pint.getInt());
 
             case "numbers.Int16":
+                return pool.ensureIntConstant(pint, Format.CInt16);
             case "numbers.Int32":
+                return pool.ensureIntConstant(pint, Format.CInt32);
+            case "numbers.Int64":
+                return pool.ensureIntConstant(pint, Format.CInt64);
             case "numbers.Int128":
+                return pool.ensureIntConstant(pint, Format.CInt128);
             case "numbers.IntN":
+                return pool.ensureIntConstant(pint, Format.CIntN);
             case "numbers.UInt16":
+                return pool.ensureIntConstant(pint, Format.CUInt16);
             case "numbers.UInt32":
+                return pool.ensureIntConstant(pint, Format.CUInt32);
             case "numbers.UInt64":
+                return pool.ensureIntConstant(pint, Format.CUInt64);
             case "numbers.UInt128":
+                return pool.ensureIntConstant(pint, Format.CUInt128);
             case "numbers.UIntN":
-                return pool.ensureIntConstant(pint, Format.valueOf(sFormat));
+                return pool.ensureIntConstant(pint, Format.CUIntN);
 
             case "numbers.Bit":     // converted by extract
             case "numbers.Nibble":  // converted by extract
             case "text.Char":       // converted by extract
-            case "numbers.Int64":
             default:
                 return pool.ensureIntConstant(pint);
             }

@@ -17,8 +17,7 @@ import org.xvm.util.PackedInteger;
  * Represent a 64-bit signed integer constant, and a bunch of lesser-known formats of integer
  * constants as well, but NOT the 8-bit integer constants.
  *
- * @see Int8Constant
- * @see UInt8Constant
+ * @see ByteConstant
  */
 public class IntConstant
         extends ValueConstant
@@ -38,17 +37,6 @@ public class IntConstant
             throws IOException
         {
         this(pool, format, new PackedInteger(in));
-        }
-
-    /**
-     * Construct a constant whose value is a signed 64-bit PackedInteger.
-     *
-     * @param pool  the ConstantPool that will contain this Constant
-     * @param pint  the PackedInteger value
-     */
-    public IntConstant(ConstantPool pool, PackedInteger pint)
-        {
-        this(pool, Format.Int64, pint);
         }
 
     /**
@@ -76,44 +64,54 @@ public class IntConstant
         boolean fUnsigned;
         switch (format)
             {
+            case CInt16:
             case Int16:
                 cBytes    = 2;
                 fUnsigned = false;
                 break;
+            case CInt32:
             case Int32:
                 cBytes    = 4;
                 fUnsigned = false;
                 break;
+            case CInt64:
             case Int64:
                 cBytes    = 8;
                 fUnsigned = false;
                 break;
+            case CInt128:
             case Int128:
                 cBytes    = 16;
                 fUnsigned = false;
                 break;
+            case CIntN:
             case IntN:
                 // some arbitrary limit that only exists in the Java implementation
                 cBytes    = 32;
                 fUnsigned = false;
                 break;
 
+            case CUInt16:
             case UInt16:
                 cBytes    = 2;
                 fUnsigned = true;
                 break;
+            case CUInt32:
             case UInt32:
                 cBytes    = 4;
                 fUnsigned = true;
                 break;
+            case CUInt64:
             case UInt64:
                 cBytes    = 8;
                 fUnsigned = true;
                 break;
+            case CUInt128:
             case UInt128:
                 cBytes    = 16;
                 fUnsigned = true;
                 break;
+            case CUIntN:
             case UIntN:
                 // some arbitrary limit that only exists in the Java implementation
                 cBytes    = 32;
@@ -164,19 +162,101 @@ public class IntConstant
         {
         switch (m_fmt)
             {
+            case CInt16:
+            case Int16:
+            case CInt32:
+            case Int32:
+            case CInt64:
+            case Int64:
+            case CInt128:
+            case Int128:
+            case CIntN:
+            case IntN:
+                return false;
+
+            case CUInt16:
+            case UInt16:
+            case CUInt32:
+            case UInt32:
+            case CUInt64:
+            case UInt64:
+            case CUInt128:
+            case UInt128:
+            case CUIntN:
+            case UIntN:
+                return true;
+
+            default:
+                throw new IllegalStateException();
+            }
+        }
+
+    /**
+     * @return true iff the format is an unchecked integer format
+     */
+    public boolean isUnchecked()
+        {
+        switch (m_fmt)
+            {
             case Int16:
             case Int32:
             case Int64:
             case Int128:
             case IntN:
-                return false;
-
             case UInt16:
             case UInt32:
             case UInt64:
             case UInt128:
             case UIntN:
                 return true;
+
+            case CInt16:
+            case CInt32:
+            case CInt64:
+            case CInt128:
+            case CIntN:
+            case CUInt16:
+            case CUInt32:
+            case CUInt64:
+            case CUInt128:
+            case CUIntN:
+                return false;
+
+            default:
+                throw new IllegalStateException();
+            }
+        }
+
+    /**
+     * @return the number of bytes in the integer format
+     */
+    public int byteSize()
+        {
+        switch (m_fmt)
+            {
+            case CInt16:
+            case Int16:
+            case CUInt16:
+            case UInt16:
+                return 2;
+
+            case CInt32:
+            case Int32:
+            case CUInt32:
+            case UInt32:
+                return 4;
+
+            case CInt64:
+            case Int64:
+            case CUInt64:
+            case UInt64:
+                return 8;
+
+            case CInt128:
+            case Int128:
+            case CUInt128:
+            case UInt128:
+                return 16;
 
             default:
                 throw new IllegalStateException();
@@ -200,26 +280,36 @@ public class IntConstant
         {
         switch (format)
             {
+            case CInt16:
             case Int16:
                 return PackedInteger.SINT2_MIN;
 
+            case CInt32:
             case Int32:
                 return PackedInteger.SINT4_MIN;
 
+            case CInt64:
             case Int64:
                 return PackedInteger.SINT8_MIN;
 
+            case CInt128:
             case Int128:
                 return PackedInteger.SINT16_MIN;
 
+            case CIntN:
             case IntN:
                 // note: just an arbitrary limit; no such limit in Ecstasy
                 return PackedInteger.SINT32_MIN;
 
+            case CUInt16:
             case UInt16:
+            case CUInt32:
             case UInt32:
+            case CUInt64:
             case UInt64:
+            case CUInt128:
             case UInt128:
+            case CUIntN:
             case UIntN:
                 return PackedInteger.ZERO;
 
@@ -245,34 +335,44 @@ public class IntConstant
         {
         switch (format)
             {
+            case CInt16:
             case Int16:
                 return PackedInteger.SINT2_MAX;
 
+            case CInt32:
             case Int32:
                 return PackedInteger.SINT4_MAX;
 
+            case CInt64:
             case Int64:
                 return PackedInteger.SINT8_MAX;
 
+            case CInt128:
             case Int128:
                 return PackedInteger.SINT16_MAX;
 
+            case CIntN:
             case IntN:
                 // note: just an arbitrary limit; no such limit in Ecstasy
                 return PackedInteger.SINT32_MAX;
 
+            case CUInt16:
             case UInt16:
                 return PackedInteger.UINT2_MAX;
 
+            case CUInt32:
             case UInt32:
                 return PackedInteger.UINT4_MAX;
 
+            case CUInt64:
             case UInt64:
                 return PackedInteger.UINT8_MAX;
 
+            case CUInt128:
             case UInt128:
                 return PackedInteger.UINT16_MAX;
 
+            case CUIntN:
             case UIntN:
                 // note: just an arbitrary limit; no such limit in Ecstasy
                 return PackedInteger.UINT32_MAX;
@@ -361,7 +461,22 @@ public class IntConstant
         {
         if (n.compareTo(getMinLimit()) < 0 || n.compareTo(getMaxLimit()) > 0)
             {
-            throw new ArithmeticException("overflow");
+            if (isUnchecked())
+                {
+                n = n.and(switch (byteSize())
+                    {
+                    case 2  -> PackedInteger.UINT2_MAX;
+                    case 4  -> PackedInteger.UINT4_MAX;
+                    case 8  -> PackedInteger.UINT8_MAX;
+                    case 16 -> PackedInteger.UINT16_MAX;
+                    default ->
+                        throw new IllegalStateException("Unexpected byte size: " + byteSize());
+                    });
+                }
+            else
+                {
+                throw new ArithmeticException("overflow");
+                }
             }
 
         return getConstantPool().ensureIntConstant(n, getFormat());
@@ -382,12 +497,32 @@ public class IntConstant
         return m_pint;
         }
 
+    private Format normalize(Format format)
+        {
+        return switch (format)
+            {
+            case CInt8    -> Format.Int8;
+            case CInt16   -> Format.Int16;
+            case CInt32   -> Format.Int32;
+            case CInt64   -> Format.Int64;
+            case CInt128  -> Format.Int128;
+            case CIntN    -> Format.IntN;
+            case CUInt8   -> Format.UInt8;
+            case CUInt16  -> Format.UInt16;
+            case CUInt32  -> Format.UInt32;
+            case CUInt64  -> Format.UInt64;
+            case CUInt128 -> Format.UInt128;
+            case CUIntN   -> Format.UIntN;
+            default       -> format;
+            };
+        }
+
     @Override
     public Constant apply(Token.Id op, Constant that)
         {
         switch (that == null
-                    ? op.TEXT + this.getFormat().name()
-                    : this.getFormat().name() + op.TEXT + that.getFormat().name())
+                    ? op.TEXT + normalize(this.getFormat()).name()
+                    : normalize(this.getFormat()).name() + op.TEXT + normalize(that.getFormat()).name())
             {
             // TODO is / .is / instanceof / .instanceof ??
             // TODO as / .as ??
@@ -630,7 +765,7 @@ public class IntConstant
             case "UIntN<<IntLiteral":
             case "UIntN>>IntLiteral":
             case "UIntN>>>IntLiteral":
-                return apply(op, ((LiteralConstant) that).toIntConstant(Format.Int64));
+                return apply(op, ((LiteralConstant) that).toIntConstant(Format.CInt64));
 
             case "Int16+Int16":
             case "Int32+Int32":
@@ -862,31 +997,6 @@ public class IntConstant
             }
 
         return super.apply(op, that);
-        }
-
-    @Override
-    public TypeConstant getType()
-        {
-        ConstantPool pool = getConstantPool();
-        switch (m_fmt)
-            {
-            case Int64:
-                return pool.typeInt();
-
-            case Int16:
-            case Int32:
-            case Int128:
-            case IntN:
-            case UInt16:
-            case UInt32:
-            case UInt64:
-            case UInt128:
-            case UIntN:
-                return pool.ensureEcstasyTypeConstant(m_fmt.getEcstasyName());
-
-            default:
-                throw new IllegalStateException();
-            }
         }
 
     @Override

@@ -54,7 +54,7 @@ public class xAtomicVar
     public ClassTemplate getTemplate(TypeConstant type)
         {
         // if Referent is Int64, then the template should be AtomicIntNumber
-        return type.getParamType(0) == pool().typeInt()
+        return type.getParamType(0) == pool().typeCInt64() // REVIEW GG checked vs. unchecked
             ? xAtomicIntNumber.INSTANCE
             : this;
         }

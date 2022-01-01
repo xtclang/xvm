@@ -42,7 +42,7 @@ public class xRTInt8Delegate
         ConstantPool pool = pool();
         return pool.ensureParameterizedTypeConstant(
                 getInceptionClassConstant().getType(),
-                pool.ensureEcstasyTypeConstant("numbers.Int8"));
+                pool.typeCInt8());
         }
 
     @Override

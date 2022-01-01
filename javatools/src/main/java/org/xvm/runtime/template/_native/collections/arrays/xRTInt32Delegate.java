@@ -44,7 +44,7 @@ public class xRTInt32Delegate
         ConstantPool pool = pool();
         return pool.ensureParameterizedTypeConstant(
                 getInceptionClassConstant().getType(),
-                pool.ensureEcstasyTypeConstant("numbers.Int32"));
+                pool.typeCInt32());
         }
 
     @Override

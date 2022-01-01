@@ -5,7 +5,7 @@ import org.xvm.asm.ClassStructure;
 
 import org.xvm.asm.Constant;
 
-import org.xvm.asm.constants.UInt8Constant;
+import org.xvm.asm.constants.ByteConstant;
 
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
@@ -68,10 +68,10 @@ public class xUInt8
     @Override
     public int createConstHandle(Frame frame, Constant constant)
         {
-        if (constant instanceof UInt8Constant)
+        if (constant instanceof ByteConstant)
             {
             return frame.pushStack(
-                    makeHandle(((UInt8Constant) constant).getValue().longValue()));
+                    makeHandle(((ByteConstant) constant).getValue().longValue()));
             }
 
         return super.createConstHandle(frame, constant);

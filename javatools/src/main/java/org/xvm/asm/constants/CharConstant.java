@@ -84,27 +84,6 @@ public class CharConstant
         }
 
     @Override
-    public TypeConstant resultType(Id op, Constant that)
-        {
-        ConstantPool pool = getConstantPool();
-        switch (op.TEXT + that.getFormat().name())
-            {
-            case "+String":
-            case "+Char":
-                // char+char => str
-                // char+str  => str
-            case "*IntLiteral":
-            case "*Int64":
-                return pool.typeString();
-
-            case "..Char":
-                return pool.ensureRangeType(pool.typeChar());
-            }
-
-        return super.resultType(op, that);
-        }
-
-    @Override
     public Constant apply(Token.Id op, Constant that)
         {
         switch (op.TEXT + that.getFormat().name())
@@ -137,6 +116,7 @@ public class CharConstant
                 }
 
             case "*IntLiteral":
+            case "*CInt64":
             case "*Int64":
                 {
                 assert Character.isValidCodePoint(this.m_chVal);
@@ -161,7 +141,7 @@ public class CharConstant
             case "+IntLiteral":
             case "-IntLiteral":
                 {
-                int delta = ((LiteralConstant) that).toIntConstant(Format.Int32).getIntValue().getInt();
+                int delta = ((LiteralConstant) that).toIntConstant(Format.CInt32).getIntValue().getInt();
                 if (op == Id.SUB)
                     {
                     delta = -delta;

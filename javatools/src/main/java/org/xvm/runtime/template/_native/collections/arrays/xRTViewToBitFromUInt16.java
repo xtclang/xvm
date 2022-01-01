@@ -38,6 +38,6 @@ public class xRTViewToBitFromUInt16
         ConstantPool pool = pool();
         return pool.ensureParameterizedTypeConstant(
                 getInceptionClassConstant().getType(),
-                pool.ensureEcstasyTypeConstant("numbers.UInt16"));
+                pool.typeCUInt16());
         }
     }
