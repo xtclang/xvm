@@ -270,7 +270,7 @@ public class ByteConstant
             case "Int8>IntLiteral":
             case "Int8>=IntLiteral":
             case "Int8<=>IntLiteral":
-                return apply(op, ((LiteralConstant) that).toCInt8Constant());
+                return apply(op, ((LiteralConstant) that).toByteConstant(getFormat()));
 
             case "Int8<<IntLiteral":
             case "Int8>>IntLiteral":
@@ -345,7 +345,7 @@ public class ByteConstant
             case "UInt8>IntLiteral":
             case "UInt8>=IntLiteral":
             case "UInt8<=>IntLiteral":
-                return apply(op, ((LiteralConstant) that).toCUInt8Constant());
+                return apply(op, ((LiteralConstant) that).toByteConstant(this.getFormat()));
 
             case "UInt8<<IntLiteral":
             case "UInt8>>IntLiteral":

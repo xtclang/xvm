@@ -9,6 +9,12 @@ module TestSimple.test.org
         import ecstasy.collections.CaseInsensitiveHasher;
         import ecstasy.collections.HasherMap;
 
+//        @Unchecked Int x = 1;
+//        console.println($"x={x} (type={&x.actualType})");
+//        ++x;
+//        @Unchecked Int y = x;
+//        console.println($"x={x} (type={&x.actualType}), y={y} (type={&y.actualType})");
+
         Map<String, String> map = new HasherMap(new CaseInsensitiveHasher());
         map.put("hello", "world");
         map.put("Hello", "World");

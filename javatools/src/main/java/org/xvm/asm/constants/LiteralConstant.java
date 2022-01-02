@@ -451,14 +451,17 @@ public class LiteralConstant
         }
 
     /**
-     * Convert the LiteralConstant to an CInt8 ByteConstant, iff the LiteralConstant is an
-     * IntLiteral whose value is in the range -128..127.
+     * Convert the LiteralConstant to an CInt8, Int8, CUInt8, or UInt8 ByteConstant, iff the
+     * LiteralConstant is an IntLiteral whose value is in the range -128..127 (signed) or 0..255
+     * (unsigned).
      *
-     * @return a CInt8 ByteConstant
+     * @param format  CInt8, Int8, CUInt8, or UInt8
+     *
+     * @return a CInt8, Int8, CUInt8, or UInt8 ByteConstant
      *
      * @throws ArithmeticException  on overflow
      */
-    public ByteConstant toCInt8Constant()
+    public ByteConstant toByteConstant(Format format)
         {
         if (getFormat() != Format.IntLiteral)
             {
@@ -466,36 +469,29 @@ public class LiteralConstant
             }
 
         PackedInteger pi = getPackedInteger();
-        if (pi.isBig() || pi.getLong() < -128 || pi.getLong() > 127)
+        switch (format)
             {
-            throw new ArithmeticException("out of range: " + pi);
+            case CInt8:
+            case Int8:
+                if (pi.isBig() || pi.getLong() < -128 || pi.getLong() > 127)
+                    {
+                    throw new ArithmeticException("out of range: " + pi);
+                    }
+                break;
+
+            case CUInt8:
+            case UInt8:
+                if (pi.isBig() || pi.getLong() < 0 || pi.getLong() > 255)
+                    {
+                    throw new ArithmeticException("out of range: " + pi);
+                    }
+                break;
+
+            default:
+                throw new IllegalArgumentException("unsupported format: " + format);
             }
 
-        return getConstantPool().ensureByteConstant(Format.CInt8, pi.getInt());
-        }
-
-    /**
-     * Convert the LiteralConstant to an CUInt8 ByteConstant, iff the LiteralConstant is an
-     * IntLiteral whose value is in the range 0..255.
-     *
-     * @return a CUInt8 ByteConstant
-     *
-     * @throws ArithmeticException  on overflow
-     */
-    public ByteConstant toCUInt8Constant()
-        {
-        if (getFormat() != Format.IntLiteral)
-            {
-            throw new IllegalStateException("format=" + getFormat());
-            }
-
-        PackedInteger pi = getPackedInteger();
-        if (pi.isBig() || pi.getLong() < 0 || pi.getLong() > 255)
-            {
-            throw new ArithmeticException("out of range: " + pi);
-            }
-
-        return getConstantPool().ensureByteConstant(Format.CUInt8, pi.getInt());
+        return getConstantPool().ensureByteConstant(format, pi.getInt());
         }
 
     /**
@@ -879,7 +875,6 @@ public class LiteralConstant
             case "IntLiteral>Int8":
             case "IntLiteral>=Int8":
             case "IntLiteral<=>Int8":
-                return this.toCInt8Constant().apply(op, that);
 
             case "IntLiteral+CUInt8":
             case "IntLiteral-CUInt8":
@@ -912,7 +907,7 @@ public class LiteralConstant
             case "IntLiteral>UInt8":
             case "IntLiteral>=UInt8":
             case "IntLiteral<=>UInt8":
-                return this.toCUInt8Constant().apply(op, that);
+                return this.toByteConstant(that.getFormat()).apply(op, that);
 
             case "IntLiteral+CInt16":
             case "IntLiteral-CInt16":
@@ -1486,97 +1481,163 @@ public class LiteralConstant
     @Override
     public Constant convertTo(TypeConstant typeOut)
         {
-        String sSimpleName = typeOut.getEcstasyClassName();
-        int    ofDot       = sSimpleName.lastIndexOf('.');
-        if (ofDot > 0)
-            {
-            sSimpleName = sSimpleName.substring(ofDot + 1);
-            }
-
-        switch (this.getFormat().name() + "->" + sSimpleName)
-            {
-            case "IntLiteral->Bit":
-                return toBitConstant();
-
-            case "IntLiteral->Nibble":
-                return toNibbleConstant();
-
-            case "IntLiteral->Int8":
-                return toCInt8Constant();
-
-            case "IntLiteral->UInt8":
-                return toCUInt8Constant();
-
-            case "IntLiteral->Int16":
-            case "IntLiteral->Int32":
-            case "IntLiteral->Int64":
-            case "IntLiteral->Int128":
-            case "IntLiteral->IntN":
-            case "IntLiteral->UInt16":
-            case "IntLiteral->UInt32":
-            case "IntLiteral->UInt64":
-            case "IntLiteral->UInt128":
-            case "IntLiteral->UIntN":
-                return toIntConstant(Format.valueOf("C" + sSimpleName));
-
-            case "IntLiteral->FPLiteral":
-                return getConstantPool().ensureLiteralConstant(Format.FPLiteral, getValue());
-
-            case "IntLiteral->BFloat16":
-            case "FPLiteral->BFloat16":
-                return toBFloat16Constant();
-
-            case "IntLiteral->Float16":
-            case "FPLiteral->Float16":
-                return toFloat16Constant();
-
-            case "IntLiteral->Float32":
-            case "FPLiteral->Float32":
-                return toFloat32Constant();
-
-            case "IntLiteral->Float64":
-            case "FPLiteral->Float64":
-                return toFloat64Constant();
-
-            case "IntLiteral->Float128":
-            case "FPLiteral->Float128":
-                return toFloat128Constant();
-
-            case "IntLiteral->FloatN":
-            case "FPLiteral->FloatN":
-                return toFloatNConstant();
-
-            case "IntLiteral->Dec32":
-            case "IntLiteral->Dec64":
-            case "IntLiteral->Dec128":
-            case "FPLiteral->Dec32":
-            case "FPLiteral->Dec64":
-            case "FPLiteral->Dec128":
-                return toDecimalConstant(Format.valueOf(sSimpleName));
-
-            case "IntLiteral->DecN":
-            case "FPLiteral->DecN":
-                return toDecNConstant();
-            }
-
-        // handle conversions to unpredictable interface types
         ConstantPool pool = getConstantPool();
-        switch (this.getFormat().name())
+        switch (this.getFormat())
             {
-            case "IntLiteral":
+            case IntLiteral:
+                {
+                if (typeOut == pool.typeBit())
+                    {
+                    return toBitConstant();
+                    }
+                else if (typeOut == pool.typeNibble())
+                    {
+                    return toNibbleConstant();
+                    }
+                else if (typeOut == pool.typeCInt8())
+                    {
+                    return toByteConstant(Format.CInt8);
+                    }
+                else if (typeOut == pool.typeInt8())
+                    {
+                    return toByteConstant(Format.Int8);
+                    }
+                else if (typeOut == pool.typeCInt16())
+                    {
+                    return toIntConstant(Format.CInt16);
+                    }
+                else if (typeOut == pool.typeInt16())
+                    {
+                    return toIntConstant(Format.Int16);
+                    }
+                else if (typeOut == pool.typeCInt32())
+                    {
+                    return toIntConstant(Format.CInt32);
+                    }
+                else if (typeOut == pool.typeInt32())
+                    {
+                    return toIntConstant(Format.Int32);
+                    }
+                else if (typeOut == pool.typeCInt64())
+                    {
+                    return toIntConstant(Format.CInt64);
+                    }
+                else if (typeOut == pool.typeInt64())
+                    {
+                    return toIntConstant(Format.Int64);
+                    }
+                else if (typeOut == pool.typeCInt128())
+                    {
+                    return toIntConstant(Format.CInt128);
+                    }
+                else if (typeOut == pool.typeInt128())
+                    {
+                    return toIntConstant(Format.Int128);
+                    }
+                else if (typeOut == pool.typeCIntN())
+                    {
+                    return toIntConstant(Format.CIntN);
+                    }
+                else if (typeOut == pool.typeIntN())
+                    {
+                    return toIntConstant(Format.IntN);
+                    }
+                else if (typeOut == pool.typeCUInt8())
+                    {
+                    return toByteConstant(Format.CUInt8);
+                    }
+                else if (typeOut == pool.typeUInt8())
+                    {
+                    return toByteConstant(Format.UInt8);
+                    }
+                else if (typeOut == pool.typeCUInt16())
+                    {
+                    return toIntConstant(Format.CUInt16);
+                    }
+                else if (typeOut == pool.typeUInt16())
+                    {
+                    return toIntConstant(Format.UInt16);
+                    }
+                else if (typeOut == pool.typeCUInt32())
+                    {
+                    return toIntConstant(Format.CUInt32);
+                    }
+                else if (typeOut == pool.typeUInt32())
+                    {
+                    return toIntConstant(Format.UInt32);
+                    }
+                else if (typeOut == pool.typeCUInt64())
+                    {
+                    return toIntConstant(Format.CUInt64);
+                    }
+                else if (typeOut == pool.typeUInt64())
+                    {
+                    return toIntConstant(Format.UInt64);
+                    }
+                else if (typeOut == pool.typeCUInt128())
+                    {
+                    return toIntConstant(Format.CUInt128);
+                    }
+                else if (typeOut == pool.typeUInt128())
+                    {
+                    return toIntConstant(Format.UInt128);
+                    }
+                else if (typeOut == pool.typeCUIntN())
+                    {
+                    return toIntConstant(Format.CUIntN);
+                    }
+                else if (typeOut == pool.typeUIntN())
+                    {
+                    return toIntConstant(Format.UIntN);
+                    }
+                else if (typeOut == pool.typeFPLiteral())
+                    {
+                    return pool.ensureLiteralConstant(Format.FPLiteral, getValue());
+                    }
+
+                String sSimpleName = typeOut.getEcstasyClassName();
+                int ofDot = sSimpleName.lastIndexOf('.');
+                if (ofDot > 0)
+                    {
+                    sSimpleName = sSimpleName.substring(ofDot + 1);
+                    }
+                switch (sSimpleName)
+                    {
+                    case "BFloat16":
+                        return toBFloat16Constant();
+                    case "Float16":
+                        return toFloat16Constant();
+                    case "Float32":
+                        return toFloat32Constant();
+                    case "Float64":
+                        return toFloat64Constant();
+                    case "Float128":
+                        return toFloat128Constant();
+                    case "FloatN":
+                        return toFloatNConstant();
+                    case "Dec32":
+                        return toDecimalConstant(Format.Dec32);
+                    case "Dec64":
+                        return toDecimalConstant(Format.Dec64);
+                    case "Dec128":
+                        return toDecimalConstant(Format.Dec128);
+                    case "DecN":
+                        return toDecNConstant();
+                    }
+
                 if (pool.typeCInt64().isA(typeOut))
                     {
                     return toIntConstant(Format.CInt64);
                     }
-                else if (pool.typeByte().isA(typeOut))
+                else if (pool.typeUInt8().isA(typeOut))
                     {
-                    return toCUInt8Constant();
+                    return toByteConstant(Format.CUInt8);
                     }
                 else
                     {
                     // go through the entire list of possibilities
                     for (Format format = Format.Bit;
-                            format.ordinal() <= Format.DecN.ordinal(); format = format.next())
+                         format.ordinal() <= Format.DecN.ordinal(); format = format.next())
                         {
                         TypeConstant typeSupported = format.getType(pool);
                         if (typeSupported.isA(typeOut))
@@ -1585,12 +1646,44 @@ public class LiteralConstant
                             }
                         }
                     }
+                }
                 break;
 
-            case "FPLiteral":
+            case FPLiteral:
+                {
+                String sSimpleName = typeOut.getEcstasyClassName();
+                int    ofDot       = sSimpleName.lastIndexOf('.');
+                if (ofDot > 0)
+                    {
+                    sSimpleName = sSimpleName.substring(ofDot + 1);
+                    }
+                switch (sSimpleName)
+                    {
+                    case "BFloat16":
+                        return toBFloat16Constant();
+                    case "Float16":
+                        return toFloat16Constant();
+                    case "Float32":
+                        return toFloat32Constant();
+                    case "Float64":
+                        return toFloat64Constant();
+                    case "Float128":
+                        return toFloat128Constant();
+                    case "FloatN":
+                        return toFloatNConstant();
+                    case "Dec32":
+                        return toDecimalConstant(Format.Dec32);
+                    case "Dec64":
+                        return toDecimalConstant(Format.Dec64);
+                    case "Dec128":
+                        return toDecimalConstant(Format.Dec128);
+                    case "DecN":
+                        return toDecNConstant();
+                    }
+
                 // go through the entire list of possibilities
                 for (Format format = Format.Float16;
-                        format.ordinal() <= Format.DecN.ordinal(); format = format.next())
+                     format.ordinal() <= Format.DecN.ordinal(); format = format.next())
                     {
                     TypeConstant typeSupported = format.getType(pool);
                     if (typeSupported.isA(typeOut))
@@ -1598,11 +1691,7 @@ public class LiteralConstant
                         return convertTo(typeSupported);
                         }
                     }
-                break;
-
-            default:
-                // TODO
-                throw new UnsupportedOperationException("TODO conversion");
+                }
             }
 
         return super.convertTo(typeOut);
