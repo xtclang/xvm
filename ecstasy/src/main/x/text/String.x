@@ -733,7 +733,7 @@ const String
         }
 
 
-    // ----- Hashable ------------------------------------------------------------------------------
+    // ----- Hashable functions --------------------------------------------------------------------
 
     @Override
     static <CompileType extends String> Int hashCode(CompileType value)

@@ -4,6 +4,7 @@ module TestSimple.test.org
 
     void run()
         {
-        console.println("foo".hashCode());
+        Int i = 3;
+        console.println(i.hashCode());
         }
     }

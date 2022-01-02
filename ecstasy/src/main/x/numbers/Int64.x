@@ -401,4 +401,19 @@ const Int64
         {
         TODO
         }
+
+
+    // ----- Hashable functions --------------------------------------------------------------------
+
+    @Override
+    static <CompileType extends Int64> Int hashCode(CompileType value)
+        {
+        return value;
+        }
+
+    @Override
+    static <CompileType extends Int64> Boolean equals(CompileType value1, CompileType value2)
+        {
+        return value1.bits == value2.bits;
+        }
     }
