@@ -3805,8 +3805,7 @@ public abstract class TypeConstant
                 }
 
             List<Object> listMatches = collectPotentialSuperMethods(
-                    methodContrib.getHead().getMethodStructure(),
-                    nidContrib, sigContrib, mapVirtMethods);
+                    methodContrib, nidContrib, mapVirtMethods);
 
             if (methodContrib.getTail().isOverride() ||
                     fAnnoMixin && methodContrib.getHead().isOverride())
@@ -4150,30 +4149,33 @@ public abstract class TypeConstant
     /**
      * Collect all methods that could be the "super" of the specified method signature.
      *
-     * @param method     the method structure for the method that is searching for a super (optional)
-     * @param nidSub     the nested identity of the method
-     * @param sigSub     the signature of the method that is searching for a super
-     * @param mapSupers  map of super methods to select from
+     * @param methodInfo  the method info for the method that is searching for a super
+     * @param nidSub      the nested identity of the method
+     * @param mapSupers   map of super methods to select from
      *
      * @return a list of all matching nested identities
      */
     protected List<Object> collectPotentialSuperMethods(
-            MethodStructure         method,
+            MethodInfo              methodInfo,
             Object                  nidSub,
-            SignatureConstant       sigSub,
             Map<Object, MethodInfo> mapSupers)
         {
-        List<Object> listMatch = null;
-        int          cDefaults = method == null ? 0 : method.getDefaultParamCount();
+        MethodStructure   method    = methodInfo.getHead().getMethodStructure();
+        SignatureConstant sigSub    = methodInfo.getSignature();
+        int               cDefaults = method == null ? 0 : method.getDefaultParamCount();
+        List<Object>      listMatch = null;
+
         for (Entry<Object, MethodInfo> entry : mapSupers.entrySet())
             {
             Object nidCandidate = entry.getKey();
             if (IdentityConstant.isNestedSibling(nidSub, nidCandidate))
                 {
-                SignatureConstant sigCandidate = entry.getValue().getSignature(); // resolved
+                MethodInfo        infoCandiate = entry.getValue();
+                SignatureConstant sigCandidate = infoCandiate.getSignature(); // resolved
                 if (sigCandidate.getName().equals(sigSub.getName()))
                     {
-                    if (sigSub.isSubstitutableFor(sigCandidate, this))
+                    if (infoCandiate.containsBody(methodInfo.getIdentity()) ||
+                            sigSub.isSubstitutableFor(sigCandidate, this))
                         {
                         if (listMatch == null)
                             {
