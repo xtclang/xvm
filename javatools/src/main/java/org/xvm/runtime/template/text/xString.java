@@ -290,6 +290,7 @@ public class xString
     @Override
     public int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn)
         {
+        // TODO GG this doesn't get called
         return frame.assignValue(iReturn, ((StringHandle) hTarget).getHashCode());
         }
 
@@ -499,11 +500,34 @@ public class xString
                     : sValue;
             }
 
+        public int calcHashCode()
+            {
+            char[] ach  = m_achValue;
+            int    cch  = ach.length;
+            int    hash = 982_451_653;
+            if (cch <= 0x40)
+                {
+                for (char ch : ach)
+                    {
+                    hash = hash * 31 + ch;
+                    }
+                }
+            else
+                {
+                // just sample ~60 characters from across the entire length of the string
+                for (int of = 0, cchStep = (cch >>> 6) + 1; of < cch; of += cchStep)
+                    {
+                    hash = hash * 31 + ach[of];
+                    }
+                }
+            return hash;
+            }
+
         public JavaLong getHashCode()
             {
             JavaLong hHash = m_hash;
             return hHash == null
-                    ? (m_hash = xInt64.makeHandle(Arrays.hashCode(m_achValue)))
+                    ? (m_hash = xInt64.makeHandle(calcHashCode()))
                     : hHash;
             }
 

@@ -733,6 +733,40 @@ const String
         }
 
 
+    // ----- Hashable ------------------------------------------------------------------------------
+
+    @Override
+    static <CompileType extends String> Int hashCode(CompileType value)
+        {
+        @Unchecked Int hash = 982_451_653;      // start with a prime number
+
+        Int len  = value.size;
+        if (len <= 0x40)
+            {
+            for (Char c : value)
+                {
+                hash = hash * 31 + c.toInt64();
+                }
+            }
+        else
+            {
+            // just sample ~60 characters from across the entire length of the string
+            for (Int offset = 0, Int step = (len >>> 6) + 1; offset < len; offset += step)
+                {
+                hash = hash * 31 + value[offset].toInt64();
+                }
+            }
+
+        return hash;
+        }
+
+    @Override
+    static <CompileType extends String> Boolean equals(CompileType value1, CompileType value2)
+        {
+        return value1.chars == value2.chars;
+        }
+
+
     // ----- Stringable methods --------------------------------------------------------------------
 
     @Override
