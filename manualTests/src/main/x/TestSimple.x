@@ -9,7 +9,7 @@ module TestSimple.test.org
         assert Object o := map.get(3);
         console.println(&o.actualType);
 
-        Double d = 2;
+        String d = "2";
         console.println(d.hashCode());
         }
     }

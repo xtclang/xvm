@@ -77,6 +77,9 @@ public class xString
         markNativeMethod("indexOf", new String[]{"text.Char", "numbers.Int64"},
                                     new String[]{"Boolean", "numbers.Int64"});
         markNativeMethod("substring", INT, STRING);
+        markNativeMethod("hashCode", null, null);
+        markNativeMethod("equals", null, null);
+        markNativeMethod("compare", null, null);
 
         getCanonicalType().invalidateTypeInfo();
         }
@@ -146,24 +149,6 @@ public class xString
             }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
-        }
-
-    @Override
-    public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                             ObjectHandle[] ahArg, int iReturn)
-        {
-        StringHandle hThis = (StringHandle) hTarget;
-
-        switch (ahArg.length)
-            {
-            case 2:
-                switch (method.getName())
-                    {
-                    }
-                break;
-            }
-
-        return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
         }
 
     @Override
@@ -290,7 +275,6 @@ public class xString
     @Override
     public int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn)
         {
-        // TODO GG this doesn't get called
         return frame.assignValue(iReturn, ((StringHandle) hTarget).getHashCode());
         }
 
@@ -298,7 +282,7 @@ public class xString
     // ----- helpers -------------------------------------------------------------------------------
 
     /**
-     * Extract a array of chars from the Array<Char> handle.
+     * Extract an array of chars from the Array<Char> handle.
      */
     private static char[] getChars(ArrayHandle hArray)
         {
@@ -364,13 +348,12 @@ public class xString
                     return of;
                     }
                 }
-            return -1;
             }
         else
             {
             // TODO: see String.java indexOfSupplementary()
-            return -1;
             }
+        return -1;
         }
 
     private static int indexOf(char[] achSource, char[] achTarget, int ofStart)
@@ -476,9 +459,9 @@ public class xString
     public static class StringHandle
             extends ObjectHandle
         {
-        private char[] m_achValue;
-        private transient JavaLong m_hash; // cached hash value
-        private transient String m_sValue; // cached String value
+        private final     char[]   m_achValue;
+        private transient JavaLong m_hash;   // cached hash value
+        private transient String   m_sValue; // cached String value
 
         protected StringHandle(TypeComposition clazz, char[] achValue)
             {
