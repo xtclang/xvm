@@ -43,6 +43,8 @@ import org.xvm.runtime.template.numbers.xInt64;
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
+import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
+
 
 /**
  * While this template represents a native interface, it never serves as an inception type
@@ -346,16 +348,40 @@ public class xConst
         switch (method.getName())
             {
             case "compare":
-                return callCompare(frame, getCanonicalClass(), ahArg[1], ahArg[2], iReturn);
+                {
+                xConst template = this;
+                if (template == INSTANCE)
+                    {
+                    TypeHandle hType = (TypeHandle) ahArg[0];
+                    template = (xConst) f_templates.getTemplate(hType.getDataType());
+                    }
+                return template.callCompare(frame, getCanonicalClass(), ahArg[1], ahArg[2], iReturn);
+                }
 
             case "estimateStringLength":
                 return callEstimateLength(frame, hTarget, iReturn);
 
             case "equals":
-                return callEquals(frame, getCanonicalClass(), ahArg[1], ahArg[2], iReturn);
+                {
+                xConst template = this;
+                if (template == INSTANCE)
+                    {
+                    TypeHandle hType = (TypeHandle) ahArg[0];
+                    template = (xConst) f_templates.getTemplate(hType.getDataType());
+                    }
+                return template.callEquals(frame, getCanonicalClass(), ahArg[1], ahArg[2], iReturn);
+                }
 
             case "hashCode":
-                return buildHashCode(frame, getCanonicalClass(), ahArg[1], iReturn);
+                {
+                xConst template = this;
+                if (template == INSTANCE)
+                    {
+                    TypeHandle hType = (TypeHandle) ahArg[0];
+                    template = (xConst) f_templates.getTemplate(hType.getDataType());
+                    }
+                return template.buildHashCode(frame, getCanonicalClass(), ahArg[1], iReturn);
+                }
             }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);

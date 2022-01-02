@@ -120,7 +120,8 @@ abstract public class BaseBinaryFP
     public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle[] ahArg, int iReturn)
         {
-        double d = ((FloatHandle) hTarget).getValue();
+        // hTarget could be null for a native function call
+        double d = hTarget == null ? 0 : ((FloatHandle) hTarget).getValue();
         switch (method.getName())
             {
             case "abs":

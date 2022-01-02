@@ -134,7 +134,8 @@ abstract public class BaseDecFP
     public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle[] ahArg, int iReturn)
         {
-        Decimal dec = ((DecimalHandle) hTarget).getValue();
+        // hTarget could be null for a native function call
+        Decimal dec = hTarget == null ? null : ((DecimalHandle) hTarget).getValue();
         switch (method.getName())
             {
             case "abs":
