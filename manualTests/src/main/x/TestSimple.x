@@ -4,12 +4,11 @@ module TestSimple.test.org
 
     void run()
         {
-        Map<Double, Object> map = new HashMap();
-        map.put(3, 14);
-        assert Object o := map.get(3);
-        console.println(&o.actualType);
+        HashMap<String, String> map = new HashMap();
+        map.put("hello", "world");
 
-        String d = "2";
-        console.println(d.hashCode());
+        HashMap<HashMap<String, String>, String> map2 = new HashMap();
+        map2.put(map, "test");
+        console.println(map2);
         }
     }

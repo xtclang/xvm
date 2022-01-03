@@ -15,6 +15,7 @@ import maps.KeyEntry;
 class HasherMap<Key, Value>
         implements HasherReplicable<Key>
         implements CopyableMap<Key, Value>
+        implements Hashable
         incorporates conditional MapFreezer<Key extends immutable Object, Value extends Shareable>
     {
     // ----- constructors --------------------------------------------------------------------------
@@ -857,6 +858,27 @@ class HasherMap<Key, Value>
                     ? makeImmutable()
                     : map.freeze(inPlace).entries.makeImmutable().as(immutable EntrySetFreezer);
             }
+        }
+
+
+    // ----- Hashable functions --------------------------------------------------------------------
+
+    @Override
+    static <CompileType extends HasherMap> Int hashCode(CompileType value)
+        {
+        Int                     hash   = value.size;
+        Hasher<CompileType.Key> hasher = value.hasher;
+        for (CompileType.Key key : value)
+            {
+            hash ^= hasher.hashOf(key);
+            }
+        return hash;
+        }
+
+    @Override
+    static <CompileType extends HasherMap> Boolean equals(CompileType value1, CompileType value2)
+        {
+        return Map.equals(value1, value2);
         }
 
 
