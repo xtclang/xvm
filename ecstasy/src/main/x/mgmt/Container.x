@@ -144,7 +144,7 @@ service Container
      * A means of specifying a module to include in a container, either by its name or by providing
      * the actual module template.
      */
-    typedef (ModuleTemplate | String) ModuleSpec;
+    typedef (ModuleTemplate | String) as ModuleSpec;
 
     /**
      * A Container Model specifies a use case that may imply additional constraints for the

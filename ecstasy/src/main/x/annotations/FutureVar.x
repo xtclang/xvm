@@ -76,7 +76,7 @@ mixin FutureVar<Referent>
     /**
      * The function type used to notify dependent futures.
      */
-    typedef function void (Completion, Referent?, Exception?) NotifyDependent;
+    typedef function void (Completion, Referent?, Exception?) as NotifyDependent;
 
     /**
      * The future that is chained to this future, that this future sends its completion result to.

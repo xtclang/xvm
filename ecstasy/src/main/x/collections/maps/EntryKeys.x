@@ -32,7 +32,7 @@ class EntryKeys<MapKey, MapValue>(Map<MapKey, MapValue> contents)
         return new KeyIterator(contents.entries.iterator());
         }
 
-    protected typedef Iterator<Map<MapKey, MapValue>.Entry> EntryIterator;
+    protected typedef Iterator<Map<MapKey, MapValue>.Entry> as EntryIterator;
 
     /**
      * Iterator that relies on an iterator of entries to produce a corresponding sequence of keys.

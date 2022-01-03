@@ -137,7 +137,7 @@ class ObjectInputStream(Schema schema, Parser parser)
      * The ObjectInputStream uses three specific JSON stream implementations internally to dissect
      * a stream of JSON tokens into the desired corresponding Ecstasy types, values, and structures.
      */
-    typedef (ElementInputStream | ArrayInputStream | FieldInputStream) AnyStream;
+    typedef (ElementInputStream | ArrayInputStream | FieldInputStream) as AnyStream;
 
     /**
      * Base virtual child implementation for the various DocInput / ElementInput / FieldInput

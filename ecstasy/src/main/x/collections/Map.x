@@ -18,7 +18,7 @@ interface Map<Key, Value>
     /**
      * An Orderer is a function that compares two keys for order.
      */
-    typedef Type<Key>.Orderer Orderer;
+    typedef Type<Key>.Orderer as Orderer;
 
 
     // ----- metadata ------------------------------------------------------------------------------

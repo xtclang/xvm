@@ -7,7 +7,7 @@
 interface FilterableQueue<Element>
         extends Queue<Element>
     {
-    typedef function Boolean (Element) Filter;
+    typedef function Boolean (Element) as Filter;
 
     /**
      * If a filter is provided, then this method scans the queue for an element that matches the

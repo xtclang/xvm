@@ -1,6 +1,6 @@
 const MultiMethod<Target>(String name, Callable[] callables)
     {
-    typedef (Method<Target> | Function) Callable;
+    typedef (Method<Target> | Function) as Callable;
 
     construct(String name, Callable[] callables)
         {

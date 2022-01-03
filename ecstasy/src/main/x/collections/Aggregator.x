@@ -23,7 +23,7 @@ interface Aggregator<Element, Result>
      * An Accumulator is the mutable, stateful representation into which `Element` values are
      * accumulated.
      */
-    typedef Appender<Element> Accumulator;
+    typedef Appender<Element> as Accumulator;
 
     /**
      * Create an intermediate, mutable data structure that will accumulate Elements as part of

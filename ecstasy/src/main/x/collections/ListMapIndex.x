@@ -16,20 +16,20 @@ mixin ListMapIndex<Key extends Hashable, Value>
      * simple `Int`. If there are multiple keys with the same hash value, then their indexes
      * are stored as an `Int[]`.
      */
-    protected typedef (Int | Int[]) OneOrN;
+    protected typedef (Int | Int[]) as OneOrN;
 
     /**
      * When multiple hash values modulo to the same bucket id, the `OneOrN` values for each
      * hash value are stored as a binary tree of `OneOrN` values in an array.
      */
-    protected typedef OneOrN[] HashTree;
+    protected typedef OneOrN[] as HashTree;
 
     /**
      * A bucket is either empty (`Null`), contains indexes of one or more keys (`OneOrN`) for a
      * single hash value, or contains one or more keys for multiple different hash values (a
      * `HashTree`).
      */
-    protected typedef (HashTree | OneOrN)? Bucket;
+    protected typedef (HashTree | OneOrN)? as Bucket;
 
     /**
      * ListMaps smaller than this number of entries are not indexed; the assumption is that it is

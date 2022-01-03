@@ -86,8 +86,8 @@ mixin CatalogMetadata<Schema extends RootSchema>
         return new Catalog<Schema>(dir, this, readOnly);
         }
 
-    typedef (Connection<Schema> + Schema) ClientConnection;
-    typedef (Transaction<Schema> + Schema) ClientTransaction;
+    typedef (Connection<Schema>  + Schema) as ClientConnection;
+    typedef (Transaction<Schema> + Schema) as ClientTransaction;
 
     /**
      * Create the `ClientConnection` factory, which will be called when a connection is injected by

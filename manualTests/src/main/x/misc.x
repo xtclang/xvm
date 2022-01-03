@@ -642,7 +642,7 @@ module TestMisc
         {
         console.println("\n** testRecursiveType()");
 
-        typedef (Nullable | Int | List<Manifold>) Manifold;
+        typedef (Nullable | Int | List<Manifold>) as Manifold;
 
         Manifold m1 = 9;
         Manifold m2 = [m1];

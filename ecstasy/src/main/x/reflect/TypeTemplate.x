@@ -231,7 +231,7 @@ interface TypeTemplate // TODO move
      * Determine if the type is recursive. Certain types may recursively refer to themselves, either
      * directly or indirectly; consider the example:
      *
-     *     typedef (Nullable | Boolean | Number | String | JsonVal[] | Map<String, JsonVal>) JsonVal
+     *     typedef (Nullable | Boolean | Number | String | Json[] | Map<String, Json>) as Json
      */
     @RO Boolean recursive;
 

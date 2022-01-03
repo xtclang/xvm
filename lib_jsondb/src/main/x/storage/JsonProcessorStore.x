@@ -181,7 +181,7 @@ service JsonProcessorStore<Message extends immutable Const>
      * Cached message/transaction/pid(s) triples. This is "the database", in the sense that this is
      * the same data that is stored on disk.
      */
-    typedef SkiplistMap<Int, PidSet> History;
+    typedef SkiplistMap<Int, PidSet> as History;
     protected Map<Message, History> scheduleHistory = new SkiplistMap();
 
     /**

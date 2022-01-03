@@ -19,10 +19,10 @@ module json.xtclang.org
     /**
      * JSON primitive types are all JSON values except for arrays and objects.
      */
-    typedef (Nullable | Boolean | IntLiteral | FPLiteral | String) Primitive;
+    typedef (Nullable | Boolean | IntLiteral | FPLiteral | String) as Primitive;
 
     /**
      * JSON types include primitive types, array types, and map types.
      */
-    typedef (Primitive | Map<String, Doc> | Array<Doc>) Doc;
+    typedef (Primitive | Map<String, Doc> | Array<Doc>) as Doc;
     }

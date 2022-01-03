@@ -143,9 +143,9 @@ module Bank
         return $"${dollars}.{cents.abs()}";
         }
 
-    typedef (oodb.Connection<BankSchema> + BankSchema) Connection;
+    typedef (oodb.Connection<BankSchema>  + BankSchema) as Connection;
 
-    typedef (oodb.Transaction<BankSchema> + BankSchema) Transaction;
+    typedef (oodb.Transaction<BankSchema> + BankSchema) as Transaction;
 
     const Account(Int id, Int balance)
         {

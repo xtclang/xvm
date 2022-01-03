@@ -26,8 +26,8 @@ interface Timer
      */
     @RO Duration elapsed;
 
-    typedef function void () Alarm;
-    typedef function void () Cancellable;
+    typedef function void () as Alarm;
+    typedef function void () as Cancellable;
 
     /**
      * Schedule an Alarm that will be invoked after the specified Duration has elapsed.

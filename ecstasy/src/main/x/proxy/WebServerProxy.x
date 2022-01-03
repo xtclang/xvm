@@ -15,7 +15,7 @@ interface WebServerProxy
      *
      * This is a function that takes a HttpRequestProxy and a Responder function.
      */
-    typedef function void (HttpRequestProxy, Responder) Handler;
+    typedef function void (HttpRequestProxy, Responder) as Handler;
 
     /**
      * A Responder handles passing a http response back to the native web server.
@@ -25,5 +25,5 @@ interface WebServerProxy
      * @param Byte[]                     the Byte array that is the response body
      * @param Tuple<String, String[]>[]  an array of Tuples that make up the response header values
      */
-    typedef function void (Int, Byte[], Tuple<String, String[]>[]) Responder;
+    typedef function void (Int, Byte[], Tuple<String, String[]>[]) as Responder;
     }

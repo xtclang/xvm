@@ -139,7 +139,7 @@ interface FileNode
      */
     @RO Int size;
 
-    typedef function void () Cancellable;
+    typedef function void () as Cancellable;
 
     /**
      * Watch this file-node, and report any events related to it.

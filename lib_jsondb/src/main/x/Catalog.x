@@ -63,7 +63,7 @@ import storage.SchemaStore;
 service Catalog<Schema extends RootSchema>
         implements Closeable
     {
-    typedef (Client.Connection + Schema) Connection;
+    typedef (Client.Connection + Schema) as Connection;
 
     // ----- constructors --------------------------------------------------------------------------
 

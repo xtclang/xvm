@@ -108,7 +108,7 @@ mixin LinkedList<Element>
      * Note that this implementation requires the property to be a read/write property, even if the
      * list is read-only.
      */
-    typedef Property<Element, Element?, Var<Element?>> Link;
+    typedef Property<Element, Element?, Var<Element?>> as Link;
 
 
     // ----- constructor ---------------------------------------------------------------------------

@@ -147,6 +147,6 @@ module ecstasy.xtclang.org
      * 3. A `service` object;
      * 4. A _virtual child_ object of a `service` object.
      */
-    // TODO CP: typedef (service | immutable | Freezable) Shareable;
-    typedef (immutable Object | Freezable | Service) Shareable;
+    // TODO CP: typedef (service | immutable | Freezable) as Shareable;
+    typedef (immutable Object | Freezable | Service) as Shareable;
     }

@@ -122,15 +122,15 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
      *
      * TODO if the value for a key is stable, replace the nested SkiplistMap with a single Value?
      */
-    typedef SkiplistMap<Int, Value|Deletion> History;
+    typedef SkiplistMap<Int, Value|Deletion> as History;
     protected Map<Key, History> history = new HashMap();
 
     /**
      * A record of how all persistent transactions are laid out on disk. It is computed in terms of
      * range positions of Chars (not bytes).
      */
-    typedef Map<Key,    Range<Int>>  EntryLayout;
-    typedef Map<String, EntryLayout> FileLayout; // very often - just a single key per file
+    typedef Map<Key,    Range<Int>>  as EntryLayout;
+    typedef Map<String, EntryLayout> as FileLayout; // very often - just a single key per file
     protected SkiplistMap<Int, FileLayout> storageLayout = new SkiplistMap();
 
     /**

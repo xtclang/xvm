@@ -4,7 +4,7 @@
 const NullableMapping<Serializable>
         implements Mapping<Serializable>
     {
-    typedef (Serializable-Nullable) NonNullable;
+    typedef (Serializable-Nullable) as NonNullable;
 
     construct(Mapping<Serializable> underlying)
         {

@@ -72,19 +72,19 @@ interface Type<DataType, OuterType>
      * the empty tuple type is used to define the minimum number of constructor parameters (i.e.
      * none), and not the exact parameters of any given constructor.
      */
-    typedef Function<<>, <DataType>> Constructor;
+    typedef Function<<>, <DataType>> as Constructor;
 
-    typedef TypeTemplate.Form Form;
+    typedef TypeTemplate.Form as Form;
 
     /**
      * "Comparer" is a function that compares two objects of this type for equality.
      */
-    typedef function Boolean (DataType, DataType) Comparer;
+    typedef function Boolean (DataType, DataType) as Comparer;
 
     /**
      * "Orderer" is a function that compares two objects of this type for order.
      */
-    typedef function Ordered (DataType, DataType) Orderer;
+    typedef function Ordered (DataType, DataType) as Orderer;
 
 
     // ----- state representation ------------------------------------------------------------------
@@ -281,7 +281,7 @@ interface Type<DataType, OuterType>
      * Determine if the type is recursive. Certain types may recursively refer to themselves, either
      * directly or indirectly; consider the example:
      *
-     *     typedef (Nullable | Boolean | Number | String | JsonDoc[] | Map<String, JsonDoc>) JsonDoc
+     *     typedef (Nullable | Boolean | Number | String | Json[] | Map<String, Json>) as Json
      */
     @RO Boolean recursive;
 

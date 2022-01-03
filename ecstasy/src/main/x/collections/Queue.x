@@ -106,8 +106,8 @@ interface Queue<Element>
         return compute();
         }
 
-    typedef function void (Element) Consumer;
-    typedef function void () Cancellable;
+    typedef function void (Element) as Consumer;
+    typedef function void ()        as Cancellable;
 
     /*
      * Redirect the first element in the queue (or the next element to arrive if the queue is

@@ -33,12 +33,12 @@ module AddressBookDB
     /**
      * This is the interface that will get injected.
      */
-    typedef (Connection<AddressBookSchema> + AddressBookSchema) Connection;
+    typedef (Connection<AddressBookSchema> + AddressBookSchema) as Connection;
 
     /**
      * This is the interface that will come back from createTransaction.
      */
-    typedef (Transaction<AddressBookSchema> + AddressBookSchema) Transaction;
+    typedef (Transaction<AddressBookSchema> + AddressBookSchema) as Transaction;
 
     mixin Contacts
             into DBMap<String, Contact>

@@ -41,8 +41,8 @@ interface Clock
      */
     @RO Boolean monotonic;
 
-    typedef function void () Alarm;
-    typedef function void () Cancellable;
+    typedef function void () as Alarm;
+    typedef function void () as Cancellable;
 
     /**
      * Request an Alarm to be scheduled on the Clock to go off at a specific point in time.

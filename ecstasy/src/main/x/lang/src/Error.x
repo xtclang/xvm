@@ -37,7 +37,7 @@ const Error
     /**
      * A function that takes an error code and returns an unformatted message.
      */
-    typedef function String MessageLookup(String);
+    typedef function String (String) as MessageLookup;
 
 
     // ----- properties ----------------------------------------------------------------------------

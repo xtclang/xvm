@@ -5,5 +5,5 @@
  mixin InjectedRef<Referent>(String? resourceName = Null, Options opts = Null)
         into Ref<Referent>
     {
-    typedef immutable Object? Options;
+    typedef immutable Object? as Options;
     }

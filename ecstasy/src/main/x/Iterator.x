@@ -15,7 +15,7 @@ interface Iterator<Element>
     /**
      * An Orderer is a function that compares two objects for order.
      */
-    typedef Element.Orderer Orderer;
+    typedef Element.Orderer as Orderer;
 
     /**
      * Get the next element.

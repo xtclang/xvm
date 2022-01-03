@@ -47,7 +47,7 @@ interface Collection<Element>
     /**
      * An Orderer is a function that compares two elements for order.
      */
-    typedef Element.Orderer Orderer;
+    typedef Element.Orderer as Orderer;
 
 
     // ----- abstract methods ----------------------------------------------------------------------
@@ -1014,7 +1014,7 @@ interface Collection<Element>
 
         // this is text-book inefficiency; we're comparing two bags of non-Hashable values
         enum NonExistent {NotAValue}
-        typedef (CompileType.Element | NonExistent) Remnant;
+        typedef (CompileType.Element | NonExistent) as Remnant;
         Iterator<CompileType.Element> iter = collection1.iterator();
         Remnant[] remnants = new Array<Remnant>(collection1.size, _ ->
             {

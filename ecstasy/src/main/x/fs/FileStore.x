@@ -133,7 +133,7 @@ interface FileStore
      */
     Directory|File move(Path source, Path dest);
 
-    typedef function void () Cancellable;
+    typedef function void () as Cancellable;
 
     /**
      * Specifies whether this FileStorage is known to be explicitly read-only.
