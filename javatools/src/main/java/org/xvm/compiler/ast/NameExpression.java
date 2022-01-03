@@ -357,7 +357,7 @@ public class NameExpression
         }
 
     /**
-     * @return true iff the expression is explicitly non-de-referencing, as with the '&' pre-fix on
+     * @return true iff the expression is explicitly non-de-referencing, as with the '&' prefix on
      *         a class, property, or method name
      */
     public boolean isSuppressDeref()
@@ -762,12 +762,16 @@ public class NameExpression
                         {
                         ctx.useFormalType(type, errs);
                         }
-                    // fall through
-                case Reserved:
+
+                    // unassigned vars are allowed to be "referenced" with the '&' prefix
                     if (!isSuppressDeref())
                         {
                         ctx.markVarRead(getNameToken(), errs);
                         }
+                    break;
+
+                case Reserved:
+                    ctx.markVarRead(getNameToken(), errs);
                     break;
 
                 case Property:
