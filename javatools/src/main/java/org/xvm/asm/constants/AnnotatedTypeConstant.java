@@ -184,10 +184,6 @@ public class AnnotatedTypeConstant
             return m_typeAnno = typeFormal.resolveGenerics(getConstantPool(), mapResolve::get);
             }
 
-        // REVIEW the only other option is the constAnno to be a PseudoConstant (referring to a virtual
-        //        child / sibling that is a mix-in, so some form of "virtual annotation" that has not
-        //        yet been defined / evaluated for inclusion in the language)
-
         return m_typeAnno = m_annotation.getAnnotationType();
         }
 
@@ -370,6 +366,23 @@ public class AnnotatedTypeConstant
         return type == null
                 ? super.getGenericParamType(sName, listParams)
                 : type;
+        }
+
+    @Override
+    public TypeConstant resolveAutoNarrowing(ConstantPool pool, boolean fRetainParams,
+                                             TypeConstant typeTarget, IdentityConstant idCtx)
+        {
+        TypeConstant constOriginal = getUnderlyingType();
+        TypeConstant constResolved = constOriginal.resolveAutoNarrowing(
+                                                    pool, fRetainParams, typeTarget, idCtx);
+        // there is a possibility that "typeTarget" has the same annotation, resulting in the
+        // "constResolved" being annotated; need to check to avoid double-annotation
+        return constResolved == constOriginal
+                ? this
+                : constResolved.isAnnotated() && constResolved.containsAnnotation(
+                            (ClassConstant) m_annotation.getAnnotationClass())
+                    ? constResolved
+                    : cloneSingle(pool, constResolved);
         }
 
     @Override

@@ -4,20 +4,9 @@ module TestSimple.test.org
 
     void run()
         {
-        HashMap<String, String> map = new HashMap();
-        map.put("hello", "world");
+        @Unchecked Int i = 3;
+        i = i.toUnchecked();
 
-        HashMap<HashMap<String, String>, String> map2 = new HashMap();
-        map2.put(map, "test");
-        console.println(map2);
-        }
-
-    interface Test
-        {
-        @Override
-        static <CompileType extends Test> Int hashCode(CompileType value)
-            {
-            return &this.actualClass.name.hashCode(); // this used to compile and fail at run-time
-            }
+        console.println($"i={i}, type={&i.actualType}, class={&i.actualClass}");
         }
     }
