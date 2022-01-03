@@ -21,7 +21,7 @@ class HashMap<Key extends Hashable, Value>
      */
     construct(Int initCapacity = 0)
         {
-        assert Hasher<Key> hasher := Key.hashed();
+        assert Hasher<Key> hasher := Key.hashed() as $"Type \"{Key}\" doesn't have a natural hasher";
         construct HashMap(hasher, initCapacity);
         }
 

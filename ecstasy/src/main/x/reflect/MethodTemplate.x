@@ -24,6 +24,11 @@ interface MethodTemplate
         }
 
     /**
+     * True iff the method has code.
+     */
+    @RO Boolean hasCode;
+
+    /**
      * The method parameters.
      */
     ParameterTemplate[] parameters;

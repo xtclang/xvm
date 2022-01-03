@@ -47,6 +47,7 @@ public class xRTMethodTemplate
     public void initNative()
         {
         markNativeProperty("annotations");
+        markNativeProperty("hasCode");
         markNativeProperty("parameterCount");
         markNativeProperty("returnCount");
 
@@ -64,6 +65,9 @@ public class xRTMethodTemplate
             {
             case "annotations":
                 return getPropertyAnnotations(frame, hMethod, iReturn);
+
+            case "hasCode":
+                return getPropertyHasCode(frame, hMethod, iReturn);
 
             case "parameterCount":
                 return frame.assignValue(iReturn,
@@ -109,6 +113,15 @@ public class xRTMethodTemplate
                 ? new Utils.CreateAnnos(aAnno, iReturn).doNext(frame)
                 : frame.assignValue(iReturn,
                     Utils.makeAnnoArrayHandle(frame.poolContext(), Utils.OBJECTS_NONE));
+        }
+
+    /**
+     * Implements property: hasCode.get()
+     */
+    protected int getPropertyHasCode(Frame frame, ComponentTemplateHandle hMethod, int iReturn)
+        {
+        MethodStructure method = (MethodStructure) hMethod.getComponent();
+        return frame.assignValue(iReturn, xBoolean.makeHandle(method.hasCode()));
         }
 
 

@@ -145,7 +145,7 @@ public class xRTComponentTemplate
     /**
      * Implements property: access.get()
      */
-    public int getPropertyAccess(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
+    protected int getPropertyAccess(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
         {
         Component component = hComponent.getComponent();
         Access    access    = component.getAccess();
@@ -155,7 +155,7 @@ public class xRTComponentTemplate
     /**
      * Implements property: doc.get()
      */
-    public int getPropertyDoc(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
+    protected int getPropertyDoc(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
         {
         Component component = hComponent.getComponent();
         String    sDoc      = component.getDocumentation();
@@ -167,7 +167,7 @@ public class xRTComponentTemplate
     /**
      * Implements property: format.get()
      */
-    public int getPropertyFormat(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
+    protected int getPropertyFormat(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
         {
         Component  component = hComponent.getComponent();
         EnumHandle hFormat   = makeFormatHandle(frame, component.getFormat());
@@ -177,37 +177,34 @@ public class xRTComponentTemplate
     /**
      * Implements property: isAbstract.get()
      */
-    public int getPropertyIsAbstract(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
+    protected int getPropertyIsAbstract(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
         {
         Component component = hComponent.getComponent();
-        boolean   fAbstract = component.isAbstract();
-        return frame.assignValue(iReturn, xBoolean.makeHandle(fAbstract));
+        return frame.assignValue(iReturn, xBoolean.makeHandle(component.isAbstract()));
         }
 
     /**
      * Implements property: isStatic.get()
      */
-    public int getPropertyIsStatic(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
+    protected int getPropertyIsStatic(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
         {
         Component component = hComponent.getComponent();
-        boolean   fStatic   = component.isStatic();
-        return frame.assignValue(iReturn, xBoolean.makeHandle(fStatic));
+        return frame.assignValue(iReturn, xBoolean.makeHandle(component.isStatic()));
         }
 
     /**
      * Implements property: name.get()
      */
-    public int getPropertyName(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
+    protected int getPropertyName(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
         {
         Component component = hComponent.getComponent();
-        String    sName     = component.getSimpleName();
-        return frame.assignValue(iReturn, xString.makeHandle(sName));
+        return frame.assignValue(iReturn, xString.makeHandle(component.getSimpleName()));
         }
 
     /**
      * Implements property: parent.get()
      */
-    public int getPropertyParent(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
+    protected int getPropertyParent(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
         {
         Component    parent  = hComponent.getComponent().getParent();
         ObjectHandle hParent = parent == null ? xNullable.NULL : makeComponentHandle(parent);
@@ -217,11 +214,10 @@ public class xRTComponentTemplate
     /**
      * Implements property: synthetic.get()
      */
-    public int getPropertySynthetic(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
+    protected int getPropertySynthetic(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
         {
-        Component component  = hComponent.getComponent();
-        boolean   fSynthetic = component.isSynthetic();
-        return frame.assignValue(iReturn, xBoolean.makeHandle(fSynthetic));
+        Component component = hComponent.getComponent();
+        return frame.assignValue(iReturn, xBoolean.makeHandle(component.isSynthetic()));
         }
 
 
@@ -230,7 +226,7 @@ public class xRTComponentTemplate
     /**
      * Implementation for: {@code ComponentTemplate[] children()}.
      */
-    public int invokeChildren(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
+    protected int invokeChildren(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
         {
         Component      component  = hComponent.getComponent();
         int            cChildren  = component.getChildrenCount();

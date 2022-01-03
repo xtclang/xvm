@@ -1,3 +1,6 @@
+import collections.Hasher;
+import collections.NaturalHasher;
+
 import reflect.Access;
 import reflect.Annotation;
 import reflect.Class;
@@ -124,20 +127,7 @@ interface Type<DataType, OuterType>
      */
     @RO Map<String, MultiMethod<DataType>> multimethods.get()
         {
-        ListMap<String, MultiMethod<DataType>> map = new ListMap();
-        for (Method<DataType> m : methods)
-            {
-            String name = m.name;
-            MultiMethod<DataType> mm = map.getOrCompute(name, () -> new MultiMethod<DataType>(name, []));
-            map.put(name, mm + m);
-            }
-        for (Function f : functions)
-            {
-            String name = f.name;
-            MultiMethod<DataType> mm = map.getOrCompute(name, () -> new MultiMethod<DataType>(name, []));
-            map.put(name, mm + f);
-            }
-        return map.freeze(True);
+        return collectMultimethods();
         }
 
     /**
@@ -473,9 +463,9 @@ interface Type<DataType, OuterType>
      * @return True iff the type is Hashable
      * @return (conditional) the natural Hasher for objects of this type
      */
-    conditional collections.Hasher<DataType> hashed()
+    conditional Hasher<DataType> hashed()
         {
-        return DataType.is(Type!<Hashable>) ? (True, new collections.NaturalHasher<DataType>()) : False;
+        return createHasher();
         }
 
 
@@ -982,6 +972,166 @@ interface Type<DataType, OuterType>
             }
 
         TODO <=>
+        }
+
+
+    // ----- helper methods ------------------------------------------------------------------------
+
+    /**
+     * The implementation of [multimethods] property.
+     */
+    // TODO GG: if protected RTType compilation fails
+    Map<String, MultiMethod<DataType>> collectMultimethods()
+        {
+        Type!<> typeActual = DataType;
+        ListMap<String, MultiMethod<typeActual.DataType>> map = new ListMap();
+        for (Method<DataType> m : methods)
+            {
+            String name = m.name;
+            MultiMethod<typeActual.DataType> mm = map.getOrCompute(name,
+                    () -> new MultiMethod<typeActual.DataType>(name, []));
+            map.put(name, mm + m);
+            }
+        for (Function f : functions)
+            {
+            String name = f.name;
+            MultiMethod<typeActual.DataType> mm = map.getOrCompute(name,
+                    () -> new MultiMethod<typeActual.DataType>(name, []));
+            map.put(name, mm + f);
+            }
+        return map.makeImmutable().as(Map<String, MultiMethod<DataType>>);
+        }
+
+    /**
+     * The implementation of [hashed()] method.
+     */
+    // TODO GG: if protected RTType compilation fails
+    conditional Hasher<DataType> createHasher()
+        {
+        Boolean isImplemented(String functionName, Int paramCount)
+            {
+            if (MultiMethod<DataType> mm := multimethods.get(functionName))
+                {
+                for (Function fn : mm.functions)
+                    {
+                    assert MethodTemplate template := fn.isFunction();
+                    if (template.parameters.size == paramCount)
+                        {
+                        return template.hasCode;
+                        }
+                    }
+                }
+            return False;
+            }
+
+        if (DataType.is(Type!<Hashable>))
+            {
+            switch (form)
+                {
+                case Class:
+                case Child:
+                    if (isImplemented("hashCode", 2) && isImplemented("equals", 3))
+                        {
+                        return True, new NaturalHasher<DataType>();
+                        }
+                    break;
+
+                case Intersection:
+                    {
+                    assert (Type!<> t1, Type!<> t2) := relational();
+
+                    if (Hasher<t1.DataType> hasher1 := t1.hashed(),
+                        Hasher<t2.DataType> hasher2 := t2.hashed())
+                        {
+                        return True, new Hasher<DataType>()
+                            {
+                            @Override
+                            Int hashOf(Value value)
+                                {
+                                if (&value.actualType.isA(t1))
+                                    {
+                                    assert Hasher<t1.DataType> hasher := t1.hashed();
+                                    return hasher.hashOf(value.as(t1.DataType));
+                                    }
+                                else
+                                    {
+                                    assert Hasher<t2.DataType> hasher := t2.hashed();
+                                    return hasher.hashOf(value.as(t2.DataType));
+                                    }
+                                }
+
+                            @Override
+                            Boolean areEqual(Value value1, Value value2)
+                                {
+                                Type actualType1 = &value1.actualType;
+                                Type actualType2 = &value2.actualType;
+
+                                if (actualType1.isA(t1) && actualType2.isA(t1))
+                                    {
+                                    assert Hasher<t1.DataType> hasher := t1.hashed();
+                                    return hasher.areEqual(value1.as(t1.DataType),
+                                                           value2.as(t1.DataType));
+                                    }
+                                if (actualType1.isA(t2) && actualType2.isA(t2))
+                                    {
+                                    assert Hasher<t2.DataType> hasher := t2.hashed();
+                                    return hasher.areEqual(value1.as(t2.DataType),
+                                                           value2.as(t2.DataType));
+                                    }
+                                return False;
+                                }
+                            }.makeImmutable();
+                        }
+                    break;
+                    }
+
+                case Union:
+                    {
+                    assert (Type!<> t1, Type!<> t2) := relational();
+
+                    if (Hasher<t1.DataType> hasher1 := t1.hashed())
+                        {
+                        if (Hasher<t2.DataType> hasher2 := t2.hashed())
+                            {
+                            return True, new Hasher<DataType>()
+                                {
+                                @Override
+                                Int hashOf(Value value)
+                                    {
+                                    return hasher1.hashOf(value.as(t1.DataType))
+                                         + hasher2.hashOf(value.as(t2.DataType));
+                                    }
+
+                                @Override
+                                Boolean areEqual(Value value1, Value value2)
+                                    {
+                                    return hasher1.areEqual(value1.as(t1.DataType), value2.as(t1.DataType))
+                                        && hasher2.areEqual(value1.as(t2.DataType), value2.as(t2.DataType));
+                                    }
+                                }.makeImmutable();
+                            }
+                        else
+                            {
+                            return True, hasher1;
+                            }
+                        }
+                    else
+                        {
+                        return t2.hashed();
+                        }
+                    }
+
+                case Immutable:
+                case Access:
+                case Annotated:
+                    assert Type!<> t := modifying();
+                    return t.hashed();
+
+                default:
+                    break;
+                }
+            }
+        return False;
         }
     }
 

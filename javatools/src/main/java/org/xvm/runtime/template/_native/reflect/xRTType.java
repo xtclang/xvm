@@ -1679,6 +1679,10 @@ public class xRTType
         hMulti.setField(GenericHandle.OUTER, hType);
         hMulti.setField("calculate",  xNullable.NULL);
 
+        GenericHandle hHasher = (GenericHandle) hType.getField("hasher");
+        hHasher.setField(GenericHandle.OUTER, hType);
+        hHasher.setField("calculate",  xNullable.NULL);
+
         return hType;
         }
 

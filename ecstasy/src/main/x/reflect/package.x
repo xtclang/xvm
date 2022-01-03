@@ -90,6 +90,22 @@ package reflect
             {
             return &this.actualClass.name.appendTo(buf);
             }
+
+
+        // ----- Hashable functions --------------------------------------------------------------------
+
+        @Override
+        static <CompileType extends Package> Int hashCode(CompileType value)
+            {
+            return &value.actualClass.name.hashCode();
+            }
+
+        @Override
+        static <CompileType extends Package> Boolean equals(CompileType value1, CompileType value2)
+            {
+            // two packages are equal only if they are the same Package object (the same instance)
+            return &value1 == &value2;
+            }
         }
 
     /**

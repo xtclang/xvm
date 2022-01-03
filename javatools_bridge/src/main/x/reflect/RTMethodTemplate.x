@@ -20,6 +20,9 @@ class RTMethodTemplate
     Annotation[] annotations.get()   { TODO("native"); }
 
     @Override
+    Boolean hasCode.get()            { TODO("native"); }
+
+    @Override
     ParameterTemplate[] parameters.get()
         {
         return new ParameterTemplate[parameterCount](index ->

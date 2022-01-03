@@ -20,6 +20,8 @@ module TestMaps
         testEquals(new SkiplistMap());
         testEquals(new ConcurrentHashMap());
 
+        testHasher();
+
         function void () run = &testFill100();
         profile(run, 10);
 
@@ -88,6 +90,35 @@ module TestMaps
         Map<Int, String> map2 = Map:[1="v1"];
 
         assert map1 == map2;
+        }
+
+    void testHasher()
+        {
+        try
+            {
+            Map<Hashable, String> map = new HashMap();
+            assert:test;
+            }
+        catch (IllegalState e)
+            {
+            console.println($"expected: {e.text}");
+            }
+
+        try
+            {
+            Map<Const, String> map = new HashMap();
+            assert:test;
+            }
+        catch (IllegalState e)
+            {
+            console.println($"expected: {e.text}");
+            }
+
+        Map<Int|String, String> map = new HashMap();
+        map.put(1, "i1");
+        map.put("1", "s1");
+        assert map.getOrDefault(1, "?") == "i1";
+        assert map.getOrDefault("1", "?") == "s1";
         }
 
     static void testFill100()

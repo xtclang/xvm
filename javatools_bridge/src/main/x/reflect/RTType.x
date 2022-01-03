@@ -1,3 +1,6 @@
+import ecstasy.collections.Hasher;
+import ecstasy.collections.NaturalHasher;
+
 import ecstasy.reflect.Access;
 import ecstasy.reflect.Annotation;
 import ecstasy.reflect.MultiMethod;
@@ -56,24 +59,29 @@ const RTType<DataType, OuterType>
     //   conditional function DataType(Struct) structConstructor(OuterType? outer = Null)
 
     @Override
+    conditional Hasher<DataType> hashed()
+        {
+        Hasher<DataType>? hasher = this.hasher;
+        if (hasher == Null)
+            {
+            return False;
+            }
+        return True, hasher;
+        }
+
+    private @Lazy Hasher<DataType>? hasher.calc()
+        {
+        Type typeActual = DataType;
+        if (Hasher<typeActual.DataType> hasher := createHasher())
+            {
+            return hasher;
+            }
+        return Null;
+        }
+
+    @Override
     @Lazy Map<String, MultiMethod<DataType>> multimethods.calc()
         {
-        // the code below is identical to the code in Type.multimethods.get(), but we needed to copy
-        // it here since RTType declares the "multimethods" property as @Lazy, which could not be
-        // done on the interface, and as a result the code on the interface is not reachable
-        ListMap<String, MultiMethod<DataType>> map = new ListMap();
-        for (Method<DataType> m : methods)
-            {
-            String name = m.name;
-            MultiMethod<DataType> mm = map.getOrCompute(name, () -> new MultiMethod<DataType>(name, []));
-            map.put(name, mm + m);
-            }
-        for (Function f : functions)
-            {
-            String name = f.name;
-            MultiMethod<DataType> mm = map.getOrCompute(name, () -> new MultiMethod<DataType>(name, []));
-            map.put(name, mm + f);
-            }
-        return map.freeze(True);
+        return collectMultimethods();
         }
     }
