@@ -4,9 +4,10 @@ module TestSimple.test.org
 
     void run()
         {
-        @Unchecked Int i = 3;
-        i = i.toUnchecked();
-
-        console.println($"i={i}, type={&i.actualType}, class={&i.actualClass}");
+        console.println($"TestSimple.is(immutable}={TestSimple.is(immutable)}");
+        console.println($"TestSimple.is(const}={TestSimple.is(const)}");
+        console.println($"TestSimple.is(package}={TestSimple.is(package)}");
+        console.println($"TestSimple.is(module}={TestSimple.is(module)}");
+        console.println($"TestSimple.is(service}={TestSimple.is(service)}");
         }
     }

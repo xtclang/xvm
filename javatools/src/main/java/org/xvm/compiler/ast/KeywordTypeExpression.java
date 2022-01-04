@@ -25,13 +25,14 @@ public class KeywordTypeExpression
 
         this.m_format = switch (keyword.getId())
             {
-            case CONST   -> Format.IsConst;
-            case ENUM    -> Format.IsEnum;
-            case MODULE  -> Format.IsModule;
-            case PACKAGE -> Format.IsPackage;
-            case SERVICE -> Format.IsService;
-            case CLASS   -> Format.IsClass;
-            default      -> throw new IllegalStateException("keyword=" + keyword);
+            case IMMUTABLE -> Format.IsImmutable;
+            case CONST     -> Format.IsConst;
+            case ENUM      -> Format.IsEnum;
+            case MODULE    -> Format.IsModule;
+            case PACKAGE   -> Format.IsPackage;
+            case SERVICE   -> Format.IsService;
+            case CLASS     -> Format.IsClass;
+            default        -> throw new IllegalStateException("keyword=" + keyword);
             };
         }
 

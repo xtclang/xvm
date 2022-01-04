@@ -929,6 +929,13 @@ public abstract class Constant
                 case DecoratedClass:
                 case NativeClass:
                 case UnresolvedName:
+                case IsImmutable:
+                case IsConst:
+                case IsEnum:
+                case IsModule:
+                case IsPackage:
+                case IsService:
+                case IsClass:
                     return true;
 
                 default:
