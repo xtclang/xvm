@@ -980,8 +980,7 @@ interface Type<DataType, OuterType>
     /**
      * The implementation of [multimethods] property.
      */
-    // TODO GG: if protected RTType compilation fails
-    Map<String, MultiMethod<DataType>> collectMultimethods()
+    protected Map<String, MultiMethod<DataType>> collectMultimethods()
         {
         Type!<> typeActual = DataType;
         ListMap<String, MultiMethod<typeActual.DataType>> map = new ListMap();
@@ -1005,8 +1004,7 @@ interface Type<DataType, OuterType>
     /**
      * The implementation of [hashed()] method.
      */
-    // TODO GG: if protected RTType compilation fails
-    conditional Hasher<DataType> createHasher()
+    protected conditional Hasher<DataType> createHasher()
         {
         Boolean isImplemented(String functionName, Int paramCount)
             {

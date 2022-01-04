@@ -2726,8 +2726,7 @@ public abstract class TypeConstant
                                    List<Contribution> listProcess, ErrorListener errs)
         {
         // must be an "interface type" (not a class type)
-        if (typeContrib.isExplicitClassIdentity(true)
-                && typeContrib.getExplicitClassFormat() != Component.Format.INTERFACE)
+        if (typeContrib.isSingleUnderlyingClass(false))
             {
             log(errs, Severity.ERROR, VE_IMPLEMENTS_NOT_INTERFACE,
                     typeContrib.getValueString(),
@@ -2745,7 +2744,8 @@ public abstract class TypeConstant
             }
         else
             {
-            listProcess.add(new Contribution(Composition.Implements, typeContrib));
+            listProcess.add(new Contribution(Composition.Implements,
+                getConstantPool().ensureAccessTypeConstant(typeContrib, Access.PROTECTED)));
             }
         }
 

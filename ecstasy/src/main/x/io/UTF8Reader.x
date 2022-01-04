@@ -59,7 +59,7 @@ class UTF8Reader
      * Abstract base class for the two Position implementations.
      */
     @Abstract
-    private static const AbstractPos
+    protected static const AbstractPos
             extends Reader.AbstractPos
         {
         @Abstract

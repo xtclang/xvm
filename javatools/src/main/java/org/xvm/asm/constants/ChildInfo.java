@@ -109,7 +109,7 @@ public class ChildInfo
      *         name to be unavailable (e.g. because the ChildInfo objects are not referring to the
      *         same component)
      */
-    ChildInfo layerOn(ChildInfo that)
+    protected ChildInfo layerOn(ChildInfo that)
         {
         if (this.f_setIds.equals(that.f_setIds) || this.f_setIds.containsAll(that.f_setIds))
             {
@@ -128,9 +128,23 @@ public class ChildInfo
             }
         else if (this.f_child instanceof ClassStructure && that.f_child instanceof ClassStructure)
             {
-            // assume that override is all that we need; if the combination is illegal, that needs
-            // to be detected by the TypeInfo creation for the child itself
-            fCombine = ((ClassStructure) that.f_child).isExplicitlyOverride();
+            ClassStructure clzThis = (ClassStructure) this.f_child;
+            ClassStructure clzThat = (ClassStructure) that.f_child;
+
+            // "static" attribute must be the same
+            if (clzThis.isStatic() == clzThat.isStatic())
+                {
+                if (clzThat.isStatic())
+                    {
+                    // a static child class fully "covers" the base one
+                    return that;
+                    }
+
+                // for virtual child assume that override is all that we need;
+                // if the combination is illegal, that needs to be detected by the TypeInfo creation
+                // for the child itself
+                fCombine = ((ClassStructure) that.f_child).isExplicitlyOverride();
+                }
             }
 
         if (fCombine)
