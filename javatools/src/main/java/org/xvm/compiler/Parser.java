@@ -2626,10 +2626,10 @@ public class Parser
         {
         Token keyword = expect(Id.TYPEDEF);
 
-        TypeExpression type = parseTypeExpression();
+        TypeExpression type = parseExtendedTypeExpression();
 
-        // optional "as" keyword
-        match(Id.AS);
+        // required "as" keyword (note: previously optional)
+        expect(Id.AS);
 
         Token simpleName = expect(Id.IDENTIFIER);
 
@@ -3352,11 +3352,13 @@ public class Parser
                         case AS:
                         case IS:
                             {
-                            Token keyword = current();
-                            expect(Id.L_PAREN);
+                            Token          keyword  = current();
+                            Token          tokOpen  = expect(Id.L_PAREN);
+                            TypeExpression exprType = parseExtendedTypeExpression();
+                            Token          tokClose = expect(Id.R_PAREN);
                             expr = keyword.getId() == Id.AS
-                                    ? new AsExpression(expr, keyword, parseTypeExpression(), expect(Id.R_PAREN))
-                                    : new IsExpression(expr, keyword, parseExpression(),     expect(Id.R_PAREN));
+                                    ? new AsExpression(expr, keyword, exprType, tokClose)
+                                    : new IsExpression(expr, keyword, exprType, tokClose);
                             break;
                             }
 
@@ -3724,6 +3726,7 @@ public class Parser
                     return expr;
                     }
 
+// TODO CP this is going away now
                 // test for an access-specified TypeExpression, i.e. ending with :public,
                 // :protected, :private, or :struct
                 Token access = null;
@@ -4534,7 +4537,22 @@ public class Parser
      */
     public TypeExpression parseTypeExpression()
         {
-        return parseUnionedTypeExpression();
+        return parseUnionedTypeExpression(false);
+        }
+
+    /**
+     * Parse an extended type expression.
+     *
+     * <p/><code><pre>
+     * ExtendedTypeExpression
+     *     ExtendedUnionedTypeExpression
+     * </pre></code>
+     *
+     * @return a TypeExpression
+     */
+    public TypeExpression parseExtendedTypeExpression()
+        {
+        return parseUnionedTypeExpression(true);
         }
 
     /**
@@ -4545,19 +4563,26 @@ public class Parser
      *     IntersectingTypeExpression
      *     UnionedTypeExpression + IntersectingTypeExpression
      *     UnionedTypeExpression - IntersectingTypeExpression
+     *
+     * ExtendedUnionedTypeExpression
+     *     ExtendedIntersectingTypeExpression
+     *     ExtendedUnionedTypeExpression + ExtendedIntersectingTypeExpression
+     *     ExtendedUnionedTypeExpression - ExtendedIntersectingTypeExpression
      * </pre></code>
+     *
+     * @param fExtended  true to parse for the "extended" form instead of the "limited" form
      *
      * @return a type expression
      */
-    TypeExpression parseUnionedTypeExpression()
+    TypeExpression parseUnionedTypeExpression(boolean fExtended)
         {
-        TypeExpression expr = parseIntersectingTypeExpression();
+        TypeExpression expr = parseIntersectingTypeExpression(fExtended);
         Token tokOp;
         do
             {
             if ((tokOp = match(Id.ADD)) != null || (tokOp = match(Id.SUB)) != null)
                 {
-                expr = new BiTypeExpression(expr, tokOp, parseIntersectingTypeExpression());
+                expr = new BiTypeExpression(expr, tokOp, parseIntersectingTypeExpression(fExtended));
                 }
             }
         while (tokOp != null);
@@ -4571,16 +4596,22 @@ public class Parser
      * IntersectingTypeExpression
      *     NonBiTypeExpression
      *     IntersectingTypeExpression | NonBiTypeExpression
+     *
+     * ExtendedIntersectingTypeExpression
+     *     ExtendedNonBiTypeExpression
+     *     ExtendedIntersectingTypeExpression | ExtendedNonBiTypeExpression
      * </pre></code>
+     *
+     * @param fExtended  true to parse for the "extended" form instead of the "limited" form
      *
      * @return a type expression
      */
-    TypeExpression parseIntersectingTypeExpression()
+    TypeExpression parseIntersectingTypeExpression(boolean fExtended)
         {
-        TypeExpression expr = parseNonBiTypeExpression();
+        TypeExpression expr = parseNonBiTypeExpression(fExtended);
         while (peek(Id.BIT_OR))
             {
-            expr = new BiTypeExpression(expr, expect(Id.BIT_OR), parseNonBiTypeExpression());
+            expr = new BiTypeExpression(expr, expect(Id.BIT_OR), parseNonBiTypeExpression(fExtended));
             }
         return expr;
         }
@@ -4594,11 +4625,26 @@ public class Parser
      *     AnnotatedTypeExpression
      *     NamedTypeExpression
      *     FunctionTypeExpression
-     *     NonBiTypeExpression "?"
+     *     NonBiTypeExpression NoWhitespace "?"
      *     NonBiTypeExpression ArrayDims
-     *     NonBiTypeExpression ArrayIndexes
-     *     NonBiTypeExpression "..."
+     *     NonBiTypeExpression ArrayIndexes            # ArrayIndexes is not consumed by this construction
      *     "immutable" NonBiTypeExpression
+     *
+     * ExtendedNonBiTypeExpression
+     *     "(" ExtendedTypeExpression ")"
+     *     ExtendedAnnotatedTypeExpression
+     *     TypeAccessModifier-opt NamedTypeExpression
+     *     FunctionTypeExpression
+     *     ExtendedNonBiTypeExpression NoWhitespace "?"
+     *     ExtendedNonBiTypeExpression ArrayDims
+     *     ExtendedNonBiTypeExpression ArrayIndexes            # ArrayIndexes is not consumed by this construction
+     *     "immutable" ExtendedNonBiTypeExpression-opt
+     *     "const"
+     *     "enum"
+     *     "module"
+     *     "package"
+     *     "service"
+     *     "class"
      *
      * NamedTypeExpression
      *     QualifiedName TypeParameterTypeList-opt
@@ -4621,11 +4667,14 @@ public class Parser
      *     ExpressionList "," Expression
      * </pre></code>
      *
+     * @param fExtended  true to parse for the "extended" form instead of the "limited" form
+     *
      * @return a type expression
      */
-    TypeExpression parseNonBiTypeExpression()
+    TypeExpression parseNonBiTypeExpression(boolean fExtended)
         {
         TypeExpression type;
+        Token tokAccess = null;
         switch (peek().getId())
             {
             case L_PAREN:
@@ -4635,7 +4684,7 @@ public class Parser
                 break;
 
             case AT:
-                type = parseAnnotatedTypeExpression();
+                type = parseAnnotatedTypeExpression(fExtended);
                 break;
 
             case FUNCTION:
@@ -4643,11 +4692,58 @@ public class Parser
                 break;
 
             case IMMUTABLE:
-                type = new DecoratedTypeExpression(current(), parseNonBiTypeExpression());
-                break;
+                {
+                Token tokImmut = current();
 
+                // the trailing type is optional in the "extended" form of the type syntax
+                if (fExtended)
+                    {
+                    switch (peek().getId())
+                        {
+                        case AS:
+                        case R_PAREN:
+                        case COMP_GT:
+                        case COMMA:
+                        case BIT_OR:
+                        case ADD:
+                        case SUB:
+                        case AND_NOT:
+                            return new KeywordTypeExpression(tokImmut);
+                        }
+                    }
+
+                type = new DecoratedTypeExpression(tokImmut, parseNonBiTypeExpression(fExtended));
+                break;
+                }
+
+            case CONST:
+            case ENUM:
+            case MODULE:
+            case PACKAGE:
+            case SERVICE:
+            case CLASS:
+                {
+                Token tokKeyword = current();
+                if (!fExtended)
+                    {
+                    log(Severity.ERROR, EXT_TYPE_SYNTAX, tokKeyword.getStartPosition(), tokKeyword.getEndPosition());
+                    }
+                type = new KeywordTypeExpression(tokKeyword);
+                return type;
+                }
+
+            case STRUCT:
+            case PUBLIC:
+            case PROTECTED:
+            case PRIVATE:
+                tokAccess = current();
+                if (!fExtended)
+                    {
+                    log(Severity.ERROR, EXT_TYPE_SYNTAX, tokAccess.getStartPosition(), tokAccess.getEndPosition());
+                    }
+                // fall through
             default:
-                type = parseNamedTypeExpression();
+                type = parseNamedTypeExpression(tokAccess);
                 break;
             }
 
@@ -4729,14 +4825,19 @@ public class Parser
      * <p/><code><pre>
      * AnnotatedTypeExpression
      *     Annotation NonBiTypeExpression
+     *
+     * ExtendedAnnotatedTypeExpression
+     *     Annotation ExtendedNonBiTypeExpression
      * </pre></code>
      *
-     * @return
+     * @param fExtended  true to parse for the "extended" form instead of the "limited" form
+     *
+     * @return an AnnotatedTypeExpression
      */
-    AnnotatedTypeExpression parseAnnotatedTypeExpression()
+    AnnotatedTypeExpression parseAnnotatedTypeExpression(boolean fExtended)
         {
         AnnotationExpression annotation = parseAnnotation(true);
-        TypeExpression type = parseNonBiTypeExpression();
+        TypeExpression type = parseNonBiTypeExpression(fExtended);
 
         return new AnnotatedTypeExpression(annotation, type);
         }
@@ -4790,18 +4891,17 @@ public class Parser
      *     NamedTypeExpression '.' Annotations-opt NamedTypeExpressionPart
      *
      * NamedTypeExpressionPart
-     *     QualifiedName TypeAccessModifier-opt NoAutoNarrowModifier-opt TypeParameterTypeList-opt
-     *
-     * TypeAccessModifier
-     *     NoWhitespace ":" NoWhitespace AccessModifier
+     *     QualifiedName NoAutoNarrowModifier-opt TypeParameterTypeList-opt
      *
      * NoAutoNarrowModifier
      *     NoWhitespace "!"
      * </pre></code>
      *
+     * @param tokAccess  PUBLIC, PROTECTED, PRIVATE, STRUCT, or (usually) null
+     *
      * @return a NamedTypeExpression
      */
-    NamedTypeExpression parseNamedTypeExpression()
+    NamedTypeExpression parseNamedTypeExpression(Token tokAccess)
         {
         NamedTypeExpression expr = null;
         do
@@ -4814,27 +4914,31 @@ public class Parser
             // QualifiedName
             List<Token> names = parseQualifiedName();
 
-            // TypeAccessModifier
-            Token tokAccess = null;
-            Token tokNext   = peek();
-            if (tokNext.getId() == Id.COLON && !tokNext.hasLeadingWhitespace() && !tokNext.hasTrailingWhitespace())
+// TODO CP this is going away now
+            if (tokAccess == null)
                 {
-                Token tokColon = current();
-                switch ((tokNext = peek()).getId())
+                // TypeAccessModifier
+                Token tokNext = peek();
+                if (tokNext.getId() == Id.COLON && !tokNext.hasLeadingWhitespace() && !tokNext.hasTrailingWhitespace())
                     {
-                    case PUBLIC:
-                    case PROTECTED:
-                    case PRIVATE:
-                    case STRUCT:
-                        // use expect() to make sure that getLastMatch() is set correctly
-                        tokAccess = expect(tokNext.getId());
-                        break;
+                    Token tokColon = current();
+                    switch ((tokNext = peek()).getId())
+                        {
+                        case PUBLIC:
+                        case PROTECTED:
+                        case PRIVATE:
+                        case STRUCT:
+                            // use expect() to make sure that getLastMatch() is set correctly
+                            tokAccess = expect(tokNext.getId());
+                            break;
 
-                    default:
-                        putBack(tokColon);
-                        break;
+                        default:
+                            putBack(tokColon);
+                            break;
+                        }
                     }
                 }
+// TODO CP end delete
 
             if (tokAccess != null && expr != null)
                 {
@@ -6170,6 +6274,11 @@ public class Parser
      * Incompatible comparison operator for ordering.
      */
     public static final String BAD_CHAINED_CMP   = "PARSER-26";
+    /**
+     * Extended type syntax unexpected.
+     * Use parenthesis around the type to enable the extended type syntax.
+     */
+    public static final String EXT_TYPE_SYNTAX   = "PARSER-27";
 
 
     // ----- data members --------------------------------------------------------------------------

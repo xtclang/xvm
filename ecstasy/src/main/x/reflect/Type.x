@@ -304,7 +304,13 @@ interface Type<DataType, OuterType>
      */
     Boolean isA(Type!<> that)
         {
-        return this.is(&that.actualType);
+        <ActualType> Boolean test(ActualType testType)
+            {
+            return this.is(ActualType);
+            }
+
+        Type!<> actual = &that.actualType;
+        return test(actual.DataType);
         }
 
     /**
@@ -410,7 +416,7 @@ interface Type<DataType, OuterType>
      */
     Boolean isInstance(Object o)
         {
-        return o.is(this);
+        return &o.actualType.isA(this);
         }
 
     /**

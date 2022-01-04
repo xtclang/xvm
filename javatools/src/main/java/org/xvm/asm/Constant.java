@@ -853,6 +853,13 @@ public abstract class Constant
         Signature,
         DecoratedClass,
         NativeClass,
+        IsImmutable,
+        IsConst,
+        IsEnum,
+        IsModule,
+        IsPackage,
+        IsService,
+        IsClass,
 
         /*
          * Types.

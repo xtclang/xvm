@@ -1890,6 +1890,11 @@ public abstract class AstNode
             }
         }
 
+    /**
+     * TODO doc
+     *
+     * @return
+     */
     public String getDumpDesc()
         {
         return null;

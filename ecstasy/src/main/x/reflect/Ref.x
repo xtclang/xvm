@@ -194,9 +194,9 @@ interface Ref<Referent>
      */
     Boolean instanceOf(Type type)
         {
-        if (Referent ref := peek())
+        if (peek())
             {
-            return ref.is(type);
+            return actualType.isA(type);
             }
 
         return False;

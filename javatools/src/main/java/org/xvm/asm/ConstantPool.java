@@ -2045,6 +2045,37 @@ public class ConstantPool
         }
 
     /**
+     * Obtain a constant representing the specified class/object category as specified by a keyword.
+     *
+     * @param format  one of the "Is*" formats
+     *
+     * @return the KeywordConstant corresponding to the format
+     */
+    public KeywordConstant ensureKeywordConstant(Format format)
+        {
+        assert format != null && switch (format)
+            {
+            case IsImmutable -> true;
+            case IsConst     -> true;
+            case IsEnum      -> true;
+            case IsModule    -> true;
+            case IsPackage   -> true;
+            case IsService   -> true;
+            case IsClass     -> true;
+            default          -> false;
+            };
+
+        // the KeywordConstant's locator is the format; it's effectively a singleton
+        KeywordConstant constKeyword = (KeywordConstant) ensureLocatorLookup(format).get(format);
+        if (constKeyword == null)
+            {
+            constKeyword = (KeywordConstant) register(new KeywordConstant(this, format));
+            }
+
+        return constKeyword;
+        }
+
+    /**
      * Create an Annotation.
      *
      * @param constClass   the class of the annotation

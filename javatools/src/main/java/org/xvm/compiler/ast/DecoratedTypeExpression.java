@@ -54,7 +54,7 @@ public class DecoratedTypeExpression
         }
 
 
-    // ----- TypeConstant methods ------------------------------------------------------------------
+    // ----- TypeExpression methods ----------------------------------------------------------------
 
     @Override
     protected TypeConstant instantiateTypeConstant(Context ctx, ErrorListener errs)

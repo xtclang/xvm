@@ -157,9 +157,7 @@ public abstract class TypeExpression
         }
 
     /**
-     * Determine if this is an introductory type expression.
-     *
-     * @return true iff this is an introductory type expression
+     * For introductory type expressions, TODO doc
      */
     public void replaceIntroducedType(TypeExpression type)
         {

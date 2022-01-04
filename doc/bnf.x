@@ -54,7 +54,7 @@ Argument
 # note: the "_" argument allows functions to specify arguments that they are NOT binding
 ArgumentExpression
     "_"
-    "<" TypeExpression ">" "_"
+    "<" ExtendedTypeExpression ">" "_"
     Expression
 
 NamedArgument
@@ -71,7 +71,7 @@ TypeParameter
     Name TypeParameterConstraint-opt
 
 TypeParameterConstraint
-    "extends" TypeExpression
+    "extends" ExtendedTypeExpression
 
 TypeParameterTypeList
     "<" TypeExpressionList ">"
@@ -82,7 +82,7 @@ TypeExpressionList
 
 TypeExpressionListElement
     TypeParameterTypeList                                       # indicates a "type sequence type"
-    TypeExpression
+    ExtendedTypeExpression
 
 #
 # compilation unit
@@ -579,7 +579,7 @@ UsingStatement
     "using" "(" UsingResources ")" StatementBlock
 
 TypeDefStatement
-    "typedef" TypeExpression "as"-opt Name ";"
+    "typedef" ExtendedTypeExpression "as" Name ";"
 
 #
 # expressions
@@ -726,13 +726,12 @@ PostfixExpression
     PostfixExpression "--"
     PostfixExpression "(" Arguments-opt ")"
     PostfixExpression ArrayDims                                 # TODO REVIEW - is this correct? (does it imply that the expression is a type expression?)
-    PostfixExpression "..."                                     # TODO REVIEW - is this correct? (does it imply that the expression is a type expression?)
     PostfixExpression ArrayIndexes
     PostfixExpression NoWhitespace "?"
     PostfixExpression "." "&"-opt Name TypeParameterTypeList-opt
     PostfixExpression ".new" NewFinish
-    PostfixExpression ".as" "(" TypeExpression ")"
-    PostfixExpression ".is" "(" TypeExpression ")"
+    PostfixExpression ".as" "(" ExtendedTypeExpression ")"
+    PostfixExpression ".is" "(" ExtendedTypeExpression ")"
 
 ArrayDims
     "[" DimIndicators-opt "]"
@@ -1080,39 +1079,70 @@ IdentifierTrail
 TypeExpression
     UnionedTypeExpression
 
+ExtendedTypeExpression
+    ExtendedUnionedTypeExpression
+
 # '+' creates a union of two types; '-' creates a difference of two types
 UnionedTypeExpression
     IntersectingTypeExpression
     UnionedTypeExpression + IntersectingTypeExpression
     UnionedTypeExpression - IntersectingTypeExpression
 
+ExtendedUnionedTypeExpression
+    ExtendedIntersectingTypeExpression
+    ExtendedUnionedTypeExpression + ExtendedIntersectingTypeExpression
+    ExtendedUnionedTypeExpression - ExtendedIntersectingTypeExpression
+
 IntersectingTypeExpression
     NonBiTypeExpression
     IntersectingTypeExpression | NonBiTypeExpression
 
+ExtendedIntersectingTypeExpression
+    ExtendedNonBiTypeExpression
+    ExtendedIntersectingTypeExpression | ExtendedNonBiTypeExpression
+
 NonBiTypeExpression
-    "(" TypeExpression ")"
+    "(" ExtendedTypeExpression ")"
     AnnotatedTypeExpression
     NamedTypeExpression
     FunctionTypeExpression
     NonBiTypeExpression NoWhitespace "?"
     NonBiTypeExpression ArrayDims
     NonBiTypeExpression ArrayIndexes             # ArrayIndexes is not consumed by this construction
-    NonBiTypeExpression "..."
     "immutable" NonBiTypeExpression
+
+ExtendedNonBiTypeExpression
+    "(" ExtendedTypeExpression ")"
+    ExtendedAnnotatedTypeExpression
+    TypeAccessModifier-opt NamedTypeExpression
+    FunctionTypeExpression
+    ExtendedNonBiTypeExpression NoWhitespace "?"
+    ExtendedNonBiTypeExpression ArrayDims
+    ExtendedNonBiTypeExpression ArrayIndexes     # ArrayIndexes is not consumed by this construction
+    "immutable" ExtendedNonBiTypeExpression-opt
+    "const"
+    "enum"
+    "module"
+    "package"
+    "service"
+    "class"
 
 AnnotatedTypeExpression
     Annotation NonBiTypeExpression
+
+ExtendedAnnotatedTypeExpression
+    Annotation ExtendedNonBiTypeExpression
 
 NamedTypeExpression
     NamedTypeExpressionPart
     NamedTypeExpression '.' Annotations-opt NamedTypeExpressionPart
 
 NamedTypeExpressionPart
-    QualifiedName TypeAccessModifier-opt NoAutoNarrowModifier-opt TypeParameterTypeList-opt
+    QualifiedName NoAutoNarrowModifier-opt TypeParameterTypeList-opt
 
 TypeAccessModifier
-    NoWhitespace ":" NoWhitespace AccessModifier
+    "struct"
+    AccessModifier
 
 NoAutoNarrowModifier
     NoWhitespace "!"
