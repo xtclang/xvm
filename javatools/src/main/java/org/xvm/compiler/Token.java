@@ -535,6 +535,7 @@ public class Token
         INC          ("++"             ),
         DEC          ("--"             ),
         LAMBDA       ("->"             ),
+        ASN_EXPR     ("<-"             ),
         ANY          ("_"              ),
         ALLOW        ("allow"          , true),
         AS           ("as"             ),

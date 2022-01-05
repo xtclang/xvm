@@ -3021,26 +3021,26 @@ public class Parser
      *
      * <p/><code><pre>
      * RelationalExpression
-     *     RangeExpression
-     *     RangeExpression      "<=>" RangeExpression
-     *     RelationalExpression "<"   RangeExpression
-     *     RelationalExpression "<="  RangeExpression
-     *     RelationalExpression ">"   RangeExpression
-     *     RelationalExpression ">="  RangeExpression
+     *     AssignmentExpression
+     *     AssignmentExpression "<=>" AssignmentExpression
+     *     RelationalExpression "<"   AssignmentExpression
+     *     RelationalExpression "<="  AssignmentExpression
+     *     RelationalExpression ">"   AssignmentExpression
+     *     RelationalExpression ">="  AssignmentExpression
      * </pre></code>
      *
      * @return an expression
      */
     Expression parseRelationalExpression()
         {
-        Expression expr = parseRangeExpression();
+        Expression expr = parseAssignmentExpression();
         Unchained: switch (peek().getId())
             {
             case COMP_LT:
             case COMP_LTEQ:
             case COMP_GT:
             case COMP_GTEQ:
-                expr = new CmpExpression(expr, current(), parseRangeExpression());
+                expr = new CmpExpression(expr, current(), parseAssignmentExpression());
                 switch (peek().getId())
                     {
                     case COMP_LT:
@@ -3053,7 +3053,7 @@ public class Parser
                 return expr;
 
             case COMP_ORD:
-                return new CmpExpression(expr, current(), parseRangeExpression());
+                return new CmpExpression(expr, current(), parseAssignmentExpression());
 
             default:
                 return expr;
@@ -3089,7 +3089,7 @@ public class Parser
                 }
 
             listOps .add(current());
-            listExpr.add(parseRangeExpression());
+            listExpr.add(parseAssignmentExpression());
 
             if (fThisAscending != fFirstAscending && !fErr)
                 {
@@ -3098,6 +3098,50 @@ public class Parser
                 fErr = true;
                 }
             }
+        }
+
+    /**
+     * Parse an assignment expression.
+     *
+     * <p/><code><pre>
+     * AssignmentExpression
+     *     RangeExpression
+     *     RangeExpression "<-" AssignmentExpression
+     * </pre></code>
+     *
+     * @return an expression
+     */
+    Expression parseAssignmentExpression()
+        {
+        Expression expr = parseRangeExpression();
+        if (peek(Id.ASN_EXPR))
+            {
+            Expression exprLValue = expr;
+            Token      tokAsnExpr = expect(Id.ASN_EXPR);
+            Expression exprRValue = parseAssignmentExpression();    // i.e. right-to-left
+
+            // for now, build this as syntactic sugar
+            // TODO GG - this was just a temporary kludge
+            //
+            //   {
+            //   val tmp=rvalue;
+            //   lvalue=tmp;
+            //   return tmp;
+            //   }
+            //
+            Token                        tokVal    = new Token(tokAsnExpr.getStartPosition(), tokAsnExpr.getEndPosition(), Id.VAL);
+            Token                        tokTmp    = new Token(tokAsnExpr.getStartPosition(), tokAsnExpr.getEndPosition(), Id.IDENTIFIER, "#tmp");
+            Token                        tokAsn    = new Token(tokAsnExpr.getStartPosition(), tokAsnExpr.getEndPosition(), Id.ASN);
+            VariableTypeExpression       typeDecl  = new VariableTypeExpression(tokVal);
+            VariableDeclarationStatement stmtDecl  = new VariableDeclarationStatement(typeDecl, tokTmp, false);
+            AssignmentStatement          stmtTmp   = new AssignmentStatement(stmtDecl, tokAsn, exprRValue);
+            AssignmentStatement          stmtAsn   = new AssignmentStatement(exprLValue, tokAsn, new NameExpression(tokTmp));
+            Token                        tokRet    = new Token(exprLValue.getStartPosition(), exprLValue.getStartPosition(), Id.RETURN);
+            ReturnStatement              stmtRet   = new ReturnStatement(tokRet, new NameExpression(tokTmp));
+            StatementBlock               stmtBlock = new StatementBlock(List.of(stmtTmp, stmtAsn, stmtRet), exprLValue.getStartPosition(), exprRValue.getEndPosition());
+            expr = new StatementExpression(stmtBlock);
+            }
+        return expr;
         }
 
     /**
