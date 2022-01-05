@@ -151,6 +151,10 @@ public class DebugConsole
             switch (m_stepMode)
                 {
                 case StepInto:
+                    if (frame.isNativeStack() || frame.f_function.isSynthetic())
+                        {
+                        return;
+                        }
                     // apparently, there was no op to step at; engage the debugger now
                     // TODO GG: disallow a natural processing (e.g. "DS" command)
                     enterCommand(frame, frame.m_iPC, true);
