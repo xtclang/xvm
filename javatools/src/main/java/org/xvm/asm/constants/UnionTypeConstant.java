@@ -96,12 +96,32 @@ public class UnionTypeConstant
         }
 
     @Override
+    public boolean isService()
+        {
+        return m_constType1.isService() || m_constType2.isService();
+        }
+
+    @Override
+    public TypeConstant ensureService()
+        {
+        TypeConstant type1 = m_constType1;
+        TypeConstant type2 = m_constType2;
+
+        return type1.isService() && type2.isService()
+                ? this
+                : cloneRelational(getConstantPool(), type1.ensureService(), type2.ensureService());
+        }
+
+    @Override
     public boolean isNullable()
         {
+        TypeConstant type1 = m_constType1;
+        TypeConstant type2 = m_constType2;
+
         // (Element + Stringable?) is Nullable (assuming trivial Element's constraint)
-        return m_constType1.isNullable()   && m_constType2.isNullable() ||
-               m_constType1.isFormalType() && m_constType2.isNullable() ||
-               m_constType1.isNullable()   && m_constType2.isFormalType();
+        return type1.isNullable()   && type2.isNullable() ||
+               type1.isFormalType() && type2.isNullable() ||
+               type1.isNullable()   && type2.isFormalType();
         }
 
     @Override
@@ -116,8 +136,8 @@ public class UnionTypeConstant
     @Override
     public TypeConstant andNot(ConstantPool pool, TypeConstant that)
         {
-        TypeConstant type1 = getUnderlyingType().resolveTypedefs();
-        TypeConstant type2 = getUnderlyingType2().resolveTypedefs();
+        TypeConstant type1 = m_constType1.resolveTypedefs();
+        TypeConstant type2 = m_constType2.resolveTypedefs();
 
         if (type1.equals(that))
             {
