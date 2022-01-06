@@ -22,18 +22,6 @@ public class KeywordTypeExpression
     public KeywordTypeExpression(Token keyword)
         {
         this.keyword  = keyword;
-
-        this.m_format = switch (keyword.getId())
-            {
-            case IMMUTABLE -> Format.IsImmutable;
-            case CONST     -> Format.IsConst;
-            case ENUM      -> Format.IsEnum;
-            case MODULE    -> Format.IsModule;
-            case PACKAGE   -> Format.IsPackage;
-            case SERVICE   -> Format.IsService;
-            case CLASS     -> Format.IsClass;
-            default        -> throw new IllegalStateException("keyword=" + keyword);
-            };
         }
 
 
@@ -59,7 +47,17 @@ public class KeywordTypeExpression
         {
         ConstantPool pool = pool();
 
-        return pool.ensureTerminalTypeConstant(pool.ensureKeywordConstant(m_format));
+        return switch (keyword.getId())
+            {
+            case IMMUTABLE -> pool.ensureImmutableTypeConstant(pool.typeObject());
+            case SERVICE   -> pool.ensureServiceTypeConstant(pool.typeObject());
+            case CONST     -> pool.ensureTerminalTypeConstant(pool.ensureKeywordConstant(Format.IsConst));
+            case ENUM      -> pool.ensureTerminalTypeConstant(pool.ensureKeywordConstant(Format.IsEnum));
+            case MODULE    -> pool.ensureTerminalTypeConstant(pool.ensureKeywordConstant(Format.IsModule));
+            case PACKAGE   -> pool.ensureTerminalTypeConstant(pool.ensureKeywordConstant(Format.IsPackage));
+            case CLASS     -> pool.ensureTerminalTypeConstant(pool.ensureKeywordConstant(Format.IsClass));
+            default        -> throw new IllegalStateException("keyword=" + keyword);
+            };
         }
 
 
@@ -84,9 +82,4 @@ public class KeywordTypeExpression
      * The parsed keyword indicating a type category.
      */
     protected Token keyword;
-
-    /**
-     * The constant format corresponding to the keyword.
-     */
-    protected Format m_format;
     }

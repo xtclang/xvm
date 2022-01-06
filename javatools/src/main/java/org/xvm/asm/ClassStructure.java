@@ -17,28 +17,9 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
-import org.xvm.asm.constants.ClassConstant;
-import org.xvm.asm.constants.ConditionalConstant;
-import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.*;
 import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
-import org.xvm.asm.constants.IntersectionTypeConstant;
-import org.xvm.asm.constants.LiteralConstant;
-import org.xvm.asm.constants.MethodConstant;
-import org.xvm.asm.constants.MethodInfo;
-import org.xvm.asm.constants.ModuleConstant;
-import org.xvm.asm.constants.NativeRebaseConstant;
-import org.xvm.asm.constants.PropertyConstant;
-import org.xvm.asm.constants.PropertyInfo;
-import org.xvm.asm.constants.SignatureConstant;
-import org.xvm.asm.constants.StringConstant;
-import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeConstant.Relation;
-import org.xvm.asm.constants.TypeInfo;
-import org.xvm.asm.constants.TypeParameterConstant;
-import org.xvm.asm.constants.TypedefConstant;
-import org.xvm.asm.constants.UnionTypeConstant;
-import org.xvm.asm.constants.UnresolvedNameConstant;
-import org.xvm.asm.constants.UnresolvedTypeConstant;
 
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.MethodStructure.ConcurrencySafety;
@@ -2416,6 +2397,14 @@ public class ClassStructure
             case Typedef:
                 return calculateRelationImpl(
                         ((TypedefConstant) constIdLeft).getReferredToType(), typeRight, fAllowInto);
+
+            case IsConst:
+            case IsEnum:
+            case IsModule:
+            case IsPackage:
+            case IsClass:
+                return calculateRelationImpl(
+                        ((KeywordConstant) constIdLeft).getBaseType(), typeRight, fAllowInto);
 
             case UnresolvedName:
                 return Relation.INCOMPATIBLE;

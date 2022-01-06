@@ -1231,9 +1231,6 @@ public abstract class Op
             case OP_IS_NOT:      return new IsNot       (in, aconst);
             case OP_IS_TYPE:     return new IsType      (in, aconst);
             case OP_IS_NTYPE:    return new IsNType     (in, aconst);
-            case OP_IS_SVC:      return new IsService   (in, aconst);
-            case OP_IS_CONST:    return new IsConst     (in, aconst);
-            case OP_IS_IMMT:     return new IsImmutable (in, aconst);
             case OP_CMP:         return new Cmp         (in, aconst);
 
             case OP_VAR:         return new Var         (in, aconst);
@@ -1467,9 +1464,6 @@ public abstract class Op
             case OP_IS_NOT:      return "IS_NOT";
             case OP_IS_TYPE:     return "IS_TYPE";
             case OP_IS_NTYPE:    return "IS_NTYPE";
-            case OP_IS_SVC:      return "IS_SVC";
-            case OP_IS_CONST:    return "IS_CONST";
-            case OP_IS_IMMT:     return "IS_IMMUT";
             case OP_CMP:         return "CMP";
             case OP_VAR:         return "VAR";
             case OP_VAR_I:       return "VAR_I";
@@ -1781,9 +1775,9 @@ public abstract class Op
     public static final int OP_IS_NOT       = 0x73;
     public static final int OP_IS_TYPE      = 0x74;
     public static final int OP_IS_NTYPE     = 0x75;
-    public static final int OP_IS_SVC       = 0x76;
-    public static final int OP_IS_CONST     = 0x77;
-    public static final int OP_IS_IMMT      = 0x78;
+    public static final int OP_RSVD_76      = 0x76;
+    public static final int OP_RSVD_77      = 0x77;
+    public static final int OP_RSVD_78      = 0x78;
 
     public static final int OP_JMP          = 0x79;
     public static final int OP_JMP_TRUE     = 0x7A;

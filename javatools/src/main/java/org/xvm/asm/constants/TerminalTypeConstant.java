@@ -108,6 +108,11 @@ public class TerminalTypeConstant
         switch (constant.getFormat())
             {
             case NativeClass:
+            case IsConst:
+            case IsEnum:
+            case IsModule:
+            case IsPackage:
+            case IsClass:
                 return true;
 
             case Module:
@@ -157,6 +162,11 @@ public class TerminalTypeConstant
 
             case NativeClass:
             case UnresolvedName:
+            case IsConst:
+            case IsEnum:
+            case IsModule:
+            case IsPackage:
+            case IsClass:
                 return false;
 
             case Typedef:
@@ -189,8 +199,15 @@ public class TerminalTypeConstant
             {
             case Module:
             case Package:
+            case IsConst:
+            case IsEnum:
+            case IsModule:
+            case IsPackage:
                 // always immutable
                 return true;
+
+            case IsClass:
+                return false;
 
             case Property:
             case TypeParameter:
@@ -211,8 +228,6 @@ public class TerminalTypeConstant
                 idClass = ((PseudoConstant) constant).getDeclarationLevelClass();
                 break;
 
-            case Typedef:
-            case UnresolvedName:
             default:
                 throw new IllegalStateException("unexpected defining constant: " + constant);
             }
@@ -221,6 +236,55 @@ public class TerminalTypeConstant
         // by resolveTypedefs() method; we need to play safe here
         ClassStructure clz = (ClassStructure) idClass.getComponent();
         return clz != null && clz.isImmutable();
+        }
+
+    @Override
+    public boolean isService()
+        {
+        TypeConstant type = resolveTypedefs();
+        if (type != this)
+            {
+            return type.isService();
+            }
+
+        Constant         constant = getDefiningConstant();
+        IdentityConstant idClass;
+        switch (constant.getFormat())
+            {
+            case Module:
+            case Package:
+            case IsConst:
+            case IsEnum:
+            case IsModule:
+            case IsPackage:
+            case IsClass:
+                return false;
+
+            case Property:
+            case TypeParameter:
+            case FormalTypeChild:
+            case DynamicFormal:
+                return (((FormalConstant) constant)).getConstraintType().isService();
+
+            case NativeClass:
+                constant = ((NativeRebaseConstant) constant).getClassConstant();
+                // fall through
+            case Class:
+                idClass = (IdentityConstant) constant;
+                break;
+
+            case ThisClass:
+            case ParentClass:
+            case ChildClass:
+                idClass = ((PseudoConstant) constant).getDeclarationLevelClass();
+                break;
+
+            default:
+                throw new IllegalStateException("unexpected defining constant: " + constant);
+            }
+
+        ClassStructure clz = (ClassStructure) idClass.getComponent();
+        return clz != null && clz.isService();
         }
 
     @Override
@@ -595,6 +659,11 @@ public class TerminalTypeConstant
             case TypeParameter:
             case FormalTypeChild:
             case DynamicFormal:
+            case IsConst:
+            case IsEnum:
+            case IsModule:
+            case IsPackage:
+            case IsClass:
                 return this;
 
             case Class:
@@ -759,7 +828,7 @@ public class TerminalTypeConstant
                 return ((ParentClassConstant) constant).getDeclarationLevelClass().getType();
 
             case ChildClass:
-                // currently not used
+                // currently, not used
                 return ((ChildClassConstant) constant).getDeclarationLevelClass().getType();
 
             case UnresolvedName:
@@ -801,7 +870,7 @@ public class TerminalTypeConstant
                         // so trying to resolve a call, such as
                         //   Int[] array = ...
                         //   Int   hash = Array<Int>.hashCode(array);
-                        // requires having the the actual type of "Array<Int>" to resolve the type
+                        // requires having the actual type of "Array<Int>" to resolve the type
                         // parameter "CompileType" with the constraint type Hasher<Element>
                         // to the resolved type of "Hasher<Int>"
                         //
@@ -863,6 +932,11 @@ public class TerminalTypeConstant
             {
             case Module:
             case Package:
+            case IsConst:
+            case IsEnum:
+            case IsModule:
+            case IsPackage:
+            case IsClass:
                 return false;
 
             case NativeClass:
@@ -1183,6 +1257,13 @@ public class TerminalTypeConstant
                         ? Category.IFACE : Category.CLASS;
                 }
 
+            case IsConst:
+            case IsEnum:
+            case IsModule:
+            case IsPackage:
+            case IsClass:
+                return Category.OTHER;
+
             default:
                 throw new IllegalStateException("unexpected defining constant: " + constant);
             }
@@ -1206,6 +1287,13 @@ public class TerminalTypeConstant
             case NativeClass:
                 // these are always class types (not interface types)
                 return true;
+
+            case IsConst:
+            case IsEnum:
+            case IsModule:
+            case IsPackage:
+            case IsClass:
+                return false;
 
             case Class:
                 {
@@ -1301,6 +1389,11 @@ public class TerminalTypeConstant
             case TypeParameter:
             case FormalTypeChild:
             case DynamicFormal:
+            case IsConst:
+            case IsEnum:
+            case IsModule:
+            case IsPackage:
+            case IsClass:
                 return false;
 
             default:
@@ -1461,6 +1554,10 @@ public class TerminalTypeConstant
             {
             case Module:
             case Package:
+            case IsConst:
+            case IsEnum:
+            case IsModule:
+            case IsPackage:
                 return true;
 
             case Property:
@@ -1471,6 +1568,7 @@ public class TerminalTypeConstant
             case ParentClass:
             case ChildClass:
             case NativeClass:
+            case IsClass:
                 return false;
 
             case Class:
@@ -1569,6 +1667,13 @@ public class TerminalTypeConstant
             case NativeClass:
                 return super.buildTypeInfo(errs);
 
+            case IsClass:
+            case IsConst:
+            case IsEnum:
+            case IsModule:
+            case IsPackage:
+                return ((KeywordConstant) constant).getBaseType().ensureTypeInfoInternal(errs);
+
             case Property:
             case TypeParameter:
             case FormalTypeChild:
@@ -1654,6 +1759,57 @@ public class TerminalTypeConstant
                     ((DynamicFormalConstant) getDefiningConstant()).getConstraintType();
             return typeRight.calculateRelation(typeConstraint);
             }
+
+        if (isSingleDefiningConstant())
+            {
+            Constant constant = getDefiningConstant();
+            if (constant instanceof KeywordConstant)
+                {
+                if (constant.getFormat() == Format.IsClass)
+                    {
+                    return typeRight.getCategory() == Category.CLASS
+                        ? Relation.IS_A
+                        : Relation.INCOMPATIBLE;
+                    }
+
+                if (typeRight.isSingleUnderlyingClass(true))
+                    {
+                    ClassStructure clzRight = (ClassStructure)
+                        typeRight.getSingleUnderlyingClass(true).getComponent();
+                    Component.Format formatClz = clzRight.getFormat();
+                    switch (constant.getFormat())
+                        {
+                        case IsConst:
+                            return switch (formatClz)
+                                {
+                                case CONST, ENUMVALUE, PACKAGE, MODULE
+                                        -> Relation.IS_A;
+                                default -> Relation.INCOMPATIBLE;
+                                };
+
+                        case IsEnum:
+                            return formatClz == Component.Format.ENUMVALUE
+                                ? Relation.IS_A
+                                : Relation.INCOMPATIBLE;
+
+                        case IsModule:
+                            return formatClz == Component.Format.MODULE
+                                ? Relation.IS_A
+                                : Relation.INCOMPATIBLE;
+
+                        case IsPackage:
+                            return formatClz == Component.Format.MODULE ||
+                                   formatClz == Component.Format.PACKAGE
+                                ? Relation.IS_A
+                                : Relation.INCOMPATIBLE;
+
+                        default:
+                            throw new IllegalStateException();
+                        }
+                    }
+                }
+            }
+
         return super.calculateRelationToRight(typeRight);
         }
 
@@ -1820,6 +1976,14 @@ public class TerminalTypeConstant
             case ParentClass:
             case ChildClass:
                 return ((PseudoConstant) constIdThis).getDeclarationLevelClass().getType().
+                    containsSubstitutableMethod(signature, access, fFunction, listParams);
+
+            case IsConst:
+            case IsEnum:
+            case IsModule:
+            case IsPackage:
+            case IsClass:
+                return ((KeywordConstant) constIdThis).getBaseType().
                     containsSubstitutableMethod(signature, access, fFunction, listParams);
 
             default:
@@ -2136,6 +2300,13 @@ public class TerminalTypeConstant
                 case NativeClass:
                     return super.validate(errs);
 
+                case IsConst:
+                case IsEnum:
+                case IsModule:
+                case IsPackage:
+                case IsClass:
+                    break;
+
                 case UnresolvedName:
                 default:
                     // this is basically an illegal state exception
@@ -2166,7 +2337,7 @@ public class TerminalTypeConstant
     private transient int m_iDef;
 
     /**
-     * The class referred to. May be an IdentityConstant (ModuleConstant, PackageConstant,
+     * The class referred to. It may be an IdentityConstant (ModuleConstant, PackageConstant,
      * ClassConstant, TypedefConstant, PropertyConstant), or a PseudoConstant (ThisClassConstant,
      * ParentClassConstant, ChildClassConstant, TypeParameterConstant, or UnresolvedNameConstant).
      */

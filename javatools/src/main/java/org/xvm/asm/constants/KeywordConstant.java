@@ -9,8 +9,8 @@ import org.xvm.asm.ConstantPool;
 
 
 /**
- * Represent a category of classes and/or types: IsImmutable, IsConst, IsEnum, IsModule, IsPackage,
- * IsService, and IsClass.
+ * Represent a category of keyword classes and/or types: "const", "enum", "module", "package",
+ * "service", and "class".
  */
 public class KeywordConstant
         extends PseudoConstant
@@ -26,8 +26,12 @@ public class KeywordConstant
     public KeywordConstant(ConstantPool pool, Format format)
         {
         super(pool);
-        validate(format);
-        m_format = format;
+
+        if (!isValid(format))
+            {
+            throw new IllegalStateException("illegal format: " + format);
+            }
+        f_format = format;
         }
 
     /**
@@ -45,28 +49,36 @@ public class KeywordConstant
         this(pool, format);
         }
 
-    private void validate(Format format)
-        {
-        if (!isValid(format))
-            {
-            throw new IllegalStateException("illegal format: " + format);
-            }
-        }
-
     private boolean isValid(Format format)
         {
         return format != null && switch (format)
             {
-            case IsImmutable -> true;
-            case IsConst     -> true;
-            case IsEnum      -> true;
-            case IsModule    -> true;
-            case IsPackage   -> true;
-            case IsService   -> true;
-            case IsClass     -> true;
-            default          -> false;
+            case IsConst   -> true;
+            case IsEnum    -> true;
+            case IsModule  -> true;
+            case IsPackage -> true;
+            case IsClass   -> true;
+            default        -> false;
             };
         }
+
+    /**
+     * @return an equivalent base type
+     */
+    public TypeConstant getBaseType()
+        {
+        ConstantPool pool = getConstantPool();
+        return switch (f_format)
+            {
+            case IsConst    -> pool.typeConst();
+            case IsEnum     -> pool.typeEnumValue();
+            case IsModule   -> pool.typeModule();
+            case IsPackage  -> pool.typePackage();
+            case IsClass    -> pool.typeObject();
+            default         -> throw new IllegalStateException();
+            };
+        }
+
 
     // ----- Pseudo-constant methods --------------------------------------------------------------
 
@@ -82,7 +94,7 @@ public class KeywordConstant
     @Override
     public Format getFormat()
         {
-        return m_format;
+        return f_format;
         }
 
     @Override
@@ -102,7 +114,7 @@ public class KeywordConstant
     protected Object getLocator()
         {
         // each format is a singleton
-        return m_format;
+        return f_format;
         }
 
     @Override
@@ -112,7 +124,7 @@ public class KeywordConstant
             {
             return -1;
             }
-        return this.m_format.compareTo(((KeywordConstant) that).m_format);
+        return this.f_format.compareTo(((KeywordConstant) that).f_format);
         }
 
     @Override
@@ -127,16 +139,14 @@ public class KeywordConstant
     @Override
     public String getDescription()
         {
-        return switch (m_format)
+        return switch (f_format)
             {
-            case IsImmutable -> "immutable";
-            case IsConst     -> "const";
-            case IsEnum      -> "enum";
-            case IsModule    -> "module";
-            case IsPackage   -> "package";
-            case IsService   -> "service";
-            case IsClass     -> "class";
-            default          -> throw new IllegalStateException("format=" + m_format);
+            case IsConst   -> "const";
+            case IsEnum    -> "enum";
+            case IsModule  -> "module";
+            case IsPackage -> "package";
+            case IsClass   -> "class";
+            default        -> throw new IllegalStateException("format=" + f_format);
             };
         }
 
@@ -146,7 +156,7 @@ public class KeywordConstant
     @Override
     public int hashCode()
         {
-        return m_format.ordinal();
+        return f_format.ordinal();
         }
 
 
@@ -155,5 +165,5 @@ public class KeywordConstant
     /**
      * The Constant Format that identifies the category of class/type for this constant.
      */
-    private Format m_format;
+    private final Format f_format;
     }

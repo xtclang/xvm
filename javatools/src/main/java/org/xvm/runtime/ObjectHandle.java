@@ -6,7 +6,6 @@ import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -128,9 +127,15 @@ public abstract class ObjectHandle
     public TypeConstant getType()
         {
         TypeConstant type = getComposition().getType();
-        return isMutable()
-                ? type
-                : type.freeze();
+        if (!isMutable())
+            {
+            type = type.freeze();
+            }
+        if (isService())
+            {
+            type = type.ensureService();
+            }
+        return type;
         }
 
     /**
@@ -1164,7 +1169,7 @@ public abstract class ObjectHandle
             ObjectHandle hConst = getInitialized();
             return hConst == null ? "<initializing>" : hConst.toString();
             }
-        };
+        }
 
     /**
      * A handle that is used as an indicator for a default method argument value.

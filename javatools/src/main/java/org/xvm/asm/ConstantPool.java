@@ -192,9 +192,9 @@ public class ConstantPool
             {
             // this can happen only in a single-thread scenario at the end of the compilation;
             // the first time that this constant is registered, the constant has to recursively
-            // register any constants that it refers to
-            // .. and each time the constant is registered, we tally that registration so that we
-            // can later order the constants from most to least referenced
+            // register any constants that it refers to, and each time the constant is registered
+            // we tally that registration so that we can later order the constants from most to
+            // least referenced
             fRegisterRecursively = constant.addRef();
             }
 
@@ -1659,23 +1659,30 @@ public class ConstantPool
      */
     public TypeConstant ensureImmutableTypeConstant(TypeConstant constType)
         {
-        TypeConstant constant;
         if (constType.isImmutabilitySpecified())
             {
-            constant = constType;
-            }
-        else
-            {
-            constant = (TypeConstant) ensureLocatorLookup(Format.ImmutableType).get(constType);
-            if (constant != null)
-                {
-                return constant;
-                }
-
-            constant = new ImmutableTypeConstant(this, constType);
+            throw new IllegalArgumentException("type already has the immutability specified");
             }
 
-        return (TypeConstant) register(constant);
+        TypeConstant constant = (TypeConstant) ensureLocatorLookup(Format.ImmutableType).get(constType);
+        return constant == null
+                ? (TypeConstant) register(new ImmutableTypeConstant(this, constType))
+                :  constant;
+        }
+
+    /**
+     * Given the specified type, obtain a TypeConstant that represents the service of that type.
+     *
+     * @param constType  the TypeConstant to obtain a service type of
+     *
+     * @return the service type of the passed TypeConstant
+     */
+    public TypeConstant ensureServiceTypeConstant(TypeConstant constType)
+        {
+        TypeConstant constant = (TypeConstant) ensureLocatorLookup(Format.ServiceType).get(constType);
+        return constant == null
+                ? (TypeConstant) register(new ServiceTypeConstant(this, constType))
+                : constant;
         }
 
     /**
@@ -1834,7 +1841,7 @@ public class ConstantPool
      *
      * @param constClass  one of: ThisClassConstant, ParentClassConstant, ChildClassConstant
      *
-     * @return an auto-narrowing constant that represents the parent class of the passe constant
+     * @return an auto-narrowing constant that represents the parent class of the passed constant
      */
     public PseudoConstant ensureParentClassConstant(PseudoConstant constClass)
         {
@@ -2053,18 +2060,6 @@ public class ConstantPool
      */
     public KeywordConstant ensureKeywordConstant(Format format)
         {
-        assert format != null && switch (format)
-            {
-            case IsImmutable -> true;
-            case IsConst     -> true;
-            case IsEnum      -> true;
-            case IsModule    -> true;
-            case IsPackage   -> true;
-            case IsService   -> true;
-            case IsClass     -> true;
-            default          -> false;
-            };
-
         // the KeywordConstant's locator is the format; it's effectively a singleton
         KeywordConstant constKeyword = (KeywordConstant) ensureLocatorLookup(format).get(format);
         if (constKeyword == null)
@@ -2146,7 +2141,7 @@ public class ConstantPool
      * Obtain a type that represents a constraint for a formal type that materializes into a
      * sequence of types.
      *
-     * @return a sequence of types type constant
+     * @return a "sequence of types" type constant
      */
     public TypeSequenceTypeConstant ensureTypeSequenceTypeConstant()
         {
@@ -2818,6 +2813,14 @@ public class ConstantPool
                     // it is not used in the persistent form of the module
                     throw new IllegalStateException();
 
+                case IsConst:
+                case IsEnum:
+                case IsModule:
+                case IsPackage:
+                case IsClass:
+                    constant = new KeywordConstant(this, format, in);
+                    break;
+
                 /*
                 * Types.
                 */
@@ -2830,6 +2833,10 @@ public class ConstantPool
 
                 case ImmutableType:
                     constant = new ImmutableTypeConstant(this, format, in);
+                    break;
+
+                case ServiceType:
+                    constant = new ServiceTypeConstant(this, format, in);
                     break;
 
                 case AccessType:
@@ -3216,7 +3223,7 @@ public class ConstantPool
         // sort the Constants by how often they are referred to within the FileStructure, with the
         // most frequently referred-to Constants appearing first
         Arrays.sort(aconst, 0, cAfter, DEBUG
-                ? Comparator.<Constant>naturalOrder()
+                ? Comparator.naturalOrder()
                 : Constant.MFU_ORDER);
 
         // mark each constant with its new position and add to the list
@@ -3556,7 +3563,7 @@ public class ConstantPool
 
         // Function<TupleRP, TupleRR> is assignable to Function<TupleLP, TupleLR> iff
         // (RP/RR - right parameters/return, LP/LR - left parameter/return)
-        // 1) TupleLP has less or equal arity arity as TupleRP
+        // 1) TupleLP has less or equal arity as TupleRP
         //    (assuming there are default values and relying on the run-time checks)
         // 2) every parameter type on the right should be assignable to a corresponding parameter
         //    on the left (e.g. "function void (Number)" is assignable to "function void (Int)")
@@ -3989,7 +3996,7 @@ public class ConstantPool
      * Set of references to ConstantPool instances, defining the only ConstantPool references that
      * may be referred to (directly or indirectly) from constants stored in this pool.
      */
-    private final Set<ConstantPool> m_setValidPools = Collections.newSetFromMap(new IdentityHashMap());
+    private final Set<ConstantPool> m_setValidPools = Collections.newSetFromMap(new IdentityHashMap<>());
 
     /**
      * Tracks whether the ConstantPool should recursively register constants.

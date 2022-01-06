@@ -7,32 +7,29 @@ import java.io.IOException;
 
 import java.util.function.Consumer;
 
-import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
-
-import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * Represent a constant that specifies an explicitly immutable form of an underlying type.
+ * Represent a constant that specifies that the underlying type is a service.
  */
-public class ImmutableTypeConstant
+public class ServiceTypeConstant
         extends TypeConstant
     {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Construct a constant whose value is an immutable type.
+     * Construct a constant whose value is a service type.
      *
      * @param pool       the ConstantPool that will contain this Constant
-     * @param constType  a TypeConstant that this constant modifies to be immutable
+     * @param constType  a TypeConstant that this constant modifies to be a service
      */
-    public ImmutableTypeConstant(ConstantPool pool, TypeConstant constType)
+    public ServiceTypeConstant(ConstantPool pool, TypeConstant constType)
         {
         super(pool);
 
@@ -53,7 +50,7 @@ public class ImmutableTypeConstant
      *
      * @throws IOException  if an issue occurs reading the Constant value
      */
-    public ImmutableTypeConstant(ConstantPool pool, Format format, DataInput in)
+    public ServiceTypeConstant(ConstantPool pool, Format format, DataInput in)
             throws IOException
         {
         super(pool);
@@ -83,53 +80,15 @@ public class ImmutableTypeConstant
         }
 
     @Override
-    public boolean isImmutabilitySpecified()
+    public boolean isService()
         {
         return true;
-        }
-
-    @Override
-    public boolean isImmutable()
-        {
-        return true;
-        }
-
-    @Override
-    public TypeConstant freeze()
-        {
-        return this;
-        }
-
-    @Override
-    public boolean isNullable()
-        {
-        return m_constType.isNullable();
-        }
-
-    @Override
-    public TypeConstant removeNullable()
-        {
-        return isNullable()
-                ? cloneSingle(getConstantPool(), m_constType.removeNullable())
-                : this;
         }
 
     @Override
     protected TypeConstant cloneSingle(ConstantPool pool, TypeConstant type)
         {
-        return type.isImmutabilitySpecified()
-                ? type
-                : pool.ensureImmutableTypeConstant(type);
-        }
-
-    @Override
-    public TypeConstant resolveConstraints()
-        {
-        TypeConstant constOriginal = getUnderlyingType();
-        TypeConstant constResolved = constOriginal.resolveConstraints();
-        return constResolved == constOriginal
-                ? this
-                : constResolved.freeze();
+        return pool.ensureServiceTypeConstant(type);
         }
 
 
@@ -138,15 +97,13 @@ public class ImmutableTypeConstant
     @Override
     public TypeInfo ensureTypeInfo(IdentityConstant idClass, ErrorListener errs)
         {
-        // the "immutable" keyword does not affect the TypeInfo, even though the type itself is
-        // slightly different
         return m_constType.ensureTypeInfo(idClass, errs);
         }
 
     @Override
     protected TypeInfo buildTypeInfo(ErrorListener errs)
         {
-        // the "immutable" keyword does not affect the TypeInfo, even though the type itself is
+        // the "service" keyword does not affect the TypeInfo, even though the type itself is
         // slightly different
         return m_constType.ensureTypeInfoInternal(errs);
         }
@@ -166,7 +123,7 @@ public class ImmutableTypeConstant
     @Override
     public Format getFormat()
         {
-        return Format.ImmutableType;
+        return Format.ServiceType;
         }
 
     @Override
@@ -190,17 +147,17 @@ public class ImmutableTypeConstant
     @Override
     protected int compareDetails(Constant that)
         {
-        if (!(that instanceof ImmutableTypeConstant))
+        if (!(that instanceof ServiceTypeConstant))
             {
             return -1;
             }
-        return this.m_constType.compareTo(((ImmutableTypeConstant) that).m_constType);
+        return this.m_constType.compareTo(((ServiceTypeConstant) that).m_constType);
         }
 
     @Override
     public String getValueString()
         {
-        return "immutable " + m_constType.getValueString();
+        return "service " + m_constType.getValueString();
         }
 
 
@@ -218,41 +175,6 @@ public class ImmutableTypeConstant
         {
         out.writeByte(getFormat().ordinal());
         writePackedLong(out, indexOf(m_constType));
-        }
-
-    @Override
-    public boolean validate(ErrorListener errs)
-        {
-        if (!isValidated())
-            {
-            boolean fHalt = false;
-
-            // the immutable type constant can modify any type constant other than an immutable
-            // type constant
-            TypeConstant type = m_constType;
-            if (type instanceof ImmutableTypeConstant)
-                {
-                fHalt |= log(errs, Severity.WARNING, VE_IMMUTABLE_REDUNDANT);
-                }
-
-            // a service type cannot be immutable
-            if (type.isExplicitClassIdentity(true))
-                {
-                IdentityConstant idClz = getSingleUnderlyingClass(true);
-                if (idClz.getComponent().getFormat() == Component.Format.SERVICE)
-                    {
-                    log(errs, Severity.ERROR, VE_IMMUTABLE_SERVICE_ILLEGAL, type.getValueString());
-                    fHalt = true;
-                    }
-                }
-
-            if (!fHalt)
-                {
-                return super.validate(errs);
-                }
-            }
-
-        return false;
         }
 
 

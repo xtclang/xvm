@@ -346,15 +346,6 @@ public abstract class ClassTemplate
         }
 
     /**
-     * Specifies whether this template represents a non-constant object that is allowed to be passed
-     * across service boundaries.
-     */
-    public boolean isService()
-        {
-        return false;
-        }
-
-    /**
      * @return true iff this class is an inner class
      */
     public boolean isInnerClass()

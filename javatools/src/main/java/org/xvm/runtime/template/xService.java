@@ -86,11 +86,6 @@ public class xService
         return this == INSTANCE ? INCEPTION_CLASS : (ClassConstant) super.getInceptionClassConstant();
         }
 
-    public boolean isService()
-        {
-        return true;
-        }
-
     public int constructSync(Frame frame, MethodStructure constructor, TypeComposition clazz,
                              ObjectHandle hParent, ObjectHandle[] ahArg, int iReturn)
         {

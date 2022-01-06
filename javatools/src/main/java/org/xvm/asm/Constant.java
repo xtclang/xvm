@@ -56,14 +56,15 @@ import org.xvm.util.PackedInteger;
  *     (fully qualifies) the particular sub-structure in the other FileStructure, such as a Class
  *     being referenced or a Method being invoked in a different Module.</li>
  * </ul>
- * There are several different categories of constants:
+ * There are several categories of constants:
  * <ul>
- * <li><b>{@link ValueConstant}</b> - Representing "typed values", such as strings and ints, but
+ * <li><b>{@link ValueConstant}</b> - representing "typed values", such as strings and integers, but
  *     also including composite structures such as arrays, tuples, and maps;</li>
- * <li><b>{@link IdentityConstant}</b> - </li>
- * <li><b>{@link PseudoConstant}</b> - </li>
- * <li><b>{@link TypeConstant}</b> - </li>
- * <li><b>{@link ConditionalConstant}</b> - </li>
+ * <li><b>{@link IdentityConstant}</b> - representing structures, such as Class, Property, Method,
+ *      etc.;</li>
+ * <li><b>{@link PseudoConstant}</b> - representing a level of indirection;</li>
+ * <li><b>{@link TypeConstant}</b> - representing types;</li>
+ * <li><b>{@link ConditionalConstant}</b> - representing conditions.</li>
  * </ul>
  */
 public abstract class Constant
@@ -575,7 +576,7 @@ public abstract class Constant
         {
         // this must be over-ridden by any Constant implementation that has a multi-line toString()
         out.print(sIndent);
-        out.println(toString());
+        out.println(this);
         }
 
 
@@ -853,12 +854,10 @@ public abstract class Constant
         Signature,
         DecoratedClass,
         NativeClass,
-        IsImmutable,
         IsConst,
         IsEnum,
         IsModule,
         IsPackage,
-        IsService,
         IsClass,
 
         /*
@@ -867,6 +866,7 @@ public abstract class Constant
         UnresolvedType,
         TerminalType,
         ImmutableType,
+        ServiceType,
         AccessType,
         AnnotatedType,
         ParameterizedType,
@@ -929,12 +929,10 @@ public abstract class Constant
                 case DecoratedClass:
                 case NativeClass:
                 case UnresolvedName:
-                case IsImmutable:
                 case IsConst:
                 case IsEnum:
                 case IsModule:
                 case IsPackage:
-                case IsService:
                 case IsClass:
                     return true;
 
@@ -1020,24 +1018,20 @@ public abstract class Constant
      * A Comparator of Constant values that orders the "most frequently used" constants to the front
      * of the ConstantPool.
      */
-    public static final Comparator<Constant> MFU_ORDER = new Comparator<Constant>()
+    public static final Comparator<Constant> MFU_ORDER = (o1, o2) ->
         {
-        @Override
-        public int compare(Constant o1, Constant o2)
+        if (o1 == o2)
             {
-            if (o1 == o2)
-                {
-                return 0;
-                }
-
-            assert o1.getConstantPool() == o2.getConstantPool();
-
-            // how much more is the first constant used than the second constant?
-            int cDif = o1.m_cRefs - o2.m_cRefs;
-
-            // most used comes first (i.e. _reverse_ sort on most used)
-            return -cDif;
+            return 0;
             }
+
+        assert o1.getConstantPool() == o2.getConstantPool();
+
+        // how much more is the first constant used than the second constant?
+        int cDif = o1.m_cRefs - o2.m_cRefs;
+
+        // most used comes first (i.e. _reverse_ sort on most used)
+        return -cDif;
         };
 
 

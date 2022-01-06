@@ -268,6 +268,26 @@ public abstract class TypeConstant
         }
 
     /**
+     * @return true iff this TypeConstant refers to a service
+     */
+    public boolean isService()
+        {
+        return isModifyingType() && getUnderlyingType().isService();
+        }
+
+    /**
+     * Create a potentially new type that represents "this" service type.
+     *
+     * @return a type constant that represents a service type of this type constant
+     */
+    public TypeConstant ensureService()
+        {
+        return isService()
+                ? this
+                : getConstantPool().ensureServiceTypeConstant(this);
+        }
+
+    /**
      * @return true iff the type specifies accessibility
      */
     public boolean isAccessSpecified()
@@ -5376,9 +5396,8 @@ public abstract class TypeConstant
         if (typeLeft.isImmutabilitySpecified())
             {
             relation = typeRight.isImmutable()
-                ? typeRight.removeImmutable().calculateRelation(typeLeft.removeImmutable())
-                : Relation.INCOMPATIBLE;
-
+                    ? typeRight.removeImmutable().calculateRelation(typeLeft.removeImmutable())
+                    : Relation.INCOMPATIBLE;
             mapRelations.put(typeLeft, relation);
             return relation;
             }
@@ -5387,6 +5406,16 @@ public abstract class TypeConstant
             {
             relation = typeRight.removeImmutable().calculateRelation(typeLeft);
 
+            mapRelations.put(typeLeft, relation);
+            return relation;
+            }
+
+        // ServiceTypeConstant cannot be augmented by any other modifier
+        if (typeLeft instanceof ServiceTypeConstant)
+            {
+            relation = typeRight.isService()
+                    ? typeRight.calculateRelation(typeLeft.getUnderlyingType())
+                    : Relation.INCOMPATIBLE;
             mapRelations.put(typeLeft, relation);
             return relation;
             }
@@ -5597,6 +5626,14 @@ public abstract class TypeConstant
                 return ((TypedefConstant) constIdRight).
                         getReferredToType().calculateRelation(typeLeft);
 
+            case IsConst:
+            case IsEnum:
+            case IsModule:
+            case IsPackage:
+            case IsClass:
+                return ((KeywordConstant) constIdRight).
+                        getBaseType().calculateRelationToContribution(typeLeft);
+
             case UnresolvedName:
                 return Relation.INCOMPATIBLE;
 
@@ -5756,7 +5793,7 @@ public abstract class TypeConstant
             case ParentClass:
             case ChildClass:
                 {
-                PseudoConstant idRight = (PseudoConstant) constIdRight;
+                PseudoConstant idRight  = (PseudoConstant) constIdRight;
                 ClassStructure clzRight = (ClassStructure)
                         idRight.getDeclarationLevelClass().getComponent();
                 return clzRight.findIntersectionContribution(typeLeft, typeRight.getParamTypes());
@@ -5765,6 +5802,18 @@ public abstract class TypeConstant
             case Typedef:
                 return ((TypedefConstant) constIdRight).
                         getReferredToType().findIntersectionContribution(typeLeft);
+
+            case IsConst:
+            case IsEnum:
+            case IsModule:
+            case IsPackage:
+            case IsClass:
+                {
+                TypeConstant   typeBase = ((KeywordConstant) constIdRight).getBaseType();
+                ClassStructure clzRight = (ClassStructure)
+                        typeBase.getSingleUnderlyingClass(true).getComponent();
+                return clzRight.findIntersectionContribution(typeLeft, typeRight.getParamTypes());
+                }
 
             default:
                 throw new IllegalStateException("unexpected constant: " + constIdRight);
@@ -5778,14 +5827,35 @@ public abstract class TypeConstant
      */
     protected static Relation checkReservedCompatibility(TypeConstant typeLeft, TypeConstant typeRight)
         {
-        if (!typeLeft.isSingleDefiningConstant()    || !typeRight.isSingleDefiningConstant() ||
-            !typeLeft.isExplicitClassIdentity(true) || !typeRight.isExplicitClassIdentity(true) ||
-             typeLeft.getAccess() != typeRight.getAccess())
+        if (!typeLeft.isSingleDefiningConstant() || !typeRight.isSingleDefiningConstant())
             {
             return null;
             }
 
-        ConstantPool      pool  = typeLeft.getConstantPool();
+//        Constant     constLeft  = typeLeft.getDefiningConstant();
+//        Constant     constRight = typeRight.getDefiningConstant();
+//
+//        if (constLeft instanceof KeywordConstant)
+//            {
+//            switch (constLeft.getFormat())
+//                {
+//                case IsConst:
+//                case IsEnum:
+//                case IsModule:
+//                case IsPackage:
+//                case IsClass:
+//                default:
+//                    throw new IllegalStateException();
+//                }
+//            }
+//
+        if (!typeLeft.isSingleDefiningConstant()    || !typeRight.isSingleDefiningConstant() ||
+            !typeLeft.isExplicitClassIdentity(true) || !typeRight.isExplicitClassIdentity(true))
+            {
+            return null;
+            }
+
+        ConstantPool     pool   = typeLeft.getConstantPool();
         IdentityConstant idLeft = typeLeft.getSingleUnderlyingClass(true);
 
         if (idLeft.getFormat() == Format.NativeClass)
