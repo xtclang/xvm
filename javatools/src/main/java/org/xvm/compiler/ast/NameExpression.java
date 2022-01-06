@@ -2383,6 +2383,16 @@ public class NameExpression
                         return idProp.getValueType(pool, typeLeft);
                         }
 
+                    // TODO GG (see innerouter.x)
+                    // if ((NameExpression) left).getMeaning() == Variable &&
+                    //     typeLeft.isTypeParameter()
+                    // instead of using the constraint type
+                    //        (VirtualChildType{type=FunkyOuter<Orderable>.FunkyInner})
+                    //  we need to create a TypeInfo for a corresponding generic type
+                    //        VirtualChildType{type=FunkyOuter<FunkyOuter.Element>.FunkyInner}
+                    //  and then replace generic types with dynamic types
+                    //        VirtualChildType{type=FunkyOuter<reg -> Element>.FunkyInner}
+
                     infoProp = getTypeInfo(ctx, typeLeft, errs).findProperty(idProp);
                     if (infoProp != null)
                         {

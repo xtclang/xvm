@@ -144,7 +144,8 @@ module TestInnerOuter
                 console.println($"value1.outer.name={value1.outer.name}");
                 console.println($"value1.&outer.actualType={value1.&outer.actualType}");
 
-//                return (value1.e <=> value2.e).reversed; // TODO GG: deferred; RT error for now
+                // TODO GG: deferred; see explanation in NameExpression.planCodeGen()
+                //  return (value1.e <=> value2.e).reversed;
                 return CompileType.OuterType.Element.compare(value1.e, value2.e).reversed;
                 }
             }
