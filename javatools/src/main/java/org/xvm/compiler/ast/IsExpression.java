@@ -10,7 +10,6 @@ import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
-import org.xvm.asm.Register;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.IsType;
@@ -19,7 +18,6 @@ import org.xvm.asm.op.JumpNType;
 import org.xvm.asm.op.JumpType;
 import org.xvm.asm.op.Label;
 
-import org.xvm.asm.op.MoveRef;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 
@@ -281,7 +279,7 @@ public class IsExpression
             }
         else
             {
-            typeTest = null; // TODO GG
+            typeTest = getTypes()[1];
             argType  = exprTest.generateArgument(ctx, code, false, true, errs);
             }
 
@@ -293,14 +291,8 @@ public class IsExpression
             return new Argument[]{argBool, argTarget};
             }
 
-        // TODO GG remove this block
-        if (typeTest == null)
-            {
-            throw new UnsupportedOperationException("TODO");
-            }
-
         Assignable varObj  = createTempVar(code, typeTest, fUsedOnce);
-        Label      label   = new Label("skipcopy");
+        Label      label   = new Label("skip_copy");
         code.add(new JumpFalse(argBool, label));
         varObj.assign(argTarget, code, errs);
         code.add(label);
