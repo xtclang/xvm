@@ -10,13 +10,16 @@ import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
+import org.xvm.asm.Register;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.IsType;
+import org.xvm.asm.op.JumpFalse;
 import org.xvm.asm.op.JumpNType;
 import org.xvm.asm.op.JumpType;
 import org.xvm.asm.op.Label;
 
+import org.xvm.asm.op.MoveRef;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 
@@ -49,14 +52,28 @@ public class IsExpression
         return lEndPos;
         }
 
-    @Override
-    public TypeConstant getImplicitType(Context ctx)
+    /**
+     * @return true iff the expression implements the "n type" / "n value" code path
+     */
+    protected boolean hasMultiValueImpl()
         {
-        return pool().typeBoolean();
+        return true;
         }
 
     @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
+    public TypeConstant[] getImplicitTypes(Context ctx)
+        {
+        return new TypeConstant[] {pool().typeBoolean(), expr2.getImplicitType(ctx)};
+        }
+
+    @Override
+    public boolean isConditionalResult()
+        {
+        return true;
+        }
+
+    @Override
+    protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
         {
         TypeFit fit = TypeFit.Fit;
 
@@ -81,11 +98,17 @@ public class IsExpression
             expr2 = exprTest;
             }
 
-        Constant constVal = null;
+        boolean        fSingle     = atypeRequired.length <= 1;
+        TypeConstant[] atypeActual = new TypeConstant[fSingle ? 1 : 2];
+        Constant[]     aconstVal   = null;
+
+        atypeActual[0] = pool.typeBoolean();
+
         if (fit.isFit())
             {
-            TypeConstant typeTarget = exprTarget.getType();
-            TypeConstant typeTest   = exprTest.getType().getParamType(0).resolveAutoNarrowingBase();
+            TypeConstant typeTarget   = exprTarget.getType();
+            TypeConstant typeTest     = exprTest.getType().getParamType(0).resolveAutoNarrowingBase();
+            TypeConstant typeInferred = typeTest;
 
             if (typeTarget.isTypeOfType() && !typeTest.isFormalType() && exprTest.isConstant())
                 {
@@ -107,9 +130,9 @@ public class IsExpression
                     }
                 }
 
-            if (exprTarget.isConstant() && exprTest.isConstant())
+            if (exprTarget.isConstant() && exprTest.isConstant() && fSingle)
                 {
-                constVal = pool.valOf(typeTarget.isA(typeTest));
+                aconstVal = new Constant[] {pool.valOf(typeTarget.isA(typeTest))};
                 }
             else if (exprTarget instanceof NameExpression)
                 {
@@ -121,7 +144,7 @@ public class IsExpression
                     typeTarget = pool.ensureAccessTypeConstant(typeTarget, Access.PRIVATE);
                     }
 
-                TypeConstant typeInferred = !typeTest.isTuple() &&
+                typeInferred = !typeTest.isTuple() &&
                         typeTest.isExplicitClassIdentity(true) &&
                         typeTarget.isExplicitClassIdentity(true)
                             ? computeInferredType(typeTarget, typeTest)
@@ -135,9 +158,20 @@ public class IsExpression
                 exprName.narrowType(ctx, Branch.WhenTrue,  typeInferred);
                 exprName.narrowType(ctx, Branch.WhenFalse, typeTarget.andNot(pool, typeTest));
                 }
+
+            if (!fSingle)
+                {
+                atypeActual[1] = typeInferred;
+                }
+            }
+        else if (!fSingle)
+            {
+            // there's an error already, so just pretend that we return what was requested for the
+            // conditional type
+            atypeActual[1] = atypeRequired[1];
             }
 
-        return finishValidation(ctx, typeRequired, pool.typeBoolean(), fit, constVal, errs);
+        return finishValidations(ctx, atypeRequired, atypeActual, fit, aconstVal, errs);
         }
 
     /**
@@ -218,7 +252,7 @@ public class IsExpression
                 }
             else
                 {
-                argType = exprTest.generateArgument(ctx, code, false, false, errs);
+                argType = exprTest.generateArgument(ctx, code, false, true, errs);
                 }
             code.add(new IsType(argTarget, argType, LVal.getLocalArgument()));
             }
@@ -226,6 +260,51 @@ public class IsExpression
             {
             super.generateAssignment(ctx, code, LVal, errs);
             }
+        }
+
+    @Override
+    public Argument[] generateArguments(
+            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
+        {
+        if (getValueCount() != 2)
+            {
+            return super.generateArguments(ctx, code, fLocalPropOk, fUsedOnce, errs);
+            }
+
+        Argument     argTarget = expr1.generateArgument(ctx, code, false, false, errs);
+        Expression   exprTest  = expr2;
+        TypeConstant typeTest;
+        Argument     argType;
+        if (exprTest.isConstant())
+            {
+            argType = typeTest = exprTest.getType().getParamType(0).resolveAutoNarrowingBase();
+            }
+        else
+            {
+            typeTest = null; // TODO GG
+            argType  = exprTest.generateArgument(ctx, code, false, true, errs);
+            }
+
+        Assignable varBool = createTempVar(code, pool().typeBoolean(), fUsedOnce);
+        Argument   argBool = varBool.getRegister();
+        code.add(new IsType(argTarget, argType, argBool));
+        if (fUsedOnce)
+            {
+            return new Argument[]{argBool, argTarget};
+            }
+
+        // TODO GG remove this block
+        if (typeTest == null)
+            {
+            throw new UnsupportedOperationException("TODO");
+            }
+
+        Assignable varObj  = createTempVar(code, typeTest, fUsedOnce);
+        Label      label   = new Label("skipcopy");
+        code.add(new JumpFalse(argBool, label));
+        varObj.assign(argTarget, code, errs);
+        code.add(label);
+        return new Argument[]{argBool, varObj.getRegister()};
         }
 
     @Override
