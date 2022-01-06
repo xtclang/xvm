@@ -1,7 +1,7 @@
 /**
  * Implementations of [Map] that need to implement [Freezable] can use this mix-in to do so:
  *
- *     incorporates conditional MapFreezer<Key extends immutable Object, Value extends Shareable>
+ *     incorporates conditional MapFreezer<Key extends immutable, Value extends Shareable>
  */
 mixin MapFreezer<Key   extends immutable Object,
                  Value extends Shareable>
@@ -18,7 +18,7 @@ mixin MapFreezer<Key   extends immutable Object,
             }
 
         // if the only thing not frozen is the map itself, then just make it immutable
-        if (values.all(e -> e.is(immutable Object)))  // TODO CP (immutable|service)
+        if (values.all(e -> e.is(immutable | service)))
             {
             return inPlace
                     ? makeImmutable()

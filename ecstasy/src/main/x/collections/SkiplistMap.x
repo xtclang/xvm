@@ -12,7 +12,7 @@ class SkiplistMap<Key extends Orderable, Value>
         implements OrderedMap<Key, Value>
         implements Replicable
         incorporates CopyableMap.ReplicableCopier<Key, Value>
-        incorporates conditional MapFreezer<Key extends immutable Object, Value extends Shareable>
+        incorporates conditional MapFreezer<Key extends immutable, Value extends Shareable>
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -1040,7 +1040,7 @@ class SkiplistMap<Key extends Orderable, Value>
             while (level >= 0);
             }
 
-        if (!this.is(immutable Object))
+        if (!this.is(immutable))
             {
             // update the cache
             cacheModCount = modCount;

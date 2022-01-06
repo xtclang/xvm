@@ -27,8 +27,7 @@ interface Freezable
      */
     static <AnyType> conditional AnyType+Freezable requiresFreeze(AnyType object)
         {
-        // TODO CP if (o.is(immutable | service))
-        if (&object.isImmutable || &object.isService)
+        if (object.is(immutable | service))
             {
             return False;
             }

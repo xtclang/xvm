@@ -17,7 +17,7 @@ mixin ListFreezer<Element extends Shareable>
             }
 
         // if the only thing not frozen is the list itself, then just make it immutable
-        if (inPlace && all(e -> e.is(immutable Object)))  // TODO CP (immutable|service)
+        if (inPlace && all(e -> e.is(immutable | service)))
             {
             return this.makeImmutable();
             }

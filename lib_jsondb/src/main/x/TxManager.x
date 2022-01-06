@@ -1672,7 +1672,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                     newlyEnlisted.add(storeId);
                     continue;
                 case InFlight:
-                    if (sealById.empty && sealById.is(immutable Object))
+                    if (sealById.empty && sealById.is(immutable))
                         {
                         sealById = new SkiplistMap();
                         }

@@ -8,7 +8,7 @@
  *       requestHandler.handle(request, response);
  *       }
  */
-const ContextToken<Value extends Service | immutable Object>
+const ContextToken<Value extends service | immutable>
         implements Closeable
     {
     construct(String name, Value value)

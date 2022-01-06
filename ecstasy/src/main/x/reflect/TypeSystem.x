@@ -24,7 +24,7 @@ const TypeSystem
     construct(Module[] modules, Boolean[] shared=[])
         {
         assert modules.size > 0;
-        if (!modules.is(immutable Object))
+        if (!modules.is(immutable))
             {
             assert modules.is(Freezable);
             modules = modules.freeze();

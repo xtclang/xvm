@@ -11,7 +11,7 @@ interface Orderable
      */
     @Op("..") Range<Orderable> to(Orderable that)
         {
-        assert this.is(immutable Object) && that.is(immutable Object);
+        assert this.is(immutable) && that.is(immutable);
         return new Range<immutable Orderable>(this, that);
         }
 
@@ -21,7 +21,7 @@ interface Orderable
      */
     @Op("..<") Range<Orderable> toExcluding(Orderable that)
         {
-        assert this.is(immutable Object) && that.is(immutable Object);
+        assert this.is(immutable) && that.is(immutable);
         return new Range<immutable Orderable>(this, that, lastExclusive=True);
         }
 
