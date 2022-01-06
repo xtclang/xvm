@@ -120,7 +120,7 @@ module TestReflection
         assert p := &str.revealAs(Point);
         console.println($"p={p}");
 
-        assert Point:struct p2 := &str.revealAs(Point:struct);
+        assert (struct Point) p2 := &str.revealAs((struct Point));
         console.println($"p2={p2}");
         }
 
@@ -312,8 +312,8 @@ module TestReflection
             switch (constructor.params.size)
                 {
                 case 1:
-                    Class<Point, Point:protected, Point:private, Point:struct> clz = Point;
-                    assert Point:struct structure := clz.allocate();
+                    Class<public Point, protected Point, private Point, struct Point> clz = Point;
+                    assert (struct Point) structure := clz.allocate();
                     structure.x = Int:1;
                     structure.y = Int:2;
                     Tuple<Point<Int>> p2 = constructor.invoke(Tuple:(structure));

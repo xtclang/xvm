@@ -129,6 +129,14 @@ public class Source
         }
 
     /**
+     * @return the simple file name, if a file is available
+     */
+    public String getSimpleFileName()
+        {
+        return m_file == null ? "<no file>" : m_file.getName();
+        }
+
+    /**
      * Specify the name of the file that the source comes from. This is automatically configured by
      * the File-based constructor.
      *

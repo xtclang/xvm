@@ -1076,7 +1076,7 @@ public class Parser
 
                     if (exprType == null)
                         {
-                        exprType = parseExpression();
+                        exprType = parseExpression(true);
                         }
                     listExpr.add(exprType);
 
@@ -2506,7 +2506,7 @@ public class Parser
                 // encountering an expression followed by anything other than an identifier (for
                 // a declaration) or a comma indicates that we're going down the wrong path
                 // REVIEW does this correctly parse @annotated types? should "Annotations" be added to "PrimaryExpression"? (seems logical)
-                Expression expr = parseExpression();
+                Expression expr = parseExpression(true);
 
                 // next token   meaning
                 // ----------   ----------------------------------------
@@ -2853,7 +2853,19 @@ public class Parser
      */
     Expression parseExpression()
         {
-        return parseElseExpression();
+        return parseElseExpression(false);
+        }
+
+    /**
+     * Parse any expression.
+     *
+     * @param fExtended  true to allow parsing of an extended type expression
+     *
+     * @return an expression
+     */
+    Expression parseExpression(boolean fExtended)
+        {
+        return parseElseExpression(fExtended);
         }
 
     /**
@@ -2865,14 +2877,16 @@ public class Parser
      *     TernaryExpression ":" Expression
      * </pre></code>
      *
+     * @param fExtended  true to allow parsing of an extended type expression
+     *
      * @return an expression
      */
-    Expression parseElseExpression()
+    Expression parseElseExpression(boolean fExtended)
         {
-        Expression expr = parseTernaryExpression();
+        Expression expr = parseTernaryExpression(fExtended);
         if (peek(Id.COLON))
             {
-            expr = new ElseExpression(expr, current(), parseElseExpression());
+            expr = new ElseExpression(expr, current(), parseElseExpression(false));
             }
         return expr;
         }
@@ -2890,13 +2904,31 @@ public class Parser
      */
     Expression parseTernaryExpression()
         {
-        Expression expr = parseOrExpression();
+        return parseTernaryExpression(false);
+        }
+
+    /**
+     * Parse a ternary expression, which is the "a ? b : c" expression.
+     *
+     * <p/><code><pre>
+     * TernaryExpression
+     *     OrExpression
+     *     OrExpression Whitespace "?" OrExpression ":" TernaryExpression
+     * </pre></code>
+     *
+     * @param fExtended  true to allow parsing of an extended type expression
+     *
+     * @return an expression
+     */
+    Expression parseTernaryExpression(boolean fExtended)
+        {
+        Expression expr = parseOrExpression(fExtended);
         if (peek(Id.COND))
             {
             expect(Id.COND);
-            Expression exprThen = parseTernaryExpression();
+            Expression exprThen = parseTernaryExpression(false);
             expect(Id.COLON);
-            Expression exprElse = parseTernaryExpression();
+            Expression exprElse = parseTernaryExpression(false);
             expr = new TernaryExpression(expr, exprThen, exprElse);
             }
         return expr;
@@ -2912,21 +2944,23 @@ public class Parser
      *     OrExpression ^^ AndExpression
      * </pre></code>
      *
+     * @param fExtended  true to allow parsing of an extended type expression
+     *
      * @return an expression
      */
-    Expression parseOrExpression()
+    Expression parseOrExpression(boolean fExtended)
         {
-        Expression expr = parseAndExpression();
+        Expression expr = parseAndExpression(fExtended);
         while (true)
             {
             switch (peek().getId())
                 {
                 case COND_OR:
-                    expr = new CondOpExpression(expr, current(), parseAndExpression());
+                    expr = new CondOpExpression(expr, current(), parseAndExpression(false));
                     break;
 
                 case COND_XOR:
-                    expr = new RelOpExpression(expr, current(), parseAndExpression());
+                    expr = new RelOpExpression(expr, current(), parseAndExpression(false));
                     break;
 
                 default:
@@ -2944,14 +2978,16 @@ public class Parser
      *     AndExpression && EqualityExpression
      * </pre></code>
      *
+     * @param fExtended  true to allow parsing of an extended type expression
+     *
      * @return an expression
      */
-    Expression parseAndExpression()
+    Expression parseAndExpression(boolean fExtended)
         {
-        Expression expr = parseEqualityExpression();
+        Expression expr = parseEqualityExpression(fExtended);
         while (peek(Id.COND_AND))
             {
-            expr = new CondOpExpression(expr, current(), parseEqualityExpression());
+            expr = new CondOpExpression(expr, current(), parseEqualityExpression(false));
             }
         return expr;
         }
@@ -2966,11 +3002,13 @@ public class Parser
      *     EqualityExpression "!=" RelationalExpression
      * </pre></code>
      *
+     * @param fExtended  true to allow parsing of an extended type expression
+     *
      * @return an expression
      */
-    Expression parseEqualityExpression()
+    Expression parseEqualityExpression(boolean fExtended)
         {
-        Expression            expr     = parseRelationalExpression();
+        Expression            expr     = parseRelationalExpression(fExtended);
         ArrayList<Expression> listExpr = null;
         ArrayList<Token>      listOps  = null;
         Token.Id              idPrev   = null;
@@ -2978,7 +3016,7 @@ public class Parser
         while (peek(Id.COMP_EQ) || peek(Id.COMP_NEQ))
             {
             Token      tokCmp   = current();
-            Expression exprNext = parseRelationalExpression();
+            Expression exprNext = parseRelationalExpression(false);
             if (idPrev == null)
                 {
                 expr = new CmpExpression(expr, tokCmp, exprNext);
@@ -3029,18 +3067,20 @@ public class Parser
      *     RelationalExpression ">="  AssignmentExpression
      * </pre></code>
      *
+     * @param fExtended  true to allow parsing of an extended type expression
+     *
      * @return an expression
      */
-    Expression parseRelationalExpression()
+    Expression parseRelationalExpression(boolean fExtended)
         {
-        Expression expr = parseAssignmentExpression();
+        Expression expr = parseAssignmentExpression(fExtended);
         Unchained: switch (peek().getId())
             {
             case COMP_LT:
             case COMP_LTEQ:
             case COMP_GT:
             case COMP_GTEQ:
-                expr = new CmpExpression(expr, current(), parseAssignmentExpression());
+                expr = new CmpExpression(expr, current(), parseAssignmentExpression(false));
                 switch (peek().getId())
                     {
                     case COMP_LT:
@@ -3053,12 +3093,11 @@ public class Parser
                 return expr;
 
             case COMP_ORD:
-                return new CmpExpression(expr, current(), parseAssignmentExpression());
+                return new CmpExpression(expr, current(), parseAssignmentExpression(false));
 
             default:
                 return expr;
             }
-
 
         ArrayList<Expression> listExpr = new ArrayList<>();
         ArrayList<Token>      listOps  = new ArrayList<>();
@@ -3089,7 +3128,7 @@ public class Parser
                 }
 
             listOps .add(current());
-            listExpr.add(parseAssignmentExpression());
+            listExpr.add(parseAssignmentExpression(false));
 
             if (fThisAscending != fFirstAscending && !fErr)
                 {
@@ -3109,25 +3148,28 @@ public class Parser
      *     RangeExpression "<-" AssignmentExpression
      * </pre></code>
      *
+     * @param fExtended  true to allow parsing of an extended type expression
+     *
      * @return an expression
      */
-    Expression parseAssignmentExpression()
+    Expression parseAssignmentExpression(boolean fExtended)
         {
-        Expression expr = parseRangeExpression();
+        Expression expr = parseRangeExpression(fExtended);
         if (peek(Id.ASN_EXPR))
             {
             Expression exprLValue = expr;
             Token      tokAsnExpr = expect(Id.ASN_EXPR);
-            Expression exprRValue = parseAssignmentExpression();    // i.e. right-to-left
+            Expression exprRValue = parseAssignmentExpression(false);    // i.e. right-to-left
 
-            // for now, build this as syntactic sugar
-            // TODO GG - this was just a temporary kludge
+            // for now, syntactic sugar
             //
             //   {
             //   val tmp=rvalue;
             //   lvalue=tmp;
             //   return tmp;
             //   }
+            //
+            // TODO eventually replace this with a proper expression
             //
             Token                        tokVal    = new Token(tokAsnExpr.getStartPosition(), tokAsnExpr.getEndPosition(), Id.VAL);
             Token                        tokTmp    = new Token(tokAsnExpr.getStartPosition(), tokAsnExpr.getEndPosition(), Id.IDENTIFIER, "#tmp");
@@ -3153,14 +3195,16 @@ public class Parser
      *     RangeExpression ".." BitwiseExpression
      * </pre></code>
      *
+     * @param fExtended  true to allow parsing of an extended type expression
+     *
      * @return an expression
      */
-    Expression parseRangeExpression()
+    Expression parseRangeExpression(boolean fExtended)
         {
-        Expression expr = parseBitwiseExpression();
+        Expression expr = parseBitwiseExpression(fExtended);
         while (peek(Id.DOTDOT))
             {
-            expr = new RelOpExpression(expr, current(), parseBitwiseExpression());
+            expr = new RelOpExpression(expr, current(), parseBitwiseExpression(fExtended));
             }
         return expr;
         }
@@ -3179,11 +3223,14 @@ public class Parser
      *     ShiftExpression "|"   AdditiveExpression
      * </pre></code>
      *
+     * @param fExtended  true to allow parsing of an extended type expression
+     *
      * @return an expression
      */
-    Expression parseBitwiseExpression()
+    Expression parseBitwiseExpression(boolean fExtended)
         {
-        Expression expr = parseAdditiveExpression();
+        Expression expr = parseAdditiveExpression(fExtended);
+// TODO CP special handling if expr is a type?
         while (true)
             {
             switch (peek().getId())
@@ -3192,9 +3239,10 @@ public class Parser
                 case SHR:
                 case USHR:
                 case BIT_AND:
+                case AND_NOT: // TODO
                 case BIT_XOR:
                 case BIT_OR:
-                    expr = new RelOpExpression(expr, current(), parseAdditiveExpression());
+                    expr = new RelOpExpression(expr, current(), parseAdditiveExpression(fExtended));
                     break;
 
                 default:
@@ -3213,14 +3261,17 @@ public class Parser
      *     AdditiveExpression "-" MultiplicativeExpression
      * </pre></code>
      *
+     * @param fExtended  true to allow parsing of an extended type expression
+     *
      * @return an expression
      */
-    Expression parseAdditiveExpression()
+    Expression parseAdditiveExpression(boolean fExtended)
         {
-        Expression expr = parseMultiplicativeExpression();
+// TODO CP type handling? (if expr comes back as a type)
+        Expression expr = parseMultiplicativeExpression(fExtended);
         while (peek(Id.ADD) || peek(Id.SUB))
             {
-            expr = new RelOpExpression(expr, current(), parseMultiplicativeExpression());
+            expr = new RelOpExpression(expr, current(), parseMultiplicativeExpression(fExtended));
             }
         return expr;
         }
@@ -3237,11 +3288,13 @@ public class Parser
      *     MultiplicativeExpression "/%" ElvisExpression
      * </pre></code>
      *
+     * @param fExtended  true to allow parsing of an extended type expression
+     *
      * @return an expression
      */
-    Expression parseMultiplicativeExpression()
+    Expression parseMultiplicativeExpression(boolean fExtended)
         {
-        Expression expr = parseElvisExpression();
+        Expression expr = parseElvisExpression(fExtended);
         while (true)
             {
             switch (peek().getId())
@@ -3250,7 +3303,7 @@ public class Parser
                 case DIV:
                 case MOD:
                 case DIVREM:
-                    expr = new RelOpExpression(expr, current(), parseElvisExpression());
+                    expr = new RelOpExpression(expr, current(), parseElvisExpression(false));
                     break;
 
                 default:
@@ -3268,14 +3321,16 @@ public class Parser
      *     PrefixExpression ?: ElvisExpression
      * </pre></code>
      *
+     * @param fExtended  true to allow parsing of an extended type expression
+     *
      * @return an expression
      */
-    Expression parseElvisExpression()
+    Expression parseElvisExpression(boolean fExtended)
         {
-        Expression expr = parsePrefixExpression();
+        Expression expr = parsePrefixExpression(fExtended);
         if (peek(Id.COND_ELSE))
             {
-            expr = new ElvisExpression(expr, current(), parseElvisExpression());
+            expr = new ElvisExpression(expr, current(), parseElvisExpression(false));
             }
         return expr;
         }
@@ -3294,28 +3349,30 @@ public class Parser
      *     "~" PrefixExpression
      * </pre></code>
      *
+     * @param fExtended  true to allow parsing of an extended type expression
+     *
      * @return an expression
      */
-    Expression parsePrefixExpression()
+    Expression parsePrefixExpression(boolean fExtended)
         {
         switch (peek().getId())
             {
             case ADD:
-                return new UnaryPlusExpression(current(), parsePrefixExpression());
+                return new UnaryPlusExpression(current(), parsePrefixExpression(false));
 
             case SUB:
-                return new UnaryMinusExpression(current(), parsePrefixExpression());
+                return new UnaryMinusExpression(current(), parsePrefixExpression(false));
 
             case NOT:
             case BIT_NOT:
-                return new UnaryComplementExpression(current(), parsePrefixExpression());
+                return new UnaryComplementExpression(current(), parsePrefixExpression(false));
 
             case INC:
             case DEC:
-                return new SequentialAssignExpression(current(), parsePrefixExpression());
+                return new SequentialAssignExpression(current(), parsePrefixExpression(false));
 
             default:
-                return parsePostfixExpression();
+                return parsePostfixExpression(fExtended);
             }
         }
 
@@ -3358,11 +3415,13 @@ public class Parser
      *     ExpressionList "," Expression
      * </pre></code>
      *
+     * @param fExtended  true to allow parsing of an extended type expression
+     *
      * @return an expression
      */
-    Expression parsePostfixExpression()
+    Expression parsePostfixExpression(boolean fExtended)
         {
-        Expression expr = parsePrimaryExpression();
+        Expression expr = parsePrimaryExpression(fExtended);
         while (true)
             {
             switch (peek().getId())
@@ -3374,8 +3433,11 @@ public class Parser
                         // it indicates a ternary operator
                         return expr;
                         }
+// TODO CP possible handling for type?
                     expr = new NotNullExpression(expr, current());
                     break;
+
+// TODO CP case NOT: (non-auto-narrow type)
 
                 case INC:
                 case DEC:
@@ -3643,9 +3705,11 @@ public class Parser
      *     "assert"                        # non-completing
      * </pre></code>
      *
+     * @param fExtended  true to allow parsing of an extended type expression
+     *
      * @return an expression
      */
-    Expression parsePrimaryExpression()
+    Expression parsePrimaryExpression(boolean fExtended)
         {
         switch (peek().getId())
             {
@@ -3704,6 +3768,28 @@ public class Parser
             case TODO:
                 return parseTodoExpression();
 
+            case FUNCTION:
+            case IMMUTABLE:
+            case AT:
+                return fExtended
+                    ? parseExtendedTypeExpression()
+                    : parseTypeExpression();
+
+            case PUBLIC:
+            case PROTECTED:
+            case PRIVATE:
+            case STRUCT:
+            case CONST:
+            case ENUM:
+            case MODULE:
+            case PACKAGE:
+            case SERVICE:
+            case CLASS:
+                if (fExtended)
+                    {
+                    return parseExtendedTypeExpression();
+                    }
+                // fall through
             default:
             case BIT_AND:
             case CONSTRUCT:
@@ -3873,7 +3959,7 @@ public class Parser
                             parseLambdaBody(), tokLParen.getStartPosition());
                     }
 
-                Expression expr = parseExpression();
+                Expression expr = parseExpression(true);
                 switch (peek().getId())
                     {
                     case COMMA:
@@ -4096,11 +4182,6 @@ public class Parser
                         ? new LiteralExpression(tokData)
                         : new FileExpression(null, tokFile, file);
                 }
-
-            case FUNCTION:
-            case IMMUTABLE:
-            case AT:
-                return parseTypeExpression();
             }
         }
 
@@ -4470,9 +4551,9 @@ public class Parser
                     }
 
                 // parseRangeExpression() logic
-                Expression expr1     = parseBitwiseExpression();
+                Expression expr1     = parseBitwiseExpression(false);
                 Token      tokDotDot = expect(Id.DOTDOT);
-                Expression expr2     = parseBitwiseExpression();
+                Expression expr2     = parseBitwiseExpression(false);
 
                 Token tokClose = null;
                 if (tokOpen != null)
@@ -5274,7 +5355,7 @@ public class Parser
                 TypeExpression type  = null;
                 if (match(Id.EXTENDS) != null)
                     {
-                    type = parseTypeExpression();
+                    type = parseExtendedTypeExpression();
                     }
                 typeParams.add(new Parameter(type, param));
                 }
@@ -5351,7 +5432,7 @@ public class Parser
                 }
             else
                 {
-                types.add(parseTypeExpression());
+                types.add(parseExtendedTypeExpression());
                 }
             }
         }
@@ -6216,6 +6297,38 @@ public class Parser
     protected boolean recoverable()
         {
         return !eof() && !m_fAvoidRecovery && m_lookAhead == null;
+        }
+
+
+    // ----- Object methods ------------------------------------------------------------------------
+
+    @Override
+    public String toString()
+        {
+        StringBuilder sb = new StringBuilder();
+
+        Source source = m_source;
+        sb.append(source.getSimpleFileName());
+
+        Token token = peek();
+        if (token == null)
+            {
+            sb.append(' ')
+              .append(source.getLine()+1)
+              .append(':')
+              .append(source.getOffset()+1);
+            }
+        else
+            {
+            sb.append(' ')
+              .append(Source.calculateLine(token.getStartPosition())+1)
+              .append(':')
+              .append(Source.calculateOffset(token.getStartPosition())+1)
+              .append(' ')
+              .append(token);
+            }
+
+        return sb.toString();
         }
 
 

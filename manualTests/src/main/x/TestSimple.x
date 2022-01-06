@@ -4,9 +4,8 @@ module TestSimple.test.org
 
     void run()
         {
-        String s = "hello";
-        String s2;
-        console.println($"s={s2 <- s}");
-        console.println($"s2={s2}");
+        String? s = "hello";
+        assert (public String) s2 ?= s;
+        Class<public String, protected String, private String, struct String> clz = String;
         }
     }

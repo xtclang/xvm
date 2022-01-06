@@ -618,7 +618,7 @@ TypeDefStatement
 #
 #   << >>           bitwise                   7     left to right
 #   >>>
-#   &
+#   &  &!
 #   ^
 #   |
 #
