@@ -854,7 +854,7 @@ class HasherMap<Key, Value>
         immutable EntrySetFreezer freeze(Boolean inPlace = False)
             {
             HasherMap<MapKey, MapValue> map = outer.as(HasherMap<MapKey, MapValue>);
-            return map.is(immutable HasherMap) // TODO CP: is(immutable)
+            return map.is(immutable)
                     ? makeImmutable()
                     : map.freeze(inPlace).entries.makeImmutable().as(immutable EntrySetFreezer);
             }
