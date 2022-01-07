@@ -14,7 +14,7 @@
  * This module is fully and completely self-referential, containing no references to other
  * modules, and no link-time or runtime dependencies.
  *
- * @Copyright 2016-2021 xqiz.it
+ * @Copyright 2016-2022 xqiz.it
  */
 module ecstasy.xtclang.org
     {
@@ -147,6 +147,5 @@ module ecstasy.xtclang.org
      * 3. A `service` object;
      * 4. A _virtual child_ object of a `service` object.
      */
-    // TODO CP: typedef (service | immutable | Freezable) as Shareable;
-    typedef (immutable Object | Freezable | Service) as Shareable;
+    typedef (service | immutable | Freezable) as Shareable;
     }

@@ -79,6 +79,10 @@ interface TypeTemplate // TODO move
          */
         Immutable    (modifying = True),
         /**
+         * A type that marks _another type_ as a service.
+         */
+        Service      (modifying = True),
+        /**
          * A type that adds an access modifier _to another type_.
          */
         Access       (modifying = True),

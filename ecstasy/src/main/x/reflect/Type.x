@@ -723,6 +723,10 @@ interface Type<DataType, OuterType>
                 assert Type!<> t := modifying();
                 return "immutable ".size + t.estimateStringLength();
 
+            case Service:
+                assert Type!<> t := modifying();
+                return "service ".size + t.estimateStringLength();
+
             case Access:
                 assert Type!<> t := modifying();
                 assert Access access := accessSpecified();
@@ -891,6 +895,12 @@ interface Type<DataType, OuterType>
 
             case Immutable:
                 "immutable ".appendTo(buf);
+                assert Type!<> t := modifying();
+                t.appendTo(buf);
+                break;
+
+            case Service:
+                "service ".appendTo(buf);
                 assert Type!<> t := modifying();
                 t.appendTo(buf);
                 break;

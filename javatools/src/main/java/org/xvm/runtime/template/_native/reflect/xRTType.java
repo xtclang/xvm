@@ -1429,6 +1429,11 @@ public class xRTType
                         case ThisClass:
                         case ParentClass:
                         case ChildClass:
+                        case IsClass:
+                        case IsConst:
+                        case IsEnum:
+                        case IsModule:
+                        case IsPackage:
                             return enumForm.getEnumByName("Class");
 
                         case Property:
@@ -1458,6 +1463,9 @@ public class xRTType
 
             case AnnotatedType:
                 return enumForm.getEnumByName("Annotated");
+
+            case ServiceType:
+                return enumForm.getEnumByName("Service");
 
             case ParameterizedType:
                 // the underlying type will be "Class" or "Child"
@@ -1597,23 +1605,6 @@ public class xRTType
         }
 
     /**
-     * @return the TypeComposition for an Array of Arguments
-     */
-    public static TypeComposition ensureArgumentArrayComposition()
-        {
-        TypeComposition clz = ARGUMENT_ARRAY_CLZCOMP;
-        if (clz == null)
-            {
-            ConstantPool pool         = INSTANCE.pool();
-            TypeConstant typeArg      = pool.ensureEcstasyTypeConstant("reflect.Argument");
-            TypeConstant typeArgArray = pool.ensureArrayType(typeArg);
-            ARGUMENT_ARRAY_CLZCOMP = clz = INSTANCE.f_templates.resolveClass(typeArgArray);
-            assert clz != null;
-            }
-        return clz;
-        }
-
-    /**
      * @return the handle for an empty Array of Type
      */
     public static ArrayHandle ensureEmptyTypeArray()
@@ -1624,19 +1615,6 @@ public class xRTType
                 ensureTypeArrayComposition(), Utils.OBJECTS_NONE);
             }
         return TYPE_ARRAY_EMPTY;
-        }
-
-    /**
-     * @return the handle for an empty Array of Arguments
-     */
-    public static ArrayHandle ensureEmptyArgumentArray()
-        {
-        if (ARGUMENT_ARRAY_EMPTY == null)
-            {
-            ARGUMENT_ARRAY_EMPTY = xArray.createImmutableArray(
-                ensureArgumentArrayComposition(), Utils.OBJECTS_NONE);
-            }
-        return ARGUMENT_ARRAY_EMPTY;
         }
 
     /**
@@ -1783,9 +1761,6 @@ public class xRTType
     private static TypeComposition TYPE_ARRAY_CLZCOMP;
     private static ArrayHandle     TYPE_ARRAY_EMPTY;
     private static TypeComposition LISTMAP_CLZCOMP;
-
-    private static TypeComposition ARGUMENT_ARRAY_CLZCOMP;
-    private static ArrayHandle     ARGUMENT_ARRAY_EMPTY;
 
     private static TypeComposition REGISTER_CLZCOMP;
     private static MethodStructure REGISTER_CONSTRUCT;
