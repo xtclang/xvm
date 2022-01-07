@@ -4804,7 +4804,7 @@ public class Parser
             {
             case L_PAREN:
                 expect(Id.L_PAREN);
-                type = parseTypeExpression();
+                type = parseExtendedTypeExpression();
                 expect(Id.R_PAREN);
                 break;
 
