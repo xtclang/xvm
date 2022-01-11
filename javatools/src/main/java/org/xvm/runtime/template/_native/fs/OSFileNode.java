@@ -176,7 +176,7 @@ public abstract class OSFileNode
 
             f_path = path;
 
-            setField("store", hOSStore);
+            setField(null, "store", hOSStore);
             }
 
         public Path getPath()

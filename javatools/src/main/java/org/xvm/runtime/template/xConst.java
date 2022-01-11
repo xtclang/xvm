@@ -283,11 +283,11 @@ public class xConst
                             ObjectHandle[] ahValueNew;
                             try
                                 {
-                                ahValueNew = haValues.getTemplate().toArray(frame, haValues);
+                                ahValueNew = haValues.getTemplate().toArray(frameCaller, haValues);
                                 }
                             catch (ExceptionHandle.WrapperException e)
                                 {
-                                return frame.raiseException(e);
+                                return frameCaller.raiseException(e);
                                 }
 
                             for (int i = 0, c = asName.length; i < c; i++)
@@ -295,11 +295,11 @@ public class xConst
                                 // verify that "freeze" didn't widen the type
                                 String       sField  = asName[i];
                                 ObjectHandle hNew    = ahValueNew[i];
-                                TypeConstant typeOld = hConst.getField(sField).getType();
+                                TypeConstant typeOld = hConst.getField(frameCaller, sField).getType();
                                 TypeConstant typeNew = hNew.getType();
                                 if (typeNew.isA(typeOld))
                                     {
-                                    hConst.setField(sField, hNew);
+                                    hConst.setField(frame, sField, hNew);
                                     }
                                 else
                                     {
@@ -415,7 +415,7 @@ public class xConst
         boolean fCache = hConst.getComposition().equals(clazz);
         if (fCache)
             {
-            JavaLong hHash = (JavaLong) hConst.getField(PROP_HASH);
+            JavaLong hHash = (JavaLong) hConst.getField(frame, PROP_HASH);
             if (hHash != null)
                 {
                 return frame.assignValue(iReturn, hHash);
@@ -490,7 +490,7 @@ public class xConst
         }
 
 
-    // ----- helper classes -----
+    // ----- helper classes ------------------------------------------------------------------------
 
     /**
      * Helper class for equals() implementation.
@@ -536,8 +536,8 @@ public class xConst
                     continue;
                     }
 
-                ObjectHandle h1 = hValue1.getField(sProp);
-                ObjectHandle h2 = hValue2.getField(sProp);
+                ObjectHandle h1 = hValue1.getField(frameCaller, sProp);
+                ObjectHandle h2 = hValue2.getField(frameCaller, sProp);
 
                 if (h1 == null || h2 == null)
                     {
@@ -616,8 +616,8 @@ public class xConst
                     continue;
                     }
 
-                ObjectHandle h1 = hValue1.getField(sProp);
-                ObjectHandle h2 = hValue2.getField(sProp);
+                ObjectHandle h1 = hValue1.getField(frameCaller, sProp);
+                ObjectHandle h2 = hValue2.getField(frameCaller, sProp);
 
                 if (h1 == null || h2 == null)
                     {
@@ -704,7 +704,7 @@ public class xConst
                     continue;
                     }
 
-                ObjectHandle hProp = hConst.getField(sProp);
+                ObjectHandle hProp = hConst.getField(frameCaller, sProp);
                 if (hProp == null)
                     {
                     return frameCaller.raiseException("Unassigned property: \"" + sProp + '"');
@@ -755,7 +755,7 @@ public class xConst
             JavaLong hHash = xInt64.makeHandle(lResult);
             if (fCache)
                 {
-                hConst.setField(PROP_HASH, hHash);
+                hConst.setField(frameCaller, PROP_HASH, hHash);
                 }
 
             return frameCaller.assignValue(iReturn, hHash);

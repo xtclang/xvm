@@ -134,8 +134,7 @@ public class xRTServiceControl
             {
             super(clazz);
 
-            f_context  = context;
-            m_fMutable = false;
+            f_context = context;
             }
 
         /**

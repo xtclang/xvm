@@ -2256,6 +2256,7 @@ public class ConstantPool
     public ClassConstant     clzFuture()        {ClassConstant     c = m_clzFuture;       if (c == null) {m_clzFuture       = c = (ClassConstant) getImplicitlyImportedIdentity("Future"          );} return c;}
     public ClassConstant     clzOverride()      {ClassConstant     c = m_clzOverride;     if (c == null) {m_clzOverride     = c = (ClassConstant) getImplicitlyImportedIdentity("Override"        );} return c;}
     public ClassConstant     clzLazy()          {ClassConstant     c = m_clzLazy;         if (c == null) {m_clzLazy         = c = (ClassConstant) getImplicitlyImportedIdentity("Lazy"            );} return c;}
+    public ClassConstant     clzTransient()     {ClassConstant     c = m_clzTransient;    if (c == null) {m_clzTransient    = c = (ClassConstant) getImplicitlyImportedIdentity("Transient"       );} return c;}
     public ClassConstant     clzUnchecked()     {ClassConstant     c = m_clzUnchecked;    if (c == null) {m_clzUnchecked    = c = (ClassConstant) getImplicitlyImportedIdentity("Unchecked"       );} return c;}
     public ClassConstant     clzUnassigned()    {ClassConstant     c = m_clzUnassigned;   if (c == null) {m_clzUnassigned   = c = (ClassConstant) getImplicitlyImportedIdentity("Unassigned"      );} return c;}
 
@@ -3101,6 +3102,7 @@ public class ConstantPool
         m_clzFuture       = null;
         m_clzOverride     = null;
         m_clzLazy         = null;
+        m_clzTransient    = null;
         m_clzUnchecked    = null;
         m_clzUnassigned   = null;
         m_typeObject      = null;
@@ -4046,6 +4048,7 @@ public class ConstantPool
     private transient ClassConstant     m_clzFuture;
     private transient ClassConstant     m_clzOverride;
     private transient ClassConstant     m_clzLazy;
+    private transient ClassConstant     m_clzTransient;
     private transient ClassConstant     m_clzUnchecked;
     private transient ClassConstant     m_clzUnassigned;
     private transient TypeConstant      m_typeObject;

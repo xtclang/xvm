@@ -378,8 +378,8 @@ public class JumpVal_N
      */
     private void addRange(GenericHandle hRange, long lCaseBit, int cColumns, int iC)
         {
-        ObjectHandle hLow  = hRange.getField("lowerBound");
-        ObjectHandle hHigh = hRange.getField("upperBound");
+        ObjectHandle hLow  = hRange.getField(null, "lowerBound");
+        ObjectHandle hHigh = hRange.getField(null, "upperBound");
 
         // TODO: if the range is small, replace it with the exact hits for native values
         ensureRangeList(cColumns, iC).add(

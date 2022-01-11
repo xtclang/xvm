@@ -319,6 +319,8 @@ public class xEnum
         {
         assert !hEnum.isStruct();
 
+        hEnum.makeImmutable();
+
         m_listHandles.set(hEnum.m_index, hEnum);
         }
 
@@ -338,7 +340,7 @@ public class xEnum
             super(clz);
 
             m_index    = index;
-            m_fMutable = false;
+            m_fMutable = clz.isStruct();
             }
 
         public int getOrdinal()

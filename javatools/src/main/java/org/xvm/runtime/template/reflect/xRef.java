@@ -152,7 +152,7 @@ public class xRef
                 return getPropertyAnnotations(frame, hRef, iReturn);
 
             case "assigned":
-                return frame.assignValue(iReturn, xBoolean.makeHandle(hRef.isAssigned()));
+                return frame.assignValue(iReturn, xBoolean.makeHandle(hRef.isAssigned(frame)));
 
             case "identity":
                 return actOnReferent(frame, hRef,
@@ -246,7 +246,7 @@ public class xRef
                 }
 
             case "peek":
-                return hRef.isAssigned()
+                return hRef.isAssigned(frame)
                     ? actOnReferent(frame, hRef,
                         h -> frame.assignValues(aiReturn, xBoolean.TRUE, h))
                     : frame.assignValue(aiReturn[0], xBoolean.FALSE);
@@ -352,7 +352,7 @@ public class xRef
         // Reference equality is used to determine if two references are referring to the same referent
         // _identity_. Specifically, two references are equal iff they reference the same runtime
         // object, or the two objects that they reference are both immutable and structurally identical.
-        return hRef1.isAssigned() && hRef2.isAssigned()
+        return hRef1.isAssigned(frame) && hRef2.isAssigned(frame)
                 ? new CompareReferents(hRef1, hRef2, this, iReturn).doNext(frame)
                 : frame.assignValue(iReturn, xBoolean.FALSE);
         }
@@ -752,7 +752,7 @@ public class xRef
             {
             this(clazz, sName);
 
-            setField(REFERENT, hReferent);
+            setField(null, REFERENT, hReferent);
             }
 
         /**
@@ -842,7 +842,7 @@ public class xRef
             switch (m_iVar)
                 {
                 case REF_REFERENT:
-                    return getField(OUTER) != null;
+                    return getField(null, OUTER) != null;
 
                 case REF_PROPERTY:
                     return true;
@@ -855,21 +855,21 @@ public class xRef
         public ObjectHandle getReferentHolder()
             {
             return m_iVar == REF_REFERENT
-                    ? getField(OUTER)
+                    ? getField(null, OUTER)
                     : m_hReferent;
             }
 
         public ObjectHandle getReferent()
             {
             return m_iVar == REF_REFERENT
-                    ? getField(REFERENT)
+                    ? getField(null, REFERENT)
                     : null;
             }
 
         public void setReferent(ObjectHandle hReferent)
             {
             assert m_iVar == REF_REFERENT;
-            setField(REFERENT, hReferent);
+            setField(null, REFERENT, hReferent);
             }
 
         public String getName()
@@ -892,7 +892,7 @@ public class xRef
             return (VarSupport) getOpSupport();
             }
 
-        public boolean isAssigned()
+        public boolean isAssigned(Frame frame)
             {
             switch (m_iVar)
                 {
@@ -900,7 +900,7 @@ public class xRef
                     return getReferent() != null;
 
                 case REF_REF:
-                    return ((RefHandle) m_hReferent).isAssigned();
+                    return ((RefHandle) m_hReferent).isAssigned(frame);
 
                 case REF_PROPERTY:
                     {
@@ -911,14 +911,14 @@ public class xRef
                         // generic types are always "assigned"
                         return true;
                         }
-                    ObjectHandle hValue = hTarget.getField(idProp);
+                    ObjectHandle hValue = hTarget.getField(frame, idProp);
                     if (hValue == null)
                         {
                         return false;
                         }
                     if (hTarget.isInflated(idProp))
                         {
-                        return ((RefHandle) hValue).isAssigned();
+                        return ((RefHandle) hValue).isAssigned(frame);
                         }
                     return true;
                     }
@@ -952,7 +952,7 @@ public class xRef
             switch (m_iVar)
                 {
                 case REF_REFERENT:
-                    return isAssigned() ? s + getReferent() : s;
+                    return isAssigned(null) ? s + getReferent() : s;
 
                 case REF_REF:
                     return s + "--> " + m_hReferent;

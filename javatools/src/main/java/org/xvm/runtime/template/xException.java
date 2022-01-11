@@ -84,7 +84,7 @@ public class xException
 
         ObjectHandle[] ahVars = new ObjectHandle[METHOD_FORMAT_EXCEPTION.getMaxVars()];
         ahVars[0] = xString.makeHandle(getClassConstant().getValueString()); // appender
-        ahVars[1] = hException.getField("stackTrace");
+        ahVars[1] = hException.getField(frame, "stackTrace");
 
         return frame.call1(METHOD_FORMAT_EXCEPTION, hException, ahVars, iReturn);
         }
@@ -211,28 +211,28 @@ public class xException
     public static ExceptionHandle pathException(Frame frame, String sMsg, ObjectHandle path)
         {
         ExceptionHandle hException = makeHandle(frame, s_clzPathException, sMsg);
-        hException.setField("path", path);
+        hException.setField(frame, "path", path);
         return hException;
         }
 
     public static ExceptionHandle fileNotFoundException(Frame frame, String sMsg, ObjectHandle path)
         {
         ExceptionHandle hException = makeHandle(frame, s_clzFileNotFoundException, sMsg);
-        hException.setField("path", path);
+        hException.setField(frame, "path", path);
         return hException;
         }
 
     public static ExceptionHandle accessDeniedException(Frame frame, String sMsg, ObjectHandle path)
         {
         ExceptionHandle hException = makeHandle(frame, s_clzAccessDeniedException, sMsg);
-        hException.setField("path", path);
+        hException.setField(frame, "path", path);
         return hException;
         }
 
     public static ExceptionHandle fileAlreadyExistsException(Frame frame, String sMsg, ObjectHandle path)
         {
         ExceptionHandle hException = makeHandle(frame, s_clzFileAlreadyExistsException, sMsg);
-        hException.setField("path", path);
+        hException.setField(frame, "path", path);
         return hException;
         }
 
@@ -264,8 +264,8 @@ public class xException
         {
         ExceptionHandle hException = makeMutableStruct(frame, clzEx, null);
 
-        hException.setField("text",  sMessage == null ? xNullable.NULL : xString.makeHandle(sMessage));
-        hException.setField("cause", hCause == null   ? xNullable.NULL : hCause);
+        hException.setField(frame, "text",  sMessage == null ? xNullable.NULL : xString.makeHandle(sMessage));
+        hException.setField(frame, "cause", hCause == null   ? xNullable.NULL : hCause);
         hException.makeImmutable();
 
         return (ExceptionHandle) hException.ensureAccess(Access.PUBLIC);
@@ -277,7 +277,7 @@ public class xException
 
         ExceptionHandle hException = new ExceptionHandle(clxEx, true, eCause);
 
-        hException.setField("stackTrace", xString.makeHandle(
+        hException.setField(frame, "stackTrace", xString.makeHandle(
                 frame == null ? "" : frame.getStackTrace()));
 
         return hException;

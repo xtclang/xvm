@@ -7,6 +7,8 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
@@ -16,6 +18,8 @@ import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.ClassComposition.FieldInfo;
+
 import org.xvm.runtime.template.xObject;
 import org.xvm.runtime.template.xService.ServiceHandle;
 
@@ -23,7 +27,6 @@ import org.xvm.runtime.template.collections.xArray;
 
 import org.xvm.runtime.template.reflect.xRef.RefHandle;
 
-import org.xvm.runtime.template._native.reflect.xRTFunction.FullyBoundHandle;
 
 /**
  * Runtime operates on Object handles holding the struct references or the values themselves
@@ -36,11 +39,12 @@ public abstract class ObjectHandle
         implements Cloneable
     {
     protected TypeComposition m_clazz;
-    protected boolean m_fMutable = false;
+    protected boolean m_fMutable;
 
     protected ObjectHandle(TypeComposition clazz)
         {
-        m_clazz = clazz;
+        m_clazz    = clazz;
+        m_fMutable = false;
         }
 
     /**
@@ -155,23 +159,15 @@ public abstract class ObjectHandle
         }
 
     /**
-     * Check whether or not the property referred by the specified constant has a custom code or
-     * Ref-annotation.
-     *
-     * @param idProp  the property to check
-     *
      * @return true iff the specified property has custom code or is Ref-annotated
      */
     public boolean isInflated(PropertyConstant idProp)
         {
-        return getComposition().isInflated(idProp.getNestedIdentity());
+        FieldInfo field = getComposition().getFieldInfo(idProp.getNestedIdentity());
+        return field != null && field.isInflated();
         }
 
     /**
-     * Check whether or not the property referred by the specified constant has an injected value.
-     *
-     * @param idProp  the property to check
-     *
      * @return true iff the specified property has an injected value
      */
     public boolean isInjected(PropertyConstant idProp)
@@ -180,11 +176,6 @@ public abstract class ObjectHandle
         }
 
     /**
-     * Check whether or not the property referred by the specified constant has to be treated as
-     * an atomic value.
-     *
-     * @param idProp  the property to check
-     *
      * @return true iff the specified property has an atomic value
      */
     public boolean isAtomic(PropertyConstant idProp)
@@ -193,10 +184,6 @@ public abstract class ObjectHandle
         }
 
     /**
-     * Check if this handle could be passed "as is" to a service context of the specified container.
-     *
-     * @param container  (optional) the "receiving" container
-     *
      * @return true iff the handle is an object that is allowed to be passed across service/container
      *         boundaries (an immutable, a service or an object that has all pass-through fields)
      */
@@ -270,7 +257,7 @@ public abstract class ObjectHandle
      * If method invocations and properties access for this handle need to be proxied across
      * service boundaries, return the corresponding ServiceHandle.
      *
-     * @return a ServiceHandle ir null of this handle is "not a Service"
+     * @return a ServiceHandle or null of this handle is "not a Service"
      */
     public ServiceHandle getService()
         {
@@ -383,44 +370,91 @@ public abstract class ObjectHandle
             return m_aFields;
             }
 
+
+        // ----- id-based field access -------------------------------------------------------------
+
         public boolean containsField(PropertyConstant idProp)
             {
-            return getFieldPosition(idProp.getNestedIdentity()) >= 0;
+            return getComposition().getFieldInfo(idProp.getNestedIdentity()) != null;
             }
 
-        public ObjectHandle getField(PropertyConstant idProp)
+        public ObjectHandle getField(Frame frame, PropertyConstant idProp)
             {
-            return m_aFields[getFieldPosition(idProp.getNestedIdentity())];
+            FieldInfo field = getComposition().getFieldInfo(idProp.getNestedIdentity());
+            return field.isTransient()
+                    ? getTransientField(frame, field)
+                    : m_aFields[field.getIndex()];
             }
 
-        public ObjectHandle getField(String sProp)
+        public ObjectHandle getField(Frame frame, String sProp)
             {
-            return m_aFields[getFieldPosition(sProp)];
+            FieldInfo field = getComposition().getFieldInfo(sProp);
+            return field.isTransient()
+                    ? getTransientField(frame, field)
+                    : m_aFields[field.getIndex()];
             }
 
-        public void setField(PropertyConstant idProp, ObjectHandle hValue)
+        public void setField(Frame frame, PropertyConstant idProp, ObjectHandle hValue)
             {
-            m_aFields[getFieldPosition(idProp.getNestedIdentity())] = hValue;
+            FieldInfo field = getComposition().getFieldInfo(idProp.getNestedIdentity());
+            if (field.isTransient())
+                {
+                setTransientField(frame, field.getIndex(), hValue);
+                }
+            else
+                {
+                m_aFields[field.getIndex()] = hValue;
+                }
             }
 
-        public void setField(String sProp, ObjectHandle hValue)
+        public void setField(Frame frame, String sProp, ObjectHandle hValue)
             {
-            m_aFields[getFieldPosition(sProp)] = hValue;
+            FieldInfo field = getComposition().getFieldInfo(sProp);
+            if (field.isTransient())
+                {
+                setTransientField(frame, field.getIndex(), hValue);
+                }
+            else
+                {
+                m_aFields[field.getIndex()] = hValue;
+                }
             }
 
-        public int getFieldPosition(Object nid)
+        public FieldInfo getFieldInfo(PropertyConstant idProp)
             {
-            return getComposition().getFieldPosition(nid);
+            return getComposition().getFieldInfo(idProp.getNestedIdentity());
             }
 
-        public ObjectHandle getFieldByPosition(int iPos)
+        // ----- index-based field access ----------------------------------------------------------
+
+        public ObjectHandle getField(int iPos)
             {
             return m_aFields[iPos];
             }
 
-        public void setFieldByPosition(int iPos, ObjectHandle hValue)
+        public void setField(int iPos, ObjectHandle hValue)
             {
             m_aFields[iPos] = hValue;
+            }
+
+        public ObjectHandle getTransientField(Frame frame, FieldInfo field)
+            {
+            TransientId  hId    = (TransientId) m_aFields[field.getIndex()];
+            ObjectHandle hValue = frame.f_context.getTransientValue(hId);
+
+            if (hValue == null && field.isInflated())
+                {
+                RefHandle hRef = field.createRefHandle(frame);
+                hRef.setField(frame, OUTER, this);
+                frame.f_context.setTransientValue(hId, hRef);
+                return hRef;
+                }
+            return hValue;
+            }
+
+        public void setTransientField(Frame frame, int iPos, ObjectHandle hValue)
+            {
+            frame.f_context.setTransientValue((TransientId) m_aFields[iPos], hValue);
             }
 
         public Container getOwner()
@@ -450,7 +484,7 @@ public abstract class ObjectHandle
             {
             if (getComposition().hasOuter())
                 {
-                ObjectHandle hParent = getField(OUTER);
+                ObjectHandle hParent = getField(null, OUTER);
                 return hParent != null && hParent.isService();
                 }
 
@@ -460,7 +494,7 @@ public abstract class ObjectHandle
         @Override
         public ServiceHandle getService()
             {
-            GenericHandle hParent = (GenericHandle) getField(OUTER);
+            GenericHandle hParent = (GenericHandle) getField(null, OUTER);
             return hParent == null || !hParent.isService()
                 ? null
                 : hParent.getService();
@@ -481,13 +515,14 @@ public abstract class ObjectHandle
                 {
                 for (Object nid : clazz.getFieldNids())
                     {
-                    if (clazz.isInflated(nid))
+                    FieldInfo field = clazz.getFieldInfo(nid);
+                    if (field.isInflated() && !field.isTransient())
                         {
-                        RefHandle    hValue = (RefHandle) aFields[clazz.getFieldPosition(nid)];
-                        ObjectHandle hOuter = hValue.getField(OUTER);
+                        RefHandle    hValue = (RefHandle) aFields[field.getIndex()];
+                        ObjectHandle hOuter = hValue.getField(null, OUTER);
                         if (hOuter != null)
                             {
-                            hValue.setField(OUTER, hClone);
+                            hValue.setField(null, OUTER, hClone);
                             }
                         }
                     }
@@ -505,10 +540,11 @@ public abstract class ObjectHandle
                 TypeComposition clazz = getComposition();
                 for (Object idProp : clazz.getFieldNids())
                     {
-                    ObjectHandle hValue = aFields[clazz.getFieldPosition(idProp)];
+                    FieldInfo    field  = clazz.getFieldInfo(idProp);
+                    ObjectHandle hValue = aFields[field.getIndex()];
                     if (hValue == null)
                         {
-                        if (!clazz.isAllowedUnassigned(idProp))
+                        if (!field.isAllowedUnassigned())
                             {
                             if (listUnassigned == null)
                                 {
@@ -985,54 +1021,27 @@ public abstract class ObjectHandle
         }
 
     /**
-     * DeferredSingletonHandle represents a deferred bully bound function call that puts a result
-     * on the calling frame's stack.
-     *
-     * Note: this handle cannot be allocated naturally and must be processed in a special way.
+     * A handle that is used for transient fields access.
      */
-    public static class DeferredFunctionCall
-            extends DeferredCallHandle
+    public static class TransientId
+            extends ObjectHandle
         {
-        private final FullyBoundHandle f_hf;
-
-        public DeferredFunctionCall(FullyBoundHandle hf)
+        protected TransientId()
             {
-            super((ExceptionHandle) null);
+            super(null);
 
-            f_hf = hf;
+            f_nHash = s_hashCode.getAndAdd(0x61c88647); // see ThreadLocal.java
             }
 
         @Override
-        public void addContinuation(Frame.Continuation continuation)
+        public int hashCode()
             {
-            throw new UnsupportedOperationException();
+            return f_nHash;
             }
 
-        @Override
-        public int proceed(Frame frameCaller, Frame.Continuation continuation)
-            {
-            switch (f_hf.call1(frameCaller, null, Utils.OBJECTS_NONE, Op.A_STACK))
-                {
-                case Op.R_NEXT:
-                    return continuation.proceed(frameCaller);
+        private final int f_nHash;
 
-                case Op.R_CALL:
-                    frameCaller.m_frameNext.addContinuation(continuation);
-                    return Op.R_CALL;
-
-                case Op.R_EXCEPTION:
-                    return Op.R_EXCEPTION;
-
-                default:
-                    throw new IllegalStateException();
-                }
-            }
-
-        @Override
-        public String toString()
-            {
-            return "Deferred function call for " + f_hf;
-            }
+        private final static AtomicInteger s_hashCode = new AtomicInteger();
         }
 
     /**

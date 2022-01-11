@@ -248,11 +248,11 @@ public class xRegEx
             if (nStart >= 0)
                 {
                 GenericHandle hRange = new ObjectHandle.GenericHandle(clzRange);
-                hRange.setField("lowerBound", xInt64.INSTANCE.makeJavaLong(nStart));
-                hRange.setField("lowerExclusive", xBoolean.FALSE);
-                hRange.setField("upperBound", xInt64.INSTANCE.makeJavaLong(match.end(i)));
-                hRange.setField("upperExclusive", xBoolean.TRUE);
-                hRange.setField("descending", xBoolean.FALSE);
+                hRange.setField(frame, "lowerBound", xInt64.INSTANCE.makeJavaLong(nStart));
+                hRange.setField(frame, "lowerExclusive", xBoolean.FALSE);
+                hRange.setField(frame, "upperBound", xInt64.INSTANCE.makeJavaLong(match.end(i)));
+                hRange.setField(frame, "upperExclusive", xBoolean.TRUE);
+                hRange.setField(frame, "descending", xBoolean.FALSE);
                 hRange.makeImmutable();
                 ah[i] = hRange;
                 }

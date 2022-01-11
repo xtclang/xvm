@@ -882,7 +882,7 @@ public abstract class Utils
                     boolean      fNoReentrancy = frame.f_iReturn == A_BLOCK;
                     FutureHandle hFuture       = (FutureHandle) frame.f_ahVar[0];
 
-                    if (hFuture.isAssigned())
+                    if (hFuture.isAssigned(frame))
                         {
                         return frame.returnValue(hFuture, true);
                         }
@@ -901,7 +901,7 @@ public abstract class Utils
                 for (int i = 0; i < cValues; i++)
                     {
                     FutureHandle hFuture = (FutureHandle) frame.f_ahVar[i];
-                    if (hFuture.isAssigned())
+                    if (hFuture.isAssigned(frame))
                         {
                         ahFuture[i] = hFuture;
                         }

@@ -146,7 +146,7 @@ public class MoveThis
             ObjectHandle hOuter = frame.getThis();
             for (int c = m_cSteps; c > 0; c--)
                 {
-                hOuter = ((GenericHandle) hOuter).getField(GenericHandle.OUTER);
+                hOuter = ((GenericHandle) hOuter).getField(frame, GenericHandle.OUTER);
                 }
 
             if (m_nAccess != 0)

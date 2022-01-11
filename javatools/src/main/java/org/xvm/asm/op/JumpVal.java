@@ -252,8 +252,8 @@ public class JumpVal
      */
     private void addRange(GenericHandle hRange, int index)
         {
-        ObjectHandle hLow  = hRange.getField("lowerBound");
-        ObjectHandle hHigh = hRange.getField("upperBound");
+        ObjectHandle hLow  = hRange.getField(null, "lowerBound");
+        ObjectHandle hHigh = hRange.getField(null, "upperBound");
 
         // TODO: if the range is small and sequential (an interval), replace it with the exact hits for native values
         List<Object[]> list = m_listRanges;

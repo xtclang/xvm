@@ -487,7 +487,7 @@ public class xAtomicIntNumber
             }
 
         @Override
-        public boolean isAssigned()
+        public boolean isAssigned(Frame frame)
             {
             return m_atomicValue != null;
             }

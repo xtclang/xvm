@@ -735,7 +735,7 @@ public class DebugConsole
                                     String sProp = asParts[2];
                                     try
                                         {
-                                        hVar = ((GenericHandle) hVar).getField(sProp);
+                                        hVar = ((GenericHandle) hVar).getField(frame, sProp);
                                         }
                                     catch (Throwable e)
                                         {
@@ -768,7 +768,7 @@ public class DebugConsole
                                         String sProp = asParts[2];
                                         try
                                             {
-                                            hVar = ((GenericHandle) hVar).getField(sProp);
+                                            hVar = ((GenericHandle) hVar).getField(frame, sProp);
                                             }
                                         catch (Throwable e)
                                             {
@@ -845,7 +845,7 @@ public class DebugConsole
      */
     private DebugStash getGlobalStash()
         {
-        return m_debugState;
+        return m_debugStash;
         }
 
     /**
@@ -1155,9 +1155,9 @@ public class DebugConsole
             MethodStructure method   = m_frameFocus.f_function;
             boolean         fPrinted = false;
 
-            int iFirst = 0;
-            int cLines = 0;
-            int nLine  = method.calculateLineNumber(m_frameFocus.m_iPC); // 1-based
+            int iFirst;
+            int cLines;
+            int nLine = method.calculateLineNumber(m_frameFocus.m_iPC); // 1-based
             if (nLine > 0)
                 {
                 // default to showing the entire method
@@ -1388,9 +1388,9 @@ public class DebugConsole
             {
             addVar(0, "this", "this", hThis, listVars, getGlobalStash().getExpandMap());
 
-            if (hThis.getComposition().getFieldPosition(GenericHandle.OUTER) != -1)
+            if (hThis.getComposition().getFieldInfo(GenericHandle.OUTER) != null)
                 {
-                ObjectHandle hOuter = ((GenericHandle) hThis).getField(GenericHandle.OUTER);
+                ObjectHandle hOuter = ((GenericHandle) hThis).getField(frame, GenericHandle.OUTER);
                 addVar(0, "outer", "outer", hOuter, listVars, mapExpand);
                 }
             }
@@ -1482,7 +1482,7 @@ public class DebugConsole
                 {
                 for (String sField : listFields)
                     {
-                    ObjectHandle hField = ((GenericHandle) hVar).getField(sField);
+                    ObjectHandle hField = ((GenericHandle) hVar).getField(m_frame, sField);
                     addVar(cIndent+1, sPath+'.'+sField, sField, hField, listVars, mapExpand);
                     }
                 }
@@ -1532,7 +1532,7 @@ public class DebugConsole
 
             for (String sField : listNames)
                 {
-                ObjectHandle hField = ((GenericHandle) hVal).getField(sField);
+                ObjectHandle hField = ((GenericHandle) hVal).getField(m_frame, sField);
 
                 sb.append('\n')
                   .append(sTab)
@@ -2119,7 +2119,7 @@ public class DebugConsole
                     return hVar;
 
                 case PROP:
-                    return ((GenericHandle) hVar).getField(sVar);
+                    return ((GenericHandle) hVar).getField(frame, sVar);
 
                 case VAR:
                     // not currently used
@@ -2187,7 +2187,7 @@ public class DebugConsole
     /**
      * The "global" debug state (visible in any frame).
      */
-    private DebugStash m_debugState = new DebugStash();
+    private DebugStash m_debugStash = new DebugStash();
 
     /**
      * The displayed array of variable names.

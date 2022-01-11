@@ -123,11 +123,10 @@ public class xNanosTimer
             return 0;
             }
 
-        ObjectHandle hRemaining = ((GenericHandle) hTimeout).getField("duration");
-        ObjectHandle hPicos     = ((GenericHandle) hRemaining).getField("picoseconds");
+        ObjectHandle hRemaining = ((GenericHandle) hTimeout).getField(null, "duration");
+        ObjectHandle hPicos     = ((GenericHandle) hRemaining).getField(null, "picoseconds");
 
-        return ((LongLongHandle) hPicos).getValue().
-                div(PICOS_PER_MILLI_LL).getLowValue();
+        return ((LongLongHandle) hPicos).getValue().div(PICOS_PER_MILLI_LL).getLowValue();
         }
 
 
@@ -224,7 +223,7 @@ public class xNanosTimer
             {
             // note: the Java Timer uses millisecond scheduling, but we're given scheduling
             // instructions in picoseconds
-            LongLongHandle llPicos = (LongLongHandle) hDuration.getField("picoseconds");
+            LongLongHandle llPicos = (LongLongHandle) hDuration.getField(null, "picoseconds");
             long            cNanos  = Math.max(0, llPicos.getValue().divUnsigned(PICOS_PER_NANO).getLowValue());
             Alarm           alarm   = new Alarm(++s_cAlarms, cNanos, hAlarm, context);
 
@@ -286,9 +285,9 @@ public class xNanosTimer
         public GenericHandle elapsedDuration()
             {
             GenericHandle hDuration = new GenericHandle(s_clzDuration);
+            LongLong      llPicos   = new LongLong(elapsed()).mul(PICOS_PER_NANO_LL);
 
-            LongLong llPicos   = new LongLong(elapsed()).mul(PICOS_PER_NANO_LL);
-            hDuration.setField("picoseconds", xUInt128.INSTANCE.makeLongLong(llPicos));
+            hDuration.setField(null, "picoseconds", xUInt128.INSTANCE.makeLongLong(llPicos));
             hDuration.makeImmutable();
 
             return hDuration;
@@ -519,7 +518,7 @@ public class xNanosTimer
         /**
          * The registered alarms.
          */
-        private ListSet<Alarm> f_setAlarms = new ListSet<>();
+        private final ListSet<Alarm> f_setAlarms = new ListSet<>();
         }
 
 

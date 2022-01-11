@@ -331,30 +331,40 @@ public class xRTMethod
                 }
             }
 
-        Annotation[] aAnno  = method.getAnnotations();
+        Annotation[] aAnno = method.getAnnotations();
 
         if (aAnno != null && aAnno.length > 0)
             {
             type = pool.ensureAnnotatedTypeConstant(type, aAnno);
 
-            MethodHandle hMethod = new MethodHandle(type, method);
-            ObjectHandle hStruct = hMethod.ensureAccess(Access.STRUCT);
+            TypeComposition clzMethod = INSTANCE.ensureClass(type);
+            MethodHandle    hStruct   = new MethodHandle(clzMethod.ensureAccess(Access.STRUCT), type, method);
 
-            switch (hMethod.getTemplate().
+            switch (hStruct.getTemplate().
                     proceedConstruction(frame, null, true, hStruct, Utils.OBJECTS_NONE, Op.A_STACK))
                 {
                 case Op.R_NEXT:
-                    return frame.popStack();
+                    {
+                    ObjectHandle hM = frame.popStack();
+                    hM.makeImmutable();
+                    return hM;
+                    }
 
                 case Op.R_CALL:
-                    return new DeferredCallHandle(frame.m_frameNext);
+                    DeferredCallHandle hDeferred = new DeferredCallHandle(frame.m_frameNext);
+                    hDeferred.addContinuation(frameCaller ->
+                        {
+                        frameCaller.peekStack().makeImmutable();
+                        return Op.R_NEXT;
+                        });
+                    return hDeferred;
 
                 case Op.R_EXCEPTION:
                     return new DeferredCallHandle(frame.m_hException);
                 }
             }
 
-        return new MethodHandle(type, method);
+        return new MethodHandle(INSTANCE.ensureClass(type), type, method);
         }
 
     /**
@@ -366,11 +376,11 @@ public class xRTMethod
     public static class MethodHandle
             extends SignatureHandle
         {
-        protected MethodHandle(TypeConstant type, MethodStructure method)
+        protected MethodHandle(TypeComposition clz, TypeConstant type, MethodStructure method)
             {
-            super(INSTANCE.ensureClass(type), method.getIdentityConstant(), method, type);
+            super(clz, method.getIdentityConstant(), method, type);
 
-            m_fMutable = false;
+            m_fMutable = clz.isStruct();
 
             assert getMethodInfo() != null;
             }

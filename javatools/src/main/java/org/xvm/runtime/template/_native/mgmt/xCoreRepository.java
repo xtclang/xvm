@@ -114,8 +114,6 @@ public class xCoreRepository
         protected CoreRepoHandle(TypeComposition clazz)
             {
             super(clazz);
-
-            m_fMutable = false;
             }
         }
 

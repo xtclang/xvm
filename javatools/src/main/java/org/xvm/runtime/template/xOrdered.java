@@ -36,13 +36,13 @@ public class xOrdered
             EQUAL   = getEnumByOrdinal(1);
             GREATER = getEnumByOrdinal(2);
 
-            LESSER .setField("symbol", xString.makeHandle("<"));
-            EQUAL  .setField("symbol", xString.makeHandle("="));
-            GREATER.setField("symbol", xString.makeHandle(">"));
+            LESSER .setField(null, "symbol", xString.makeHandle("<"));
+            EQUAL  .setField(null, "symbol", xString.makeHandle("="));
+            GREATER.setField(null, "symbol", xString.makeHandle(">"));
 
-            LESSER .setField("reversed", GREATER);
-            EQUAL  .setField("reversed", EQUAL);
-            GREATER.setField("reversed", LESSER);
+            LESSER .setField(null, "reversed", GREATER);
+            EQUAL  .setField(null, "reversed", EQUAL);
+            GREATER.setField(null, "reversed", LESSER);
             }
         }
 

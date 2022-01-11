@@ -71,8 +71,8 @@ public class xInjectedRef
             {
             // opts are not specified; the handle could be trivially initialized on-the-spot
             InjectedHandle hInject = new InjectedHandle(clazz.ensureAccess(Access.PUBLIC), sName, sResource);
-            hInject.setField("resourceName", xString.makeHandle(sResource));
-            hInject.setField("opts", xNullable.NULL);
+            hInject.setField(frame, "resourceName", xString.makeHandle(sResource));
+            hInject.setField(frame, "opts", xNullable.NULL);
             return hInject;
             }
 
@@ -90,7 +90,7 @@ public class xInjectedRef
             {
             TypeConstant typeResource = hInjected.getType().resolveGenericType("Referent");
             String       sResource    = hInjected.getResourceName();
-            ObjectHandle hOpts        = hInjected.getField("opts");
+            ObjectHandle hOpts        = hInjected.getField(frame, "opts");
 
             hValue = frame.f_context.f_container.getInjectable(frame, sResource, typeResource, hOpts);
             if (hValue == null)

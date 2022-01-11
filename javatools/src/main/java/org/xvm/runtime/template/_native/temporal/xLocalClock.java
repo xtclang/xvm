@@ -103,8 +103,8 @@ public class xLocalClock
         GenericHandle hDateTime = new GenericHandle(clzDateTime);
 
         LongLong llNow = new LongLong(System.currentTimeMillis()).mul(PICOS_PER_MILLI_LL);
-        hDateTime.setField("epochPicos", xUInt128.INSTANCE.makeLongLong(llNow));
-        hDateTime.setField("timezone", timezone());
+        hDateTime.setField(null, "epochPicos", xUInt128.INSTANCE.makeLongLong(llNow));
+        hDateTime.setField(null, "timezone", timezone());
         hDateTime.makeImmutable();
 
         return hDateTime;
@@ -128,9 +128,9 @@ public class xLocalClock
             m_hTimeZone = hTimeZone = new GenericHandle(clzTimeZone);
 
             long lOffset = 0; // TODO
-            hTimeZone.setField("picos", xInt64.makeHandle(lOffset));
-            hTimeZone.setField("name",  xNullable.NULL);
-            hTimeZone.setField("rules", xArray.createEmptyArray(clzRuleArray, 0, Mutability.Mutable));
+            hTimeZone.setField(null, "picos", xInt64.makeHandle(lOffset));
+            hTimeZone.setField(null, "name",  xNullable.NULL);
+            hTimeZone.setField(null, "rules", xArray.createEmptyArray(clzRuleArray, 0, Mutability.Mutable));
             hTimeZone.makeImmutable();
             }
 
@@ -160,7 +160,7 @@ public class xLocalClock
         protected FunctionHandle schedule(GenericHandle hWakeup)
             {
             // assert (hWakeup.timezone == NoTZ) == (this.timezone == NoTZ)
-            LongLongHandle llEpoch = (LongLongHandle) hWakeup.getField("epochPicos");
+            LongLongHandle llEpoch = (LongLongHandle) hWakeup.getField(null, "epochPicos");
 
             long  ldtNow    = System.currentTimeMillis();
             long  ldtWakeup = llEpoch.getValue().divUnsigned(PICOS_PER_MILLI).getLowValue();

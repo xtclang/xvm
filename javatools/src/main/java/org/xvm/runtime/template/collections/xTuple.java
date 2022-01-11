@@ -224,11 +224,11 @@ public class xTuple
                 {
                 GenericHandle hInterval = (GenericHandle) hArg;
 
-                long    ixFrom   = ((JavaLong) hInterval.getField("lowerBound")).getValue();
-                long    ixTo     = ((JavaLong) hInterval.getField("upperBound")).getValue();
-                boolean fExLower = ((BooleanHandle) hInterval.getField("lowerExclusive")).get();
-                boolean fExUpper = ((BooleanHandle) hInterval.getField("upperExclusive")).get();
-                boolean fReverse = ((BooleanHandle) hInterval.getField("descending")).get();
+                long    ixFrom   = ((JavaLong) hInterval.getField(frame, "lowerBound")).getValue();
+                long    ixTo     = ((JavaLong) hInterval.getField(frame, "upperBound")).getValue();
+                boolean fExLower = ((BooleanHandle) hInterval.getField(frame, "lowerExclusive")).get();
+                boolean fExUpper = ((BooleanHandle) hInterval.getField(frame, "upperExclusive")).get();
+                boolean fReverse = ((BooleanHandle) hInterval.getField(frame, "descending")).get();
                 return slice(frame, (TupleHandle) hTarget, ixFrom, fExLower, ixTo, fExUpper, fReverse, iReturn);
                 }
             }

@@ -3210,6 +3210,7 @@ public class ClassStructure
                 continue;
                 }
 
+            FieldInfo        field     = entry.getValue();
             PropertyConstant idField   = infoProp.getFieldIdentity();
             MethodConstant   idInit    = null;
             Constant         constInit = null;
@@ -3233,6 +3234,10 @@ public class ClassStructure
             if (constInit != null)
                 {
                 code.add(new L_Set(idField, constInit));
+                if (field.isTransient())
+                    {
+                    field.constInit = constInit;
+                    }
                 }
             else if (idInit != null)
                 {
@@ -3245,9 +3250,12 @@ public class ClassStructure
                     {
                     code.add(new Invoke_01(new Register(typeStruct, Op.A_THIS), idInit, idField));
                     }
+
+                // TODO: transient field initializer is not currently supported
+                //  (non-static initializer would need a struct, which by that time is frozen)
                 }
 
-            if (entry.getValue().isInflated())
+            if (field.isInflated())
                 {
                 // assign the ref's OUTER property; the auto-initializer will be called
                 // by the constructor (see ClassTemplate#proceedConstruction)
@@ -3257,9 +3265,9 @@ public class ClassStructure
                     public int process(Frame frame, int iPC)
                         {
                         GenericHandle hStruct = (GenericHandle) frame.getThis();
-                        RefHandle     hRef    = (RefHandle) hStruct.getField(idField);
+                        RefHandle     hRef    = (RefHandle) hStruct.getField(frame, idField);
 
-                        hRef.setField(GenericHandle.OUTER, hStruct);
+                        hRef.setField(frame, GenericHandle.OUTER, hStruct);
                         return iPC + 1;
                         }
 

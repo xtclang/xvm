@@ -1024,8 +1024,8 @@ public class xRTType
         ConstantPool  pool     = frame.poolContext();
         TypeConstant  typeThis = hType.getDataType();
         GenericHandle hAnno    = (GenericHandle) hArg;
-        ClassHandle   hClass   = (ClassHandle) hAnno.getField("mixinClass");
-        ArrayHandle   hArgs    = (ArrayHandle) hAnno.getField("arguments");
+        ClassHandle   hClass   = (ClassHandle) hAnno.getField(frame, "mixinClass");
+        ArrayHandle   hArgs    = (ArrayHandle) hAnno.getField(frame, "arguments");
 
         if (xArray.INSTANCE.size(hArgs) > 0)
             {
@@ -1653,13 +1653,13 @@ public class xRTType
             ? new TypeHandle(INSTANCE.ensureClass(type.getType()), null)
             : new TypeHandle(INSTANCE.getCanonicalClass(), type.getType());
 
-        GenericHandle hMulti = (GenericHandle) hType.getField("multimethods");
-        hMulti.setField(GenericHandle.OUTER, hType);
-        hMulti.setField("calculate",  xNullable.NULL);
+        GenericHandle hMulti = (GenericHandle) hType.getField(null, "multimethods");
+        hMulti.setField(null, GenericHandle.OUTER, hType);
+        hMulti.setField(null, "calculate",  xNullable.NULL);
 
-        GenericHandle hHasher = (GenericHandle) hType.getField("hasher");
-        hHasher.setField(GenericHandle.OUTER, hType);
-        hHasher.setField("calculate",  xNullable.NULL);
+        GenericHandle hHasher = (GenericHandle) hType.getField(null, "hasher");
+        hHasher.setField(null, GenericHandle.OUTER, hType);
+        hHasher.setField(null, "calculate",  xNullable.NULL);
 
         return hType;
         }

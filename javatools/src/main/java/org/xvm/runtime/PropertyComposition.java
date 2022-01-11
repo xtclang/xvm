@@ -19,6 +19,7 @@ import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
+import org.xvm.runtime.ClassComposition.FieldInfo;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 
 import org.xvm.runtime.template.reflect.xRef;
@@ -165,9 +166,9 @@ public class PropertyComposition
         }
 
     @Override
-    public int getFieldPosition(Object nid)
+    public FieldInfo getFieldInfo(Object nid)
         {
-        return f_clzRef.getFieldPosition(nid);
+        return f_clzRef.getFieldInfo(nid);
         }
 
     @Override
@@ -186,24 +187,6 @@ public class PropertyComposition
     public boolean hasOuter()
         {
         return f_clzRef.hasOuter();
-        }
-
-    @Override
-    public boolean isInflated(Object nid)
-        {
-        return f_clzRef.isInflated(nid);
-        }
-
-    @Override
-    public boolean isLazy(Object nid)
-        {
-        return f_clzRef.isLazy(nid);
-        }
-
-    @Override
-    public boolean isAllowedUnassigned(Object nid)
-        {
-        return f_clzRef.isAllowedUnassigned(nid);
         }
 
     @Override

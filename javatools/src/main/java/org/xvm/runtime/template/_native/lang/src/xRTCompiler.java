@@ -96,8 +96,8 @@ public class xRTCompiler
                                 ObjectHandle[] ahSources, int[] aiReturn)
         {
         CompilerAdapter compiler  = hCompiler.fAdapter;
-        ObjectHandle    hLibRepo  = hCompiler.getField("libRepo");
-        NodeHandle      hDirOut   = (NodeHandle) hCompiler.getField("outputDir");
+        ObjectHandle    hLibRepo  = hCompiler.getField(frame, "libRepo");
+        NodeHandle      hDirOut   = (NodeHandle) hCompiler.getField(frame, "outputDir");
 
         if (hDirOut == null)
             {

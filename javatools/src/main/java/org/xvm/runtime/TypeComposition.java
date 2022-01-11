@@ -115,13 +115,13 @@ public interface TypeComposition
     ObjectHandle[] initializeStructure();
 
     /**
-     * Return the specified field's position in the structure.
+     * Return the specified field's attributes.
      *
      * @param nid  the field nid
      *
-     * @return the field's position; -1 if not present
+     * @return the field's attributes; -1 if not present
      */
-    int getFieldPosition(Object nid);
+    ClassComposition.FieldInfo getFieldInfo(Object nid);
 
     /**
      * Make all the fields of the specified structure immutable.
@@ -144,25 +144,6 @@ public interface TypeComposition
     boolean hasOuter();
 
     /**
-     * Check whether the property referred by the specified nid has a custom code or
-     * Ref-annotation.
-     *
-     * @param nid  the property nid
-     *
-     * @return true iff the specified property has custom code or is Ref-annotated
-     */
-    boolean isInflated(Object nid);
-
-    /**
-     * Check whether the property referred by the specified nid is LazyVar annotated.
-     *
-     * @param nid  the property nid
-     *
-     * @return true iff the property is LazyVar annotated
-     */
-    boolean isLazy(Object nid);
-
-    /**
      * Check whether the property referred by the specified nid is a "regular" one, meaning that
      * it's neither nested nor synthetic nor lazy.
      *
@@ -183,18 +164,8 @@ public interface TypeComposition
             return false;
             }
 
-        return !isInflated(sName) && !isLazy(sName);
+        return getFieldInfo(sName).isRegular();
         }
-
-    /**
-     * Check whether the property referred by the specified nid is allowed to stay unassigned after
-     * the construction.
-     *
-     * @param nid  the property nid
-     *
-     * @return true if the specified property is allowed to stay unassigned
-     */
-    boolean isAllowedUnassigned(Object nid);
 
     /**
      * @return true if the specified property is injected
@@ -260,17 +231,17 @@ public interface TypeComposition
         }
 
     /**
-     * @return a list of field names (excluding potentially unassigned and lazy)
+     * @return a list of field names (excluding potentially unassigned, lazy and transient)
      */
     List<String> getFieldNames();
 
     /**
-     * @return an array of field name handles (excluding potentially unassigned and lazy)
+     * @return an array of field name handles (excluding potentially unassigned, lazy and transient)
      */
     StringHandle[] getFieldNameArray();
 
     /**
-     * @return an array of field value handles (excluding potentially unassigned and lazy)
+     * @return an array of field value handles (excluding potentially unassigned, lazy and transient)
      */
     ObjectHandle[] getFieldValueArray(GenericHandle hValue);
     }

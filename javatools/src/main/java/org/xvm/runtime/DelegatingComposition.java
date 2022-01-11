@@ -9,6 +9,7 @@ import org.xvm.asm.MethodStructure;
 
 import org.xvm.asm.constants.PropertyConstant;
 
+import org.xvm.runtime.ClassComposition.FieldInfo;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 
 import org.xvm.runtime.template.text.xString.StringHandle;
@@ -56,27 +57,9 @@ abstract public class DelegatingComposition
         }
 
     @Override
-    public boolean isInflated(Object nid)
-        {
-        return f_clzOrigin.isInflated(nid);
-        }
-
-    @Override
-    public boolean isLazy(Object nid)
-        {
-        return f_clzOrigin.isLazy(nid);
-        }
-
-    @Override
-    public boolean isAllowedUnassigned(Object nid)
-        {
-        return f_clzOrigin.isAllowedUnassigned(nid);
-        }
-
-    @Override
     public boolean isInjected(PropertyConstant idProp)
         {
-        return f_clzOrigin.isInflated(idProp);
+        return f_clzOrigin.isInjected(idProp);
         }
 
     @Override
@@ -128,9 +111,9 @@ abstract public class DelegatingComposition
         }
 
     @Override
-    public int getFieldPosition(Object nid)
+    public FieldInfo getFieldInfo(Object nid)
         {
-        return f_clzOrigin.getFieldPosition(nid);
+        return f_clzOrigin.getFieldInfo(nid);
         }
 
     @Override

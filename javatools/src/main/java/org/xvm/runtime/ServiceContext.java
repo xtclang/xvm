@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 import java.util.TimerTask;
+import java.util.WeakHashMap;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -29,6 +30,7 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.Return_0;
 
+import org.xvm.runtime.ObjectHandle.TransientId;
 import org.xvm.runtime.Fiber.FiberStatus;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle.WrapperException;
@@ -148,7 +150,7 @@ public class ServiceContext
             }
         else
             {
-            ObjectHandle hCritical = ((GenericHandle) hSection).getField("critical");
+            ObjectHandle hCritical = ((GenericHandle) hSection).getField(null, "critical");
 
             m_fiberSyncOwner = fiber;
             m_synchronicity  = ((BooleanHandle) hCritical).get() ?
@@ -261,6 +263,35 @@ public class ServiceContext
         {
         f_mapOpInfo.computeIfAbsent(op, (op_) -> new EnumMap(category.getClass()))
                    .put(category, info);
+        }
+
+    /**
+     * @return service-local value represented by the specified ref
+     */
+    public ObjectHandle getTransientValue(TransientId ref)
+        {
+        return ensureTransientMap().get(ref);
+        }
+
+    /**
+     * Set service-local value represented by the specified ref.
+     */
+    public void setTransientValue(TransientId ref, ObjectHandle value)
+        {
+        ensureTransientMap().put(ref, value);
+        }
+
+    /**
+     * @return the map of service-local values; accessed only by this service
+     */
+    private Map<TransientId, ObjectHandle> ensureTransientMap()
+        {
+        Map<TransientId, ObjectHandle> map = m_mapTransient;
+        if (map == null)
+            {
+            map = m_mapTransient = new WeakHashMap<>();
+            }
+        return map;
         }
 
 
@@ -1913,6 +1944,11 @@ public class ServiceContext
      * Since only one fiber can access the service context at any time, a simple HashMap is used.
      */
     private final Map<Op, EnumMap> f_mapOpInfo = new HashMap<>();
+
+    /**
+     * A "service-local" cache for transient field values.
+     */
+    private Map<TransientId, ObjectHandle> m_mapTransient;
 
     /**
      * A wake-up scheduler to process registered timeouts.

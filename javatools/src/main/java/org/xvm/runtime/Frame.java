@@ -1636,7 +1636,7 @@ public class Frame
         {
         RefHandle hRef = (RefHandle) f_ahVar[nVar];
 
-        return hRef.isAssigned() ? hRef : null;
+        return hRef.isAssigned(this) ? hRef : null;
         }
 
     /**

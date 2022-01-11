@@ -241,7 +241,7 @@ public class xRTFunction
         GenericHandle hParam = (GenericHandle) ahArg[1];
         ObjectHandle  hValue = ahArg[2];
 
-        long nOrdinal = ((JavaLong) hParam.getField("ordinal")).getValue();
+        long nOrdinal = ((JavaLong) hParam.getField(frame, "ordinal")).getValue();
 
         FunctionHandle hFuncR = hFunc.bind(frame, (int) nOrdinal, hValue);
         return frame.assignValue(iReturn, hFuncR);
@@ -623,7 +623,7 @@ public class xRTFunction
          *
          * @param ahVar  the argument array to place the arguments to
          *
-         * @return the number or arguments that has been added
+         * @return the number of arguments that has been added
          */
         protected int addBoundArguments(ObjectHandle[] ahVar)
             {

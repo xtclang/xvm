@@ -12,6 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
@@ -29,6 +30,9 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.runtime.ObjectHandle.GenericHandle;
+import org.xvm.runtime.ObjectHandle.TransientId;
+
+import org.xvm.runtime.template.reflect.xRef.RefHandle;
 
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
@@ -101,6 +105,7 @@ public class ClassComposition
 
         m_mapFields       = f_clzInception.m_mapFields;
         m_fHasOuter       = f_clzInception.m_fHasOuter;
+        m_fHasSpecial     = f_clzInception.m_fHasSpecial;
         m_methodInit      = f_clzInception.m_methodInit;
         }
 
@@ -279,37 +284,6 @@ public class ClassComposition
         }
 
     @Override
-    public boolean isInflated(Object nid)
-        {
-        FieldInfo info = m_mapFields.get(nid);
-        return info != null && info.getTypeComposition() != null;
-        }
-
-    @Override
-    public boolean isLazy(Object nid)
-        {
-        FieldInfo info = m_mapFields.get(nid);
-        if (info != null)
-            {
-            TypeComposition clz = info.getTypeComposition();
-            if (clz != null)
-                {
-                ConstantPool pool = f_typeInception.getConstantPool();
-                return clz instanceof PropertyComposition && ((PropertyComposition) clz).isLazy()
-                    || clz.getType().containsAnnotation(pool.clzLazy());
-                }
-            }
-        return false;
-        }
-
-    @Override
-    public boolean isAllowedUnassigned(Object nid)
-        {
-        return m_mapFields.get(nid).isSynthetic()
-            || f_typeStructure.ensureTypeInfo().findPropertyByNid(nid).isSimpleUnassigned();
-        }
-
-    @Override
     public boolean isInjected(PropertyConstant idProp)
         {
         return f_typeInception.ensureTypeInfo().findProperty(idProp).isInjected();
@@ -375,13 +349,16 @@ public class ClassComposition
             else
                 {
                 listNames = new ArrayList<>(mapFields.size());
-                for (Object nid : mapFields.keySet())
+                for (Map.Entry<Object, FieldInfo> entry : mapFields.entrySet())
                     {
+                    Object nid = entry.getKey();
+
                     // disregard nested (private) and synthetic properties
                     if (nid instanceof String)
                         {
-                        String sName = (String) nid;
-                        if (sName.charAt(0) != '$' && !isAllowedUnassigned(sName) && !isLazy(sName))
+                        FieldInfo field = entry.getValue();
+                        String    sName = (String) nid;
+                        if (sName.charAt(0) != '$' && field.isRegular())
                             {
                             listNames.add(sName);
                             }
@@ -428,7 +405,7 @@ public class ClassComposition
         int i = 0;
         for (String sName : listNames)
             {
-            ahFields[i++] = hValue.getField(sName);
+            ahFields[i++] = hValue.getField(null, sName);
             }
 
         return ahFields;
@@ -438,21 +415,26 @@ public class ClassComposition
     public ObjectHandle[] initializeStructure()
         {
         Map<Object, FieldInfo> mapCached = m_mapFields;
-        if (mapCached.isEmpty())
+        int                    cSize     = mapCached.size();
+
+        if (cSize == 0)
             {
             return Utils.OBJECTS_NONE;
             }
 
-        ObjectHandle[] aFields = new ObjectHandle[mapCached.size()];
-        for (Map.Entry<Object, FieldInfo> entry : mapCached.entrySet())
+        ObjectHandle[] aFields = new ObjectHandle[cSize];
+        if (m_fHasSpecial)
             {
-            Object          nidProp = entry.getKey();
-            FieldInfo       info    = entry.getValue();
-            TypeComposition clzRef  = info.getTypeComposition();
-            if (clzRef != null)
+            for (FieldInfo field : mapCached.values())
                 {
-                aFields[info.getIndex()] = ((VarSupport) clzRef.getSupport()).
-                        createRefHandle(null, clzRef, nidProp.toString());
+                if (field.isTransient())
+                    {
+                    aFields[field.getIndex()] = new TransientId();
+                    }
+                else if (field.isInflated())
+                    {
+                    aFields[field.getIndex()] = field.createRefHandle(null);
+                    }
                 }
             }
 
@@ -460,10 +442,9 @@ public class ClassComposition
         }
 
     @Override
-    public int getFieldPosition(Object nid)
+    public FieldInfo getFieldInfo(Object nid)
         {
-        FieldInfo info = m_mapFields.get(nid);
-        return info == null ? -1 : info.getIndex();
+        return m_mapFields.get(nid);
         }
 
     @Override
@@ -481,12 +462,11 @@ public class ClassComposition
     @Override
     public int makeStructureImmutable(Frame frame, ObjectHandle[] ahField)
         {
-        for (Map.Entry<Object, FieldInfo> entry : m_mapFields.entrySet())
+        for (FieldInfo field : m_mapFields.values())
             {
-            Object       nid    = entry.getKey();
-            ObjectHandle hValue = ahField[entry.getValue().getIndex()];
+            ObjectHandle hValue = ahField[field.getIndex()];
 
-            if (hValue != null && !hValue.isService() && hValue.isMutable() && !isLazy(nid))
+            if (hValue != null && !hValue.isService() && hValue.isMutable() && !field.isLazy())
                 {
                 switch (hValue.getTemplate().makeImmutable(frame, hValue))
                     {
@@ -586,7 +566,8 @@ public class ClassComposition
                 {
                 m_fHasOuter = true;
                 }
-            mapFields.put(sField, new FieldInfo(nIndex++, null, true));
+            mapFields.put(sField,
+                    new FieldInfo(sField, nIndex++, null, /*synthetic*/ true, false, false, false));
             }
 
         for (Map.Entry<PropertyConstant, PropertyInfo> entry : aEntry)
@@ -655,14 +636,24 @@ public class ClassComposition
                     }
                 }
 
-            if (fField || clzRef != null)
+            if (fField)
                 {
+                boolean fTransient = infoProp.isTransient();
+
                 Object nid = idProp.getNestedIdentity();
 
                 assert infoStruct.findPropertyByNid(nid) != null;
                 assert !mapFields.containsKey(nid);
 
-                mapFields.put(nid, new FieldInfo(nIndex++, clzRef, infoProp.isInjected()));
+                mapFields.put(nid, new FieldInfo(nid.toString(), nIndex++, clzRef,
+                        infoProp.isInjected(), fTransient,
+                        infoProp.isSimpleUnassigned(), infoProp.isLazy()));
+
+                m_fHasSpecial |= fTransient | clzRef != null;
+                }
+            else
+                {
+                assert clzRef == null;
                 }
             }
 
@@ -705,7 +696,6 @@ public class ClassComposition
         return f_typeRevealed.getValueString();
         }
 
-
     /**
      * Information regarding a field of this {@link ClassComposition}.
      */
@@ -715,14 +705,27 @@ public class ClassComposition
          * Construct a {@link FieldInfo}.
          *
          * @param nIndex      the field's storage index
-         * @param clz         (optional) the TypeComposition for inflated fields
+         * @param clzRef      (optional) the TypeComposition for inflated fields
          * @param fSynthetic  true iff the field is synthetic (e.g. implicit or injected)
          */
-        protected FieldInfo(int nIndex, TypeComposition clz, boolean fSynthetic)
+        protected FieldInfo(String sName, int nIndex, TypeComposition clzRef, boolean fSynthetic,
+                            boolean fTransient, boolean fUnassigned, boolean fLazy)
             {
-            f_nIndex     = nIndex;
-            f_clz        = clz;
-            f_fSynthetic = fSynthetic;
+            f_sName       = sName;
+            f_nIndex      = nIndex;
+            f_clzRef      = clzRef;
+            f_fSynthetic  = fSynthetic;
+            f_fTransient  = fTransient;
+            f_fUnassigned = fUnassigned;
+            f_fLazy       = fLazy;
+            }
+
+        /**
+         * @return the field's name
+         */
+        public String getName()
+            {
+            return f_sName;
             }
 
         /**
@@ -738,7 +741,7 @@ public class ClassComposition
          */
         public TypeComposition getTypeComposition()
            {
-           return f_clz;
+           return f_clzRef;
            }
 
         /**
@@ -746,7 +749,7 @@ public class ClassComposition
          */
         public boolean isInflated()
             {
-            return f_clz != null;
+            return f_clzRef != null;
             }
 
         /**
@@ -757,30 +760,92 @@ public class ClassComposition
             return f_fSynthetic;
             }
 
+        /**
+         * @return true iff the field is transient
+         */
+        public boolean isTransient()
+            {
+            return f_fTransient;
+            }
+
+        /**
+         * @return true iff the field is allowed to be unassigned
+         */
+        public boolean isUnassigned()
+            {
+            return f_fUnassigned;
+            }
+
+        /**
+         * @return true iff the field is LazyVar annotated
+         */
+        public boolean isLazy()
+            {
+            return f_fLazy;
+            }
+
+        /**
+         * @return true if this field is allowed to stay unassigned
+         */
+        public boolean isAllowedUnassigned()
+            {
+            return isSynthetic() || isTransient() || isUnassigned();
+            }
+
+        /**
+         * @return true if this field is regular field (used by Const auto-generated methods)
+         */
+        public boolean isRegular()
+            {
+            return !isSynthetic() && !isTransient() && !isUnassigned() && !isLazy();
+            }
+
+        /**
+         * @return a new RefHandle for this field
+         */
+        public RefHandle createRefHandle(Frame frame)
+            {
+            return ((VarSupport) f_clzRef.getSupport()).createRefHandle(frame, f_clzRef, f_sName);
+            }
+
         @Override
         public String toString()
             {
             StringBuilder sb = new StringBuilder();
 
-            if (f_fSynthetic)
+            sb.append(getName())
+              .append('@')
+              .append(getIndex());
+
+            if (isSynthetic())
                 {
-                sb.append("synthetic ");
+                sb.append(" synthetic");
                 }
-            if (f_clz != null)
+            if (isTransient())
                 {
-                sb.append("inflated ");
+                sb.append(" transient");
                 }
-            sb.append(f_nIndex);
+            if (isInflated())
+                {
+                sb.append(" inflated");
+                }
 
             return sb.toString();
             }
 
         // ----- fields ----------------------------------------------------------------------------
 
+        private final String          f_sName;
         private final int             f_nIndex;
-        private final TypeComposition f_clz;
+        private final TypeComposition f_clzRef;
         private final boolean         f_fSynthetic;
+        private final boolean         f_fTransient;
+        private final boolean         f_fUnassigned;
+        private final boolean         f_fLazy;
+
+        public Constant constInit;
         }
+
 
     // ----- data fields ---------------------------------------------------------------------------
 
@@ -826,6 +891,11 @@ public class ClassComposition
      * True iff this class contains an OUTER field.
      */
     private boolean m_fHasOuter;
+
+    /**
+     * True iff this class contains transient or inflated fields.
+     */
+    private boolean m_fHasSpecial;
 
     /**
      * A cache of derivative TypeCompositions keyed by the "revealed type".

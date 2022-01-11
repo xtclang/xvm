@@ -31,7 +31,6 @@ import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xOrdered;
 
 import org.xvm.runtime.template.collections.xArray;
-import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 
 import org.xvm.runtime.template.numbers.xInt64;
 
@@ -308,7 +307,7 @@ public class xClass
      */
     public int invokePropertyCanonicalParams(Frame frame, ClassHandle hClass, int iReturn)
         {
-        ObjectHandle hMap = hClass.getField("canonicalParams");
+        ObjectHandle hMap = hClass.getField(frame, "canonicalParams");
         if (hMap == null)
             {
             TypeConstant   typeClz = getClassType(hClass);
@@ -363,14 +362,14 @@ public class xClass
                 {
                 case Op.R_NEXT:
                     hMap = frame.popStack();
-                    hClass.setField("canonicalParams", hMap);
+                    hClass.setField(frame, "canonicalParams", hMap);
                     break;
 
                 case Op.R_CALL:
                     Frame.Continuation stepNext = frameCaller ->
                         {
                         ObjectHandle hResult = frameCaller.popStack();
-                        hClass.setField("canonicalParams", hResult);
+                        hClass.setField(frame, "canonicalParams", hResult);
                         return frameCaller.assignValue(iReturn, hResult);
                         };
                     frame.m_frameNext.addContinuation(stepNext);
@@ -535,21 +534,8 @@ public class xClass
         return clz;
         }
 
-    /**
-     * @return the handle for an empty Array of Class
-     */
-    public static ArrayHandle ensureEmptyArray()
-        {
-        if (ARRAY_EMPTY == null)
-            {
-            ARRAY_EMPTY = xArray.createImmutableArray(ensureArrayComposition(), Utils.OBJECTS_NONE);
-            }
-        return ARRAY_EMPTY;
-        }
 
-
-    // ----- data members --------------------------------------------------------------------------
+    // ----- constants -----------------------------------------------------------------------------
 
     private static TypeComposition ARRAY_CLZCOMP;
-    private static ArrayHandle     ARRAY_EMPTY;
     }

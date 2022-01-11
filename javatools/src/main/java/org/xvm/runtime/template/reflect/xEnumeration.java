@@ -66,7 +66,7 @@ public class xEnumeration
      */
     protected int getPropertyByName(Frame frame, ClassHandle hClass, int iReturn)
         {
-        RefHandle    hByName = (RefHandle) hClass.getField("byName");
+        RefHandle    hByName = (RefHandle) hClass.getField(frame, "byName");
         ObjectHandle hMap    = hByName.getReferent();
         if (hMap == null)
             {

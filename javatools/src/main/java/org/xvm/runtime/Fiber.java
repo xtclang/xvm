@@ -458,8 +458,8 @@ public class Fiber
                     List<ExceptionHandle> listEx = m_listUnhandledEx;
                     if (listEx != null && !listEx.isEmpty())
                         {
-                        GenericHandle hAsyncSection = (GenericHandle) hSectionOld;
-                        FunctionHandle hNotify = (FunctionHandle) hAsyncSection.getField("notify");
+                        GenericHandle  hAsyncSection = (GenericHandle) hSectionOld;
+                        FunctionHandle hNotify       = (FunctionHandle) hAsyncSection.getField(frame, "notify");
 
                         return new CallNotify(listEx, hNotify).proceed(frameCaller);
                         }

@@ -192,17 +192,27 @@ public class xRTProperty
             {
             typeProp = frame.poolContext().ensureAnnotatedTypeConstant(typeProp, aAnno);
 
-            PropertyHandle hProp   = new PropertyHandle(INSTANCE.ensureClass(typeProp));
-            ObjectHandle   hStruct = hProp.ensureAccess(Access.STRUCT);
+            TypeComposition clzProp = INSTANCE.ensureClass(typeProp);
+            PropertyHandle  hStruct = new PropertyHandle(clzProp.ensureAccess(Access.STRUCT));
 
             switch (INSTANCE.proceedConstruction(
                     frame, null, true, hStruct, Utils.OBJECTS_NONE, Op.A_STACK))
                 {
                 case Op.R_NEXT:
-                    return frame.popStack();
+                    {
+                    ObjectHandle hM = frame.popStack();
+                    hM.makeImmutable();
+                    return hM;
+                    }
 
                 case Op.R_CALL:
-                    return new DeferredCallHandle(frame.m_frameNext);
+                    DeferredCallHandle hDeferred = new DeferredCallHandle(frame.m_frameNext);
+                    hDeferred.addContinuation(frameCaller ->
+                        {
+                        frameCaller.peekStack().makeImmutable();
+                        return Op.R_NEXT;
+                        });
+                    return hDeferred;
 
                 case Op.R_EXCEPTION:
                     return new DeferredCallHandle(frame.m_hException);
@@ -222,7 +232,7 @@ public class xRTProperty
             {
             super(clzProp);
 
-            m_fMutable = false;
+            m_fMutable = clzProp.isStruct();
             }
 
         public TypeConstant getTargetType()

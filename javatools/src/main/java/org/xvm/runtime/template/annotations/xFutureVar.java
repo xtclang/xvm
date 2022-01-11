@@ -120,7 +120,7 @@ public class xFutureVar
         switch (sPropName)
             {
             case "assigned":
-                return frame.assignValue(iReturn, xBoolean.makeHandle(hThis.isAssigned()));
+                return frame.assignValue(iReturn, xBoolean.makeHandle(hThis.isAssigned(frame)));
 
             case "failure":
                 return frame.assignValue(iReturn, hThis.getException());
@@ -128,7 +128,7 @@ public class xFutureVar
             case "completion":
                 {
                 EnumHandle hValue =
-                    hThis.isAssigned() ?
+                    hThis.isAssigned(frame) ?
                         hThis.getFuture().isCompletedExceptionally() ?
                             COMPLETION.getEnumByName("Error")  :
                             COMPLETION.getEnumByName("Result") :
@@ -900,7 +900,7 @@ public class xFutureVar
             }
 
         @Override
-        public boolean isAssigned()
+        public boolean isAssigned(Frame frame)
             {
             return f_future.isDone();
             }

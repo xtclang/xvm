@@ -393,8 +393,8 @@ public class PropertyInfo
                                    Set<IdentityConstant> setClass,
                                    Set<IdentityConstant> setDefault)
         {
-        ArrayList<PropertyBody> list  = null;
-        PropertyBody[]          aBody = m_aBody;
+        List<PropertyBody> list  = null;
+        PropertyBody[]     aBody = m_aBody;
         for (int i = 0, c = aBody.length; i < c; ++i)
             {
             PropertyBody     body     = aBody[i];
@@ -433,11 +433,7 @@ public class PropertyInfo
                 }
             else if (list == null)
                 {
-                list = new ArrayList<>();
-                for (int iCopy = 0; iCopy < i; ++iCopy)
-                    {
-                    list.add(aBody[iCopy]);
-                    }
+                list = Arrays.asList(aBody).subList(0, i);
                 }
             }
 
@@ -599,10 +595,7 @@ public class PropertyInfo
             // there is a possibility that the property has been "duck-typeable", which is only
             // allowable for interfaces
             Component parent = constId.getNamespace().getComponent();
-            if (parent != null && parent.getFormat() == Format.INTERFACE)
-                {
-                return true;
-                }
+            return parent != null && parent.getFormat() == Format.INTERFACE;
             }
 
         return false;
@@ -883,14 +876,6 @@ public class PropertyInfo
         }
 
     /**
-     * @return an array of the non-virtual annotations on the property declaration itself
-     */
-    public Annotation[] getPropertyAnnotations()
-        {
-        return getHead().getStructure().getPropertyAnnotations();
-        }
-
-    /**
      * @return true iff the property can exist across multiple "glass panes" of the type's
      *         composition; note that a property considered to be non-virtual by this test can
      *         still have a multi-level call chain, such as if it has Ref/Var annotations
@@ -927,6 +912,29 @@ public class PropertyInfo
             }
 
         return true;
+        }
+
+    /**
+     * @return an array of the non-virtual annotations on the property declaration itself
+     */
+    public Annotation[] getPropertyAnnotations()
+        {
+        return getHead().getStructure().getPropertyAnnotations();
+        }
+
+    /**
+     * @return true iff this property contains the specified property annotation
+     */
+    public boolean containsPropertyAnnotation(IdentityConstant idAnno)
+        {
+        for (Annotation anno : getPropertyAnnotations())
+            {
+            if (anno.getAnnotationClass().equals(idAnno))
+                {
+                return true;
+                }
+            }
+        return false;
         }
 
     /**
@@ -991,6 +999,21 @@ public class PropertyInfo
         }
 
     /**
+     * @return true iff this property contains the specified annotation
+     */
+    public boolean containsRefAnnotation(IdentityConstant idAnno)
+        {
+        for (Annotation anno : getRefAnnotations())
+            {
+            if (anno.getAnnotationClass().equals(idAnno))
+                {
+                return true;
+                }
+            }
+        return false;
+        }
+
+    /**
      * Obtain the TypeConstant representing the data type of the underlying "box" (Ref/Var).
      * <p/>
      * Note, that unlike the {@link PropertyConstant#getRefType}, this method returns the base
@@ -1033,21 +1056,6 @@ public class PropertyInfo
         }
 
     /**
-     * @return true iff this property contains the specified annotation
-     */
-    public boolean containsRefAnnotation(IdentityConstant idAnno)
-        {
-        for (Annotation anno : getRefAnnotations())
-            {
-            if (anno.getAnnotationClass().equals(idAnno))
-                {
-                return true;
-                }
-            }
-        return false;
-        }
-
-    /**
      * @return true iff the property has any methods in addition to the underlying Ref or Var
      *         "rebasing" implementation, and in addition to any annotations
      */
@@ -1085,6 +1093,14 @@ public class PropertyInfo
         Annotation[] aAnnos = getRefAnnotations();
         return aAnnos.length == 1
             && (aAnnos[0].getAnnotationClass()).equals(pool().clzUnassigned());
+        }
+
+    /**
+     * @return true iff the property has the Transient annotation
+     */
+    public boolean isTransient()
+        {
+        return containsPropertyAnnotation(pool().clzTransient());
         }
 
     /**
@@ -1190,14 +1206,6 @@ public class PropertyInfo
     public boolean isExplicitlyAbstract()
         {
         return getHead().isExplicitAbstract();
-        }
-
-    /**
-     * @return true if the property is annotated by "@RO"
-     */
-    public boolean isExplicitlyReadOnly()
-        {
-        return getHead().isExplicitReadOnly();
         }
 
     /**

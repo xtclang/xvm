@@ -56,7 +56,7 @@ public class xLazyVar
         switch (sPropName)
             {
             case "assigned":
-                if (!hThis.isAssigned() && hThis.isPropertyOnImmutable())
+                if (!hThis.isAssigned(frame) && hThis.isPropertyOnImmutable())
                     {
                     hThis.registerAssign(frame.f_fiber);
                     }
@@ -112,7 +112,7 @@ public class xLazyVar
                     }
                 }
 
-            ObjectHandle hOuter = hLazy.getField(GenericHandle.OUTER);
+            ObjectHandle hOuter = hLazy.getField(frame, GenericHandle.OUTER);
             return frame.raiseException(
                 xException.notFreezableProperty(frame, hLazy.getName(), hOuter.getType()));
             }
@@ -124,12 +124,12 @@ public class xLazyVar
         synchronized (hLazy)
             {
             boolean fAllowDupe = hLazy.unregisterAssign(frame.f_fiber);
-            if (hLazy.isAssigned())
+            if (hLazy.isAssigned(frame))
                 {
                 return fAllowDupe
                     ? Op.R_NEXT
                     : frame.raiseException(xException.immutableObjectProperty(
-                        frame, hLazy.getName(), hLazy.getField(GenericHandle.OUTER).getType()));
+                        frame, hLazy.getName(), hLazy.getField(frame, GenericHandle.OUTER).getType()));
                 }
             else
                 {
@@ -165,7 +165,7 @@ public class xLazyVar
          */
         public boolean isPropertyOnImmutable()
             {
-            ObjectHandle hOuter = getField(GenericHandle.OUTER);
+            ObjectHandle hOuter = getField(null, GenericHandle.OUTER);
             return hOuter != null && !hOuter.isMutable();
             }
 

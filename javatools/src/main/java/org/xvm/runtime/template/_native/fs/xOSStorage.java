@@ -86,7 +86,7 @@ public class xOSStorage
             {
             // optimize out the cross-service call
             return frame.assignValue(iReturn,
-                ((ServiceHandle) hTarget).getField("fileStore"));
+                ((ServiceHandle) hTarget).getField(frame, "fileStore"));
             }
 
         return super.getPropertyValue(frame, hTarget, idProp, iReturn);
@@ -96,7 +96,7 @@ public class xOSStorage
     public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
         {
         ServiceHandle hStorage = (ServiceHandle) hTarget;
-        ObjectHandle  hStore   = hStorage.getField("fileStore");
+        ObjectHandle  hStore   = hStorage.getField(frame, "fileStore");
 
         // the handles below are cached by the Container.initResources()
         switch (sPropName)
