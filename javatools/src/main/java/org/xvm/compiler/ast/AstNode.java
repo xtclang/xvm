@@ -868,38 +868,6 @@ public abstract class AstNode
     // ----- helpers -------------------------------------------------------------------------------
 
     /**
-     * Test fit for the specified expressions against the specified types.
-     *
-     * @param ctx        the compiler context
-     * @param listExpr   the list of expressions
-     * @param atypeTest  the types array to test fit for
-     *
-     * @return the combine fit for all the expressions
-     */
-    protected TypeFit testExpressions(Context ctx, List<Expression> listExpr,
-                                      TypeConstant[] atypeTest)
-        {
-        int     cTypes = atypeTest == null ? 0 : atypeTest.length;
-        TypeFit fit    = TypeFit.Fit;
-        for (int i = 0, c = Math.min(listExpr.size(), cTypes); i < c ; ++i)
-            {
-            TypeConstant typeTest = atypeTest[i];
-            if (typeTest != null)
-                {
-                ctx = ctx.enterInferring(typeTest);
-                }
-
-            fit = fit.combineWith(listExpr.get(i).testFit(ctx, typeTest, null));
-
-            if (typeTest != null)
-                {
-                ctx = ctx.exit();
-                }
-            }
-        return fit;
-        }
-
-    /**
      * Validate the specified expressions against the required types.
      *
      * @param ctx            the compiler context
@@ -1197,6 +1165,13 @@ public abstract class AstNode
         ErrorListener errsTemp = errs.branch(this);
         ErrorListener errsKeep = null;
 
+        // if there are multiple methods with the same name and no match is found, let's try to
+        // report an error only if it's clear which method didn't fit:
+        // - a wrong arity error should be reported only if there are no other errors
+        // - a type mismatch error should be reported only if there are no other type mismatch errors
+        int cArityErrs = 0;
+        int cTypeErrs  = 0;
+
         NextMethod: for (MethodConstant idMethod : setMethods)
             {
             MethodInfo        infoMethod = infoTarget.getMethodById(idMethod);
@@ -1210,8 +1185,11 @@ public abstract class AstNode
 
             if (cExprs > cVisible || fCall && cExprs < cRequired)
                 {
-                log(errsTemp, Severity.ERROR, Compiler.ARGUMENT_WRONG_COUNT, cRequired, cExprs);
-                errsKeep = errsTemp;
+                if (cArityErrs++ == 0 && cTypeErrs == 0)
+                    {
+                    errsKeep = errs.branch(this);
+                    log(errsKeep, Severity.ERROR, Compiler.ARGUMENT_WRONG_COUNT, cRequired, cExprs);
+                    }
                 continue;
                 }
 
@@ -1222,8 +1200,11 @@ public abstract class AstNode
                 boolean fTuple = cReturns == 1 && isVoid(atypeReturn);
                 if (cMethodRets != 0 || !fTuple)
                     {
-                    log(errsTemp, Severity.ERROR, Compiler.RETURN_WRONG_COUNT, cReturns, cMethodRets);
-                    errsKeep = errsTemp;
+                    if (cArityErrs++ == 0 && cTypeErrs == 0)
+                        {
+                        errsKeep = errs.branch(this);
+                        log(errsKeep, Severity.ERROR, Compiler.RETURN_WRONG_COUNT, cReturns, cMethodRets);
+                        }
                     continue;
                     }
                 }
@@ -1378,18 +1359,12 @@ public abstract class AstNode
                 {
                 if (errsTemp.hasSeriousErrors())
                     {
-                    // once we find something bad enough to stop compilation, that becomes our
-                    // "errors to report in case there is no match", but we keep looking for a
-                    // method that fits
-                    if (errsKeep == null)
+                    if (cTypeErrs++ == 0)
                         {
                         errsKeep = errsTemp;
                         }
-                    else
-                        {
-                        // discard the errors
-                        errsTemp = errs.branch(this);
-                        }
+
+                    errsTemp = errs.branch(this);
                     }
                 continue; // NextMethod
                 }
@@ -1404,10 +1379,10 @@ public abstract class AstNode
                 }
             }
 
-        if (errsKeep != null)
+        // if there is any ambiguity, don't report anything; the caller will log a generic
+        // "Could not find a matching method" error
+        if (cTypeErrs == 1 || (cTypeErrs == 0 && cArityErrs == 1))
             {
-            // copy the most serious errors even if we found some matching methods; there is a
-            // chance that none of them fit, in which case the caller would report those errors
             errsKeep.merge();
             }
         }
@@ -1737,8 +1712,9 @@ public abstract class AstNode
         Map<String, Object> cats = getDumpChildren();
         for (Iterator<Map.Entry<String, Object>> iter = cats.entrySet().iterator(); iter.hasNext(); )
             {
-            Map.Entry entry = iter.next();
-            Object    value = entry.getValue();
+            Map.Entry<String, Object> entry = iter.next();
+
+            Object value = entry.getValue();
             if (value == null)
                 {
                 iter.remove();
@@ -1959,7 +1935,7 @@ public abstract class AstNode
         {
         return list instanceof ArrayList
                 ? (ArrayList<T>) list
-                : new ArrayList<T>(list);
+                : new ArrayList<>(list);
         }
 
     /**
@@ -2228,7 +2204,7 @@ public abstract class AstNode
         private static final int HAS_NEXT = 1;
         private static final int HAS_PREV = 2;
 
-        private Field[] fields;
+        private final Field[] fields;
         private int iField = -1;
         private Object value;
         private int state = NOT_PREP;
