@@ -4,11 +4,27 @@ module TestSimple.test.org
 
     void run()
         {
-        String? s = "hello";
-        if (String s2 := s.is(String))
-            {
-            console.println($"s={s}, s2={s2}");
-            }
+        Test t1 = new Test(1);
+        Test t2 = new Test(2);
+
+        Data d = new Data("test");
+        d.svcId = 0;
+
+        d.report("start");
+
+        t1.send(d);
+        d = t1.receive();
+
+        t2.send(d);
+        d = t2.receive();
+
+        t1.send(d);
+        d = t1.receive();
+
+        t2.send(d);
+        d = t2.receive();
+
+        d.report("end");
         }
 
 
