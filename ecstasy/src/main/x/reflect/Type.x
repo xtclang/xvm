@@ -1139,7 +1139,7 @@ interface Type<DataType, OuterType>
                 case Access:
                 case Annotated:
                     assert Type!<> t := modifying();
-                    // TODO GG: can compiler generate dynamic type parameter with using "as()"?
+                    // TODO GG: can compiler generate dynamic type parameter without using "as()"?
                     return t.as(Type<t.DataType>).hashed();
 
                 default:
