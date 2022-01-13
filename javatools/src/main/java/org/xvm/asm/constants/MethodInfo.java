@@ -331,8 +331,8 @@ public class MethodInfo
 
             for (int iBase = 0; iBase < cBase; ++iBase)
                 {
-                // discard duplicates
-                if (bodyAdd.equals(aBase[iBase]))
+                // discard duplicates or abstract
+                if (bodyAdd.equals(aBase[iBase]) || bodyAdd.isAbstract())
                     {
                     continue NextLayer;
                     }
@@ -387,8 +387,8 @@ public class MethodInfo
                 {
                 case Implicit:
                 case SansCode:
-                case Declared:      // this allows duplicates to survive (ignore retain set)
-                case Default:       // this allows duplicates to survive (ignore retain set)
+                case Declared: // this allows duplicates to survive (ignore retain set)
+                case Default:  // this allows duplicates to survive (ignore retain set)
                 case Native:
                     fRetain = true;
                     break;

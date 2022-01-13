@@ -6,7 +6,11 @@ module TestSimple.test.org
 
     void run()
         {
-        Map<Object, Object> map1  = new HasherMap(new CaseInsensitiveHasher());
-        Map<Int, String> map2  = new ListMap([1], "");
+        Int[] array = [1, 2, 3];
+
+        Map<Int[], String> map = new HashMap(); // this used to fail at run-time
+        map.put(array, "hello");
+
+        console.println(map);
         }
-}
+    }
