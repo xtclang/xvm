@@ -1315,7 +1315,8 @@ public abstract class AstNode
                         }
 
                     log(errsTemp, Severity.ERROR, Compiler.INCOMPATIBLE_PARAMETER_TYPE,
-                            sigMethod.getName(),
+                            String.valueOf(i+1), method.getParam(i).getName(),
+                            method.getIdentityConstant().getValueString(),
                             typeParam.getValueString(),
                             typeExpr == null ? exprArg.toString() : typeExpr.getValueString());
                     }
@@ -1571,7 +1572,7 @@ public abstract class AstNode
                                          TypeConstant[] atypeReturn, TypeConstant typeCtx,
                                          ErrorListener errs)
         {
-        return calculateReturnFit(sigMethod.getRawReturns(), sigMethod.getName(), fCall,
+        return calculateReturnFit(sigMethod.getRawReturns(), sigMethod.getValueString(), fCall,
                                     atypeReturn, typeCtx, errs);
         }
 
@@ -1579,7 +1580,7 @@ public abstract class AstNode
      * Calculate the fit for a method or function return values.
      *
      * @param atypeMethodReturn  the method return types
-     * @param sName              a method or function name (used for error reporting only)
+     * @param sName              a method or function name or signature; used for error reporting only
      * @param fCall              if true, the method will be called; otherwise it will be bound
      * @param atypeReturn        the array of required return types
      * @param typeCtx            the type within which context the covariance is to be determined

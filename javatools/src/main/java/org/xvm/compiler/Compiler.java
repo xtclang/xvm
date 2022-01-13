@@ -1194,15 +1194,15 @@ public class Compiler
      */
     public static final String PARENT_NOT_CONSTRUCTED              = "COMPILER-149";
     /**
-     * Parameter type mismatch for {0} method; required {1}, actual {2}.
+     * Parameter {0} ({1}) type mismatch for method {2}; required {3}, actual {4}.
      */
     public static final String INCOMPATIBLE_PARAMETER_TYPE         = "COMPILER-150";
     /**
-     * Return type mismatch for {0} method; required {1}, actual {2}.
+     * Return type mismatch for method {0}; required {1}, actual {2}.
      */
     public static final String INCOMPATIBLE_RETURN_TYPE            = "COMPILER-151";
     /**
-     * Return count mismatch for {0} method; required {1}, actual {2}.
+     * Return count mismatch for method {0}; required {1}, actual {2}.
      */
     public static final String INCOMPATIBLE_RETURN_COUNT           = "COMPILER-152";
     /**

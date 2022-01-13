@@ -547,7 +547,7 @@ public interface Constants
      */
     String VE_NEW_VIRTUAL_CONSTRUCT               = "VERIFY-86";
     /**
-     * The access for the {1} method on {0} is defined more restrictively than its base.
+     * The access for the method {1} on {0} is defined more restrictively than its base.
      */
     String VE_METHOD_ACCESS_LESSENED              = "VERIFY-87";
 

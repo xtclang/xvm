@@ -2198,7 +2198,7 @@ public abstract class TypeConstant
                         log(errs, Severity.ERROR, VE_TYPE_PARAM_INCOMPATIBLE_TYPE,
                                 constId.getPathString(), sName,
                                 typeConstraint.getValueString(),
-                                typeActual.getValueString(), this.getValueString());
+                                typeActual.getValueString(), this.removeAccess().getValueString());
                         }
                     }
 
@@ -2330,7 +2330,7 @@ public abstract class TypeConstant
                         // TODO: need a better error indicating that the parent is not parameterized
                         //       or parameterized incorrectly
                         log(errs, Severity.ERROR, VE_EXTENDS_INCOMPATIBLE,
-                                this.getValueString(), struct.getFormat(),
+                                this.removeAccess().getValueString(), struct.getFormat(),
                                 typeExtends.getValueString(), structExtends.getFormat());
                         }
                     }
@@ -2679,7 +2679,7 @@ public abstract class TypeConstant
                 log(errs, Severity.ERROR, VE_INCORPORATES_INCOMPATIBLE,
                     constId.getPathString(),
                     typeContrib.getValueString(),
-                    this.getValueString(),
+                    this.removeAccess().getValueString(),
                     typeInto.getValueString());
                 return;
                 }
@@ -3452,14 +3452,14 @@ public abstract class TypeConstant
                     if (paramCurr.isActualTypeSpecified())
                         {
                         log(errs, Severity.ERROR, VE_TYPE_PARAM_CONTRIB_NO_SPEC,
-                                this.getValueString(), nid,
+                                this.removeAccess().getValueString(), nid,
                                 paramCurr.getActualType().getValueString(),
                                 typeContrib.getValueString());
                         }
                     else
                         {
                         log(errs, Severity.ERROR, VE_TYPE_PARAM_CONTRIB_HAS_SPEC,
-                                this.getValueString(), nid,
+                                this.removeAccess().getValueString(), nid,
                                 typeContrib.getValueString(),
                                 paramContrib.getActualType().getValueString());
                         }
@@ -3473,7 +3473,7 @@ public abstract class TypeConstant
                         continue;
                         }
                     log(errs, Severity.ERROR, VE_TYPE_PARAM_INCOMPATIBLE_CONTRIB,
-                            this.getValueString(), nid,
+                            this.removeAccess().getValueString(), nid,
                             paramCurr.getActualType().getValueString(),
                             typeContrib.getValueString(),
                             paramContrib.getActualType().getValueString());
@@ -5071,13 +5071,13 @@ public abstract class TypeConstant
             if (info == null)
                 {
                 log(errs, Severity.ERROR, VE_TYPE_PARAM_PROPERTY_MISSING,
-                        this.getValueString(), sParam);
+                        this.removeAccess().getValueString(), sParam);
                 }
             else if (!info.isFormalType() ||
                      !info.getType().getParamType(0).isA(param.getConstraintType()))
                 {
                 log(errs, Severity.ERROR, VE_TYPE_PARAM_PROPERTY_INCOMPATIBLE,
-                        this.getValueString(), sParam);
+                        this.removeAccess().getValueString(), sParam);
                 }
             }
         }
