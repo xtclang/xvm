@@ -62,20 +62,22 @@ public class xRTSlicingDelegate
 
         return nCapacity == hSlice.m_cSize
             ? Op.R_NEXT
-            : frame.raiseException(xException.readOnly(frame));
+            : frame.raiseException(xException.readOnly(frame, hSlice.getMutability()));
         }
 
     @Override
     protected int invokeInsertElement(Frame frame, ObjectHandle hTarget,
                                       ObjectHandle.JavaLong hIndex, ObjectHandle hValue, int iReturn)
         {
-        return frame.raiseException(xException.readOnly(frame));
+        return frame.raiseException(
+                xException.readOnly(frame, ((SliceHandle) hTarget).getMutability()));
         }
 
     @Override
     protected int invokeDeleteElement(Frame frame, ObjectHandle hTarget, ObjectHandle hValue, int iReturn)
         {
-        return frame.raiseException(xException.readOnly(frame));
+        return frame.raiseException(
+                xException.readOnly(frame, ((SliceHandle) hTarget).getMutability()));
         }
 
     @Override

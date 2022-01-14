@@ -541,18 +541,14 @@ public class xRTDelegate
 
         switch (hDelegate.getMutability())
             {
-            case Constant:
-                return frame.raiseException(xException.readOnly(frame));
-
             case Fixed:
-                if (lIndex >= cSize)
+                if (lIndex < cSize)
                     {
-                    return frame.raiseException(xException.sizeLimited(frame, "Fixed size array"));
+                    break;
                     }
-                break;
-
-            case Persistent:
-                return frame.raiseException(xException.unsupportedOperation(frame, "Persistent array"));
+                // fall through
+            case Constant:
+                return frame.raiseException(xException.readOnly(frame, hDelegate.getMutability()));
             }
 
         if (lIndex < 0)

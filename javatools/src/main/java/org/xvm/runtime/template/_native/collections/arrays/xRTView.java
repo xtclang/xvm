@@ -48,20 +48,22 @@ abstract public class xRTView
 
         return nCapacity == hView.m_cSize
             ? Op.R_NEXT
-            : frame.raiseException(xException.readOnly(frame));
+            : frame.raiseException(xException.readOnly(frame, hView.getMutability()));
         }
 
     @Override
     protected int invokeInsertElement(Frame frame, ObjectHandle hTarget,
                                       JavaLong hIndex, ObjectHandle hValue, int iReturn)
         {
-        return frame.raiseException(xException.readOnly(frame));
+        return frame.raiseException(
+                xException.readOnly(frame, ((DelegateHandle) hTarget).getMutability()));
         }
 
     @Override
     protected int invokeDeleteElement(Frame frame, ObjectHandle hTarget, ObjectHandle hValue, int iReturn)
         {
-        return frame.raiseException(xException.readOnly(frame));
+        return frame.raiseException(
+                xException.readOnly(frame, ((DelegateHandle) hTarget).getMutability()));
         }
 
     @Override

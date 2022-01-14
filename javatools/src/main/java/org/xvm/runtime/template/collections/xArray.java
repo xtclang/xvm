@@ -508,7 +508,7 @@ public class xArray
                             break;
 
                         case Fixed:
-                            return frame.raiseException(xException.readOnly(frame));
+                            return frame.raiseException(xException.readOnly(frame, mutability));
 
                         case Constant:
                         case Persistent:
@@ -749,7 +749,7 @@ public class xArray
             {
             if (hDelegateNew == null)
                 {
-                return frame.raiseException(xException.readOnly(frame));
+                return frame.raiseException(xException.readOnly(frame, mutability));
                 }
             hArray = new ArrayHandle(hArray.getComposition(), hDelegateNew, mutability);
             }
@@ -774,7 +774,7 @@ public class xArray
             {
             if (hDelegateNew == null)
                 {
-                return frame.raiseException(xException.readOnly(frame));
+                return frame.raiseException(xException.readOnly(frame, hArray.m_mutability));
                 }
             hArray = new ArrayHandle(hArray.getComposition(), hDelegateNew, hArray.m_mutability);
             }

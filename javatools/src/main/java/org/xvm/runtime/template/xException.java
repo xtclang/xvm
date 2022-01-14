@@ -16,6 +16,7 @@ import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 
+import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.text.xString;
 
 
@@ -164,9 +165,21 @@ public class xException
         return makeHandle(frame, s_clzOutOfBounds, sMsg);
         }
 
-    public static ExceptionHandle readOnly(Frame frame)
+    public static ExceptionHandle readOnly(Frame frame, xArray.Mutability mutability)
         {
-        return makeHandle(frame, s_clzReadOnly, null);
+        String sMsg = switch (mutability)
+            {
+            case Constant   -> "Constant array";
+            case Fixed      -> "Fixed size array";
+            case Persistent -> "Persistent array";
+            default         -> throw new IllegalStateException();
+            };
+        return makeHandle(frame, s_clzReadOnly, sMsg);
+        }
+
+    public static ExceptionHandle readOnly(Frame frame, String sMsg)
+        {
+        return makeHandle(frame, s_clzReadOnly, sMsg);
         }
 
     public static ExceptionHandle sizeLimited(Frame frame, String sMsg)
