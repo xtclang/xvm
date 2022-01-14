@@ -117,9 +117,9 @@ abstract public class DelegatingComposition
         }
 
     @Override
-    public int makeStructureImmutable(Frame frame, ObjectHandle[] ahField)
+    public boolean makeStructureImmutable(ObjectHandle[] ahField)
         {
-        return f_clzOrigin.makeStructureImmutable(frame, ahField);
+        return f_clzOrigin.makeStructureImmutable(ahField);
         }
 
     @Override

@@ -126,12 +126,11 @@ public interface TypeComposition
     /**
      * Make all the fields of the specified structure immutable.
      *
-     * @param frame    the current frame
      * @param ahField  the field array representing the object structure
      *
-     * @return one of the {@link Op#R_NEXT} or {@link Op#R_EXCEPTION} values
+     * @return true if all fields have been successfully marked as immutable; false otherwise
      */
-    int makeStructureImmutable(Frame frame, ObjectHandle[] ahField);
+    boolean makeStructureImmutable(ObjectHandle[] ahField);
 
     /**
      * @return the set of field nids for instances of this type.

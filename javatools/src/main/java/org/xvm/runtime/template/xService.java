@@ -135,9 +135,9 @@ public class xService
         }
 
     @Override
-    protected int makeImmutable(Frame frame, ObjectHandle hTarget)
+    protected boolean makeImmutable(ObjectHandle hTarget)
         {
-        return frame.raiseException(xException.unsupportedOperation(frame, "makeImmutable"));
+        return false;
         }
 
     @Override

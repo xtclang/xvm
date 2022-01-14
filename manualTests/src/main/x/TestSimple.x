@@ -6,11 +6,21 @@ module TestSimple.test.org
 
     void run()
         {
-        Int[] array = [1, 2, 3];
+        Bucket[] buckets = new Bucket[3](i -> new Bucket(i));
+        console.println(buckets);
+        buckets.makeImmutable();
 
-        Map<Int[], String> map = new HashMap(); // this used to fail at run-time
-        map.put(array, "hello");
+        buckets[0].key = 17; // this used to not throw!!
 
-        console.println(map);
+        console.println(buckets);
+        }
+
+    class Bucket(Int key)
+        {
+        @Override
+        String toString()
+            {
+            return "b="+key;
+            }
         }
     }

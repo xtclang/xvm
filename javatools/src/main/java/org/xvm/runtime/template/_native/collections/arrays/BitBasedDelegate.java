@@ -406,20 +406,15 @@ public abstract class BitBasedDelegate
             }
 
         @Override
-        public void makeImmutable()
+        protected void purgeUnusedSpace()
             {
-            if (isMutable())
+            byte[] ab = m_abValue;
+            int    c  = storage(m_cSize);
+            if (ab.length != c)
                 {
-                // purge the unused space
-                byte[] ab = m_abValue;
-                int    c  = storage(m_cSize);
-                if (ab.length != c)
-                    {
-                    byte[] abNew = new byte[c];
-                    System.arraycopy(ab, 0, abNew, 0, c);
-                    m_abValue = abNew;
-                    }
-                super.makeImmutable();
+                byte[] abNew = new byte[c];
+                System.arraycopy(ab, 0, abNew, 0, c);
+                m_abValue = abNew;
                 }
             }
 

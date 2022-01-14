@@ -317,7 +317,6 @@ public class xArray
                             hValue.proceed(frame, frameCaller ->
                                 fill(frameCaller, hArray, cSize, frameCaller.popStack(), iReturn));
                             }
-                        return fill(frame, hArray, cSize, hValue, iReturn);
                         }
                     else
                         {
@@ -348,8 +347,8 @@ public class xArray
                                 };
                             return new Utils.FillArray(hArray, cSize, supplier, iReturn).doNext(frame);
                             }
-                        return fill(frame, hArray, cSize, hValue, iReturn);
                         }
+                    return fill(frame, hArray, cSize, hValue, iReturn);
                     }
                 return frame.assignValue(iReturn, hArray);
                 }
@@ -962,11 +961,12 @@ public class xArray
             }
 
         @Override
-        public void makeImmutable()
+        public boolean makeImmutable()
             {
+            setMutability(Mutability.Constant);
             super.makeImmutable();
 
-            setMutability(Mutability.Constant);
+            return m_hDelegate.makeImmutable();
             }
 
         @Override
@@ -985,7 +985,7 @@ public class xArray
     public enum Mutability {Constant, Persistent, Fixed, Mutable}
 
     // array of constructors
-    private static MethodConstant[] CONSTRUCTORS = new MethodConstant[4];
+    private static final MethodConstant[] CONSTRUCTORS = new MethodConstant[4];
     private static MethodStructure  ITERABLE_TO_ARRAY;
 
     protected static final String[] ELEMENT_TYPE = new String[] {"Element"};

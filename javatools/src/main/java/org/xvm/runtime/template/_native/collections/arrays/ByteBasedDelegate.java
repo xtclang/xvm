@@ -314,7 +314,7 @@ public abstract class ByteBasedDelegate
     abstract protected ObjectHandle makeElementHandle(long lValue);
 
     /**
-     * Make a cannoncal array handle.
+     * Make a canonical array handle.
      */
     public ByteArrayHandle makeHandle(byte[] ab, long cSize, Mutability mutability)
         {
@@ -336,20 +336,24 @@ public abstract class ByteBasedDelegate
             }
 
         @Override
-        public void makeImmutable()
+        public boolean makeImmutable()
             {
             if (isMutable())
                 {
-                // purge the unused space
-                byte[] ab = m_abValue;
-                int    c  = (int) m_cSize;
-                if (ab.length != c)
-                    {
-                    byte[] abNew = new byte[c];
-                    System.arraycopy(ab, 0, abNew, 0, c);
-                    m_abValue = abNew;
-                    }
-                super.makeImmutable();
+                purgeUnusedSpace();
+                }
+            return super.makeImmutable();
+            }
+
+        protected void purgeUnusedSpace()
+            {
+            byte[] ab = m_abValue;
+            int    c  = (int) m_cSize;
+            if (ab.length != c)
+                {
+                byte[] abNew = new byte[c];
+                System.arraycopy(ab, 0, abNew, 0, c);
+                m_abValue = abNew;
                 }
             }
 

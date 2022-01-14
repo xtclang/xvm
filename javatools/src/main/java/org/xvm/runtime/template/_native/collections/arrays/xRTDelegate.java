@@ -803,12 +803,12 @@ public class xRTDelegate
         public Equals(ObjectHandle[] ah1, ObjectHandle[] ah2, TypeConstant typeEl,
                       int cElements, int[] holder, int iReturn)
             {
-            this.ah1 = ah1;
-            this.ah2 = ah2;
-            this.typeEl = typeEl;
+            this.ah1       = ah1;
+            this.ah2       = ah2;
+            this.typeEl    = typeEl;
             this.cElements = cElements;
-            this.holder = holder;
-            this.iReturn = iReturn;
+            this.holder    = holder;
+            this.iReturn   = iReturn;
             }
 
         @Override
@@ -899,6 +899,21 @@ public class xRTDelegate
             }
 
         @Override
+        public boolean makeImmutable()
+            {
+            ObjectHandle[] ahValue = m_ahValue;
+            for (int i = 0, c = (int) m_cSize; i < c; i++)
+                {
+                ObjectHandle hValue = ahValue[i];
+                if (!hValue.isService() && !hValue.makeImmutable())
+                    {
+                    return false;
+                    }
+                }
+            return super.makeImmutable();
+            }
+
+        @Override
         public boolean isNativeEqual()
             {
             return false;
@@ -934,11 +949,10 @@ public class xRTDelegate
             }
 
         @Override
-        public void makeImmutable()
+        public boolean makeImmutable()
             {
-            super.makeImmutable();
-
             setMutability(Mutability.Constant);
+            return super.makeImmutable();
             }
 
         @Override

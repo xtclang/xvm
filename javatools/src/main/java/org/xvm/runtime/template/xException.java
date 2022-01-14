@@ -107,8 +107,9 @@ public class xException
     public static ExceptionHandle immutableObjectProperty(Frame frame, String sProp, TypeConstant type)
         {
         String sDesc = type.isConstant() ? "const" : "an immutable";
-        return makeHandle(frame, "Attempt to modify property \"" + sProp + "\" on " + sDesc + " \"" +
-                type.removeAccess().getValueString() + '"');
+        return makeHandle(frame, s_clzReadOnly,
+                "Attempt to modify property \"" + sProp + "\" on " + sDesc + " \"" +
+                    type.removeAccess().getValueString() + '"');
         }
 
     public static ExceptionHandle unknownProperty(Frame frame, String sProp, TypeConstant type)

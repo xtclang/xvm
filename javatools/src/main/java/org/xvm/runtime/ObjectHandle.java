@@ -83,9 +83,15 @@ public abstract class ObjectHandle
         return m_fMutable;
         }
 
-    public void makeImmutable()
+    /**
+     * Mark the object as immutable.
+     *
+     * @return true if the object has been successfully marked as immutable; false otherwise
+     */
+    public boolean makeImmutable()
         {
         m_fMutable = false;
+        return true;
         }
 
     /**
@@ -557,6 +563,13 @@ public abstract class ObjectHandle
                     }
                 }
             return listUnassigned;
+            }
+
+        @Override
+        public boolean makeImmutable()
+            {
+            return getComposition().makeStructureImmutable(m_aFields) &&
+                   super.makeImmutable();
             }
 
         @Override

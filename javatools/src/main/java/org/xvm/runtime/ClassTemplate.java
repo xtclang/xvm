@@ -463,24 +463,13 @@ public abstract class ClassTemplate
     /**
      * Make the specified object handle immutable.
      *
-     * @param frame    the current frame
      * @param hTarget  the object handle
      *
-     * @return one of the {@link Op#R_NEXT} or {@link Op#R_EXCEPTION} values
+     * @return true if the object has been successfully marked as immutable; false otherwise
      */
-    protected int makeImmutable(Frame frame, ObjectHandle hTarget)
+    protected boolean makeImmutable(ObjectHandle hTarget)
         {
-        if (hTarget.isMutable())
-            {
-            hTarget.makeImmutable();
-            if (hTarget instanceof GenericHandle)
-                {
-                GenericHandle hGeneric = (GenericHandle) hTarget;
-
-                return hGeneric.getComposition().makeStructureImmutable(frame, hGeneric.getFields());
-                }
-            }
-        return Op.R_NEXT;
+        return !hTarget.isMutable() || hTarget.makeImmutable();
         }
 
     /**
@@ -649,17 +638,10 @@ public abstract class ClassTemplate
                         return buildStringValue(frame, hTarget, iReturn);
 
                     case "makeImmutable":
-                        switch (makeImmutable(frame, hTarget))
-                            {
-                            case Op.R_NEXT:
-                                return frame.assignValue(iReturn, hTarget);
-
-                            case Op.R_EXCEPTION:
-                                return Op.R_EXCEPTION;
-
-                            default:
-                                throw new IllegalStateException();
-                            }
+                        return makeImmutable(hTarget)
+                            ? frame.assignValue(iReturn, hTarget)
+                            : frame.raiseException(
+                                xException.unsupportedOperation(frame, "makeImmutable"));
                     }
                 break;
 

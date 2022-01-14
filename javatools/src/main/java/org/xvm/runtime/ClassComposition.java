@@ -16,7 +16,6 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
-import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.AccessTypeConstant;
 import org.xvm.asm.constants.IdentityConstant;
@@ -460,29 +459,20 @@ public class ClassComposition
         }
 
     @Override
-    public int makeStructureImmutable(Frame frame, ObjectHandle[] ahField)
+    public boolean makeStructureImmutable(ObjectHandle[] ahField)
         {
         for (FieldInfo field : m_mapFields.values())
             {
             ObjectHandle hValue = ahField[field.getIndex()];
 
-            if (hValue != null && !hValue.isService() && hValue.isMutable() && !field.isLazy())
+            if (hValue != null && hValue.isMutable() && !hValue.isService() && !field.isLazy() &&
+                    !hValue.makeImmutable())
                 {
-                switch (hValue.getTemplate().makeImmutable(frame, hValue))
-                    {
-                    case Op.R_NEXT:
-                        continue;
-
-                    case Op.R_EXCEPTION:
-                        return Op.R_EXCEPTION;
-
-                    default:
-                        throw new IllegalStateException();
-                    }
+                return false;
                 }
             }
 
-        return Op.R_NEXT;
+        return true;
         }
 
 

@@ -293,16 +293,32 @@ module TestMaps
         console.println("\n** testFreezable()");
 
         Container c = new Container();
-        Map<String, String> map = c.mapL;
-        try
+
+        void modifyAttempt(Map<String, String> map)
             {
-            map.put("2", "b");
-            assert;
+            try
+                {
+                map.put("1", "a");
+                assert False as $"Invalid modification for {&map.actualType}";
+                }
+            catch (ReadOnly e)
+                {
+                }
+
+            try
+                {
+                map.put("2", "b");
+                assert False as $"Invalid insert for {&map.actualType}";
+                }
+            catch (ReadOnly e)
+                {
+                }
             }
-        catch (Exception e)
-            {
-            console.println($"Expected modify attempt: {e.text}");
-            }
+
+        modifyAttempt(c.mapL);
+        modifyAttempt(c.mapH);
+        modifyAttempt(c.mapS);
+
         console.println($"{c.mapL} {c.mapL.keys} {c.mapL.values}");
         console.println($"{c.mapH} {c.mapH.keys} {c.mapH.values}");
         console.println($"{c.mapS} {c.mapS.keys} {c.mapS.values}");

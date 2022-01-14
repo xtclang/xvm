@@ -577,7 +577,7 @@ public abstract class LongBasedDelegate
             }
 
         @Override
-        public void makeImmutable()
+        public boolean makeImmutable()
             {
             if (isMutable())
                 {
@@ -590,8 +590,8 @@ public abstract class LongBasedDelegate
                     System.arraycopy(ab, 0, abNew, 0, c);
                     m_alValue = abNew;
                     }
-                super.makeImmutable();
                 }
+            return super.makeImmutable();
             }
 
         @Override

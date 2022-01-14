@@ -172,9 +172,9 @@ public class PropertyComposition
         }
 
     @Override
-    public int makeStructureImmutable(Frame frame, ObjectHandle[] ahField)
+    public boolean makeStructureImmutable(ObjectHandle[] ahField)
         {
-        return f_clzRef.makeStructureImmutable(frame, ahField);
+        return f_clzRef.makeStructureImmutable(ahField);
         }
 
     @Override

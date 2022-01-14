@@ -312,7 +312,7 @@ public class xRTCharDelegate
             }
 
         @Override
-        public void makeImmutable()
+        public boolean makeImmutable()
             {
             if (isMutable())
                 {
@@ -325,8 +325,8 @@ public class xRTCharDelegate
                     System.arraycopy(ach, 0, achNew, 0, c);
                     m_achValue = achNew;
                     }
-                super.makeImmutable();
                 }
+            return super.makeImmutable();
             }
 
         @Override
