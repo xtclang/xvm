@@ -448,6 +448,12 @@ public class AssignmentStatement
             ctxLValue = ctxLV.enterLValue();
             }
 
+        if (!nodeLeft.isLValueSyntax())
+            {
+            nodeLeft.log(errs, Severity.ERROR, Compiler.ASSIGNABLE_REQUIRED);
+            return null;
+            }
+
         // regardless of whether the LValue is a statement or expression, all L-Values must be able
         // to provide an expression as a representative form
         Expression exprLeft = nodeLeft.getLValueExpression();
