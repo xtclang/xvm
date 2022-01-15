@@ -486,7 +486,7 @@ class Array<Element>
                 return this;
 
             case Fixed:
-                throw new ReadOnly();
+                throw new ReadOnly("Fixed size array");
 
             case Persistent:
             case Constant:
@@ -511,7 +511,7 @@ class Array<Element>
                 return this;
 
             case Fixed:
-                throw new ReadOnly();
+                throw new ReadOnly("Fixed size array");
 
             case Persistent:
             case Constant:
@@ -612,7 +612,7 @@ class Array<Element>
                 return this;
 
             case Fixed:
-                throw new ReadOnly();
+                throw new ReadOnly("Fixed size array");
 
             case Persistent:
             case Constant:
@@ -717,7 +717,7 @@ class Array<Element>
                 return this;
 
             case Fixed:
-                throw new ReadOnly();
+                throw new ReadOnly("Fixed size array");
 
             case Persistent:
             case Constant:
@@ -774,7 +774,7 @@ class Array<Element>
                 return this;
 
             case Fixed:
-                throw new ReadOnly();
+                throw new ReadOnly("Fixed size array");
 
             case Persistent:
             case Constant:
@@ -795,7 +795,7 @@ class Array<Element>
                 return this;
 
             case Fixed:
-                throw new ReadOnly();
+                throw new ReadOnly("Fixed size array");
 
             case Persistent:
             case Constant:
@@ -848,7 +848,7 @@ class Array<Element>
                 return this;
 
             case Fixed:
-                throw new ReadOnly();
+                throw new ReadOnly("Fixed size array");
 
             case Persistent:
             case Constant:
