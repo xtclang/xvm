@@ -54,7 +54,8 @@ public class xListMap
             TypeConstant typeMap = constant.getType();
             if (typeMap.containsFormalType(true))
                 {
-                typeMap = typeMap.resolveGenerics(frame.poolContext(), frame.getGenericsResolver());
+                typeMap = typeMap.resolveGenerics(frame.poolContext(),
+                        frame.getGenericsResolver(typeMap.containsDynamicType(null)));
                 }
 
             Map<Constant, Constant> mapValues = ((MapConstant) constant).getValue();
@@ -105,8 +106,8 @@ public class xListMap
         TypeConstant typeKeyArray = pool.ensureArrayType(typeKey);
         TypeConstant typeValArray = pool.ensureArrayType(typeVal);
 
-        TypeComposition clzKeyArray = f_templates.resolveClass(typeKeyArray);
-        TypeComposition clzValArray = f_templates.resolveClass(typeValArray);
+        TypeComposition clzKeyArray = typeKeyArray.ensureClass(frame);
+        TypeComposition clzValArray = typeValArray.ensureClass(frame);
         TypeComposition clzMap      = ensureClass(
             pool.ensureParameterizedTypeConstant(getClassConstant().getType(), typeKey, typeVal));
 

@@ -494,7 +494,7 @@ public class CoreContainer
                                     pool.typeString());
 
             switch (Utils.constructListMap(frame,
-                            f_templates.resolveClass(typeMap), haKeys, haValues, Op.A_STACK))
+                            typeMap.ensureClass(frame), haKeys, haValues, Op.A_STACK))
                 {
                 case Op.R_NEXT:
                     hProps = frame.popStack();

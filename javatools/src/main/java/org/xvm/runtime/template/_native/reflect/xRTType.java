@@ -173,8 +173,10 @@ public class xRTType
             TypeConstant typeTarget = (TypeConstant) constant;
             assert typeTarget.isTypeOfType();
 
-            TypeConstant typeData = typeTarget.getParamType(0).
-                    resolveGenerics(pool, frame.getGenericsResolver());
+            TypeConstant typeData = typeTarget.getParamType(0);
+
+            typeData = typeData.resolveGenerics(pool,
+                    frame.getGenericsResolver(typeData.containsDynamicType(null)));
             return frame.pushStack(typeData.normalizeParameters().ensureTypeHandle(pool));
             }
 
@@ -607,7 +609,7 @@ public class xRTType
             {
             ConstantPool    pool       = frame.poolContext();
             TypeConstant    typeStruct = pool.ensureAccessTypeConstant(typeTarget, Access.STRUCT);
-            TypeComposition clzTarget  = f_templates.resolveClass(typeTarget);
+            TypeComposition clzTarget  = typeTarget.ensureClass(frame);
 
             ArrayList<FunctionHandle> listHandles   = new ArrayList<>();
             boolean                   fStructConstr = false;
@@ -1555,7 +1557,7 @@ public class xRTType
         if (clz == null)
             {
             TypeConstant typeReg = pool().ensureEcstasyTypeConstant("reflect.Register");
-            REGISTER_CLZCOMP = clz = f_templates.resolveClass(typeReg);
+            REGISTER_CLZCOMP = clz = typeReg.ensureClass(frame);
             REGISTER_CONSTRUCT = ctor = REGISTER_CLZCOMP.getTemplate().getStructure().findMethod("construct", 1);
             }
 

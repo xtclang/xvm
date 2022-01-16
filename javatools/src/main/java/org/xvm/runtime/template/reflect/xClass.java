@@ -93,8 +93,10 @@ public class xClass
         if (constant instanceof ClassConstant || constant instanceof DecoratedClassConstant)
             {
             IdentityConstant idClz    = (IdentityConstant) constant;
-            TypeConstant     typeClz  = idClz.getValueType(frame.poolContext(), null).
-                resolveGenerics(frame.poolContext(), frame.getGenericsResolver());
+            TypeConstant     typeClz  = idClz.getValueType(frame.poolContext(), null);
+
+            typeClz = typeClz.resolveGenerics(frame.poolContext(),
+                        frame.getGenericsResolver(typeClz.containsDynamicType(null)));
 
             ClassTemplate template;
             switch (idClz.getComponent().getFormat())
@@ -277,7 +279,7 @@ public class xClass
                 return frame.assignValue(aiReturn[0], xBoolean.FALSE);
             }
 
-        TypeComposition clz      = f_templates.resolveClass(typePublic);
+        TypeComposition clz      = typePublic.ensureClass(frame);
         ObjectHandle    hStruct  = template.createStruct(frame, clz);
         MethodStructure methodAI = clz.ensureAutoInitializer(frame.poolContext());
         if (methodAI != null)

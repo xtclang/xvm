@@ -276,6 +276,19 @@ public class ParameterizedTypeConstant
     @Override
     public TypeConstant resolveGenerics(ConstantPool pool, GenericTypeResolver resolver)
         {
+        // don't cache results from non-constant (e.g. Frame) resolvers
+        boolean fCache = resolver instanceof TypeConstant;
+        if (fCache)
+            {
+            synchronized (this)
+                {
+                if (resolver.equals(m_resolverPrev))
+                    {
+                    return m_typeResolved;
+                    }
+                }
+            }
+
         TypeConstant constOriginal = m_constType;
         TypeConstant constResolved = constOriginal.resolveGenerics(pool, resolver);
         boolean      fDiff         = constOriginal != constResolved;
@@ -308,9 +321,19 @@ public class ParameterizedTypeConstant
                 }
             }
 
-        return fDiff
+        TypeConstant typeResolved = fDiff
             ? pool.ensureParameterizedTypeConstant(constResolved, aconstResolved)
             : this;
+
+        if (fCache)
+            {
+            synchronized (this)
+                {
+                m_typeResolved = typeResolved;
+                m_resolverPrev = resolver;
+                }
+            }
+        return typeResolved;
         }
 
     @Override
@@ -1042,7 +1065,7 @@ public class ParameterizedTypeConstant
     private transient int m_iType;
 
     /**
-     * During disassembly, this holds the index of the the type parameters.
+     * During disassembly, this holds the index of the type parameters.
      */
     private transient int[] m_aiTypeParams;
 
@@ -1060,4 +1083,14 @@ public class ParameterizedTypeConstant
      * Cached hashCode value.
      */
     private transient int m_nHashCode;
+
+    /**
+     * Cached conversion target.
+     */
+    private transient GenericTypeResolver m_resolverPrev;
+
+    /**
+     * Cached conversion result.
+     */
+    private transient TypeConstant m_typeResolved;
     }

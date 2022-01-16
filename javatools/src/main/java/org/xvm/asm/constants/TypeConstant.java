@@ -1709,7 +1709,7 @@ public abstract class TypeConstant
         {
         // any newly created derivative types and various constants should be placed into the same
         // pool where this type comes from
-        try (var x = ConstantPool.withPool(getConstantPool()))
+        try (var ignore = ConstantPool.withPool(getConstantPool()))
             {
             return buildTypeInfoImpl(errs);
             }
@@ -4190,11 +4190,11 @@ public abstract class TypeConstant
             Object nidCandidate = entry.getKey();
             if (IdentityConstant.isNestedSibling(nidSub, nidCandidate))
                 {
-                MethodInfo        infoCandiate = entry.getValue();
-                SignatureConstant sigCandidate = infoCandiate.getSignature(); // resolved
+                MethodInfo        infoCandidate = entry.getValue();
+                SignatureConstant sigCandidate  = infoCandidate.getSignature(); // resolved
                 if (sigCandidate.getName().equals(sigSub.getName()))
                     {
-                    if (infoCandiate.containsBody(methodInfo.getIdentity()) ||
+                    if (infoCandidate.containsBody(methodInfo.getIdentity()) ||
                             sigSub.isSubstitutableFor(sigCandidate, this))
                         {
                         if (listMatch == null)
@@ -6543,6 +6543,19 @@ public abstract class TypeConstant
         }
 
     /**
+     * @return a TypeComposition for this type
+     */
+    public TypeComposition ensureClass(Frame frame)
+        {
+        TypeComposition clz = m_clz;
+        if (clz == null)
+            {
+            m_clz = clz = frame.f_context.f_templates.resolveClass(this);
+            }
+        return clz;
+        }
+
+    /**
      * Obtain a run-time handle representing this type.
      *
      * @param pool  the ConstantPool to make the handle for
@@ -6588,7 +6601,7 @@ public abstract class TypeConstant
         TypeComposition clz =
                 hValue1.getComposition().getType().equals(this) ? hValue1.getComposition() :
                 hValue2.getComposition().getType().equals(this) ? hValue2.getComposition() :
-                                                                  frame.ensureClass(this);
+                                                                  ensureClass(frame);
         return clz.getTemplate().callEquals(frame, clz, hValue1, hValue2, iReturn);
         }
 
@@ -6613,7 +6626,7 @@ public abstract class TypeConstant
         TypeComposition clz =
                 hValue1.getComposition().getType().equals(this) ? hValue1.getComposition() :
                 hValue2.getComposition().getType().equals(this) ? hValue2.getComposition() :
-                                                                  frame.ensureClass(this);
+                                                                  ensureClass(frame);
         return clz.getTemplate().callCompare(frame, clz, hValue1, hValue2, iReturn);
         }
 
@@ -7045,6 +7058,11 @@ public abstract class TypeConstant
      * A cache of "produces" responses.
      */
     private transient Map<String, Usage> m_mapProduces;
+
+    /**
+     * Cached TypeComposition.
+     */
+    private transient TypeComposition m_clz;
 
     /**
      * Cached TypeHandle.

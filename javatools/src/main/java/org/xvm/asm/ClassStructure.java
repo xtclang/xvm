@@ -1719,13 +1719,10 @@ public class ClassStructure
      */
     public int indexOfGenericParameter(String sParamName)
         {
-        Iterator<Map.Entry<StringConstant, TypeConstant>> iterFormalEntry =
-                getTypeParams().entrySet().iterator();
-        for (int i = 0; iterFormalEntry.hasNext(); i++)
+        List<Map.Entry<StringConstant, TypeConstant>> listFormal = getTypeParamsAsList();
+        for (int i = 0, c = listFormal.size(); i < c; i++)
             {
-            Map.Entry<StringConstant, TypeConstant> entry = iterFormalEntry.next();
-
-            if (entry.getKey().getValue().equals(sParamName))
+            if (listFormal.get(i).getKey().getValue().equals(sParamName))
                 {
                 return i;
                 }

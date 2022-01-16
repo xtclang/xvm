@@ -865,7 +865,7 @@ public class Frame
      */
     public int assignTuple(int nVar, ObjectHandle... ahValue)
         {
-        TypeComposition clazz = ensureClass(getVarInfo(nVar).getType());
+        TypeComposition clazz = getVarInfo(nVar).getType().ensureClass(this);
 
         return assignValue(nVar, xTuple.makeHandle(clazz, ahValue));
         }
@@ -1135,7 +1135,7 @@ public class Frame
                             ? f_framePrev.getRegisterType(iReturn)
                             : poolContext().typeTuple();
                     return returnValue(iReturn,
-                        xTuple.makeHandle(ensureClass(type), ahValue), false);
+                        xTuple.makeHandle(type.ensureClass(this), ahValue), false);
                     }
                 else
                     {
@@ -1288,12 +1288,7 @@ public class Frame
 
     public TypeComposition resolveClass(int iArg)
         {
-        return ensureClass(resolveType(iArg));
-        }
-
-    public TypeComposition ensureClass(TypeConstant type)
-        {
-        return f_context.f_templates.resolveClass(type);
+        return resolveType(iArg).ensureClass(this);
         }
 
     public ClassTemplate ensureTemplate(IdentityConstant constClz)
@@ -1310,7 +1305,7 @@ public class Frame
         {
         ConstantPool pool = poolContext();
 
-        type = type.resolveGenerics(pool, getGenericsResolver());
+        type = type.resolveGenerics(pool, getGenericsResolver(type.containsDynamicType(null)));
         if (type.containsAutoNarrowing(true) && f_hThis != null)
             {
             type = type.resolveAutoNarrowing(pool, false, f_hThis.getType(), null);
@@ -1778,9 +1773,11 @@ public class Frame
 
     // ----- GenericTypeResolver interface ---------------------------------------------------------
 
-    public GenericTypeResolver getGenericsResolver()
+    public GenericTypeResolver getGenericsResolver(boolean fDynamic)
         {
-        return this;
+        return fDynamic || f_hThis == null || f_function.getTypeParamCount() != 0
+                ? this
+                : f_hThis.getType();
         }
 
     @Override
@@ -2423,7 +2420,7 @@ public class Frame
                 // don't cache dynamic types
                 boolean fDynamic = type.containsDynamicType(null);
 
-                type = type.resolveGenerics(poolContext(), getGenericsResolver());
+                type = type.resolveGenerics(poolContext(), getGenericsResolver(fDynamic));
 
                 if (fDynamic)
                     {

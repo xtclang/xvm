@@ -139,7 +139,7 @@ public class xConst
             BooleanHandle f2 = xBoolean.makeHandle(constRange.isLastExcluded());
 
             TypeConstant    typeRange   = constRange.getType();
-            TypeComposition clzRange    = f_templates.resolveClass(typeRange);
+            TypeComposition clzRange    = typeRange.ensureClass(frame);
             MethodStructure constructor = RANGE_CONSTRUCT;
 
             ObjectHandle[] ahArg = new ObjectHandle[constructor.getMaxVars()];
@@ -544,8 +544,10 @@ public class xConst
                     return frameCaller.raiseException("Unassigned property \"" + sProp +'"');
                     }
 
-                TypeConstant typeProp = clz.getFieldType(sProp).
-                    resolveGenerics(pool, frameCaller.getGenericsResolver());
+                TypeConstant typeProp = clz.getFieldType(sProp);
+
+                typeProp = typeProp.resolveGenerics(pool,
+                            frameCaller.getGenericsResolver(typeProp.containsDynamicType(null)));
 
                 switch (typeProp.callEquals(frameCaller, h1, h2, Op.A_STACK))
                     {
@@ -624,8 +626,10 @@ public class xConst
                     return frameCaller.raiseException("Unassigned property \"" + sProp +'"');
                     }
 
-                TypeConstant typeProp = clz.getFieldType(sProp).
-                    resolveGenerics(pool, frameCaller.getGenericsResolver());
+                TypeConstant typeProp = clz.getFieldType(sProp);
+
+                typeProp = typeProp.resolveGenerics(pool,
+                            frameCaller.getGenericsResolver(typeProp.containsDynamicType(null)));
 
                 // this check is only to provide a better exception description
                 if (typeProp.findCallable(pool.sigCompare()) == null)
@@ -710,8 +714,10 @@ public class xConst
                     return frameCaller.raiseException("Unassigned property: \"" + sProp + '"');
                     }
 
-                TypeConstant typeProp = clz.getFieldType(sProp).
-                    resolveGenerics(pool, frameCaller.getGenericsResolver());
+                TypeConstant typeProp = clz.getFieldType(sProp);
+
+                typeProp = typeProp.resolveGenerics(pool,
+                            frameCaller.getGenericsResolver(typeProp.containsDynamicType(null)));
 
                 MethodStructure methodHash = typeProp.findCallable(HASH_SIG);
                 if (methodHash == null)

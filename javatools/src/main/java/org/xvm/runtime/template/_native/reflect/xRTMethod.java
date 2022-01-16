@@ -430,7 +430,7 @@ public class xRTMethod
             else
                 {
                 SignatureConstant sig = idMethod.getSignature().
-                        resolveGenericTypes(frame.poolContext(), frame.getGenericsResolver());
+                        resolveGenericTypes(frame.poolContext(), frame.getGenericsResolver(true));
 
                 chain = clazz.getMethodCallChain(sig);
                 if (chain.getDepth() == 0)

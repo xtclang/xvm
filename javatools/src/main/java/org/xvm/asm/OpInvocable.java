@@ -155,7 +155,7 @@ public abstract class OpInvocable extends Op
         if (idProp == null)
             {
             Object nid = idMethod.resolveNestedIdentity(
-                            frame.poolContext(), frame.getGenericsResolver());
+                            frame.poolContext(), frame.getGenericsResolver(true));
 
             chain = clazz.getMethodCallChain(nid);
             }

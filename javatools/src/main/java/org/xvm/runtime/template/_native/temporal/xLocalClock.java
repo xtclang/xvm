@@ -64,10 +64,10 @@ public class xLocalClock
         switch (sPropName)
             {
             case "now":
-                return frame.assignValue(iReturn, dateTimeNow());
+                return frame.assignValue(iReturn, dateTimeNow(frame));
 
             case "timezone":
-                return frame.assignValue(iReturn, timezone());
+                return frame.assignValue(iReturn, timezone(frame));
             }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
@@ -97,20 +97,20 @@ public class xLocalClock
 
     // -----  helpers ------------------------------------------------------------------------------
 
-    protected GenericHandle dateTimeNow()
+    protected GenericHandle dateTimeNow(Frame frame)
         {
         TypeComposition clzDateTime = ensureDateTimeClass();
         GenericHandle hDateTime = new GenericHandle(clzDateTime);
 
         LongLong llNow = new LongLong(System.currentTimeMillis()).mul(PICOS_PER_MILLI_LL);
-        hDateTime.setField(null, "epochPicos", xUInt128.INSTANCE.makeLongLong(llNow));
-        hDateTime.setField(null, "timezone", timezone());
+        hDateTime.setField(frame, "epochPicos", xUInt128.INSTANCE.makeLongLong(llNow));
+        hDateTime.setField(frame, "timezone", timezone(frame));
         hDateTime.makeImmutable();
 
         return hDateTime;
         }
 
-    protected GenericHandle timezone()
+    protected GenericHandle timezone(Frame frame)
         {
         GenericHandle hTimeZone = m_hTimeZone;
         if (hTimeZone == null)
@@ -118,19 +118,19 @@ public class xLocalClock
             ConstantPool    pool           = pool();
             ClassStructure  structTimeZone = f_templates.getClassStructure("temporal.TimeZone");
             TypeConstant    typeTimeZone   = structTimeZone.getCanonicalType();
-            TypeComposition clzTimeZone    = f_templates.resolveClass(typeTimeZone);
+            TypeComposition clzTimeZone    = typeTimeZone.ensureClass(frame);
 
             ClassStructure  structRule     = (ClassStructure) structTimeZone.getChild("Rule");
             TypeConstant    typeRule       = structRule.getCanonicalType();
             TypeConstant    typeRuleArray  = pool.ensureArrayType(typeRule);
-            TypeComposition clzRuleArray   = f_templates.resolveClass(typeRuleArray);
+            TypeComposition clzRuleArray   = typeRuleArray.ensureClass(frame);
 
             m_hTimeZone = hTimeZone = new GenericHandle(clzTimeZone);
 
             long lOffset = 0; // TODO
-            hTimeZone.setField(null, "picos", xInt64.makeHandle(lOffset));
-            hTimeZone.setField(null, "name",  xNullable.NULL);
-            hTimeZone.setField(null, "rules", xArray.createEmptyArray(clzRuleArray, 0, Mutability.Mutable));
+            hTimeZone.setField(frame, "picos", xInt64.makeHandle(lOffset));
+            hTimeZone.setField(frame, "name",  xNullable.NULL);
+            hTimeZone.setField(frame, "rules", xArray.createEmptyArray(clzRuleArray, 0, Mutability.Mutable));
             hTimeZone.makeImmutable();
             }
 

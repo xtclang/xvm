@@ -123,8 +123,10 @@ public class xTuple
             return frame.pushStack(H_VOID);
             }
 
-        TypeConstant typeTuple = constTuple.getType().resolveGenerics(
-            frame.poolContext(), frame.getGenericsResolver());
+        TypeConstant typeTuple = constTuple.getType();
+
+        typeTuple = typeTuple.resolveGenerics(frame.poolContext(),
+                        frame.getGenericsResolver(typeTuple.containsDynamicType(null)));
 
         ObjectHandle[] ahValue   = new ObjectHandle[c];
         boolean        fDeferred = false;

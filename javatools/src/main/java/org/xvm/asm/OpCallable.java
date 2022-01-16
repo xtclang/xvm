@@ -331,7 +331,7 @@ public abstract class OpCallable extends Op
             }
 
         ConstantPool        pool       = frame.poolContext();
-        GenericTypeResolver resolver   = frame.getGenericsResolver();
+        GenericTypeResolver resolver   = frame.getGenericsResolver(false);
         MethodConstant      idCtor     = (MethodConstant) frame.getConstant(m_nFunctionId);
         IdentityConstant    idTarget   = idCtor.getNamespace();
         TypeConstant        typeTarget = idTarget.getFormalType().resolveGenerics(pool, resolver);
@@ -406,7 +406,7 @@ public abstract class OpCallable extends Op
                 if (function == null)
                     {
                     ConstantPool        pool     = frame.poolContext();
-                    GenericTypeResolver resolver = frame.getGenericsResolver();
+                    GenericTypeResolver resolver = frame.getGenericsResolver(false);
 
                     TypeConstant typeTarget = idTarget.getFormalType().resolveGenerics(pool, resolver);
 
@@ -436,7 +436,7 @@ public abstract class OpCallable extends Op
             case TypeParameter:
             case DynamicFormal:
                 {
-                GenericTypeResolver resolver   = frame.getGenericsResolver();
+                GenericTypeResolver resolver   = frame.getGenericsResolver(true);
                 TypeConstant        typeTarget = ((FormalConstant) idTarget).resolve(resolver);
                 TypeConstant        typePrev   = (TypeConstant) context.getOpInfo(this, Category.TargetType);
                 if (function == null || !typeTarget.equals(typePrev))
@@ -496,7 +496,7 @@ public abstract class OpCallable extends Op
         ClassStructure  structChild = (ClassStructure) constructor.getParent().getParent();
         TypeConstant    typeChild   = frame.poolContext().ensureThisVirtualChildTypeConstant
                                             (hParent.getType(), structChild.getName());
-        TypeComposition clzTarget   = frame.ensureClass(typeChild);
+        TypeComposition clzTarget   = typeChild.ensureClass(frame);
 
         if (frame.isNextRegister(m_nRetValue))
             {

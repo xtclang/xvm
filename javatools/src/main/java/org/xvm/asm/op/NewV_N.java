@@ -117,7 +117,7 @@ public class NewV_N
             }
 
         TypeConstant    typeTarget = hType.getDataType();
-        TypeComposition clzTarget  = frame.f_context.f_templates.resolveClass(typeTarget);
+        TypeComposition clzTarget  = typeTarget.ensureClass(frame);
         int             nReturn    = m_nRetValue;
 
         if (frame.isNextRegister(nReturn))

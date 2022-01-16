@@ -226,7 +226,8 @@ public class xArray
 
         if (typeArray.containsFormalType(true))
             {
-            typeArray = typeArray.resolveGenerics(frame.poolContext(), frame.getGenericsResolver());
+            typeArray = typeArray.resolveGenerics(frame.poolContext(),
+                            frame.getGenericsResolver(typeArray.containsDynamicType(null)));
             }
 
         if (fSet)

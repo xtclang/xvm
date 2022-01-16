@@ -778,7 +778,7 @@ public abstract class Utils
             TypeConstant typeRef = frame.poolContext().ensureAnnotatedTypeConstant(
                     idProp.getRefType(null), prop.getRefAnnotations());
 
-            TypeComposition clzRef  = frame.ensureClass(typeRef);
+            TypeComposition clzRef  = typeRef.ensureClass(frame);
             VarSupport      support = (VarSupport) clzRef.getSupport();
 
             switch (support.introduceRef(frame, clzRef, idProp.getName(), Op.A_STACK))

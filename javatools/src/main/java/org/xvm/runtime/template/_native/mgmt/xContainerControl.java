@@ -24,7 +24,6 @@ import org.xvm.runtime.template._native.xRTServiceControl;
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
 
 import org.xvm.runtime.template.xNullable;
-import org.xvm.runtime.template.xService.ServiceHandle;
 
 import org.xvm.runtime.template.text.xString.StringHandle;
 
@@ -116,7 +115,7 @@ public class xContainerControl
                 " method for " + idModule.getValueString());
             }
 
-        TypeComposition clzModule = f_templates.resolveClass(idModule.getType());
+        TypeComposition clzModule = idModule.getType().ensureClass(frame);
         CallChain       chain     = clzModule.getMethodCallChain(idMethod.getSignature());
         FunctionHandle  hFunction = new xRTFunction.AsyncHandle(chain)
             {

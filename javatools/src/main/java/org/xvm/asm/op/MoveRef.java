@@ -102,7 +102,7 @@ public class MoveRef
             ConstantPool pool = frame.poolContext();
 
             typeReg = pool.ensureParameterizedTypeConstant(pool.typeRef(), hReferent.getType());
-            hRef    = new RefHandle(frame.ensureClass(typeReg), null, hReferent);
+            hRef    = new RefHandle(typeReg.ensureClass(frame), null, hReferent);
             }
 
         if (fNextReg)

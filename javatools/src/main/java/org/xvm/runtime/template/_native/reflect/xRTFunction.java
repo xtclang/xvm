@@ -516,7 +516,7 @@ public class xRTFunction
             assert iArg >= 0;
 
             ConstantPool        pool     = frame.poolContext();
-            GenericTypeResolver resolver = frame.getGenericsResolver();
+            GenericTypeResolver resolver = frame.getGenericsResolver(true);
             MethodStructure     method   = getMethod();
             if (method != null)
                 {
