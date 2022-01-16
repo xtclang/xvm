@@ -197,7 +197,7 @@ public class TypeCompositionStatement
         this.qualified = Arrays.stream(Handy.parseDelimitedString(module.getName(), '.'))
                 .map(s -> new Token(0, 0, Id.IDENTIFIER, s))
                 .collect(Collectors.toCollection(ArrayList::new));
-        this.typeArgs  = new ArrayList<>(Arrays.asList(type));
+        this.typeArgs  = new ArrayList<>(List.of(type));
 
         introduceParentage();
         setComponent(module);
@@ -877,15 +877,11 @@ public class TypeCompositionStatement
                 // register the type parameters
                 if (typeParams != null && !typeParams.isEmpty())
                     {
-                    HashSet<String> names = new HashSet<>();
+                    HashSet<String> setNames = new HashSet<>();
                     for (Parameter param : typeParams)
                         {
                         String sParam = param.getName();
-                        if (names.contains(sParam))
-                            {
-                            log(errs, Severity.ERROR, Compiler.DUPLICATE_TYPE_PARAM, sName);
-                            }
-                        else
+                        if (setNames.add(sParam))
                             {
                             // add the type parameter information to the component
                             TypeExpression exprType  = param.getType();
@@ -893,6 +889,10 @@ public class TypeCompositionStatement
                                     ? pool.typeObject()
                                     : exprType.ensureTypeConstant();
                             component.addTypeParam(sParam, constType);
+                            }
+                        else
+                            {
+                            log(errs, Severity.ERROR, Compiler.DUPLICATE_TYPE_PARAM, sName);
                             }
                         }
                     }
@@ -1272,8 +1272,7 @@ public class TypeCompositionStatement
                     PropertyConstant idTarget;
                     if (exprTarget instanceof NameExpression && ((NameExpression) exprTarget).isSimpleName())
                         {
-                        sTarget  = ((NameExpression) exprTarget).getName();
-                        idTarget = pool.ensurePropertyConstant(component.getIdentityConstant(), sTarget);
+                        sTarget = ((NameExpression) exprTarget).getName();
                         }
                     else
                         {
@@ -1293,8 +1292,8 @@ public class TypeCompositionStatement
                         propTarget.markSynthetic();
                         exprTarget.setParent(propTarget); // REVIEW
                         ensureBody().addStatement(propTarget);
-                        idTarget = pool.ensurePropertyConstant(component.getIdentityConstant(), sTarget);
                         }
+                    idTarget = pool.ensurePropertyConstant(component.getIdentityConstant(), sTarget);
 
                     // remember the property identity that holds the target
                     ((Delegates) composition).setPropertyName(sTarget);
@@ -1442,13 +1441,14 @@ public class TypeCompositionStatement
 
         // if there are any constructor parameters, then that implies the existence both of
         // properties and of a constructor; we will handle the constructor creation later (the
-        // resolve-names pass) once we we can figure out what types mean; for now, if the properties
+        // resolve-names pass) once we can figure out what types mean; for now, if the properties
         // are missing (i.e. not redundantly declared), then create them, and either way, we will
         // double-check them once we can resolve types
-        if (constructorParams != null && !constructorParams.isEmpty())
+        List<Parameter> listParams = constructorParams;
+        if (listParams != null && !listParams.isEmpty())
             {
             Map<String, Component> mapChildren = component.ensureChildByNameMap();
-            for (Parameter param : constructorParams)
+            for (Parameter param : listParams)
                 {
                 // the name should either not exist already, or if it does, it needs to be a
                 // property and the type will have to match the parameter
@@ -1480,8 +1480,7 @@ public class TypeCompositionStatement
 
         // all of the contributions need to be resolved before we can proceed (because we're
         // going to have to "follow" those contributions
-        ClassStructure clz = component;
-        do
+        for (ClassStructure clz = component; clz != null; clz = clz.getContainingClass())
             {
             if (clz.containsUnresolvedContribution())
                 {
@@ -1495,9 +1494,7 @@ public class TypeCompositionStatement
                 // itself does not depend on anything else
                 break;
                 }
-            clz = clz.getContainingClass();
             }
-        while (clz != null);
 
         // check for cyclical contributions
         TypeConstant typeThis = component.getIdentityConstant().getType();
@@ -1836,19 +1833,21 @@ public class TypeCompositionStatement
 
         Map<String, Component> mapChildren  = component.ensureChildByNameMap();
         MultiMethodStructure   constructors = (MultiMethodStructure) mapChildren.get("construct");
-        if (constructorParams != null && !constructorParams.isEmpty())
+        List<Parameter>        listParams   = constructorParams;
+        if (listParams != null && !listParams.isEmpty())
             {
             if (fModuleImport)
                 {
-                constructorParams.get(0).log(errs, Severity.ERROR, Compiler.IMPURE_MODULE_IMPORT);
+                listParams.get(0).log(errs, Severity.ERROR, Compiler.IMPURE_MODULE_IMPORT);
                 }
 
             // resolve the type of each constructor parameter
-            int            cParams     = constructorParams.size();
-            TypeConstant[] atypeParams = new TypeConstant[cParams];
+            IdentityConstant idThis      = component.getIdentityConstant();
+            int              cParams     = listParams.size();
+            TypeConstant[]   atypeParams = new TypeConstant[cParams];
             for (int i = 0; i < cParams; ++i)
                 {
-                Parameter    param     = constructorParams.get(i);
+                Parameter    param     = listParams.get(i);
                 TypeConstant typeParam = param.getType().ensureTypeConstant();
 
                 if (typeParam.containsUnresolved())
@@ -1870,10 +1869,21 @@ public class TypeCompositionStatement
                     return;
                     }
 
+                if (component.isStatic() && typeParam.isGenericType())
+                    {
+                    PropertyConstant idFormal = (PropertyConstant) typeParam.getDefiningConstant();
+                    if (!idFormal.getParentConstant().equals(idThis))
+                        {
+                        // DEFERRED: consider a possibility to turn this error into a "semi-virtual"
+                        //           child type that carries the parent's type, but not reference
+                        param.log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_INACCESSIBLE,
+                            idFormal.getName(), component.getName());
+                        }
+                    }
+
                 // the property type must be compatible with the parameter type,
                 // but it is too early in the compilation cycle to use "isA()";
                 // we will check for the match while building the type info
-                // TODO: point where exactly
                 atypeParams[i] = typeParam;
                 }
 
@@ -1943,12 +1953,12 @@ public class TypeCompositionStatement
                             long lEnd   = name.getEndPosition();
                             if (cParams > 0)
                                 {
-                                lStart = constructorParams.get(0).getStartPosition();
-                                lEnd   = constructorParams.get(cParams - 1).getEndPosition();
+                                lStart = listParams.get(0).getStartPosition();
+                                lEnd   = listParams.get(cParams - 1).getEndPosition();
                                 }
                             errs.log(Severity.ERROR, Compiler.SIGNATURE_AMBIGUOUS,
                                     new String[] {sb.toString()}, getSource(), lStart, lEnd);
-                            break NextConstructor;
+                            break;
                             }
 
                         fFound = true;
@@ -1967,7 +1977,7 @@ public class TypeCompositionStatement
                     ConstantPool pool = pool();
                     for (int i = 0; i < cParams; ++i)
                         {
-                        Parameter param = constructorParams.get(i);
+                        Parameter param = listParams.get(i);
                         aParams[i] = new org.xvm.asm.Parameter(pool, atypeParams[i],
                                 param.getName(), null, false, i, false);
                         if (param.value != null)
@@ -2258,9 +2268,10 @@ public class TypeCompositionStatement
             }
 
         // adjust synthetic properties created during registerStructures() phase if necessary
-        ClassStructure component = (ClassStructure) getComponent();
-        ClassStructure clzSuper  = component.getSuper();
-        if (component.getFormat() != Format.INTERFACE && constructorParams != null && clzSuper != null)
+        ClassStructure  component  = (ClassStructure) getComponent();
+        ClassStructure  clzSuper   = component.getSuper();
+        List<Parameter> listParams = constructorParams;
+        if (component.getFormat() != Format.INTERFACE && listParams != null && clzSuper != null)
             {
             ConstantPool   pool      = pool();
             TypeConstant   typeSuper = pool.ensureAccessTypeConstant(
@@ -2269,9 +2280,9 @@ public class TypeCompositionStatement
 
             Map<String, Component> mapChildren = component.ensureChildByNameMap();
             boolean                fInvalidate = false;
-            for (int i = 0, cParams = constructorParams.size(); i < cParams; ++i)
+            for (int i = 0, cParams = listParams.size(); i < cParams; ++i)
                 {
-                Parameter param = constructorParams.get(i);
+                Parameter param = listParams.get(i);
                 String    sProp = param.getName();
 
                 PropertyStructure prop = (PropertyStructure) mapChildren.get(sProp);
@@ -2284,7 +2295,7 @@ public class TypeCompositionStatement
                 PropertyInfo infoProp = infoSuper.findProperty(sProp);
                 if (infoProp == null)
                     {
-                    // the "super" property doesn't not exist or not accessible
+                    // the "super" property doesn't exist or not accessible
                     continue;
                     }
 
@@ -2683,18 +2694,20 @@ public class TypeCompositionStatement
     private void disallowTypeParams(ErrorListener errs)
         {
         // type parameters are not permitted
-        if (typeParams != null && !typeParams.isEmpty())
+        List<Parameter> listParams = typeParams;
+        if (listParams != null && !listParams.isEmpty())
             {
-            typeParams.get(0).log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
+            listParams.get(0).log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
             }
         }
 
     private void requireConstructorParamValues(ErrorListener errs)
         {
         // constructor parameters are not permitted
-        if (constructorParams != null && !constructorParams.isEmpty())
+        List<Parameter> listParams = constructorParams;
+        if (listParams != null && !listParams.isEmpty())
             {
-            for (Parameter param : constructorParams)
+            for (Parameter param : listParams)
                 {
                 if (param.value == null)
                     {

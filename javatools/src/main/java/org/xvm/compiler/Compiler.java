@@ -142,7 +142,7 @@ public class Compiler
         {
         validateCompiler();
 
-        // idempotent: allow this to be called more than necessary without any errors/side-effects
+        // idempotent: allow this to be called more than necessary without any errors/side effects
         if (getStage() == Stage.Initial)
             {
             setStage(Stage.Registering);
@@ -172,13 +172,13 @@ public class Compiler
         validateCompiler();
         ensureReached(Stage.Registered);
 
-        // idempotent: allow this to be called more than necessary without any errors/side-effects
+        // idempotent: allow this to be called more than necessary without any errors/side effects
         if (alreadyReached(Stage.Loaded))
             {
             return;
             }
 
-        try (var x = ConstantPool.withPool(m_structFile.getConstantPool()))
+        try (var ignore = ConstantPool.withPool(m_structFile.getConstantPool()))
             {
             // first time through, load any module dependencies
             setStage(Stage.Loading);
@@ -205,13 +205,13 @@ public class Compiler
         validateCompiler();
         ensureReached(Stage.Registered);
 
-        // idempotent: allow this to be called more than necessary without any errors/side-effects
+        // idempotent: allow this to be called more than necessary without any errors/side effects
         if (alreadyReached(Stage.Resolved))
             {
             return true;
             }
 
-        try (var x = ConstantPool.withPool(m_structFile.getConstantPool()))
+        try (var ignore = ConstantPool.withPool(m_structFile.getConstantPool()))
             {
             // recursively resolve all of the unresolved global names, and if anything couldn't get done
             // in one pass, then store it off in a list to tackle next time
@@ -248,13 +248,13 @@ public class Compiler
         validateCompiler();
         ensureReached(Stage.Resolved);
 
-        // idempotent: allow this to be called more than necessary without any errors/side-effects
+        // idempotent: allow this to be called more than necessary without any errors/side effects
         if (alreadyReached(Stage.Validated))
             {
             return true;
             }
 
-        try (var x = ConstantPool.withPool(m_structFile.getConstantPool()))
+        try (var ignored = ConstantPool.withPool(m_structFile.getConstantPool()))
             {
             // recursively resolve all of the unresolved global names, and if anything couldn't get done
             // in one pass, the manager will keep track of what remains to be done
@@ -291,13 +291,13 @@ public class Compiler
         validateCompiler();
         ensureReached(Stage.Validated);
 
-        // idempotent: allow this to be called more than necessary without any errors/side-effects
+        // idempotent: allow this to be called more than necessary without any errors/side effects
         if (alreadyReached(Stage.Emitted))
             {
             return true;
             }
 
-        try (var x = ConstantPool.withPool(m_structFile.getConstantPool()))
+        try (var ignored = ConstantPool.withPool(m_structFile.getConstantPool()))
             {
             // recursively resolve all of the unresolved global names, and if anything couldn't get done
             // in one pass, then store it off in a list to tackle next time
@@ -418,7 +418,7 @@ public class Compiler
      * The TypeCompositionStatement for the module being compiled. This is an object returned from
      * the Parser, or one assembled from multiple objects returned from the Parser.
      */
-    private TypeCompositionStatement m_stmtModule;
+    private final TypeCompositionStatement m_stmtModule;
 
     /**
      * The ErrorListener to report errors to.
@@ -471,7 +471,7 @@ public class Compiler
             }
 
         /**
-         * @return true if this stage is a intermediate stage, i.e. indicating that a node is in
+         * @return true if this stage is an intermediate stage, i.e. indicating that a node is in
          *         the process of moving towards a target-able stage
          */
         public boolean isTransition()
@@ -737,7 +737,7 @@ public class Compiler
      */
     public static final String NAME_AMBIGUOUS                     = "COMPILER-37";
     /**
-     * Name "{0}" is unresolvable..
+     * Name "{0}" is unresolvable.
      */
     public static final String NAME_UNRESOLVABLE                  = "COMPILER-38";
     /**
@@ -1309,6 +1309,10 @@ public class Compiler
      * Possible name collision: an attempt to use property {0} defined at {1} as a function.
      */
     public static final String SUSPICIOUS_PROPERTY_USE             = "COMPILER-178";
+    /**
+     * Type parameter {0} inaccessible from static child class {1}.
+     */
+    public static final String TYPE_PARAMS_INACCESSIBLE            = "COMPILER-179";
     /**
      * {0} is not yet implemented.
      */

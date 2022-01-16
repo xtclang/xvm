@@ -88,7 +88,7 @@ class HasherMap<Key, Value>
     /**
      * This is the Entry implementation used to store the HasherMap's keys and values.
      */
-    protected static class HashEntry(Key key, Int hash, Value value, HashEntry? next = Null)
+    protected static class HashNode<Key, Value>(Key key, Int hash, Value value, HashEntry? next = Null)
             implements Duplicable
         {
         construct(HashEntry that)
@@ -99,6 +99,8 @@ class HasherMap<Key, Value>
             this.next  = that.next?.duplicate() : Null;
             }
         }
+
+    typedef HashNode<Key, Value> as HashEntry;
 
     /**
      * An array of hash buckets.
