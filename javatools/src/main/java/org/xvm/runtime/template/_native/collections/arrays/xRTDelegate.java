@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.Map;
 
+import java.util.stream.Stream;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -70,6 +71,8 @@ public class xRTDelegate
             registerNativeTemplate(new xRTUInt16Delegate  (f_templates, f_struct, true));
             registerNativeTemplate(new xRTUInt32Delegate  (f_templates, f_struct, true));
             registerNativeTemplate(new xRTUInt64Delegate  (f_templates, f_struct, true));
+
+            registerNativeTemplate(new xRTStringDelegate  (f_templates, f_struct, true));
             }
         }
 
@@ -79,6 +82,8 @@ public class xRTDelegate
         // register native delegations
         ConstantPool                   pool         = pool();
         Map<TypeConstant, xRTDelegate> mapDelegates = new HashMap<>();
+
+        TypeConstant typeString = pool.ensureEcstasyTypeConstant("text.String");
 
         mapDelegates.put(pool.typeBoolean(), xRTBooleanDelegate.INSTANCE);
         mapDelegates.put(pool.typeBit(),     xRTBitDelegate    .INSTANCE);
@@ -93,6 +98,8 @@ public class xRTDelegate
         mapDelegates.put(pool.typeCUInt16(), xRTUInt16Delegate .INSTANCE);
         mapDelegates.put(pool.typeCUInt32(), xRTUInt32Delegate .INSTANCE);
         mapDelegates.put(pool.typeCUInt64(), xRTUInt64Delegate .INSTANCE);
+
+        mapDelegates.put(typeString,         xRTStringDelegate .INSTANCE);
 
         DELEGATES = mapDelegates;
 
@@ -878,6 +885,31 @@ public class xRTDelegate
 
             m_ahValue = ahValue;
             m_cSize   = cSize;
+            }
+
+        /**
+         * Get the ObjectHandle at the specified index in the array.
+         *
+         * @param nIndex  the index of the ObjectHandle to return
+         *
+         * @return  the ObjectHandle at the specified index in the array
+         *
+         * @throws IndexOutOfBoundsException if the index is out of
+         *         range (nIndex < 0 || nIndex >= m_cSize)
+         */
+        public ObjectHandle get(long nIndex)
+            {
+            return m_ahValue[(int) nIndex];
+            }
+
+        /**
+         * Obtain the contents of the array as a {@link Stream} of {@link ObjectHandle handles}.
+         *
+         * @return the contents of the String array as a {@link Stream}
+         */
+        public Stream<ObjectHandle> stream()
+            {
+            return Arrays.stream(m_ahValue);
             }
 
         @Override

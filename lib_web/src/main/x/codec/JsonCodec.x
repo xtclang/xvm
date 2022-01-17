@@ -1,6 +1,9 @@
 import ecstasy.io.UTF8Reader;
 import ecstasy.io.UTF8Writer;
 
+import json.Mapping;
+import json.ObjectInputStream;
+import json.ObjectInputStream.ElementInputStream;
 import json.Schema;
 
 /**
@@ -36,9 +39,12 @@ const JsonCodec
         }
 
     @Override
-    <ObjectType> ObjectType decode<ObjectType>(InputStream in)
+    <ObjectType> ObjectType decode<ObjectType>(Type type, InputStream in)
         {
-        return schema.createObjectInput(new UTF8Reader(in)).read<ObjectType>();
+        assert Mapping     mapper := schema.findMapping(type);
+        ObjectInputStream  o_in   = schema.createObjectInput(new UTF8Reader(in)).as(ObjectInputStream);
+        ElementInputStream e_in   = o_in.ensureElementInput();
+        return mapper.read(e_in).as(ObjectType);
         }
 
     @Override

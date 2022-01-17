@@ -53,7 +53,7 @@ public class xRegEx
     public void initNative()
         {
         markNativeProperty("pattern");
-        markNativeMethod("construct", STRING, VOID);
+        markNativeMethod("construct", new String[] {"text.String", "numbers.Int64"}, VOID);
         markNativeMethod("find", new String[] {"text.String", "numbers.Int64"}, null);
         markNativeMethod("match", STRING, null);
         markNativeMethod("matchPrefix", STRING, null);
@@ -80,7 +80,8 @@ public class xRegEx
                          ObjectHandle hParent, ObjectHandle[] ahVar, int iReturn)
         {
         String regex = ((xString.StringHandle) ahVar[0]).getStringValue();
-        return frame.assignValue(iReturn, new RegExHandle(INSTANCE.getCanonicalClass(), regex));
+        long   nFlags = ((ObjectHandle.JavaLong) ahVar[1]).getValue();
+        return frame.assignValue(iReturn, new RegExHandle(INSTANCE.getCanonicalClass(), regex, nFlags));
         }
 
     @Override
@@ -103,8 +104,10 @@ public class xRegEx
             {
             case "append":
                 {
-                String regex = ((RegExHandle) hTarget).getRegex() + ((RegExHandle) hArg).getRegex();
-                return frame.assignValue(iReturn, new RegExHandle(INSTANCE.getCanonicalClass(), regex));
+                RegExHandle hRegEx = (RegExHandle) hTarget;
+                String      regex  = hRegEx.getRegex() + ((RegExHandle) hArg).getRegex();
+                long        nFlags = hRegEx.getFlags();
+                return frame.assignValue(iReturn, new RegExHandle(INSTANCE.getCanonicalClass(), regex, nFlags));
                 }
             case "appendTo":
                 {
@@ -201,8 +204,9 @@ public class xRegEx
         {
         if (constant instanceof RegExConstant)
             {
+            RegExConstant regex = (RegExConstant) constant;
             return frame.pushStack(new RegExHandle(getCanonicalClass(),
-                ((RegExConstant) constant).getValue()));
+                regex.getValue(), regex.getFlags()));
             }
 
         return super.createConstHandle(frame, constant);
@@ -212,14 +216,15 @@ public class xRegEx
      * Create an object handle for a RegEx using the specified String pattern and push it on the
      * frame's local stack.
      *
-     * @param frame  the current frame
-     * @param regex  the regular expression pattern
+     * @param frame   the current frame
+     * @param regex   the regular expression pattern
+     * @param nFlags  the flags to pass to the compiler
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
-    public int createConstHandle(Frame frame, String regex)
+    public int createConstHandle(Frame frame, String regex, int nFlags)
         {
-        return createConstHandle(frame, new RegExConstant(frame.poolContext(), regex));
+        return createConstHandle(frame, new RegExConstant(frame.poolContext(), regex, nFlags));
         }
 
 
@@ -281,13 +286,16 @@ public class xRegEx
          */
         private final String m_regex;
 
+        private final long m_nFlags;
+
         private Pattern m_pattern;
 
-        protected RegExHandle(TypeComposition clazz, String regex)
+        protected RegExHandle(TypeComposition clazz, String regex, long nFlags)
             {
             super(clazz);
 
-            m_regex = regex;
+            m_regex  = regex;
+            m_nFlags = nFlags;
             }
 
         /**
@@ -299,13 +307,21 @@ public class xRegEx
             }
 
         /**
+         * @return the regular expression flags.
+         */
+        public long getFlags()
+            {
+            return m_nFlags;
+            }
+
+        /**
          * @return the compiled regular expression {@link Pattern}.
          */
         public Pattern getPattern()
             {
             if (m_pattern == null)
                 {
-                m_pattern = Pattern.compile(m_regex);
+                m_pattern = Pattern.compile(m_regex, (int) m_nFlags);
                 }
             return m_pattern;
             }

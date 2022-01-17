@@ -5,6 +5,7 @@ import ecstasy.io.ByteArrayOutputStream;
  * Represents a codec for a particular media type. For example application/json.
  */
 interface MediaTypeCodec
+        extends Const
     {
     /**
      * Return the MediaTypes supported by this codec.
@@ -16,22 +17,24 @@ interface MediaTypeCodec
     /**
      * Decode the given type from the given InputStream.
      *
-     * @param in  the input stream containing the data to decode
+     * @param type  the Type of the value to decode
+     * @param in    the input stream containing the data to decode
      *
      * @return The decoded result
      */
-    <ObjectType> ObjectType decode<ObjectType>(InputStream in);
+    <ObjectType> ObjectType decode<ObjectType>(Type type, InputStream in);
 
     /**
      * Decode the given type from the given InputStream.
      *
+     * @param type   the Type of the value to decode
      * @param bytes  the byte array containing the data to decode
      *
      * @return The decoded result
      */
-    <ObjectType> ObjectType decode<ObjectType>(Byte[] bytes)
+    <ObjectType> ObjectType decode<ObjectType>(Type type, Byte[] bytes)
         {
-        return decode<ObjectType>(new ByteArrayInputStream(bytes));
+        return decode<ObjectType>(type, new ByteArrayInputStream(bytes));
         }
 
     /**

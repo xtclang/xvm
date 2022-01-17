@@ -39,8 +39,6 @@ import org.xvm.runtime.template._native.mgmt.xCoreRepository;
 
 import org.xvm.runtime.template._native.numbers.xRTRandom;
 
-import org.xvm.runtime.template._native.proxy.xRTWebServerProxy;
-
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 import org.xvm.runtime.template._native.reflect.xRTFunction.NativeFunctionHandle;
 
@@ -152,12 +150,6 @@ public class CoreContainer
 
         addResourceSupplier(new InjectionKey("rnd"   , typeRandom), this::ensureDefaultRandom);
         addResourceSupplier(new InjectionKey("random", typeRandom), this::ensureDefaultRandom);
-
-        // +++ WebServer
-        TypeConstant typeWebServer = pool.ensureEcstasyTypeConstant("proxy.WebServerProxy");
-
-        f_mapResources.put(new InjectionKey("webServer" , typeWebServer), this::ensureWebServerProxy);
-        f_mapResources.put(new InjectionKey("proxy" , typeWebServer), this::ensureWebServerProxy);
 
         // +++ OSFileStore etc.
         TypeConstant typeFileStore = pool.ensureEcstasyTypeConstant("fs.FileStore");
@@ -292,24 +284,6 @@ public class CoreContainer
             }
 
         return hRnd;
-        }
-
-    protected ObjectHandle ensureWebServerProxy(Frame frame, ObjectHandle hOpts)
-        {
-        ObjectHandle hServer = m_hWebServer;
-        if (hServer == null)
-            {
-            xRTWebServerProxy template = (xRTWebServerProxy) f_templates.getTemplate("_native.proxy.RTWebServerProxy");
-            if (template != null)
-                {
-                TypeConstant typeWebServer = frame.poolContext().ensureEcstasyTypeConstant("proxy.WebServerProxy");
-                m_hWebServer = hServer = template.createServiceHandle(
-                    createServiceContext("WebServerProxy"),
-                    template.getCanonicalClass(), typeWebServer);
-                }
-            }
-
-        return hServer;
         }
 
     protected ObjectHandle ensureFileStore(Frame frame, ObjectHandle hOpts)

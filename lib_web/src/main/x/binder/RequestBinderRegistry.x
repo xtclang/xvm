@@ -6,6 +6,8 @@ import ecstasy.reflect.Parameter;
  */
 class RequestBinderRegistry
         implements ParameterBinderRegistry<HttpRequest>
+        implements Freezable
+        implements Stringable
     {
     construct()
         {
@@ -13,7 +15,43 @@ class RequestBinderRegistry
         binders.add(new QueryParameterBinder());
         }
 
+    construct (Array.Mutability mutability, Array<ParameterBinder<HttpRequest>> binders)
+        {
+        this.binders = new Array(mutability, binders);
+        }
+    finally
+        {
+        if (mutability == Constant)
+            {
+            makeImmutable();
+            }
+        }
+
     private Array<ParameterBinder<HttpRequest>> binders;
+
+    @Override
+    immutable RequestBinderRegistry freeze(Boolean inPlace = False)
+        {
+        if (&this.isImmutable)
+            {
+            return this.as(immutable RequestBinderRegistry);
+            }
+
+        if (binders.mutability == Constant)
+            {
+            // the underlying binders is already frozen
+            assert &binders.isImmutable;
+            return this.makeImmutable();
+            }
+
+        if (!inPlace)
+            {
+             return new RequestBinderRegistry(Constant, binders).as(immutable RequestBinderRegistry);
+            }
+
+        this.binders = binders.freeze(inPlace);
+        return makeImmutable();
+        }
 
     @Override
     void addParameterBinder(ParameterBinder<HttpRequest> binder)
@@ -48,10 +86,10 @@ class RequestBinderRegistry
      *
      * @return a RouteMatch bound to the arguments from the source request
      */
-    RouteMatch bind(RouteMatch route, HttpRequest req)
+    RouteMatch bind(function void () fn, RouteMatch route, HttpRequest req)
         {
         Map<String, Object> arguments = new HashMap();
-        for (Parameter p : route.requiredParameters)
+        for (Parameter p : route.requiredParameters(fn))
             {
             if (String                       name   := p.hasName(),
                 ParameterBinder<HttpRequest> binder := findParameterBinder(p, req))
@@ -63,6 +101,23 @@ class RequestBinderRegistry
                     }
                 }
             }
-        return route.fulfill(arguments);
+        return route.fulfill(fn, arguments);
+        }
+
+    // ----- Stringable methods ----------------------------------------------------------------
+
+    @Override
+    Int estimateStringLength()
+        {
+        return 0;
+        }
+
+    @Override
+    Appender<Char> appendTo(Appender<Char> buf)
+        {
+        "RequestBinderRegistry(".appendTo(buf);
+        binders.appendTo(buf);
+        ")".appendTo(buf);
+        return buf;
         }
     }

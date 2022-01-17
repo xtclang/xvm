@@ -1,7 +1,7 @@
 /**
  * A registry of MediaTypeCodec instances.
  */
-class MediaTypeCodecRegistry
+const MediaTypeCodecRegistry
     {
     /**
      * Construct a MediaTypeCodecRegistry.
@@ -30,6 +30,8 @@ class MediaTypeCodecRegistry
                     }
                 }
             }
+        codecsByType.makeImmutable();
+        codecsByExtension.makeImmutable();
         }
 
     /**

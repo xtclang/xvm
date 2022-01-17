@@ -2,9 +2,10 @@
  * Test utilities.
  */
 
-val xdk          = project(":xdk");
-val javatools    = project(":javatools")
-val javatoolsJar = "${javatools.buildDir}/libs/javatools.jar"
+val xdk           = project(":xdk");
+val javatools     = project(":javatools")
+val javatoolsJar  = "${javatools.buildDir}/libs/javatools.jar"
+val javatoolsDeps = "${javatools.buildDir}/deps/*"
 
 val tests = listOf<String>(
     "src/main/x/annos.x",
@@ -43,7 +44,7 @@ val compileAll = tasks.register<JavaExec>("compileAll") {
 
     jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
 
-    classpath(javatoolsJar)
+    classpath(javatoolsJar, javatoolsDeps)
 
     val opts = listOf<String>(
         "-verbose",
@@ -81,7 +82,7 @@ val compileOne = tasks.register<JavaExec>("compileOne") {
 
     val name = if (project.hasProperty("testName")) project.property("testName") else "TestSimple"
 
-    classpath(javatoolsJar)
+    classpath(javatoolsJar, javatoolsDeps)
 
     args("-verbose",
          "-o", "$buildDir",
@@ -123,7 +124,7 @@ tasks.register<JavaExec>("hostOne") {
 
     systemProperties.put("xvm.db.impl", System.getProperty("xvm.db.impl"))
 
-    classpath(javatoolsJar)
+    classpath(javatoolsJar, javatoolsDeps)
 
     val opts = listOf<String>(
         "-L", "${xdk.buildDir}/xdk/lib/",
@@ -143,7 +144,7 @@ tasks.register<JavaExec>("hostAll") {
 
     jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
 
-    classpath(javatoolsJar)
+    classpath(javatoolsJar, javatoolsDeps)
 
     val opts = listOf<String>(
         "-verbose",

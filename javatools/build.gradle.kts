@@ -28,15 +28,28 @@ tasks.register<Copy>("copyUtils") {
     }
 }
 
+tasks.register<Copy>("copyDeps") {
+    group       = "Build"
+    description = "Copy the module dependencies into the build directory."
+    from(configurations.default)
+    into("$buildDir/deps")
+    doLast {
+        println("Finished task: copyDeps")
+    }
+}
+
 tasks.jar {
     val copyImplicits = tasks["copyImplicits"]
     val copyUtils     = tasks["copyUtils"]
+    val copyDeps      = tasks["copyDeps"]
 
     dependsOn(copyImplicits)
     dependsOn(copyUtils)
+    dependsOn(copyDeps)
 
     mustRunAfter(copyImplicits)
     mustRunAfter(copyUtils)
+    mustRunAfter(copyDeps)
 
     manifest {
         attributes["Manifest-Version"] = "1.0"
@@ -69,6 +82,7 @@ java {
 
 dependencies {
     implementation("org.xtclang.xvm:utils:")
+    implementation("io.netty:netty-all:4.1.71.Final")
 
     // Use JUnit test framework
     testImplementation("junit:junit:4.12")
