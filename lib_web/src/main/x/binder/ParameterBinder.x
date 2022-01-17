@@ -8,8 +8,7 @@ import ecstasy.reflect.Parameter;
  *
  * @param <Source>  the type of the value source
  */
-interface ParameterBinder<Source>
-        extends Const
+public interface ParameterBinder<Source>
     {
     /**
      * The default priority value used to order ParameterBinder instances.

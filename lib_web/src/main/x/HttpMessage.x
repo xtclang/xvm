@@ -30,6 +30,6 @@ class HttpMessage
      */
     MediaType? contentType.get()
         {
-        return headers.getContentType();
+        return headers.contentType;
         }
     }

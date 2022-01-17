@@ -6,15 +6,15 @@
  */
 const MediaType
         implements Stringable
-//        implements Hashable
         implements immutable Orderable
+        implements immutable Hashable
     {
     /**
      * Construct a new MediaType.
      *
-     * @param name       the name of the MediaType in the format `type/subType`
-     * @param extension  the optional extension, if not provided the extension will be the subType
-     * @param params     the parameters for the MediaType, additional parameters will be parsed from the name
+     * @param  the name of the MediaType in the format `type/subType`
+     * @param  the optional extension, if not provided the extension will be the subType
+     * @param  the parameters for the MediaType, additional parameters will be parsed from the name
      *
      * @throws IllegalArgument if the name is not in the `type/subType` format
      */
@@ -231,12 +231,12 @@ const MediaType
         return buf;
         }
 
-//    // ----- Hashable ------------------------------------------------------------------------------
-//
-//    static <CompileType extends MediaType> Int hashCode(CompileType value)
-//        {
-//        return value.name.hashCode();
-//        }
+    // ----- Hashable ------------------------------------------------------------------------------
+
+    static <CompileType extends MediaType> Int hashCode(CompileType value)
+        {
+        return String.hashCode(value.name);
+        }
 
     // ----- Orderable -----------------------------------------------------------------------------
 
@@ -301,7 +301,7 @@ const MediaType
     /**
      * HTML: text/html.
      */
-    static MediaType TEXT_HTML_TYPE = new MediaType(TEXT_HTML, "html");
+    static MediaType TEXT_HTML_TYPE = new MediaType(TEXT_HTML);
 
     /**
      * XHTML: application/xhtml+xml.
@@ -311,7 +311,7 @@ const MediaType
     /**
      * XHTML: application/xhtml+xml.
      */
-    static MediaType APPLICATION_XHTML_TYPE = new MediaType(APPLICATION_XHTML);
+    static MediaType APPLICATION_XHTML_TYPE = new MediaType(APPLICATION_XHTML, "html");
 
     /**
      * XML: application/xml.
@@ -321,7 +321,7 @@ const MediaType
     /**
      * XML: application/xml.
      */
-    static MediaType APPLICATION_XML_TYPE = new MediaType(APPLICATION_XML, "xml");
+    static MediaType APPLICATION_XML_TYPE = new MediaType(APPLICATION_XML);
 
     /**
      * JSON: application/json.
@@ -331,7 +331,7 @@ const MediaType
     /**
      * JSON: application/json.
      */
-    static MediaType APPLICATION_JSON_TYPE = new MediaType(MediaType.APPLICATION_JSON, "json");
+    static MediaType APPLICATION_JSON_TYPE = new MediaType(MediaType.APPLICATION_JSON);
 
     /**
      * YAML: application/x-yaml.
@@ -361,7 +361,7 @@ const MediaType
     /**
      * Plain Text: text/plain.
      */
-    static MediaType TEXT_PLAIN_TYPE = new MediaType(TEXT_PLAIN, "txt");
+    static MediaType TEXT_PLAIN_TYPE = new MediaType(TEXT_PLAIN);
 
     /**
      * HAL JSON: application/hal+json.
@@ -451,7 +451,7 @@ const MediaType
     /**
      * Png Image: image/png.
      */
-    static MediaType IMAGE_PNG_TYPE = new MediaType(IMAGE_PNG, "png");
+    static MediaType IMAGE_PNG_TYPE = new MediaType(IMAGE_PNG);
 
     /**
      * Jpeg Image: image/jpeg.
@@ -461,7 +461,7 @@ const MediaType
     /**
      * Jpeg Image: image/jpeg.
      */
-    static MediaType IMAGE_JPEG_TYPE = new MediaType(IMAGE_JPEG, "jpg");
+    static MediaType IMAGE_JPEG_TYPE = new MediaType(IMAGE_JPEG);
 
     /**
      * Gif Image: image/gif.
@@ -471,7 +471,7 @@ const MediaType
     /**
      * Gif Image: image/gif.
      */
-    static MediaType IMAGE_GIF_TYPE = new MediaType(IMAGE_GIF, "gif");
+    static MediaType IMAGE_GIF_TYPE = new MediaType(IMAGE_GIF);
 
     /**
      * Webp Image: image/webp.

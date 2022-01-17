@@ -47,11 +47,13 @@ module TestWebApp
     import web.PathParam;
     import web.Post;
     import web.WebServer;
+    import web.WebService;
 
     /**
      * A simple CRUD web service.
      */
-    service UsersApi
+    @WebService("/")
+    class UsersApi
         {
         private Map<String, User> users = new HashMap();
 
@@ -61,7 +63,7 @@ module TestWebApp
          * @param who   the user name extracted from the URI path
          * @param user  the User to add or update, decoded from the json request body
          */
-        @Post("/{who}")
+        @Post("/users/{who}")
         @Consumes("application/json")
         void putUser(@PathParam String who, @Body User user)
             {
@@ -82,7 +84,7 @@ module TestWebApp
          * @return a True iff a User associated with the specified name exists
          * @return the User value associated with the specified name (conditional)
          */
-        @Get("/{who}")
+        @Get("/users/{who}")
         conditional User getUser(String who)
             {
             if (User user := users.get(who))
@@ -100,7 +102,7 @@ module TestWebApp
          * @return HttpStatus.OK if the User was deleted or HttpStatus.NotFound
          *         if no User exists for the specified name
          */
-        @Delete("/{who}")
+        @Delete("/users/{who}")
         HttpStatus deleteUser(String who)
             {
             if (!users.contains(who))
@@ -125,52 +127,10 @@ module TestWebApp
         console.println("Testing Web App");
 
         // Create the web server, add the endpoints, and start.
-        WebServer server = new WebServer(8080)
-                .addRoutes(new UsersApi(), "/users")
+        new WebServer()
+                .addRoutes(new UsersApi())
                 .start();
 
         console.println("Started WebServer http://localhost:8080");
-
-        // this will effectively wait for the specified duration...
-       // wait^(server, Duration:60s));
-        }
-
-    void wait(WebServer server, Duration duration)
-        {
-        @Inject Timer timer;
-
-        @Future Tuple<> result;
-
-        // schedule a "forced shutdown"
-        timer.schedule(duration, () ->
-            {
-            if (!&result.assigned)
-                {
-                @Inject Console console;
-                console.println("Shutting down the test");
-                server.stop();
-                result=Tuple:();
-                }
-            });
-
-        private void checkRunning(WebServer server, Timer timer, FutureVar<Tuple> result)
-            {
-            if (server.isRunning())
-                {
-                timer.schedule(Duration.ofSeconds(10), &checkRunning(server, timer, result));
-                return;
-                }
-
-            if (!result.assigned)
-                {
-                @Inject Console console;
-                console.println("The web server has stopped");
-                result.set(Tuple:());
-                }
-            }
-
-        // schedule a periodic check
-        timer.schedule(Duration.ofSeconds(10), &checkRunning(server, timer, &result));
-        return result;
         }
     }

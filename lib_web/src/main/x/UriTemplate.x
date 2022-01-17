@@ -599,10 +599,6 @@ const UriTemplate(String template, List<PathSegment> segments, Int variableCount
         {
         // ----- properties --------------------------------------------------------------------
 
-        RegEx PATTERN_PERCENT = new RegEx("%");
-
-        RegEx PATTERN_SPACE   = new RegEx("\\s");
-
         @Lazy String stringValue.calc()
             {
             StringBuffer builder = new StringBuffer();
@@ -660,6 +656,11 @@ const UriTemplate(String template, List<PathSegment> segments, Int variableCount
          */
         private String escape(String s)
             {
+            @Inject(opts = "%")
+            RegEx PATTERN_PERCENT;
+            @Inject(opts = "\\s")
+            RegEx PATTERN_SPACE;
+
             s = PATTERN_PERCENT.replaceAll(s, "%25");
 //            if (Matcher m := PATTERN_PERCENT.find(s))
 //                {

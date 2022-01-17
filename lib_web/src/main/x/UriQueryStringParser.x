@@ -24,7 +24,7 @@ class UriQueryStringParser
         this.uri                   = uri;
         this.maxParams             = maxParams;
         this.semicolonIsNormalChar = semicolonIsNormalChar;
-        this.pathEndIdx            = hasPath ? findPathEndIndex(uri) : 0;
+        this.pathEndIdx            = hasPath ? -1 : 0;
         this.path                  = Null;
         this.params                = Null;
     }
@@ -46,8 +46,18 @@ class UriQueryStringParser
 
     /**
      * The end of the path value in the URI.
+     * The index is lazily initialized.
      */
-    private Int pathEndIdx;
+    private Int pathEndIdx.get()
+        {
+        Int ix = super();
+        if (ix == -1)
+            {
+            ix = findPathEndIndex(uri);
+            set(ix);
+            }
+        return ix;
+        }
 
     /**
      * The decoded path value.
@@ -248,7 +258,7 @@ class UriQueryStringParser
     /**
      * Calculate the index in the URI that is the end of the path.
      */
-    private static Int findPathEndIndex(String uri)
+    private Int findPathEndIndex(String uri)
         {
         Loop: for (Char c : uri)
             {

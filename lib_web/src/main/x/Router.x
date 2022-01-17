@@ -1,125 +1,33 @@
-import ecstasy.reflect.Parameter;
-
-import binder.BodyParameterBinder;
-import binder.BindingResult;
-import binder.ParameterBinder;
-import binder.RequestBinderRegistry;
-
-import codec.MediaTypeCodec;
-import codec.MediaTypeCodecRegistry;
-
 /**
  * A router that can work out the routes for a given http method and URI.
  */
-@Concurrent
 class Router
-        implements Freezable
     {
     construct()
         {
-        construct Router(new Array(), new Array(), new Array());
-        }
-
-    construct (UriRoute[] routes, PreProcessor[] preProcessors, PostProcessor[] postProcessors)
-        {
-        this.routes         = routes;
-        this.preProcessors  = preProcessors;
-        this.postProcessors = postProcessors;
-        this.codecRegistry  = new MediaTypeCodecRegistry();
-        this.binderRegistry = new RequestBinderRegistry();
-
-        this.binderRegistry.addParameterBinder(new BodyParameterBinder(codecRegistry));
+        routes = new Array();
         }
 
     /**
      * The routes this Router can route requests to.
      */
-    private Array<UriRoute> routes;
-
-    private PreProcessor[] preProcessors;
-
-    private PostProcessor[] postProcessors;
+    private UriRoute[] routes;
 
     /**
-     * A registry of binders that can bind various attributes of a http request
-     * to different parameters of an endpoint method.
-     */
-    private RequestBinderRegistry binderRegistry;
-
-    /**
-     * The registry of codecs for converting request and response bodies to
-     * endpoint method parameters. For example, deserializing a json request
-     * body to a specific Object type.
-     */
-    private MediaTypeCodecRegistry codecRegistry;
-
-    // ----- Freezable interface -------------------------------------------------------------------
-
-    @Override
-    immutable Router freeze(Boolean inPlace = False)
-        {
-        if (&this.isImmutable)
-            {
-            return this.as(immutable Router);
-            }
-
-        if (inPlace)
-            {
-            this.routes         = this.routes.freeze(inPlace);
-            this.preProcessors  = this.preProcessors.freeze(inPlace);
-            this.postProcessors = this.postProcessors.freeze(inPlace);
-            return this.makeImmutable();
-            }
-
-        return new Router(this.routes.freeze(inPlace),
-                this.preProcessors.freeze(inPlace),
-                this.postProcessors.freeze(inPlace)).makeImmutable();
-        }
-
-    /**
-     * Add all of the annotated endpoints in the specified web-service.
+     * Add all of the Routes for the annotated endpoints in the specified Type.
      *
-     * @param webService  the web-service with annotated endpoints
-     * @param rootPath    the root path prefix for all endpoints
+     * @param controller  the endpoints to add
      */
-    void addRoutes(Object webService, String rootPath = "", PreProcessor[] preProcessors = [], PostProcessor[] postProcessors = [])
+    <ControllerType> void addRoutes(ControllerType controller)
         {
-        Type type;
-        Function<<>, <Object>> constructor;
-
-        if (webService.is(Type))
-            {
-            type = webService;
-            assert:arg constructor := type.defaultConstructor();
-            }
-        else
-            {
-            type = &webService.actualType;
-            constructor = () -> webService;
-            }
-
-        if (rootPath.size > 0)
-            {
-            if (!rootPath.startsWith('/'))
-                {
-                rootPath = "/" + rootPath;
-                }
-
-            if (rootPath.endsWith('/'))
-                {
-                rootPath = rootPath[0..rootPath.size-1);
-                }
-            }
-
-        for (Method<Object, Tuple, Tuple> endpoint : type.methods)
+        for (Method<Object, Tuple, Tuple> endpoint : &controller.actualType.methods)
             {
             if (endpoint.is(HttpEndpoint))
                 {
-                ExecutableFunction executable = new SimpleExecutableFunction(endpoint, constructor);
+                ExecutableFunction executable = new SimpleExecutableFunction(endpoint, controller);
                 MediaType[]        produces   = new Array<MediaType>();
                 MediaType[]        consumes   = new Array<MediaType>();
-                String             path       = formatPath(rootPath, endpoint.path);
-                UriMatchTemplate   template   = UriMatchTemplate.from(path);
+                UriMatchTemplate   template   = UriMatchTemplate.from(endpoint.path);
 
                 if (endpoint.is(Produces))
                     {
@@ -132,50 +40,29 @@ class Router
                     }
 
                 routes.add(new DefaultUriRoute(endpoint.method, template,
-                        executable, consumes, produces, preProcessors, postProcessors));
+                        executable, consumes, produces));
                 }
             }
-            routes = routes.sorted();
-        }
-
-    private String formatPath(String rootPath, String path)
-        {
-        if (path == "" || path == "/")
-            {
-            return rootPath;
-            }
-
-        if (path.endsWith('/'))
-            {
-            path = path[0..rootPath.size-1);
-            }
-
-        if (path.startsWith('/'))
-            {
-            return rootPath + path;
-            }
-
-        return rootPath + "/" + path;
         }
 
     /**
      * Finds the closest matching routes for the given request.
      *
-     * @param req  the request
+     * @param request the request
      *
      * @return a list of possible routes
      */
-    private List<UriRouteMatch> findClosestRoute(HttpRequest req)
+    List<UriRouteMatch> findClosestRoute(HttpRequest req)
         {
-        HttpMethod  method        = req.method;
-        Boolean     permitsBody   = HttpMethod.permitsRequestBody(method);
-        MediaType?  contentType   = req.contentType;
-        MediaType[] acceptedTypes = req.accepts;
+        HttpMethod  method                = req.method;
+        Boolean     permitsBody           = HttpMethod.permitsRequestBody(method);
+        MediaType?  contentType           = req.contentType;
+        MediaType[] acceptedProducedTypes = req.accepts;
 
         // find the routes matching the URI path filtered on matching media types
         List<UriRouteMatch> matches = findRoutes(method, req)
                 .filter(match -> (!permitsBody || match.canConsume(contentType))
-                                 && match.canProduce(acceptedTypes), new Array())
+                                 && match.canProduce(acceptedProducedTypes), new Array())
                 .as(List<UriRouteMatch>);
 
         if (matches.size <= 1)
@@ -184,14 +71,14 @@ class Router
             return matches;
             }
 
-        if (!acceptedTypes.empty)
+        if (!acceptedProducedTypes.empty)
             {
             // take the highest priority accepted type
-            MediaType           mediaType    = acceptedTypes[0];
+            MediaType           mediaType    = acceptedProducedTypes[0];
             List<UriRouteMatch> mostSpecific = matches.filter(
                     match -> match.canProduce(mediaType), new Array()).as(List<UriRouteMatch>);
 
-            if (!mostSpecific.empty || !acceptedTypes.contains(MediaType.ALL_TYPE))
+            if (!mostSpecific.empty || !acceptedProducedTypes.contains(MediaType.ALL_TYPE))
                 {
                 matches = mostSpecific;
                 }
@@ -269,99 +156,12 @@ class Router
         return matches;
         }
 
-    /**
-     * Handle a http request.
-     */
-    (Int, String[], String[][], Byte[]) handle(String uri, String methodName, String[] headerNames,
-            String[][] headerValues, Byte[] body)
-        {
-        @Inject Console console;
-
-        try
-            {
-            HttpHeaders         headers = new HttpHeaders(headerNames, headerValues);
-            HttpMethod          method  = HttpMethod.fromName(methodName);
-            HttpRequest         httpReq = new HttpRequest(URI.create(uri), headers, method, body);
-            List<UriRouteMatch> routes  = findClosestRoute(httpReq);
-            HttpResponse        response;
-
-            if (routes.size == 1)
-                {
-                // a single endpoint matches the request
-                UriRouteMatch matchedRoute = routes[0];
-
-                httpReq.attributes.add(HttpAttributes.ROUTE, matchedRoute.route);
-                httpReq.attributes.add(HttpAttributes.ROUTE_MATCH, matchedRoute);
-
-                // bind values from the request to the endpoint method parameters and execute the method call
-                function void () fn     = matchedRoute.createFunction();
-                RouteMatch       bound  = binderRegistry.bind(fn, matchedRoute, httpReq);
-                Tuple            result = bound.execute(fn);
-
-                if (bound.conditionalResult && result.size > 0 && result[0].as(Boolean) == False)
-                    {
-                    // the method executed is a conditional method that has returned False as the
-                    // first element of the Tuple
-                    // ToDo: should be handled by a 404 status handler if one has been added
-                    response = new HttpResponse(HttpStatus.NotFound);
-                    }
-                else
-                    {
-                    MediaType[] accepts   = httpReq.accepts;
-                    MediaType   mediaType = bound.resolveDefaultResponseContentType(accepts);
-                    Int         index     = bound.conditionalResult ? 1 : 0;
-
-                    response = HttpResponse.encodeResponse(result, index, method, mediaType);
-
-                    // If there is a body convert it to the required response media type
-                    if (response.body != Null && !response.body.is(Byte[]))
-                        {
-                        if (MediaTypeCodec codec := codecRegistry.findCodec(mediaType))
-                            {
-                            response.body = codec.encode(response.body);
-                            }
-                        // ToDo: the else should probably be an error/exception
-                        }
-                    }
-                }
-            else if (routes.size == 0)
-                {
-                // no endpoints match the request
-                // ToDo: should be handled by a 404 status handler if one has been added
-                response = new HttpResponse(HttpStatus.NotFound);
-                }
-            else
-                {
-                // At this point there are multiple endpoints that match the request
-                // ToDo: we should attempt to narrow down multiple results using other rules
-                response = new HttpResponse(HttpStatus.MultipleChoices);
-                }
-
-            // ToDo: Check the status and execute any status handler for the status
-
-            return response.asTuple();
-            }
-        catch (Exception error)
-            {
-            console.println($"Caught exception handling request for {uri}. {error}");
-            // ToDo: should be handled by a 500 status handler if one has been added
-            if (error.is(HttpException))
-                {
-                return (error.status.code, [], [], error.toString().utf8());
-                }
-            else
-                {
-                return (HttpStatus.InternalServerError.code, [], [], error.toString().utf8());
-                }
-            }
-        }
-
     // ----- inner class: DefaultUriRoute ----------------------------------------------------------
 
     /**
      * The default implementation of a UriRoute.
      */
-    protected static const DefaultUriRoute
+    static class DefaultUriRoute
             implements UriRoute
             implements Stringable
         {
@@ -370,8 +170,6 @@ class Router
                   ExecutableFunction    executable,
                   MediaType[]           consumes = [],
                   MediaType[]           produces = [],
-                  PreProcessor[]        preProcessors = [],
-                  PostProcessor[]       postProcessors = [],
                   List<DefaultUriRoute> nestedRoutes = List:[])
             {
             this.httpMethod       = httpMethod;
@@ -380,8 +178,6 @@ class Router
             this.consumes         = consumes;
             this.produces         = produces;
             this.nestedRoutes     = new Array(Mutable, nestedRoutes);
-            this.preProcessors    = preProcessors.sorted();
-            this.postProcessors   = postProcessors.sorted();
             }
 
         // ----- properties ------------------------------------------------------------------------
@@ -395,12 +191,6 @@ class Router
          * Child routes of this route.
          */
         private List<DefaultUriRoute> nestedRoutes;
-
-        @Override
-        PreProcessor[] preProcessors;
-
-        @Override
-        PostProcessor[] postProcessors;
 
         /**
          * The template to use to match this route to a URI.
@@ -436,6 +226,20 @@ class Router
                 return True, new DefaultUriRouteMatch(info, this);
                 }
             return False;
+            }
+
+        // ----- Orderable methods -----------------------------------------------------------------
+
+        @Override
+        static <CompileType extends DefaultUriRoute> Boolean equals(CompileType value1, CompileType value2)
+            {
+            return value1.uriMatchTemplate == value2.uriMatchTemplate;
+            }
+
+        @Override
+        static <CompileType extends DefaultUriRoute> Ordered compare(CompileType value1, CompileType value2)
+            {
+            return value1.uriMatchTemplate <=> value2.uriMatchTemplate;
             }
 
         // ----- Stringable methods ----------------------------------------------------------------

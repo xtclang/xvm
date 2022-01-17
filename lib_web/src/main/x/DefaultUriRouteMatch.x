@@ -5,7 +5,6 @@ import ecstasy.reflect.Parameter;
  */
 class DefaultUriRouteMatch
         implements UriRouteMatch
-        implements Stringable
     {
     construct(UriMatchInfo info, UriRoute route)
         {
@@ -36,9 +35,9 @@ class DefaultUriRouteMatch
         }
 
     @Override
-    Function<Tuple, Tuple> createFunction()
+    Function<Tuple, Tuple> fn.get()
         {
-        return route.executable.createFunction();
+        return route.executable.fn;
         }
 
     @Override
@@ -114,7 +113,7 @@ class DefaultUriRouteMatch
         }
 
     @Override
-    Tuple execute(function void () fn, Map<String, Object> parameterValues)
+    Tuple execute(Map<String, Object> parameterValues)
         {
         Tuple parameters = Tuple:();
 
@@ -180,30 +179,9 @@ class DefaultUriRouteMatch
             }
 
         @Override
-        Tuple<Object> execute(function void () fn)
+        Tuple<Object> execute()
             {
-            return execute(fn, variableValues);
+            return execute(variableValues);
             }
         }
-        // ----- Stringable methods ----------------------------------------------------------------
-
-        @Override
-        Int estimateStringLength()
-            {
-            return 0;
-            }
-
-        @Override
-        Appender<Char> appendTo(Appender<Char> buf)
-            {
-            "DefaultUriRouteMatch(".appendTo(buf);
-            info          .appendTo(buf);
-            ", "          .appendTo(buf);
-            route         .appendTo(buf);
-            ", "          .appendTo(buf);
-            variableValues.appendTo(buf);
-            ")"           .appendTo(buf);
-
-           return buf;
-           }
     }

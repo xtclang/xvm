@@ -2,7 +2,6 @@
  * Information of a route endpoint that matches a URI.
  */
 interface UriMatchInfo
-        extends Const
     {
     /**
      * The matched URI.

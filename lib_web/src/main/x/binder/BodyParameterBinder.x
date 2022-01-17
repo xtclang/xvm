@@ -8,7 +8,7 @@ import web.Body;
 /**
  * A ParameterBinder that binds a http request request body to a parameter.
  */
-const BodyParameterBinder(MediaTypeCodecRegistry registry)
+class BodyParameterBinder(MediaTypeCodecRegistry registry)
         implements ParameterBinder<HttpRequest>
     {
     @Override
@@ -49,8 +49,7 @@ const BodyParameterBinder(MediaTypeCodecRegistry registry)
                 Object? requestBody = request.body;
                 if (requestBody.is(Byte[]))
                     {
-                    assert Type[] paramType := &parameter.actualType.parameterized();
-                    ParamType body = codec.decode<ParamType>(paramType[0], requestBody);
+                    ParamType body = codec.decode<ParamType>(requestBody);
                     request.attributes.add(HttpAttributes.BODY, body);
                     return new BindingResult<ParamType>(body, True);
                     }

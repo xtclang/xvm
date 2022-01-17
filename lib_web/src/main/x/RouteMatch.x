@@ -30,9 +30,9 @@ interface RouteMatch
      *
      * @return the required parameters in order to invoke this route
      */
-    List<Parameter> requiredParameters(function void () fn)
+    @RO List<Parameter> requiredParameters.get()
         {
-        Parameter[]     parameters         = fn.params;
+        Parameter[]     parameters         = this.fn.params;
         List<Parameter> requiredParameters = new Array(parameters.size);
         if (parameters.size > 0)
             {
@@ -97,7 +97,7 @@ interface RouteMatch
      *
      * @return the fulfilled RouteMatch
      */
-    RouteMatch! fulfill(function void () fn, Map<String, Object> arguments)
+    RouteMatch! fulfill(Map<String, Object> arguments)
         {
         if (arguments.size == 0)
             {
@@ -106,8 +106,7 @@ interface RouteMatch
 
         Map<String, Object> newVariables          = new ListMap();
         Parameter[]         parameters            = fn.params;
-        List<Parameter>     required              = requiredParameters(fn);
-        Boolean             hasRequiredParameters = required.empty;
+        Boolean             hasRequiredParameters = requiredParameters.empty;
         Parameter?          bodyParameter         = bodyParameter;
         String?             bodyParameterName     = Null;
 
@@ -130,41 +129,15 @@ interface RouteMatch
 
                 if (hasRequiredParameters)
                     {
-                    required.remove(requiredParameter);
+                    requiredParameters.remove(requiredParameter);
                     }
 
                 newVariables.put(argumentName, value);
                 }
             }
 
-        return newFulfilled(newVariables, required);
+        return newFulfilled(newVariables, requiredParameters);
         }
-
-    /**
-     * Determine the default content type for the response body.
-     *
-     * @param accepts  the media types the http request accepts
-     *
-     * @return the MediaType of the response body
-     */
-    MediaType resolveDefaultResponseContentType(MediaType[] accepts)
-        {
-        for (MediaType mt : accepts)
-            {
-            if (mt != MediaType.ALL_TYPE && this.canProduce(mt))
-                {
-                return mt;
-                }
-            }
-
-        MediaType[] produces = this.produces;
-        if (produces.size > 0)
-            {
-            return produces[0];
-            }
-        return MediaType.APPLICATION_JSON_TYPE;
-        }
-
 
     RouteMatch newFulfilled(Map<String, Object> variables, List<Parameter> parameters);
 
@@ -173,9 +146,9 @@ interface RouteMatch
      *
      * @return the execution result
      */
-    Tuple execute(function void () fn)
+    Tuple execute()
         {
-        return execute(fn, Map<String, Object>:[]);
+        return execute(Map<String, Object>:[]);
         }
 
     /**
@@ -187,5 +160,5 @@ interface RouteMatch
      *
      * @return the execution result
      */
-    Tuple execute(function void () fn, Map<String, Object> parameterValues);
+    Tuple execute(Map<String, Object> parameterValues);
     }

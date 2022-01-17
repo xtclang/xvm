@@ -9,18 +9,6 @@ import ecstasy.collections.CaseInsensitiveHasher;
 class HttpHeaders
         delegates Stringable(headers)
     {
-    construct(String[] names = [], String[][] values = [])
-        {
-        assert:arg names.size == values.size;
-        }
-    finally
-        {
-        for (Int i : [0..names.size))
-            {
-            addAll(names[i], values[i]);
-            }
-        }
-
     /**
      * The map of headers.
      */
@@ -173,10 +161,7 @@ class HttpHeaders
             {
             for (String mt : list)
                 {
-                for (String s : mt.split(','))
-                    {
-                    accepts.add(new MediaType(s));
-                    }
+                accepts.add(new MediaType(mt));
                 }
             }
         return accepts.toArray();
@@ -187,47 +172,13 @@ class HttpHeaders
      *
      * @return the content type
      */
-    MediaType? getContentType()
+    MediaType? contentType.get()
         {
         if (String ct := get("Content-Type"))
             {
             return new MediaType(ct);
             }
         return Null;
-        }
-
-    /**
-     * Set the request or response content type.
-     *
-     * @param mediaType  the content type
-     */
-    void setContentType(MediaType? mediaType)
-        {
-        if (mediaType != Null)
-            {
-            set("Content-Type", mediaType.name);
-            }
-        else
-            {
-            headers.remove("Content-Type");
-            }
-        }
-
-    /**
-     * Set the request or response content type.
-     *
-     * @param mediaType  the content type
-     */
-    void setContentType(String? mediaType)
-        {
-        if (mediaType != Null)
-            {
-            set("Content-Type", mediaType);
-            }
-        else
-            {
-            headers.remove("Content-Type");
-            }
         }
 
     /**
@@ -245,23 +196,20 @@ class HttpHeaders
         return Null;
         }
 
-    Map<String, String[]> toMap()
+    ListMap<String, String[]> toMap()
         {
-        Map<String, String[]> map = new HashMap();
+        ListMap<String, String[]> map = new ListMap();
         return map.putAll(headers);
         }
 
-    (String[], String[][]) toArrays()
+    Tuple<String, String[]>[] toTuples()
         {
-        String[]   headerNames  = new Array(headers.size);
-        String[][] headerValues = new Array(headers.size);
-
+        Tuple<String, String[]>[] tuples = new Array(headers.size);
         Headers: for ((String key, String[] values) : headers)
             {
-            headerNames[Headers.count]  = key;
-            headerValues[Headers.count] = values;
+            tuples[Headers.count] = (key, values);
             }
-        return (headerNames, headerValues);
+        return tuples;
         }
 
 
