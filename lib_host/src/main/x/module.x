@@ -36,44 +36,41 @@ module host.xtclang.org
                     {
                     break;
                     }
-                Tuple<FutureVar, Buffer>? result = loadAndRun(path);
+                FutureVar? result = loadAndRun(path);
                 if (result != Null)
                     {
-                    result[0].get(); // block until done
-                    console.println(result[1].flush());
+                    result.get(); // block until done
                     }
                 }
             }
         else
             {
-            Tuple<FutureVar, Buffer>?[] results =
-                new Array(modules.size, i -> loadAndRun(modules[i]));
-            reportResults(results, 0);
+            FutureVar?[] results = new Array(modules.size, i -> loadAndRun(modules[i]));
+            waitForResults(results, 0);
             }
         }
 
-    void reportResults(Tuple<FutureVar, Buffer>?[] results, Int index)
+    void waitForResults(FutureVar?[] results, Int index)
         {
         while (index < results.size)
             {
-            Tuple<FutureVar, Buffer>? resultTuple = results[index++];
-            if (resultTuple != Null)
+            FutureVar? result = results[index++];
+            if (result != Null)
                 {
-                resultTuple[0].whenComplete((_, e) ->
+                result.whenComplete((_, e) ->
                     {
-                    console.println(resultTuple[1].flush());
                     if (e != Null)
                         {
                         console.println(e);
                         }
-                    reportResults(results, index);
+                    waitForResults(results, index);
                     });
                 return;
                 }
             }
         }
 
-    Tuple<FutureVar, Buffer>? loadAndRun(String path)
+    FutureVar? loadAndRun(String path)
         {
         File fileXtc;
         if (!(fileXtc := curDir.findFile(path)))
@@ -108,15 +105,15 @@ module host.xtclang.org
             }
 
         ModuleTemplate  moduleTemplate = fileTemplate.mainModule;
+        Path?           buildPath      = fileXtc.path.parent;
+        Directory       buildDir       = fileXtc.store.dirFor(buildPath?) : curDir;
+        Directory       appHomeDir     = ensureHome(buildDir, moduleTemplate);
+        function void() terminate      = () -> {};
         Injector        injector;
-        function void() terminate = () -> {};
 
         if (String dbModuleName := detectDatabase(fileTemplate))
             {
-            Path?     buildPath = fileXtc.path.parent;
-            Directory buildDir  = fileXtc.store.dirFor(buildPath?) : curDir;
-            String[]  errors    = new String[];
-
+            String[]       errors = new String[];
             DbHost         dbHost;
             ModuleTemplate dbModuleTemplate;
 
@@ -134,17 +131,7 @@ module host.xtclang.org
 
             terminate = dbHost.closeDatabase;
 
-            // give the db container the real console
-            Injector dbInjector = new Injector()
-                {
-                @Override
-                Supplier getResource(Type type, String name)
-                    {
-                    return type.isA(Console)
-                            ? console
-                            : super(type, name);
-                    }
-                };
+            Injector dbInjector = new Injector(ensureHome(buildDir, dbModuleTemplate));
 
             dbHost.dbContainer = new Container(dbModuleTemplate, Lightweight, repository, dbInjector);
 
@@ -154,7 +141,7 @@ module host.xtclang.org
 
             function Connection(DBUser) createConnection = dbHost.ensureDatabase();
 
-            injector = new Injector()
+            injector = new Injector(appHomeDir)
                 {
                 @Override
                 Supplier getResource(Type type, String name)
@@ -178,17 +165,14 @@ module host.xtclang.org
             }
         else
             {
-            injector = new Injector();
+            injector = new Injector(appHomeDir);
             }
 
         Container container = new Container(moduleTemplate, Lightweight, repository, injector);
-        Buffer    buffer    = injector.consoleBuffer;
-
-        buffer.println($"++++++ Loading module: {moduleTemplate.qualifiedName} +++++++\n");
 
         @Future Tuple result = container.invoke("run", Tuple:());
         &result.whenComplete((r, x) -> terminate());
-        return (&result, buffer);
+        return &result;
         }
 
     /**
@@ -240,12 +224,33 @@ module host.xtclang.org
             }
         }
 
-    service Injector
+    /**
+     * Ensure a home directory for the specified module.
+     */
+    Directory ensureHome(Directory parentDir, ModuleTemplate template)
+        {
+        return parentDir.dirFor($"{template.qualifiedName}_home").ensure();
+        }
+
+    /**
+     * The Injector service.
+     */
+    service Injector(Directory appHomeDir)
             implements ResourceProvider
         {
         @Lazy ConsoleBuffer consoleBuffer.calc()
             {
-            return new ConsoleBuffer(new ConsoleBack());
+            File consoleFile = appHomeDir.fileFor("console.log");
+            if (consoleFile.exists)
+                {
+                // remove the old content
+                consoleFile.truncate(0);
+                }
+            else
+                {
+                consoleFile.ensure();
+                }
+            return new ConsoleBuffer(new ConsoleBack(consoleFile));
             }
 
         /**
@@ -278,11 +283,6 @@ module host.xtclang.org
                 throw new UnsupportedOperation();
                 }
 
-            String flush()
-                {
-                return backService.flush();
-                }
-
             @Override
             Appender<Char> appendTo(Appender<Char> buf)
                 {
@@ -293,25 +293,17 @@ module host.xtclang.org
         /**
          * The "service" side of the ConsoleBuffer.
          */
-        class ConsoleBack
+        class ConsoleBack(File consoleFile)
             {
-            private StringBuffer buffer = new StringBuffer();
-
             void print(String s)
                 {
-                buffer.append(s);
+                consoleFile.append(s.utf8());
                 }
 
             void println(String s)
                 {
-                buffer.append(s).append('\n');
-                }
-
-            String flush()
-                {
-                String s = buffer.toString();
-                buffer = new StringBuffer();
-                return s;
+                // consider remembering the position if the file size calls for pruning
+                consoleFile.append(s.utf8()).append(['\n'.toByte()]);
                 }
             }
 
