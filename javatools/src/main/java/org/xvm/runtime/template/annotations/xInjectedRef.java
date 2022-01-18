@@ -73,12 +73,23 @@ public class xInjectedRef
             InjectedHandle hInject = new InjectedHandle(clazz.ensureAccess(Access.PUBLIC), sName, sResource);
             hInject.setField(frame, "resourceName", xString.makeHandle(sResource));
             hInject.setField(frame, "opts", xNullable.NULL);
+            hInject.makeImmutable();
             return hInject;
             }
 
         // arguments initialization and assignment will be handled in the generic manner
         assert clazz.isStruct();
         return new InjectedHandle(clazz, sName, sResource);
+        }
+
+    @Override
+    protected int postValidate(Frame frame, ObjectHandle hStruct)
+        {
+        if (hStruct.isMutable())
+            {
+            hStruct.makeImmutable();
+            }
+        return Op.R_NEXT;
         }
 
     @Override
@@ -125,7 +136,6 @@ public class xInjectedRef
             super(clazz, sVarName);
 
             f_sResource = sResourceName;
-            m_fMutable  = false;
             }
 
         public String getResourceName()

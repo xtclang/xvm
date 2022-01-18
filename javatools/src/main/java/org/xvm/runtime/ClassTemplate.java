@@ -1107,7 +1107,6 @@ public abstract class ClassTemplate
                 xException.immutableObjectProperty(frame, idProp.getName(), hThis.getType()));
             }
 
-
         if (field.isInflated())
             {
             RefHandle hRef = (RefHandle) (field.isTransient()
