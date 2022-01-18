@@ -133,6 +133,12 @@ tasks.register<JavaExec>("hostOne") {
 
     args(opts + "build/$name.xtc")
     mainClass.set("org.xvm.tool.Runner")
+
+    doLast {
+        exec() {
+            commandLine = listOf<String>("cat", "$buildDir/${name}_home/console.log")
+        }
+    }
 }
 
 tasks.register<JavaExec>("hostAll") {
