@@ -127,6 +127,12 @@ public class AccessTypeConstant
         }
 
     @Override
+    public TypeConstant removeAccess()
+        {
+        return m_constType;
+        }
+
+    @Override
     public boolean isNullable()
         {
         assert !m_constType.isNullable();
@@ -245,11 +251,10 @@ public class AccessTypeConstant
     @Override
     protected int compareDetails(Constant obj)
         {
-        if (!(obj instanceof AccessTypeConstant))
+        if (!(obj instanceof AccessTypeConstant that))
             {
             return -1;
             }
-        AccessTypeConstant that = (AccessTypeConstant) obj;
         int n = this.m_constType.compareTo(that.m_constType);
         if (n == 0)
             {
@@ -327,5 +332,5 @@ public class AccessTypeConstant
     /**
      * The public/protected/private/struct modifier for the type referred to.
      */
-    private Access m_access;
+    private final Access m_access;
     }

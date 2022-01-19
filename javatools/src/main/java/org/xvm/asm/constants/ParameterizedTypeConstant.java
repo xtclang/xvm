@@ -282,6 +282,7 @@ public class ParameterizedTypeConstant
             {
             synchronized (this)
                 {
+                resolver = ((TypeConstant) resolver).removeAccess();
                 if (resolver.equals(m_resolverPrev))
                     {
                     return m_typeResolved;
@@ -364,9 +365,8 @@ public class ParameterizedTypeConstant
 
         if (fDiff)
             {
-            ParameterizedTypeConstant typeResolved = (ParameterizedTypeConstant)
-                getConstantPool().ensureParameterizedTypeConstant(constResolved, aconstResolved);
-            return typeResolved;
+            return getConstantPool().
+                    ensureParameterizedTypeConstant(constResolved, aconstResolved);
             }
         return this;
         }
@@ -398,9 +398,8 @@ public class ParameterizedTypeConstant
 
         if (fDiff)
             {
-            ParameterizedTypeConstant typeResolved = (ParameterizedTypeConstant)
-                getConstantPool().ensureParameterizedTypeConstant(constUnderlying, aconstResolved);
-            return typeResolved;
+            return getConstantPool().
+                    ensureParameterizedTypeConstant(constUnderlying, aconstResolved);
             }
         return this;
         }
@@ -937,12 +936,11 @@ public class ParameterizedTypeConstant
     @Override
     protected int compareDetails(Constant obj)
         {
-        if (!(obj instanceof ParameterizedTypeConstant))
+        if (!(obj instanceof ParameterizedTypeConstant that))
             {
             return -1;
             }
 
-        ParameterizedTypeConstant that = (ParameterizedTypeConstant) obj;
         int n = this.m_constType.compareTo(that.m_constType);
         if (n == 0)
             {
