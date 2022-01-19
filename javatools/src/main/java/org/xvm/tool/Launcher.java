@@ -1509,7 +1509,7 @@ public abstract class Launcher
      *
      * @return the file containing the module, or null
      */
-    protected File findModule(File file)
+    public File findModule(File file)
         {
         if (file.isFile())
             {
@@ -1531,6 +1531,8 @@ public abstract class Launcher
 
         while (file != null && file.isDirectory())
             {
+// TODO CP remove this block once the new model is in place
+            {
             File moduleFile = new File(file, "module.x");
             if (moduleFile.exists() && moduleFile.isFile())
                 {
@@ -1539,8 +1541,19 @@ public abstract class Launcher
                     return moduleFile;
                     }
                 }
+            }
 
+            // if the directory is "/a/b/c/", then check for a module in the "/a/b/c.x" file
+            String name = file.getName();
             file = file.getParentFile();
+            File moduleFile = new File(file, name + ".x");
+            if (moduleFile.exists() && moduleFile.isFile())
+                {
+                if (isModule(moduleFile))
+                    {
+                    return moduleFile;
+                    }
+                }
             }
 
         return null;
@@ -1555,12 +1568,7 @@ public abstract class Launcher
      */
     protected boolean isModule(File file)
         {
-        if (!file.getName().endsWith(".x"))
-            {
-            return false;
-            }
-
-        return getModuleName(file) != null;
+        return file.getName().endsWith(".x") && getModuleName(file) != null;
         }
 
     /**
@@ -1572,14 +1580,29 @@ public abstract class Launcher
      */
     public String getModuleName(File file)
         {
+        if (m_mapModuleNames == null)
+            {
+            m_mapModuleNames = new HashMap<>();
+            }
+        else
+            {
+            String sName = m_mapModuleNames.get(file);
+            if (sName != null)
+                {
+                return sName;
+                }
+            }
+
         assert file.isFile() && file.canRead();
         log(Severity.INFO, "Parsing file: " + file);
 
         try
             {
-            Source source  = new Source(file, 0);
-            Parser parser  = new Parser(source, ErrorListener.BLACKHOLE);
-            return parser.parseModuleNameIgnoreEverythingElse();
+            Source source = new Source(file, 0);
+            Parser parser = new Parser(source, ErrorListener.BLACKHOLE);
+            String sName  =  parser.parseModuleNameIgnoreEverythingElse();
+            m_mapModuleNames.put(file, sName);
+            return sName;
             }
         catch (CompilerException e)
             {
@@ -1668,7 +1691,10 @@ public abstract class Launcher
      */
     protected Node loadSourceTree(File fileModule, Stage desired)
         {
-        Node nodeModule = buildSourceTree(null, fileModule);
+        assert fileModule.isFile();
+        Node nodeModule = fileModule.getName().equals("module.x")
+                ? deprecatedBuildSourceTree(null, fileModule) // TODO CP remove
+                : buildSourceTree(fileModule);
         nodeModule.logErrors();
         checkErrors();
 
@@ -1697,6 +1723,7 @@ public abstract class Launcher
         }
 
     /**
+     * TODO CP remove this method
      * Build a tree of source files that compose an Ecstasy module, or any sub-package thereof.
      *
      * @param parent  the parent node
@@ -1704,7 +1731,7 @@ public abstract class Launcher
      *
      * @return a node iff there is anything "there" to compile, otherwise null
      */
-    protected Node buildSourceTree(DirNode parent, File file)
+    protected Node deprecatedBuildSourceTree(DirNode parent, File file)
         {
         DirNode node;
         if (file.isDirectory())
@@ -1737,7 +1764,7 @@ public abstract class Launcher
             {
             if (fileChild.isDirectory())
                 {
-                DirNode nodeChild = (DirNode) buildSourceTree(node, fileChild);
+                DirNode nodeChild = (DirNode) deprecatedBuildSourceTree(node, fileChild);
                 if (nodeChild != null)
                     {
                     node.packageNodes().add(nodeChild);
@@ -1769,7 +1796,83 @@ public abstract class Launcher
             }
 
         return node.sourceFile() == null && node.classNodes().isEmpty()
-                && node.packageNodes().isEmpty() ? null : node;
+            && node.packageNodes().isEmpty() ? null : node;
+        }
+
+    /**
+     * Build a tree of source files that compose an Ecstasy module, or any sub-package thereof.
+     *
+     * @param fileModule  a module file
+     *
+     * @return the root node for the module
+     */
+    protected Node buildSourceTree(File fileModule)
+        {
+        // look for a sub-directory containing expanded module contents
+        String sFile = fileModule.getName();
+        if (sFile.endsWith(".x"))
+            {
+            File fileDir = new File(fileModule.getParentFile(), sFile.substring(0, sFile.length()-2));
+            if (fileDir.exists() && fileDir.isDirectory())
+                {
+                DirNode nodeModule = makeDirNode(null, fileDir);
+                nodeModule.configureSource(fileModule, makeFileNode(nodeModule, fileModule));
+                buildSourceTree(nodeModule, fileDir);
+                return nodeModule;
+                }
+            }
+
+        return makeFileNode(null, fileModule);
+        }
+
+    /**
+     * Build a sub-tree of source files that are in the specified directory.
+     *
+     * @param nodeParent    the parent node
+     * @param fileDir   a directory that may contain source code
+     */
+    protected void buildSourceTree(DirNode nodeParent, File fileDir)
+        {
+        for (File fileChild : nodeParent.file().listFiles())
+            {
+            if (fileChild.isDirectory())
+                {
+                // if the directory has no corresponding ".x" file, then it is an implied package
+                if (!(new File(fileDir, fileChild.getName() + ".x")).exists()
+                        && fileChild.getName().indexOf('.') < 0
+                        && fileChild.listFiles(f -> f.isFile() && f.getName().endsWith(".x")).length > 0)
+                    {
+                    DirNode nodeChild = makeDirNode(nodeParent, fileChild);
+                    nodeParent.packageNodes().add(nodeChild);
+                    buildSourceTree(nodeChild, fileChild);
+                    }
+                }
+            else
+                {
+                String sFile = fileChild.getName();
+                if (!sFile.endsWith(".x"))
+                    {
+                    continue;
+                    }
+
+                // if there is a directory by the same name (minus the ".x"), then recurse to create
+                // a subtree
+                File fileSubDir = new File(fileDir, sFile.substring(0, sFile.length()-2));
+                if (fileSubDir.exists() && fileSubDir.isDirectory())
+                    {
+                    // create a sub-tree
+                    DirNode nodeSub = makeDirNode(nodeParent, fileSubDir);
+                    nodeSub.configureSource(fileChild, makeFileNode(nodeSub, fileChild));
+                    nodeParent.packageNodes().add(nodeSub);
+                    buildSourceTree(nodeSub, fileSubDir);
+                    }
+                else
+                    {
+                    // it's a source file
+                    nodeParent.classNodes().put(fileChild, makeFileNode(nodeParent, fileChild));
+                    }
+                }
+            }
         }
 
     /**
@@ -2345,9 +2448,18 @@ public abstract class Launcher
         @Override
         public String name()
             {
-            return m_stmtType == null
-                    ? file().getName()
-                    : type().getName();
+            TypeCompositionStatement stmtType = type();
+            if (stmtType != null)
+                {
+                return stmtType.getName();
+                }
+
+            String sName = file().getName();
+            if (sName.endsWith(".x"))
+                {
+                sName = sName.substring(0, sName.length()-2);
+                }
+            return sName;
             }
 
         @Override
@@ -2638,4 +2750,9 @@ public abstract class Launcher
      * The number of times that errors have been suspended without being resumed.
      */
     protected int m_cSuspended;
+
+    /**
+     * Cache of module names extracted from corresponding ".x" source files.
+     */
+    private Map<File, String> m_mapModuleNames;
     }

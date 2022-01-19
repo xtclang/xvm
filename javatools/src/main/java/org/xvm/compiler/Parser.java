@@ -157,26 +157,33 @@ public class Parser
             {
             m_errorListener = ErrorListener.BLACKHOLE;
 
-            while (!eof() && current().getId() != Id.MODULE)
+            Loop: while (!eof())
                 {
-                }
-
-            if (!eof())
-                {
-                m_errorListener = new ErrorList(1);
-                List<Token> tokens = parseQualifiedName();
-                if (!m_errorListener.hasSeriousErrors())
+                switch (current().getId())
                     {
-                    StringBuilder sb = new StringBuilder();
-                    for (int i = 0, c = tokens.size(); i < c; ++i)
-                        {
-                        if (i > 0)
+                    case MODULE:
+                        if (!eof())
                             {
-                            sb.append('.');
+                            m_errorListener = new ErrorList(1);
+                            List<Token> tokens = parseQualifiedName();
+                            if (!m_errorListener.hasSeriousErrors())
+                                {
+                                StringBuilder sb = new StringBuilder();
+                                for (int i = 0, c = tokens.size(); i < c; ++i)
+                                    {
+                                    if (i > 0)
+                                        {
+                                        sb.append('.');
+                                        }
+                                    sb.append(tokens.get(i).getValueText());
+                                    }
+                                return sb.toString();
+                                }
                             }
-                        sb.append(tokens.get(i).getValueText());
-                        }
-                    return sb.toString();
+
+                    case L_CURLY:
+                    case R_CURLY:
+                        break Loop;
                     }
                 }
             }

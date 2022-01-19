@@ -67,7 +67,14 @@ public class TestConnector
         String[]   asModuleNames = new String[cModules];
         for (int i = 0; i < cModules; i++)
             {
-            String sName = compiler.getModuleName(listSrcFile.get(i));
+            File   fileOrig   = listSrcFile.get(i);
+            File   fileModule = compiler.findModule(fileOrig);
+            if (fileModule == null)
+                {
+                System.err.println("Failed to find module for " + fileOrig);
+                return;
+                }
+            String sName = compiler.getModuleName(fileModule);
             int    ofDot = sName.indexOf('.');
 
             asFileNames[i]   = ofDot < 0 ? sName : sName.substring(0, ofDot);
