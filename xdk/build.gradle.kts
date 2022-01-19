@@ -72,7 +72,7 @@ val compileEcstasy = tasks.register<JavaExec>("compileEcstasy") {
     args("-verbose",
             "-o", "$libDir",
             "-version", "$version",
-            "$ecstasyMain/x/module.x",
+            "$ecstasyMain/x/ecstasy.x",
             "$bridgeMain/x/module.x")
     mainClass.set("org.xvm.tool.Compiler")
 

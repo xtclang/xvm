@@ -2446,6 +2446,19 @@ public abstract class Launcher
             }
 
         @Override
+        public int depth()
+            {
+            int cDepth = super.depth();
+            DirNode nodeParent = parent();
+            if (nodeParent != null && this == nodeParent.sourceNode()
+                    && nodeParent.file() != this.file().getParentFile()) // TODO CP remove after new module re-org is complete
+                {
+                --cDepth;
+                }
+            return cDepth;
+            }
+
+        @Override
         public String name()
             {
             TypeCompositionStatement stmtType = type();

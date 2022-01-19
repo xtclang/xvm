@@ -282,17 +282,23 @@ public class Source
         }
 
     /**
-     * @return the child directory under the top directory, if it exists
+     * @param sChild the name of the child directory
+     *
+     * @return the specified directory at the same level as the top directory, if it exists
      */
     private File getSubDir(String sChild)
         {
         File file = getTopDir();
-        if (file != null)
+        if (file != null && file.exists() && file.isDirectory())
             {
-            file = new File(file, sChild);
-            if (file.exists() && file.isDirectory())
+            file = file.getParentFile();
+            if (file != null && file.exists() && file.isDirectory())
                 {
-                return file;
+                file = new File(file, sChild);
+                if (file.exists() && file.isDirectory())
+                    {
+                    return file;
+                    }
                 }
             }
         return null;
