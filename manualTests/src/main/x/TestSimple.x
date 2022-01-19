@@ -44,7 +44,7 @@ module TestSimple.test.org
             return new Child(key, value);
             }
 
-        static class Child(Key key, Value value)
+        static class Child(Object key, Object value)
             {
             }
         }

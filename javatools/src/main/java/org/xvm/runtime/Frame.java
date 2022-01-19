@@ -956,19 +956,14 @@ public class Frame
      */
     public int returnVoid()
         {
-        switch (f_iReturn)
+        return switch (f_iReturn)
             {
-            case Op.A_IGNORE:
-            case Op.A_IGNORE_ASYNC:
-            case Op.A_BLOCK:
-                return Op.R_RETURN;
-
-            case Op.A_TUPLE:
-                return returnValue(f_aiReturn[0], xTuple.H_VOID, false);
-
-            default:
-                return returnValue(f_iReturn, xTuple.H_VOID, false);
-            }
+            case Op.A_IGNORE,
+                 Op.A_IGNORE_ASYNC,
+                 Op.A_BLOCK         -> Op.R_RETURN;
+            case Op.A_TUPLE         -> returnValue(f_aiReturn[0], xTuple.H_VOID, false);
+            default                 -> returnValue(f_iReturn, xTuple.H_VOID, false);
+            };
         }
 
     /**
@@ -1155,18 +1150,12 @@ public class Frame
      */
     public int returnTuple(TupleHandle hTuple)
         {
-        switch (f_iReturn)
+        return switch (f_iReturn)
             {
-            case Op.A_MULTI:
-                return returnValues(hTuple.m_ahValue, null);
-
-            case Op.A_TUPLE:
-                return returnValue(f_aiReturn[0], hTuple, false);
-
-            default:
-                // pass the tuple "as is"
-                return returnValue(f_iReturn, hTuple, false);
-            }
+            case Op.A_MULTI -> returnValues(hTuple.m_ahValue, null);
+            case Op.A_TUPLE -> returnValue(f_aiReturn[0], hTuple, false);
+            default         -> returnValue(f_iReturn, hTuple, false); // pass the tuple "as is"
+            };
         }
 
     // return R_EXCEPTION
@@ -1257,14 +1246,9 @@ public class Frame
     private TypeConstant getLocalConstantType(int iArg)
         {
         Constant constant = getConstant(iArg);
-        switch (constant.getFormat())
-            {
-            case Class:
-                return ((ClassConstant) constant).getValueType(poolContext(), null);
-
-            default:
-                return constant.getType();
-            }
+        return constant.getFormat() == Constant.Format.Class
+                ? ((ClassConstant) constant).getValueType(poolContext(), null)
+                : constant.getType();
         }
 
     /**
@@ -1355,20 +1339,13 @@ public class Frame
             if (info != null && info.isDynamicVar())
                 {
                 RefHandle hRef = (RefHandle) hValue;
-                switch (hRef.getVarSupport().getReferent(this, hRef, Op.A_STACK))
+                return switch (hRef.getVarSupport().getReferent(this, hRef, Op.A_STACK))
                     {
-                    case Op.R_NEXT:
-                        return popStack();
-
-                    case Op.R_CALL:
-                        return new DeferredCallHandle(m_frameNext);
-
-                    case Op.R_EXCEPTION:
-                        throw m_hException.getException();
-
-                    default:
-                        throw new IllegalStateException();
-                    }
+                    case Op.R_NEXT      -> popStack();
+                    case Op.R_CALL      -> new DeferredCallHandle(m_frameNext);
+                    case Op.R_EXCEPTION -> throw m_hException.getException();
+                    default             -> throw new IllegalStateException();
+                    };
                  }
             return hValue;
             }
@@ -1488,7 +1465,7 @@ public class Frame
      * Note: this method increments the "nextVar" index.
      *
      * @param nVar     the variable to introduce
-     * @param nTypeId  an "absolute" (positive, ConstantPool based) number (see Op.convertId())
+     * @param nTypeId  an "absolute" (positive, local constants based) number (see Op.convertId())
      */
     public void introduceVar(int nVar, int nTypeId, int nNameId, int nStyle, ObjectHandle hValue)
         {
@@ -1508,7 +1485,7 @@ public class Frame
      * Note: this method increments up the "nextVar" index
      *
      * @param nVar     the variable to introduce
-     * @param nTypeId  an "absolute" (positive, ConstantPool based) number (see Op.convertId())
+     * @param nTypeId  an "absolute" (positive, local constants based) number (see Op.convertId())
      */
     public void introduceVar(int nVar, int nTypeId)
         {
@@ -1708,20 +1685,14 @@ public class Frame
             }
 
         Synchronicity synchronicity = f_context.getSynchronicity();
-        switch (synchronicity)
+        return switch (synchronicity)
             {
-            case Concurrent:
-                return isSafeStack()
-                    ? Synchronicity.Concurrent
-                    : Synchronicity.Synchronized;
-
-            case Synchronized:
-            case Critical:
-                return synchronicity;
-
-            default:
-                throw new IllegalStateException();
-            }
+            case Concurrent -> isSafeStack()
+                                ? Synchronicity.Concurrent
+                                : Synchronicity.Synchronized;
+            case Synchronized,
+                 Critical   -> synchronicity;
+            };
         }
 
     /**
@@ -2317,8 +2288,8 @@ public class Frame
                     : -1;
             }
 
-        private int m_ixGuard;     // the index of the next AllGuard to proceed to
-        private int m_ixGuardBase; // the index of the AllGuard to stop at
+        private       int m_ixGuard;     // the index of the next AllGuard to proceed to
+        private final int m_ixGuardBase; // the index of the AllGuard to stop at
         }
 
     /**
