@@ -159,7 +159,7 @@ val compileOODB = tasks.register<JavaExec>("compileOODB") {
             "-version", "$version",
             "-L", "$coreLib",
             "-L", "$bridgeLib",
-            "$oodbMain/x/module.x")
+            "$oodbMain/x/oodb.x")
    mainClass.set("org.xvm.tool.Compiler")
 }
 
@@ -180,7 +180,7 @@ val compileIMDB = tasks.register<JavaExec>("compileIMDB") {
             "-L", "$coreLib",
             "-L", "$bridgeLib",
             "-L", "$libDir",
-            "$imdbMain/x/module.x")
+            "$imdbMain/x/imdb.x")
     mainClass.set("org.xvm.tool.Compiler")
 }
 
@@ -202,7 +202,7 @@ val compileJsonDB = tasks.register<JavaExec>("compileJsonDB") {
             "-L", "$coreLib",
             "-L", "$bridgeLib",
             "-L", "$libDir",
-            "$jsondbMain/x/module.x")
+            "$jsondbMain/x/jsondb.x")
     mainClass.set("org.xvm.tool.Compiler")
 }
 
@@ -224,7 +224,7 @@ val compileHost = tasks.register<JavaExec>("compileHost") {
             "-L", "$coreLib",
             "-L", "$bridgeLib",
             "-L", "$libDir",
-            "$hostMain/x/module.x")
+            "$hostMain/x/host.x")
     mainClass.set("org.xvm.tool.Compiler")
 }
 

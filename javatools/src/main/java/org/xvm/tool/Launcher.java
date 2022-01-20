@@ -1630,7 +1630,7 @@ public abstract class Launcher
         // default (if no source is specified)
         if (listSources.isEmpty())
             {
-            listSources = Collections.singletonList(new File("module.x"));
+            listSources = Collections.singletonList(new File("module.x"));  // TODO CP module org changes
             }
 
         Set<File> setDups = null;
@@ -2284,8 +2284,7 @@ public abstract class Launcher
             }
 
         /**
-         * @return the "package.x" or "module.x" file as appropriate in this directory, or null if
-         *         none
+         * @return the module, package, or class source file, or null if none
          */
         public File sourceFile()
             {
@@ -2360,7 +2359,7 @@ public abstract class Launcher
         protected File                    m_fileSrc;
 
         /**
-         * The node for the module.x or package.x file, or null.
+         * The node for the module, package, or class source.
          */
         protected FileNode                m_nodeSrc;
 

@@ -15,7 +15,7 @@ Status: In Progress
 * There's a separate, related directory (`./_native/`) that is related to the proof-of-concept runtime.
 
 Excellent examples to look at:
-* `module.x` - the module definition (the root of the runtime library); contains many small class definitions
+* `ecstasy.x` - the module definition (the root of the runtime library); contains many small class definitions
 * `Object.x` - the root object
 * `Service.x` - key to understanding the concurrency model
 * `Enum.x` and `Enumeration.x` - the implementations for enum types

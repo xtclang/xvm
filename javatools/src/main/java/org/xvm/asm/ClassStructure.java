@@ -125,17 +125,7 @@ public class ClassStructure
             }
 
         // assume the implied class name
-        switch (clzTopLevel.getFormat())
-            {
-            case MODULE:
-                return "module.x";
-
-            case PACKAGE:
-                return "package.x";
-
-            default:
-                return clzTopLevel.getSimpleName() + ".x";
-            }
+        return clzTopLevel.getSimpleName() + ".x";
         }
 
     /**

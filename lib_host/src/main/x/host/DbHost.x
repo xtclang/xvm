@@ -127,6 +127,7 @@ class DbHost(String dbModuleName)
             return False;
             }
 
+        // TODO GG change to new module organization layout
         File sourceFile = moduleDir.fileFor("module.x");
 
         if (createModule(sourceFile, appName, dbModule, appSchemaTemplate, errors) &&
@@ -139,7 +140,7 @@ class DbHost(String dbModuleName)
         }
 
     /**
-     * Create module.x source file.
+     * Create module source file.
      */
     Boolean createModule(File sourceFile, String appName,
                          ModuleTemplate moduleTemplate, ClassTemplate appSchemaTemplate, Log errors)

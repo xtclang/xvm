@@ -32,7 +32,7 @@ import org.xvm.util.Severity;
  *
  * <p/>Compile the specified module, placing the result in the default location:
  *
- * <p/>{@code  xtc ./path/to/module.x}
+ * <p/>{@code  xtc ./path/to/module_name.x}
  *
  * <p/>Compile the module that the specified file belongs to:
  *
@@ -45,7 +45,7 @@ import org.xvm.util.Severity;
  *     same-named file with the ".xtc" extension, such as "MyModule.xtc".</li>
  * <li>If the module is in a directory format, then the resulting ".xtc" file is placed in the
  *     <i>parent</i> directory of the directory containing the module. For example, if the module
- *     file is located at "app/main/src/module.x", and the module name is "App", then the resulting
+ *     file is located at "app/main/src/App.x", and the module name is "App", then the resulting
  *     ".xtc" file is written to "app/main/App.xtc".</li>
  * </ul>
  *
