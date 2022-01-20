@@ -13,8 +13,8 @@ Ecstasy virtual machine (XVM) project.
 </td><td style="border: none;">
 
 Ecstasy is a new, general-purpose, programming language, designed for modern cloud architectures,
-and explicitly for the serverless cloud. Actually, to be completely honest, it's the most amazing
-programming language ever. No, really, it's that awesome.
+and explicitly for the secure, serverless cloud. Actually, to be completely honest, it's the most
+amazing programming language ever. No, really, it's that awesome.
 
 </td></tr></table>
 
@@ -42,7 +42,8 @@ And please respect our [code of conduct](CODE_OF_CONDUCT.md) and each other.
 
 ## Status:
 
-Version 0.1.0. _Not_ 1.0.
+Version 0.3.0. That's way _before_ a 1.0. In other words, Ecstasy is about as mature as Windows 3.1
+was.
 
 **Warning:** The Ecstasy project is not yet certified for production use. This is a large and
 extremely ambitious project, and _it may yet be several years before this project is certified for
@@ -56,8 +57,9 @@ place for you here. Feel free to lurk. Feel free to fork the project. Feel free 
  
 We only "_get one chance to make a good first impression_", and we are determined not to waste it.
 We will not ask developers to waste their time attempting to use an incomplete project, so if you
-are here for a work reason, it's probably a little bit too early for you to be using this. If you
-are here to learn or contribute, then you are probably right on time! Our doors are open.
+are here for a work reason, it's probably still a bit too early for you to be using this for your
+day job. On the other hand, if you are here to learn and/or contribute, then you are right on time!
+Our doors are open.
 
 ## License
 
@@ -70,8 +72,8 @@ derivative forms thereof) is Creative Commons CC-BY-4.0, unless explicitly noted
 
 To help ensure clean IP (which will help us keep this project free and open source), pull requests
 for source code changes require a signed contributor agreement to be submitted in advance. We use
-the Apache contributor model agreements (modified to identify this specific project), which are
-located under the `./license` directory. Contributors are required to sign and submit an Ecstasy
+the Apache contributor model agreements (modified to identify this specific project), which can be
+found in the [license](./license) directory. Contributors are required to sign and submit an Ecstasy
 Project Individual Contributor License Agreement (ICLA), or be a named employee on an Ecstasy
 Project Corporate Contributor License Agreement (CCLA), both derived directly from the Apache
 agreements of the same name. (Sorry for the paper-work! We hate it, too!)
@@ -86,25 +88,26 @@ made aware of, and remains (c) The Ecstasy Project, all rights reserved.
 
 The project is organized as a number of sub-projects, with the important ones to know about being:
 
-* The Ecstasy core library is in the `xvm/ecstasy` directory, and is conceptually like `stdlib` for
-  C, or `rt.jar` for Java. When the XDK is built, the resulting module is located at 
-  `xdk/lib/ecstasy.xtc`. This module contains portions of the Ecstasy tool chain, including the
+* The Ecstasy core library is in the [xvm/lib_ecstasy](./lib_ecstasy) directory, and is conceptually
+  like `stdlib` for C, or `rt.jar` for Java. When the XDK is built, the resulting module is located
+  at `xdk/lib/ecstasy.xtc`. This module contains portions of the Ecstasy tool chain, including the
   lexer and parser. (Ecstasy source files use an `.x` extension, and are compiled into a single
   module file with an `.xtc` extension.)
   
 * The Java tool chain (including an Ecstasy compiler and interpreter) is located in the 
-  `xvm/javatools` directory.  When the XDK is built, the resulting `.jar` file is located at 
-  `xdk/javatools/javatools.jar`.
+  [xvm/javatools](./javatools) directory.  When the XDK is built, the resulting `.jar` file is
+  located at `xdk/javatools/javatools.jar`.
   
-* There is an Ecstasy library in `xvm/javatools_bridge` that is used by the Java interpreter to
-  boot-strap the runtime. When the XDK is built, the resulting module is located at 
+* There is an Ecstasy library in [xvm/javatools_bridge](./javatools_bridge) that is used by the Java
+  interpreter to boot-strap the runtime. When the XDK is built, the resulting module is located at 
   `xdk/javatools/javatools_bridge.xtc`.
   
-* The wiki documentation is [online](https://github.com/xtclang/xvm/wiki), and (coming soon) will
-  also be found in the `xvm/wiki` project directory, and in the `xdk/doc` directory of the built
-  XDK. 
+* The wiki documentation is [online](https://github.com/xtclang/xvm/wiki). There is an
+  [introduction to Ecstasy](https://github.com/xtclang/xvm/wiki/lang-intro) that is being written
+  for new users. The wiki source code will (eventually) be found in the `xvm/wiki` project directory,
+  and (as a distributable) in the `xdk/doc` directory of the built XDK. 
   
-* Other directories each have a `README.md` file that explains their purpose.
+* Various other directories will have a `README.md` file that explains their purpose.
 
 To download the entire project from the terminal, you will need
 [git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) installed. From the terminal,
