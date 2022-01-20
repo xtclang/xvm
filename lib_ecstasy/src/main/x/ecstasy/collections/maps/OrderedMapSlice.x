@@ -500,8 +500,6 @@ class OrderedMapSlice<Key extends Orderable, Value>
         @Override
         OrderedSet<Key> reify()
             {
-            // TODO GG: assert Orderer orderer := ordered();
-            // TODO GG: Orderer orderer = this.OrderedMapSlice.compare;
             return new SkiplistSet<Key>(size, this.OrderedMapSlice.compare).addAll(this);
             }
 

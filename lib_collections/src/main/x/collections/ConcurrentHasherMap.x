@@ -19,8 +19,6 @@ import ecstasy.collections.maps.KeyEntry;
  * partition. Furthermore blocking writes such as by [process] on a key will not block concurrent
  * reads of that same key. Writes to any given key are ordered.
  */
-// TODO GG: if this is `service` (not `const`), Map.equals throws an IllegalArgument complaining
-//          about a mutable being used for a service call, I don't see what that mutable is
 const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
         implements Map<Key, Value>
     {

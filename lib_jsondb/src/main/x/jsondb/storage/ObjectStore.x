@@ -469,8 +469,6 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
                 }
             else
                 {
-                // TODO GG can't assign a future result to a Future
-                // changes.pendingReadId = txManager.enlist^(this.id, txId);
                 Int readId = txManager.enlist^(this.id, txId);
                 changes = new Changes(writeId, &readId);
                 inFlight.put(writeId, changes);
