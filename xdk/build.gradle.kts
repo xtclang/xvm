@@ -99,7 +99,7 @@ val compileAggregate = tasks.register<JavaExec>("compileAggregate") {
             "-version", "$version",
             "-L", "$coreLib",
             "-L", "$bridgeLib",
-            "$aggregateMain/x/module.x")
+            "$aggregateMain/x/aggregate.x")
     mainClass.set("org.xvm.tool.Compiler")
 }
 
@@ -119,7 +119,7 @@ val compileCollections = tasks.register<JavaExec>("compileCollections") {
             "-version", "$version",
             "-L", "$coreLib",
             "-L", "$bridgeLib",
-            "$collectionsMain/x/module.x")
+            "$collectionsMain/x/collections.x")
     mainClass.set("org.xvm.tool.Compiler")
 }
 
