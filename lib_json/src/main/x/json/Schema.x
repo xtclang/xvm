@@ -49,6 +49,8 @@ const Schema
               Boolean     retainNulls      = False,
               Boolean     storeRemainders  = False)
         {
+        import json.mappings.*;
+
         // verify that the type system is the TypeSystem that includes this class, or a TypeSystem
         // that derives from the TypeSystem that includes this class
         if (typeSystem == Null)
@@ -78,7 +80,9 @@ const Schema
         // build indexes for the provided mappings
         ListMap<Type, Mapping> mappingByType   = new ListMap();
         HashMap<String, Type>  typeByName      = new HashMap();
-        Mapping[]              defaultMappings = mapping.DEFAULT_MAPPINGS;
+        Mapping[]              defaultMappings = json.mappings.DEFAULT_MAPPINGS;  // TODO CP why didn't this resolve without qualified name?
+                                                                                  // TODO CP ... and why didn't explicit import work either?
+
         mappings = mappings.empty ? defaultMappings : (new Mapping[]) + mappings + defaultMappings;
         for (Mapping mapping : mappings)
             {
@@ -90,7 +94,6 @@ const Schema
             {
             // add a reflection mapping that "handles" any object (by providing a more specific
             // mapping for whatever object type is requested)
-            import mapping.*;
             Mapping<Object> mapping = new @Narrowable ReflectionMapping("Object", Object, []);
             mappingByType.putIfAbsent(Object, mapping);
             typeByName.putIfAbsent("Object", Object);
@@ -344,7 +347,7 @@ const Schema
 
             // to avoid the chicken-and-the-egg problem with recursion, register a temporary mapping
             // for this type
-            allMappingsByType.put(type, new mapping.ChickenOrEggMapping<Serializable>(() ->
+            allMappingsByType.put(type, new mappings.ChickenOrEggMapping<Serializable>(() ->
                 {
                 assert Mapping<Serializable> mapping := findMapping(type);
                 return mapping;

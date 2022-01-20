@@ -139,7 +139,7 @@ val compileJson = tasks.register<JavaExec>("compileJson") {
             "-version", "$version",
             "-L", "$coreLib",
             "-L", "$bridgeLib",
-            "$jsonMain/x/module.x")
+            "$jsonMain/x/json.x")
     mainClass.set("org.xvm.tool.Compiler")
 }
 

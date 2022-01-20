@@ -1,4 +1,4 @@
-package mapping
+package mappings
     {
     Mapping[] DEFAULT_MAPPINGS =
         [

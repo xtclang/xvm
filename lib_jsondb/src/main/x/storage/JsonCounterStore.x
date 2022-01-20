@@ -1,6 +1,6 @@
 import model.DBObjectInfo;
 
-import json.mapping.IntNumberMapping;
+import json.mappings.IntNumberMapping;
 
 /**
  * Provides the low-level I/O for a transactional counter, with optimizations for blind adjustments
