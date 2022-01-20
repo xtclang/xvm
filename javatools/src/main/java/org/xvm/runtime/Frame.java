@@ -1288,18 +1288,22 @@ public class Frame
     public TypeConstant resolveType(TypeConstant type)
         {
         ConstantPool pool = poolContext();
+        if (type.containsFormalType(true))
+            {
+            type = type.resolveGenerics(pool, getGenericsResolver(type.containsDynamicType(null)));
 
-        type = type.resolveGenerics(pool, getGenericsResolver(type.containsDynamicType(null)));
+            if (type.containsFormalType(true))
+                {
+                // soft assertion
+                System.err.println("ERROR: Unresolved type " + type);
+                }
+            }
+
         if (type.containsAutoNarrowing(true) && f_hThis != null)
             {
             type = type.resolveAutoNarrowing(pool, false, f_hThis.getType(), null);
             }
 
-        if (type.containsFormalType(true))
-            {
-            // soft assertion
-            System.err.println("ERROR: Unresolved type " + type);
-            }
         return type;
         }
 
