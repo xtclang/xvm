@@ -1840,7 +1840,7 @@ public abstract class Launcher
                 // if the directory has no corresponding ".x" file, then it is an implied package
                 if (!(new File(fileDir, fileChild.getName() + ".x")).exists()
                         && fileChild.getName().indexOf('.') < 0
-                        && fileChild.listFiles(f -> f.isFile() && f.getName().endsWith(".x")).length > 0)
+                        && fileChild.listFiles(f -> f.isDirectory() ^ f.getName().endsWith(".x")).length > 0)
                     {
                     DirNode nodeChild = makeDirNode(nodeParent, fileChild);
                     nodeParent.packageNodes().add(nodeChild);
