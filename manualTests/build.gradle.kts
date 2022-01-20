@@ -135,8 +135,11 @@ tasks.register<JavaExec>("hostOne") {
     mainClass.set("org.xvm.tool.Runner")
 
     doLast {
-        exec() {
-            commandLine = listOf<String>("cat", "$buildDir/${name}_home/console.log")
+        val console = "$buildDir/${name}_home/console.log"
+        if (file(console).exists()) {
+            exec() {
+                commandLine = listOf<String>("cat", "$buildDir/${name}_home/console.log")
+            }
         }
     }
 }
