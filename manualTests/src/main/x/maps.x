@@ -132,6 +132,9 @@ module TestMaps
 
     void profile(function void () run, Int iterations)
         {
+        // warmup
+        run();
+
         timer.reset();
         for (Int i = 0; i < iterations; i++)
             {
