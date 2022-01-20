@@ -40,6 +40,10 @@
  *
  * * When both `@Synchronized` and `@Concurrent` appear on the same class, property, or method, the
  *   `@Synchronized` annotation takes precedence.
+ *
+ * * Special care should be taken when marking default interface methods as `@Concurrent`: if the
+ *   implementation calls any method that can potentially "yield", doing it **while** retaining any
+ *   state (e.g. using a non-concurrent iterator over a collection) should be avoided.
  */
 mixin Concurrent
         into Class | Property | Method

@@ -158,7 +158,6 @@ interface Collection<Element>
      *
      * @return `True` iff the specified values all exist in this collection
      */
-    @Concurrent
     Boolean containsAll(Collection! values)
         {
         // this.contains(values) is always True when there are no values to test, or when the passed
@@ -175,9 +174,9 @@ interface Collection<Element>
             }
 
         // if both collections are sorted by the same thing, then a "zipper" algorithm is O(N)
-        if (    Orderer? thisOrder := this.ordered(),
-                Orderer? thatOrder := values.ordered(),
-                thisOrder? == thatOrder?)
+        if (Orderer? thisOrder := this.ordered(),
+            Orderer? thatOrder := values.ordered(),
+            thisOrder? == thatOrder?)
             {
             using (Iterator<Element> iterThat = values.iterator(),
                    Iterator<Element> iterThis = this  .iterator())
@@ -226,6 +225,19 @@ interface Collection<Element>
         using (val iter = values.iterator())
             {
             return iter.whileEach(contains(_));
+            }
+        }
+
+    /**
+     * Perform the specified action for all elements in this collection.
+     *
+     * @param process  an action to perform on each element
+     */
+    void forEach(function void (Element) process)
+        {
+        for (Element e : this)
+            {
+            process(e);
             }
         }
 
@@ -333,7 +345,6 @@ interface Collection<Element>
      *
      * @return the resulting `Collection` containing the elements that matched the criteria
      */
-    @Concurrent
     <Result> Collection!<Result> map(function Result(Element) transform,
                                      Collection!<Result>?     dest      = Null)
         {
@@ -381,10 +392,7 @@ interface Collection<Element>
         assert:arg &dest != &this;
 
         dest ?:= new Result[];
-        for (Element e : this)
-            {
-            dest.addAll(flatten(e));
-            }
+        forEach(e -> dest.addAll(flatten(e)));
         return dest;
         }
 
@@ -422,10 +430,10 @@ interface Collection<Element>
                            function Result(Result, Element) accumulate)
         {
         Result result = initial;
-        for (Element e : this)
+        forEach(e ->
             {
             result = accumulate(result, e);
-            }
+            });
         return result;
         }
 
@@ -457,11 +465,11 @@ interface Collection<Element>
                                           Map<Key,Value>?                 dest = Null)
         {
         Map<Key, Value> map = dest ?: new ListMap();
-        for (Element e : this)
+        forEach(e ->
             {
             (Key k, Value v) = transform(e);
             map.put(k, v);
-            }
+            });
         return map;
         }
 
@@ -521,10 +529,10 @@ interface Collection<Element>
                                                  Map<Key, Collection!<Element>>? dest   = Null)
         {
         Map<Key, Collection<Element>> map = dest ?: new ListMap();
-        for (Element e : this)
+        forEach(e ->
             {
             map.computeIfAbsent(keyFor(e), () -> new ListSet<Element>()).add(e);
-            }
+            });
         return map;
         }
 
@@ -550,7 +558,7 @@ interface Collection<Element>
                                           Map<Element, Value>?           dest = Null)
         {
         Map<Element, Value> map = dest ?: new ListMap();
-        for (Element e : this)
+        forEach(e ->
             {
             map.process(e, entry ->
                 {
@@ -559,7 +567,7 @@ interface Collection<Element>
                         : initial(e);
                 return Null;
                 });
-            }
+            });
         return map;
         }
 
@@ -667,10 +675,10 @@ interface Collection<Element>
     Collection addAll(Iterator<Element> iter)
         {
         Collection collection = this;
-        for (Element value : iter)
+        iter.forEach(value ->
             {
             collection = collection.add(value);
-            }
+            });
         return collection;
         }
 
@@ -734,10 +742,10 @@ interface Collection<Element>
         // made with knowledge of either this collection and/or the passed in values, for example
         // if both are ordered; it must obviously be overridden for non-mutable collections
         Collection result = this;
-        for (Element value : values)
+        values.iterator().forEach(value ->
             {
             result = result.remove(value);
-            }
+            });
         return result;
         }
 
@@ -785,13 +793,13 @@ interface Collection<Element>
     (Collection, Int) removeAll(function Boolean (Element) shouldRemove)
         {
         Element[]? values = Null;
-        for (Element value : this)
+        forEach(value ->
             {
             if (shouldRemove(value))
                 {
                 values = (values ?: new Element[]) + value;
                 }
-            }
+            });
 
         if (values == Null)
             {

@@ -353,10 +353,10 @@ interface Map<Key, Value>
     Map putAll(Map! that)
         {
         Map result = this;
-        for (Entry entry : that.entries)
+        that.entries.forEach(entry ->
             {
             result = result.put(entry.key, entry.value);
-            }
+            });
         return result;
         }
 
@@ -376,6 +376,7 @@ interface Map<Key, Value>
      *
      * @throws ReadOnly  if the map does not allow or support the requested mutating operation
      */
+    @Concurrent
     conditional Map putIfAbsent(Key key, Value value)
         {
         if (keys.contains(key))
@@ -397,6 +398,7 @@ interface Map<Key, Value>
      * @return True iff the key did exist in the map and was associated with `valueOld`
      * @return the resultant map, which is the same as `this` for an in-place map
      */
+    @Concurrent
     conditional Map replace(Key key, Value valueOld, Value valueNew)
         {
         if (valueOld != valueNew)
@@ -436,6 +438,7 @@ interface Map<Key, Value>
      *
      * @throws ReadOnly  if the map does not allow or support the requested mutating operation
      */
+    @Concurrent
     conditional Map remove(Key key, Value value)
         {
         if (Value valueOld := get(key), value == valueOld)
@@ -468,10 +471,10 @@ interface Map<Key, Value>
             }
         else
             {
-            for (Key key : keys)
+            keys.forEach(key ->
                 {
                 result = result.remove(key);
-                }
+                });
             }
         return result;
         }
@@ -495,6 +498,7 @@ interface Map<Key, Value>
      * @throws ReadOnly  if the map does not support in-place mutation and the `compute` function
      *                   attempts to modify an entry
      */
+    @Concurrent
     <Result> Result process(Key                    key,
                             function Result(Entry) compute)
         {
@@ -520,10 +524,7 @@ interface Map<Key, Value>
                                           function Result(Entry) compute)
         {
         ListMap<Key, Result> result = new ListMap(keys.size);
-        for (Key key : keys)
-            {
-            result.put(key, process(key, compute));
-            }
+        keys.iterator().forEach(key -> result.put(key, process(key, compute)));
         return result;
         }
 
@@ -541,6 +542,7 @@ interface Map<Key, Value>
      * @throws ReadOnly  if the map does not support in-place mutation and the `compute` function
      *                   attempts to modify an entry
      */
+    @Concurrent
     <Result> conditional Result processIfPresent(Key                    key,
                                                  function Result(Entry) compute)
         {
