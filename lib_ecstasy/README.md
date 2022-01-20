@@ -1,18 +1,14 @@
-# Directory: ./xsrc/ #
+# Runtime Library
 
-This directory contains natural (Ecstasy) code.
-
-## Runtime Library
-
-Folder: `./system/`
+Folder: `./lib_ecstasy/`
 
 Status: In Progress
 
-* This is the core runtime library (module `Ecstasy.xtclang.org`).
+* This directory contains the Ecstasy code for the core `ecstasy.xtclang.org` module.
 * The XVM is tightly coupled with this module.
 * It compiles, but there's a lot of stuff not done, and a lot of stuff missing.
 * Major reorganization still occurs periodically; the organization will not be required to be stable until we approach the 1.0 release.
-* There's a separate, related directory (`./_native/`) that is related to the proof-of-concept runtime.
+* There's a separate, related directory (`./javatools_bridge/`) that is related to the proof-of-concept runtime.
 
 Excellent examples to look at:
 * `ecstasy.x` - the module definition (the root of the runtime library); contains many small class definitions
@@ -25,11 +21,3 @@ Excellent examples to look at:
 * `Iterable.x` and `Iterator.x` - pretty obvious the 10th time around
 * `fs/*.x` - basic filing system APIs
 * `annotations/*.x` - mixins that apply to various things (like variables, methods, classes)
-
-## Other stuff
-
-Folder: `./examples/`
-
-Status: Scratch-pad
-
-This is just stuff that we're keeping around because sometimes we need something to remind us of who we are and why we're here, and there's not always enough coffee to pull that off.
