@@ -488,9 +488,8 @@ public class ServiceContext
      */
     private void processResponses()
         {
-        Queue<Response> qResponse = f_queueResponse;
         Response response;
-        while ((response = qResponse.poll()) != null)
+        while ((response = f_queueResponse.poll()) != null)
             {
             response.run();
             }
@@ -509,11 +508,10 @@ public class ServiceContext
         processResponses();
 
         // pickup all the messages, but keep them in the "initial" state
-        Queue<Message> qMsg   = f_queueMsg;
-        FiberQueue     qFiber = f_queueSuspended;
+        FiberQueue qFiber = f_queueSuspended;
 
         Message message;
-        while ((message = qMsg.poll()) != null)
+        while ((message = f_queueMsg.poll()) != null)
             {
             qFiber.add(message.createFrame(this));
             }
@@ -536,22 +534,17 @@ public class ServiceContext
         {
         switch (frame.f_fiber.getStatus())
             {
-            case Running:
-                throw new IllegalStateException();
+            case Running -> throw new IllegalStateException();
 
-            case Initial:
-                f_queueSuspended.add(frame);
-                break;
+            case Initial -> f_queueSuspended.add(frame);
 
-            case Waiting:
-                m_frameCurrent = null;
-                f_queueSuspended.add(frame);
-                break;
+            case Waiting ->
+                    {
+                    m_frameCurrent = null;
+                    f_queueSuspended.add(frame);
+                    }
 
-            case Paused:
-                // we must resume this frame
-                m_frameCurrent = frame;
-                break;
+            case Paused -> m_frameCurrent = frame; // we must resume this frame
             }
         }
 
@@ -769,15 +762,11 @@ public class ServiceContext
 
                         frame.raiseException(hException);
 
-                        switch (frame.m_continuation.proceed(null))
+                        // R_NEXT indicates this fiber is done
+                        if (frame.m_continuation.proceed(null) != Op.R_NEXT)
                             {
-                            case Op.R_NEXT:
-                                // this fiber is done
-                                break;
-
-                            default:
-                                // the proto-frame never calls anything naturally nor throws
-                                throw new IllegalStateException();
+                            // the proto-frame never calls anything naturally nor throws
+                            throw new IllegalStateException();
                             }
 
                         terminateFiber(fiber);
@@ -819,18 +808,11 @@ public class ServiceContext
         TypeConstant typeReturn;
         switch (cReturns)
             {
-            case -1:
-                cReturns   = 1;
-                typeReturn = f_pool.typeTuple0();
-                break;
+            case -1 -> {typeReturn = f_pool.typeTuple0(); cReturns = 1;}
 
-            case 0:
-                typeReturn = null;
-                break;
+            case 0  -> typeReturn = null;
 
-            default:
-                typeReturn = f_pool.typeObject();
-                break;
+            default -> typeReturn = f_pool.typeObject();
             }
 
         // create a pseudo frame that has variables to collect the return values
@@ -959,22 +941,12 @@ public class ServiceContext
             return ServiceStatus.Idle;
             }
 
-        switch (statusActive)
+        return switch (statusActive)
             {
-            case Initial:
-            case Running:
-            case Paused:
-                return ServiceStatus.Busy;
-
-            case Waiting:
-                return ServiceStatus.BusyWaiting;
-
-            case Terminating:
-                return ServiceStatus.IdleWaiting;
-
-            default:
-                throw new IllegalStateException();
-            }
+            case Initial, Running, Paused -> ServiceStatus.Busy;
+            case Waiting                  -> ServiceStatus.BusyWaiting;
+            case Terminating              -> ServiceStatus.IdleWaiting;
+            };
         }
 
     /**
@@ -1150,48 +1122,44 @@ public class ServiceContext
         int     cReturns;
         switch (iReturn)
             {
-            case Op.A_IGNORE_ASYNC:
+            case Op.A_IGNORE_ASYNC ->
+                {
                 assert !fTuple;
                 fAsync   = fHandleExceptions = true;
                 cReturns = 0;
-                break;
+                }
 
-            case Op.A_IGNORE:
+            case Op.A_IGNORE ->
+                {
                 assert !fTuple;
                 fAsync   = fHandleExceptions = false;
                 cReturns = 0;
-                break;
+                }
 
-            default:
+            default ->
+                {
                 fAsync            = frameCaller.isDynamicVar(iReturn);
                 fHandleExceptions = false;
                 cReturns          = fTuple ? -1 : 1;
-                break;
+                }
             }
 
         Op opCall = new Op()
             {
             public int process(Frame frame, int iPC)
                 {
-                switch (cReturns)
+                return switch (cReturns)
                     {
-                    case -1:
-                        return hFunction.callT(frame, hTarget, ahArg, 0);
-
-                    case 0:
-                        return hFunction.call1(frame, hTarget, ahArg, A_IGNORE);
-
-                    case 1:
-                        return hFunction.call1(frame, hTarget, ahArg, 0);
-
-                    default:
-                        throw new IllegalStateException();
-                    }
+                    case -1 -> hFunction.callT(frame, hTarget, ahArg, 0);
+                    case 0  -> hFunction.call1(frame, hTarget, ahArg, A_IGNORE);
+                    case 1  -> hFunction.call1(frame, hTarget, ahArg, 0);
+                    default -> throw new IllegalStateException();
+                    };
                 }
 
             public String toString()
                 {
-                return "Invoke1: " + hFunction.getName();
+                return hFunction.getMethodId().getPathString();
                 }
             };
 
@@ -1253,7 +1221,7 @@ public class ServiceContext
 
             public String toString()
                 {
-                return "InvokeN: " + hFunction.getName();
+                return hFunction.getMethodId().getPathString();
                 }
             };
 
@@ -1312,7 +1280,7 @@ public class ServiceContext
 
             public String toString()
                 {
-                return "PropertyGet: " + idProp.getName();
+                return idProp.getPathString();
                 }
             };
 
@@ -1356,7 +1324,7 @@ public class ServiceContext
 
             public String toString()
                 {
-                return "PropertySet: " + idProp.getName();
+                return idProp.getPathString();
                 }
             };
 
@@ -1399,139 +1367,31 @@ public class ServiceContext
                 {
                 switch (Utils.callToString(frame, ahArg[0]))
                     {
-                    case Op.R_NEXT:
+                    case Op.R_NEXT ->
+                        {
                         Utils.log(frame, "\nUnhandled exception: " +
                             ((StringHandle) frame.popStack()).getStringValue());
                         return Op.R_NEXT;
+                        }
 
-                    case Op.R_CALL:
-                        frame.m_frameNext.addContinuation(
-                            frameCaller ->
-                                {
-                                Utils.log(frameCaller, "\nUnhandled exception: " +
-                                    ((StringHandle) frameCaller.popStack()).getStringValue());
-                                return Op.R_NEXT;
-                                }
-                            );
+                    case Op.R_CALL ->
+                        {
+                        frame.m_frameNext.addContinuation(frameCaller ->
+                            {
+                            Utils.log(frameCaller, "\nUnhandled exception: " +
+                                ((StringHandle) frameCaller.popStack()).getStringValue());
+                            return Op.R_NEXT;
+                            });
                         return Op.R_CALL;
+                        }
 
-                    default:
-                        throw new IllegalStateException();
+                    default -> throw new IllegalStateException();
                     }
                 });
             }
 
         // ignore any exception coming out of the handler
         postRequest(null, hFunction, new ObjectHandle[]{hException}, 0);
-        }
-
-    /**
-     * Send the specified number of return values back to the caller.
-     */
-    protected static int sendResponse(Fiber fiberCaller, Frame frame,
-                                      CompletableFuture future, int cReturns)
-        {
-        switch (cReturns)
-            {
-            case 0:
-                fiberCaller.f_context.respond(
-                        new Response<ObjectHandle>(fiberCaller, xTuple.H_VOID, frame.m_hException, future));
-                break;
-
-            case  1:
-                {
-                ObjectHandle    hReturn    = frame.f_ahVar[0];
-                ExceptionHandle hException = frame.m_hException;
-                ServiceContext  ctxCaller  = fiberCaller.f_context;
-
-                if (hException == null && !hReturn.isPassThrough(ctxCaller.f_container))
-                    {
-                    hReturn = hReturn.getTemplate().createProxyHandle(frame.f_context, hReturn, null);
-                    if (hReturn == null)
-                        {
-                        hException = xException.mutableObject(frame);
-                        }
-                    }
-                ctxCaller.respond(new Response<ObjectHandle>(fiberCaller, hReturn, hException, future));
-                break;
-                }
-
-            case -1: // tuple return
-                {
-                ObjectHandle[]  ahReturn   = frame.f_ahVar;
-                ExceptionHandle hException = frame.m_hException;
-                ServiceContext  ctxCaller  = fiberCaller.f_context;
-                TupleHandle     hTuple     = null;
-                if (hException == null)
-                    {
-                    hTuple = (TupleHandle) ahReturn[0];
-                    if (hTuple == null)
-                        {
-                        // indicates a "void" return
-                        hTuple = xTuple.H_VOID;
-                        }
-                    else
-                        {
-                        ahReturn = hTuple.m_ahValue;
-                        for (int i = 0, c = ahReturn.length; i < c; i++)
-                            {
-                            ObjectHandle hReturn = ahReturn[i];
-                            if (!hReturn.isPassThrough(ctxCaller.f_container))
-                                {
-                                hReturn = hReturn.getTemplate().createProxyHandle(frame.f_context, hReturn, null);
-                                if (hReturn == null)
-                                    {
-                                    hException = xException.mutableObject(frame);
-                                    hTuple     = null;
-                                    break;
-                                    }
-                                ahReturn[i] = hReturn;
-                                }
-                            }
-                        }
-                    }
-                ctxCaller.respond(new Response<ObjectHandle>(fiberCaller, hTuple, hException, future));
-                break;
-                }
-
-            default:
-                {
-                assert cReturns > 1;
-                ObjectHandle[]  ahReturn   = frame.f_ahVar;
-                ExceptionHandle hException = frame.m_hException;
-                ServiceContext  ctxCaller  = fiberCaller.f_context;
-                if (hException == null)
-                    {
-                    for (int i = 0, c = ahReturn.length; i < c; i++)
-                        {
-                        ObjectHandle hReturn = ahReturn[i];
-                        if (hReturn == null)
-                            {
-                            // this is only possible for a conditional return of "False"
-                            assert i > 0 && ahReturn[0].equals(xBoolean.FALSE);
-
-                            // since "null" indicates a deferred future value, replace it with
-                            // the DEFAULT value (see Utils.GET_AND_RETURN)
-                            ahReturn[i] = ObjectHandle.DEFAULT;
-                            }
-                        else if (!hReturn.isPassThrough(ctxCaller.f_container))
-                            {
-                            hReturn = hReturn.getTemplate().createProxyHandle(frame.f_context, hReturn, null);
-                            if (hReturn == null)
-                                {
-                                hException = xException.mutableObject(frame);
-                                ahReturn   = null;
-                                break;
-                                }
-                            ahReturn[i] = hReturn;
-                            }
-                        }
-                    }
-                ctxCaller.respond(new Response<ObjectHandle[]>(fiberCaller, ahReturn, hException, future));
-                break;
-                }
-            }
-        return Op.R_NEXT;
         }
 
     @Override
@@ -1544,10 +1404,6 @@ public class ServiceContext
           .append(f_nId)
           .append(')');
 
-        if (isContended())
-            {
-            sb.append(" contended");
-            }
         if (m_synchronicity != Synchronicity.Concurrent)
             {
             sb.append(" ")
@@ -1555,7 +1411,7 @@ public class ServiceContext
             }
         if (m_frameCurrent != null)
             {
-            sb.append(" @")
+            sb.append(" ")
               .append(m_frameCurrent);
             }
         return sb.toString();
@@ -1608,6 +1464,113 @@ public class ServiceContext
             f_future = new CompletableFuture();
             }
 
+        /**
+         * Send the specified number of return values back to the caller.
+         */
+        protected int sendResponse(Fiber fiberCaller, Frame frame, CompletableFuture future, int cReturns)
+            {
+            switch (cReturns)
+                {
+                case 0 -> fiberCaller.f_context.respond(
+                    new Response<ObjectHandle>(fiberCaller, xTuple.H_VOID, frame.m_hException, future));
+
+                case 1 ->
+                    {
+                    ObjectHandle    hReturn    = frame.f_ahVar[0];
+                    ExceptionHandle hException = frame.m_hException;
+                    ServiceContext  ctxCaller  = fiberCaller.f_context;
+
+                    if (hException == null && !hReturn.isPassThrough(ctxCaller.f_container))
+                        {
+                        hReturn = hReturn.getTemplate().createProxyHandle(frame.f_context, hReturn, null);
+                        if (hReturn == null)
+                            {
+                            hException = xException.illegalArgument(frame,
+                                "Mutable return value from \"" + this + '"');
+                            }
+                        }
+                    ctxCaller.respond(new Response<ObjectHandle>(fiberCaller, hReturn, hException, future));
+                    }
+
+                case -1 -> // tuple return
+                    {
+                    ObjectHandle[]  ahReturn   = frame.f_ahVar;
+                    ExceptionHandle hException = frame.m_hException;
+                    ServiceContext  ctxCaller  = fiberCaller.f_context;
+                    TupleHandle     hTuple     = null;
+                    if (hException == null)
+                        {
+                        hTuple = (TupleHandle) ahReturn[0];
+                        if (hTuple == null)
+                            {
+                            // indicates a "void" return
+                            hTuple = xTuple.H_VOID;
+                            }
+                        else
+                            {
+                            ahReturn = hTuple.m_ahValue;
+                            for (int i = 0, c = ahReturn.length; i < c; i++)
+                                {
+                                ObjectHandle hReturn = ahReturn[i];
+                                if (!hReturn.isPassThrough(ctxCaller.f_container))
+                                    {
+                                    hReturn = hReturn.getTemplate().createProxyHandle(frame.f_context, hReturn, null);
+                                    if (hReturn == null)
+                                        {
+                                        hException = xException.mutableObject(frame);
+                                        hTuple = null;
+                                        break;
+                                        }
+                                    ahReturn[i] = hReturn;
+                                    }
+                                }
+                            }
+                        }
+                    ctxCaller.respond(new Response<ObjectHandle>(fiberCaller, hTuple, hException, future));
+                    }
+
+                default ->
+                    {
+                    assert cReturns > 1;
+                    ObjectHandle[]  ahReturn   = frame.f_ahVar;
+                    ExceptionHandle hException = frame.m_hException;
+                    ServiceContext  ctxCaller  = fiberCaller.f_context;
+
+                    if (hException == null)
+                        {
+                        for (int i = 0, c = ahReturn.length; i < c; i++)
+                            {
+                            ObjectHandle hReturn = ahReturn[i];
+                            if (hReturn == null)
+                                {
+                                // this is only possible for a conditional return of "False"
+                                assert i > 0 && ahReturn[0].equals(xBoolean.FALSE);
+
+                                // since "null" indicates a deferred future value, replace it with
+                                // the DEFAULT value (see Utils.GET_AND_RETURN)
+                                ahReturn[i] = ObjectHandle.DEFAULT;
+                                }
+                            else if (!hReturn.isPassThrough(ctxCaller.f_container))
+                                {
+                                hReturn = hReturn.getTemplate().
+                                            createProxyHandle(frame.f_context, hReturn, null);
+                                if (hReturn == null)
+                                    {
+                                    hException = xException.mutableObject(frame);
+                                    ahReturn = null;
+                                    break;
+                                    }
+                                ahReturn[i] = hReturn;
+                                }
+                            }
+                        }
+                    ctxCaller.respond(
+                            new Response<ObjectHandle[]>(fiberCaller, ahReturn, hException, future));
+                    }
+                }
+            return Op.R_NEXT;
+            }
+
         final public CompletableFuture f_future;
 
         public Fiber m_fiber;
@@ -1636,6 +1599,12 @@ public class ServiceContext
 
             frame0.addContinuation(_null -> sendResponse(f_fiberCaller, frame0, f_future, f_cReturns));
             return frame0;
+            }
+
+        @Override
+        public String toString()
+            {
+            return f_op.toString();
             }
 
         private final Op  f_op;
