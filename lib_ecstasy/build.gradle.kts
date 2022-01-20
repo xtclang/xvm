@@ -17,7 +17,7 @@ tasks.register("clean") {
 
 tasks.register<Copy>("importUnicodeFiles") {
     group       = "Build"
-    description = "Copy the various Unicode data files from :unicode to :ecstasy project."
+    description = "Copy the various Unicode data files from :unicode to :lib_ecstasy project."
     from(file("${project(":unicode").buildDir}/resources/"))
     include("Char*.txt", "Char*.dat")
     into(file("src/main/resources/text/"))

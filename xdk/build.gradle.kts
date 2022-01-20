@@ -2,9 +2,9 @@
  * Build files for the XDK.
  */
 
-val ecstasy       = project(":ecstasy")
 val javatools     = project(":javatools")
 val bridge        = project(":javatools_bridge")
+val ecstasy       = project(":lib_ecstasy")
 val aggregate     = project(":lib_aggregate");
 val collections   = project(":lib_collections");
 val json          = project(":lib_json");

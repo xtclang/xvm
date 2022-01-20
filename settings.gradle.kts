@@ -1,13 +1,13 @@
 rootProject.name = "xvm"
 
 include(":utils")               // produces utils.jar for org.xvm.utils package
-include(":unicode")             // produces data files -> :ecstasy/resources, only on request
-include(":ecstasy")             // produces *only* a source zip file (no .xtc), and only on request
-include(":javatools_bridge")    // produces *only* a source zip file (no .xtc), and only on request
+include(":unicode")             // produces data files -> :lib_ecstasy/resources, only on request
 include(":javatools")           // produces javatools.jar
-include(":javatools_launcher")  // produces native (Win, Mac, Linux) executables, only on request
+include(":javatools_bridge")    // produces *only* a source zip file (no .xtc), and only on request
+include(":javatools_launcher")  // produces native executables (Win, Mac, Linux), only on request
+include(":lib_ecstasy")         // produces *only* a source zip file (no .xtc), and only on request
 include(":lib_aggregate")       // produces aggregate.xtc
-include(":lib_collections")       // produces aggregate.xtc
+include(":lib_collections")     // produces collections.xtc
 include(":lib_json")            // produces json.xtc
 include(":lib_oodb")            // produces oodb.xtc
 include(":lib_imdb")            // produces imdb.xtc

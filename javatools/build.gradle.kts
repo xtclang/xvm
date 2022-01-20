@@ -8,8 +8,8 @@ plugins {
 
 tasks.register<Copy>("copyImplicits") {
     group       = "Build"
-    description = "Copy the implicit.x from :ecstasy project into the build directory."
-    from(file(project(":ecstasy").property("implicit.x")!!))
+    description = "Copy the implicit.x from :lib_ecstasy project into the build directory."
+    from(file(project(":lib_ecstasy").property("implicit.x")!!))
     into(file("$buildDir/resources/main/"))
     doLast {
         println("Finished task: copyImplicits")
