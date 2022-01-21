@@ -9,22 +9,22 @@ module TestSimple.test.org
 
     void run()
         {
-        Int i = 11;
+        Int i1 = 3;
+        Int i2 = 7;
 
-        Set<Int> s1 = new ArrayOrderedSet([3,7,11]); // this used to fail to compile
-        report(s1);
+        Array<Int> a1 = [i1,i2,11];
+        Array<Int> a2 = [2,7,12];
 
-        Set<Int> s1a = new ArrayOrderedSet([3,7,i]); // this used to fail to compile
-        report(s1a);
+        Set<Int> s1 = [i1,i2,11];
+        Set<Int> s2 = [2,7,12];
 
-        Set<Int> s2 = [3,7,11];
-        report(s2);
+        Set<Int> s3 = s1.addAll(s2);
+        report(s3);
+        Set<Int> s4 = s3.addAll(s3);
+        report(s4);
 
-        Set<Int> s2a = [3,7,i];
-        report(s2a);
-
-        Collection<Int> a1 = Set:[3,7,i]; // this is questionable, but deferred for now
-        report(a1);
+        s4.removeAll(s1); // used to throw
+        console.println(s4);
         }
 
     void report(Object o)

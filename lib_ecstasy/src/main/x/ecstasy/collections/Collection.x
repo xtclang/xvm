@@ -738,6 +738,11 @@ interface Collection<Element>
     @Concurrent
     @Op("-") Collection removeAll(Iterable<Element> values)
         {
+        if (&values == &this)
+            {
+            return clear();
+            }
+
         // this naive implementation is likely to be overridden in cases where optimizations can be
         // made with knowledge of either this collection and/or the passed in values, for example
         // if both are ordered; it must obviously be overridden for non-mutable collections
@@ -825,6 +830,11 @@ interface Collection<Element>
     @Concurrent
     Collection retainAll(Iterable<Element> values)
         {
+        if (&values == &this)
+            {
+            return this;
+            }
+
         // this default implementation is likely to be overridden in cases where optimizations can
         // be made with knowledge of either this collection and/or the passed in values, for example
         // if both are ordered; it must obviously be overridden for non-mutable collections
