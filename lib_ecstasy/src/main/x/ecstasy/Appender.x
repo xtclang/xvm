@@ -26,11 +26,10 @@ interface Appender<Element>
      *
      * @return this
      */
+    @Concurrent
     Appender addAll(Iterable<Element> iterable)
         {
-        ensureCapacity(iterable.size);
-        addAll(iterable.iterator());
-        return this;
+        return ensureCapacity(iterable.size).addAll(iterable.iterator());
         }
 
     /**
@@ -40,13 +39,12 @@ interface Appender<Element>
      *
      * @return this
      */
+    @Concurrent
     Appender addAll(Iterator<Element> iter)
         {
-        while (Element v := iter.next())
-            {
-            add(v);
-            }
-        return this;
+        var result = this;
+        iter.forEach(e -> {result = result.add(e);});
+        return result;
         }
 
     /**
@@ -61,6 +59,7 @@ interface Appender<Element>
      *
      * @return this
      */
+    @Concurrent
     Appender ensureCapacity(Int count)
         {
         return this;

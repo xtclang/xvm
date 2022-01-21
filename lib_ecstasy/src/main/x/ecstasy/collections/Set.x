@@ -39,6 +39,22 @@ interface Set<Element>
      */
     @Op("^") Set symmetricDifference(Set!<Element> values)
         {
+        Set<Element> result = this;
+        Clone: if (result.inPlace && result.is(immutable))
+            {
+            if (result.is(Replicable))
+                {
+                result = result.new();
+                if (!(result.inPlace && result.is(immutable)))
+                    {
+                    result = result.addAll(this);
+                    break Clone;
+                    }
+                }
+
+            throw new ReadOnly();
+            }
+
         Element[]? remove = Null;
         for (Element value : this)
             {
@@ -57,7 +73,6 @@ interface Set<Element>
                 }
             }
 
-        Set<Element> result = this;
         result -= remove?;
         result |= add?;
         return result;
@@ -71,6 +86,7 @@ interface Set<Element>
      *
      * @return a new set that represents the complement of this set within the `universalSet`
      */
+    @Concurrent
     @Op("~") Set! complement(immutable Set!<Element> universalSet)
         {
         return new ComplementSet<Element>(this, universalSet);
