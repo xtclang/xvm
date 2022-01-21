@@ -808,15 +808,13 @@ interface List<Element>
      */
     List replace(Int index, Element value)
         {
-        if (inPlace)
+        if (inPlace && !this.is(immutable))
             {
             this[index] = value;
             return this;
             }
-        else
-            {
-            throw new ReadOnly();
-            }
+
+        throw new ReadOnly($"{this:class} is immutable or does not support replace()");
         }
 
     /**
@@ -865,7 +863,7 @@ interface List<Element>
      */
     List insert(Int index, Element value)
         {
-        throw new ReadOnly("element insertion is not supported");
+        throw new ReadOnly($"{this:class} does not support insert()");
         }
 
     /**
@@ -915,7 +913,7 @@ interface List<Element>
      */
     List delete(Int index)
         {
-        throw new ReadOnly("element deletion is not supported");
+        throw new ReadOnly($"{this:class} does not support delete()");
         }
 
     /**
@@ -1208,6 +1206,10 @@ interface List<Element>
                     // may throw ReadOnly
                     list[index] = value;
                     }
+                else if (this.is(immutable))
+                    {
+                    throw new ReadOnly($"{this:class} is immutable");
+                    }
                 else if (inPlace)
                     {
                     this.index = size;
@@ -1215,7 +1217,7 @@ interface List<Element>
                     }
                 else
                     {
-                    throw new ReadOnly();
+                    throw new ReadOnly($"{this:class} does not support element set()");
                     }
                 }
             }
@@ -1223,9 +1225,9 @@ interface List<Element>
         @Override
         void insert(Element value)
             {
-            if (!inPlace)
+            if (!inPlace || this.is(immutable))
                 {
-                throw new ReadOnly();
+                throw new ReadOnly($"{this:class} is immutable or does not support insert()");
                 }
 
             Int index = this.index;
@@ -1244,9 +1246,9 @@ interface List<Element>
         @Override
         void delete()
             {
-            if (!inPlace)
+            if (!inPlace || this.is(immutable))
                 {
-                throw new ReadOnly();
+                throw new ReadOnly($"{this:class} is immutable or does not support delete()");
                 }
 
             Int index = this.index;

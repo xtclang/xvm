@@ -52,7 +52,7 @@ interface Set<Element>
                     }
                 }
 
-            throw new ReadOnly();
+            throw new ReadOnly($"{this:class} is immutable or does not support symmetricDifference()");
             }
 
         Element[]? remove = Null;
