@@ -19,6 +19,8 @@ import org.xvm.runtime.PropertyComposition;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TypeComposition;
 
+import org.xvm.runtime.template.xException;
+
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
 
@@ -168,7 +170,9 @@ public abstract class OpInvocable extends Op
 
         if (chain.getDepth() == 0)
             {
-            return new CallChain.ExceptionChain(idMethod, hTarget.getType());
+            return new CallChain.ExceptionChain(xException.makeHandle(frame,
+                "Missing method \"" + idMethod.getValueString() +
+                "\" on " + hTarget.getType().getValueString()));
             }
 
         context.setOpInfo(this, Category.Chain, chain);
@@ -234,9 +238,8 @@ public abstract class OpInvocable extends Op
     private PropertyConstant checkPropertyAccessor(MethodConstant idMethod)
         {
         IdentityConstant idParent = idMethod.getNamespace();
-        if (idParent instanceof PropertyConstant)
+        if (idParent instanceof PropertyConstant idProp)
             {
-            PropertyConstant  idProp = (PropertyConstant) idParent;
             SignatureConstant sig    = idMethod.getSignature();
             String            sName  = sig.getName();
 
@@ -325,5 +328,5 @@ public abstract class OpInvocable extends Op
     protected Argument[]     m_aArgReturn; // optional
 
     // categories for cached info
-    enum Category {Chain, Composition};
+    enum Category {Chain, Composition}
     }

@@ -720,39 +720,29 @@ public abstract class ClassTemplate
             }
         else
             {
-            switch (method.getReturnCount())
+            return switch (method.getReturnCount())
                 {
-                case 0:
+                case 0 ->
                     switch (invokeNativeN(frame, method, hTarget, ahArg, Op.A_IGNORE))
                         {
-                        case Op.R_NEXT:
-                            return frame.assignValue(iReturn, xTuple.H_VOID);
+                        case Op.R_NEXT      -> frame.assignValue(iReturn, xTuple.H_VOID);
+                        case Op.R_EXCEPTION -> Op.R_EXCEPTION;
+                        default             -> throw new IllegalStateException();
+                        };
 
-                        case Op.R_EXCEPTION:
-                            return Op.R_EXCEPTION;
-
-                        default:
-                            throw new IllegalStateException();
-                        }
-
-                case 1:
+                case 1 ->
                     switch (invokeNativeN(frame, method, hTarget, ahArg, Op.A_STACK))
                         {
-                        case Op.R_NEXT:
-                            return frame.assignTuple(iReturn, frame.popStack());
+                        case Op.R_NEXT      -> frame.assignTuple(iReturn, frame.popStack());
+                        case Op.R_EXCEPTION -> Op.R_EXCEPTION;
+                        default             -> throw new IllegalStateException();
+                        };
 
-                        case Op.R_EXCEPTION:
-                            return Op.R_EXCEPTION;
-
-                        default:
-                            throw new IllegalStateException();
-                        }
-
-                default:
+                default ->
                     // create a temporary frame with N registers; call invokeNativeNN into it
                     // and then convert the results into a Tuple
                     throw new UnsupportedOperationException();
-                }
+                };
             }
         }
 
@@ -1676,9 +1666,8 @@ public abstract class ClassTemplate
     @Override
     public ClassTemplate getTemplate(TypeConstant type)
         {
-        if (type instanceof AnnotatedTypeConstant)
+        if (type instanceof AnnotatedTypeConstant typeAnno)
             {
-            AnnotatedTypeConstant typeAnno = (AnnotatedTypeConstant) type;
             while (true)
                 {
                 TypeConstant typeBase = typeAnno.getUnderlyingType();
@@ -1698,120 +1687,122 @@ public abstract class ClassTemplate
     @Override
     public int invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        return getOpChain(hTarget, "add", "+", hArg).invoke(frame, hTarget, hArg, iReturn);
+        return getOpChain(frame, hTarget, "add", "+", hArg).invoke(frame, hTarget, hArg, iReturn);
         }
 
     @Override
     public int invokeSub(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        return getOpChain(hTarget, "sub", "-", hArg).invoke(frame, hTarget, hArg, iReturn);
+        return getOpChain(frame, hTarget, "sub", "-", hArg).invoke(frame, hTarget, hArg, iReturn);
         }
 
     @Override
     public int invokeMul(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        return getOpChain(hTarget, "mul", "*", hArg).invoke(frame, hTarget, hArg, iReturn);
+        return getOpChain(frame, hTarget, "mul", "*", hArg).invoke(frame, hTarget, hArg, iReturn);
         }
 
     @Override
     public int invokeDiv(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        return getOpChain(hTarget, "div", "/", hArg).invoke(frame, hTarget, hArg, iReturn);
+        return getOpChain(frame, hTarget, "div", "/", hArg).invoke(frame, hTarget, hArg, iReturn);
         }
 
     @Override
     public int invokeMod(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        return getOpChain(hTarget, "mod", "%", hArg).invoke(frame, hTarget, hArg, iReturn);
+        return getOpChain(frame, hTarget, "mod", "%", hArg).invoke(frame, hTarget, hArg, iReturn);
         }
 
     @Override
     public int invokeShl(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        return getOpChain(hTarget, "shiftLeft", "<<", hArg).invoke(frame, hTarget, hArg, iReturn);
+        return getOpChain(frame, hTarget, "shiftLeft", "<<", hArg).invoke(frame, hTarget, hArg, iReturn);
         }
 
     @Override
     public int invokeShr(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        return getOpChain(hTarget, "shiftRight", ">>", hArg).invoke(frame, hTarget, hArg, iReturn);
+        return getOpChain(frame, hTarget, "shiftRight", ">>", hArg).invoke(frame, hTarget, hArg, iReturn);
         }
 
     @Override
     public int invokeShrAll(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        return getOpChain(hTarget, "shiftAllRight", ">>>", hArg).invoke(frame, hTarget, hArg, iReturn);
+        return getOpChain(frame, hTarget, "shiftAllRight", ">>>", hArg).invoke(frame, hTarget, hArg, iReturn);
         }
 
     @Override
     public int invokeAnd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        return getOpChain(hTarget, "and", "&", hArg).invoke(frame, hTarget, hArg, iReturn);
+        return getOpChain(frame, hTarget, "and", "&", hArg).invoke(frame, hTarget, hArg, iReturn);
         }
 
     @Override
     public int invokeOr(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        return getOpChain(hTarget, "or", "|", hArg).invoke(frame, hTarget, hArg, iReturn);
+        return getOpChain(frame, hTarget, "or", "|", hArg).invoke(frame, hTarget, hArg, iReturn);
         }
 
     @Override
     public int invokeXor(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        return getOpChain(hTarget, "xor", "^", hArg).invoke(frame, hTarget, hArg, iReturn);
+        return getOpChain(frame, hTarget, "xor", "^", hArg).invoke(frame, hTarget, hArg, iReturn);
         }
 
     @Override
     public int invokeDivRem(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int[] aiReturn)
         {
-        return getOpChain(hTarget, "divrem", "/%", hArg).invoke(frame, hTarget, hArg, aiReturn);
+        return getOpChain(frame, hTarget, "divrem", "/%", hArg).invoke(frame, hTarget, hArg, aiReturn);
         }
 
     @Override
     public int invokeDotDot(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        return getOpChain(hTarget, "to", "..", hArg).invoke(frame, hTarget, hArg, iReturn);
+        return getOpChain(frame, hTarget, "to", "..", hArg).invoke(frame, hTarget, hArg, iReturn);
         }
 
     @Override
     public int invokeDotDotEx(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        return getOpChain(hTarget, "toExcluding", "..<", hArg).invoke(frame, hTarget, hArg, iReturn);
+        return getOpChain(frame, hTarget, "toExcluding", "..<", hArg).invoke(frame, hTarget, hArg, iReturn);
         }
 
     @Override
     public int invokeNeg(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        return getOpChain(hTarget, "neg", null, null).invoke(frame, hTarget, iReturn);
+        return getOpChain(frame, hTarget, "neg", null, null).invoke(frame, hTarget, iReturn);
         }
 
     @Override
     public int invokeCompl(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        return getOpChain(hTarget, "not", "~", null).invoke(frame, hTarget, iReturn);
+        return getOpChain(frame, hTarget, "not", "~", null).invoke(frame, hTarget, iReturn);
         }
 
     @Override
     public int invokeNext(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        return getOpChain(hTarget, "nextValue", null, null).invoke(frame, hTarget, iReturn);
+        return getOpChain(frame, hTarget, "nextValue", null, null).invoke(frame, hTarget, iReturn);
         }
 
     @Override
     public int invokePrev(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        return getOpChain(hTarget, "prevValue", null, null).invoke(frame, hTarget, iReturn);
+        return getOpChain(frame, hTarget, "prevValue", null, null).invoke(frame, hTarget, iReturn);
         }
 
     /**
      * @return a call chain for the specified op; throw if none exists
      */
-    protected CallChain getOpChain(ObjectHandle hTarget, String sName, String sOp, ObjectHandle hArg)
+    protected CallChain getOpChain(Frame frame, ObjectHandle hTarget, String sName, String sOp,
+                                   ObjectHandle hArg)
         {
         CallChain chain = findOpChain(hTarget, sName, sOp, hArg);
         if (chain == null)
             {
-            throw new IllegalStateException("Invalid op for " + this);
+            chain = new CallChain.ExceptionChain(xException.makeHandle(frame,
+                     "Missing operation \"" + sOp + "\" on " + hTarget.getType().getValueString()));
             }
         return chain;
         }
@@ -2169,18 +2160,14 @@ public abstract class ClassTemplate
             if (component != null)
                 {
                 IdentityConstant constId = component.getIdentityConstant();
-                switch (constId.getFormat())
+                constType = switch (constId.getFormat())
                     {
-                    case Module:
-                    case Package:
-                    case Class:
-                        constType = constId.getType();
-                        break;
-
-                    case Typedef:
-                        constType = ((TypedefStructure) component).getType();
-                        break;
-                    }
+                    case Module,
+                         Package,
+                         Class    -> constId.getType();
+                    case Typedef  -> ((TypedefStructure) component).getType();
+                    default       -> constType;
+                    };
                 }
             }
 

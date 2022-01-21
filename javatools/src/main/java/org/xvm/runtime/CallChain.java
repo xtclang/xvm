@@ -8,9 +8,9 @@ import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.MethodBody;
 import org.xvm.asm.constants.MethodBody.Implementation;
-import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
-import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction;
 
@@ -321,7 +321,7 @@ public class CallChain
 
         switch (bodySuper.getImplementation())
             {
-            case Native:
+            case Native ->
                 {
                 ClassTemplate template = hThis.getTemplate();
                 return fReturnTuple
@@ -330,18 +330,16 @@ public class CallChain
                         ? template.invokeNative1(frame, methodSuper, hThis, ahArg[0], iReturn)
                         : template.invokeNativeN(frame, methodSuper, hThis, ahArg, iReturn);
                 }
-            case Default:
-            case Explicit:
+
+            case Default, Explicit ->
                 {
                 ObjectHandle[] ahVar = Utils.ensureSize(ahArg, methodSuper.getMaxVars());
-
                 return fReturnTuple
-                    ? frame.invokeT(this, nDepth, hThis, ahVar, iReturn)
-                    : frame.invoke1(this, nDepth, hThis, ahVar, iReturn);
+                        ? frame.invokeT(this, nDepth, hThis, ahVar, iReturn)
+                        : frame.invoke1(this, nDepth, hThis, ahVar, iReturn);
                 }
 
-            default:
-                throw new IllegalStateException();
+            default -> throw new IllegalStateException();
             }
         }
 
@@ -355,19 +353,17 @@ public class CallChain
         MethodBody      bodySuper   = f_aMethods[nDepth];
         MethodStructure methodSuper = bodySuper.getMethodStructure();
 
-        switch (bodySuper.getImplementation())
+        return switch (bodySuper.getImplementation())
             {
-            case Native:
-                return hThis.getTemplate().invokeNativeNN(frame, methodSuper, hThis, ahArg, aiReturn);
+            case Native ->
+                hThis.getTemplate().invokeNativeNN(frame, methodSuper, hThis, ahArg, aiReturn);
 
-            case Default:
-            case Explicit:
-                return frame.invokeN(this, nDepth, hThis,
-                    Utils.ensureSize(ahArg, methodSuper.getMaxVars()), aiReturn);
+            case Default, Explicit ->
+                frame.invokeN(this, nDepth, hThis,
+                        Utils.ensureSize(ahArg, methodSuper.getMaxVars()), aiReturn);
 
-            default:
-                throw new IllegalStateException();
-            }
+            default -> throw new IllegalStateException();
+            };
         }
 
     public static CallChain createPropertyCallChain(MethodBody[] aMethods)
@@ -381,7 +377,7 @@ public class CallChain
     // ----- CallChain subclasses ------------------------------------------------------------------
 
     /**
-     * A CallChain representing an excpetion.
+     * A CallChain representing an exception.
      */
     public static class FieldAccessChain
             extends CallChain
@@ -416,12 +412,11 @@ public class CallChain
     public static class ExceptionChain
             extends CallChain
         {
-        public ExceptionChain(MethodConstant idMethod, TypeConstant typeTarget)
+        public ExceptionChain(ExceptionHandle hException)
             {
             super(MethodBody.NO_BODIES);
 
-            f_idMethod   = idMethod;
-            f_typeTarget = typeTarget;
+            f_hException = hException;
             }
 
         @Override
@@ -474,12 +469,10 @@ public class CallChain
 
         private int throwException(Frame frame)
             {
-            return frame.raiseException("Missing method \"" + f_idMethod.getValueString() +
-                        "\" on " + f_typeTarget.getValueString());
+            return frame.raiseException(f_hException);
             }
 
-        private final MethodConstant f_idMethod;
-        private final TypeConstant   f_typeTarget;
+        private final ExceptionHandle f_hException;
         }
 
 

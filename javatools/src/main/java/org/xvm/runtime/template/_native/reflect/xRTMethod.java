@@ -108,9 +108,8 @@ public class xRTMethod
     @Override
     public int createConstHandle(Frame frame, Constant constant)
         {
-        if (constant instanceof MethodConstant)
+        if (constant instanceof MethodConstant idMethod)
             {
-            MethodConstant   idMethod = (MethodConstant) constant;
             IdentityConstant idTarget = idMethod.getNamespace();
             TypeConstant     typeThis = frame.getThis().getType();
             TypeConstant     typeTarget;
@@ -435,7 +434,9 @@ public class xRTMethod
                 chain = clazz.getMethodCallChain(sig);
                 if (chain.getDepth() == 0)
                     {
-                    return new CallChain.ExceptionChain(idMethod, hTarget.getType());
+                    return new CallChain.ExceptionChain(xException.makeHandle(frame,
+                            "Missing method \"" + sig.getValueString() +
+                            "\" on " + hTarget.getType().getValueString()));
                     }
                 }
             return chain;

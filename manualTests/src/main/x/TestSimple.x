@@ -6,18 +6,19 @@ module TestSimple.test.org
 
     void run()
         {
-        Svc s = new Svc();
+        Int i1 = 3;
+        Int i2 = 7;
 
-        console.println($"{s.foo()}");
-        }
+        Set<Int> s1 = [i1,i2,11];
+        Set<Int> s2 = [2,7,12];
 
-    service Svc
-        {
-        Int[] foo()
-            {
-            Int[] ints = new Int[];
-            ints += 1;
-            return ints; // this throws "not immutable return"
-            }
+        Set<Int> s3 = s1.addAll(s2);
+        console.println(s3);
+
+        Set<Int> s4 = s1 ^ s2; // used to throw
+        console.println(s4);
+
+        Set<Int> s5 = s1.symmetricDifference(s2);
+        console.println(s5);
         }
     }
