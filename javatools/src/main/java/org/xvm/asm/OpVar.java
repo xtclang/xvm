@@ -139,12 +139,12 @@ public abstract class OpVar
         }
 
     /**
-     * Helper method to calculate a TypeComposition for a sequence class.
+     * Helper method to calculate a TypeComposition for a sequence array.
      *
      * @param frame     the current frame
      * @param typeList  the sequence type
      *
-     * @return the corresponding class composition
+     * @return the corresponding array class composition
      */
     protected TypeComposition getArrayClass(Frame frame, TypeConstant typeList)
         {

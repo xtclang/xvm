@@ -75,10 +75,15 @@ class ConstHelper
         }
 
     /**
-     * Helper function to create an immutable ListSet out of an array.
+     * Helper function to create a ListSet out of an array.
      */
-    static <Element> immutable ListSet<Element> createListSet(immutable Element[] values)
+    static <Element> ListSet<Element> createListSet(Element[] values)
         {
-        return new ListSet<Element>(values).makeImmutable();
+        ListSet<Element> set = new ListSet(values);
+        if (values.is(immutable))
+            {
+            set.makeImmutable();
+            }
+        return set;
         }
     }

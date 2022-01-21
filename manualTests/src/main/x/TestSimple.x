@@ -15,10 +15,7 @@ module TestSimple.test.org
         Set<Int> s3 = s1.addAll(s2);
         console.println(s3);
 
-        Set<Int> s4 = s1 ^ s2; // used to throw
-        console.println(s4);
-
-        Set<Int> s5 = s1.symmetricDifference(s2);
-        console.println(s5);
+        s1.symmetricDifference(s2); // this used to throw
+        console.println(s1);
         }
     }

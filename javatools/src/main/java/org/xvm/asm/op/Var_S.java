@@ -19,6 +19,7 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.collections.xArray;
+import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 import org.xvm.runtime.template.collections.xArray.Mutability;
 
 
@@ -126,11 +127,16 @@ public class Var_S
         TypeConstant    typeList = frame.resolveType(m_nType);
         TypeComposition clzArray = getArrayClass(frame, typeList);
 
-        ObjectHandle hArray = xArray.makeArrayHandle(clzArray, ahArg.length, ahArg,
+        ArrayHandle hArray = xArray.makeArrayHandle(clzArray, ahArg.length, ahArg,
                 typeList.isImmutable() ? Mutability.Constant : Mutability.Persistent);
 
-        frame.introduceResolvedVar(m_nVar, typeList, null, Frame.VAR_STANDARD, hArray);
+        if (typeList.isA(frame.poolContext().typeSet()))
+            {
+            frame.introduceResolvedVar(m_nVar, typeList, null, Frame.VAR_STANDARD, null);
+            return xArray.createListSet(frame, hArray, m_nVar);
+            }
 
+        frame.introduceResolvedVar(m_nVar, typeList, null, Frame.VAR_STANDARD, hArray);
         return iPC + 1;
         }
 
