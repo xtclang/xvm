@@ -84,27 +84,39 @@ public class ListExpression
     @Override
     public TypeConstant getImplicitType(Context ctx)
         {
-        TypeConstant typeExplicit = type == null ? null : type.ensureTypeConstant(ctx, null);
-        if (typeExplicit != null)
-            {
-            if (typeExplicit.containsUnresolved())
-                {
-                return null;
-                }
-            if (typeExplicit.resolveGenericType("Element") != null)
-                {
-                return typeExplicit;
-                }
-            }
-
-        // see if there is an implicit element type
-        TypeConstant typeArray   = typeExplicit == null ? pool().typeArray() : typeExplicit;
+        TypeConstant typeBase    = getBaseType(ctx, null);
         TypeConstant typeElement = getImplicitElementType(ctx);
         if (typeElement != null)
             {
-            typeArray = pool().ensureArrayType(typeElement);
+            typeBase = pool().ensureParameterizedTypeConstant(typeBase, typeElement);
             }
-        return typeArray;
+        return typeBase;
+        }
+
+    /**
+     * @return the base type for this ListExpression, which is one of Array, Collection, List or Set
+     */
+    private TypeConstant getBaseType(Context ctx, TypeConstant typeRequired)
+        {
+        if (type == null)
+            {
+            ConstantPool pool = pool();
+            if (typeRequired != null && typeRequired.isSingleUnderlyingClass(true))
+                {
+                TypeConstant typeBase = typeRequired.getSingleUnderlyingClass(true).getType();
+                if (pool.typeSet().isA(typeBase))
+                    {
+                    return pool.typeSet();
+                    }
+                }
+
+            return pool.typeArray();
+            }
+
+        TypeConstant typeExplicit = type.ensureTypeConstant(ctx, null);
+
+        assert !typeExplicit.isParamsSpecified();
+        return typeExplicit;
         }
 
     private TypeConstant getImplicitElementType(Context ctx)
@@ -125,12 +137,25 @@ public class ListExpression
     @Override
     public TypeFit testFit(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
-        int cElements = exprs.size();
-        if (cElements > 0 && typeRequired != null && typeRequired.isA(pool().typeCollection()))
+        InferFromRequired:
+        if (typeRequired != null)
             {
             TypeConstant typeElement = typeRequired.resolveGenericType("Element");
-            TypeFit      fit         = TypeFit.Fit;
-            for (int i = 0; i < cElements; ++i)
+            if (typeElement == null)
+                {
+                break InferFromRequired;
+                }
+
+            TypeConstant typeBase   = getBaseType(ctx, typeRequired);
+            TypeConstant typeTarget = pool().ensureParameterizedTypeConstant(typeBase, typeElement);
+
+            if (!isA(ctx, typeTarget, typeRequired))
+                {
+                return TypeFit.NoFit;
+                }
+
+            TypeFit fit = TypeFit.Fit;
+            for (int i = 0, cElements = exprs.size(); i < cElements; ++i)
                 {
                 fit = fit.combineWith(exprs.get(i).testFit(ctx, typeElement, errs));
                 if (!fit.isFit())
@@ -141,25 +166,6 @@ public class ListExpression
             return fit;
             }
         return super.testFit(ctx, typeRequired, errs);
-        }
-
-    @Override
-    protected TypeFit calcFit(Context ctx, TypeConstant typeIn, TypeConstant typeOut)
-        {
-        if (exprs.isEmpty())
-            {
-            // an empty list fits any type
-            return TypeFit.Fit;
-            }
-
-        ConstantPool pool = pool();
-        if (typeOut != null && typeOut.isA(pool.typeCollection()) &&
-            typeIn  != null && typeIn .isA(pool.typeCollection()))
-            {
-            typeOut = typeOut.resolveGenericType("Element");
-            typeIn  = typeIn .resolveGenericType("Element");
-            }
-        return super.calcFit(ctx, typeIn, typeOut);
         }
 
     @Override
@@ -187,18 +193,8 @@ public class ListExpression
             typeElement = pool.typeObject();
             }
 
-        TypeConstant typeActual;
-        boolean      fSet;
-        if (typeRequired != null && typeRequired.isA(pool.typeSet()))
-            {
-            typeActual = pool.typeSet();
-            fSet       = true;
-            }
-        else
-            {
-            typeActual = pool.typeArray();
-            fSet       = false;
-            }
+        TypeConstant typeActual = getBaseType(ctx, typeRequired);
+        boolean      fSet       = typeActual.isA(pool.typeSet());
 
         TypeExpression exprTypeOld = type;
         if (exprTypeOld != null)
