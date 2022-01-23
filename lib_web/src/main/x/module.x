@@ -3,6 +3,7 @@
  */
 module web.xtclang.org
     {
+    package collections import collections.xtclang.org;
     package json import json.xtclang.org;
 
     import ecstasy.reflect.Parameter;
@@ -53,6 +54,17 @@ module web.xtclang.org
      */
     mixin Post(String path = "")
             extends HttpEndpoint(HttpMethod.POST, path)
+            into Method
+        {
+        }
+
+    /**
+     * A http PATCH method.
+     *
+     * @param path  the optional path to reach this endpoint
+     */
+    mixin Patch(String path = "")
+            extends HttpEndpoint(HttpMethod.PATCH, path)
             into Method
         {
         }
@@ -144,12 +156,51 @@ module web.xtclang.org
         {
         }
 
+    interface Prioritized
+            extends Orderable
+        {
+        static immutable Int Normal = 1000;
+
+        @RO Int priority = Normal;
+
+        // ----- Orderable -----------------------------------------------------------------------------
+
+        /**
+         * Prioritized are equal if their priorities are equal.
+         */
+        static <CompileType extends Prioritized> Boolean equals(CompileType value1, CompileType value2)
+            {
+            return value1.priority == value2.priority;
+            }
+
+        /**
+         * Prioritized are compared by their priority.
+         */
+        static <CompileType extends Prioritized> Ordered compare(CompileType value1, CompileType value2)
+            {
+            return value1.priority <=> value2.priority;
+            }
+        }
+
+    interface PreProcessor
+        extends Prioritized
+        {
+        void process(HttpRequest request);
+        }
+
+    interface PostProcessor
+        extends Prioritized
+        {
+        void process(HttpRequest request, HttpResponse response);
+        }
+
     /**
      * A provider of a function, typically a handler for a http request.
      */
     interface ExecutableFunction
+            extends Const
         {
-        @RO function void () fn;
+        function void () createFunction();
 
         @RO Boolean conditionalResult;
         }

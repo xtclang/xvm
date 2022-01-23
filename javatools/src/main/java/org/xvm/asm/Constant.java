@@ -827,6 +827,7 @@ public abstract class Constant
         FSDir     ("fs"),
         FSFile    ("fs"),
         FSLink    ("fs"),
+        ResponseSender ("http"),
 
         /*
          * Structural identifiers.

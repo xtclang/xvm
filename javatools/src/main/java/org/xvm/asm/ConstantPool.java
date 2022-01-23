@@ -297,7 +297,7 @@ public class ConstantPool
         RegExConstant constant = (RegExConstant) ensureLocatorLookup(Format.RegEx).get(expression);
         if (constant == null)
             {
-            constant = (RegExConstant) register(new RegExConstant(this, expression));
+            constant = (RegExConstant) register(new RegExConstant(this, expression, 0));
             }
         return constant;
         }

@@ -6,7 +6,7 @@
  * A RegEx is a constant, the state of the result of a match is in the Match, meaning that a
  * single RegEx may be safely used multiple times to match different input values.
  */
-const RegEx(String pattern)
+const RegEx(String pattern, Int flags = 0)
     {
     /**
      * Match this pattern against the entire input value.
@@ -108,7 +108,7 @@ const RegEx(String pattern)
      *
      * @return a literal String pattern that matches the input String
      */
-    static String toLiteral(String input)
+    public static String toLiteral(String input)
         {
         if (Int slashEIndex := input.indexOf("\\E"))
             {
@@ -131,4 +131,15 @@ const RegEx(String pattern)
             return $"\\Q{input}\\E";
             }
         }
+
+    // ---- Flags -----------------------------------------------------------
+
+    /**
+     * Enables dotall mode.
+     *
+     * In dotall mode, the expression `.` matches any character,
+     * including a line terminator. By default this expression
+     * does not match line terminators.
+     */
+    static Int DOTALL = 0x20;
     }

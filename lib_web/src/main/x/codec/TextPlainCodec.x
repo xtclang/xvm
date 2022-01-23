@@ -29,7 +29,7 @@ const TextPlainCodec
         }
 
     @Override
-    <ObjectType> ObjectType decode<ObjectType>(InputStream in)
+    <ObjectType> ObjectType decode<ObjectType>(Type type, InputStream in)
         {
         if (ObjectType.is(Type<String>))
             {

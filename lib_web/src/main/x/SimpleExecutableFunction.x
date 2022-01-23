@@ -1,7 +1,7 @@
 /**
  * A simple implementation of an ExecutableFunction that executes a method bound to a target.
  */
-class SimpleExecutableFunction
+const SimpleExecutableFunction
         implements ExecutableFunction
     {
     /**
@@ -10,15 +10,26 @@ class SimpleExecutableFunction
      * @param method  the method to bind to the target
      * @param target  the target to bind the method to when creating the function to execute
      */
-    construct(Method<Object, Tuple, Tuple> method, Object target)
+    construct(Method<Object, Tuple, Tuple> method, Function<<>, <Object>> constructor)
         {
-        this.fn                = method.bindTarget(target);
+        this.method            = method;
+        this.constructor       = constructor;
         this.conditionalResult = method.conditionalResult;
         }
 
     @Override
-    public/private function void () fn;
+    function void () createFunction()
+        {
+        Tuple         params = Tuple:();
+        Tuple<Object> target = constructor.invoke(params);
+        assert target.size == 1;
+        return method.bindTarget(target[0]);
+        }
+
+    public/private Method<Object, Tuple, Tuple> method;
 
     @Override
     public/private Boolean conditionalResult;
+
+    private Function<<>, <Object>> constructor;
     }
