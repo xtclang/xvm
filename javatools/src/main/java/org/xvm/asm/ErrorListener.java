@@ -1,6 +1,7 @@
 package org.xvm.asm;
 
 
+import java.lang.management.ManagementFactory;
 import java.text.MessageFormat;
 
 import java.util.Arrays;
@@ -378,9 +379,21 @@ public interface ErrorListener
                 if (sFile != null)
                     {
                     // output file:line as IntelliJ will then link to the line
-                    sb.append(sFile)
-                        .append(':').append(getLine() + 1)
-                        .append(' ');
+                    if (INTELLIJ_IDEA)
+                        {
+                        sb.append(sFile)
+                            .append(" (")
+                            .append(sFile.substring(sFile.lastIndexOf('/') + 1))
+                            .append(':')
+                            .append(getLine() + 1)
+                            .append(") ");
+                        }
+                    else
+                        {
+                        sb.append(sFile)
+                            .append(':').append(getLine() + 1)
+                            .append(' ');
+                        }
                     }
 
                 sb.append("[")
@@ -458,4 +471,10 @@ public interface ErrorListener
      */
     ErrorListener BLACKHOLE = new BlackholeErrorListener();
     ErrorListener RUNTIME   = new RuntimeErrorListener();
+
+    /**
+     * Indicates that the compiler probably runs inside of IntelliJ IDEA.
+     */
+    boolean INTELLIJ_IDEA = ManagementFactory.getRuntimeMXBean().
+                            getInputArguments().toString().contains("IntelliJ");
     }
