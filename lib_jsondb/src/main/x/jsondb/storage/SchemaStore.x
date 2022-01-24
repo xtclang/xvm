@@ -16,7 +16,7 @@ service SchemaStore
               DBObjectInfo     info,
              )
         {
-        construct ObjectStore(catalog, info);
+        super(catalog, info);
         }
 
     @Override

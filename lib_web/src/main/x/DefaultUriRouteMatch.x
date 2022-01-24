@@ -175,7 +175,7 @@ class DefaultUriRouteMatch
                    Map<String, Object> variableValues,
                    List<Parameter>     requiredParameters)
             {
-            construct DefaultUriRouteMatch(info, route, variableValues);
+            super(info, route, variableValues);
             }
 
         @Override

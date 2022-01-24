@@ -14,7 +14,7 @@ class HasherSet<Element>
      */
     construct(Hasher<Element> hasher, Int initCapacity = 0)
         {
-        construct MapSet(new HasherMap<Element, Nullable>(hasher, initCapacity));
+        super(new HasherMap<Element, Nullable>(hasher, initCapacity));
         }
 
     /**
@@ -36,7 +36,7 @@ class HasherSet<Element>
                 {
                 map.put(value, Null);
                 }
-            construct MapSet(map);
+            super(map);
             }
         }
 
@@ -47,7 +47,7 @@ class HasherSet<Element>
      */
     construct(HasherSet<Element> that)
         {
-        construct MapSet(that);
+        super(that);
         }
 
     /**

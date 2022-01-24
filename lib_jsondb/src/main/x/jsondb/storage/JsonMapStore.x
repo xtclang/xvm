@@ -38,7 +38,7 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
               Mapping<Value>   valueMapping,
               )
         {
-        construct ObjectStore(catalog, info);
+        super(catalog, info);
 
         this.jsonSchema   = catalog.jsonSchema;
         this.keyMapping   = keyMapping;

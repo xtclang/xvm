@@ -33,7 +33,7 @@ class HashMap<Key extends Hashable, Value>
     construct(Map<Key, Value> that)
         {
         assert Hasher<Key> hasher := Key.hashed();
-        construct HasherMap(hasher, that);
+        super(hasher, that);
         }
 
     /**
@@ -43,7 +43,7 @@ class HashMap<Key extends Hashable, Value>
      */
     construct(HashMap<Key, Value> that)
         {
-        construct HasherMap(that);
+        super(that);
         }
 
     /**
@@ -55,6 +55,6 @@ class HashMap<Key extends Hashable, Value>
      */
     construct(Hasher<Key> hasher, Int initCapacity = 0)
         {
-        construct HasherMap(hasher, initCapacity);
+        super(hasher, initCapacity);
         }
     }

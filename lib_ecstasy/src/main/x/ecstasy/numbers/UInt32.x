@@ -53,7 +53,7 @@ const UInt32
     construct(Bit[] bits)
         {
         assert bits.size == 32;
-        construct UIntNumber(bits);
+        super(bits);
         }
 
     /**
@@ -65,7 +65,7 @@ const UInt32
     construct(Byte[] bytes)
         {
         assert bytes.size == 4;
-        construct UIntNumber(bytes);
+        super(bytes);
         }
 
 

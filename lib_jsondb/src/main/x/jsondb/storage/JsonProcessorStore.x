@@ -46,7 +46,7 @@ service JsonProcessorStore<Message extends immutable Const>
               Mapping<Message> messageMapping,
               )
         {
-        construct ObjectStore(catalog, info);
+        super(catalog, info);
 
         this.messageMapping = messageMapping;
         this.jsonSchema     = catalog.jsonSchema;

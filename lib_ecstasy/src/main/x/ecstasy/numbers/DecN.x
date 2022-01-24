@@ -13,7 +13,7 @@ const DecN
     construct(Bit[] bits)
         {
         assert bits.size >= 32 && bits.size.bitCount == 1;
-        construct DecimalFPNumber(bits);
+        super(bits);
         }
 
     /**
@@ -26,7 +26,7 @@ const DecN
     construct(Byte[] bytes)
         {
         assert bytes.size >= 4 && bytes.size.bitCount == 1;
-        construct DecimalFPNumber(bytes);
+        super(bytes);
         }
 
 

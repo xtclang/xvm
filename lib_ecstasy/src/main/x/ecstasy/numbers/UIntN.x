@@ -15,7 +15,7 @@ const UIntN
     construct(Bit[] bits)
         {
         assert bits.size >= 8 && bits.size.bitCount == 1;
-        construct UIntNumber(bits);
+        super(bits);
         }
 
     /**
@@ -27,7 +27,7 @@ const UIntN
     construct(Byte[] bytes)
         {
         assert bytes.size >= 1;
-        construct UIntNumber(bytes);
+        super(bytes);
         }
 
     // ----- Numeric funky interface ---------------------------------------------------------------

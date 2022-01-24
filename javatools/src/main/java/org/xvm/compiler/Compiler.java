@@ -797,7 +797,7 @@ public class Compiler
      */
     public static final String NO_THIS                            = "COMPILER-52";
     /**
-     * There is no "super".
+     * No "super" method is available.
      */
     public static final String NO_SUPER                           = "COMPILER-53";
     /**

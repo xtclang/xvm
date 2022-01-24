@@ -53,7 +53,7 @@ const Int64
     construct(Bit[] bits)
         {
         assert bits.size == 64;
-        construct IntNumber(bits);
+        super(bits);
         }
 
     /**
@@ -65,7 +65,7 @@ const Int64
     construct(Byte[] bytes)
         {
         assert bytes.size == 8;
-        construct IntNumber(bytes);
+        super(bytes);
         }
 
 

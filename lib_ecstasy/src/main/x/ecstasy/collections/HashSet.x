@@ -13,7 +13,7 @@ class HashSet<Element extends Hashable>
      */
     construct(Int initCapacity = 0)
         {
-        construct MapSet(new HashMap<Element, Nullable>(initCapacity));
+        super(new HashMap<Element, Nullable>(initCapacity));
         }
 
     /**
@@ -34,7 +34,7 @@ class HashSet<Element extends Hashable>
                 {
                 map.put(value, Null);
                 }
-            construct MapSet(map);
+            super(map);
             }
         }
 
@@ -45,6 +45,6 @@ class HashSet<Element extends Hashable>
      */
     construct(HashSet<Element> that)
         {
-        construct MapSet(that);
+        super(that);
         }
     }

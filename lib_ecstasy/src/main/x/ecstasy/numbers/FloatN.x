@@ -13,7 +13,7 @@ const FloatN
     construct(Bit[] bits)
         {
         assert:bounds bits.size >= 16 && bits.size.bitCount == 1;
-        construct BinaryFPNumber(bits);
+        super(bits);
         }
 
     /**
@@ -26,7 +26,7 @@ const FloatN
     construct(Byte[] bytes)
         {
         assert:bounds bytes.size >= 2 && bytes.size.bitCount == 1;
-        construct BinaryFPNumber(bytes);
+        super(bytes);
         }
 
 

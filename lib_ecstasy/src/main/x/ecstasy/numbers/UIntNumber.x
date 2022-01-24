@@ -14,7 +14,7 @@
      */
     construct(Bit[] bits)
         {
-        construct IntNumber(bits);
+        super(bits);
         }
 
     /**
@@ -25,7 +25,7 @@
      */
     construct(Byte[] bytes)
         {
-        construct IntNumber(bytes);
+        super(bytes);
         }
 
 

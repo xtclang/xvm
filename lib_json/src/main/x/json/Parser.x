@@ -916,7 +916,7 @@ class Parser
         {
         construct(Parser raw, function void()? notifyClosed = Null)
             {
-            construct Parser(raw);
+            super(raw);
             this.raw          = raw;
             this.notifyClosed = notifyClosed;
             }

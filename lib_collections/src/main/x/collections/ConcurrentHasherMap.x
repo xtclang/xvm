@@ -444,7 +444,7 @@ const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
         {
         construct (Iterator<Element> iter1, Iterator<Element> iter2)
             {
-            construct CompoundIterator(iter1, iter2);
+            super(iter1, iter2);
             }
         }
 
@@ -472,7 +472,7 @@ const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
             assert partitionCount > 0 as "Partition count must be specified";
 
             this.partitionCount = partitionCount;
-            construct HasherMap(hasher, initCapacity);
+            super(hasher, initCapacity);
             }
 
         /**
@@ -483,7 +483,7 @@ const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
         construct(Partition<Key, Value> that)
             {
             this.partitionCount = that.partitionCount;
-            construct HasherMap(that);
+            super(that);
             }
 
 

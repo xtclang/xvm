@@ -554,7 +554,7 @@ class ObjectInputStream(Schema schema, Parser parser)
         {
         construct(ParentInput parent, (String|Int)? id = Null, Token[]? tokens = Null)
             {
-            construct DocInputStream(parent, id, tokens);
+            super(parent, id, tokens);
             }
 
         @Override
@@ -620,7 +620,7 @@ class ObjectInputStream(Schema schema, Parser parser)
         construct()
             {
             assert root == Null;
-            construct ElementInputStream(Null);
+            super(Null);
             }
         finally
             {
@@ -664,7 +664,7 @@ class ObjectInputStream(Schema schema, Parser parser)
         {
         construct(ParentInput parent, (String|Int)? id = Null, Token[]? tokens = Null)
             {
-            construct DocInputStream(parent, id, tokens);
+            super(parent, id, tokens);
             parser.expect(ArrayEnter);
             }
 
@@ -750,7 +750,7 @@ class ObjectInputStream(Schema schema, Parser parser)
         {
         construct(ParentInput parent, (String|Int)? id = Null, Token[]? tokens = Null, Boolean peekingAhead = False)
             {
-            construct DocInputStream(parent, id, tokens);
+            super(parent, id, tokens);
 
             if (peekingAhead)
                 {
