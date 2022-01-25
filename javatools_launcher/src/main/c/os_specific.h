@@ -27,7 +27,7 @@ extern const char* findLauncherPath();
  *
  * @param javaPath  the path to use to execute the JVM (e.g. "java")
  * @param javaOpts  the JVM options (e.g. "-Xmx=512m")
- * @param jarPath   the directory path containing the xvm.jar to execute and xvm.xtc
+ * @param jarPath   the directory path containing javatools.jar and javatools_bridge.xtc
  * @param libPath   the directory path containing Ecstasy.xtc and other modules
  * @param argc      the number of arguments to pass along
  * @param argv      the arguments to pass along

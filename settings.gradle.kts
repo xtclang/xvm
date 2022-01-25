@@ -1,7 +1,7 @@
 rootProject.name = "xvm"
 
-include(":utils")               // produces utils.jar for org.xvm.utils package
-include(":unicode")             // produces data files -> :lib_ecstasy/resources, only on request
+include(":javatools_utils")     // produces javatools_utils.jar for org.xvm.utils package
+include(":javatools_unicode")   // produces data files -> :lib_ecstasy/resources, only on request
 include(":javatools")           // produces javatools.jar
 include(":javatools_bridge")    // produces *only* a source zip file (no .xtc), and only on request
 include(":javatools_launcher")  // produces native executables (Win, Mac, Linux), only on request
@@ -16,6 +16,6 @@ include(":lib_host")            // produces host.xtc
 include(":lib_web")             // produces web.xtc
 // TODO(":wiki")
 include(":xdk")         // builds the above modules (ecstasy.xtc, javatools_bridge.xtc, json.xtc, etc.)
-// drags in Java libraries (utils, javatools), native launchers, wiki, etc.
+// drags in Java libraries (javatools_utils, javatools), native launchers, wiki, etc.
 
 include(":manualTests") // temporary; allowing gradle test execution

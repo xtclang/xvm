@@ -9,4 +9,4 @@ command line tools:
   application. The source code is located at
   [https://github.com/xtclang/xvm/tree/master/xsrc/_native](https://github.com/xtclang/xvm/tree/master/xsrc/_native)
 
-Note: Requires Java 11 or later.
+Note: Requires Java 17 or later.

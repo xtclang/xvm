@@ -25,11 +25,11 @@ else
   exit 1
 fi
 
-# verify Java version 11 or later
+# verify Java version 17 or later
 JVER=$("${JEXEC}" -version 2>&1 | awk -F '"' '/version/ {print $2}')
 JMAJ="${JVER%%.*}"
-if [[ "${JMAJ}" < "11" ]]; then
-  echo "Java version is ${JVER}; Java 11 or later required"
+if [[ "${JMAJ}" < "17" ]]; then
+  echo "Java version is ${JVER}; Java 17 or later required"
   exit 1
 fi
 

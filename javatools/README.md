@@ -4,7 +4,7 @@ This directory contains the "javatools" project, which is a
 set of Java classes that implement the Ecstasy lexer, parser,
 compiler, IR, runtime, etc.
 
-This project uses the library produced by the "utils" project,
+This project uses the library produced by the "javatools_utils" project,
 and the `implicit.x` resource file from the "ecstasy" project.
 
 Long term, this project will be used to help support IDE
