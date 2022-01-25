@@ -240,15 +240,15 @@ public class NameExpression
     public boolean validateCondition(ErrorListener errs)
         {
         // can only be "Name.Name.present" form
-        if (left instanceof NameExpression && amp == null && params == null && getName().equals("present"))
+        if (left instanceof NameExpression exprName &&
+                amp == null && params == null && getName().equals("present"))
             {
             // left has to be all names
-            NameExpression expr = (NameExpression) left;
-            while (expr.left != null)
+            while (exprName.left != null)
                 {
-                if (!expr.getName().equals("present") && expr.left instanceof NameExpression)
+                if (!exprName.getName().equals("present") && exprName.left instanceof NameExpression)
                     {
-                    expr = (NameExpression) expr.left;
+                    exprName = (NameExpression) exprName.left;
                     }
                 else
                     {
@@ -444,7 +444,7 @@ public class NameExpression
         TypeExpression exprType = null;
 
         NameExpressions:
-        if (left instanceof NameExpression)
+        if (left instanceof NameExpression exprLeft)
             {
             // we're going to split a chain of name expression (A).(B<T>).(C).(D<U>) into
             // a chain of NamedTypeExpressions (A.B<T>).(C.D<U>)
@@ -452,9 +452,7 @@ public class NameExpression
             tokens.add(name);
 
             // moving to the left, find any previous parameterized named expression
-            NameExpression exprLeft = (NameExpression) left;
             NameExpression exprPrev;
-
             while (true)
                 {
                 if (exprLeft.params != null)
@@ -470,7 +468,7 @@ public class NameExpression
                     {
                     // if expr is null, there is no left-named type and therefore no reason to split
                     // this into a chain of NamedTypeExpressions;
-                    // otherwise this should be an error and it will be reported later
+                    // otherwise this should be an error, which will be reported later
                     break NameExpressions;
                     }
                 exprLeft = (NameExpression) expr;
@@ -841,22 +839,18 @@ public class NameExpression
             return false;
             }
 
-        switch (getMeaning())
+        return switch (getMeaning())
             {
-            case Variable:
-            case Property:
-            case FormalChildType:
-                return true;
-
-            case Reserved: // TODO - some of these are traceworthy, right?
-            default:
-            case Unknown:
-            case Method:
-            case Class:
-            case Type:
-            case Label:
-                return false;
-            }
+            case Variable,
+                 Property,
+                 FormalChildType -> true; // TODO - some of these are traceworthy, right?
+            case Reserved,
+                 Unknown,
+                 Method,
+                 Class,
+                 Type,
+                 Label           -> false;
+            };
         }
 
     @Override
@@ -1207,9 +1201,8 @@ public class NameExpression
 
             case PropertyDeref:
                 {
-                if (left instanceof NameExpression)
+                if (left instanceof NameExpression nameLeft)
                     {
-                    NameExpression nameLeft = (NameExpression) left;
                     if (nameLeft.getMeaning() == Meaning.Label)
                         {
                         LabelVar labelVar = (LabelVar) nameLeft.m_arg;
@@ -1480,11 +1473,9 @@ public class NameExpression
                 assert target == null;
                 return new Assignable((Register) arg);
                 }
-            else if (arg instanceof PropertyConstant)
+            else if (arg instanceof PropertyConstant idProp)
                 {
-                PropertyConstant idProp = (PropertyConstant) arg;
-                Argument         argTarget;
-
+                Argument argTarget;
                 if (left == null)
                     {
                     ClassStructure clz = ctx.getThisClass();
@@ -1615,9 +1606,8 @@ public class NameExpression
                 m_arg         = arg;
                 m_fAssignable = ((Register) arg).isWritable();
                 }
-            else if (arg instanceof Constant)
+            else if (arg instanceof Constant constant)
                 {
-                Constant constant = ((Constant) arg);
                 switch (constant.getFormat())
                     {
                     case Package:
@@ -1830,10 +1820,9 @@ public class NameExpression
                     return null;
                     }
 
-                if (typeLeft.isTypeOfType() && left instanceof NameExpression)
+                if (typeLeft.isTypeOfType() && left instanceof NameExpression exprLeft)
                     {
                     FormalConstant constFormal = null;
-                    NameExpression exprLeft    = (NameExpression) left;
                     switch (exprLeft.getMeaning())
                         {
                         case Variable:
@@ -2049,7 +2038,7 @@ public class NameExpression
         ConstantPool pool           = pool();
         boolean      fSuppressDeref = isSuppressDeref();
 
-        if (argRaw instanceof Register)
+        if (argRaw instanceof Register reg)
             {
             // meaning    type (de-ref)  type (no-de-ref)
             // ---------  -------------  ----------------
@@ -2063,8 +2052,6 @@ public class NameExpression
                 {
                 log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
                 }
-
-            Register reg = (Register) argRaw;
 
             // label variables do not actually exist
             if (reg.isLabel() && (fSuppressDeref || !(getParent() instanceof NameExpression)))
@@ -2092,10 +2079,9 @@ public class NameExpression
                 }
             }
 
-        if (argRaw instanceof TypeConstant)
+        if (argRaw instanceof TypeConstant typeParent)
             {
             // this can only mean an "outer this"
-            TypeConstant typeParent = (TypeConstant) argRaw;
             if (fSuppressDeref)
                 {
                 m_plan = Plan.OuterRef;
@@ -2415,9 +2401,8 @@ public class NameExpression
                                 boolean fDynamic = false;
 
                                 CheckDynamic:
-                                if (left instanceof NameExpression)
+                                if (left instanceof NameExpression exprLeft)
                                     {
-                                    NameExpression exprLeft = (NameExpression) left;
                                     if (exprLeft.isSuppressDeref())
                                         {
                                         // this is a Ref property access, e.g.: "&outer.Referent"
@@ -2507,7 +2492,7 @@ public class NameExpression
                 if (aTypeParams != null)
                     {
                     // TODO have to incorporate type params
-                    notImplemented();
+                    throw notImplemented();
                     }
 
                 m_plan = Plan.TypeOfTypedef;
@@ -2615,10 +2600,9 @@ public class NameExpression
         ConstantPool pool = pool();
 
         CheckDynamic:
-        if (left instanceof NameExpression &&
+        if (left instanceof NameExpression exprLeft &&
                 typeLeft.isSingleDefiningConstant() && !typeLeft.isFormalType())
             {
-            NameExpression exprLeft = (NameExpression) left;
             if (exprLeft.isSuppressDeref())
                 {
                 // this is a Ref property access, e.g.: "&outer.assigned"
@@ -2626,12 +2610,11 @@ public class NameExpression
                 }
 
             Argument argLeft = exprLeft.resolveRawArgument(ctx, false, ErrorListener.BLACKHOLE);
-            if (!(argLeft instanceof Register))
+            if (!(argLeft instanceof Register regLeft))
                 {
                 break CheckDynamic;
                 }
 
-            Register regLeft = (Register) argLeft;
             if (regLeft.isPredefined())
                 {
                 break CheckDynamic;
@@ -2694,9 +2677,8 @@ public class NameExpression
             return Meaning.Unknown;
             }
 
-        if (arg instanceof Register)
+        if (arg instanceof Register reg)
             {
-            Register reg = (Register) arg;
             return reg.isPredefined()
                     ? reg.isLabel()
                             ? Meaning.Label
@@ -2710,9 +2692,8 @@ public class NameExpression
             return Meaning.Reserved;
             }
 
-        if (arg instanceof Constant)
+        if (arg instanceof Constant constant)
             {
-            Constant constant = (Constant) arg;
             switch (constant.getFormat())
                 {
                     // class ID
@@ -2871,13 +2852,12 @@ public class NameExpression
             return null;
             }
         Component component = typeFrom.getSingleUnderlyingClass(true).getComponent();
-        if (!(component instanceof ClassStructure))
+        if (!(component instanceof ClassStructure clzFrom))
             {
             return null;
             }
 
         ConstantPool   pool       = pool();
-        ClassStructure clzFrom    = (ClassStructure) component;
         PseudoConstant idVirtPath = null;
         int            cDepth     = 0;
         while (clzFrom != null)
@@ -2919,9 +2899,8 @@ public class NameExpression
             return PropertyAccess.This;
             }
 
-        if (left instanceof NameExpression)
+        if (left instanceof NameExpression exprLeft)
             {
-            NameExpression exprLeft = (NameExpression) left;
             // check that "this" is not "OuterThis"
             if (exprLeft.getName().equals("this") &&
                     (fRef || exprLeft.m_plan == Plan.None))
@@ -2972,10 +2951,9 @@ public class NameExpression
                 }
             else
                 {
-                if (arg instanceof TargetInfo)
+                if (arg instanceof TargetInfo info)
                     {
-                    TargetInfo       info = (TargetInfo) arg;
-                    IdentityConstant id   = info.getId();
+                    IdentityConstant id = info.getId();
                     if (id instanceof PropertyConstant)
                         {
                         PropertyConstant idProp = (PropertyConstant) arg;
@@ -3003,10 +2981,8 @@ public class NameExpression
                             }
                         }
                     }
-                else if (arg instanceof PropertyConstant)
+                else if (arg instanceof PropertyConstant idProp)
                     {
-                    PropertyConstant idProp = (PropertyConstant) arg;
-
                     assert sName.equals(idProp.getName());
 
                     if (idProp.isFormalType())
