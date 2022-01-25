@@ -27,7 +27,7 @@ const ConcurrentHashMap<Key extends immutable Hashable, Value extends Shareable>
     construct(Int initCapacity = 0, Int parallelism = 16)
         {
         assert Hasher<Key> hasher := Key.hashed();
-        construct ConcurrentHasherMap(hasher, initCapacity, parallelism);
+        super(hasher, initCapacity, parallelism);
         }
 
     /**
@@ -40,7 +40,7 @@ const ConcurrentHashMap<Key extends immutable Hashable, Value extends Shareable>
     construct(Map<Key, Value> that, Int parallelism = 16)
         {
         assert Hasher<Key> hasher := Key.hashed();
-        construct ConcurrentHasherMap(hasher, that, parallelism);
+        super(hasher, that, parallelism);
         }
 
     /**
@@ -51,6 +51,6 @@ const ConcurrentHashMap<Key extends immutable Hashable, Value extends Shareable>
      */
     construct(ConcurrentHashMap<Key, Value> that, Int parallelism = 16)
         {
-        construct ConcurrentHasherMap(that, parallelism);
+        super(that, parallelism);
         }
     }

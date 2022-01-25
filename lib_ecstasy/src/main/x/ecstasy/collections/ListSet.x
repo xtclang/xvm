@@ -20,7 +20,7 @@ class ListSet<Element>
             {
             map.put(value, Null);
             }
-        construct MapSet(map);
+        super(map);
         }
 
     /**
@@ -30,6 +30,6 @@ class ListSet<Element>
      */
     construct(ListSet<Element> that)
         {
-        construct MapSet(that);
+        super(that);
         }
     }

@@ -16,7 +16,7 @@
      */
     construct(Bit[] bits)
         {
-        construct FPNumber(bits);
+        super(bits);
         }
 
     /**
@@ -27,7 +27,7 @@
      */
     construct(Byte[] bytes)
         {
-        construct FPNumber(bytes);
+        super(bytes);
         }
 
 

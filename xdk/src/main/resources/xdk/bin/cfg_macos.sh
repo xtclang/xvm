@@ -1,13 +1,14 @@
-#!/bin/bash
+#!/bin/zsh
 
 # get directory of this script
 if [[ -e "$0" ]]; then
   DIR=$(dirname "$0")
-  EXP="N"
+  DIR="$(cd "$(dirname "$DIR")"; pwd)/$(basename "$DIR")"
+  EXP="Y"
 fi
 
 if [[ ! -e "${DIR}/cfg_macos.sh" ]]; then
-  DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+  DIR="$( cd "$( dirname "${(%):-%N}" )" && pwd )"
   EXP="Y"
 fi
 
@@ -24,11 +25,11 @@ else
   exit 1
 fi
 
-# verify Java version 11 or later
+# verify Java version 17 or later
 JVER=$("${JEXEC}" -version 2>&1 | awk -F '"' '/version/ {print $2}')
 JMAJ="${JVER%%.*}"
-if [[ "${JMAJ}" < "11" ]]; then
-  echo "Java version is ${JVER}; Java 11 or later required"
+if [[ "${JMAJ}" < "17" ]]; then
+  echo "Java version is ${JVER}; Java 17 or later required"
   exit 1
 fi
 

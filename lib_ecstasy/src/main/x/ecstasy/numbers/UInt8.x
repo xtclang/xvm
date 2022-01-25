@@ -56,7 +56,7 @@ const UInt8
     construct(Bit[] bits)
         {
         assert bits.size == 8;
-        construct UIntNumber(bits);
+        super(bits);
         }
 
     /**
@@ -68,7 +68,7 @@ const UInt8
     construct(Byte[] bytes)
         {
         assert bytes.size == 1;
-        construct UIntNumber(bytes);
+        super(bytes);
         }
 
 

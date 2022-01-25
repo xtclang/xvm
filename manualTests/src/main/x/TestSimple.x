@@ -9,26 +9,41 @@ module TestSimple.test.org
 
     void run()
         {
-        Int i1 = 3;
-        Int i2 = 7;
-
-        Array<Int> a1 = [i1,i2,11];
-        Array<Int> a2 = [2,7,12];
-
-        Set<Int> s1 = [i1,i2,11];
-        Set<Int> s2 = [2,7,12];
-
-        Set<Int> s3 = s1.addAll(s2);
-        report(s3);
-        Set<Int> s4 = s3.addAll(s3);
-        report(s4);
-
-        s4.removeAll(s1); // used to throw
-        console.println(s4);
+        Derived d = new Derived(5, "hell0");
+        d.foo(1);
         }
 
     void report(Object o)
         {
-        console.println($"{&o.actualType}: {o}");
+        // console.println($"{&o.actualType}: {o}");
+        }
+
+    class Base(Int value)
+        {
+        void foo(Int a1, Int a2=0)
+            {
+            Int a3;
+            console.println($"{a1} {a2}");
+            // console.println($"{a1} {a2} {&a3.assigned}"); // blows up
+            }
+        }
+
+    const Derived()
+            extends Base
+        {
+        String name;
+        construct(Int value, String name)
+            {
+            this.name = name;
+            super(value);
+            }
+
+        @Override
+        void foo(Int a1, Int a2=2, Int a3=3)
+            {
+            super(a1);
+            super(a1, a2);
+            //super(a1, a2, a3);  // this should not compile; deferred
+            }
         }
     }

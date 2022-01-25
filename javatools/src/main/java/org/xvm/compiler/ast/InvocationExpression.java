@@ -346,11 +346,10 @@ public class InvocationExpression
         {
         ConstantPool pool = pool();
 
-        if (expr instanceof NameExpression)
+        if (expr instanceof NameExpression exprName)
             {
-            NameExpression exprName = (NameExpression) expr;
-            Expression     exprLeft = exprName.left;
-            TypeConstant   typeLeft = null;
+            Expression   exprLeft = exprName.left;
+            TypeConstant typeLeft = null;
             if (exprLeft != null)
                 {
                 typeLeft = exprLeft.getImplicitType(ctx);
@@ -408,9 +407,8 @@ public class InvocationExpression
                 }
 
             // handle method or function
-            if (argMethod instanceof MethodConstant)
+            if (argMethod instanceof MethodConstant idMethod)
                 {
-                MethodConstant      idMethod    = (MethodConstant) argMethod;
                 MethodStructure     method      = m_method;
                 int                 cTypeParams = method.getTypeParamCount();
                 int                 cReturns    = method.getReturnCount();
@@ -671,13 +669,12 @@ public class InvocationExpression
         // because the name resolution is the responsibility of this InvocationExpression, and
         // the NameExpression itself will error on resolving a method/function name
         Validate:
-        if (expr instanceof NameExpression)
+        if (expr instanceof NameExpression exprName)
             {
             // if the name expression has an expression on _its_ left, then we are now responsible
             // for validating that "left's left" expression
-            NameExpression exprName = (NameExpression) expr;
-            Expression     exprLeft = exprName.left;
-            TypeConstant   typeLeft = null;
+            Expression   exprLeft = exprName.left;
+            TypeConstant typeLeft = null;
             if (exprLeft != null)
                 {
                 Expression exprNew = exprLeft.validate(ctx, null, errs);
@@ -782,23 +779,11 @@ public class InvocationExpression
                     {
                     ctx.markVarRead(exprName.getNameToken(), errs);
                     }
-                else if (argMethod instanceof MethodConstant ||
-                         argMethod instanceof PropertyConstant)
+                else
                     {
-                    Component component = ((IdentityConstant) argMethod).getComponent();
-                    boolean   fStatic;
-                    if (component == null)
-                        {
-                        TypeConstant type = m_targetInfo.getTargetType();
-                        TypeInfo     info = getTypeInfo(ctx, type, errs);
-                        fStatic = argMethod instanceof MethodConstant
-                                ? info.getMethodById((MethodConstant) argMethod).isFunction()
-                                : info.findProperty((PropertyConstant) argMethod).isConstant();
-                        }
-                    else
-                        {
-                        fStatic = component.isStatic();
-                        }
+                    boolean fStatic = argMethod instanceof MethodConstant idMethod
+                            ? getMethod(ctx, idMethod).isFunction()
+                            : getProperty(ctx, (PropertyConstant) argMethod).isStatic();
 
                     if (!fStatic)
                         {
@@ -843,9 +828,8 @@ public class InvocationExpression
                 }
 
             // handle method or function
-            if (argMethod instanceof MethodConstant)
+            if (argMethod instanceof MethodConstant idMethod)
                 {
-                MethodConstant  idMethod    = (MethodConstant) argMethod;
                 MethodStructure method      = m_method;
                 boolean         fCondReturn = method.isConditionalReturn();
                 TypeConstant[]  atypeParams = idMethod.getRawParams();
@@ -1014,9 +998,8 @@ public class InvocationExpression
                 int          cTypeParams = 0;
                 int          cDefaults   = 0;
                 TypeConstant typeFn;
-                if (argMethod instanceof PropertyConstant)
+                if (argMethod instanceof PropertyConstant idProp)
                     {
-                    PropertyConstant idProp = (PropertyConstant) argMethod;
                     if (m_targetInfo != null)
                         {
                         typeLeft = m_targetInfo.getTargetType();
@@ -1329,14 +1312,11 @@ public class InvocationExpression
         int        cTypeParams    = aargTypeParams == null ? 0 : aargTypeParams.length;
         boolean    fTargetOnStack = cArgs == 0 || args.stream().allMatch(Expression::isConstant);
 
-        if (expr instanceof NameExpression)
+        if (expr instanceof NameExpression exprName)
             {
-            NameExpression exprName = (NameExpression) expr;
-            Expression     exprLeft = exprName.left;
-            if (m_argMethod instanceof MethodConstant)
+            Expression exprLeft = exprName.left;
+            if (m_argMethod instanceof MethodConstant idMethod)
                 {
-                MethodConstant idMethod = (MethodConstant) m_argMethod;
-
                 if (m_method.isFunction() || m_method.isConstructor())
                     {
                     // use the function identity as the argument & drop through to the function handling
@@ -1579,10 +1559,9 @@ public class InvocationExpression
                     Argument argTarget = generateTarget(ctx, code, exprLeft, fLocalPropOk,
                                             fTargetOnStack, errs);
                     Argument argMethod = m_argMethod;
-                    if (argMethod instanceof PropertyConstant)
+                    if (argMethod instanceof PropertyConstant idProp)
                         {
-                        PropertyConstant  idProp = (PropertyConstant) argMethod;
-                        PropertyStructure prop   = (PropertyStructure) idProp.getComponent();
+                        PropertyStructure prop = (PropertyStructure) idProp.getComponent();
                         if (prop.isConstant() && prop.hasInitialValue())
                             {
                             MethodConstant idMethod = (MethodConstant) prop.getInitialValue();
@@ -1700,21 +1679,11 @@ public class InvocationExpression
                 MethodConstant idConstruct = (MethodConstant) argFn;
                 switch (chArgs)
                     {
-                    case '0':
-                        code.add(new Construct_0(idConstruct));
-                        break;
-
-                    case '1':
-                        code.add(new Construct_1(idConstruct, arg));
-                        break;
-
-                    case 'N':
-                        code.add(new Construct_N(idConstruct, aArgs));
-                        break;
-
-                    case 'T':
-                    default:
-                        throw new UnsupportedOperationException("constructor by Tuple");
+                    case '0' -> code.add(new Construct_0(idConstruct));
+                    case '1' -> code.add(new Construct_1(idConstruct, arg));
+                    case 'N' -> code.add(new Construct_N(idConstruct, aArgs));
+                    case 'T' -> throw new UnsupportedOperationException("TODO: Construct_T");
+                    default  -> throw new IllegalStateException();
                     }
                 return;
                 }
@@ -2129,11 +2098,10 @@ public class InvocationExpression
                 return null;
                 }
 
-            if (arg instanceof Register)
+            if (arg instanceof Register reg)
                 {
-                Register reg         = (Register) arg;
-                int      cTypeParams = 0;
-                int      cDefaults   = 0;
+                int cTypeParams = 0;
+                int cDefaults   = 0;
                 if (reg.isPredefined())
                     {
                     // report specific error messages for incorrect "this" or "super" use
@@ -2154,11 +2122,57 @@ public class InvocationExpression
 
                         case Op.A_SUPER:
                             {
-                            if (!ctx.isMethod())
+                            if (ctx.isFunction())
                                 {
                                 exprName.log(errs, Severity.ERROR, Compiler.NO_SUPER);
                                 return null;
                                 }
+
+                            if (ctx.isConstructor())
+                                {
+                                // carved out special use for using direct "super()" in constructors
+                                Contribution contribExtends = ctx.getThisClass().
+                                        findContribution(Component.Composition.Extends);
+                                if (contribExtends == null || ctx.isFunction())
+                                    {
+                                    exprName.log(errs, Severity.ERROR, Compiler.NO_SUPER);
+                                    return null;
+                                    }
+
+                                if (fNoCall)
+                                    {
+                                    exprName.log(errs, Severity.ERROR, Compiler.INVALID_SUPER_REFERENCE);
+                                    return null;
+                                    }
+
+                                TypeConstant typeSuper = pool.ensureAccessTypeConstant(
+                                        contribExtends.getTypeConstant(), Access.PROTECTED);
+
+                                TypeInfo       infoSuper   = typeSuper.ensureTypeInfo(errs);
+                                MethodConstant idConstruct = (MethodConstant) findCallable(ctx, typeSuper,
+                                        infoSuper, "construct", MethodKind.Constructor,
+                                        false, atypeReturn, ErrorListener.BLACKHOLE);
+                                if (idConstruct == null)
+                                    {
+                                    log(errs, Severity.ERROR, Compiler.IMPLICIT_SUPER_CONSTRUCTOR_MISSING,
+                                        ctx.getThisType().getValueString(), typeSuper.getValueString());
+                                    return null;
+                                    }
+
+                                MethodStructure ctor = getMethod(infoSuper, idConstruct);
+                                assert ctor != null;
+
+                                m_argMethod   = idConstruct;
+                                m_method      = ctor;
+                                m_fBindTarget = false;
+                                return idConstruct;
+                                }
+
+                            // the code below is slightly opportunistic; there is a chance that
+                            // none of the "super" methods have the required number of arguments
+                            // DEFERRED: we need to add a corresponding check, which is not as
+                            // simple as just getting the MethodInfo from the context class -
+                            // the current method can be a nested property accessor as well
                             MethodStructure method = ctx.getMethod();
 
                             cTypeParams = method.getTypeParamCount();
@@ -2176,9 +2190,8 @@ public class InvocationExpression
                 return arg;
                 }
 
-            if (arg instanceof TargetInfo)
+            if (arg instanceof TargetInfo target)
                 {
-                TargetInfo       target     = (TargetInfo) arg;
                 TypeConstant     typeTarget = target.getTargetType();
                 TypeInfo         info       = typeTarget.ensureTypeInfo(errs);
                 IdentityConstant id         = target.getId();
@@ -2314,9 +2327,8 @@ public class InvocationExpression
         // the left expression provides the scope to search for a matching method/function;
         // if the left expression is itself a NameExpression, and it's in identity mode (i.e. a
         // possible identity), then check the identity first
-        if (exprLeft instanceof NameExpression)
+        if (exprLeft instanceof NameExpression nameLeft)
             {
-            NameExpression nameLeft = (NameExpression) exprLeft;
             if (nameLeft.getName().equals("super"))
                 {
                 log(errs, Severity.ERROR, Compiler.INVALID_SUPER_REFERENCE);
@@ -2414,12 +2426,11 @@ public class InvocationExpression
                             sName, infoLeft.getType().getValueString());
                     return null;
                     }
-                if (arg instanceof MethodConstant)
+                if (arg instanceof MethodConstant idMethod)
                     {
                     errsTemp.merge();
 
-                    MethodConstant idMethod   = (MethodConstant) arg;
-                    MethodInfo     infoMethod = infoLeft.getMethodById(idMethod);
+                    MethodInfo infoMethod = infoLeft.getMethodById(idMethod);
                     assert infoMethod != null;
 
                     if (infoMethod.isAbstractFunction())
@@ -2434,7 +2445,7 @@ public class InvocationExpression
                     m_fBindTarget = fSingleton && !m_method.isFunction();
                     return idMethod;
                     }
-                else if (arg instanceof PropertyConstant)
+                if (arg instanceof PropertyConstant)
                     {
                     errsTemp.merge();
                     return testStaticProperty(ctx, (PropertyConstant) arg, atypeReturn, errs);
@@ -2607,41 +2618,26 @@ public class InvocationExpression
                 }
             }
 
-        if (exprLeft instanceof NameExpression && typeLeft.isA(pool.typeFunction()))
+        if (exprLeft instanceof NameExpression nameLeft && typeLeft.isA(pool.typeFunction()))
             {
             // it appears that they try to use a variable or property, but have a function instead
             if (errsMain.hasError(Compiler.MISSING_METHOD) &&
                     infoLeft.findMethods(sName, -1, MethodKind.Any).isEmpty())
                 {
-                NameExpression   exprFn = (NameExpression) exprLeft;
-                IdentityConstant idParent;
-                if (exprFn.isIdentityMode(ctx, false))
-                    {
-                    idParent = exprFn.getIdentity(ctx).getNamespace();
-                    }
-                else
-                    {
-                    NameExpression nameLeft = (NameExpression) exprLeft;
-                    switch (nameLeft.getMeaning())
+                IdentityConstant idParent = nameLeft.isIdentityMode(ctx, false)
+                    ? nameLeft.getIdentity(ctx).getNamespace()
+                    : switch (nameLeft.getMeaning())
                         {
-                        case Property:
-                            idParent = ((PropertyConstant) nameLeft.
-                                resolveRawArgument(ctx, false, errs)).getNamespace();
-                            break;
-
-                        case Variable:
-                            idParent = ctx.getMethod().getIdentityConstant();
-                            break;
-
-                        default:
-                            idParent = null;
-                        }
-                    }
+                        case Property -> ((PropertyConstant) nameLeft.
+                                            resolveRawArgument(ctx, false, errs)).getNamespace();
+                        case Variable -> ctx.getMethod().getIdentityConstant();
+                        default       -> null;
+                        };
 
                 if (idParent != null)
                     {
                     log(errsMain, Severity.ERROR, Compiler.SUSPICIOUS_FUNCTION_USE,
-                            exprFn.getName(), idParent.getValueString());
+                            nameLeft.getName(), idParent.getValueString());
                     }
                 }
             }
@@ -2651,18 +2647,54 @@ public class InvocationExpression
         }
 
     /**
+     * @return a MethodStructure for the specified id
+     */
+    private MethodStructure getMethod(Context ctx, MethodConstant idMethod)
+        {
+        MethodStructure method = m_method;
+        if (method == null)
+            {
+            method = (MethodStructure) idMethod.getComponent();
+            if (method == null)
+                {
+                TypeConstant type = m_targetInfo.getTargetType();
+                TypeInfo     info = getTypeInfo(ctx, type, ErrorListener.BLACKHOLE);
+
+                method = getMethod(info, idMethod);
+                }
+            }
+        return method;
+        }
+
+    /**
      * @return a method structure for the specified argument; null if not a method constant
      */
     private MethodStructure getMethod(TypeInfo infoType, Argument arg)
         {
-        if (arg instanceof MethodConstant)
+        if (arg instanceof MethodConstant idMethod)
             {
-            MethodInfo infoMethod = infoType.getMethodById((MethodConstant) arg);
+            MethodInfo infoMethod = infoType.getMethodById(idMethod);
             assert infoMethod != null;
 
             return infoMethod.getTopmostMethodStructure(infoType);
             }
         return null;
+        }
+
+    /**
+     * @return a PropertyStructure for the specified id
+     */
+    private PropertyStructure getProperty(Context ctx, PropertyConstant idProp)
+        {
+        PropertyStructure prop = (PropertyStructure) idProp.getComponent();
+        if (prop == null)
+            {
+            TypeConstant type = m_targetInfo.getTargetType();
+            TypeInfo     info = getTypeInfo(ctx, type, ErrorListener.BLACKHOLE);
+
+            prop = info.findProperty(idProp).getHead().getStructure();
+            }
+        return prop;
         }
 
     /**

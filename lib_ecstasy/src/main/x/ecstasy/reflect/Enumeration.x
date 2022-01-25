@@ -53,7 +53,7 @@ const Enumeration<Value extends Enum>
     {
     construct(Composition composition, ListMap<String, Type>? canonicalParams = Null)
         {
-        construct Class(composition, canonicalParams);
+        super(composition, canonicalParams);
         }
 
     /**

@@ -18,9 +18,9 @@ tasks.register<Copy>("copyImplicits") {
 
 tasks.register<Copy>("copyUtils") {
     group       = "Build"
-    description = "Copy the classes from :utils project into the build directory."
-    dependsOn(project(":utils").tasks["classes"])
-    from(file("${project(":utils").buildDir}/classes/java/main"))
+    description = "Copy the classes from :javatools_utils project into the build directory."
+    dependsOn(project(":javatools_utils").tasks["classes"])
+    from(file("${project(":javatools_utils").buildDir}/classes/java/main"))
     include("**/*.class")
     into(file("$buildDir/classes/java/main"))
     doLast {
@@ -44,10 +44,10 @@ tasks.jar {
         attributes["Main-Class"] = "org.xvm.tool.Launcher"
         attributes["Name"] = "/org/xvm/"
         attributes["Specification-Title"] = "xvm"
-        attributes["Specification-Version"] = "0.1.0"
+        attributes["Specification-Version"] = "0.3.0"
         attributes["Specification-Vendor"] = "xtclang.org"
         attributes["Implementation-Title"] = "xvm-prototype"
-        attributes["Implementation-Version"] = "0.1.0"
+        attributes["Implementation-Version"] = "0.3.0"
         attributes["Implementation-Vendor"] = "xtclang.org"
     }
 }
@@ -68,7 +68,7 @@ java {
 }
 
 dependencies {
-    implementation("org.xtclang.xvm:utils:")
+    implementation("org.xtclang.xvm:javatools_utils:")
 
     // Use JUnit test framework
     testImplementation("junit:junit:4.12")

@@ -3,14 +3,14 @@
  */
 
 group = "org.xvm"
-version = "0.1.0"
+version = "0.3.0"
 
 allprojects {
     configurations.all {
         resolutionStrategy.dependencySubstitution {
-            substitute(module("org.xtclang.xvm:utils")).with(project(":utils"))
-            substitute(module("org.xtclang.xvm:unicode")).with(project(":unicode"))
-            substitute(module("org.xtclang.xvm:javatools")).with(project(":javatools"))
+            substitute(module("org.xtclang.xvm:javatools_utils"  )).with(project(":javatools_utils"))
+            substitute(module("org.xtclang.xvm:javatools_unicode")).with(project(":javatools_unicode"))
+            substitute(module("org.xtclang.xvm:javatools"        )).with(project(":javatools"))
         }
     }
 

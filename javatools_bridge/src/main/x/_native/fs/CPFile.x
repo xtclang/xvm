@@ -14,7 +14,7 @@ const CPFile(Object cookie, CPFileStore? fileStore, Path path, DateTime created,
     {
     construct (Object cookie)
         {
-        construct CPFileNode(cookie);
+        super(cookie);
         }
 
     @Override

@@ -10,7 +10,7 @@ const EnumValue<Value extends Enum>
     {
     construct(Composition composition, Enumeration<Value> enumeration)
         {
-        construct Class(composition);
+        super(composition);
 
         this.enumeration = enumeration;
         }

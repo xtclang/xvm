@@ -18,7 +18,7 @@ service JsonNtxLogStore<Element extends immutable Const>
               Mapping<Element> elementMapping,
               )
         {
-        construct ObjectStore(catalog, info);
+        super(catalog, info);
 
         this.jsonSchema     = catalog.jsonSchema;
         this.elementMapping = elementMapping;

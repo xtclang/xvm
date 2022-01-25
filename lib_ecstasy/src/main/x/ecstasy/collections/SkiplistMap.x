@@ -692,11 +692,6 @@ class SkiplistMap<Key extends Orderable, Value>
         @Override
         protected class IteratorImpl
             {
-            construct()
-                {
-                construct CollectionImpl.IteratorImpl();  // TODO GG super()
-                }
-
             @Override
             protected Key toElement(Key key, Int node, Int height)
                 {
@@ -737,11 +732,6 @@ class SkiplistMap<Key extends Orderable, Value>
         @Override
         protected class IteratorImpl
             {
-            construct()
-                {
-                construct CollectionImpl.IteratorImpl();  // TODO GG super()
-                }
-
             @Override
             protected Entry toElement(Key key, Int node, Int height)
                 {
@@ -2513,7 +2503,7 @@ class SkiplistMap<Key extends Orderable, Value>
         {
         construct()
             {
-            construct AbstractStore();
+            super();
 
             // determine the size of the numeric type
             Type numType;
@@ -2690,7 +2680,7 @@ class SkiplistMap<Key extends Orderable, Value>
         {
         construct(Int initCapacity)
             {
-            construct AbstractStore();
+            super();
             contents = new Array<Element|Int>(initCapacity);
             }
 

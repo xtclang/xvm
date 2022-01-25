@@ -6,7 +6,7 @@ class ValueStore<Value extends immutable Const>
     {
     construct (DBObjectInfo info, Appender<String> errs, Value initial)
         {
-        construct ObjectStore(info, errs);
+        super(info, errs);
 
         value   = initial;
         valueAt = new SkiplistMap();

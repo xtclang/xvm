@@ -65,10 +65,10 @@ public class MethodStructure
      * Construct a MethodStructure with the specified identity. This constructor is used to
      * deserialize a MethodStructure.
      *
-     * @param xsParent   the XvmStructure (probably a FileStructure) that contains this structure
+     * @param xsParent   the XvmStructure (probably a MultiMethod) that contains this structure
      * @param nFlags     the Component bit flags
-     * @param constId    the constant that specifies the identity of the Module
-     * @param condition  the optional condition for this ModuleStructure
+     * @param constId    the constant that specifies the identity of the Method
+     * @param condition  the optional condition for this MethodStructure
      */
     protected MethodStructure(XvmStructure xsParent, int nFlags, MethodConstant constId,
                               ConditionalConstant condition)
@@ -79,10 +79,10 @@ public class MethodStructure
     /**
      * Construct a method structure.
      *
-     * @param xsParent     the XvmStructure (probably a FileStructure) that contains this structure
+     * @param xsParent     the XvmStructure (probably a MultiMethod) that contains this structure
      * @param nFlags       the Component bit flags
-     * @param constId      the constant that specifies the identity of the Module
-     * @param condition    the optional condition for this ModuleStructure
+     * @param constId      the constant that specifies the identity of the Method
+     * @param condition    the optional condition for this MethodStructure
      * @param annotations  an array of Annotations
      * @param aReturns     an array of Parameters representing the "out" values
      * @param aParams      an array of Parameters representing the "in" values
@@ -942,7 +942,7 @@ public class MethodStructure
         }
 
     /**
-     * Specifies whether or not the method implementation is implemented at this virtual level.
+     * Specifies whether the method is implemented at this virtual level.
      *
      * @param fAbstract  pass true to mark the method as abstract
      */
@@ -1157,7 +1157,7 @@ public class MethodStructure
         {
         if (m_FHasCode != null)
             {
-            return m_FHasCode;
+            return m_FHasCode.booleanValue();
             }
 
         return m_code != null && m_code.hasOps();
@@ -1593,7 +1593,7 @@ public class MethodStructure
             that.m_aconstLocal = this.m_aconstLocal.clone();
             }
 
-        // force the reload of the m_structFinally
+        // force the reloading of the m_structFinally
         that.m_structFinally = null;
 
         return that;
@@ -1610,10 +1610,9 @@ public class MethodStructure
 
         for (Constant constant : aconst)
             {
-            if (constant instanceof AnnotatedTypeConstant)
+            if (constant instanceof AnnotatedTypeConstant typeAnno)
                 {
-                AnnotatedTypeConstant typeAnno = (AnnotatedTypeConstant) constant;
-                IdentityConstant      idAnno   = typeAnno.getAnnotationClass();
+                IdentityConstant idAnno   = typeAnno.getAnnotationClass();
 
                 if (idAnno.equals(idAnno.getConstantPool().clzInject()))
                     {
@@ -1628,10 +1627,8 @@ public class MethodStructure
                         {
                         for (Op op : ensureCode().getAssembledOps())
                             {
-                            if (op instanceof Var_DN)
+                            if (op instanceof Var_DN opVar)
                                 {
-                                Var_DN opVar = (Var_DN) op;
-
                                 TypeConstant typeVar = opVar.getType(aconst);
                                 if (typeVar.equals(typeAnno))
                                     {
@@ -2222,14 +2219,6 @@ public class MethodStructure
             }
 
         /**
-         * @return a blackhole if the code is not reachable
-         */
-        public Code onlyIf(boolean fReachable)
-            {
-            return fReachable ? this : blackhole();
-            }
-
-        /**
          * @return a Code instance that pretends to be this but ignores any attempt to add ops
          */
         public Code blackhole()
@@ -2360,8 +2349,8 @@ public class MethodStructure
             }
 
         /**
-         * Walk through all of the code paths, determining what code is reachable versus
-         * unreachable, and eliminate the unreachable code.
+         * Walk through all the code paths, determining what code is reachable versus unreachable,
+         * and eliminate the unreachable code.
          *
          * @return true iff any changes occurred
          */
@@ -2464,7 +2453,7 @@ public class MethodStructure
             }
 
         /**
-         * Walk over all of the code, determining what ops are redundant (have no net effect), and
+         * Walk over the code, determining what ops are redundant (have no net effect), and
          * eliminate that redundant code.
          *
          * @return true iff any changes occurred
@@ -3071,7 +3060,7 @@ public class MethodStructure
 
     /**
      * Cached method for the construct-finally that goes with this method, iff this method is a
-     * construct function that has a finally.
+     * constructor that has a "finally" block.
      */
     private transient MethodStructure m_structFinally;
 

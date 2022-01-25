@@ -113,13 +113,6 @@ class DbHost(String dbModuleName)
 
         String appName = dbModuleName; // TODO GG: allow fully qualified name
 
-        Directory moduleDir = buildDir.dirFor($"{appName}_{hostName}");
-        if (moduleDir.exists)
-            {
-            moduleDir.deleteRecursively();
-            }
-        moduleDir.create();
-
         ClassTemplate appSchemaTemplate;
         if (!(appSchemaTemplate := findSchema(dbModule)))
             {
@@ -127,8 +120,7 @@ class DbHost(String dbModuleName)
             return False;
             }
 
-        // TODO GG change to new module organization layout
-        File sourceFile = moduleDir.fileFor("module.x");
+        File sourceFile = buildDir.fileFor($"{appName}_{hostName}.x");
 
         if (createModule(sourceFile, appName, dbModule, appSchemaTemplate, errors) &&
             compileModule(sourceFile, buildDir, errors))

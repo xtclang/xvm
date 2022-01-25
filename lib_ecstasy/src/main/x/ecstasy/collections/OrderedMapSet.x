@@ -17,7 +17,7 @@ class OrderedMapSet<Element extends Orderable>
      */
     construct(CopyableOrderedMap map)
         {
-        construct MapSet(map);
+        super(map);
         }
 
     /**
@@ -27,7 +27,7 @@ class OrderedMapSet<Element extends Orderable>
      */
     construct(OrderedMapSet<Element> that)
         {
-        construct MapSet(that);
+        super(that);
         }
 
 
