@@ -1,13 +1,14 @@
-#!/bin/bash
+#!/bin/zsh
 
 # get directory of this script
 if [[ -e "$0" ]]; then
   DIR=$(dirname "$0")
-  EXP="N"
+  DIR="$(cd "$(dirname "$DIR")"; pwd)/$(basename "$DIR")"
+  EXP="Y"
 fi
 
 if [[ ! -e "${DIR}/cfg_macos.sh" ]]; then
-  DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+  DIR="$( cd "$( dirname "${(%):-%N}" )" && pwd )"
   EXP="Y"
 fi
 
