@@ -17,8 +17,8 @@ tasks.register("clean") {
 
 tasks.register<Copy>("importUnicodeFiles") {
     group       = "Build"
-    description = "Copy the various Unicode data files from :unicode to :lib_ecstasy project."
-    from(file("${project(":unicode").buildDir}/resources/"))
+    description = "Copy the various Unicode data files from :javatools_unicode to :lib_ecstasy project."
+    from(file("${project(":javatools_unicode").buildDir}/resources/"))
     include("Char*.txt", "Char*.dat")
     into(file("src/main/resources/text/"))
     doLast {
@@ -28,8 +28,8 @@ tasks.register<Copy>("importUnicodeFiles") {
 
 tasks.register("rebuildUnicodeFiles") {
     group       = "Build"
-    description = "Force the rebuild of the `./src/main/resources/text` data files by running the :unicode project and copying the results."
-    val make = project(":unicode").tasks["run"]
+    description = "Force the rebuild of the `./src/main/resources/text` data files by running the :javatools_unicode project and copying the results."
+    val make = project(":javatools_unicode").tasks["run"]
     val copy = tasks["importUnicodeFiles"]
     dependsOn(make)
     dependsOn(copy)
