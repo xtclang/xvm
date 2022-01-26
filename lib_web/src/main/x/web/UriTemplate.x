@@ -120,12 +120,9 @@ const UriTemplate(String template, List<PathSegment> segments, Int variableCount
 
         protected ParserResult parse(String template)
             {
-            if (template[template.size - 1] == SLASH_OPERATOR)
+            while (template.endsWith(SLASH_OPERATOR) && template.size > 1)
                 {
-                if (template.size > 1)
-                    {
-                    template = template[0..template.size - 1);
-                    }
+                template = template[0..template.size - 1);
                 }
 
             Array<PathSegment> segments = new Array();
