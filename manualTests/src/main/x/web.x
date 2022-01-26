@@ -32,7 +32,7 @@
  * curl -i -w '\n'  -X GET http://localhost:8080/users/joe
  *
  * It should now return a 404 again
- *                                                      
+ *
  */
 module TestWebApp
     {
@@ -132,7 +132,7 @@ module TestWebApp
         console.println("Started WebServer http://localhost:8080");
 
         // this will effectively wait for the specified duration...
-       // wait^(server, Duration:60s));
+        wait^(server, Duration:60s));
         }
 
     void wait(WebServer server, Duration duration)

@@ -13,19 +13,24 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.RegExConstant;
-
 import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.collections.xArray;
+
 import org.xvm.runtime.template.numbers.xInt64;
+
+import org.xvm.runtime.template.text.xString.StringHandle;
+
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xNullable;
@@ -35,7 +40,7 @@ import org.xvm.runtime.template.xNullable;
  * Native implementation of RegEx.
  */
 public class xRegEx
-        extends xConst
+    extends xConst
     {
     public static xRegEx INSTANCE;
 
@@ -79,8 +84,11 @@ public class xRegEx
     public int construct(Frame frame, MethodStructure constructor, TypeComposition clazz,
                          ObjectHandle hParent, ObjectHandle[] ahVar, int iReturn)
         {
-        String regex = ((xString.StringHandle) ahVar[0]).getStringValue();
-        long   nFlags = ((ObjectHandle.JavaLong) ahVar[1]).getValue();
+        StringHandle hPattern = (StringHandle) ahVar[0];
+        ObjectHandle hFlags   = ahVar[1];
+
+        String regex  = hPattern.getStringValue();
+        long   nFlags = hFlags == ObjectHandle.DEFAULT ? 0 : ((JavaLong) hFlags).getValue();
         return frame.assignValue(iReturn, new RegExHandle(INSTANCE.getCanonicalClass(), regex, nFlags));
         }
 
@@ -103,17 +111,17 @@ public class xRegEx
         switch (method.getName())
             {
             case "append":
-                {
-                RegExHandle hRegEx = (RegExHandle) hTarget;
-                String      regex  = hRegEx.getRegex() + ((RegExHandle) hArg).getRegex();
-                long        nFlags = hRegEx.getFlags();
-                return frame.assignValue(iReturn, new RegExHandle(INSTANCE.getCanonicalClass(), regex, nFlags));
-                }
+            {
+            RegExHandle hRegEx = (RegExHandle) hTarget;
+            String      regex  = hRegEx.getRegex() + ((RegExHandle) hArg).getRegex();
+            long        nFlags = hRegEx.getFlags();
+            return frame.assignValue(iReturn, new RegExHandle(INSTANCE.getCanonicalClass(), regex, nFlags));
+            }
             case "appendTo":
-                {
-                xString.StringHandle hRegex = xString.makeHandle(((RegExHandle) hTarget).getRegex());
-                return xString.callAppendTo(frame, hRegex, hArg, iReturn);
-                }
+            {
+            StringHandle hRegex = xString.makeHandle(((RegExHandle) hTarget).getRegex());
+            return xString.callAppendTo(frame, hRegex, hArg, iReturn);
+            }
             }
 
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
@@ -126,14 +134,14 @@ public class xRegEx
         switch (method.getName())
             {
             case "replaceAll":
-                {
-                xString.StringHandle hText       = (xString.StringHandle) ahArg[0];
-                String               text        = hText.getStringValue();
-                String               replacement = ((xString.StringHandle) ahArg[1]).getStringValue();
-                Matcher              matcher     = ((RegExHandle) hTarget).getPattern().matcher(text);
-                xString.StringHandle hResult     = xString.makeHandle(matcher.replaceAll(replacement));
-                return frame.assignValue(iReturn, hResult);
-                }
+            {
+            StringHandle hText       = (StringHandle) ahArg[0];
+            String       text        = hText.getStringValue();
+            String       replacement = ((StringHandle) ahArg[1]).getStringValue();
+            Matcher      matcher     = ((RegExHandle) hTarget).getPattern().matcher(text);
+            StringHandle hResult     = xString.makeHandle(matcher.replaceAll(replacement));
+            return frame.assignValue(iReturn, hResult);
+            }
             }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
@@ -147,54 +155,54 @@ public class xRegEx
         switch (method.getName())
             {
             case "match":
+            {
+            StringHandle hText   = (StringHandle) ahArg[0];
+            Pattern      pattern = hRegEx.getPattern();
+            Matcher      matcher = pattern.matcher(hText.getStringValue());
+            if (matcher.matches())
                 {
-                xString.StringHandle hText   = (xString.StringHandle) ahArg[0];
-                Pattern              pattern = hRegEx.getPattern();
-                Matcher              matcher = pattern.matcher(hText.getStringValue());
-                if (matcher.matches())
-                    {
-                    MatchResult result = matcher.toMatchResult();
-                    return Utils.assignConditionalResult(
-                        frame,
-                        createMatchHandle(frame, result, hText, hRegEx, Op.A_STACK),
-                        aiReturn);
-                    }
-                return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+                MatchResult result = matcher.toMatchResult();
+                return Utils.assignConditionalResult(
+                    frame,
+                    createMatchHandle(frame, result, hText, hRegEx, Op.A_STACK),
+                    aiReturn);
                 }
+            return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+            }
             case "matchPrefix":
+            {
+            StringHandle hText   = (StringHandle) ahArg[0];
+            Pattern      pattern = hRegEx.getPattern();
+            Matcher      matcher = pattern.matcher(hText.getStringValue());
+            if (matcher.lookingAt())
                 {
-                xString.StringHandle hText   = (xString.StringHandle) ahArg[0];
-                Pattern              pattern = hRegEx.getPattern();
-                Matcher              matcher = pattern.matcher(hText.getStringValue());
-                if (matcher.lookingAt())
-                    {
-                    MatchResult result = matcher.toMatchResult();
-                    return Utils.assignConditionalResult(
-                        frame,
-                        createMatchHandle(frame, result, hText, hRegEx, Op.A_STACK),
-                        aiReturn);
-                    }
-                return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+                MatchResult result = matcher.toMatchResult();
+                return Utils.assignConditionalResult(
+                    frame,
+                    createMatchHandle(frame, result, hText, hRegEx, Op.A_STACK),
+                    aiReturn);
                 }
+            return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+            }
             case "find":
+            {
+            StringHandle  hText   = (StringHandle) ahArg[0];
+            Pattern       pattern = hRegEx.getPattern();
+            Matcher       matcher = pattern.matcher(hText.getStringValue());
+            ObjectHandle  hStart  = ahArg[1];
+            long          nStart  = hStart instanceof JavaLong
+                ? ((JavaLong) hStart).getValue()
+                : 0L;
+            if (matcher.find((int) nStart))
                 {
-                xString.StringHandle hText   = (xString.StringHandle) ahArg[0];
-                Pattern              pattern = hRegEx.getPattern();
-                Matcher              matcher = pattern.matcher(hText.getStringValue());
-                ObjectHandle         hStart  = ahArg[1];
-                long                 nStart  = hStart instanceof ObjectHandle.JavaLong
-                                                    ? ((ObjectHandle.JavaLong) hStart).getValue()
-                                                    : 0L;
-                if (matcher.find((int) nStart))
-                    {
-                    MatchResult result = matcher.toMatchResult();
-                    return Utils.assignConditionalResult(
-                        frame,
-                        createMatchHandle(frame, result, hText, hRegEx, Op.A_STACK),
-                        aiReturn);
-                    }
-                return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+                MatchResult result = matcher.toMatchResult();
+                return Utils.assignConditionalResult(
+                    frame,
+                    createMatchHandle(frame, result, hText, hRegEx, Op.A_STACK),
+                    aiReturn);
                 }
+            return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+            }
             }
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
         }
@@ -202,9 +210,8 @@ public class xRegEx
     @Override
     public int createConstHandle(Frame frame, Constant constant)
         {
-        if (constant instanceof RegExConstant)
+        if (constant instanceof RegExConstant regex)
             {
-            RegExConstant regex = (RegExConstant) constant;
             return frame.pushStack(new RegExHandle(getCanonicalClass(),
                 regex.getValue(), regex.getFlags()));
             }
@@ -229,7 +236,7 @@ public class xRegEx
 
 
     /**
-     * Construct a new text.Match hanle representing the specified {@link MatchResult}.
+     * Construct a new text.Match handle representing the specified {@link MatchResult}.
      *
      * @param frame   the current frame
      * @param match   the immutable {@link MatchResult}
@@ -239,8 +246,8 @@ public class xRegEx
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
-    public int createMatchHandle(Frame frame, MatchResult match, xString.StringHandle hText,
-                                 xRegEx.RegExHandle hRegEx, int iReturn)
+    public int createMatchHandle(Frame frame, MatchResult match, StringHandle hText,
+                                 RegExHandle hRegEx, int iReturn)
         {
         TypeComposition clzRange    = m_clzRangeOfInt;
         TypeComposition clzStruct   = m_clzMatchStruct;
@@ -252,7 +259,7 @@ public class xRegEx
             int nStart = match.start(i);
             if (nStart >= 0)
                 {
-                GenericHandle hRange = new ObjectHandle.GenericHandle(clzRange);
+                GenericHandle hRange = new GenericHandle(clzRange);
                 hRange.setField(frame, "lowerBound", xInt64.INSTANCE.makeJavaLong(nStart));
                 hRange.setField(frame, "lowerExclusive", xBoolean.FALSE);
                 hRange.setField(frame, "upperBound", xInt64.INSTANCE.makeJavaLong(match.end(i)));
@@ -279,7 +286,7 @@ public class xRegEx
      * A handle for a regular expression.
      */
     public static class RegExHandle
-            extends ObjectHandle
+        extends ObjectHandle
         {
         /**
          * The compiled regular expression {@link Pattern}.
