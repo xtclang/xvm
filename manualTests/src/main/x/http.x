@@ -21,7 +21,7 @@ module TestHttp
 
         console.println($"Web server is running {uri}");
 
-        console.println("Creating http clients");
+        console.println("Creating HTTP clients");
         HttpClient client1 = new HttpClient();
         HttpClient client2 = new HttpClient();
 

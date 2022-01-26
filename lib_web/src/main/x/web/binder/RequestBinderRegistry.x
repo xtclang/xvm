@@ -82,7 +82,7 @@ class RequestBinderRegistry
      * Produce the bound parameters for the route and request.
      *
      * @param route  the route to bind parameters for
-     * @param req    the http request to obtain parameters values from
+     * @param req    the HTTP request to obtain parameters values from
      *
      * @return a RouteMatch bound to the arguments from the source request
      */

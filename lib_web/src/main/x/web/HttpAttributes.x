@@ -1,5 +1,5 @@
 /**
- * A holder of http message attributes.
+ * A holder of HTTP message attributes.
  */
 class HttpAttributes
     {

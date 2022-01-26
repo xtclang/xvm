@@ -1,5 +1,5 @@
 /**
- * A representation of an http request.
+ * A representation of an HTTP request.
  */
 class HttpRequest(URI uri, HttpHeaders headers, HttpMethod method, Object? body)
         extends HttpMessage(headers, body)

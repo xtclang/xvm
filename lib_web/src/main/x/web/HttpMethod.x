@@ -56,7 +56,7 @@ enum HttpMethod
     CUSTOM;
 
     /**
-     * Returns a http method from the method name.
+     * Returns an HTTP method from the method name.
      */
     static HttpMethod fromName(String name)
         {

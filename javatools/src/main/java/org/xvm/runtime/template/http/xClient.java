@@ -226,7 +226,7 @@ public class xClient
     // ----- WebServerHandle ------------------------------------------------
 
     /**
-     * A {@link ObjectHandle} for a http client service.
+     * A {@link ObjectHandle} for an HTTP client service.
      */
     protected static class ClientHandle
                 extends ObjectHandle

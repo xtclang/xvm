@@ -1,5 +1,5 @@
 /**
- * The base class for http requests and responses.
+ * The base class for HTTP requests and responses.
  */
 class HttpMessage
     {

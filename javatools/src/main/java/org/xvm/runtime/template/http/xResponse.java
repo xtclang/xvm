@@ -139,7 +139,7 @@ public class xResponse
     // ----- RequestHandle --------------------------------------------------
 
     /**
-     * A {@link ServiceHandle} for a http request service.
+     * A {@link ServiceHandle} for an HTTP request service.
      */
     protected static class ResponseHandle
                 extends ServiceHandle

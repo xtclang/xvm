@@ -1,7 +1,7 @@
 import ecstasy.io.ByteArrayOutputStream;
 
 /**
- * A representation of an http response.
+ * A representation of an HTTP response.
  */
 class HttpResponse(HttpStatus status = HttpStatus.OK)
         extends HttpMessage(new HttpHeaders())
@@ -10,7 +10,7 @@ class HttpResponse(HttpStatus status = HttpStatus.OK)
      * Process the `Tuple` returned from a request handler into a `HttpResponse`.
      *
      * @param tuple      the `Tuple` of return values from the endpoint method execution
-     * @param method     the http request method (i.e. GET, POST, etc)
+     * @param method     the HTTP request method (i.e. GET, POST, etc)
      * @param mediaType  the media type of the response body
      *
      * @return a HttpResponse

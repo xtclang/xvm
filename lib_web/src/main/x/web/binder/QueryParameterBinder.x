@@ -3,7 +3,7 @@ import ecstasy.reflect.Parameter;
 import web.QueryParam;
 
 /**
- * A parameter binder that binds values from a http request's URI query parameters.
+ * A parameter binder that binds values from an HTTP request's URI query parameters.
  */
 const QueryParameterBinder
         implements ParameterBinder<HttpRequest>

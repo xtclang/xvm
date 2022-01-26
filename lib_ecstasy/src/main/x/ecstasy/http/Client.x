@@ -1,10 +1,10 @@
 /**
- * A http client service.
+ * An HTTP client service.
  */
 const Client(Int connectionTimeout, Redirect redirect, Int priority)
     {
     /**
-     * Send a http request.
+     * Send an HTTP request.
      *
      * @param uri           the URI being requested
      * @param method        the request method, e.g. GET, POST, PUT, DELETE, etc

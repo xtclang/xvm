@@ -159,7 +159,7 @@ module SockShopUserApi
         }
 
     /**
-     * A const representing the http request body to add an address.
+     * A const representing the HTTP request body to add an address.
      */
     const AddAddressRequest(String number, String street, String city, String postcode, String country, String userID)
         {
@@ -170,7 +170,7 @@ module SockShopUserApi
         }
 
     /**
-     * A const representing the http request body to add an payment cars.
+     * A const representing the HTTP request body to add an payment cars.
      */
     const AddCardRequest(String longNum, String expires, String ccv, String userID)
         {
@@ -181,7 +181,7 @@ module SockShopUserApi
         }
 
     /**
-     * A status returned by a http request.
+     * A status returned by an HTTP request.
      */
     const Status<Value>(String name, Value value)
         {

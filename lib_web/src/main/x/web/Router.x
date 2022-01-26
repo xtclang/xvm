@@ -9,7 +9,7 @@ import codec.MediaTypeCodec;
 import codec.MediaTypeCodecRegistry;
 
 /**
- * A router that can work out the routes for a given http method and URI.
+ * A router that can work out the routes for a given HTTP method and URI.
  */
 @Concurrent
 class Router
@@ -41,7 +41,7 @@ class Router
     private PostProcessor[] postProcessors;
 
     /**
-     * A registry of binders that can bind various attributes of a http request
+     * A registry of binders that can bind various attributes of an HTTP request
      * to different parameters of an endpoint method.
      */
     private RequestBinderRegistry binderRegistry;
@@ -250,9 +250,9 @@ class Router
         }
 
     /**
-     * Find the matching routes for a http method, URI and request.
+     * Find the matching routes for an HTTP method, URI and request.
      *
-     * @param method  the requested http method
+     * @param method  the requested HTTP method
      * @param req     the HttpRequest
      */
     List<UriRouteMatch> findRoutes(HttpMethod method, HttpRequest req)
@@ -270,7 +270,7 @@ class Router
         }
 
     /**
-     * Handle a http request.
+     * Handle an HTTP request.
      */
     (Int, String[], String[][], Byte[]) handle(String uri, String methodName, String[] headerNames,
             String[][] headerValues, Byte[] body)
@@ -387,7 +387,7 @@ class Router
         // ----- properties ------------------------------------------------------------------------
 
         /**
-         * The http method that this routes matches.
+         * The HTTP method that this routes matches.
          */
         private HttpMethod httpMethod;
 

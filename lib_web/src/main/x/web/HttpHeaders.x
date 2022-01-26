@@ -2,7 +2,7 @@ import ecstasy.collections.HasherMap;
 import ecstasy.collections.CaseInsensitiveHasher;
 
 /**
- * A representation of the headers for a http request or response.
+ * A representation of the headers for an HTTP request or response.
  *
  * Headers keys are case-insensitive.
  */

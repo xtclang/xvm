@@ -1,5 +1,5 @@
 /**
- * Represents a route to an endpoint for a http request.
+ * Represents a route to an endpoint for an HTTP request.
  */
 interface Route
     {

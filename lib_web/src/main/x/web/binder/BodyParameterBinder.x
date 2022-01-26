@@ -6,7 +6,7 @@ import codec.MediaTypeCodecRegistry;
 import web.Body;
 
 /**
- * A ParameterBinder that binds a http request request body to a parameter.
+ * A ParameterBinder that binds an HTTP request request body to a parameter.
  */
 const BodyParameterBinder(MediaTypeCodecRegistry registry)
         implements ParameterBinder<HttpRequest>

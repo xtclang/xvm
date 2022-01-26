@@ -9,7 +9,7 @@ module web.xtclang.org
     import ecstasy.reflect.Parameter;
 
     /**
-     * A handler for a HTTP request response pair, that will typically be mapped to a Route.
+     * A handler for an HTTP request response pair, that will typically be mapped to a Route.
      */
     interface RequestHandler
         {
@@ -25,10 +25,10 @@ module web.xtclang.org
         }
 
     /**
-     * A generic http endpoint.
+     * A generic HTTP endpoint.
      *
-     * @param methodName the name of the http method
-     * @param method     the name of the http method
+     * @param methodName the name of the HTTP method
+     * @param method     the name of the HTTP method
      * @param path       the optional path to reach this endpoint
      */
     mixin HttpEndpoint(HttpMethod method, String path = "")
@@ -37,7 +37,7 @@ module web.xtclang.org
         }
 
     /**
-     * A http GET method.
+     * An HTTP `GET` method.
      *
      * @param path  the optional path to reach this endpoint
      */
@@ -48,7 +48,7 @@ module web.xtclang.org
         }
 
     /**
-     * A http POST method.
+     * An HTTP `POST` method.
      *
      * @param path  the optional path to reach this endpoint
      */
@@ -59,7 +59,7 @@ module web.xtclang.org
         }
 
     /**
-     * A http PATCH method.
+     * An HTTP `PATCH` method.
      *
      * @param path  the optional path to reach this endpoint
      */
@@ -70,7 +70,7 @@ module web.xtclang.org
         }
 
     /**
-     * A http PUT method.
+     * An HTTP `PUT` method.
      *
      * @param path  the optional path to reach this endpoint
      */
@@ -81,7 +81,7 @@ module web.xtclang.org
         }
 
     /**
-     * A http DELETE method.
+     * An HTTP `DELETE` method.
      *
      * @param path  the optional path to reach this endpoint
      */
@@ -183,19 +183,19 @@ module web.xtclang.org
         }
 
     interface PreProcessor
-        extends Prioritized
+            extends Prioritized
         {
         void process(HttpRequest request);
         }
 
     interface PostProcessor
-        extends Prioritized
+            extends Prioritized
         {
         void process(HttpRequest request, HttpResponse response);
         }
 
     /**
-     * A provider of a function, typically a handler for a http request.
+     * A provider of a function, typically a handler for an HTTP request.
      */
     interface ExecutableFunction
             extends Const
@@ -206,7 +206,7 @@ module web.xtclang.org
         }
 
     /**
-     * Indicates a http error with a specific status code.
+     * Indicates an HTTP error with a specific status code.
      */
     const HttpException(HttpStatus status, String? text = Null, Exception? cause = Null)
             extends Exception(text, cause);

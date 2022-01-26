@@ -15,7 +15,7 @@ import ecstasy.http.Server;
     public/private Int port;
 
     /**
-     * The http server.
+     * The HTTP server.
      */
     private Server? server = Null;
 
@@ -36,7 +36,7 @@ import ecstasy.http.Server;
         return this;
         }
 
-    // ToDo: Methods to add handlers for http response statuses and exceptions
+    // ToDo: Methods to add handlers for HTTP response statuses and exceptions
 
     /**
      * Start this web server.
@@ -85,7 +85,7 @@ import ecstasy.http.Server;
         }
 
     /**
-     * A handler for http requests.
+     * A handler for HTTP requests.
      */
     @Concurrent
     private static service Handler(Router router)

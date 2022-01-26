@@ -143,7 +143,7 @@ interface RouteMatch
     /**
      * Determine the default content type for the response body.
      *
-     * @param accepts  the media types the http request accepts
+     * @param accepts  the media types the HTTP request accepts
      *
      * @return the MediaType of the response body
      */

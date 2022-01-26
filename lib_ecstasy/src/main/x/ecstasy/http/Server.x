@@ -1,5 +1,5 @@
 /**
- * A http server service.
+ * An HTTP server service.
  *
  * @param port     the port to bind the web server to
  * @param handler  the Handler that will requests
@@ -31,14 +31,14 @@
         }
 
     /**
-     * An interface implemented by http request handlers.
+     * An interface implemented by HTTP request handlers.
      */
     static interface Handler
         {
         /**
-         * Handle a http request.
+         * Handle an HTTP request.
          *
-         * @param response  the http response
+         * @param response  the HTTP response
          */
         void handle(String uri, String method, String[] headerNames, String[][] headerValues,
                     Byte[] body, Response response);
