@@ -105,76 +105,52 @@ public class TerminalTypeConstant
     public boolean isShared(ConstantPool poolOther)
         {
         Constant constant = m_constId;
-        switch (constant.getFormat())
+        return switch (constant.getFormat())
             {
-            case NativeClass:
-            case IsConst:
-            case IsEnum:
-            case IsModule:
-            case IsPackage:
-            case IsClass:
-                return true;
+            case NativeClass, IsConst, IsEnum, IsModule, IsPackage, IsClass ->
+                true;
 
-            case Module:
-            case Package:
-            case Class:
-                return ((IdentityConstant) constant).isShared(poolOther);
+            case Module, Package, Class ->
+                ((IdentityConstant) constant).isShared(poolOther);
 
-            case Property:
-            case TypeParameter:
-            case FormalTypeChild:
-            case DynamicFormal:
-                return ((FormalConstant) constant).getParentConstant().isShared(poolOther);
+            case Property, TypeParameter, FormalTypeChild, DynamicFormal ->
+                ((FormalConstant) constant).getParentConstant().isShared(poolOther);
 
-            case ThisClass:
-            case ParentClass:
-            case ChildClass:
-                return ((PseudoConstant) constant).getDeclarationLevelClass().isShared(poolOther);
+            case ThisClass, ParentClass, ChildClass ->
+                ((PseudoConstant) constant).getDeclarationLevelClass().isShared(poolOther);
 
-            case Typedef:
-                return ((TypedefConstant) constant).getParentConstant().isShared(poolOther);
+            case Typedef ->
+                ((TypedefConstant) constant).getParentConstant().isShared(poolOther);
 
-            default:
+            default ->
                 throw new IllegalStateException("unexpected defining constant: " + constant);
-            }
+            };
         }
 
     @Override
     public boolean isComposedOfAny(Set<IdentityConstant> setIds)
         {
         Constant constant = ensureResolvedConstant();
-        switch (constant.getFormat())
+        return switch (constant.getFormat())
             {
-            case Module:
-            case Package:
-            case Class:
-                return setIds.contains((IdentityConstant) constant);
+            case Module, Package, Class ->
+                setIds.contains((IdentityConstant) constant);
 
-            case Property:
-            case TypeParameter:
-            case FormalTypeChild:
-                return setIds.contains(((FormalConstant) constant).getParentConstant());
+            case Property, TypeParameter, FormalTypeChild ->
+                setIds.contains(((FormalConstant) constant).getParentConstant());
 
-            case ThisClass:
-            case ParentClass:
-            case ChildClass:
-                return setIds.contains(((PseudoConstant) constant).getDeclarationLevelClass());
+            case ThisClass, ParentClass, ChildClass ->
+                setIds.contains(((PseudoConstant) constant).getDeclarationLevelClass());
 
-            case NativeClass:
-            case UnresolvedName:
-            case IsConst:
-            case IsEnum:
-            case IsModule:
-            case IsPackage:
-            case IsClass:
-                return false;
+            case NativeClass, UnresolvedName, IsConst, IsEnum, IsModule, IsPackage, IsClass
+                -> false;
 
-            case Typedef:
-                return ((TypedefConstant) constant).getReferredToType().isComposedOfAny(setIds);
+            case Typedef ->
+                ((TypedefConstant) constant).getReferredToType().isComposedOfAny(setIds);
 
-            default:
+            default ->
                 throw new IllegalStateException("unexpected defining constant: " + constant);
-            }
+            };
         }
 
     @Override
@@ -593,10 +569,9 @@ public class TerminalTypeConstant
             }
 
         Constant constId = getDefiningConstant();
-        if (constId instanceof FormalConstant)
+        if (constId instanceof FormalConstant constFormal)
             {
-            FormalConstant constFormal  = (FormalConstant) constId;
-            TypeConstant   typeResolved = constFormal.resolve(resolver);
+            TypeConstant typeResolved = constFormal.resolve(resolver);
             if (typeResolved != null)
                 {
                 return typeResolved;
@@ -617,9 +592,8 @@ public class TerminalTypeConstant
             }
 
         Constant constId = getDefiningConstant();
-        if (constId instanceof FormalConstant)
+        if (constId instanceof FormalConstant constFormal)
             {
-            FormalConstant constFormal = (FormalConstant) constId;
             return constFormal.getConstraintType().resolveConstraints();
             }
 
@@ -632,9 +606,8 @@ public class TerminalTypeConstant
         if (isSingleDefiningConstant())
             {
             Constant constId = getDefiningConstant();
-            if (constId instanceof DynamicFormalConstant)
+            if (constId instanceof DynamicFormalConstant constDynamic)
                 {
-                DynamicFormalConstant constDynamic = (DynamicFormalConstant) constId;
                 if (register == null || constDynamic.getRegister() == register)
                     {
                     return constDynamic.getConstraintType();
@@ -987,16 +960,14 @@ public class TerminalTypeConstant
             }
 
         Constant constant = getDefiningConstant();
-        switch (constant.getFormat())
+        return switch (constant.getFormat())
             {
-            case Property:
-            case TypeParameter:
-            case FormalTypeChild:
-            case DynamicFormal:
-                return ((FormalConstant) constant).getConstraintType().isNullable();
-            }
+            case Property, TypeParameter, FormalTypeChild, DynamicFormal ->
+                ((FormalConstant) constant).getConstraintType().isNullable();
 
-        return false;
+            default ->
+                false;
+            };
         }
 
     @Override
@@ -1114,29 +1085,21 @@ public class TerminalTypeConstant
             }
 
         Constant constant = getDefiningConstant();
-        switch (constant.getFormat())
+        return switch (constant.getFormat())
             {
-            case Module:
-            case Package:
-            case Class:
-                return ((ClassStructure) ((IdentityConstant) constant)
-                        .getComponent()).extendsClass(constClass);
+            case Module, Package, Class ->
+                ((ClassStructure) ((IdentityConstant) constant).getComponent()).extendsClass(constClass);
 
-            case Property:
-            case TypeParameter:
-            case FormalTypeChild:
-            case DynamicFormal:
-                return ((FormalConstant) constant).getConstraintType().extendsClass(constClass);
+            case Property, TypeParameter, FormalTypeChild, DynamicFormal ->
+                ((FormalConstant) constant).getConstraintType().extendsClass(constClass);
 
-            case ThisClass:
-            case ParentClass:
-            case ChildClass:
-                return ((ClassStructure) ((PseudoConstant) constant).getDeclarationLevelClass()
-                        .getComponent()).extendsClass(constClass);
+            case ThisClass, ParentClass, ChildClass ->
+                ((ClassStructure) ((PseudoConstant) constant).getDeclarationLevelClass().
+                    getComponent()).extendsClass(constClass);
 
-            default:
+            default ->
                 throw new IllegalStateException("unexpected defining constant: " + constant);
-            }
+            };
         }
 
     @Override
@@ -1374,31 +1337,18 @@ public class TerminalTypeConstant
             }
 
         Constant constant = getDefiningConstant();
-        switch (constant.getFormat())
+        return switch (constant.getFormat())
             {
-            case Module:
-            case Package:
-            case Class:
-            case ThisClass:
-            case ParentClass:
-            case ChildClass:
-            case NativeClass:
-                return true;
+            case Module, Package, Class, ThisClass, ParentClass, ChildClass, NativeClass ->
+                true;
 
-            case Property:
-            case TypeParameter:
-            case FormalTypeChild:
-            case DynamicFormal:
-            case IsConst:
-            case IsEnum:
-            case IsModule:
-            case IsPackage:
-            case IsClass:
-                return false;
+            case Property, TypeParameter, FormalTypeChild, DynamicFormal, IsConst,
+                 IsEnum, IsModule, IsPackage, IsClass ->
+                false;
 
-            default:
+            default ->
                 throw new IllegalStateException("unexpected defining constant: " + constant);
-            }
+            };
         }
 
     @Override
@@ -1412,27 +1362,25 @@ public class TerminalTypeConstant
             }
 
         Constant constant = getDefiningConstant();
-        switch (constant.getFormat())
+        return switch (constant.getFormat())
             {
-            case Module:
-                return Component.Format.MODULE;
+            case Module ->
+                Component.Format.MODULE;
 
-            case Package:
-                return Component.Format.PACKAGE;
+            case Package ->
+                Component.Format.PACKAGE;
 
-            case Class:
+            case Class ->
                 // get the class referred to and return its format
-                return ((ClassConstant) constant).getComponent().getFormat();
+                ((ClassConstant) constant).getComponent().getFormat();
 
-            case ThisClass:
-            case ParentClass:
-            case ChildClass:
+            case ThisClass, ParentClass, ChildClass ->
                 // follow the indirection to the class structure
-                return ((PseudoConstant) constant).getDeclarationLevelClass().getComponent().getFormat();
+                ((PseudoConstant) constant).getDeclarationLevelClass().getComponent().getFormat();
 
-            default:
+            default ->
                 throw new IllegalStateException("no class format for: " + constant);
-            }
+            };
         }
 
     @Override
@@ -1446,23 +1394,18 @@ public class TerminalTypeConstant
             }
 
         Constant       constId = getDefiningConstant();
-        ClassStructure structMixin;
-        switch (constId.getFormat())
+        ClassStructure structMixin = switch (constId.getFormat())
             {
-            case Class:
+            case Class ->
                 // get the class referred to and return its format
-                structMixin = (ClassStructure) ((ClassConstant) constId).getComponent();
-                break;
+                (ClassStructure) ((ClassConstant) constId).getComponent();
 
-            case ThisClass:
-            case ParentClass:
-            case ChildClass:
-                structMixin = (ClassStructure) ((PseudoConstant) constId).getDeclarationLevelClass().getComponent();
-                break;
+            case ThisClass, ParentClass, ChildClass ->
+                (ClassStructure) ((PseudoConstant) constId).getDeclarationLevelClass().getComponent();
 
-            default:
+            default ->
                 throw new IllegalStateException("no class format for: " + constId);
-            }
+            };
 
         if (structMixin == null || structMixin.getFormat() != Component.Format.MIXIN)
             {
@@ -1777,35 +1720,37 @@ public class TerminalTypeConstant
                     ClassStructure clzRight = (ClassStructure)
                         typeRight.getSingleUnderlyingClass(true).getComponent();
                     Component.Format formatClz = clzRight.getFormat();
-                    switch (constant.getFormat())
+
+                    return switch (constant.getFormat())
                         {
-                        case IsConst:
-                            return switch (formatClz)
+                        case IsConst ->
+                            switch (formatClz)
                                 {
-                                case CONST, ENUMVALUE, PACKAGE, MODULE
-                                        -> Relation.IS_A;
-                                default -> Relation.INCOMPATIBLE;
+                                case CONST, ENUMVALUE, PACKAGE, MODULE ->
+                                    Relation.IS_A;
+                                default ->
+                                    Relation.INCOMPATIBLE;
                                 };
 
-                        case IsEnum:
-                            return formatClz == Component.Format.ENUMVALUE
-                                ? Relation.IS_A
-                                : Relation.INCOMPATIBLE;
+                        case IsEnum ->
+                            formatClz == Component.Format.ENUMVALUE
+                                    ? Relation.IS_A
+                                    : Relation.INCOMPATIBLE;
 
-                        case IsModule:
-                            return formatClz == Component.Format.MODULE
-                                ? Relation.IS_A
-                                : Relation.INCOMPATIBLE;
+                        case IsModule ->
+                            formatClz == Component.Format.MODULE
+                                    ? Relation.IS_A
+                                    : Relation.INCOMPATIBLE;
 
-                        case IsPackage:
-                            return formatClz == Component.Format.MODULE ||
-                                   formatClz == Component.Format.PACKAGE
-                                ? Relation.IS_A
-                                : Relation.INCOMPATIBLE;
+                        case IsPackage ->
+                            formatClz == Component.Format.MODULE ||
+                            formatClz == Component.Format.PACKAGE
+                                    ? Relation.IS_A
+                                    : Relation.INCOMPATIBLE;
 
-                        default:
+                        default ->
                             throw new IllegalStateException();
-                        }
+                        };
                     }
                 }
             }
@@ -2168,24 +2113,20 @@ public class TerminalTypeConstant
             }
 
         Constant constIdThis = getDefiningConstant();
-        switch (constIdThis.getFormat())
+        return switch (constIdThis.getFormat())
             {
-            case Module:
-            case Package:
-            case Class:
-                return registry.getTemplate((IdentityConstant) constIdThis);
+            case Module, Package, Class ->
+                registry.getTemplate((IdentityConstant) constIdThis);
 
-            case NativeClass:
-                return registry.getTemplate(((NativeRebaseConstant) constIdThis).getClassConstant());
+            case NativeClass ->
+                registry.getTemplate(((NativeRebaseConstant) constIdThis).getClassConstant());
 
-            case ThisClass:
-            case ParentClass:
-            case ChildClass:
-                return registry.getTemplate(((PseudoConstant) constIdThis).getDeclarationLevelClass());
+            case ThisClass, ParentClass, ChildClass ->
+                registry.getTemplate(((PseudoConstant) constIdThis).getDeclarationLevelClass());
 
-            default:
+            default ->
                 throw new IllegalStateException("unexpected defining constant: " + constIdThis);
-            }
+            };
         }
 
 
@@ -2230,12 +2171,11 @@ public class TerminalTypeConstant
     @Override
     protected int compareDetails(Constant obj)
         {
-        if (!(obj instanceof TerminalTypeConstant))
+        if (!(obj instanceof TerminalTypeConstant that))
             {
             return -1;
             }
 
-        TerminalTypeConstant that = (TerminalTypeConstant) obj;
         Constant constThis = this.m_constId;
         if (constThis instanceof ResolvableConstant)
             {
