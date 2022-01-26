@@ -9,24 +9,13 @@ module TestSimple.test.org
 
     void run()
         {
-        console.println(bar(""));
-        console.println(bar(Null));
+        String s = "/"[0..0);
+        console.println($"s={s}");  // used to throw OutOfBounds
         }
 
     void report(Object o)
         {
         console.println($"{&o.actualType}: {o}");
         }
-
-    Int bar(String? s)
-        {
-        return switch (s?)  // this used to fail to compile
-            {
-            case "Hello":   1;
-            case "Goodbye": 2;
-            default:        0;
-            } : -1;
-        }
-
     }
 

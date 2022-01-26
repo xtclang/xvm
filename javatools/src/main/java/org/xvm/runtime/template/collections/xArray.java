@@ -688,7 +688,7 @@ public class xArray
             }
 
         int cSize = (int) hDelegate.m_cSize;
-        if (ixUpper < 0 || ixUpper >= cSize)
+        if (ixUpper < ixLower - 1 || ixUpper >= cSize)
             {
             return frame.raiseException(xException.outOfBounds(frame, ixUpper, cSize));
             }
