@@ -192,20 +192,12 @@ public class xArray
         {
         ArrayConstant constArray = (ArrayConstant) constant;
 
-        boolean fSet;
-        switch (constArray.getFormat())
+        boolean fSet = switch (constArray.getFormat())
             {
-            case Array:
-                fSet = false;
-                break;
-
-            case Set:
-                fSet = true;
-                break;
-
-            default:
-                throw new IllegalStateException();
-            }
+            case Array -> false;
+            case Set   -> true;
+            default    -> throw new IllegalStateException();
+            };
 
         TypeConstant typeArray = constArray.getType();
         Constant[]   aconst    = constArray.getValue();
@@ -368,14 +360,13 @@ public class xArray
             case 3: // private construct(ArrayDelegate<Element> delegate, Mutability mutability)
                 {
                 ObjectHandle hTarget = ahVar[0];
-                if (!(hTarget instanceof DelegateHandle))
+                if (!(hTarget instanceof DelegateHandle hDelegate))
                     {
                     return frame.raiseException(xException.unsupportedOperation(frame));
                     }
 
-                DelegateHandle hDelegate   = (DelegateHandle) hTarget;
-                ObjectHandle   hMutability = ahVar[1];
-                ArrayHandle    hArray      = new ArrayHandle(
+                ObjectHandle hMutability = ahVar[1];
+                ArrayHandle  hArray      = new ArrayHandle(
                     clzArray, hDelegate, Mutability.values()[((EnumHandle) hMutability).getOrdinal()]);
 
                 if (hArray.m_mutability == Mutability.Constant)
