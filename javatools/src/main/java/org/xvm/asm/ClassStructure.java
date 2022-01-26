@@ -411,9 +411,8 @@ public class ClassStructure
             {
             public void accept(Constant c)
                 {
-                if (c instanceof TypeConstant)
+                if (c instanceof TypeConstant t)
                     {
-                    TypeConstant t = (TypeConstant) c;
                     if (t.isGenericType())
                         {
                         Constant constId = t.getDefiningConstant();
@@ -553,18 +552,14 @@ public class ClassStructure
      */
     public boolean isConst()
         {
-        switch (getFormat())
+        return switch (getFormat())
             {
-            case MODULE:
-            case PACKAGE:
-            case CONST:
-            case ENUM:
-            case ENUMVALUE:
-                return true;
+            case MODULE, PACKAGE, CONST, ENUM, ENUMVALUE ->
+                true;
 
-            default:
-                return false;
-            }
+            default ->
+                false;
+            };
         }
 
     /**
@@ -657,28 +652,21 @@ public class ClassStructure
                 continue;
                 }
 
-            boolean fCheck;
-            switch (contrib.getComposition())
+            boolean fCheck = switch (contrib.getComposition())
                 {
-                case Annotation:
-                    fCheck = !isIntoClassMixin(typeContrib);
-                    break;
+                case Annotation ->
+                    !isIntoClassMixin(typeContrib);
 
-                case Into:
-                    fCheck = fAllowInto;
-                    break;
+                case Into ->
+                    fAllowInto;
 
-                case Implements:
-                case Incorporates:
-                case Extends:
-                    fCheck = true;
-                    break;
+                case Implements, Incorporates, Extends ->
+                    true;
 
-                default:
+                default ->
                     // ignore any other contributions
-                    fCheck = false;
-                    break;
-                }
+                    false;
+                };
 
             if (fCheck)
                 {
@@ -993,9 +981,8 @@ public class ClassStructure
         {
         for (Component child : children())
             {
-            if (child instanceof PackageStructure)
+            if (child instanceof PackageStructure pkg)
                 {
-                PackageStructure pkg = (PackageStructure) child;
                 if (pkg.isModuleImport())
                     {
                     ModuleStructure moduleDep  = pkg.getImportedModule();
@@ -1759,27 +1746,20 @@ public class ClassStructure
                 continue;
                 }
 
-            boolean fCheck;
-            switch (contrib.getComposition())
+            boolean fCheck = switch (contrib.getComposition())
                 {
-                case Annotation:
-                    fCheck = !isIntoClassMixin(typeContrib);
-                    break;
+                case Annotation ->
+                    !isIntoClassMixin(typeContrib);
 
-                case Into:
-                    fCheck = fAllowInto;
-                    break;
+                case Into ->
+                    fAllowInto;
 
-                case Delegates:
-                case Implements:
-                case Incorporates:
-                case Extends:
-                    fCheck = true;
-                    break;
+                case Delegates, Implements, Incorporates, Extends ->
+                    true;
 
-                default:
+                default ->
                     throw new IllegalStateException();
-                }
+                };
 
             if (fCheck)
                 {
@@ -1844,27 +1824,20 @@ public class ClassStructure
                 continue;
                 }
 
-            boolean fCheck;
-            switch (contrib.getComposition())
+            boolean fCheck = switch (contrib.getComposition())
                 {
-                case Annotation:
-                    fCheck = !isIntoClassMixin(typeContrib);
-                    break;
+                case Annotation ->
+                    !isIntoClassMixin(typeContrib);
 
-                case Into:
-                    fCheck = fAllowInto;
-                    break;
+                case Into ->
+                    fAllowInto;
 
-                case Delegates:
-                case Implements:
-                case Incorporates:
-                case Extends:
-                    fCheck = true;
-                    break;
+                case Delegates, Implements, Incorporates, Extends ->
+                    true;
 
-                default:
+                default ->
                     throw new IllegalStateException();
-                }
+                };
 
             if (fCheck)
                 {
@@ -2373,6 +2346,7 @@ public class ClassStructure
             case TypeParameter:
             case FormalTypeChild:
                 // r-value (this) is a real type; it cannot be assigned to a formal type
+            case UnresolvedName:
                 return Relation.INCOMPATIBLE;
 
             case ThisClass:
@@ -2392,9 +2366,6 @@ public class ClassStructure
             case IsClass:
                 return calculateRelationImpl(
                         ((KeywordConstant) constIdLeft).getBaseType(), typeRight, fAllowInto);
-
-            case UnresolvedName:
-                return Relation.INCOMPATIBLE;
 
             default:
                 throw new IllegalStateException("unexpected constant: " + constIdLeft);
@@ -2622,10 +2593,8 @@ public class ClassStructure
                         }
                     }
                 }
-            else if (child instanceof PropertyStructure)
+            else if (child instanceof PropertyStructure property)
                 {
-                PropertyStructure property = (PropertyStructure) child;
-
                 if (property.isGenericTypeParameter())
                     {
                     // generic types don't consume
@@ -2773,10 +2742,8 @@ public class ClassStructure
                         }
                     }
                 }
-            else if (child instanceof PropertyStructure)
+            else if (child instanceof PropertyStructure property)
                 {
-                PropertyStructure property = (PropertyStructure) child;
-
                 if (property.isGenericTypeParameter())
                     {
                     // generic types don't produce
@@ -2915,10 +2882,8 @@ public class ClassStructure
 
         for (Component child : children())
             {
-            if (child instanceof PropertyStructure)
+            if (child instanceof PropertyStructure prop)
                 {
-                PropertyStructure prop = (PropertyStructure) child;
-
                 if (prop.isGenericTypeParameter())
                     {
                     if (!typeRight.containsGenericParam(prop.getName()))
@@ -2951,9 +2916,8 @@ public class ClassStructure
                         }
                     }
                 }
-            else if (child instanceof MultiMethodStructure)
+            else if (child instanceof MultiMethodStructure mms)
                 {
-                MultiMethodStructure mms = (MultiMethodStructure) child;
                 for (MethodStructure method : mms.methods())
                     {
                     if (!method.isAccessible(accessLeft))
@@ -3044,10 +3008,8 @@ public class ClassStructure
 
         if (signature.isProperty())
             {
-            if (child instanceof PropertyStructure)
+            if (child instanceof PropertyStructure prop)
                 {
-                PropertyStructure prop = (PropertyStructure) child;
-
                 // TODO: should we check the "Var" access?
                 if (prop.isRefAccessible(access) &&
                     prop.isSubstitutableFor(pool, signature, listParams))
@@ -3058,10 +3020,8 @@ public class ClassStructure
             }
         else
             {
-            if (child instanceof MultiMethodStructure)
+            if (child instanceof MultiMethodStructure mms)
                 {
-                MultiMethodStructure mms = (MultiMethodStructure) child;
-
                 GenericTypeResolver resolver = listParams.isEmpty()
                         ? null
                         : new SimpleTypeResolver(pool, listParams);
@@ -3984,12 +3944,10 @@ public class ClassStructure
             return true;
             }
 
-        if (!(obj instanceof ClassStructure) || !super.equals(obj))
+        if (!(obj instanceof ClassStructure that) || !super.equals(obj))
             {
             return false;
             }
-
-        ClassStructure that = (ClassStructure) obj;
 
         // type parameters
         Map mapThisParams = this.m_mapParams;
