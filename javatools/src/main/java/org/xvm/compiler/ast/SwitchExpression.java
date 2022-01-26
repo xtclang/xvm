@@ -336,6 +336,22 @@ public class SwitchExpression
         return m_casemgr == null || !m_casemgr.isConditionAborting();
         }
 
+    @Override
+    public boolean isShortCircuiting()
+        {
+        if (cond != null)
+            {
+            for (AstNode node : cond)
+                {
+                if (node instanceof Expression expr && expr.isShortCircuiting())
+                    {
+                    return true;
+                    }
+                }
+            }
+        return false;
+        }
+
 
     // ----- debugging assistance ------------------------------------------------------------------
 

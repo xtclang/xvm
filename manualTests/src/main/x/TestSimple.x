@@ -9,41 +9,24 @@ module TestSimple.test.org
 
     void run()
         {
-        Derived d = new Derived(5, "hell0");
-        d.foo(1);
+        console.println(bar(""));
+        console.println(bar(Null));
         }
 
     void report(Object o)
         {
-        // console.println($"{&o.actualType}: {o}");
+        console.println($"{&o.actualType}: {o}");
         }
 
-    class Base(Int value)
+    Int bar(String? s)
         {
-        void foo(Int a1, Int a2=0)
+        return switch (s?)  // this used to fail to compile
             {
-            Int a3;
-            console.println($"{a1} {a2}");
-            // console.println($"{a1} {a2} {&a3.assigned}"); // blows up
-            }
+            case "Hello":   1;
+            case "Goodbye": 2;
+            default:        0;
+            } : -1;
         }
 
-    const Derived()
-            extends Base
-        {
-        String name;
-        construct(Int value, String name)
-            {
-            this.name = name;
-            super(value);
-            }
-
-        @Override
-        void foo(Int a1, Int a2=2, Int a3=3)
-            {
-            super(a1);
-            super(a1, a2);
-            //super(a1, a2, a3);  // this should not compile; deferred
-            }
-        }
     }
+
