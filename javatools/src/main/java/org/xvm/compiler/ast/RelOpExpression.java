@@ -159,31 +159,30 @@ public class RelOpExpression
     @Override
     public boolean validateCondition(ErrorListener errs)
         {
-        switch (operator.getId())
+        return switch (operator.getId())
             {
-            case BIT_AND:
-            case BIT_OR:
-                return expr1.validateCondition(errs) && expr2.validateCondition(errs);
+            case BIT_AND, BIT_OR ->
+                expr1.validateCondition(errs) && expr2.validateCondition(errs);
 
-            default:
-                return super.validateCondition(errs);
-            }
+            default ->
+                super.validateCondition(errs);
+            };
         }
 
     @Override
     public ConditionalConstant toConditionalConstant()
         {
-        switch (operator.getId())
+        return switch (operator.getId())
             {
-            case BIT_AND:
-                return expr1.toConditionalConstant().addAnd(expr2.toConditionalConstant());
+            case BIT_AND ->
+                expr1.toConditionalConstant().addAnd(expr2.toConditionalConstant());
 
-            case BIT_OR:
-                return expr1.toConditionalConstant().addOr(expr2.toConditionalConstant());
+            case BIT_OR ->
+                expr1.toConditionalConstant().addOr(expr2.toConditionalConstant());
 
-            default:
-                return super.toConditionalConstant();
-            }
+            default ->
+                super.toConditionalConstant();
+            };
         }
 
 
@@ -636,7 +635,7 @@ public class RelOpExpression
                         ? ((ArrayConstant) constResult).getValue() // divrem result is in a tuple
                         : new Constant[] {constResult};
                 }
-            catch (RuntimeException e) {}
+            catch (RuntimeException ignore) {}
             }
 
         return finishValidations(ctx, atypeRequired, atypeResults, TypeFit.Fit, aconstResult, errs);
@@ -1078,51 +1077,23 @@ public class RelOpExpression
      */
     public String getDefaultMethodName()
         {
-        switch (operator.getId())
+        return switch (operator.getId())
             {
-            case BIT_AND:
-                return "and";
-
-            case BIT_OR:
-                return "or";
-
-            case BIT_XOR:
-            case COND_XOR:
-                return "xor";
-
-            case DOTDOT:
-                return isExcluding() ? "toExcluding" : "to";
-
-            case SHL:
-                return "shiftLeft";
-
-            case SHR:
-                return "shiftRight";
-
-            case USHR:
-                return "shiftAllRight";
-
-            case ADD:
-                return "add";
-
-            case SUB:
-                return "sub";
-
-            case MUL:
-                return "mul";
-
-            case DIV:
-                return "div";
-
-            case MOD:
-                return "mod";
-
-            case DIVREM:
-                return "divrem";
-
-            default:
-                throw new IllegalStateException();
-            }
+            case BIT_AND           -> "and";
+            case BIT_OR            -> "or";
+            case BIT_XOR, COND_XOR -> "xor";
+            case DOTDOT            -> isExcluding() ? "toExcluding" : "to";
+            case SHL               -> "shiftLeft";
+            case SHR               -> "shiftRight";
+            case USHR              -> "shiftAllRight";
+            case ADD               -> "add";
+            case SUB               -> "sub";
+            case MUL               -> "mul";
+            case DIV               -> "div";
+            case MOD               -> "mod";
+            case DIVREM            -> "divrem";
+            default                -> throw new IllegalStateException();
+            };
         }
 
     /**

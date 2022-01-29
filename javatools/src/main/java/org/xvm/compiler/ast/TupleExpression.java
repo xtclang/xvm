@@ -250,13 +250,13 @@ public class TupleExpression
         ConstantPool     pool           = pool();
         List<Expression> listFieldExprs = exprs;
         int              cFields        = listFieldExprs == null ? 0 : listFieldExprs.size();
-        TypeConstant     typeRequired   = null;
-        TypeConstant     typeResult     = null;
         TypeConstant[]   aSpecTypes     = TypeConstant.NO_TYPES;
         int              cSpecTypes     = 0;
         TypeConstant[]   aReqTypes      = TypeConstant.NO_TYPES;
         int              cReqTypes      = 0;
         boolean          fValid         = true;
+        TypeConstant     typeResult     = null;
+        TypeConstant     typeRequired;
         boolean          fMultiplexing;
 
         if (type != null)
@@ -325,7 +325,7 @@ public class TupleExpression
             else if (!typeRequired.equals(pool.typeObject()))
                 {
                 // required type could be an intersection type. e.g. (T1 | Tuple<T2>), in which case
-                // we could use an a very simple helper; otherwise use implicit types
+                // we could use a very simple helper; otherwise use implicit types
                 if (typeRequired instanceof IntersectionTypeConstant)
                     {
                     TypeConstant typeTuple = ((IntersectionTypeConstant) typeRequired).extractTuple();

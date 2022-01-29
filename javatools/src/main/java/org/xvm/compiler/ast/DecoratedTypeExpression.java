@@ -59,18 +59,18 @@ public class DecoratedTypeExpression
     @Override
     protected TypeConstant instantiateTypeConstant(Context ctx, ErrorListener errs)
         {
-        switch (keyword.getId())
+        return switch (keyword.getId())
             {
-            case IMMUTABLE:
-                return pool().ensureImmutableTypeConstant(type.ensureTypeConstant(ctx, errs));
+            case IMMUTABLE ->
+                pool().ensureImmutableTypeConstant(type.ensureTypeConstant(ctx, errs));
 
-            case CONDITIONAL:
+            case CONDITIONAL ->
                 // TODO
-                throw new UnsupportedOperationException();
+                throw notImplemented();
 
-            default:
+            default ->
                 throw new IllegalStateException("keyword=" + keyword);
-            }
+            };
         }
 
     @Override
@@ -108,13 +108,7 @@ public class DecoratedTypeExpression
     @Override
     public String toString()
         {
-        StringBuilder sb = new StringBuilder();
-
-        sb.append(keyword.getId().TEXT)
-          .append(' ')
-          .append(type);
-
-        return sb.toString();
+        return keyword.getId().TEXT + ' ' + type;
         }
 
     @Override

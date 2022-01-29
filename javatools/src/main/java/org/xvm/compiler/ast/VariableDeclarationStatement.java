@@ -178,10 +178,8 @@ public class VariableDeclarationStatement
         m_reg = new Register(typeVar);
         ctx.registerVar(name, m_reg, errs);
 
-        if (exprNew instanceof AnnotatedTypeExpression)
+        if (exprNew instanceof AnnotatedTypeExpression exprAnnoType)
             {
-            AnnotatedTypeExpression exprAnnoType = (AnnotatedTypeExpression) exprNew;
-
             // for DVAR registers, specify the DVAR "register type"
             // (separate from the type of the value that gets held in the register)
             List<AnnotationExpression> listRefAnnos = exprAnnoType.getRefAnnotations();
@@ -224,11 +222,9 @@ public class VariableDeclarationStatement
         Register reg = m_reg;
         if (reg.isDVar())
             {
-            if (!m_fConstAnno && type instanceof AnnotatedTypeExpression)
+            if (!m_fConstAnno && type instanceof AnnotatedTypeExpression exprAnnoType)
                 {
                 // replace the non-constant args with the corresponding registers
-                AnnotatedTypeExpression exprAnnoType = (AnnotatedTypeExpression) type;
-
                 TypeConstant typeReg = pool.ensureParameterizedTypeConstant(
                         exprAnnoType.isVar() ? pool.typeVar() : pool.typeRef(), reg.getOriginalType());
 

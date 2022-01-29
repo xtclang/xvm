@@ -147,7 +147,7 @@ public class SequentialAssignExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
-    private boolean m_fPre;
+    private final boolean m_fPre;
 
     private transient Assignable m_LValTarget;
     }

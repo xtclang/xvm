@@ -336,7 +336,7 @@ public class MethodDeclarationStatement
                             log(errs, Severity.ERROR, Compiler.FUNCTION_NOT_ALLOWED, sName);
                             return;
                             }
-                        // it's a "short hand" property method; stop right here
+                        // it's a "shorthand" property method; stop right here
                         // will continue resolution in resolveNames() below
                         break CreateStructure;
                         }
@@ -490,10 +490,9 @@ public class MethodDeclarationStatement
             String    sName     = getName();
             if (container.isMethodContainer())
                 {
-                if (returns == null && container instanceof PropertyStructure)
+                if (returns == null && container instanceof PropertyStructure property)
                     {
                     // this is a short-hand property method
-                    PropertyStructure property = (PropertyStructure) container;
                     List<AnnotationExpression> annotations =
                         ((PropertyDeclarationStatement) getParent().getParent()).annotations; // TODO: replace
 
@@ -589,9 +588,8 @@ public class MethodDeclarationStatement
                     Parameter param = listParams.get(i);
 
                     TypeExpression exprType = param.getType();
-                    while (exprType instanceof AnnotatedTypeExpression)
+                    while (exprType instanceof AnnotatedTypeExpression exprAnno)
                         {
-                        AnnotatedTypeExpression exprAnno = (AnnotatedTypeExpression) exprType;
                         if (exprAnno.isDisassociated())
                             {
                             method.getParam(i).addAnnotation(
@@ -978,10 +976,10 @@ public class MethodDeclarationStatement
     protected MethodStructure findMethod(ConstantPool pool, ClassStructure clz,
             String sMethName, List<Parameter> parameters)
         {
-        Component mms = clz.getChild(sMethName);
-        if (mms instanceof MultiMethodStructure)
+        Component child = clz.getChild(sMethName);
+        if (child instanceof MultiMethodStructure mms)
             {
-            for (Component c : ((MultiMethodStructure) mms).children())
+            for (Component c : mms.children())
                 {
                 MethodStructure method = (MethodStructure) c;
 

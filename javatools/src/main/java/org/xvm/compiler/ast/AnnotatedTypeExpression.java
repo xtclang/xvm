@@ -264,9 +264,8 @@ public class AnnotatedTypeExpression
                 m_fFinal = true;
                 }
 
-            if (exprTypeNew instanceof AnnotatedTypeExpression)
+            if (exprTypeNew instanceof AnnotatedTypeExpression exprTypeNext)
                 {
-                AnnotatedTypeExpression exprTypeNext = (AnnotatedTypeExpression) exprTypeNew;
                 if (m_fInjected || exprTypeNext.isInjected())
                     {
                     log(errs, Severity.ERROR, Compiler.ANNOTATED_INJECTION);

@@ -108,17 +108,13 @@ public class ReturnStatement
 
         TypeConstant[] atypeRet = container.getReturnTypes();
         int            cRets    = atypeRet == null ? 0 : atypeRet.length;
-        switch (cRets)
+
+        return switch (cRets)
             {
-            case 0:
-                return true;
-
-            case 1:
-                return atypeRet[0].equals(pool().typeBoolean());
-
-            default:
-                return false;
-            }
+            case 0  -> true;
+            case 1  -> atypeRet[0].equals(pool().typeBoolean());
+            default -> false;
+            };
         }
 
     @Override
@@ -330,11 +326,9 @@ public class ReturnStatement
         AstNode container    = getCodeContainer();
         boolean fConditional = container.isReturnConditional();
 
-        if (container instanceof StatementExpression)
+        if (container instanceof StatementExpression expr)
             {
             assert !fConditional;
-
-            StatementExpression expr = ((StatementExpression) container);
 
             // emit() for a return inside a StatementExpression produces an assignment from the
             // expression

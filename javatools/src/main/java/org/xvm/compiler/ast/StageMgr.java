@@ -254,24 +254,14 @@ public class StageMgr
 
     private Stage requiredStage(Stage target)
         {
-        switch (target)
+        return switch (target)
             {
-            case Registered:
-                return Stage.Initial;
-
-            case Loaded:
-            case Resolved:
-                return Stage.Registered;
-
-            case Validated:
-                return Stage.Resolved;
-
-            case Emitted:
-                return Stage.Validated;
-
-            default:
-                throw new IllegalStateException("unsupported target: " + target);
-            }
+            case Registered       -> Stage.Initial;
+            case Loaded, Resolved -> Stage.Registered;
+            case Validated        -> Stage.Resolved;
+            case Emitted          -> Stage.Validated;
+            default               -> throw new IllegalStateException("unsupported target: " + target);
+            };
         }
 
     /**
@@ -497,7 +487,7 @@ public class StageMgr
     /**
      * Error list to log processing errors to.
      */
-    private ErrorListener m_errs;
+    private final ErrorListener m_errs;
 
     /**
      * The current node being processed if processing is occurring.

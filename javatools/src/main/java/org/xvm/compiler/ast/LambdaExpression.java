@@ -1050,10 +1050,8 @@ public class LambdaExpression
                                                 idLambda, iParam, sCapture).getType();
                     TypeConstant typeFormal;
                     Register     regFormal;
-                    if (argFormal instanceof TargetInfo)
+                    if (argFormal instanceof TargetInfo infoGeneric)
                         {
-                        TargetInfo infoGeneric = (TargetInfo) argFormal;
-
                         typeFormal = infoGeneric.getType(); // type of type
                         regFormal  = new Register(typeFormal, Op.A_STACK);
 

@@ -29,7 +29,7 @@ import org.xvm.util.Severity;
  *
  * <p/>TODO serious issues with types, because the expression cannot complete, yet it factors into
  *          type analysis. for example, "if (x?.y : assert)" does not evaluate to Boolean
- *      -> parent expression should always check isCompleteable() before factoring in type info?
+ *      -> parent expression should always check isCompletable() before factoring in type info?
  *      -> need to create a "subtype of all types" pseudo-type for compile-time that non-completing
  *         expressions can report as their type (that has an isA() implementation that returns true)
  */

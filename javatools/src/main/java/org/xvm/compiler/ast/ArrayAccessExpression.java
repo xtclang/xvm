@@ -277,7 +277,7 @@ public class ArrayAccessExpression
                     }
                 else // not a List, but might still be UniformIndexed and/or Sliceable
                     {
-                    // test for UniformIndexed
+                    // test for UniformIndexed:
                     //  UniformIndexed       - test if target could be
                     //                         UniformIndexed<indexes[0], typeRequired>
                     //      Index -> Element - indexes[0] must have an implicit type
@@ -296,7 +296,7 @@ public class ArrayAccessExpression
                             }
                         }
 
-                    // test for Sliceable
+                    // test for Sliceable:
                     //  Sliceable             - test if target could be Sliceable without conv, and
                     //                          index could be a Range
                     //      Index -> Element  - probably does not matter what indexes are, since
@@ -312,7 +312,7 @@ public class ArrayAccessExpression
                         }
                     }
 
-                // test for Map
+                // test for Map:
                 //  Map               - test if target is Map without conv, and could be a
                 //                      Map<indexes[0], typeRequired>
                 //      Key -> Value  - indexes[0] must have an implicit type, or typeTarget has to
@@ -834,17 +834,12 @@ public class ArrayAccessExpression
             setMatch.add(idMethod);
             }
 
-        switch (setMatch.size())
+        return switch (setMatch.size())
             {
-            case 0:
-                return null;
-
-            case 1:
-                return setMatch.iterator().next();
-
-            default:
-                return chooseBest(setMatch, typeTarget, ErrorListener.BLACKHOLE);
-            }
+            case 0  -> null;
+            case 1  -> setMatch.iterator().next();
+            default -> chooseBest(setMatch, typeTarget, ErrorListener.BLACKHOLE);
+            };
         }
 
     private Set<MethodConstant> findPotentialOps(TypeInfo infoTarget, int cArgs)
@@ -956,7 +951,7 @@ public class ArrayAccessExpression
                 int            cOpParams     = atypeOpParams.length;
                 if (cParams != cOpParams)
                     {
-                    continue NextOp;
+                    continue;
                     }
 
                 for (int i = 0; i < cParams; ++i)
@@ -973,7 +968,7 @@ public class ArrayAccessExpression
                 TypeConstant[] atypeOpReturns = idOp.getRawReturns();
                 if (atypeOpReturns.length == 0 || isAssignable(ctx, atypeOpReturns[0], typeReturn))
                     {
-                    continue NextOp;
+                    continue;
                     }
                 }
 
@@ -1025,10 +1020,10 @@ public class ArrayAccessExpression
         if (method.getRawReturns().length > 0)
             {
             TypeConstant[] atypes = method.getRawParams();
-            int            ctypes = atypes.length;
-            if (ctypes == indexes.size())
+            int            cTypes = atypes.length;
+            if (cTypes == indexes.size())
                 {
-                for (int i = 0; i < ctypes; ++i)
+                for (int i = 0; i < cTypes; ++i)
                     {
                     if (!indexes.get(i).testFit(ctx, atypes[i], null).isFit())
                         {
@@ -1231,13 +1226,14 @@ public class ArrayAccessExpression
                     ? convertConstant(constRaw, pool.ensureRangeType(pool.typeCInt64()))
                     : constIndex;
             }
-        else if (exprIndex instanceof LiteralExpression)
+
+        if (exprIndex instanceof LiteralExpression)
             {
             return fromLiteral(exprIndex);
             }
-        else if (exprIndex instanceof RelOpExpression)
+
+        if (exprIndex instanceof RelOpExpression exprInterval)
             {
-            RelOpExpression exprInterval = (RelOpExpression) exprIndex;
             if (exprInterval.getOperator().getId() == Id.DOTDOT)
                 {
                 // need both the left & right expressions, and they must both be
@@ -1270,7 +1266,7 @@ public class ArrayAccessExpression
                 {
                 return (IntConstant) constLit.convertTo(pool().typeCInt64());
                 }
-            catch (ArithmeticException e) {}
+            catch (ArithmeticException ignore) {}
             }
 
         return null;
@@ -1286,7 +1282,8 @@ public class ArrayAccessExpression
      *
      * @return the estimated index type, or null
      */
-    TypeConstant estimateIndexType(Context ctx, TypeConstant typeTarget, String sIndexParam, Expression exprIndex)
+    TypeConstant estimateIndexType(Context ctx, TypeConstant typeTarget, String sIndexParam,
+                                   Expression exprIndex)
         {
         TypeConstant typeIndex = typeTarget == null
                 ? null

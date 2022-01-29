@@ -229,23 +229,13 @@ public class ForEachStatement
     @Override
     public boolean hasLabelVar(String sName)
         {
-        switch (sName)
+        return switch (sName)
             {
-            case "first":
-            case "count":
-                return true;
-
-            case "last":
-                return m_plan == Plan.RANGE || m_plan == Plan.SEQUENCE;
-
-            case "entry":
-            case "Key":
-            case "Value":
-                return m_plan == Plan.MAP;
-
-            default:
-                return false;
-            }
+            case "first", "count"        -> true;
+            case "last"                  -> m_plan == Plan.RANGE || m_plan == Plan.SEQUENCE;
+            case "entry", "Key", "Value" -> m_plan == Plan.MAP;
+            default                      -> false;
+            };
         }
 
     @Override
@@ -253,18 +243,16 @@ public class ForEachStatement
         {
         assert hasLabelVar(sName);
 
-        Register reg;
-        switch (sName)
+        Register reg = switch (sName)
             {
-            case "first": reg = m_regFirst  ; break;
-            case "last" : reg = m_regLast   ; break;
-            case "count": reg = m_regCount  ; break;
-            case "entry": reg = m_regEntry  ; break;
-            case "Key"  : reg = m_regKeyType; break;
-            case "Value": reg = m_regValType; break;
-            default:
-                throw new IllegalStateException();
-            }
+            case "first" -> m_regFirst;
+            case "last"  -> m_regLast;
+            case "count" -> m_regCount;
+            case "entry" -> m_regEntry;
+            case "Key"   -> m_regKeyType;
+            case "Value" -> m_regValType;
+            default      -> throw new IllegalStateException();
+            };
 
         if (reg == null)
             {
@@ -275,18 +263,15 @@ public class ForEachStatement
             Token        tok    = new Token(keyword.getStartPosition(), keyword.getEndPosition(), Id.IDENTIFIER, sLabel + '.' + sName);
             ConstantPool pool   = pool();
 
-            TypeConstant type;
-            switch (sName)
+            TypeConstant type = switch (sName)
                 {
-                case "first":
-                case "last" : type = pool.typeBoolean()      ; break;
-                case "count": type = pool.typeCInt64()          ; break;
-                case "entry": type = getEntryType()          ; break;
-                case "Key"  : type = getKeyType().getType()  ; break;
-                case "Value": type = getValueType().getType(); break;
-                default:
-                    throw new IllegalStateException();
-                }
+                case "first", "last" -> pool.typeBoolean();
+                case "count"         -> pool.typeCInt64();
+                case "entry"         -> getEntryType();
+                case "Key"           -> getKeyType().getType();
+                case "Value"         -> getValueType().getType();
+                default              -> throw new IllegalStateException();
+                };
 
             reg = new Register(type);
             m_ctxLabelVars.registerVar(tok, reg, m_errsLabelVars);
@@ -340,9 +325,8 @@ public class ForEachStatement
 
         // validate the LValue declarations and any LValue sub-expressions
         AstNode condLVal = cond.getLValue();
-        if (condLVal instanceof Statement)
+        if (condLVal instanceof Statement condOld)
             {
-            Statement condOld = (Statement) condLVal;
             Statement condNew = condOld.validate(ctx, errs);
             if (condNew == null)
                 {
@@ -397,17 +381,15 @@ public class ForEachStatement
 
         for (int i = Plan.ITERATOR.ordinal(); i <= Plan.ITERABLE.ordinal(); ++i)
             {
-            plan = Plan.valueOf(i);
-            switch (plan)
+            plan     = Plan.valueOf(i);
+            typeRVal = switch (plan)
                 {
-                case ITERATOR: typeRVal = pool.typeIterator(); break;
-                case RANGE   : typeRVal = pool.typeRange()   ; break;
-                case SEQUENCE: typeRVal = pool.typeList()    ; break;
-                case MAP     : typeRVal = pool.typeMap()     ; break;
-                case ITERABLE: typeRVal = pool.typeIterable(); break;
-
-                default: throw new IllegalStateException();
-                }
+                case ITERATOR -> pool.typeIterator();
+                case RANGE    -> pool.typeRange();
+                case SEQUENCE -> pool.typeList();
+                case MAP      -> pool.typeMap();
+                case ITERABLE -> pool.typeIterable();
+                };
 
             if (exprRVal.testFit(ctx, typeRVal, null).isFit())
                 {
@@ -575,16 +557,14 @@ public class ForEachStatement
                 }
             }
 
-        switch (m_plan)
+        fCompletes = switch (m_plan)
             {
-            case ITERATOR: fCompletes = emitIterator(ctx, fCompletes, code, errs); break;
-            case RANGE   : fCompletes = emitRange   (ctx, fCompletes, code, errs); break;
-            case SEQUENCE: fCompletes = emitSequence(ctx, fCompletes, code, errs); break;
-            case MAP     : fCompletes = emitMap     (ctx, fCompletes, code, errs); break;
-            case ITERABLE: fCompletes = emitIterable(ctx, fCompletes, code, errs); break;
-            default:
-                throw new IllegalStateException();
-            }
+            case ITERATOR -> emitIterator(ctx, fCompletes, code, errs);
+            case RANGE    -> emitRange(ctx, fCompletes, code, errs);
+            case SEQUENCE -> emitSequence(ctx, fCompletes, code, errs);
+            case MAP      -> emitMap(ctx, fCompletes, code, errs);
+            case ITERABLE -> emitIterable(ctx, fCompletes, code, errs);
+            };
 
         code.add(new Exit());
 

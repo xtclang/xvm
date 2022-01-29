@@ -269,7 +269,7 @@ public class CmpExpression
                     {
                     constVal = expr1New.toConstant().apply(operator.getId(), expr2New.toConstant());
                     }
-                catch (RuntimeException e) {}
+                catch (RuntimeException ignore) {}
                 break CheckInference;
                 }
 
@@ -475,46 +475,27 @@ public class CmpExpression
             Argument arg1      = expr1.generateArgument(ctx, code, true, true, errs);
             Argument arg2      = expr2.generateArgument(ctx, code, true, true, errs);
             Argument argResult = LVal.getLocalArgument();
-            OpTest   op;
+            OpTest   op = switch (operator.getId())
+                {
+                case COMP_EQ ->
+                    m_fArg1Null ? new IsNull(arg2, argResult) :
+                    m_fArg2Null ? new IsNull(arg1, argResult) :
+                                  new IsEq(arg1, arg2, argResult);
+
+                case COMP_NEQ ->
+                    m_fArg1Null ? new IsNotNull(arg2, argResult) :
+                    m_fArg2Null ? new IsNotNull(arg1, argResult) :
+                                  new IsNotEq(arg1, arg2, argResult);
+
+                case COMP_LT   -> new IsLt(arg1, arg2, argResult);
+                case COMP_GT   -> new IsGt(arg1, arg2, argResult);
+                case COMP_LTEQ -> new IsLte(arg1, arg2, argResult);
+                case COMP_GTEQ -> new IsGte(arg1, arg2, argResult);
+                case COMP_ORD  -> new Cmp(arg1, arg2, argResult);
+                default        -> throw new IllegalStateException();
+                };
 
             // generate the op that combines the two sub-expressions
-            switch (operator.getId())
-                {
-                case COMP_EQ:
-                    op = m_fArg1Null ? new IsNull(arg2, argResult) :
-                         m_fArg2Null ? new IsNull(arg1, argResult) :
-                                       new IsEq(arg1, arg2, argResult);
-                    break;
-
-                case COMP_NEQ:
-                    op = m_fArg1Null ? new IsNotNull(arg2, argResult) :
-                         m_fArg2Null ? new IsNotNull(arg1, argResult) :
-                                       new IsNotEq(arg1, arg2, argResult);
-                    break;
-
-                case COMP_LT:
-                    op = new IsLt(arg1, arg2, argResult);
-                    break;
-
-                case COMP_GT:
-                    op = new IsGt(arg1, arg2, argResult);
-                    break;
-
-                case COMP_LTEQ:
-                    op = new IsLte(arg1, arg2, argResult);
-                    break;
-
-                case COMP_GTEQ:
-                    op = new IsGte(arg1, arg2, argResult);
-                    break;
-
-                case COMP_ORD:
-                    op = new Cmp(arg1, arg2, argResult);
-                    break;
-
-                default:
-                    throw new IllegalStateException();
-                }
 
             op.setCommonType(m_typeCommon);
             code.add(op);
@@ -533,62 +514,49 @@ public class CmpExpression
             // evaluate the sub-expressions
             Argument   arg1 = expr1.generateArgument(ctx, code, true, true, errs);
             Argument   arg2 = expr2.generateArgument(ctx, code, true, true, errs);
-            OpCondJump op;
+            OpCondJump op = switch (operator.getId())
+                {
+                case COMP_EQ ->
+                    fWhenTrue
+                        ? (m_fArg1Null ? new JumpNull(arg2, label) :
+                           m_fArg2Null ? new JumpNull(arg1, label) :
+                                         new JumpEq(arg1, arg2, label))
+                        : (m_fArg1Null ? new JumpNotNull(arg2, label) :
+                           m_fArg2Null ? new JumpNotNull(arg1, label) :
+                                         new JumpNotEq(arg1, arg2, label));
+                case COMP_NEQ ->
+                    fWhenTrue
+                        ? (m_fArg1Null ? new JumpNotNull(arg2, label) :
+                           m_fArg2Null ? new JumpNotNull(arg1, label) :
+                                         new JumpNotEq(arg1, arg2, label))
+
+                        : (m_fArg1Null ? new JumpNull(arg2, label) :
+                           m_fArg2Null ? new JumpNull(arg1, label) :
+                                         new JumpEq(arg1, arg2, label));
+                case COMP_LT ->
+                    fWhenTrue
+                        ? new JumpLt(arg1, arg2, label)
+                        : new JumpGte(arg1, arg2, label);
+
+                case COMP_GT ->
+                    fWhenTrue
+                        ? new JumpGt(arg1, arg2, label)
+                        : new JumpLte(arg1, arg2, label);
+
+                case COMP_LTEQ ->
+                    fWhenTrue
+                        ? new JumpLte(arg1, arg2, label)
+                        : new JumpGt(arg1, arg2, label);
+
+                case COMP_GTEQ -> fWhenTrue
+                    ? new JumpGte(arg1, arg2, label)
+                    : new JumpLt(arg1, arg2, label);
+
+                default ->
+                    throw new IllegalStateException();
+                };
 
             // generate the op that combines the two sub-expressions
-            switch (operator.getId())
-                {
-                case COMP_EQ:
-                    op = fWhenTrue
-                            ? (m_fArg1Null ? new JumpNull(arg2, label) :
-                               m_fArg2Null ? new JumpNull(arg1, label) :
-                                             new JumpEq  (arg1, arg2, label))
-
-                            : (m_fArg1Null ? new JumpNotNull(arg2, label) :
-                               m_fArg2Null ? new JumpNotNull(arg1, label) :
-                                             new JumpNotEq  (arg1, arg2, label));
-                    break;
-
-                case COMP_NEQ:
-                    op = fWhenTrue
-                            ? (m_fArg1Null ? new JumpNotNull(arg2, label) :
-                               m_fArg2Null ? new JumpNotNull(arg1, label) :
-                                             new JumpNotEq  (arg1, arg2, label))
-
-                            : (m_fArg1Null ? new JumpNull(arg2, label) :
-                               m_fArg2Null ? new JumpNull(arg1, label) :
-                                             new JumpEq  (arg1, arg2, label));
-
-                    break;
-
-                case COMP_LT:
-                    op = fWhenTrue
-                            ? new JumpLt(arg1, arg2, label)
-                            : new JumpGte(arg1, arg2, label);
-                    break;
-
-                case COMP_GT:
-                    op = fWhenTrue
-                            ? new JumpGt(arg1, arg2, label)
-                            : new JumpLte(arg1, arg2, label);
-                    break;
-
-                case COMP_LTEQ:
-                    op = fWhenTrue
-                            ? new JumpLte(arg1, arg2, label)
-                            : new JumpGt(arg1, arg2, label);
-                    break;
-
-                case COMP_GTEQ:
-                    op = fWhenTrue
-                            ? new JumpGte(arg1, arg2, label)
-                            : new JumpLt(arg1, arg2, label);
-                    break;
-
-                default:
-                case COMP_ORD:
-                    throw new IllegalStateException();
-                }
 
             op.setCommonType(m_typeCommon);
             code.add(op);

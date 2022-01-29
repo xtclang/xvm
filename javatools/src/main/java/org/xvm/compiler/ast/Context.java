@@ -1151,23 +1151,23 @@ public class Context
      */
     public boolean isReservedName(String sName)
         {
-        switch (sName)
+        return switch (sName)
             {
-            case "this":
-            case "this:target":
-            case "this:public":
-            case "this:protected":
-            case "this:private":
-            case "this:struct":
-            case "this:class":
-            case "this:service":
-            case "super":
-            case "this:module":
-                return true;
+            case "this",
+                 "this:target",
+                 "this:public",
+                 "this:protected",
+                 "this:private",
+                 "this:struct",
+                 "this:class",
+                 "this:service",
+                 "this:module",
+                 "super"
+                -> true;
 
-            default:
-                return false;
-            }
+            default
+                -> false;
+            };
         }
     /**
      * Resolve a reserved name to an argument.
@@ -1403,21 +1403,12 @@ public class Context
      */
     protected Map<FormalConstant, TypeConstant> getFormalTypeMap(Branch branch)
         {
-        Map<FormalConstant, TypeConstant> map;
-        switch (branch)
+        Map<FormalConstant, TypeConstant> map = switch (branch)
             {
-            case WhenTrue:
-                map = m_mapFormalWhenTrue;
-                break;
-
-            case WhenFalse:
-                map = m_mapFormalWhenFalse;
-                break;
-
-            default:
-                map = m_mapFormal;
-                break;
-            }
+            case WhenTrue  -> m_mapFormalWhenTrue;
+            case WhenFalse -> m_mapFormalWhenFalse;
+            default        -> m_mapFormal;
+            };
         return map == null ? Collections.EMPTY_MAP : map;
         }
 
@@ -1430,17 +1421,12 @@ public class Context
 
         if (map == Collections.EMPTY_MAP)
             {
-            switch (branch)
+            return switch (branch)
                 {
-                case WhenTrue:
-                    return m_mapFormalWhenTrue = new HashMap<>();
-
-                case WhenFalse:
-                    return m_mapFormalWhenFalse = new HashMap<>();
-
-                default:
-                    return m_mapFormal = new HashMap<>();
-                }
+                case WhenTrue  -> m_mapFormalWhenTrue  = new HashMap<>();
+                case WhenFalse -> m_mapFormalWhenFalse = new HashMap<>();
+                default        -> m_mapFormal          = new HashMap<>();
+                };
             }
         return map;
         }
@@ -2101,8 +2087,8 @@ public class Context
                 }
             }
 
-        private boolean m_fWhenTrue;
-        private boolean m_fExclusive;
+        private final boolean m_fWhenTrue;
+        private       boolean m_fExclusive;
         }
 
 
@@ -2786,20 +2772,12 @@ public class Context
          */
         public Branch complement()
             {
-            switch (this)
+            return switch (this)
                 {
-                case Always:
-                    return Always;
-
-                case WhenTrue:
-                    return WhenFalse;
-
-                case WhenFalse:
-                    return WhenTrue;
-
-                default:
-                    throw new IllegalStateException();
-                }
+                case Always    -> Always;
+                case WhenTrue  -> WhenFalse;
+                case WhenFalse -> WhenTrue;
+                };
             }
 
         /**
@@ -2821,7 +2799,7 @@ public class Context
      * True means that this context should demux the assignment information that it pushes
      * "outwards" on exit.
      */
-    private boolean m_fDemuxOnExit;
+    private final boolean m_fDemuxOnExit;
 
     /**
      * True iff the code for which the context exists is considered reachable at this point.

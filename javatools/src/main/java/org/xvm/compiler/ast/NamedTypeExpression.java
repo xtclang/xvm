@@ -225,19 +225,14 @@ public class NamedTypeExpression
             return null;
             }
 
-        switch (access.getId())
+        return switch (access.getId())
             {
-            case PUBLIC:
-                return Access.PUBLIC;
-            case PROTECTED:
-                return Access.PROTECTED;
-            case PRIVATE:
-                return Access.PRIVATE;
-            case STRUCT:
-                return Access.STRUCT;
-            default:
-                throw new IllegalStateException("access=" + access);
-            }
+            case PUBLIC    -> Access.PUBLIC;
+            case PROTECTED -> Access.PROTECTED;
+            case PRIVATE   -> Access.PRIVATE;
+            case STRUCT    -> Access.STRUCT;
+            default        -> throw new IllegalStateException("access=" + access);
+            };
         }
 
     /**
@@ -501,9 +496,8 @@ public class NamedTypeExpression
                 {
                 parent = parent.getParent();
                 }
-            if (parent instanceof NewExpression)
+            if (parent instanceof NewExpression exprNew)
                 {
-                NewExpression exprNew = (NewExpression) parent;
                 if (exprNew.left != null)
                     {
                     // defer the virtual child name resolution till validation time
@@ -514,10 +508,9 @@ public class NamedTypeExpression
 
             while (parent != null)
                 {
-                if (parent instanceof TypeCompositionStatement)
+                if (parent instanceof TypeCompositionStatement stmt)
                     {
-                    TypeCompositionStatement stmt = (TypeCompositionStatement) parent;
-                    ClassStructure           clz  = (ClassStructure) stmt.getComponent();
+                    ClassStructure clz = (ClassStructure) stmt.getComponent();
                     if (stmt.getName().equals(getName()))
                         {
                         if (!stmt.alreadyReached(Stage.Resolved))
@@ -1072,9 +1065,8 @@ public class NamedTypeExpression
                         // keep the formal types when in constructors or lambdas (a lambda that
                         // refers to a virtual child will make a decision to become a method later)
                         boolean fFormalParent = true;
-                        if (component instanceof MethodStructure)
+                        if (component instanceof MethodStructure method)
                             {
-                            MethodStructure method = (MethodStructure) component;
                             fFormalParent = !method.isFunction() || method.isLambda();
                             }
                         boolean fFormalChild = fFormalParent && fAllowFormal && paramTypes == null;
@@ -1159,10 +1151,8 @@ public class NamedTypeExpression
                             ClassStructure clzLeft = (ClassStructure) idLeft.getComponent();
                             String         sChild  = name.getValueText();
                             Component      child   = clzLeft.findChildDeep(sChild);
-                            if (child instanceof ClassStructure)
+                            if (child instanceof ClassStructure clzChild)
                                 {
-                                ClassStructure clzChild = (ClassStructure) child;
-
                                 if (clzChild.isVirtualChild())
                                     {
                                     type = isExplicitlyNonAutoNarrowing()

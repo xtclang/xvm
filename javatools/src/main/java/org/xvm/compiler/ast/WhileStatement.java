@@ -302,9 +302,8 @@ public class WhileStatement
                         // the condition is either a boolean expression or an assignment
                         // statement whose R-value is a multi-value with the first value
                         // being a boolean
-                        if (condOld instanceof AssignmentStatement)
+                        if (condOld instanceof AssignmentStatement stmtCond)
                             {
-                            AssignmentStatement stmtCond = (AssignmentStatement) condOld;
                             if (stmtCond.isNegated())
                                 {
                                 ctx = ctx.enterNot();
@@ -679,10 +678,8 @@ public class WhileStatement
             {
             for (AstNode cond : conds)
                 {
-                if (cond instanceof AssignmentStatement)
+                if (cond instanceof AssignmentStatement stmtCond)
                     {
-                    AssignmentStatement stmtCond = (AssignmentStatement) cond;
-
                     for (VariableDeclarationStatement stmtDecl : stmtCond.takeDeclarations())
                         {
                         fCompletes &= stmtDecl.completes(ctx, fCompletes, code, errs);
@@ -772,10 +769,8 @@ public class WhileStatement
             {
             AstNode cond  = getCondition(i);
             boolean fLast = i == c-1;
-            if (cond instanceof AssignmentStatement)
+            if (cond instanceof AssignmentStatement stmtCond)
                 {
-                AssignmentStatement stmtCond = (AssignmentStatement) cond;
-
                 fCompletes &= stmtCond.completes(ctx, fCompletes, code, errs);
 
                 if (fLast)

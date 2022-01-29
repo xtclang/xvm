@@ -331,9 +331,8 @@ public class ForStatement
 
             // the condition is either a boolean expression or an assignment statement whose R-value
             // is a multi-value with the first value being a boolean
-            if (cond instanceof AssignmentStatement)
+            if (cond instanceof AssignmentStatement stmtOld)
                 {
-                AssignmentStatement stmtOld = (AssignmentStatement) cond;
                 if (stmtOld.isNegated())
                     {
                     ctx = ctx.enterNot();
@@ -558,9 +557,8 @@ public class ForStatement
             for (int i = 0, c = getConditionCount(); i < c; ++i)
                 {
                 AstNode cond = getCondition(i);
-                if (cond instanceof AssignmentStatement)
+                if (cond instanceof AssignmentStatement stmtCond)
                     {
-                    AssignmentStatement stmtCond = (AssignmentStatement) cond;
                     fBlockReachable &= stmtCond.completes(ctx, fCompletes, code, errs);
 
                     code.add(stmtCond.isNegated()

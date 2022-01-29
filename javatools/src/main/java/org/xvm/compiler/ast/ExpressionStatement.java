@@ -6,8 +6,6 @@ import java.lang.reflect.Field;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
-import org.xvm.asm.op.Label;
-
 
 /**
  * An expression statement is just an expression that someone stuck a semicolon on the end of.

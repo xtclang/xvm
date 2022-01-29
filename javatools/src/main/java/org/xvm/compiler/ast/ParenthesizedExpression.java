@@ -62,8 +62,8 @@ public class ParenthesizedExpression
     /**
      * The start and end positions.
      */
-    private long m_lStartPos;
-    private long m_lEndPos;
+    private final long m_lStartPos;
+    private final long m_lEndPos;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(ParenthesizedExpression.class, "expr");
     }

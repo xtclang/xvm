@@ -528,11 +528,10 @@ public class StatementBlock
             for (int i = 0, c = stmts.size(); i < c; ++i)
                 {
                 Statement stmt = stmts.get(i);
-                if (stmt instanceof TypeCompositionStatement
-                        && ((TypeCompositionStatement) stmt).category.getId() == Token.Id.ENUM_VAL)
+                if (stmt instanceof TypeCompositionStatement stmtType
+                        && stmtType.category.getId() == Token.Id.ENUM_VAL)
                     {
-                    TypeCompositionStatement enumStmt = (TypeCompositionStatement) stmt;
-                    multiline |= enumStmt.doc != null || enumStmt.body != null;
+                    multiline |= stmtType.doc != null || stmtType.body != null;
                     ++firstNonEnum;
                     }
                 }
@@ -718,9 +717,8 @@ public class StatementBlock
         public boolean isVarDeclaredInThisScope(String sName)
             {
             Argument arg = getNameMap().get(sName);
-            if (arg instanceof Register)
+            if (arg instanceof Register reg)
                 {
-                Register reg = (Register) arg;
                 return reg.isUnknown() || reg.getIndex() >= 0;
                 }
 
@@ -1004,12 +1002,11 @@ public class StatementBlock
                         typeThis  = null;
                         ++cSteps;
                         }
-                    else if (id instanceof PropertyConstant)
+                    else if (id instanceof PropertyConstant idProp)
                         {
                         // first, look for a property of the given name inside the current
                         // property
                         IdentityConstant idResult = null;
-                        PropertyConstant idProp   = (PropertyConstant) id;
                         PropertyInfo     prop     = info.ensureNestedPropertiesByName(idProp).get(sName);
                         if (prop == null)
                             {
@@ -1039,11 +1036,10 @@ public class StatementBlock
                             return new TargetInfo(sName, idResult, fHasThis, info.getType(), cSteps);
                             }
                         }
-                    else if (id instanceof MethodConstant)
+                    else if (id instanceof MethodConstant idMethod)
                         {
                         // first, look for a property of the given name inside this method
                         IdentityConstant idResult = null;
-                        MethodConstant   idMethod = (MethodConstant) id;
                         PropertyInfo     prop     = info.ensureNestedPropertiesByName(idMethod).get(sName);
                         if (prop == null)
                             {
@@ -1129,10 +1125,9 @@ public class StatementBlock
                         }
                     }
 
-                if (fSameFile && node instanceof StatementBlock)
+                if (fSameFile && node instanceof StatementBlock block)
                     {
                     // the name may specify an import
-                    StatementBlock  block      = (StatementBlock) node;
                     ImportStatement stmtImport = block.getImport(sName, errs);
                     if (stmtImport != null)
                         {
@@ -1610,10 +1605,9 @@ public class StatementBlock
             this.typeTarget = typeTarget;
             this.stepsOut   = stepsOut;
 
-            if (id instanceof PropertyConstant)
+            if (id instanceof PropertyConstant idProp)
                 {
-                PropertyConstant idProp   = (PropertyConstant) id;
-                PropertyInfo     infoProp = typeTarget.ensureTypeInfo().findProperty(idProp);
+                PropertyInfo infoProp = typeTarget.ensureTypeInfo().findProperty(idProp);
 
                 this.type = infoProp == null
                         ? idProp.isFormalType()

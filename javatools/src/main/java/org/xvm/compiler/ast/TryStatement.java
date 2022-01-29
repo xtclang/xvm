@@ -503,10 +503,10 @@ public class TryStatement
 
         if (catches != null)
             {
-            for (CatchStatement catchone : catches)
+            for (CatchStatement catchOne : catches)
                 {
                 sb.append('\n')
-                  .append(catchone);
+                  .append(catchOne);
                 }
             }
 

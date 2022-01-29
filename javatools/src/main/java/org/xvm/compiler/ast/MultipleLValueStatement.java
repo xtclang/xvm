@@ -212,7 +212,8 @@ public class MultipleLValueStatement
         for (int i = 0, c = LVals.size(); i < c; ++i)
             {
             // REVIEW - how much of the short-circuitable LValue "a?[b]" should be handled here?
-            // REVIEW - do we need to create a temp var here for all non-statements? (non-decls) ... or just for short-circuitable expressions?
+            // REVIEW - do we need to create a temp var here for all non-statements? (non-decls) ...
+            //          or just for short-circuitable expressions?
 
             AstNode node = LVals.get(i);
             if (node instanceof Statement)

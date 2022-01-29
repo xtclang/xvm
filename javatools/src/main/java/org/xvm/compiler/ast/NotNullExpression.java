@@ -149,9 +149,8 @@ public class NotNullExpression
 
         TypeConstant typeNotNull = type.removeNullable();
 
-        if (exprNew instanceof NameExpression)
+        if (exprNew instanceof NameExpression exprName)
             {
-            NameExpression exprName = (NameExpression) exprNew;
             if (exprName.left == null)
                 {
                 String   sName = exprName.getName();

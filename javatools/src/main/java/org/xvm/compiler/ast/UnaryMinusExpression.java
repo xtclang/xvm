@@ -81,7 +81,7 @@ public class UnaryMinusExpression
                 {
                 constVal = exprRight.toConstant().apply(operator.getId(), null);
                 }
-            catch (RuntimeException e) {}
+            catch (RuntimeException ignore) {}
             }
 
         return finishValidation(ctx, typeRequired, typeRight, fit, constVal, errs);

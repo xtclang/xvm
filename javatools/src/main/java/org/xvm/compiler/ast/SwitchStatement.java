@@ -101,7 +101,7 @@ public class SwitchStatement
         m_listGroups = new ArrayList<>();
         m_casemgr    = mgr;
 
-        // create an new context in case there are short-circuiting conditions that result in
+        // create a new context in case there are short-circuiting conditions that result in
         // narrowing inferences; for example:
         //   Int[]? args = ...;
         //   switch (args?.size > 0)
@@ -123,7 +123,7 @@ public class SwitchStatement
         // TODO this is probably all wrong now; needs REVIEW CP
         if (mgr.usesIfLadder())
             {
-            // a switch that uses an "if ladder" may have side-effects of the various case
+            // a switch that uses an "if ladder" may have side effects of the various case
             // statements that effect assignment, so treat the context containing the case
             // statements as one big branch whose completion represents one possible path
             ctx = ctx.enter();
@@ -241,7 +241,6 @@ public class SwitchStatement
                 }
 
             ctxBlock.exit();
-            ctxBlock = null;
             }
 
         // close the context used for an "if ladder"
@@ -284,7 +283,7 @@ public class SwitchStatement
         {
         CaseManager<CaseGroup> mgr = m_casemgr;
 
-        // check for the extremely rare possibility that the switch condition is a constant and we
+        // check for the extremely rare possibility that the switch condition is a constant, and we
         // can tell which branch to use (discarding the rest of the possible case branches)
         if (mgr.isSwitchConstant())
             {

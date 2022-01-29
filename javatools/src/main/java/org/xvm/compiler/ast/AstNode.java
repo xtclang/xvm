@@ -574,9 +574,8 @@ public abstract class AstNode
         {
         for (AstNode node : children())
             {
-            if (node instanceof Expression)
+            if (node instanceof Expression expr)
                 {
-                Expression expr = (Expression) node;
                 if (expr.isValidated() && expr.isTraceworthy())
                     {
                     String sExpr = expr.toString();
@@ -1786,21 +1785,18 @@ public abstract class AstNode
             // find the kids
             int      cKids;
             Iterator iterK;
-            if (value instanceof Map)
+            if (value instanceof Map kids)
                 {
-                Map kids = (Map) value;
                 cKids = kids.size();
                 iterK = kids.entrySet().iterator();
                 }
-            else if (value instanceof Collection)
+            else if (value instanceof Collection kids)
                 {
-                Collection kids = (Collection) value;
                 cKids = kids.size();
                 iterK = kids.iterator();
                 }
-            else if (value instanceof Object[])
+            else if (value instanceof Object[] kids)
                 {
-                Object[] kids = (Object[]) value;
                 cKids = kids.length;
                 iterK = Arrays.asList(kids).iterator();
                 }
@@ -2111,18 +2107,16 @@ public abstract class AstNode
 
                 if (next != null)
                     {
-                    if (next instanceof List)
+                    if (next instanceof List list)
                         {
-                        List list = (List) next;
                         if (!list.isEmpty())
                             {
                             value = list.listIterator();
                             return true;
                             }
                         }
-                    else if (next instanceof Collection)
+                    else if (next instanceof Collection coll)
                         {
-                        Collection coll = (Collection) next;
                         if (!coll.isEmpty())
                             {
                             value = coll.iterator();

@@ -15,7 +15,7 @@ import org.xvm.util.Severity;
 
 
 /**
- * An bi type expression is a type expression composed of two type expressions. For example, union
+ * A BiType expression is a type expression composed of two type expressions. For example, union
  * or intersection types.
  */
 public class BiTypeExpression
@@ -67,21 +67,14 @@ public class BiTypeExpression
         TypeConstant constType1 = type1.ensureTypeConstant(ctx, errs);
         TypeConstant constType2 = type2.ensureTypeConstant(ctx, errs);
 
-        final ConstantPool pool = pool();
-        switch (operator.getId())
+        ConstantPool pool = pool();
+        return switch (operator.getId())
             {
-            case ADD:
-                return pool.ensureUnionTypeConstant(constType1, constType2);
-
-            case BIT_OR:
-                return pool.ensureIntersectionTypeConstant(constType1, constType2);
-
-            case SUB:
-                return pool.ensureDifferenceTypeConstant(constType1, constType2);
-
-            default:
-                throw new IllegalStateException("unsupported operator: " + operator);
-            }
+            case ADD    -> pool.ensureUnionTypeConstant(constType1, constType2);
+            case BIT_OR -> pool.ensureIntersectionTypeConstant(constType1, constType2);
+            case SUB    -> pool.ensureDifferenceTypeConstant(constType1, constType2);
+            default     -> throw new IllegalStateException("unsupported operator: " + operator);
+            };
         }
 
     @Override

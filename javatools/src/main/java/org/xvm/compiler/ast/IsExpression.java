@@ -132,10 +132,8 @@ public class IsExpression
                 {
                 aconstVal = new Constant[] {pool.valOf(typeTarget.isA(typeTest))};
                 }
-            else if (exprTarget instanceof NameExpression)
+            else if (exprTarget instanceof NameExpression exprName)
                 {
-                NameExpression exprName = (NameExpression) exprTarget;
-
                 if (typeTarget.isNestMateOf(ctx.getThisClass().getIdentityConstant()) &&
                         typeTarget.getAccess() != Access.STRUCT)
                     {

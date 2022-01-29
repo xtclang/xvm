@@ -198,7 +198,7 @@ public class TemplateExpression
         // - an expression that yields an Object, which is then converted to a String, and
         //   appended to the buffer.
         // unfortunately, the evaluation (including appending) order must be strictly
-        // left-to-right, because side-effects of the expressions are unknown
+        // left-to-right, because side effects of the expressions are unknown
         //
         // pseudo-code:
         //   Int minlen = sum of StringConstant lengths

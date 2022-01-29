@@ -5,7 +5,6 @@ import java.lang.reflect.Field;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
@@ -27,7 +26,6 @@ public class MultiValueExpression
         exprs = aExprs;
         aExprs[0].getParent().adopt(this);
 
-        ConstantPool   pool   = pool();
         int            cExprs = aExprs.length;
         TypeConstant[] aTypes = new TypeConstant[cExprs];
         Constant[]     aVals  = null;

@@ -70,7 +70,7 @@ public class LabeledExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
-    private Token name;
+    private final Token name;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(LabeledExpression.class, "expr");
     }

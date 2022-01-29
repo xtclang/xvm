@@ -242,7 +242,7 @@ public abstract class Statement
     /**
      * The break info.
      */
-    private class Break
+    private static class Break
         {
         Break(AstNode node, Map<String, Assignment> mapAssign, Label label)
             {

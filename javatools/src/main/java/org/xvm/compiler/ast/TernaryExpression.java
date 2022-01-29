@@ -96,19 +96,18 @@ public class TernaryExpression
     @Override
     public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
         {
-        switch (generatePlan(ctx))
+        return switch (generatePlan(ctx))
             {
-            case ThenIsFalse:
-                return exprElse.testFitMulti(ctx, atypeRequired, errs);
+            case ThenIsFalse ->
+                exprElse.testFitMulti(ctx, atypeRequired, errs);
 
-            case ElseIsFalse:
-                return exprThen.testFitMulti(ctx, atypeRequired, errs);
+            case ElseIsFalse ->
+                exprThen.testFitMulti(ctx, atypeRequired, errs);
 
-            default:
-            case Symmetrical:
-                return exprThen.testFitMulti(ctx, atypeRequired, errs).combineWith(
-                       exprElse.testFitMulti(ctx, atypeRequired, errs));
-            }
+            case Symmetrical ->
+                exprThen.testFitMulti(ctx, atypeRequired, errs).combineWith(
+                exprElse.testFitMulti(ctx, atypeRequired, errs));
+            };
         }
 
     @Override
@@ -335,24 +334,14 @@ public class TernaryExpression
                 default:
                 case Symmetrical:
                     {
-                    switch (use)
+                    atypeResult = switch (use)
                         {
-                        case Required:
-                            atypeResult = selectWiderTypes(atypeThenV, atypeElseV, atypeRequired);
-                            break;
-                        case Any:
-                            atypeResult = selectNarrowerTypes(atypeThen, atypeElse);
-                            break;
-                        case Then:
-                            atypeResult = atypeThen;
-                            break;
-                        case Else:
-                            atypeResult = atypeElse;
-                            break;
-                        case Intersection:
-                            atypeResult = selectCommonTypes(atypeThen, atypeElse);
-                            break;
-                        }
+                        case Required     -> selectWiderTypes(atypeThenV, atypeElseV, atypeRequired);
+                        case Any          -> selectNarrowerTypes(atypeThen, atypeElse);
+                        case Then         -> atypeThen;
+                        case Else         -> atypeElse;
+                        case Intersection -> selectCommonTypes(atypeThen, atypeElse);
+                        };
                     break;
                     }
                 }
@@ -697,15 +686,7 @@ public class TernaryExpression
     @Override
     public String toString()
         {
-        StringBuilder sb = new StringBuilder();
-
-        sb.append(cond)
-          .append(" ? ")
-          .append(exprThen)
-          .append(" : ")
-          .append(exprElse);
-
-        return sb.toString();
+        return cond + " ? " + exprThen + " : " + exprElse;
         }
 
 
@@ -720,7 +701,7 @@ public class TernaryExpression
     private enum Plan {Symmetrical, ThenIsFalse, ElseIsFalse}
     private transient Plan m_plan = Plan.Symmetrical;
 
-    private enum Usage {Required, Any, Then, Else, Intersection};
+    private enum Usage {Required, Any, Then, Else, Intersection}
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(TernaryExpression.class, "cond", "exprThen", "exprElse");
     }

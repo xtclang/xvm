@@ -150,9 +150,8 @@ public class AssignmentStatement
         VariableDeclarationStatement[] aDecls = m_decls;
 
         AstNode LVal = lvalue;
-        if (LVal instanceof VariableDeclarationStatement)
+        if (LVal instanceof VariableDeclarationStatement stmt)
             {
-            VariableDeclarationStatement stmt = (VariableDeclarationStatement) LVal;
             lvalue = new NameExpression(this, stmt.getNameToken(), stmt.getRegister());
             if (aDecls == null)
                 {
@@ -166,9 +165,8 @@ public class AssignmentStatement
             for (int i = 0, c = LVals.size(); i < c; ++i)
                 {
                 AstNode node = LVals.get(i);
-                if (node instanceof VariableDeclarationStatement)
+                if (node instanceof VariableDeclarationStatement stmt)
                     {
-                    VariableDeclarationStatement stmt = (VariableDeclarationStatement) node;
                     LVals.set(i, new NameExpression(this, stmt.getNameToken(), stmt.getRegister()));
                     if (listDecls != null)
                         {
@@ -235,37 +233,26 @@ public class AssignmentStatement
      */
     public Category getCategory()
         {
-        switch (op.getId())
+        return switch (op.getId())
             {
-            case ASN:
-                return Category.Assign;
+            case ASN ->
+                Category.Assign;
 
-            case ADD_ASN:
-            case SUB_ASN:
-            case MUL_ASN:
-            case DIV_ASN:
-            case MOD_ASN:
-            case SHL_ASN:
-            case SHR_ASN:
-            case USHR_ASN:
-            case BIT_AND_ASN:
-            case BIT_OR_ASN:
-            case BIT_XOR_ASN:
-                return Category.InPlace;
+            case ADD_ASN, SUB_ASN, MUL_ASN, DIV_ASN, MOD_ASN,
+                 SHL_ASN, SHR_ASN, USHR_ASN,
+                 BIT_AND_ASN, BIT_OR_ASN, BIT_XOR_ASN ->
+                Category.InPlace;
 
-            case COND_AND_ASN:
-            case COND_OR_ASN:
-            case COND_ELSE_ASN:
-                return Category.CondLeft;
+            case COND_AND_ASN, COND_OR_ASN,
+                 COND_ELSE_ASN ->
+                Category.CondLeft;
 
-            case COND_ASN:
-            case COND_NN_ASN:
-            case COLON:
-                return Category.CondRight;
+            case COND_ASN, COND_NN_ASN, COLON ->
+                Category.CondRight;
 
-            default:
+            default ->
                 throw new IllegalStateException("op=" + op);
-            }
+            };
         }
 
     /**
@@ -415,7 +402,7 @@ public class AssignmentStatement
         Context      ctxLValue = ctx;
 
         // a LValue represented by a statement indicates one or more variable declarations
-        if (nodeLeft instanceof Statement)
+        if (nodeLeft instanceof Statement lvalueOld)
             {
             assert nodeLeft instanceof VariableDeclarationStatement ||
                    nodeLeft instanceof MultipleLValueStatement;
@@ -424,7 +411,6 @@ public class AssignmentStatement
 
             errs = errs.branch(this);
 
-            Statement lvalueOld = (Statement) nodeLeft;
             Statement lvalueNew = lvalueOld.validate(ctxLV, errs);
 
             if (lvalueNew == null)
@@ -574,9 +560,8 @@ public class AssignmentStatement
                         // into
                         //      @Future Int i = svc.f^();
                         Argument argLeft = ctxLValue.getVar(((NameExpression) exprLeft).getName());
-                        if (argLeft instanceof Register)
+                        if (argLeft instanceof Register regLeft)
                             {
-                            Register     regLeft = (Register) argLeft;
                             TypeConstant typeRef = regLeft.ensureRegType(false);
 
                             if (!typeRef.containsAnnotation(pool.clzFuture()))
@@ -924,62 +909,40 @@ public class AssignmentStatement
      */
     private BiExpression createBiExpression(Expression exprLeft, Token opIP, Expression exprRight)
         {
-        Token.Id idBi;
-        switch (opIP.getId())
+        Token.Id idBi = switch (opIP.getId())
             {
-            case ADD_ASN      : idBi = Id.ADD      ; break;
-            case SUB_ASN      : idBi = Id.SUB      ; break;
-            case MUL_ASN      : idBi = Id.MUL      ; break;
-            case DIV_ASN      : idBi = Id.DIV      ; break;
-            case MOD_ASN      : idBi = Id.MOD      ; break;
-            case SHL_ASN      : idBi = Id.SHL      ; break;
-            case SHR_ASN      : idBi = Id.SHR      ; break;
-            case USHR_ASN     : idBi = Id.USHR     ; break;
-            case BIT_AND_ASN  : idBi = Id.BIT_AND  ; break;
-            case BIT_OR_ASN   : idBi = Id.BIT_OR   ; break;
-            case BIT_XOR_ASN  : idBi = Id.BIT_XOR  ; break;
-            case COND_AND_ASN : idBi = Id.COND_AND ; break;
-            case COND_OR_ASN  : idBi = Id.COND_OR  ; break;
-            case COND_ELSE_ASN: idBi = Id.COND_ELSE; break;
+            case ADD_ASN       -> Id.ADD;
+            case SUB_ASN       -> Id.SUB;
+            case MUL_ASN       -> Id.MUL;
+            case DIV_ASN       -> Id.DIV;
+            case MOD_ASN       -> Id.MOD;
+            case SHL_ASN       -> Id.SHL;
+            case SHR_ASN       -> Id.SHR;
+            case USHR_ASN      -> Id.USHR;
+            case BIT_AND_ASN   -> Id.BIT_AND;
+            case BIT_OR_ASN    -> Id.BIT_OR;
+            case BIT_XOR_ASN   -> Id.BIT_XOR;
+            case COND_AND_ASN  -> Id.COND_AND;
+            case COND_OR_ASN   -> Id.COND_OR;
+            case COND_ELSE_ASN -> Id.COND_ELSE;
+            default            -> throw new IllegalStateException("op=" + opIP.getId().TEXT);
+            };
 
-            case ASN:
-            case COLON:
-            case COND_ASN:
-            case COND_NN_ASN:
-            default:
-                throw new IllegalStateException("op=" + opIP.getId().TEXT);
-            }
-
-        Token        opBi = new Token(opIP.getStartPosition(), opIP.getEndPosition(), idBi);
-        BiExpression exprResult;
-        switch (idBi)
+        Token opBi = new Token(opIP.getStartPosition(), opIP.getEndPosition(), idBi);
+        BiExpression exprResult = switch (idBi)
             {
-            case ADD:
-            case SUB:
-            case MUL:
-            case DIV:
-            case MOD:
-            case SHL:
-            case SHR:
-            case USHR:
-            case BIT_AND:
-            case BIT_OR:
-            case BIT_XOR:
-                exprResult = new RelOpExpression(exprLeft, opBi, exprRight);
-                break;
+            case ADD, SUB, MUL, DIV, MOD, SHL, SHR, USHR, BIT_AND, BIT_OR, BIT_XOR ->
+                new RelOpExpression(exprLeft, opBi, exprRight);
 
-            case COND_AND:
-            case COND_OR:
-                exprResult = new CondOpExpression(exprLeft, opBi, exprRight);
-                break;
+            case COND_AND, COND_OR ->
+                new CondOpExpression(exprLeft, opBi, exprRight);
 
-            case COND_ELSE:
-                exprResult = new ElvisExpression(exprLeft, opBi, exprRight);
-                break;
+            case COND_ELSE ->
+                new ElvisExpression(exprLeft, opBi, exprRight);
 
-            default:
+            default ->
                 throw new IllegalStateException("op=" + opBi.getId().TEXT);
-            }
+            };
 
         exprResult.setParent(this);
         return exprResult;

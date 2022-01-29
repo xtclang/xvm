@@ -214,7 +214,7 @@ public class NameResolver
                             case UNKNOWN:
                                 if (node.getParent() == null)
                                     {
-                                    // we've reached the top and it's possible we've never checked
+                                    // we've reached the top, and it's possible we've never checked
                                     // the topmost statement block's imports on the way up
                                     // (this can happen for module contribution clauses)
                                     StatementBlock  body = ((TypeCompositionStatement) node).ensureBody();
@@ -294,9 +294,8 @@ public class NameResolver
                         return getResult();
                         }
 
-                    if (structure instanceof PropertyStructure)
+                    if (structure instanceof PropertyStructure prop)
                         {
-                        PropertyStructure prop = (PropertyStructure) structure;
                         if (!prop.isGenericTypeParameter())
                             {
                             m_node.log(errs, Severity.ERROR, Compiler.NOT_CLASS_TYPE, m_sName);
@@ -309,13 +308,12 @@ public class NameResolver
                             return result;
                             }
                         }
-                    else if (structure instanceof TypeParameterConstant)
+                    else if (structure instanceof TypeParameterConstant constTypeParam)
                         {
-                        TypeParameterConstant constTypeParam = (TypeParameterConstant) structure;
-                        MethodConstant        idMethod       = constTypeParam.getMethod();
-                        int                   nRegister      = constTypeParam.getRegister();
-                        MethodStructure       method         = (MethodStructure) idMethod.getComponent();
-                        TypeConstant          typeParam      = method == null
+                        MethodConstant  idMethod  = constTypeParam.getMethod();
+                        int             nRegister = constTypeParam.getRegister();
+                        MethodStructure method    = (MethodStructure) idMethod.getComponent();
+                        TypeConstant    typeParam = method == null
                                 ? idMethod.getRawParams()[nRegister]
                                 : method.getParam(nRegister).getType();
                         assert typeParam.isTypeOfType();
@@ -624,23 +622,20 @@ public class NameResolver
      */
     public Result getResult()
         {
-        switch (m_stage)
+        return switch (m_stage)
             {
-            case CHECK_IMPORTS:
-            case RESOLVE_FIRST_NAME:
-            case RESOLVE_DOT_NAME:
+            case CHECK_IMPORTS, RESOLVE_FIRST_NAME, RESOLVE_DOT_NAME ->
                 // not done yet
-                return Result.DEFERRED;
+                Result.DEFERRED;
 
-            case RESOLVED:
+            case RESOLVED ->
                 // completed successfully
-                return Result.RESOLVED;
+                Result.RESOLVED;
 
-            default:
-            case ERROR:
+            case RESOLVE_TURTLES, ERROR ->
                 // cannot complete successfully
-                return Result.ERROR;
-            }
+                Result.ERROR;
+            };
         }
 
     /**
@@ -853,7 +848,7 @@ public class NameResolver
     /**
      * The possible internal type resolution modes for the resolver.
      */
-    private enum TypeMode {TYPE, FORMAL_TYPE};
+    private enum TypeMode {TYPE, FORMAL_TYPE}
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -861,12 +856,12 @@ public class NameResolver
     /**
      * The node that this NameResolver is working for.
      */
-    private AstNode m_node;
+    private final AstNode m_node;
 
     /**
      * The sequence of names to resolve.
      */
-    private Iterator<String> m_iter;
+    private final Iterator<String> m_iter;
 
     /**
      * The current simple name to resolve.
@@ -911,7 +906,7 @@ public class NameResolver
      * Name resolution can be completely generic ("I need any value, including a type or a
      * multi-method"), or can be a bit more specific ("I am resolving for a type").
      */
-    private boolean m_fTypeGoal;
+    private final boolean m_fTypeGoal;
 
     /**
      * Set to TYPE or FORMAL_TYPE mode once a type definition or a formal type parameter have been

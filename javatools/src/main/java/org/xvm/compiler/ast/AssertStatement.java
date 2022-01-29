@@ -241,10 +241,8 @@ public class AssertStatement
             AstNode cond = getCondition(i);
             // the condition is either a boolean expression or an assignment statement whose R-value
             // is a multi-value with the first value being a boolean
-            if (cond instanceof AssignmentStatement)
+            if (cond instanceof AssignmentStatement stmtOld)
                 {
-                AssignmentStatement stmtOld = (AssignmentStatement) cond;
-
                 if (stmtOld.isNegated())
                     {
                     ctx = ctx.enterNot();
@@ -270,11 +268,10 @@ public class AssertStatement
                         }
                     }
                 }
-            else if (cond instanceof Expression)
+            else if (cond instanceof Expression exprOld)
                 {
                 ctx = new AssertContext(ctx);
 
-                Expression exprOld = (Expression) cond;
                 Expression exprNew = exprOld.validate(ctx, pool().typeBoolean(), errs);
                 if (exprNew == null)
                     {
@@ -342,36 +339,15 @@ public class AssertStatement
                     : new JumpNSample(interval.generateArgument(ctx, code, true, true, errs), getEndLabel()));
             }
 
-        String sThrow;
-        switch (keyword.getId())
+        String sThrow = switch (keyword.getId())
             {
-            default:
-            case ASSERT:
-                sThrow = "IllegalState";
-                break;
-
-            case ASSERT_ARG:
-                sThrow = "IllegalArgument";
-                break;
-
-            case ASSERT_BOUNDS:
-                sThrow = "OutOfBounds";
-                break;
-
-            case ASSERT_TODO:
-                sThrow = "UnsupportedOperation";
-                break;
-
-            case ASSERT_ONCE:
-            case ASSERT_RND:
-            case ASSERT_TEST:
-                sThrow = "Assertion";
-                break;
-
-            case ASSERT_DBG:
-                sThrow = null;
-                break;
-            }
+            default                                   -> "IllegalState"; // ASSERT
+            case ASSERT_ARG                           -> "IllegalArgument";
+            case ASSERT_BOUNDS                        -> "OutOfBounds";
+            case ASSERT_TODO                          -> "UnsupportedOperation";
+            case ASSERT_ONCE, ASSERT_RND, ASSERT_TEST -> "Assertion";
+            case ASSERT_DBG                           -> null;
+            };
 
         ClassConstant  constEx  = sThrow == null ? null : pool.ensureEcstasyClassConstant(sThrow);
         MethodConstant constNew = sThrow == null ? null : findExceptionConstructor(pool, sThrow, errs);
@@ -458,10 +434,9 @@ public class AssertStatement
 
             Argument argCond;
             boolean  fNegated = false;
-            if (cond instanceof AssignmentStatement)
+            if (cond instanceof AssignmentStatement stmtCond)
                 {
-                AssignmentStatement stmtCond = (AssignmentStatement) cond;
-                fNegated = stmtCond.isNegated();
+                fNegated    = stmtCond.isNegated();
                 fCompletes &= stmtCond.completes(ctx, fCompletes, code, errs);
                 argCond = stmtCond.getConditionRegister();
                 }
@@ -578,15 +553,13 @@ public class AssertStatement
                 cond.getSource().toString(cond.getStartPosition(), cond.getEndPosition()))
                 .toString();
 
-        if (cond instanceof UnaryComplementExpression)
+        if (cond instanceof UnaryComplementExpression exprNot)
             {
             // demorgan
-            UnaryComplementExpression exprNot = (UnaryComplementExpression) cond;
-            Expression                exprSub = exprNot.expr;
-            if (exprSub instanceof BiExpression
-                    && ((BiExpression) exprSub).operator.getId() == Id.COND_OR)
+            Expression exprSub = exprNot.expr;
+            if (exprSub instanceof BiExpression exprOr
+                    && exprOr.operator.getId() == Id.COND_OR)
                 {
-                BiExpression              exprOr   = (BiExpression) exprSub;
                 UnaryComplementExpression exprNot2 = (UnaryComplementExpression) exprNot.clone();
 
                 exprNot .expr = exprOr.expr1;
@@ -597,10 +570,9 @@ public class AssertStatement
                 return;
                 }
             }
-        else if (cond instanceof BiExpression
-                && ((BiExpression) cond).operator.getId() == Id.COND_AND)
+        else if (cond instanceof BiExpression exprAnd
+                    && exprAnd.operator.getId() == Id.COND_AND)
             {
-            BiExpression exprAnd = (BiExpression) cond;
             demorgan(exprAnd.expr1);
             demorgan(exprAnd.expr2);
             exprAnd.discard(false);

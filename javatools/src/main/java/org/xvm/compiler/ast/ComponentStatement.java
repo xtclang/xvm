@@ -114,7 +114,7 @@ public abstract class ComponentStatement
 
     // ----- fields --------------------------------------------------------------------------------
 
-    private Component component;
-    private long      lStartPos;
-    private long      lEndPos;
+    private Component  component;
+    private final long lStartPos;
+    private final long lEndPos;
     }

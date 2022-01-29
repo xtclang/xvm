@@ -154,10 +154,8 @@ public class AnnotationExpression
                     exprArg = ((LabeledExpression) exprArg).getUnderlyingExpression();
                     }
 
-                if (exprArg instanceof LiteralExpression)
+                if (exprArg instanceof LiteralExpression exprLit)
                     {
-                    LiteralExpression exprLit = (LiteralExpression) exprArg;
-
                     if (exprLit.getLiteral().getId() == Id.LIT_STRING)
                         {
                         // only String literals have a predictable runtime type (no @Auto conversions)

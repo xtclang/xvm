@@ -339,8 +339,4 @@ public class CondOpExpression
     static final int UandF = ('?' << 16) | ('&' << 8) | '0';
     static final int UandT = ('?' << 16) | ('&' << 8) | '1';
     static final int UandU = ('?' << 16) | ('&' << 8) | '?';
-
-
-    // ----- fields --------------------------------------------------------------------------------
-
     }

@@ -137,41 +137,24 @@ public class ToIntExpression
 
         ConstantPool pool    = pool();
         String       sFormat = expr.getType().getEcstasyClassName(); // REVIEW CP
-        switch (sFormat)
+        return switch (sFormat)
             {
-            case "numbers.Int8":
-                return pool.ensureByteConstant(Format.CInt8, pint.getInt());
+            case "numbers.Int8"    -> pool.ensureByteConstant(Format.CInt8, pint.getInt());
+            case "numbers.UInt8"   -> pool.ensureByteConstant(Format.CUInt8, pint.getInt());
+            case "numbers.Int16"   -> pool.ensureIntConstant(pint, Format.CInt16);
+            case "numbers.Int32"   -> pool.ensureIntConstant(pint, Format.CInt32);
+            case "numbers.Int64"   -> pool.ensureIntConstant(pint, Format.CInt64);
+            case "numbers.Int128"  -> pool.ensureIntConstant(pint, Format.CInt128);
+            case "numbers.IntN"    -> pool.ensureIntConstant(pint, Format.CIntN);
+            case "numbers.UInt16"  -> pool.ensureIntConstant(pint, Format.CUInt16);
+            case "numbers.UInt32"  -> pool.ensureIntConstant(pint, Format.CUInt32);
+            case "numbers.UInt64"  -> pool.ensureIntConstant(pint, Format.CUInt64);
+            case "numbers.UInt128" -> pool.ensureIntConstant(pint, Format.CUInt128);
+            case "numbers.UIntN"   -> pool.ensureIntConstant(pint, Format.CUIntN);
 
-            case "numbers.UInt8":
-                return pool.ensureByteConstant(Format.CUInt8, pint.getInt());
-
-            case "numbers.Int16":
-                return pool.ensureIntConstant(pint, Format.CInt16);
-            case "numbers.Int32":
-                return pool.ensureIntConstant(pint, Format.CInt32);
-            case "numbers.Int64":
-                return pool.ensureIntConstant(pint, Format.CInt64);
-            case "numbers.Int128":
-                return pool.ensureIntConstant(pint, Format.CInt128);
-            case "numbers.IntN":
-                return pool.ensureIntConstant(pint, Format.CIntN);
-            case "numbers.UInt16":
-                return pool.ensureIntConstant(pint, Format.CUInt16);
-            case "numbers.UInt32":
-                return pool.ensureIntConstant(pint, Format.CUInt32);
-            case "numbers.UInt64":
-                return pool.ensureIntConstant(pint, Format.CUInt64);
-            case "numbers.UInt128":
-                return pool.ensureIntConstant(pint, Format.CUInt128);
-            case "numbers.UIntN":
-                return pool.ensureIntConstant(pint, Format.CUIntN);
-
-            case "numbers.Bit":     // converted by extract
-            case "numbers.Nibble":  // converted by extract
-            case "text.Char":       // converted by extract
-            default:
-                return pool.ensureIntConstant(pint);
-            }
+            // converted by extract "numbers.Bit", "numbers.Nibble", "text.Char"
+            default                -> pool.ensureIntConstant(pint);
+            };
         }
 
     /**
@@ -348,5 +331,5 @@ public class ToIntExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
-    private PackedInteger m_pintOffset;
+    private final PackedInteger m_pintOffset;
     }

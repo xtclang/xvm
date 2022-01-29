@@ -247,16 +247,15 @@ public class CaseManager<CookieType>
             boolean            fAllConst  = true;
             for (int i = 0, c = listCond.size(); i < c; ++i)
                 {
-                AstNode        node    = listCond.get(i);
-                AstNode        nodeNew = null;
-                TypeConstant[] atype   = null;
-                Constant[]     aconst  = null;
-                if (node instanceof AssignmentStatement)
+                AstNode        node   = listCond.get(i);
+                TypeConstant[] atype  = null;
+                Constant[]     aconst = null;
+                AstNode        nodeNew;
+                if (node instanceof AssignmentStatement stmtCond)
                     {
                     // assignment represents a side-effect, so disable the constant optimizations
                     fAllConst = false;
 
-                    AssignmentStatement stmtCond = (AssignmentStatement) node;
                     if (m_ctxSwitch == null && stmtCond.hasDeclarations())
                         {
                         m_ctxSwitch = ctx = ctx.enter();
@@ -368,7 +367,7 @@ public class CaseManager<CookieType>
             TypeConstant typeCond = m_atypeCond[0];
             m_typeCase = typeCond.isImmutable()
                     ? typeCond
-                    : pool.ensureImmutableTypeConstant(typeCond);;
+                    : pool.ensureImmutableTypeConstant(typeCond);
             }
         else
             {
@@ -604,10 +603,9 @@ public class CaseManager<CookieType>
         Constant constCase = m_listsetCase.last();
         if (m_cCondVals == 1)
             {
-            if (constCase instanceof TypeConstant)
+            if (constCase instanceof TypeConstant typeCase)
                 {
                 NameExpression exprType = (NameExpression) m_listCond.get(0);
-                TypeConstant   typeCase = (TypeConstant) constCase;
                 assert typeCase.isTypeOfType();
 
                 exprType.narrowType(ctx, Branch.Always, typeCase);
@@ -919,9 +917,8 @@ public class CaseManager<CookieType>
         Object oThisLo, oThisHi;
         if (fRangeThis)
             {
-            if (constThis instanceof RangeConstant)
+            if (constThis instanceof RangeConstant range)
                 {
-                RangeConstant range = (RangeConstant) constThis;
                 oThisLo = range.getFirst();
                 oThisHi = range.getLast();
                 if (oThisLo instanceof ValueConstant && oThisHi instanceof ValueConstant)
@@ -943,8 +940,8 @@ public class CaseManager<CookieType>
             {
             oThisLo = oThisHi = ((ValueConstant) constThis).getValue();
             }
-        if (!(  oThisLo instanceof Comparable &&
-                oThisHi instanceof Comparable))
+        if (!(oThisLo instanceof Comparable cmpThisLo &&
+              oThisHi instanceof Comparable cmpThisHi))
             {
             return false;
             }
@@ -952,15 +949,15 @@ public class CaseManager<CookieType>
         Object oThatLo, oThatHi;
         if (fRangeThat)
             {
-            if (constThat instanceof RangeConstant)
+            if (constThat instanceof RangeConstant range)
                 {
-                RangeConstant range = (RangeConstant) constThat;
                 oThatLo = range.getFirst();
                 oThatHi = range.getLast();
-                if (oThatLo instanceof ValueConstant && oThatHi instanceof ValueConstant)
+                if (oThatLo instanceof ValueConstant valueLo &&
+                    oThatHi instanceof ValueConstant valueHi)
                     {
-                    oThatLo = ((ValueConstant) oThatLo).getValue();
-                    oThatHi = ((ValueConstant) oThatHi).getValue();
+                    oThatLo = valueLo.getValue();
+                    oThatHi = valueHi.getValue();
                     }
                 else
                     {
@@ -976,18 +973,14 @@ public class CaseManager<CookieType>
             {
             oThatLo = oThatHi = ((ValueConstant) constThat).getValue();
             }
-        if (!(  oThatLo instanceof Comparable &&
-                oThatHi instanceof Comparable))
+        if (!(  oThatLo instanceof Comparable cmpThatLo &&
+                oThatHi instanceof Comparable cmpThatHi))
             {
             return false;
             }
 
         // this automatically works for ValueConstant types that have a corresponding Java type,
         // like Int, String, etc., while enums use their ordinal values (see EnumValueConstant).
-        Comparable cmpThisLo = (Comparable) oThisLo;
-        Comparable cmpThisHi = (Comparable) oThisHi;
-        Comparable cmpThatLo = (Comparable) oThatLo;
-        Comparable cmpThatHi = (Comparable) oThatHi;
         try
             {
             if (cmpThisLo.compareTo(cmpThisHi) > 0)
@@ -1171,13 +1164,12 @@ public class CaseManager<CookieType>
                 processCondition(cube, iCond + 1, anPoint, cCondVals, aconstCase, aconstBase);
                 }
             }
-        else if (constCase instanceof RangeConstant)
+        else if (constCase instanceof RangeConstant constRange)
             {
-            RangeConstant constRange = (RangeConstant) constCase;
-            Constant      constFirst = constRange.getFirst();
-            Constant      constLast  = constRange.getLast();
-            boolean       fReverse   = constRange.isReverse();
-            Constant      constBase  = aconstBase[iCond];
+            Constant constFirst = constRange.getFirst();
+            Constant constLast  = constRange.getLast();
+            boolean  fReverse   = constRange.isReverse();
+            Constant constBase  = aconstBase[iCond];
 
             IntConstant constMin = (IntConstant)
                 (fReverse ? constLast : constFirst).apply(Token.Id.SUB, constBase);
@@ -1218,11 +1210,9 @@ public class CaseManager<CookieType>
         for (AstNode node : m_listCond)
             {
             Expression exprCond;
-            if (node instanceof AssignmentStatement)
+            if (node instanceof AssignmentStatement stmt)
                 {
-                AssignmentStatement stmt = (AssignmentStatement) node;
-                boolean fCompletes = stmt.completes(ctx, true, code, errs);
-                if (!fCompletes)
+                if (!stmt.completes(ctx, true, code, errs))
                     {
                     m_fCondAborts = true;
                     }
@@ -1318,12 +1308,12 @@ public class CaseManager<CookieType>
         for (int i = 0; i < cNodes; ++i)
             {
             AstNode node = aNodes.get(i);
-            if (node instanceof CaseStatement)
+            if (node instanceof CaseStatement stmt)
                 {
-                CaseStatement stmt = ((CaseStatement) node);
                 if (!stmt.isDefault())
                     {
                     stmt.updateLineNumber(code);
+
                     Label labelCur = stmt.getLabel();
                     for (Expression expr : stmt.getExpressions())
                         {
@@ -1344,7 +1334,7 @@ public class CaseManager<CookieType>
     /**
      * The switch statement or expression.
      */
-    private AstNode m_nodeSwitch;
+    private final AstNode m_nodeSwitch;
 
     /**
      * If the switch condition requires a scope, this creates a context.
@@ -1416,12 +1406,12 @@ public class CaseManager<CookieType>
     /**
      * A list of case values.
      */
-    private ListSet<Constant> m_listsetCase = new ListSet<>();
+    private final ListSet<Constant> m_listsetCase = new ListSet<>();
 
     /**
      * A list of case labels.
      */
-    private List<Label> m_listLabels = new ArrayList<>();
+    private final List<Label> m_listLabels = new ArrayList<>();
 
     /**
      * Set to false when any non-constant case values are encountered.
@@ -1431,7 +1421,7 @@ public class CaseManager<CookieType>
     /**
      * A list-map of labels corresponding to the list of case values; associated value is a cookie.
      */
-    private ListMap<Label, CookieType> m_mapLabels = new ListMap<>();
+    private final ListMap<Label, CookieType> m_mapLabels = new ListMap<>();
 
     /**
      * The (lazily created) list of all case values that have wildcards or intervals.

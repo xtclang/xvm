@@ -16,7 +16,7 @@ import org.xvm.asm.op.Var;
 
 
 /**
- * An type conversion expression. This converts a value from the sub-expression into a value of a
+ * A type conversion expression. This converts a value from the sub-expression into a value of a
  * different type.
  */
 public class ConvertExpression
@@ -222,10 +222,10 @@ public class ConvertExpression
     /**
      * The expression value index.
      */
-    private int m_iVal;
+    private final int m_iVal;
 
     /**
      * The conversion method.
      */
-    private MethodConstant m_idConv;
+    private final MethodConstant m_idConv;
     }

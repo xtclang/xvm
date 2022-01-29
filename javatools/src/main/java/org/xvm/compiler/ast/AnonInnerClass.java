@@ -79,15 +79,13 @@ public class AnonInnerClass
     public Token getCategory()
         {
         AstNode location = getTypeExpression();
-        switch (getFormat())
+        return switch (getFormat())
             {
-            case CLASS:   return genKeyword(location, Id.CLASS);
-            case CONST:   return genKeyword(location, Id.CONST);
-            case SERVICE: return genKeyword(location, Id.SERVICE);
-
-            default:
-                throw new IllegalStateException();
-            }
+            case CLASS   -> genKeyword(location, Id.CLASS);
+            case CONST   -> genKeyword(location, Id.CONST);
+            case SERVICE -> genKeyword(location, Id.SERVICE);
+            default      -> throw new IllegalStateException();
+            };
         }
 
     /**
@@ -547,7 +545,7 @@ public class AnonInnerClass
     /**
      * The TypeExpression for which this AnonInnerClass was created.
      */
-    private TypeExpression m_exprType;
+    private final TypeExpression m_exprType;
 
     /**
      * The format that this AnonInnerClass has settled on, one of SERVICE, CONST, or CLASS, or null

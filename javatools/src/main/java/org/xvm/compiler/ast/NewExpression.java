@@ -586,12 +586,11 @@ public class NewExpression
                             }
                         }
                     }
-                else if (type instanceof ArrayTypeExpression)
+                else if (type instanceof ArrayTypeExpression exprArray)
                     {
                     // this is a "new X[]", "new X[c1]", new X[c1](supply),
                     // or "new X[c1, ...]" construct
-                    ArrayTypeExpression exprArray = (ArrayTypeExpression) type;
-                    int                 cDims     = exprArray.getDimensions();
+                    int cDims = exprArray.getDimensions();
                     switch (cDims)
                         {
                         case 0:

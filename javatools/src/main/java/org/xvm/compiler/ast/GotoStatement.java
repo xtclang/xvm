@@ -114,9 +114,8 @@ public abstract class GotoStatement
         AstNode node = getParent();
         while (true)
             {
-            if (node instanceof Statement)
+            if (node instanceof Statement stmt)
                 {
-                Statement stmt = (Statement) node;
                 if (stmt.isNaturalGotoStatementTarget())
                     {
                     return stmt;

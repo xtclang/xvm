@@ -110,17 +110,13 @@ public class FileExpression
             }
         else
             {
-            switch (sType)
+            return switch (sType)
                 {
-                case "FileStore":
-                    return pool.typeFileStore();
-                case "Directory":
-                    return pool.typeDirectory();
-                case "File":
-                    return pool.typeFile();
-                default:
-                    throw new IllegalStateException("type=" + sType);
-                }
+                case "FileStore" -> pool.typeFileStore();
+                case "Directory" -> pool.typeDirectory();
+                case "File"      -> pool.typeFile();
+                default          -> throw new IllegalStateException("type=" + sType);
+                };
             }
         }
 
@@ -218,20 +214,24 @@ public class FileExpression
         String       sPath = (String) path.getValue();
         File         file  = m_file == null ? new File("error") : m_file;
         String       sType = getImplicitType(ctx).getSingleUnderlyingClass(true).getName();
-        switch (sType)
+
+        return switch (sType)
             {
-            case "FileStore":
-                return pool().ensureFileStoreConstant(sPath, pool.ensureDirectoryConstant(file.getName(),
-                        createdDateTime(pool, file), modifiedDateTime(pool, file), FSNodeConstant.NO_NODES));
-            case "Directory":
-                return pool.ensureDirectoryConstant(file.getName(),
-                        createdDateTime(pool, file), modifiedDateTime(pool, file), FSNodeConstant.NO_NODES);
-            case "File":
-                return pool.ensureFileConstant(file.getName(),
-                        createdDateTime(pool, file), modifiedDateTime(pool, file), new byte[0]);
-            default:
+            case "FileStore" ->
+                pool().ensureFileStoreConstant(sPath, pool.ensureDirectoryConstant(file.getName(),
+                    createdDateTime(pool, file), modifiedDateTime(pool, file), FSNodeConstant.NO_NODES));
+
+            case "Directory" ->
+                pool.ensureDirectoryConstant(file.getName(),
+                    createdDateTime(pool, file), modifiedDateTime(pool, file), FSNodeConstant.NO_NODES);
+
+            case "File" ->
+                pool.ensureFileConstant(file.getName(),
+                    createdDateTime(pool, file), modifiedDateTime(pool, file), new byte[0]);
+
+            default ->
                 throw new IllegalStateException("type=" + sType);
-            }
+            };
         }
 
     /**
@@ -247,24 +247,24 @@ public class FileExpression
     public static FSNodeConstant buildDirectoryConstant(ConstantPool pool, File dir)
             throws IOException
         {
-        File[] afiles  = dir.listFiles();
-        if (afiles == null)
+        File[] aFiles = dir.listFiles();
+        if (aFiles == null)
             {
             throw new IOException("failed to obtain contents of directory: " + dir);
             }
 
-        int              cfiles  = afiles.length;
-        FSNodeConstant[] aconsts = new FSNodeConstant[cfiles];
-        for (int i = 0; i < cfiles; ++i)
+        int              cFiles  = aFiles.length;
+        FSNodeConstant[] aConsts = new FSNodeConstant[cFiles];
+        for (int i = 0; i < cFiles; ++i)
             {
-            File file = afiles[i];
-            aconsts[i] = file.isDirectory()
+            File file = aFiles[i];
+            aConsts[i] = file.isDirectory()
                     ? buildDirectoryConstant(pool, file)
                     : buildFileConstant(pool, file);
             }
 
         return pool.ensureDirectoryConstant(dir.getName(),
-                createdDateTime(pool, dir), modifiedDateTime(pool, dir),  aconsts);
+                createdDateTime(pool, dir), modifiedDateTime(pool, dir), aConsts);
         }
 
     /**
@@ -343,7 +343,7 @@ public class FileExpression
     /**
      * The File for the directory or file that the path string was resolved to.
      */
-    private File m_file;
+    private final File m_file;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(FileExpression.class, "type");
     }
