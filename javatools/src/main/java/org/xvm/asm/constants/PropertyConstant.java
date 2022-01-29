@@ -136,9 +136,8 @@ public class PropertyConstant
             {
             // the following block is for nothing else, but compilation of Tuple and
             // ConditionalTuple natural classes
-            if (resolver instanceof TypeConstant)
+            if (resolver instanceof TypeConstant typeResolver)
                 {
-                TypeConstant typeResolver = (TypeConstant) resolver;
                 if (typeResolver.isTuple() && !typeResolver.isParamsSpecified())
                     {
                     return null;
@@ -382,7 +381,7 @@ public class PropertyConstant
     @Override
     public String getDescription()
         {
-        StringBuilder sb = new StringBuilder();
+        StringBuilder sb = new StringBuilder("property=");
         sb.append(getName());
         IdentityConstant idParent = getNamespace();
         while (idParent != null)
@@ -400,7 +399,7 @@ public class PropertyConstant
                 }
             }
 
-        return "property=" + sb.toString();
+        return sb.toString();
         }
 
 

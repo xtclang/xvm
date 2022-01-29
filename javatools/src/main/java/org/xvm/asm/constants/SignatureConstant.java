@@ -29,7 +29,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * <p/>
  * In Ecstasy, a type is simply a collection of methods and properties. Even properties can be
  * expressed as methods; a property of type T and name N can be represented as a method N that takes
- * no parameters and returns a single value of type T. As such, a type can represented as a
+ * no parameters and returns a single value of type T. As such, a type can be represented as a
  * collection of method signatures.
  * <p/>
  * Method signatures are not necessarily exact, however. Consider the support in Ecstasy for auto-
@@ -594,12 +594,11 @@ public class SignatureConstant
     @Override
     protected synchronized int compareDetails(Constant obj)
         {
-        if (!(obj instanceof SignatureConstant) || containsUnresolved())
+        if (!(obj instanceof SignatureConstant that) || containsUnresolved())
             {
             return -1;
             }
 
-        SignatureConstant that = (SignatureConstant) obj;
         if (that == m_sigPrev)
             {
             return m_nCmpPrev;

@@ -1059,20 +1059,14 @@ public abstract class Expression
             return ((TypeConstant) m_oType).getValueString();
             }
 
-        if (m_oType instanceof TypeConstant[])
+        if (m_oType instanceof TypeConstant[] aTypes)
             {
-            TypeConstant[] aTypes = (TypeConstant[]) m_oType;
-            switch (aTypes.length)
+            return switch (aTypes.length)
                 {
-                case 0:
-                    return "void";
-
-                case 1:
-                    return aTypes[0].getValueString();
-
-                default:
-                    return aTypes[0].getValueString() + " (+" + (aTypes.length-1) + " more)";
-                }
+                case 0   -> "void";
+                case 1  -> aTypes[0].getValueString();
+                default -> aTypes[0].getValueString() + " (+" + (aTypes.length - 1) + " more)";
+                };
             }
 
         if (ctx != null)
@@ -2085,9 +2079,8 @@ public abstract class Expression
          */
         public Assignable(Argument argTarget, PropertyConstant constProp)
             {
-            if (argTarget instanceof Register)
+            if (argTarget instanceof Register reg)
                 {
-                Register reg = (Register) argTarget;
                 if (reg.isPredefined())
                     {
                     switch (((Register) argTarget).getIndex())
@@ -2179,30 +2172,24 @@ public abstract class Expression
          */
         public TypeConstant getType()
             {
-            switch (m_form)
+            return switch (m_form)
                 {
-                case BlackHole:
-                    return pool().typeObject();
+                case BlackHole ->
+                    pool().typeObject();
 
-                case LocalVar:
-                    return getRegister().getType();
+                case LocalVar ->
+                    getRegister().getType();
 
-                case LocalProp:
-                case TargetProp:
-                    return getProperty().getType();
+                case LocalProp, TargetProp ->
+                    getProperty().getType();
 
-                case Indexed:
-                case IndexedN:
-                    return getArray().getType();
+                case Indexed, IndexedN ->
+                    getArray().getType();
 
-                case IndexedProp:
-                case IndexedNProp:
+                case IndexedProp, IndexedNProp ->
                     // TODO
                     throw notImplemented();
-
-                default:
-                    throw new IllegalStateException();
-                }
+                };
             }
 
         /**
@@ -2256,16 +2243,11 @@ public abstract class Expression
          */
         public boolean isLocalArgument()
             {
-            switch (m_form)
+            return switch (m_form)
                 {
-                case BlackHole:
-                case LocalVar:
-                case LocalProp:
-                    return true;
-
-                default:
-                    return false;
-                }
+                case BlackHole, LocalVar, LocalProp -> true;
+                default                             -> false;
+                };
             }
 
         /**
@@ -2274,20 +2256,13 @@ public abstract class Expression
          */
         public Argument getLocalArgument()
             {
-            switch (m_form)
+            return switch (m_form)
                 {
-                case BlackHole:
-                    return generateBlackHole(null);
-
-                case LocalVar:
-                    return getRegister();
-
-                case LocalProp:
-                    return getProperty();
-
-                default:
-                    throw new IllegalStateException();
-                }
+                case BlackHole -> generateBlackHole(null);
+                case LocalVar  -> getRegister();
+                case LocalProp -> getProperty();
+                default        -> throw new IllegalStateException();
+                };
             }
 
         /**
@@ -2704,7 +2679,6 @@ public abstract class Expression
                         code.add(seq.isInc()
                                 ? new PIP_Inc(prop, argTarget)
                                 : new PIP_Dec(prop, argTarget));
-                        return null;
                         }
                     else
                         {
@@ -2729,8 +2703,8 @@ public abstract class Expression
                             {
                             LValResult.assign(argReturn, code, errs);
                             }
-                        return null;
                         }
+                    return null;
                     }
 
                 case Indexed:
@@ -2745,7 +2719,6 @@ public abstract class Expression
                         code.add(seq.isInc()
                                 ? new IIP_Inc(argArray, argIndex)
                                 : new IIP_Dec(argArray, argIndex));
-                        return null;
                         }
                     else
                         {
@@ -2770,15 +2743,14 @@ public abstract class Expression
                             {
                             LValResult.assign(argReturn, code, errs);
                             }
-                        return null;
                         }
+                    return null;
                     }
 
                 case IndexedN:
                 case IndexedNProp:
                     // TODO
-                    notImplemented();
-                    break;
+                    throw notImplemented();
 
                 default:
                     throw new IllegalStateException();
@@ -2883,23 +2855,21 @@ public abstract class Expression
                 case LocalProp:
                     {
                     Argument argTarget = getLocalArgument();
-                    switch (tokOp.getId())
+                    op = switch (tokOp.getId())
                         {
-                        case ADD_ASN      : op = new IP_Add   (argTarget, arg); break;
-                        case SUB_ASN      : op = new IP_Sub   (argTarget, arg); break;
-                        case MUL_ASN      : op = new IP_Mul   (argTarget, arg); break;
-                        case DIV_ASN      : op = new IP_Div   (argTarget, arg); break;
-                        case MOD_ASN      : op = new IP_Mod   (argTarget, arg); break;
-                        case SHL_ASN      : op = new IP_Shl   (argTarget, arg); break;
-                        case SHR_ASN      : op = new IP_Shr   (argTarget, arg); break;
-                        case USHR_ASN     : op = new IP_ShrAll(argTarget, arg); break;
-                        case BIT_AND_ASN  : op = new IP_And   (argTarget, arg); break;
-                        case BIT_OR_ASN   : op = new IP_Or    (argTarget, arg); break;
-                        case BIT_XOR_ASN  : op = new IP_Xor   (argTarget, arg); break;
-
-                        default:
-                            throw new IllegalStateException("op=" + tokOp.getId().TEXT);
-                        }
+                        case ADD_ASN     -> new IP_Add(argTarget, arg);
+                        case SUB_ASN     -> new IP_Sub(argTarget, arg);
+                        case MUL_ASN     -> new IP_Mul(argTarget, arg);
+                        case DIV_ASN     -> new IP_Div(argTarget, arg);
+                        case MOD_ASN     -> new IP_Mod(argTarget, arg);
+                        case SHL_ASN     -> new IP_Shl(argTarget, arg);
+                        case SHR_ASN     -> new IP_Shr(argTarget, arg);
+                        case USHR_ASN    -> new IP_ShrAll(argTarget, arg);
+                        case BIT_AND_ASN -> new IP_And(argTarget, arg);
+                        case BIT_OR_ASN  -> new IP_Or(argTarget, arg);
+                        case BIT_XOR_ASN -> new IP_Xor(argTarget, arg);
+                        default          -> throw new IllegalStateException("op=" + tokOp.getId().TEXT);
+                        };
                     break;
                     }
 
@@ -2907,23 +2877,21 @@ public abstract class Expression
                     {
                     PropertyConstant prop      = getProperty();
                     Argument         argTarget = getTarget();
-                    switch (tokOp.getId())
+                    op = switch (tokOp.getId())
                         {
-                        case ADD_ASN      : op = new PIP_Add   (prop, argTarget, arg); break;
-                        case SUB_ASN      : op = new PIP_Sub   (prop, argTarget, arg); break;
-                        case MUL_ASN      : op = new PIP_Mul   (prop, argTarget, arg); break;
-                        case DIV_ASN      : op = new PIP_Div   (prop, argTarget, arg); break;
-                        case MOD_ASN      : op = new PIP_Mod   (prop, argTarget, arg); break;
-                        case SHL_ASN      : op = new PIP_Shl   (prop, argTarget, arg); break;
-                        case SHR_ASN      : op = new PIP_Shr   (prop, argTarget, arg); break;
-                        case USHR_ASN     : op = new PIP_ShrAll(prop, argTarget, arg); break;
-                        case BIT_AND_ASN  : op = new PIP_And   (prop, argTarget, arg); break;
-                        case BIT_OR_ASN   : op = new PIP_Or    (prop, argTarget, arg); break;
-                        case BIT_XOR_ASN  : op = new PIP_Xor   (prop, argTarget, arg); break;
-
-                        default:
-                            throw new IllegalStateException("op=" + tokOp.getId().TEXT);
-                        }
+                        case ADD_ASN     -> new PIP_Add(prop, argTarget, arg);
+                        case SUB_ASN     -> new PIP_Sub(prop, argTarget, arg);
+                        case MUL_ASN     -> new PIP_Mul(prop, argTarget, arg);
+                        case DIV_ASN     -> new PIP_Div(prop, argTarget, arg);
+                        case MOD_ASN     -> new PIP_Mod(prop, argTarget, arg);
+                        case SHL_ASN     -> new PIP_Shl(prop, argTarget, arg);
+                        case SHR_ASN     -> new PIP_Shr(prop, argTarget, arg);
+                        case USHR_ASN    -> new PIP_ShrAll(prop, argTarget, arg);
+                        case BIT_AND_ASN -> new PIP_And(prop, argTarget, arg);
+                        case BIT_OR_ASN  -> new PIP_Or(prop, argTarget, arg);
+                        case BIT_XOR_ASN -> new PIP_Xor(prop, argTarget, arg);
+                        default          -> throw new IllegalStateException("op=" + tokOp.getId().TEXT);
+                        };
                     break;
                     }
 
@@ -2934,23 +2902,21 @@ public abstract class Expression
                             ? getArray()
                             : getProperty();
                     Argument argIndex = getIndex();
-                    switch (tokOp.getId())
+                    op = switch (tokOp.getId())
                         {
-                        case ADD_ASN      : op = new IIP_Add   (argArray, argIndex, arg); break;
-                        case SUB_ASN      : op = new IIP_Sub   (argArray, argIndex, arg); break;
-                        case MUL_ASN      : op = new IIP_Mul   (argArray, argIndex, arg); break;
-                        case DIV_ASN      : op = new IIP_Div   (argArray, argIndex, arg); break;
-                        case MOD_ASN      : op = new IIP_Mod   (argArray, argIndex, arg); break;
-                        case SHL_ASN      : op = new IIP_Shl   (argArray, argIndex, arg); break;
-                        case SHR_ASN      : op = new IIP_Shr   (argArray, argIndex, arg); break;
-                        case USHR_ASN     : op = new IIP_ShrAll(argArray, argIndex, arg); break;
-                        case BIT_AND_ASN  : op = new IIP_And   (argArray, argIndex, arg); break;
-                        case BIT_OR_ASN   : op = new IIP_Or    (argArray, argIndex, arg); break;
-                        case BIT_XOR_ASN  : op = new IIP_Xor   (argArray, argIndex, arg); break;
-
-                        default:
-                            throw new IllegalStateException("op=" + tokOp.getId().TEXT);
-                        }
+                        case ADD_ASN     -> new IIP_Add(argArray, argIndex, arg);
+                        case SUB_ASN     -> new IIP_Sub(argArray, argIndex, arg);
+                        case MUL_ASN     -> new IIP_Mul(argArray, argIndex, arg);
+                        case DIV_ASN     -> new IIP_Div(argArray, argIndex, arg);
+                        case MOD_ASN     -> new IIP_Mod(argArray, argIndex, arg);
+                        case SHL_ASN     -> new IIP_Shl(argArray, argIndex, arg);
+                        case SHR_ASN     -> new IIP_Shr(argArray, argIndex, arg);
+                        case USHR_ASN    -> new IIP_ShrAll(argArray, argIndex, arg);
+                        case BIT_AND_ASN -> new IIP_And(argArray, argIndex, arg);
+                        case BIT_OR_ASN  -> new IIP_Or(argArray, argIndex, arg);
+                        case BIT_XOR_ASN -> new IIP_Xor(argArray, argIndex, arg);
+                        default          -> throw new IllegalStateException("op=" + tokOp.getId().TEXT);
+                        };
                     break;
                     }
 
@@ -2968,7 +2934,7 @@ public abstract class Expression
 
         // ----- fields ------------------------------------------------------------------------
 
-        private AssignForm       m_form;
+        private final AssignForm m_form;
         private Argument         m_arg;
         private PropertyConstant m_prop;
         private Object           m_oIndex;

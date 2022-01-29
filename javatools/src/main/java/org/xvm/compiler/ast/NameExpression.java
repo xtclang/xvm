@@ -291,7 +291,8 @@ public class NameExpression
      */
     public boolean isOnlyNames()
         {
-        return left == null || left instanceof NameExpression && ((NameExpression) left).isOnlyNames();
+        return left == null ||
+               left instanceof NameExpression exprName && exprName.isOnlyNames();
         }
 
     /**
@@ -314,9 +315,9 @@ public class NameExpression
     protected String[] collectNames(int cNames)
         {
         String[] asName;
-        if (left instanceof NameExpression)
+        if (left instanceof NameExpression exprName)
             {
-            asName = ((NameExpression) left).collectNames(cNames + 1);
+            asName = exprName.collectNames(cNames + 1);
             }
         else
             {
@@ -336,9 +337,9 @@ public class NameExpression
     protected List<Token> collectNameTokens(int cNames)
         {
         List<Token> list;
-        if (left instanceof NameExpression)
+        if (left instanceof NameExpression exprName)
             {
-            list = ((NameExpression) left).collectNameTokens(cNames + 1);
+            list = exprName.collectNameTokens(cNames + 1);
             }
         else
             {
@@ -373,7 +374,7 @@ public class NameExpression
     public boolean hasAnySuppressDeref()
         {
         return isSuppressDeref() ||
-            left instanceof NameExpression && ((NameExpression) left).hasAnySuppressDeref();
+            left instanceof NameExpression exprName && exprName.hasAnySuppressDeref();
         }
 
     /**
@@ -435,7 +436,8 @@ public class NameExpression
 
     public boolean isSpecial()
         {
-        return name.isSpecial() || left instanceof NameExpression && ((NameExpression) left).isSpecial();
+        return name.isSpecial() ||
+               left instanceof NameExpression exprName && exprName.isSpecial();
         }
 
     @Override
@@ -666,9 +668,11 @@ public class NameExpression
                             case Singleton:
                                 // theoretically, the singleton could be a parent of the current
                                 // class, so we could have a PseudoConstant for it
-                                assert argRaw instanceof IdentityConstant || argRaw instanceof PseudoConstant;
-                                IdentityConstant idClass = argRaw instanceof PseudoConstant
-                                        ? ((PseudoConstant) argRaw).getDeclarationLevelClass()
+                                assert argRaw instanceof IdentityConstant ||
+                                       argRaw instanceof PseudoConstant;
+
+                                IdentityConstant idClass = argRaw instanceof PseudoConstant constPseudo
+                                        ? constPseudo.getDeclarationLevelClass()
                                         : (IdentityConstant) argRaw;
                                 constVal = pool.ensureSingletonConstConstant(idClass);
                                 break;
@@ -790,7 +794,7 @@ public class NameExpression
                 }
             }
 
-        if (left instanceof NameExpression && ((NameExpression) left).getMeaning() == Meaning.Label)
+        if (left instanceof NameExpression exprName && exprName.getMeaning() == Meaning.Label)
             {
             LabelVar labelVar = (LabelVar) ctx.getVar(((NameExpression) left).getNameToken(), errs);
             String   sVar     = getName();
@@ -961,11 +965,9 @@ public class NameExpression
                     {
                     assert getMeaning() == Meaning.Class || getMeaning() == Meaning.Reserved;
 
-                    if (argRaw instanceof ParentClassConstant)
+                    if (argRaw instanceof ParentClassConstant constParent)
                         {
-                        int cSteps = ((ParentClassConstant) argRaw).getDepth();
-
-                        code.add(new MoveThis(cSteps, argLVal));
+                        code.add(new MoveThis(constParent.getDepth(), argLVal));
                         return;
                         }
 
@@ -998,8 +1000,8 @@ public class NameExpression
 
                 case PropertyDeref:
                     {
-                    if (left instanceof NameExpression &&
-                            ((NameExpression) left).getMeaning() == Meaning.Label)
+                    if (left instanceof NameExpression exprName &&
+                            exprName.getMeaning() == Meaning.Label)
                         {
                         break;
                         }
@@ -1148,9 +1150,9 @@ public class NameExpression
                 {
                 TypeConstant typeOuter;
                 int          cSteps;
-                if (argRaw instanceof TypeConstant)
+                if (argRaw instanceof TypeConstant type)
                     {
-                    typeOuter = (TypeConstant) argRaw;
+                    typeOuter = type;
                     cSteps    = m_targetInfo == null ? 1 : m_targetInfo.getStepsOut();
                     }
                 else
@@ -1176,9 +1178,9 @@ public class NameExpression
                 TypeConstant typeRef;
                 TypeConstant typeOuter;
                 int          cSteps;
-                if (argRaw instanceof TypeConstant)
+                if (argRaw instanceof TypeConstant type)
                     {
-                    typeOuter = (TypeConstant) argRaw;
+                    typeOuter = type;
                     typeRef   = pool().ensureParameterizedTypeConstant(pool().typeRef(), typeOuter);
                     cSteps    = m_targetInfo.getStepsOut();
                     }
@@ -1468,12 +1470,12 @@ public class NameExpression
             {
             TargetInfo target = m_targetInfo;
             Argument   arg    = m_arg;
-            if (arg instanceof Register)
+            if (arg instanceof Register reg)
                 {
                 assert target == null;
-                return new Assignable((Register) arg);
+                return new Assignable(reg);
                 }
-            else if (arg instanceof PropertyConstant idProp)
+            if (arg instanceof PropertyConstant idProp)
                 {
                 Argument argTarget;
                 if (left == null)
@@ -1515,10 +1517,8 @@ public class NameExpression
 
                 return new Assignable(argTarget, idProp);
                 }
-            else
-                {
-                return super.generateAssignable(ctx, code, errs);
-                }
+
+            return super.generateAssignable(ctx, code, errs);
             }
 
         return null;
@@ -1601,10 +1601,10 @@ public class NameExpression
                 return null;
                 }
 
-            if (arg instanceof Register)
+            if (arg instanceof Register reg)
                 {
                 m_arg         = arg;
-                m_fAssignable = ((Register) arg).isWritable();
+                m_fAssignable = reg.isWritable();
                 }
             else if (arg instanceof Constant constant)
                 {
@@ -1642,11 +1642,11 @@ public class NameExpression
                                 + ", constant=" + constant);
                     }
                 }
-            else if (arg instanceof TargetInfo)
+            else if (arg instanceof TargetInfo target)
                 {
-                TargetInfo       target = m_targetInfo = (TargetInfo) arg;
-                IdentityConstant id     = target.getId();
+                m_targetInfo = target;
 
+                IdentityConstant id = target.getId();
                 switch (id.getFormat())
                     {
                     case MultiMethod:
@@ -1753,9 +1753,9 @@ public class NameExpression
                 }
 
             // attempt to use identity mode (e.g. "packageName.ClassName.PropName")
-            boolean fIdMode = left instanceof NameExpression
-                    && ((NameExpression) left).resolveRawArgument(ctx, false, errs) != null
-                    && ((NameExpression) left).isIdentityMode(ctx, true);
+            boolean fIdMode = left instanceof NameExpression exprName
+                    && exprName.resolveRawArgument(ctx, false, errs) != null
+                    && exprName.isIdentityMode(ctx, true);
             if (fIdMode)
                 {
                 NameExpression   exprLeft = (NameExpression) left;
@@ -2094,7 +2094,6 @@ public class NameExpression
                 }
             }
 
-        assert argRaw instanceof Constant;
         Constant constant = (Constant) argRaw;
         switch (constant.getFormat())
             {
@@ -2183,8 +2182,8 @@ public class NameExpression
                                     ? ((ClassConstant) idThis).getOutermost()
                                     : ((ClassConstant) idTarget).getAutoNarrowingBase();
                                 ClassStructure clzBase = (ClassStructure) idBase.getComponent();
-                                boolean        fFormal = !(component instanceof MethodStructure &&
-                                                         ((MethodStructure) component).isFunction());
+                                boolean        fFormal = !(component instanceof MethodStructure method &&
+                                                           method.isFunction());
                                 type = pool.ensureVirtualTypeConstant(clzBase, clzTarget,
                                     fFormal && fMate, /*fParameterize*/ false, idTarget);
                                 }
@@ -2733,7 +2732,7 @@ public class NameExpression
      */
     public boolean isDynamicVar()
         {
-        return m_arg instanceof Register && ((Register) m_arg).isDVar();
+        return m_arg instanceof Register reg && reg.isDVar();
         }
 
     /**
@@ -2834,8 +2833,8 @@ public class NameExpression
      */
     protected IdentityConstant getIdentity(Context ctx)
         {
-        return m_arg instanceof IdentityConstant
-                ? (IdentityConstant) m_arg
+        return m_arg instanceof IdentityConstant id
+                ? id
                 : ((TypeConstant) m_arg).getSingleUnderlyingClass(true);
         }
 
@@ -2932,10 +2931,10 @@ public class NameExpression
 
             if (left != null)
                 {
-                if (arg instanceof FormalTypeChildConstant)
+                if (arg instanceof FormalTypeChildConstant constFormal)
                     {
                     // e.g.: CompileType.Element
-                    ctx.replaceGenericType((FormalConstant) arg, branch, typeNarrow);
+                    ctx.replaceGenericType(constFormal, branch, typeNarrow);
                     }
 
                 // TODO: to allow an expression "a.b.c" to be narrowed, all parents have to be immutable
@@ -2945,19 +2944,17 @@ public class NameExpression
             // we are only concerned with registers and type parameters;
             // properties and constants are ignored
             String sName = getName();
-            if (arg instanceof Register)
+            if (arg instanceof Register reg)
                 {
-                ctx.narrowLocalRegister(sName, (Register) arg, branch, typeNarrow);
+                ctx.narrowLocalRegister(sName, reg, branch, typeNarrow);
                 }
             else
                 {
                 if (arg instanceof TargetInfo info)
                     {
                     IdentityConstant id = info.getId();
-                    if (id instanceof PropertyConstant)
+                    if (id instanceof PropertyConstant idProp)
                         {
-                        PropertyConstant idProp = (PropertyConstant) arg;
-
                         assert sName.equals(id.getName());
 
                         if (idProp.isFormalType())
@@ -3006,9 +3003,9 @@ public class NameExpression
                             }
                         }
                     }
-                else if (arg instanceof TypeParameterConstant)
+                else if (arg instanceof TypeParameterConstant constTypeParam)
                     {
-                    ctx.replaceGenericType((TypeParameterConstant) arg, branch, typeNarrow);
+                    ctx.replaceGenericType(constTypeParam, branch, typeNarrow);
                     }
                 }
             }
