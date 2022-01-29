@@ -2253,11 +2253,7 @@ public abstract class TypeConstant
         switch (struct.getFormat())
             {
             case PACKAGE:
-                if (cContribs == 0)
-                    {
-                    assert ((PackageStructure) struct).isModuleImport();
-                    // module import is still a Package and needs to be "re-based"
-                    }
+                assert cContribs != 0 || ((PackageStructure) struct).isModuleImport();
                 // fall through
             case MODULE:
             case ENUMVALUE:
@@ -4409,9 +4405,8 @@ public abstract class TypeConstant
 
         for (Component child : struct.children())
             {
-            if (child instanceof PropertyStructure)
+            if (child instanceof PropertyStructure prop)
                 {
-                PropertyStructure prop = (PropertyStructure) child;
                 if (prop.isGenericTypeParameter())
                     {
                     PropertyConstant id    = prop.getIdentityConstant();
@@ -4522,9 +4517,8 @@ public abstract class TypeConstant
         ConstantPool pool    = getConstantPool();
         boolean      fRebase = constId instanceof NativeRebaseConstant;
 
-        if (structContrib instanceof MethodStructure)
+        if (structContrib instanceof MethodStructure method)
             {
-            MethodStructure   method       = (MethodStructure) structContrib;
             boolean           fHasNoCode   = !method.hasCode();
             boolean           fNative      = method.isNative();
             boolean           fStatic      = method.isStatic();
@@ -4550,9 +4544,8 @@ public abstract class TypeConstant
             MethodInfo infoNew = new MethodInfo(body);
             mapMethods.put(id, infoNew);
             }
-        else if (structContrib instanceof PropertyStructure)
+        else if (structContrib instanceof PropertyStructure prop)
             {
-            PropertyStructure prop = (PropertyStructure) structContrib;
             if (prop.isGenericTypeParameter())
                 {
                 // type parameters have been processed by collectSelfTypeParameters()
@@ -6374,28 +6367,28 @@ public abstract class TypeConstant
             return false;
             }
 
-        switch (getEcstasyClassName())
+        return switch (getEcstasyClassName())
             {
-            case "numbers.Bit":
-            case "numbers.Nibble":
-            case "text.Char":
-            case "numbers.Int8":
-            case "numbers.Int16":
-            case "numbers.Int32":
-            case "numbers.Int64":
-            case "numbers.Int128":
-            case "numbers.IntN":
-            case "numbers.UInt8":
-            case "numbers.UInt16":
-            case "numbers.UInt32":
-            case "numbers.UInt64":
-            case "numbers.UInt128":
-            case "numbers.UIntN":
-                return true;
+            case "numbers.Bit",
+                 "numbers.Nibble",
+                 "text.Char",
+                 "numbers.Int8",
+                 "numbers.Int16",
+                 "numbers.Int32",
+                 "numbers.Int64",
+                 "numbers.Int128",
+                 "numbers.IntN",
+                 "numbers.UInt8",
+                 "numbers.UInt16",
+                 "numbers.UInt32",
+                 "numbers.UInt64",
+                 "numbers.UInt128",
+                 "numbers.UIntN" ->
+                    true;
 
-            default:
-                return getExplicitClassFormat() == Component.Format.ENUM;
-            }
+            default ->
+                    getExplicitClassFormat() == Component.Format.ENUM;
+            };
         }
 
     /**
@@ -6517,9 +6510,8 @@ public abstract class TypeConstant
             IdentityConstant id   = getSingleUnderlyingClass(false);
             ClassStructure   clz  = (ClassStructure) id.getComponent();
             Component        prop = clz.getChild("default");
-            if (prop instanceof PropertyStructure)
+            if (prop instanceof PropertyStructure propDefault)
                 {
-                PropertyStructure propDefault = (PropertyStructure) prop;
                 return propDefault.getInitialValue();
                 }
             }
