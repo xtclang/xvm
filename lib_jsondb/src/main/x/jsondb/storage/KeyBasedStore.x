@@ -113,9 +113,9 @@ mixin KeyBasedStore<Key extends Hashable>
                 Int     endOffset  = 0;
                 Boolean corrupted  = False;
 
-                using (val arrayParser = fileParser.expectArray())
+                try
                     {
-                    try
+                    using (val arrayParser = fileParser.expectArray())
                         {
                         while (!arrayParser.eof)
                             {
@@ -135,10 +135,10 @@ mixin KeyBasedStore<Key extends Hashable>
                             endOffset  = endToken.end.offset;
                             }
                         }
-                    catch (Exception e)
-                        {
-                        corrupted = True;
-                        }
+                    }
+                catch (Exception e)
+                    {
+                    corrupted = True;
                     }
 
                 if (lastInFile > lastSeal)
