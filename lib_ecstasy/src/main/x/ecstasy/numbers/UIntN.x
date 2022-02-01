@@ -3,6 +3,7 @@
  */
 const UIntN
         extends UIntNumber
+        default(0)
     {
     // ----- constructors --------------------------------------------------------------------------
 

@@ -4,6 +4,7 @@
  */
 const FPLiteral(String text)
         implements Orderable
+        default(0.0)
     {
     /**
      * The literal text.

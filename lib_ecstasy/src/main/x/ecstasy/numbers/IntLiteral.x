@@ -21,6 +21,7 @@
  */
 const IntLiteral(String text)
         implements Sequential
+        default(0)
     {
     /**
      * Construct an IntLiteral from a String.

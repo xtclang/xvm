@@ -3,6 +3,7 @@
  */
 const IntN
         extends IntNumber
+        default(0)
     {
     // ----- constructors --------------------------------------------------------------------------
 

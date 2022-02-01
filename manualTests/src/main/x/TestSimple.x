@@ -9,13 +9,13 @@ module TestSimple.test.org
 
     void run()
         {
-        String s = "/"[0..0);
-        console.println($"s={s}");  // used to throw OutOfBounds
+        val test = new TestUninitialized();
+        console.println(test.test);
         }
 
-    void report(Object o)
+    const TestUninitialized
         {
-        console.println($"{&o.actualType}: {o}");
+        Double test;
         }
     }
 

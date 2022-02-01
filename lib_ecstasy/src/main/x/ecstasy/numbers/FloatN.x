@@ -1,5 +1,6 @@
 const FloatN
         extends BinaryFPNumber
+        // TODO default(0.0)
     {
     // ----- constructors --------------------------------------------------------------------------
 

@@ -1,5 +1,6 @@
 const DecN
         extends DecimalFPNumber
+        // TODO default(0.0)
     {
     // ----- constructors --------------------------------------------------------------------------
 

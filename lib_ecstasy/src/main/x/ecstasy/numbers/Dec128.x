@@ -1,5 +1,6 @@
 const Dec128
         extends DecimalFPNumber
+        default(0.0)
     {
     // ----- constructors --------------------------------------------------------------------------
 

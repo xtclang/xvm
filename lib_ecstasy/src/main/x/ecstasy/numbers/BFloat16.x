@@ -1,5 +1,6 @@
 const BFloat16
         extends BinaryFPNumber
+        default(0.0)
     {
     // ----- constructors --------------------------------------------------------------------------
 
