@@ -12,6 +12,7 @@ import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
+
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
@@ -30,16 +31,18 @@ import org.xvm.runtime.template._native.reflect.xRTFunction;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 
 import org.xvm.runtime.template.collections.xArray;
+
 import org.xvm.runtime.template.numbers.xInt64;
 
 import org.xvm.runtime.template.text.xString;
+
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xService;
 
+
 /**
- * Native implementation of the http.Server service that wraps a
- * native Java {@link HttpServer}.
+ * Native implementation of the http.Server service that wraps a native Java {@link HttpServer}.
  */
 public class xServer
         extends xService
@@ -60,23 +63,24 @@ public class xServer
     public void initNative()
         {
         markNativeMethod("construct", new String[]{"numbers.Int64", "http.Server.Handler"}, null);
-        markNativeMethod("start", VOID, VOID);
-        markNativeMethod("stop", VOID, VOID);
+        markNativeMethod("start"    , VOID, VOID);
+        markNativeMethod("stop"     , VOID, VOID);
         markNativeMethod("isRunning", VOID, BOOLEAN);
+
         markNativeProperty("port");
         markNativeProperty("handler");
 
         getCanonicalType().invalidateTypeInfo();
 
-        ConstantPool    pool                 = pool();
-        TypeConstant    typeString           = pool.typeString();
-        TypeConstant    typeStringArray      = pool.ensureArrayType(pool.typeString());
-        TypeConstant    typeStringArrayArray = pool.ensureArrayType(typeStringArray);
-        TypeConstant    typeByteArray        = pool.typeByteArray();
-        TypeConstant    typeResponse         = xResponse.INSTANCE.getCanonicalType();
+        ConstantPool pool                 = pool();
+        TypeConstant typeString           = pool.typeString();
+        TypeConstant typeStringArray      = pool.ensureArrayType(pool.typeString());
+        TypeConstant typeStringArrayArray = pool.ensureArrayType(typeStringArray);
+        TypeConstant typeByteArray        = pool.typeByteArray();
+        TypeConstant typeResponse         = xResponse.INSTANCE.getCanonicalType();
 
         m_aTypeHandleArgs = new TypeConstant[]{typeString, typeString, typeStringArray,
-            typeStringArrayArray, typeByteArray, typeResponse};
+                typeStringArrayArray, typeByteArray, typeResponse};
         }
 
     @Override
@@ -103,10 +107,12 @@ public class xServer
             }
         }
 
-    private WebServerHandle createJavaWebServer(ServiceContext  context, int nPort, FunctionHandle  hFunction, ServiceHandle hHandler) throws IOException
+    private WebServerHandle createJavaWebServer(ServiceContext  context, int nPort,
+                                                FunctionHandle  hFunction, ServiceHandle hHandler)
+            throws IOException
         {
         RequestHandler  handler = new RequestHandler(context, hFunction);
-        HttpServer      server = HttpServer.create(new InetSocketAddress((int) nPort), 0);
+        HttpServer      server  = HttpServer.create(new InetSocketAddress((int) nPort), 0);
 
         server.createContext("/", handler);
         server.setExecutor(Executors.newFixedThreadPool(4));
@@ -155,7 +161,8 @@ public class xServer
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
         }
 
-    // ----- JavaWebServerHandle --------------------------------------------
+
+    // ----- WebServerHandle -----------------------------------------------------------------------
 
     /**
      * A {@link ServiceHandle} for a web server service.
@@ -179,7 +186,8 @@ public class xServer
         protected abstract ServiceHandle getHandler();
         }
 
-    // ----- JavaWebServerHandle --------------------------------------------
+
+    // ----- JavaWebServerHandle -------------------------------------------------------------------
 
     /**
      * A {@link ServiceHandle} for a web server service.
@@ -199,7 +207,7 @@ public class xServer
             {
             f_context.registerNotification();
             f_server.start();
-            f_fRunning = true;
+            m_fRunning = true;
             }
 
         @Override
@@ -207,7 +215,7 @@ public class xServer
             {
             f_server.stop(1);
             f_context.unregisterNotification();
-            f_fRunning = false;
+            m_fRunning = false;
             }
 
         @Override
@@ -225,7 +233,7 @@ public class xServer
         @Override
         protected boolean isRunning()
             {
-            return f_fRunning;
+            return m_fRunning;
             }
 
         /**
@@ -241,10 +249,11 @@ public class xServer
         /**
          * Whether the server is running.
          */
-        private volatile boolean f_fRunning;
+        private volatile boolean m_fRunning;
         }
 
-    // ----- RequestHandler -------------------------------------------------
+
+    // ----- RequestHandler ------------------------------------------------------------------------
 
     /**
      * The {@link HttpHandler} that handles all request from the {@link HttpServer}
@@ -340,7 +349,8 @@ public class xServer
         private final FunctionHandle f_hFunction;
         }
 
-    // ----- data members ---------------------------------------------------
+
+    // ----- data members --------------------------------------------------------------------------
 
     private TypeConstant[] m_aTypeHandleArgs;
     }

@@ -105,7 +105,7 @@ class Router
                 rootPath = "/" + rootPath;
                 }
 
-            if (rootPath.endsWith('/'))
+            if (rootPath.endsWith('/') && rootPath.size > 1)
                 {
                 rootPath = rootPath[0..rootPath.size-1);
                 }
