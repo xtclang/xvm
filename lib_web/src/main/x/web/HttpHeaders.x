@@ -160,7 +160,6 @@ class HttpHeaders
         return this;
         }
 
-
     /**
      * The accepted media types.
      *
@@ -276,8 +275,7 @@ class HttpHeaders
 
         for (Char char : name)
             {
-            Int value = char.toInt64();
-            switch (value)
+            switch (char.codepoint)
                 {
                 case 0:    // 0x00
                 case 9:    // '\t'
@@ -290,12 +288,12 @@ class HttpHeaders
                 case 58:   // ':'
                 case 59:   // ';'
                 case 61:   // '='
-                    throw new IllegalArgument($"header name '{name}' contains '{char}' one of the prohibited characters: =,;: \\t\\r\\n\\v\\f");
+                    throw new IllegalArgument($|Header name {name.quoted()} contains a prohibited\
+                                               | character: {char.quoted()}
+                                             );
                 default:
-                    if (value < 0 || value > 0x7F)
-                        {
-                        throw new IllegalArgument($"header name '{name}' contains non-ASCII character: {char}");
-                        }
+                    assert:arg char.codepoint <= 0x7F
+                            as $"Header name {name.quoted()} contains a non-ASCII character: {char.quoted()}";
                     break;
                 }
             }
