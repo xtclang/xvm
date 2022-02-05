@@ -402,11 +402,10 @@ public class TemplateRegistry
      */
     public TypeComposition resolveClass(TypeConstant typeActual)
         {
-        if (typeActual instanceof PropertyClassTypeConstant)
+        if (typeActual instanceof PropertyClassTypeConstant typeProp)
             {
-            PropertyClassTypeConstant typeProp = (PropertyClassTypeConstant) typeActual;
-            ClassComposition          clz      = (ClassComposition) resolveClass(
-                                                    typeProp.getParentType().removeAccess());
+            ClassComposition clz = (ClassComposition) resolveClass(
+                                        typeProp.getParentType().removeAccess());
             return clz.ensurePropertyComposition(typeProp.getPropertyInfo());
             }
         return getTemplate(typeActual).ensureClass(typeActual.normalizeParameters());

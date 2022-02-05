@@ -210,7 +210,7 @@ public class Proxy
         throw new IllegalStateException("Invalid context");
         }
 
-    public static ObjectHandle makeHandle(ProxyComposition clzProxy, ServiceContext ctx,
+    public static ProxyHandle makeHandle(ProxyComposition clzProxy, ServiceContext ctx,
                                           ObjectHandle hTarget)
         {
         return new ProxyHandle(clzProxy, ctx, hTarget);
@@ -265,6 +265,19 @@ public class Proxy
         public ProxyComposition getComposition()
             {
             return (ProxyComposition) super.getComposition();
+            }
+
+        @Override
+        public TypeConstant getType()
+            {
+            // don't augment the tyoe
+            return super.getComposition().getType();
+            }
+
+        @Override
+        public ObjectHandle cloneAs(TypeComposition clazz)
+            {
+            return f_hTarget.cloneAs(clazz);
             }
 
         @Override

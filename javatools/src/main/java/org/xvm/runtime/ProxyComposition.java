@@ -73,9 +73,9 @@ public class ProxyComposition
         }
 
     @Override
-    public ProxyComposition revealAs(TypeConstant type)
+    public TypeComposition revealAs(TypeConstant type)
         {
-        throw new UnsupportedOperationException();
+        return f_clzOrigin.revealAs(type);
         }
 
     @Override

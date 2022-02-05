@@ -14,12 +14,14 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassComposition.FieldInfo;
 
+import org.xvm.runtime.template.Proxy;
 import org.xvm.runtime.template.xObject;
 import org.xvm.runtime.template.xService.ServiceHandle;
 
@@ -488,7 +490,7 @@ public abstract class ObjectHandle
         @Override
         public boolean isService()
             {
-            if (getComposition().hasOuter())
+            if (m_fMutable && getComposition().hasOuter())
                 {
                 ObjectHandle hParent = getField(null, OUTER);
                 return hParent != null && hParent.isService();
@@ -581,6 +583,21 @@ public abstract class ObjectHandle
         @Override
         public GenericHandle maskAs(Container owner, TypeConstant typeAs)
             {
+            if (!isService())
+                {
+                TypeConstant type = getType();
+                assert type.isImmutable() && type.isSingleUnderlyingClass(true);
+
+                ModuleConstant idModule = type.getSingleUnderlyingClass(true).getModuleConstant();
+                if (!idModule.isCoreModule())
+                    {
+                    // even though it's a const, all calls need to be proxied
+                    ProxyComposition clzProxy = new ProxyComposition(
+                            (ClassComposition) getComposition(), typeAs);
+                    return Proxy.makeHandle(clzProxy, owner.getServiceContext(), this);
+                    }
+                }
+
             TypeComposition clzAs = getComposition().maskAs(typeAs);
             if (clzAs != null)
                 {

@@ -105,6 +105,16 @@ public class ModuleConstant
         return getName().equals(ECSTASY_MODULE);
         }
 
+    /**
+     * @return true iff this ModuleConstant represents the module containing the Ecstasy class
+     *         library or a native (prototype) module
+     */
+    public boolean isCoreModule()
+        {
+        String sName = getName();
+        return sName.equals(ECSTASY_MODULE) || sName.equals(PROTOTYPE_MODULE);
+        }
+
 
     // ----- IdentityConstant methods --------------------------------------------------------------
 
