@@ -625,9 +625,14 @@ service Catalog<Schema extends RootSchema>
         Mapping<elementType.DataType> elementMapping =
                 jsonSchema.ensureMapping(elementType).as(Mapping<elementType.DataType>);
 
+        Map<String, immutable Object> options = info.options;
+
+        Duration expiry   = options.getOrDefault("expiry", Duration.NONE).as(Duration);
+        Int      truncate = options.getOrDefault("truncate", Int:-1).as(Int);
+
         return info.transactional
-                ? new JsonLogStore<elementType.DataType>(this, info, elementMapping)
-                : new JsonNtxLogStore<elementType.DataType>(this, info, elementMapping);
+                ? new JsonLogStore<elementType.DataType>   (this, info, elementMapping, expiry, truncate)
+                : new JsonNtxLogStore<elementType.DataType>(this, info, elementMapping, expiry, truncate);
         }
 
     @Concurrent

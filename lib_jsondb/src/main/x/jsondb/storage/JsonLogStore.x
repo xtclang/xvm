@@ -16,12 +16,15 @@ service JsonLogStore<Element extends immutable Const>
     construct(Catalog          catalog,
               DBObjectInfo     info,
               Mapping<Element> elementMapping,
+              Duration         expiry,
+              Int              truncateSize,
               )
         {
         super(catalog, info);
 
-        this.jsonSchema   = catalog.jsonSchema;
+        this.jsonSchema     = catalog.jsonSchema;
         this.elementMapping = elementMapping;
+        this.truncateSize   = truncateSize;
         }
 
 
@@ -50,9 +53,8 @@ service JsonLogStore<Element extends immutable Const>
 
     /**
      * The maximum size log to store in any one log file.
-     * TODO this setting should be configurable (need a "Prefs" API)
      */
-    protected Int maxLogSize = 100K;
+    protected Int truncateSize;
 
 
     // ----- storage API exposed to the client -----------------------------------------------------
@@ -89,7 +91,7 @@ service JsonLogStore<Element extends immutable Const>
             }
 
         length += buf.size;
-        if (length > maxLogSize)
+        if (length > truncateSize)
             {
             // TODO schedule a rotation
             }

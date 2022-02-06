@@ -179,8 +179,14 @@ class DbHost(String dbModuleName)
             switch (category)
                 {
                 case DBMap:
-                    assert TypeTemplate keyType   := typeTemplate.resolveFormalType("Key");
-                    assert TypeTemplate valueType := typeTemplate.resolveFormalType("Value");
+                    TypeTemplate keyType;
+                    TypeTemplate valueType;
+                    if (keyType   := resolveFormalType(typeTemplate, "Key",   propertyName, errors),
+                        valueType := resolveFormalType(typeTemplate, "Value", propertyName, errors)) {}
+                    else
+                        {
+                        return False;
+                        }
 
                     String keyTypeName   = displayName(keyType, appName);
                     String valueTypeName = displayName(valueType, appName);
@@ -202,7 +208,11 @@ class DbHost(String dbModuleName)
                     break;
 
                 case DBValue:
-                    assert TypeTemplate valueType := typeTemplate.resolveFormalType("Value");
+                    TypeTemplate valueType;
+                    if (!(valueType := resolveFormalType(typeTemplate, "Value", propertyName, errors)))
+                        {
+                        return False;
+                        }
 
                     String valueTypeName = displayName(valueType, appName);
 
@@ -232,7 +242,11 @@ class DbHost(String dbModuleName)
                     break;
 
                 case DBLog:
-                    assert TypeTemplate elementType := typeTemplate.resolveFormalType("Element");
+                    TypeTemplate elementType;
+                    if (!(elementType := resolveFormalType(typeTemplate, "Element", propertyName, errors)))
+                        {
+                        return False;
+                        }
 
                     String elementTypeName = displayName(elementType, appName);
 
@@ -244,10 +258,30 @@ class DbHost(String dbModuleName)
                         {
                         transactional = "False";
                         }
+                    if (AnnotationTemplate annotation := findAnnotation(property, "oodb.AutoExpire"))
+                        {
+                        Duration expiry = annotation.arguments[0].value.as(Duration);
+                        options += $"\"expiry\"=Duration:{expiry.seconds}s";
+                        }
+
+                    if (AnnotationTemplate annotation := findAnnotation(property, "oodb.AutoTruncate"))
+                        {
+                        Int truncateSize = annotation.arguments[0].value.as(Int);
+                        if (options.size > 0)
+                            {
+                            options += ", ";
+                            }
+                        options += $"\"truncate\"=Int:{truncateSize}";
+                        }
+
                     break;
 
                 case DBProcessor:
-                    assert TypeTemplate messageType := typeTemplate.resolveFormalType("Message");
+                    TypeTemplate messageType;
+                    if (!(messageType := resolveFormalType(typeTemplate, "Message", propertyName, errors)))
+                        {
+                        return False;
+                        }
 
                     String messageTypeName = displayName(messageType, appName);
 
@@ -465,6 +499,20 @@ class DbHost(String dbModuleName)
 
         // TODO recurse to super template
         return True, properties;
+        }
+
+    /**
+     * Obtain the formal type for the specified name; log an error if the type cannot be resolved.
+     */
+    conditional TypeTemplate resolveFormalType(TypeTemplate typeTemplate, String formalName,
+                                               String propertyName, Log errors)
+        {
+        if (TypeTemplate typeFormal := typeTemplate.resolveFormalType(formalName))
+            {
+            return True, typeFormal;
+            }
+        errors.add($"Error: Property {propertyName.quoted()} must specify {formalName.quoted()} type");
+        return False;
         }
 
     /**

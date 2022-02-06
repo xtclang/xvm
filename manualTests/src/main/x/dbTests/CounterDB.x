@@ -4,6 +4,7 @@ module CounterDB
     package oodb import oodb.xtclang.org;
 
     import oodb.Database;
+    import oodb.DBLog;
     import oodb.DBMap;
     import oodb.DBProcessor;
     import oodb.RootSchema;
@@ -13,6 +14,7 @@ module CounterDB
         {
         @RO DBMap<String, Int> counters;
         @RO Cranker cranker;
+        @RO @oodb.NoTx @oodb.AutoTruncate(10K) @oodb.AutoExpire(Duration:1h) DBLog<String> logger;
         }
 
     mixin Cranker
