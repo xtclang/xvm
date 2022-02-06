@@ -593,7 +593,7 @@ const Duration(UInt128 picoseconds)
             Int minutes = this.minutesPart;
             Int seconds = this.secondsPart;
             Int picos   = this.picosecondsPart;
-            if (hours != 0 && minutes != 0 && seconds != 0 && picos != 0)
+            if (hours != 0 || minutes != 0 || seconds != 0 || picos != 0)
                 {
                 buf.add('T');
 

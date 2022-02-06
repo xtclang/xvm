@@ -8,7 +8,17 @@ module TestSimple.test.org
 
     void run()
         {
-        UInt u = 0 - 1; // used to compile and throw at run-time; now a compiler error
+        testDuration(Duration:123456s);
+        testDuration(Duration:P1DT12H30M0.02234S);
+        }
+
+    void testDuration(Duration d)
+        {
+        String iso = d.toString(True);
+        console.println($"{d} -> {iso}");
+
+        Duration d2 = new Duration(iso);
+        assert d2 == d;
         }
     }
 
