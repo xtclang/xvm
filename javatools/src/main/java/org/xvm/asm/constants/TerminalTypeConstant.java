@@ -501,6 +501,11 @@ public class TerminalTypeConstant
             case TypeParameter:
             case FormalTypeChild:
             case DynamicFormal:
+            case IsConst:
+            case IsEnum:
+            case IsModule:
+            case IsPackage:
+            case IsClass:
                 return ResolutionResult.UNKNOWN;
 
             case NativeClass:
