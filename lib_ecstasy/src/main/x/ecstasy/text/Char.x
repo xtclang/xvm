@@ -857,7 +857,7 @@ const Char
             throw new IllegalUTF($"illegal trailing-surrogate: {lo}");
             }
 
-        static UInt32 SURROGATE_OFFSET = 0x10000 - (0xD800 << 10) - 0xDC00;
+        static @Unchecked UInt32 SURROGATE_OFFSET = 0x10000 - (0xD800 << 10) - 0xDC00;
         return new Char((hi << 10) + lo + SURROGATE_OFFSET);
         }
 

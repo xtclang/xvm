@@ -2,20 +2,13 @@ module TestSimple.test.org
     {
     @Inject Console console;
 
-    import ecstasy.collections.*;
-
     package collections import collections.xtclang.org;
+    import ecstasy.collections.*;
     import collections.*;
 
     void run()
         {
-        val test = new TestUninitialized();
-        console.println(test.test);
-        }
-
-    const TestUninitialized
-        {
-        Double test;
+        UInt u = 0 - 1; // used to compile and throw at run-time; now a compiler error
         }
     }
 

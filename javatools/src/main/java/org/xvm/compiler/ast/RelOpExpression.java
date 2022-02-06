@@ -635,6 +635,11 @@ public class RelOpExpression
                         ? ((ArrayConstant) constResult).getValue() // divrem result is in a tuple
                         : new Constant[] {constResult};
                 }
+            catch (ArithmeticException e)
+                {
+                log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE, typeRequired, this);
+                return null;
+                }
             catch (RuntimeException ignore) {}
             }
 
