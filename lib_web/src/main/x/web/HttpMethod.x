@@ -60,12 +60,9 @@ enum HttpMethod
      */
     static HttpMethod fromName(String name)
         {
-        for (HttpMethod method : HttpMethod.values)
+        if (HttpMethod method := HttpMethod.byName.get(name))
             {
-            if (name == method.name)
-                {
-                return method;
-                }
+            return method;
             }
         return CUSTOM;
         }
