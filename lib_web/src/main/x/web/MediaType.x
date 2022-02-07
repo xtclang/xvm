@@ -5,9 +5,6 @@
  * @see [RFC 2046](https://tools.ietf.org/html/rfc2046)
  */
 const MediaType
-        implements Stringable
-//        implements Hashable
-        implements immutable Orderable
     {
     /**
      * Construct a new MediaType.
@@ -78,15 +75,17 @@ const MediaType
         this.allSubTypes = this.subType == "*";
         }
 
+
     // ----- Properties ----------------------------------------------------------------------------
 
-    public/private String name;
-    public/private String type;
-    public/private Boolean allTypes;
-    public/private String subType;
-    public/private Boolean allSubTypes;
-    public/private String? extension;
-    public/private HashMap<String, String> parameters;
+    String                  name;
+    String                  type;
+    Boolean                 allTypes;
+    String                  subType;
+    Boolean                 allSubTypes;
+    String?                 extension;
+    HashMap<String, String> parameters;
+
 
     // ----- constants -----------------------------------------------------------------------------
 
@@ -109,6 +108,7 @@ const MediaType
      * The default quality parameter.
      */
     private String DEFAULT_QUALITY = "1.0";
+
 
     // ----- MediaType methods ---------------------------------------------------------------------
 
@@ -213,8 +213,9 @@ const MediaType
      */
     public String getQuality()
         {
-        return parameters.getOrDefault("q", DEFAULT_QUALITY);
+        return parameters.getOrDefault(QUALITY_PARAMETER, DEFAULT_QUALITY);
         }
+
 
     // ----- Stringable interface implementation ---------------------------------------------------
 
@@ -231,12 +232,14 @@ const MediaType
         return buf;
         }
 
+
 //    // ----- Hashable ------------------------------------------------------------------------------
 //
 //    static <CompileType extends MediaType> Int hashCode(CompileType value)
 //        {
 //        return value.name.hashCode();
 //        }
+
 
     // ----- Orderable -----------------------------------------------------------------------------
 
@@ -255,6 +258,7 @@ const MediaType
         {
         return value1.name <=> value2.name;
         }
+
 
     // ----- Constants -----------------------------------------------------------------------------
 
