@@ -1,5 +1,6 @@
 /**
  * An HTTP response.
+ * TODO CP: deprecate and remove
  */
 service Response
     {

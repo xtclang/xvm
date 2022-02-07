@@ -1,5 +1,6 @@
 /**
  * A representation of a Uniform Resource Identifier (URI) reference.
+ * TODO GG: move to "net" module
  */
 const URI(String? scheme,
           String? authority,

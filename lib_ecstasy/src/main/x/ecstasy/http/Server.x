@@ -3,6 +3,8 @@
  *
  * @param port     the port to bind the web server to
  * @param handler  the Handler that will requests
+ *
+ * TODO CP: deprecate and remove
  */
 @Concurrent service Server(Int port, Handler handler)
     {

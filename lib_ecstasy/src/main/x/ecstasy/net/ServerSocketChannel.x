@@ -1,5 +1,6 @@
 /**
  * ServerSocketChannel provides the ability to accept inbound network connections.
+ * TODO GG: move to "net" module
  */
 interface ServerSocketChannel
         extends Closeable

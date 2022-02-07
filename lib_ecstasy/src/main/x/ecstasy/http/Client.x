@@ -1,5 +1,6 @@
 /**
  * An HTTP client service.
+ * TODO CP: deprecate and remove
  */
 const Client(Int connectionTimeout, Redirect redirect, Int priority)
     {
