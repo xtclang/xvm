@@ -39,6 +39,8 @@ import org.xvm.util.Severity;
  * An assignment statement specifies an l-value, an assignment operator, and an r-value.
  *
  * Additionally, this can represent the assignment portion of a "conditional declaration".
+ *
+ * TODO log warning for "a=a;"
  */
 public class AssignmentStatement
         extends Statement

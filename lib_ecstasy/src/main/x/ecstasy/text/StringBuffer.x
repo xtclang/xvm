@@ -1,6 +1,8 @@
 /**
  * A StringBuffer is used to efficiently create a resulting String from any number of contributions
  * of any size.
+ *
+ * TODO add deleteAll(offset..offset) method (or maybe just implement List<Char>)
  */
 class StringBuffer
         implements Appender<Char>

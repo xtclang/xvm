@@ -59,6 +59,8 @@ import TxManager.Requirement;
  * able to provide a custom, type-safe representation of each custom database, effectively merging
  * together the OODB API with the custom API and the custom type system defined by the database and
  * its schema.
+ *
+ * TODO provide a DBClosed exception after shutdown, instead of arbitrary assertions/exceptions
  */
 service Client<Schema extends RootSchema>
     {
