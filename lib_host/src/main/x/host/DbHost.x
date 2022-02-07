@@ -78,7 +78,7 @@ class DbHost(String dbModuleName)
     @RO String customMethodTemplate;
 
     /**
-     * Generate all the necessary classes to use a DB modules.
+     * Generate (if necessary) all the necessary classes to use a DB modules.
      *
      * @param repository  the repository to load necessary modules from
      * @param buildDir    the directory to place all generated artifacts to
@@ -87,7 +87,7 @@ class DbHost(String dbModuleName)
      * @return True iff the module template was successfully created
      * @return the generated module (optional)
      */
-    conditional ModuleTemplate generateDBModule(
+    conditional ModuleTemplate ensureDBModule(
             ModuleRepository repository, Directory buildDir, Log errors)
         {
         ModuleTemplate dbModule   = repository.getResolvedModule(dbModuleName);

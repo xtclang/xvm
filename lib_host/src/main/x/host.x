@@ -7,6 +7,7 @@ module host.xtclang.org
     import ecstasy.annotations.InjectedRef;
 
     import ecstasy.io.IOException;
+    import ecstasy.io.Log;
 
     import ecstasy.mgmt.Container;
     import ecstasy.mgmt.ModuleRepository;
@@ -22,61 +23,39 @@ module host.xtclang.org
     @Inject Console   console;
     @Inject Directory curDir;
 
-    void run(String[] modules=[])
+    void run(String[] args=[])
         {
-        if (modules.empty)
+        if (args.empty)
             {
-            console.println($"Current directory is {curDir}");
-            while (True)
-                {
-                console.print("\nEnter module path: ");
-
-                String path = console.readLine(); // e.g. "tests/manual/TestSimple.xtc"
-                if (path.size == 0)
-                    {
-                    break;
-                    }
-                FutureVar? result = loadAndRun(path);
-                if (result != Null)
-                    {
-                    result.get(); // block until done
-                    }
-                }
+            console.println($"Error: Module is not specified");
+            return;
             }
-        else
+
+        String   path   = args[0];
+        String[] errors = new String[];
+
+        if (FutureVar result := loadAndRun(path, errors))
             {
-            FutureVar?[] results = new Array(modules.size, i -> loadAndRun(modules[i]));
-            waitForResults(results, 0);
+            result.handle(e ->
+                {
+                console.println($"Execution error: {e}");
+                return Tuple:();
+                });
+            }
+
+        for (String error : errors)
+            {
+            console.println(error);
             }
         }
 
-    void waitForResults(FutureVar?[] results, Int index)
-        {
-        while (index < results.size)
-            {
-            FutureVar? result = results[index++];
-            if (result != Null)
-                {
-                result.whenComplete((_, e) ->
-                    {
-                    if (e != Null)
-                        {
-                        console.println(e);
-                        }
-                    waitForResults(results, index);
-                    });
-                return;
-                }
-            }
-        }
-
-    FutureVar? loadAndRun(String path)
+    conditional FutureVar loadAndRun(String path, Log errors)
         {
         File fileXtc;
         if (!(fileXtc := curDir.findFile(path)))
             {
-            console.println($"'{path}' - not found");
-            return Null;
+            errors.add($"Error: {path.quoted()} - not found");
+            return False;
             }
 
         Byte[] bytes;
@@ -86,8 +65,8 @@ module host.xtclang.org
             }
         catch (IOException e)
             {
-            console.println($"Failed to read the module: {fileXtc}");
-            return Null;
+            errors.add($"Error: Failed to read the module: {fileXtc}");
+            return False;
             }
 
         @Inject Container.Linker linker;
@@ -100,8 +79,8 @@ module host.xtclang.org
             }
         catch (Exception e)
             {
-            console.println($"Failed to resolve the module: {fileXtc} ({e.text})");
-            return Null;
+            errors.add($"Error: Failed to resolve the module: {fileXtc} ({e.text})");
+            return False;
             }
 
         ModuleTemplate  moduleTemplate = fileTemplate.mainModule;
@@ -113,20 +92,15 @@ module host.xtclang.org
 
         if (String dbModuleName := detectDatabase(fileTemplate))
             {
-            String[]       errors = new String[];
             DbHost         dbHost;
             ModuleTemplate dbModuleTemplate;
 
             if (dbHost           := createDBHost(dbModuleName, errors),
-                dbModuleTemplate := dbHost.generateDBModule(repository, buildDir, errors)) {}
+                dbModuleTemplate := dbHost.ensureDBModule(repository, buildDir, errors)) {}
             else
                 {
-                console.println($"Failed to create a host for : {dbModuleName}");
-                for (String error : errors)
-                    {
-                    console.println(error);
-                    }
-                return Null;
+                errors.add($"Error: Failed to create a host for : {dbModuleName}");
+                return False;
                 }
 
             terminate = dbHost.closeDatabase;
@@ -172,7 +146,7 @@ module host.xtclang.org
 
         @Future Tuple result = container.invoke("run", Tuple:());
         &result.whenComplete((r, x) -> terminate());
-        return &result;
+        return True, &result;
         }
 
     /**

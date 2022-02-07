@@ -1,4 +1,4 @@
-module TestSimple.test.org
+module TestSimple
     {
     @Inject Console console;
 

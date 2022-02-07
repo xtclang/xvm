@@ -113,7 +113,7 @@ tasks.register<JavaExec>("runOne") {
     mainClass.set("org.xvm.runtime.TestConnector")
 }
 
-tasks.register<JavaExec>("hostOne") {
+tasks.register<JavaExec>("host") {
     group       = "Test"
     description = "Host a \"testName\" test"
 
@@ -142,48 +142,4 @@ tasks.register<JavaExec>("hostOne") {
             }
         }
     }
-}
-
-tasks.register<JavaExec>("hostAll") {
-    group       = "Test"
-    description = "Host all tests"
-
-    dependsOn(compileAll)
-
-    jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
-
-    classpath(javatoolsJar)
-
-    val opts = listOf<String>(
-        "-verbose",
-        "-L", "${xdk.buildDir}/xdk/lib/",
-        "-L", "${xdk.buildDir}/xdk/javatools/javatools_bridge.xtc",
-        "-L", "$buildDir",
-        "${xdk.buildDir}/xdk/lib/host.xtc")
-
-    val names = listOf<String>(
-        "build/TestAnnotations.xtc",
-        "build/TestArray.xtc",
-        "build/TestCollections.xtc",
-        "build/TestDefAsn.xtc",
-        "build/TestTry.xtc",
-        "build/TestGenerics.xtc",
-        "build/TestInnerOuter.xtc",
-        "build/TestFiles.xtc",
-        "build/TestIO.xtc",
-        "build/TestLambda.xtc",
-        "build/TestLiterals.xtc",
-        "build/TestLoops.xtc",
-        "build/TestNesting.xtc",
-        "build/TestNumbers.xtc",
-        "build/TestProps.xtc",
-        "build/TestMaps.xtc",
-        "build/TestMisc.xtc",
-        "build/TestQueues.xtc",
-        "build/TestServices.xtc",
-        "build/TestReflection.xtc",
-        "build/TestTuples.xtc")
-
-    args(opts + names)
-    mainClass.set("org.xvm.tool.Runner")
 }
