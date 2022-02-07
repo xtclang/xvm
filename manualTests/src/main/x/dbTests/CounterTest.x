@@ -13,7 +13,7 @@ module CounterTest
     void run()
         {
         @Inject CounterSchema schema;
-assert:debug;
+
         // first, show the state
         dump(schema.counters);
 
