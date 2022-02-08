@@ -47,21 +47,18 @@ const Duration(UInt128 picoseconds)
                 case 'P':
                     // while 'P' is required per the ISO-8601 specification, this constructor is
                     // only used for duration values, so
-                    if (stage >= 1)
-                        {
-                        throw new IllegalArgument("duration must begin with 'P' and must contain"
-                                + $" no other occurrences of 'P': \"{duration}\"");
-                        }
+                    assert:arg stage == 0 as
+                            $|Duration must begin with 'P' and must contain no other occurrences of\
+                             | 'P': {duration.quoted()}
+                            ;
                     stage = 1;
                     break;
 
                 case 'T':
-                    if (stage >= 3)
-                        {
-                        throw new IllegalArgument("duration includes 'T' to separate date from time"
-                                +  " components,  and must contain no other occurrences of 'T':"
-                                + $" \"{duration}\"");
-                        }
+                    assert:arg stage < 3 as
+                            $|Duration includes 'T' to separate date from time components, and must\
+                             | contain no other occurrences of 'T': {duration.quoted()}
+                            ;
                     stage = 3;
                     break;
 
@@ -73,11 +70,8 @@ const Duration(UInt128 picoseconds)
                         {
                         ++digits;
                         part = part * 10 + (ch - '0');
-                        if (index > last)
-                            {
-                            throw new IllegalArgument("duration is missing a trailing indicator:"
-                                    + $" \"{duration}\"");
-                            }
+                        assert:arg index <= last as
+                                $"Duration is missing a trailing indicator: {duration.quoted()}";
 
                         ch = duration[index++];
                         }
@@ -133,15 +127,12 @@ const Duration(UInt128 picoseconds)
                             break;
 
                         default:
-                            throw new IllegalArgument("duration is missing a trailing indicator:"
-                                    + $" \"{duration}\"");
+                            throw new IllegalArgument(
+                                    $"Duration is missing a trailing indicator: {duration.quoted()}");
                         }
 
-                    if (stageNew <= stage)
-                        {
-                        throw new IllegalArgument("duration components are out of order:"
-                                + $" \"{duration}\"");
-                        }
+                    assert:arg stageNew > stage as
+                            $"Duration components are out of order: {duration.quoted()}";
 
                     total += part * factor;
                     stage  = stageNew;
@@ -149,24 +140,17 @@ const Duration(UInt128 picoseconds)
                     break;
 
                 default:
-                    throw new IllegalArgument("duration includes an illegal character or character"
-                            + $" sequence starting with \"{duration[index]}\": \"{duration}\"");
+                    throw new IllegalArgument(
+                            $|Duration includes an illegal character or character\
+                             | sequence starting with {ch.quoted()}: {duration.quoted()}
+                            );
                 }
             }
 
-        if (stage == 6)
-            {
-            throw new IllegalArgument($"missing fractional second duration: \"{duration}\"");
-            }
+        assert:arg stage != 6 as $"Duration is missing fractional seconds: {duration.quoted()}";
+        assert:arg any        as $"No duration information provided: {duration.quoted()}";
 
-        if (any)
-            {
-            construct Duration(total);
-            }
-        else
-            {
-            throw new IllegalArgument($"no duration information provided: \"{duration}\"");
-            }
+        construct Duration(total);
         }
 
     /**
