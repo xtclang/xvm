@@ -64,7 +64,7 @@ assert:debug;
             Injector     injector;
 
             Log errors = new String[];
-            if ((fileTemplate, appHomeDir) := host.load(appName, errors)) // TODO GG: doesn't compile correctly
+            if ((fileTemplate, appHomeDir) := host.load(appName, errors))
                 {
                 if (String dbModuleName := host.detectDatabase(fileTemplate))
                     {
@@ -99,8 +99,9 @@ assert:debug;
                         new Container(fileTemplate.mainModule, Lightweight, repository, injector);
 
                 loaded.put(appName, appHost);
+                return HttpStatus.OK;
                 }
-            return HttpStatus.OK;
+            return HttpStatus.NotFound;
             }
 
         @Post("/run/{appName}")
