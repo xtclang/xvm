@@ -85,6 +85,7 @@ module TestWebApp
         @Get("/{who}")
         conditional User getUser(String who)
             {
+assert:debug;
             if (User user := users.get(who))
                 {
                 return True, user;

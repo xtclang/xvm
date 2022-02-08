@@ -13,6 +13,7 @@ val imdb          = project(":lib_imdb");
 val jsondb        = project(":lib_jsondb");
 val host          = project(":lib_host");
 val web           = project(":lib_web");
+val hostWeb       = project(":lib_hostWeb");
 
 val ecstasyMain     = "${ecstasy.projectDir}/src/main"
 val bridgeMain      = "${bridge.projectDir}/src/main"
@@ -25,6 +26,7 @@ val imdbMain        = "${imdb.projectDir}/src/main";
 val jsondbMain      = "${jsondb.projectDir}/src/main";
 val hostMain        = "${host.projectDir}/src/main";
 val webMain         = "${web.projectDir}/src/main";
+val hostWebMain     = "${hostWeb.projectDir}/src/main";
 
 val libDir        = "$buildDir/xdk/lib"
 val coreLib       = "$libDir/ecstasy.xtc"
@@ -249,6 +251,28 @@ val compileWeb = tasks.register<JavaExec>("compileWeb") {
     mainClass.set("org.xvm.tool.Compiler")
 }
 
+val compileHostWeb = tasks.register<JavaExec>("compileHostWeb") {
+    group       = "Execution"
+    description = "Build hostWeb.xtc module"
+
+    dependsOn(javatools.tasks["build"])
+
+    shouldRunAfter(compileHost)
+    shouldRunAfter(compileWeb)
+
+    jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
+
+    classpath(javatoolsJar)
+    args("-verbose",
+            "-o", "$libDir",
+            "-version", "$version",
+            "-L", "$coreLib",
+            "-L", "$bridgeLib",
+            "-L", "$libDir",
+            "$hostWebMain/x/hostWeb.x")
+    mainClass.set("org.xvm.tool.Compiler")
+}
+
 tasks.register("build") {
     group       = "Build"
     description = "Build the XDK"
@@ -291,7 +315,7 @@ tasks.register("build") {
         dependsOn(compileCollections)
         }
 
-    // compile JSON
+    // compile json.xtclang.org
     val jsonSrc = fileTree(jsonMain).getFiles().stream().
             mapToLong({f -> f.lastModified()}).max().orElse(0)
     val jsonDest = file("$libDir/json.xtc").lastModified()
@@ -300,7 +324,7 @@ tasks.register("build") {
         dependsOn(compileJson)
         }
 
-    // compile OODB
+    // compile oodb.xtclang.org
     val oodbSrc = fileTree(oodbMain).getFiles().stream().
             mapToLong({f -> f.lastModified()}).max().orElse(0)
     val oodbDest = file("$libDir/oodb.xtc").lastModified()
@@ -309,7 +333,7 @@ tasks.register("build") {
         dependsOn(compileOODB)
         }
 
-    // compile IMDB
+    // compile imdb.xtclang.org
     val imdbSrc = fileTree(imdbMain).getFiles().stream().
             mapToLong({f -> f.lastModified()}).max().orElse(0)
     val imdbDest = file("$libDir/imdb.xtc").lastModified()
@@ -318,7 +342,7 @@ tasks.register("build") {
         dependsOn(compileIMDB)
         }
 
-    // compile JSON-DB
+    // compile jsondb.xtclang.org
     val jsondbSrc = fileTree(jsondbMain).getFiles().stream().
     mapToLong({f -> f.lastModified()}).max().orElse(0)
     val jsondbDest = file("$libDir/jsondb.xtc").lastModified()
@@ -327,7 +351,7 @@ tasks.register("build") {
         dependsOn(compileJsonDB)
     }
 
-    // compile HOST
+    // compile host.xtclang.org
     val hostSrc = fileTree(hostMain).getFiles().stream().
     mapToLong({f -> f.lastModified()}).max().orElse(0)
     val hostDest = file("$libDir/host.xtc").lastModified()
@@ -336,13 +360,22 @@ tasks.register("build") {
         dependsOn(compileHost)
     }
 
-    // compile Web
+    // compile web.xtclang.org
     val webSrc = fileTree(webMain).getFiles().stream().
             mapToLong({f -> f.lastModified()}).max().orElse(0)
-    val webDest = file("$libDir/Web.xtc").lastModified()
+    val webDest = file("$libDir/web.xtc").lastModified()
 
     if (webSrc > webDest) {
         dependsOn(compileWeb)
+        }
+
+    // compile hostWeb.xtclang.org
+    val hostWebSrc = fileTree(hostWebMain).getFiles().stream().
+            mapToLong({f -> f.lastModified()}).max().orElse(0)
+    val hostWebDest = file("$libDir/hostWeb.xtc").lastModified()
+
+    if (hostWebSrc > hostWebDest) {
+        dependsOn(compileHostWeb)
         }
 
     doLast {

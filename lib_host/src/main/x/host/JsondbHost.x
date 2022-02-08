@@ -9,8 +9,8 @@ import oodb.DBUser;
 /**
  * Host for jsondb-based DB module.
  */
-class JsondbHost(String dbModuleName)
-        extends DbHost(dbModuleName)
+class JsondbHost(String dbModuleName, Directory homeDir)
+        extends DbHost(dbModuleName, homeDir)
     {
     // ---- run-time support -----------------------------------------------------------------------
 
@@ -19,7 +19,7 @@ class JsondbHost(String dbModuleName)
      */
     @Lazy CatalogMetadata meta.calc()
         {
-        return dbContainer.innerTypeSystem.primaryModule.as(CatalogMetadata);
+        return container.innerTypeSystem.primaryModule.as(CatalogMetadata);
         }
 
     /**
@@ -27,18 +27,9 @@ class JsondbHost(String dbModuleName)
      */
     @Lazy Catalog catalog.calc()
         {
-        @Inject Directory curDir;
-        Directory dataDir = curDir;
-        if (val subDir := dataDir.find("data"), subDir.is(Directory))
-            {
-            dataDir = subDir;
-            }
-
-        // +++ TODO temporary for testing
-        dataDir = curDir.dirFor($"build/{dbModuleName}_data").ensure();
-
-        Catalog catalog = meta.createCatalog(dataDir, False);
-        Boolean success = False;
+        Directory dataDir = homeDir.dirFor("data").ensure();
+        Catalog   catalog = meta.createCatalog(dataDir, False);
+        Boolean   success = False;
         try
             {
             success = catalog.open();

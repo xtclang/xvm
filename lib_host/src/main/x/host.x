@@ -1,3 +1,6 @@
+/**
+ * The module for basic hosting functionality.
+ */
 module host.xtclang.org
     {
     package oodb   import oodb.xtclang.org;
@@ -20,8 +23,9 @@ module host.xtclang.org
 
     import Injector.ConsoleBuffer as Buffer;
 
-    @Inject Console   console;
-    @Inject Directory curDir;
+    @Inject Console          console;
+    @Inject Directory        curDir;
+    @Inject ModuleRepository repository;
 
     void run(String[] args=[])
         {
@@ -51,6 +55,52 @@ module host.xtclang.org
 
     conditional FutureVar loadAndRun(String path, Log errors)
         {
+        FileTemplate fileTemplate;
+        Directory    appHomeDir;
+
+        if (!((fileTemplate, appHomeDir) := load(path, errors)))
+            {
+            return False;
+            }
+
+        function void() terminate = () -> {};
+        Injector        injector;
+
+        if (String dbModuleName := detectDatabase(fileTemplate))
+            {
+            // Directory workDir = appHomeDir.parent ?: assert; // TODO GG - breaks the second "if" below
+            Directory? workDir = appHomeDir.parent;
+            assert workDir != Null;
+
+            if (DbHost dbHost := createDbHost(workDir, dbModuleName, errors))
+                {
+                injector  = createDbInjector(dbHost, appHomeDir);
+                terminate = dbHost.closeDatabase;
+                }
+            else
+                {
+                return False;
+                }
+            }
+        else
+            {
+            injector = new Injector(appHomeDir);
+            }
+
+        Container container = new Container(fileTemplate.mainModule, Lightweight, repository, injector);
+
+        Tuple result = container.invoke^("run", Tuple:());
+        &result.whenComplete((r, x) -> terminate());
+        return True, &result;
+        }
+
+    /**
+     * @return True iff there is a file template for the specified module path
+     * @return (optional) the FileTemplate for the module
+     * @return (optional) the "home" directory to use
+     */
+    conditional (FileTemplate, Directory) load(String path, Log errors)
+        {
         File fileXtc;
         if (!(fileXtc := curDir.findFile(path)))
             {
@@ -69,12 +119,11 @@ module host.xtclang.org
             return False;
             }
 
-        @Inject Container.Linker linker;
-        @Inject ModuleRepository repository;
-
         FileTemplate fileTemplate;
         try
             {
+            @Inject Container.Linker linker;
+
             fileTemplate = linker.loadFileTemplate(bytes).resolve(repository);
             }
         catch (Exception e)
@@ -83,70 +132,11 @@ module host.xtclang.org
             return False;
             }
 
-        ModuleTemplate  moduleTemplate = fileTemplate.mainModule;
-        Path?           buildPath      = fileXtc.path.parent;
-        Directory       buildDir       = fileXtc.store.dirFor(buildPath?) : curDir;
-        Directory       appHomeDir     = ensureHome(buildDir, moduleTemplate);
-        function void() terminate      = () -> {};
-        Injector        injector;
+        Path?     buildPath = fileXtc.path.parent;
+        Directory workDir  = fileXtc.store.dirFor(buildPath?) : curDir; // temporary
+        Directory homeDir   = ensureHome(workDir, fileTemplate.mainModule.qualifiedName);
 
-        if (String dbModuleName := detectDatabase(fileTemplate))
-            {
-            DbHost         dbHost;
-            ModuleTemplate dbModuleTemplate;
-
-            if (dbHost           := createDBHost(dbModuleName, errors),
-                dbModuleTemplate := dbHost.ensureDBModule(repository, buildDir, errors)) {}
-            else
-                {
-                errors.add($"Error: Failed to create a host for : {dbModuleName}");
-                return False;
-                }
-
-            terminate = dbHost.closeDatabase;
-
-            Injector dbInjector = new Injector(ensureHome(buildDir, dbModuleTemplate));
-
-            dbHost.dbContainer = new Container(dbModuleTemplate, Lightweight, repository, dbInjector);
-
-            import oodb.Connection;
-            import oodb.RootSchema;
-            import oodb.DBUser;
-
-            function Connection(DBUser) createConnection = dbHost.ensureDatabase();
-
-            injector = new Injector(appHomeDir)
-                {
-                @Override
-                Supplier getResource(Type type, String name)
-                    {
-                    if (type.is(Type<Connection>) || type.is(Type<RootSchema>))
-                        {
-                        return (InjectedRef.Options opts) ->
-                            {
-                            // consider the injector to be passed some info about the calling
-                            // container, so the host could figure out the user
-                            DBUser user = new oodb.model.User(1, "test");
-                            Connection conn = createConnection(user);
-                            return type.is(Type<Connection>)
-                                    ? &conn.maskAs<Connection>(type)
-                                    : &conn.maskAs<RootSchema>(type);
-                            };
-                        }
-                    return super(type, name);
-                    }
-                };
-            }
-        else
-            {
-            injector = new Injector(appHomeDir);
-            }
-
-        Container container = new Container(moduleTemplate, Lightweight, repository, injector);
-
-        @Future Tuple result = container.invoke("run", Tuple:());
-        &result.whenComplete((r, x) -> terminate());
-        return True, &result;
+        return True, fileTemplate, homeDir;
         }
 
     /**
@@ -180,30 +170,81 @@ module host.xtclang.org
         }
 
     /**
-     * Create a DbHost.
+     * Create a DbHost for the specified db module.
+     *
+     * @return (optional) the DbHost
      */
-    conditional DbHost createDBHost(String dbModuleName, Log errors)
+    conditional DbHost createDbHost(Directory workDir, String dbModuleName, Log errors)
         {
+        Directory      dbHomeDir = ensureHome(workDir, dbModuleName);
+        DbHost         dbHost;
+        ModuleTemplate dbModuleTemplate;
+
         @Inject Map<String, String> properties;
 
         switch (String impl = properties.getOrDefault("db.impl", "json"))
             {
             case "":
             case "json":
-                return True, new JsondbHost(dbModuleName);
+                dbHost = new JsondbHost(dbModuleName, dbHomeDir);
+                break;
 
             default:
                 errors.add($"Error: Unknown db implementation: {impl}");
                 return False;
             }
+
+        if (!(dbModuleTemplate := dbHost.ensureDBModule(repository, workDir, errors)))
+            {
+            errors.add($"Error: Failed to create a host for : {dbModuleName}");
+            return False;
+            }
+
+        dbHost.container = new Container(dbModuleTemplate, Lightweight, repository,
+                                new Injector(dbHomeDir));
+        return True, dbHost;
+        }
+
+    /**
+     * @return an Injector for the specified DbHost
+     */
+    Injector createDbInjector(DbHost dbHost, Directory appHomeDir)
+        {
+        import oodb.Connection;
+        import oodb.RootSchema;
+        import oodb.DBUser;
+
+        function Connection(DBUser) createConnection = dbHost.ensureDatabase();
+
+        return new Injector(appHomeDir)
+            {
+            @Override
+            Supplier getResource(Type type, String name)
+                {
+                if (type.is(Type<Connection>) || type.is(Type<RootSchema>))
+                    {
+                    return (InjectedRef.Options opts) ->
+                        {
+                        // consider the injector to be passed some info about the calling
+                        // container, so the host could figure out the user
+                        DBUser user = new oodb.model.User(1, "test");
+                        Connection conn = createConnection(user);
+                        return type.is(Type<Connection>)
+                                ? &conn.maskAs<Connection>(type)
+                                : &conn.maskAs<RootSchema>(type);
+                        };
+                    }
+                return super(type, name);
+                }
+            };
         }
 
     /**
      * Ensure a home directory for the specified module.
      */
-    Directory ensureHome(Directory parentDir, ModuleTemplate template)
+    Directory ensureHome(Directory parentDir, String moduleName)
         {
-        return parentDir.dirFor($"{template.qualifiedName}_home").ensure();
+        return parentDir.dirFor(moduleName).ensure();
         }
 
     /**

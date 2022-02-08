@@ -1,6 +1,5 @@
 import ecstasy.io.Log;
 
-import ecstasy.mgmt.Container;
 import ecstasy.mgmt.ModuleRepository;
 
 import ecstasy.reflect.AnnotationTemplate;
@@ -22,20 +21,10 @@ import oodb.DBObject.DBCategory;
  * An abstract host for a DB module.
  */
 @Abstract
-class DbHost(String dbModuleName)
+class DbHost(String moduleName, Directory homeDir)
+        extends AppHost(moduleName, homeDir)
     {
     // ---- run-time support -----------------------------------------------------------------------
-
-    /**
-     * The hosted module name.
-     */
-    public/private String dbModuleName;
-
-    /**
-     * The Container that hosts the DB module.
-     */
-    @Unassigned
-    Container dbContainer;
 
     /**
      * Check an existence of the DB (e.g. on disk); create or recover if necessary.
@@ -90,8 +79,8 @@ class DbHost(String dbModuleName)
     conditional ModuleTemplate ensureDBModule(
             ModuleRepository repository, Directory buildDir, Log errors)
         {
-        ModuleTemplate dbModule   = repository.getResolvedModule(dbModuleName);
-        String         hostedName = $"{dbModuleName}_{hostName}";
+        ModuleTemplate dbModule   = repository.getResolvedModule(moduleName);
+        String         hostedName = $"{moduleName}_{hostName}";
 
         if (repository.moduleNames.contains(hostedName))
             {
@@ -104,19 +93,19 @@ class DbHost(String dbModuleName)
                 DateTime?      hostStamp  = hostModule.parent.created;
                 if (dbStamp != Null && hostStamp != Null && hostStamp > dbStamp)
                     {
-                    console.println($"Info: Host module '{hostedName}' for '{dbModuleName}' is up to date");
+                    console.println($"Info: Host module '{hostedName}' for '{moduleName}' is up to date");
                     return True, hostModule;
                     }
                 }
             catch (Exception ignore) {}
             }
 
-        String appName = dbModuleName; // TODO GG: allow fully qualified name
+        String appName = moduleName; // TODO GG: allow fully qualified name
 
         ClassTemplate appSchemaTemplate;
         if (!(appSchemaTemplate := findSchema(dbModule)))
             {
-            errors.add($"Error: Schema is not found in module '{dbModuleName}'");
+            errors.add($"Error: Schema is not found in module '{moduleName}'");
             return False;
             }
 
@@ -125,7 +114,7 @@ class DbHost(String dbModuleName)
         if (createModule(sourceFile, appName, dbModule, appSchemaTemplate, errors) &&
             compileModule(sourceFile, buildDir, errors))
             {
-            console.println($"Info: Created a host module '{hostedName}' for '{dbModuleName}'");
+            console.println($"Info: Created a host module '{hostedName}' for '{moduleName}'");
             return True, repository.getModule(hostedName);
             }
         return False;
