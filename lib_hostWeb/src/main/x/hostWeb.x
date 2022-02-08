@@ -51,7 +51,6 @@ module hostWeb.xtclang.org
         @Post("/load/{appName}")
         HttpStatus load(@PathParam String appName)
             {
-assert:debug;
             // we assume that the hostWeb covers a single "domain", which means that
             // there is one and only one loaded app for a given name
             if (loaded.contains(appName))
@@ -63,8 +62,9 @@ assert:debug;
             Directory    appHomeDir;
             Injector     injector;
 
-            Log errors = new String[];
-            if ((fileTemplate, appHomeDir) := host.load(appName, errors))
+            Log    errors = new String[];
+            String path   = $"build/{appName}.xtc"; // REVIEW: temporary hack
+            if ((fileTemplate, appHomeDir) := host.load(path, errors))
                 {
                 if (String dbModuleName := host.detectDatabase(fileTemplate))
                     {
@@ -79,7 +79,7 @@ assert:debug;
                         Directory workDir = appHomeDir.parent ?: assert;
                         if (!(dbHost := host.createDbHost(workDir, dbModuleName, errors)))
                             {
-                            // TODO: how to communicate the errors?
+                            // REVIEW: how to communicate the errors?
                             return HttpStatus.NotFound;
                             }
                         loaded.put(dbModuleName, dbHost);
@@ -107,7 +107,6 @@ assert:debug;
         @Post("/run/{appName}")
         HttpStatus run(@PathParam String appName)
             {
-assert:debug;
             if (FutureVar result := running.get(appName), !result.assigned)
                 {
                 return HttpStatus.Processing;
@@ -130,31 +129,38 @@ assert:debug;
             return HttpStatus.OK;
             }
 
-        @Get("/{appName}")
-        @Produces("text/plain")
+        @Get("/report/{appName}")
+        @Produces("application/json")
         String report(@PathParam String appName)
             {
-assert:debug;
+            String response;
             if (AppHost appHost := loaded.get(appName))
                 {
                 if (FutureVar result := running.get(appName))
                     {
-                    return result.completion.toString();
+                    response = result.completion.toString();
                     }
                 else
                     {
-                    return "Not running";
+                    response = "Not running";
                     }
                 }
             else
                 {
-                return "Not loaded";
+                response = "Not loaded";
                 }
+            return response.quoted();
             }
 
         @Post("/unload/{appName}")
-        void unload(@PathParam String appName)
+        HttpStatus unload(@PathParam String appName)
             {
+            if (loaded.contains(appName))
+                {
+                loaded.remove(appName);
+                return HttpStatus.OK;
+                }
+            return HttpStatus.NotFound;
             }
         }
     }
