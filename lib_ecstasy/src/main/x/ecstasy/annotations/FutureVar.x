@@ -485,6 +485,12 @@ mixin FutureVar<Referent>
             }
         }
 
+    @Override
+    String toString()
+        {
+        return $"FutureVar<{Referent}>(completion={completion})";
+        }
+
 
     // ----- inner classes -------------------------------------------------------------------------
 
