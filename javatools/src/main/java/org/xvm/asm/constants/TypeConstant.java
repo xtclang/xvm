@@ -1764,28 +1764,30 @@ public abstract class TypeConstant
         // constants (not including typedefs, type parameters, auto-narrowing types, and unresolved
         // names); in other words, there must be an identity constant and a component structure
         // available for the type
+        ConstantPool     pool = getConstantPool();
         IdentityConstant constId;
         ClassStructure   struct;
         try
             {
             constId = (IdentityConstant) getDefiningConstant();
             struct  = (ClassStructure)   constId.getComponent();
-
-            if (struct instanceof PackageStructure pkg && pkg.isModuleImport())
-                {
-                ModuleStructure module = pkg.getImportedModule();
-                struct  = module.isFingerprint() ? module.getFingerprintOrigin() : module;
-                constId = struct.getIdentityConstant();
-                }
             }
         catch (RuntimeException e)
             {
             throw new IllegalStateException("Unable to determine class for " + getValueString(), e);
             }
 
+        if (struct instanceof PackageStructure pkg && pkg.isModuleImport())
+            {
+            ModuleStructure module = pkg.getImportedModule();
+            module = module.isFingerprint() ? module.getFingerprintOrigin() : module;
+
+            return pool.ensureAccessTypeConstant(module.getCanonicalType(), Access.PRIVATE).
+                    buildTypeInfoImpl(errs);
+            }
+
         // get a snapshot of the current invalidation count BEFORE building the TypeInfo
-        ConstantPool pool    = getConstantPool();
-        int          cInvals = pool.getInvalidationCount();
+        int cInvals = pool.getInvalidationCount();
 
         Annotation[] aAnnoMixin = struct.collectAnnotations(false);
         Annotation[] aAnnoClass = struct.collectAnnotations(true);
