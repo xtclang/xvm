@@ -315,7 +315,9 @@ public class xModule
 
         if (expr != null && errs.getSeriousErrorCount() == 0)
             {
-            TypeCompositionStatement stmtModule = new TypeCompositionStatement(module, source, expr);
+            // create a TypeCompositionStatement parent or "expr"
+            new TypeCompositionStatement(module, source, expr);
+
             if (new StageMgr(expr, Compiler.Stage.Resolved, errs).fastForward(3))
                 {
                 TypeConstant typeClz = null;
