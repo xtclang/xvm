@@ -13,7 +13,6 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
-import org.xvm.asm.PackageStructure;
 import org.xvm.asm.TypedefStructure;
 import org.xvm.asm.XvmStructure;
 
@@ -201,17 +200,11 @@ public abstract class IdentityConstant
      */
     public boolean isNested()
         {
-        switch (getFormat())
+        return switch (getFormat())
             {
-            case Typedef:
-            case Property:
-            case MultiMethod:
-            case Method:
-                return true;
-
-            default:
-                return false;
-            }
+            case Typedef, Property, MultiMethod, Method -> true;
+            default                                     -> false;
+            };
         }
 
     /**
@@ -251,24 +244,15 @@ public abstract class IdentityConstant
     public String getNestedName()
         {
         IdentityConstant idParent = getParentConstant();
-        switch (idParent.getFormat())
+        return switch (idParent.getFormat())
             {
-            case Module:
-            case Package:
-            case Class:
-                return getName();
+            case Module, Package, Class -> getName();
+            case MultiMethod            -> idParent.getNestedName();
+            case Property               -> idParent.getNestedName() + '.' + getName();
 
-            case MultiMethod:
-                return idParent.getNestedName();
-
-            case Property:
-                return idParent.getNestedName() + '.' + getName();
-
-            case Typedef:       // this is not supposed to be possible
-            case Method:        // nothing is visible inside a method from the outside
-            default:
-                return null;
-            }
+            // nothing else is supposed to be visible inside a method from the outside
+            default -> null;
+            };
         }
 
     /**
@@ -284,7 +268,7 @@ public abstract class IdentityConstant
 
     /**
      * Obtain an object that identifies this constant relative to the class within which it nests,
-     * with generic types resolved resolved using the specified resolver.
+     * with generic types resolved using the specified resolver.
      *
      * @param pool      the ConstantPool to use
      * @param resolver  the {@link GenericTypeResolver} to resolve generic types
@@ -490,12 +474,11 @@ public abstract class IdentityConstant
                 return true;
                 }
 
-            if (!(obj instanceof NestedIdentity))
+            if (!(obj instanceof NestedIdentity that))
                 {
                 return false;
                 }
 
-            NestedIdentity   that   = (NestedIdentity) obj;
             IdentityConstant idThis = this.getIdentityConstant();
             IdentityConstant idThat = that.getIdentityConstant();
             boolean          fTop   = true;
@@ -647,38 +630,23 @@ public abstract class IdentityConstant
      */
     public TypeInfo ensureTypeInfo(Access access, ErrorListener errs)
         {
-        TypeConstant type;
-        switch (getFormat())
+        TypeConstant type = switch (getFormat())
             {
-            case Package:
-                {
-                PackageStructure pkg = (PackageStructure) getComponent();
-                if (pkg.isModuleImport())
-                    {
-                    type = pkg.getImportedModule().getCanonicalType();
-                    break;
-                    }
-                // fall through
-                }
-            case Module:
-            case DecoratedClass:
-                type = getType();
-                break;
+            case Package, Module, DecoratedClass ->
+                getType();
 
-            case Class:
-                type = ((ClassStructure) getComponent()).getFormalType();
-                break;
+            case Class ->
+                ((ClassStructure) getComponent()).getFormalType();
 
-            case Typedef:
-                type = ((TypedefStructure) getComponent()).getType();
-                break;
+            case Typedef ->
+                ((TypedefStructure) getComponent()).getType();
 
-            case Property:
+            case Property ->
                 throw new UnsupportedOperationException("TODO: TypeInfo for property");
 
-            default:
-                throw new IllegalStateException("not a class type: " + this);
-            }
+            default ->
+                throw new IllegalStateException("unsupported type: " + this);
+            };
 
         if (access != null && access != Access.PUBLIC)
             {
@@ -767,22 +735,15 @@ public abstract class IdentityConstant
     @Override
     public TypeConstant getType()
         {
-        switch (getFormat())
+        return switch (getFormat())
             {
-            case Module:
-            case Package:
-            case Class:
-            case Typedef:
-            case NativeClass:
-            case Property:
-            case TypeParameter:
-            case FormalTypeChild:
-            case DynamicFormal:
-                return getConstantPool().ensureTerminalTypeConstant(this);
+            case Module, Package, Class, Typedef, NativeClass, Property,
+                 TypeParameter, FormalTypeChild, DynamicFormal ->
+                getConstantPool().ensureTerminalTypeConstant(this);
 
-            default:
+            default ->
                 throw new IllegalStateException("not a class type: " + this);
-            }
+            };
         }
 
     @Override

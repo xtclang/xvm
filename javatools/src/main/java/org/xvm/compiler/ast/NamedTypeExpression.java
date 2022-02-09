@@ -815,21 +815,8 @@ public class NamedTypeExpression
                 {
                 // this is a duplicate of the check in calculateDefaultType() in case we got
                 // to this point bypassing that logic
-                boolean fValid;
-                if (type.isExplicitClassIdentity(true))
-                    {
-                    ClassStructure clzTarget = (ClassStructure)
-                            type.getSingleUnderlyingClass(true).getComponent();
-
-                    fValid = clzTarget.isTuple() ||
-                             atypeParams.length <= clzTarget.getTypeParamCount();
-                    }
-                else
-                    {
-                    fValid = false;
-                    }
-
-                if (fValid)
+                if (type.isExplicitClassIdentity(true) &&
+                        (type.isTuple() || atypeParams.length <= type.getMaxParamsCount()))
                     {
                     type = pool.ensureParameterizedTypeConstant(type, atypeParams);
                     }
