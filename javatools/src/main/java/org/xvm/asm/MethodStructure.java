@@ -1330,26 +1330,6 @@ public class MethodStructure
         }
 
     /**
-     * Find a parameter by name.
-     *
-     * @param sParam  the parameter name
-     *
-     * @return a parameter index; -1 if not found
-     */
-    public int findParameter(String sParam)
-        {
-        for (int i = 0, c = getParamCount(); i < c; i++)
-            {
-            Parameter param = getParam(i);
-            if (sParam.equals(param.getName()))
-                {
-                return i;
-                }
-            }
-        return -1;
-        }
-
-    /**
      * Calculate the line number for a given op counter.
      *
      * @return the corresponding line number (one-based) of zero if the line cannot be calculated
@@ -1617,9 +1597,8 @@ public class MethodStructure
                 if (idAnno.equals(idAnno.getConstantPool().clzInject()))
                     {
                     Constant[] aconstParam = typeAnno.getAnnotationParams();
-                    if (aconstParam.length > 0)
+                    if (aconstParam.length > 0 && aconstParam[0] instanceof StringConstant constName)
                         {
-                        StringConstant constName = (StringConstant) aconstParam[0];
                         setInjections.add(
                             new InjectionKey(constName.getValue(), typeAnno.getParamType(0)));
                         }
