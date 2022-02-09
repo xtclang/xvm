@@ -173,7 +173,7 @@ public class PropertyStructure
             && !isSynthetic()         // never synthetic
             && m_type.isTypeOfType(); // must be "Type"
 
-        setAuxiliary(true);
+        markAuxiliary();
         }
 
     /**

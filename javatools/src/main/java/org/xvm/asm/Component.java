@@ -428,15 +428,13 @@ public abstract class Component
         }
 
     /**
-     * Specify whether or not the auxiliary flag is set. The semantic of this flag depends on the
-     * specific component implementation.
-     *
-     * @param fAux  true to set the auxiliary flag; false otherwise
+     * Set the auxiliary flag. The semantic of this flag depends on the specific component
+     * implementation.
      */
-    protected void setAuxiliary(boolean fAux)
+    protected void markAuxiliary()
         {
         int nFlagsOld = m_nFlags;
-        int nFlagsNew = (nFlagsOld & ~AUXILIARY_BIT) | (fAux ? AUXILIARY_BIT : 0);
+        int nFlagsNew = (nFlagsOld & ~AUXILIARY_BIT) | AUXILIARY_BIT;
         if (nFlagsNew != nFlagsOld)
             {
             m_nFlags = (short) nFlagsNew;
@@ -2549,9 +2547,8 @@ public abstract class Component
     @Override
     public boolean equals(Object obj)
         {
-        if (obj instanceof Component)
+        if (obj instanceof Component that)
             {
-            Component that = (Component) obj;
             if (!isBodyIdentical(that) || !areChildrenIdentical(that))
                 {
                 return false;
@@ -2624,29 +2621,15 @@ public abstract class Component
          */
         public boolean isExtendsLegal(Format fmtSuper)
             {
-            switch (this)
+            return switch (this)
                 {
-                case CLASS:
-                    return fmtSuper == CLASS;
-
-                case CONST:
-                case ENUM:
-                case PACKAGE:
-                case MODULE:
-                    return fmtSuper == CONST || fmtSuper == CLASS;
-
-                case ENUMVALUE:
-                    return fmtSuper == ENUM;
-
-                case MIXIN:
-                    return fmtSuper == MIXIN;
-
-                case SERVICE:
-                    return fmtSuper == SERVICE || fmtSuper == CLASS;
-
-                default:
-                    return false;
-                }
+                case CLASS                        -> fmtSuper == CLASS;
+                case CONST, ENUM, PACKAGE, MODULE -> fmtSuper == CONST || fmtSuper == CLASS;
+                case ENUMVALUE                    -> fmtSuper == ENUM;
+                case MIXIN                        -> fmtSuper == MIXIN;
+                case SERVICE                      -> fmtSuper == SERVICE || fmtSuper == CLASS;
+                default                           -> false;
+                };
             }
 
         /**
@@ -2667,93 +2650,62 @@ public abstract class Component
                 throw new IllegalStateException("parent required");
                 }
 
-            switch (this)
+            return switch (this)
                 {
-                case FILE:
-                    throw new IllegalStateException("file is not instantiable");
+                case MODULE ->
+                    new ModuleStructure(xsParent, nFlags, (ModuleConstant) constId, condition);
 
-                case MODULE:
-                    return new ModuleStructure(xsParent, nFlags, (ModuleConstant) constId, condition);
+                case PACKAGE ->
+                    new PackageStructure(xsParent, nFlags, (PackageConstant) constId, condition);
 
-                case PACKAGE:
-                    return new PackageStructure(xsParent, nFlags, (PackageConstant) constId, condition);
+                case INTERFACE, CLASS, CONST, ENUM, ENUMVALUE, MIXIN, SERVICE ->
+                    new ClassStructure(xsParent, nFlags, (ClassConstant) constId, condition);
 
-                case INTERFACE:
-                case CLASS:
-                case CONST:
-                case ENUM:
-                case ENUMVALUE:
-                case MIXIN:
-                case SERVICE:
-                    return new ClassStructure(xsParent, nFlags, (ClassConstant) constId, condition);
+                case TYPEDEF ->
+                    new TypedefStructure(xsParent, nFlags, (TypedefConstant) constId, condition);
 
-                case TYPEDEF:
-                    return new TypedefStructure(xsParent, nFlags, (TypedefConstant) constId, condition);
+                case PROPERTY ->
+                    new PropertyStructure(xsParent, nFlags, (PropertyConstant) constId, condition);
 
-                case PROPERTY:
-                    return new PropertyStructure(xsParent, nFlags, (PropertyConstant) constId, condition);
+                case MULTIMETHOD ->
+                    new MultiMethodStructure(xsParent, nFlags, (MultiMethodConstant) constId, condition);
 
-                case MULTIMETHOD:
-                    return new MultiMethodStructure(xsParent, nFlags, (MultiMethodConstant) constId, condition);
+                case METHOD ->
+                    new MethodStructure(xsParent, nFlags, (MethodConstant) constId, condition);
 
-                case METHOD:
-                    return new MethodStructure(xsParent, nFlags, (MethodConstant) constId, condition);
-
-                default:
+                default ->
                     throw new IllegalStateException("uninstantiable format: " + this);
-                }
+                };
             }
 
         public boolean isImplicitlyStatic()
             {
-            switch (this)
+            return switch (this)
                 {
-                case MODULE:
-                case PACKAGE:
-                case ENUM:
-                case ENUMVALUE:
-                    return true;
+                case MODULE, PACKAGE, ENUM, ENUMVALUE ->
+                    true;
 
-                case INTERFACE:
-                case CLASS:
-                case CONST:
-                case MIXIN:
-                case SERVICE:
-                case PROPERTY:
-                case MULTIMETHOD:
-                case METHOD:
-                case TYPEDEF:
-                    return false;
+                case INTERFACE, CLASS, CONST, MIXIN, SERVICE, PROPERTY, MULTIMETHOD, METHOD, TYPEDEF ->
+                    false;
 
-                default:
+                default ->
                     throw new IllegalStateException("unsupported format: " + this);
-                }
+                };
             }
 
         public boolean isAutoNarrowingAllowed()
             {
-            switch (this)
+            return switch (this)
                 {
-                case MODULE:
-                case PACKAGE:
-                case ENUM:
-                case ENUMVALUE:
-                case PROPERTY:
-                case MULTIMETHOD:
-                case METHOD:
-                case TYPEDEF:
-                    return false;
+                case MODULE, PACKAGE, ENUM, ENUMVALUE, PROPERTY, MULTIMETHOD, METHOD, TYPEDEF ->
+                    false;
 
-                case MIXIN:
-                case INTERFACE:
-                case CLASS:
-                case CONST:
-                case SERVICE:
-                    return true;
+                case MIXIN, INTERFACE, CLASS, CONST, SERVICE ->
+                    true;
 
-                default:
+                default ->
                     throw new IllegalStateException("unsupported format: " + this);
-                }
+                };
             }
 
         /**
@@ -3470,12 +3422,11 @@ public abstract class Component
                 return true;
                 }
 
-            if (!(obj instanceof Contribution))
+            if (!(obj instanceof Contribution that))
                 {
                 return false;
                 }
 
-            Contribution that = (Contribution) obj;
             if (this.m_composition == that.m_composition
                     && Handy.equals(this.m_constModule, that.m_constModule)
                     && Handy.equals(this.m_typeContrib, that.m_typeContrib)
@@ -3607,7 +3558,7 @@ public abstract class Component
         /**
          * Defines the form of composition that this component contributes to the class.
          */
-        private Composition m_composition;
+        private final Composition m_composition;
 
         /**
          * Defines the module (ModuleConstant) that was used as part of the Contribution.
@@ -3652,16 +3603,11 @@ public abstract class Component
          */
         public ResolutionResult combine(ResolutionResult that)
             {
-            switch (this)
+            return switch (this)
                 {
-                case POSSIBLE:
-                case ERROR:
-                    return this;
-
-                case UNKNOWN:
-                default:
-                    return that;
-                }
+                case POSSIBLE, ERROR -> this;
+                default              -> that;
+                };
             }
         }
 
@@ -3752,7 +3698,7 @@ public abstract class Component
         /**
          * The error listener.
          */
-        private ErrorListener m_errs;
+        private final ErrorListener m_errs;
         }
 
 
