@@ -94,15 +94,17 @@ public class xResponse
 
     private void sendResponse(ResponseHandle hResponse, ObjectHandle[] ahArg)
         {
+        long                 nStatus       = ((JavaLong) ahArg[0]).getValue();
+        StringArrayHandle    hHeaderNames  = (StringArrayHandle) ((ArrayHandle) ahArg[1]).m_hDelegate;
+        GenericArrayDelegate hHeaderValues = (GenericArrayDelegate) ((ArrayHandle) ahArg[2]).m_hDelegate;
+        ArrayHandle          hBody         = (ArrayHandle) ahArg[3];
+        byte[]               abBody        = xByteArray.getBytes(hBody);
+        int                  cbBody        = abBody.length;
+
         HttpExchange exchange = hResponse.f_exchange;
         try
             {
-            long                 nStatus       = ((JavaLong) ahArg[0]).getValue();
-            StringArrayHandle    hHeaderNames  = (StringArrayHandle) ((ArrayHandle) ahArg[1]).m_hDelegate;
-            GenericArrayDelegate hHeaderValues = (GenericArrayDelegate) ((ArrayHandle) ahArg[2]).m_hDelegate;
-            ArrayHandle          hBody         = (ArrayHandle) ahArg[3];
-            byte[]               abBody        = xByteArray.getBytes(hBody);
-            Headers              headers       = exchange.getResponseHeaders();
+            Headers headers = exchange.getResponseHeaders();
 
             for (long n = 0; n < hHeaderNames.m_cSize; n++)
                 {
@@ -111,15 +113,21 @@ public class xResponse
                 hValues.stream().forEach(hValue -> headers.add(sName, hValue));
                 }
 
-            exchange.sendResponseHeaders((int) nStatus, abBody.length);
+            exchange.sendResponseHeaders((int) nStatus, cbBody > 0 ? cbBody : -1);
+            }
+        catch (IOException t)
+            {
+            sendError(exchange, t);
+            return;
+            }
+
+        if (cbBody > 0)
+            {
             try (OutputStream out = exchange.getResponseBody())
                 {
                 out.write(abBody);
                 }
-            }
-        catch (Throwable t)
-            {
-            sendError(exchange, t);
+            catch (Throwable ignore) {}
             }
         }
 
