@@ -74,9 +74,8 @@ public class xModule
     @Override
     public int createConstHandle(Frame frame, Constant constant)
         {
-        if (constant instanceof ModuleConstant)
+        if (constant instanceof ModuleConstant idModule)
             {
-            ModuleConstant  idModule   = (ModuleConstant) constant;
             TypeConstant    typeModule = idModule.getType();
             TypeComposition clazz      = ensureClass(typeModule, typeModule);
 
@@ -230,10 +229,9 @@ public class xModule
             return frame.assignValue(aiReturn[0], xBoolean.FALSE);
             }
 
-        if (oResult instanceof TypeConstant)
+        if (oResult instanceof TypeConstant typeClz)
             {
-            TypeConstant     typeClz = (TypeConstant) oResult;
-            IdentityConstant idClz   = typeClz.getConstantPool().ensureClassConstant(typeClz);
+            IdentityConstant idClz = typeClz.getConstantPool().ensureClassConstant(typeClz);
             return frame.assignConditionalDeferredValue(aiReturn, frame.getConstHandle(idClz));
             }
 
@@ -313,7 +311,7 @@ public class xModule
             {
             expr = fClass ? parser.parseClassExpression() : parser.parseTypeExpression();
             }
-        catch (RuntimeException e) {}
+        catch (RuntimeException ignore) {}
 
         if (expr != null && errs.getSeriousErrorCount() == 0)
             {
@@ -325,7 +323,7 @@ public class xModule
                     {
                     typeClz = expr.ensureTypeConstant();
                     }
-                catch (RuntimeException e) {}
+                catch (RuntimeException ignore) {}
 
                 if (typeClz != null && !typeClz.containsUnresolved())
                     {
