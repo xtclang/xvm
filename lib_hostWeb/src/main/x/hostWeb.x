@@ -109,7 +109,7 @@ module hostWeb.xtclang.org
             {
             if (FutureVar result := running.get(appName), !result.assigned)
                 {
-                return HttpStatus.Processing;
+                return HttpStatus.NoContent;
                 }
 
             AppHost appHost;
@@ -155,12 +155,28 @@ module hostWeb.xtclang.org
         @Post("/unload/{appName}")
         HttpStatus unload(@PathParam String appName)
             {
-            if (loaded.contains(appName))
+            if (AppHost appHost := loaded.get(appName))
                 {
                 loaded.remove(appName);
+
+                if (FutureVar result := running.get(appName), !result.assigned)
+                    {
+                    // TODO GG: appHost.container.kill();
+                    result.set(Tuple:());
+                    }
+                running.remove(appName);
+
                 return HttpStatus.OK;
                 }
             return HttpStatus.NotFound;
+            }
+
+        @Post("/debug")
+        HttpStatus debug()
+            {
+            // temporary
+            assert:debug;
+            return HttpStatus.OK;
             }
         }
     }
