@@ -6,19 +6,16 @@ module TestSimple
     import ecstasy.collections.*;
     import collections.*;
 
+    package host  import host.xtclang.org;
+
     void run()
         {
-        testDuration(Duration:123456s);
-        testDuration(Duration:P1DT12H30M0.02234S);
-        }
+        @Inject Directory homeDir;
 
-    void testDuration(Duration d)
-        {
-        String iso = d.toString(True);
-        console.println($"{d} -> {iso}");
+        Directory d = host.ensureHome(homeDir, "test");
+        console.println(d);
 
-        Duration d2 = new Duration(iso);
-        assert d2 == d;
+        assert Module m := host.isModuleImport();
+        console.println(m);
         }
     }
-

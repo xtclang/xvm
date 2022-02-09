@@ -18,6 +18,7 @@ import java.util.Set;
 
 import java.util.concurrent.ConcurrentHashMap;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
@@ -36,6 +37,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
+import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.PackageStructure;
 import org.xvm.asm.PropertyStructure;
@@ -594,17 +596,14 @@ public abstract class TypeConstant
             {
             public TypeConstant apply(TypeConstant type)
                 {
-                return type instanceof VirtualChildTypeConstant
+                return type instanceof VirtualChildTypeConstant typeChild
                     ? fPromote
-                        ? pool.ensureVirtualChildTypeConstant(typeParent,
-                                ((VirtualChildTypeConstant) type).getChildName())
+                        ? pool.ensureVirtualChildTypeConstant(typeParent, typeChild.getChildName())
                         // a virtual child that retains the origin parent type is only used as a
                         // transient type by the isA() and TypeInfo calculations and therefore
                         // doesn't need to be registered with a pool
                         : new VirtualChildTypeConstant(pool,
-                                type.getParentType(),
-                                ((VirtualChildTypeConstant) type).getChildName(),
-                                typeParent)
+                                type.getParentType(), typeChild.getChildName(), typeParent)
                     : type.replaceUnderlying(pool, this);
                 }
             };
@@ -656,8 +655,8 @@ public abstract class TypeConstant
     public boolean isPublicEcstasyType()
         {
         return isSingleDefiningConstant()
-                && getDefiningConstant() instanceof ClassConstant
-                && ((ClassConstant) this.getDefiningConstant()).getModuleConstant().isEcstasyModule()
+                && getDefiningConstant() instanceof ClassConstant idClass
+                && idClass.getModuleConstant().isEcstasyModule()
                 && getAccess() == Access.PUBLIC;
         }
 
@@ -685,10 +684,7 @@ public abstract class TypeConstant
      */
     public String getEcstasyClassName()
         {
-        return isSingleDefiningConstant()
-                    && getDefiningConstant() instanceof ClassConstant
-                    && ((ClassConstant) getDefiningConstant()).getModuleConstant().isEcstasyModule()
-                    && getAccess() == Access.PUBLIC
+        return isPublicEcstasyType()
                 ? ((ClassConstant) getDefiningConstant()).getPathString()
                 : "?";
         }
@@ -1461,7 +1457,7 @@ public abstract class TypeConstant
                             // recursion, so be very careful about what can allow a TypeInfo to be built
                             // "incomplete" (it needs to be impossible to rebuild a TypeInfo and have it
                             // be incomplete for the second time)
-                            if (++m_cRecursiveDepth > 2)
+                            if (m_cRecursiveDepth.getAndIncrement() > 2)
                                 {
                                 // an infinite loop
                                 throw new IllegalStateException("Infinite loop while producing a TypeInfo for "
@@ -1472,7 +1468,7 @@ public abstract class TypeConstant
                             ErrorListener errsTemp = errs.branch(null);
 
                             infoDeferred = typeDeferred.buildTypeInfo(errsTemp);
-                            --m_cRecursiveDepth;
+                            m_cRecursiveDepth.getAndDecrement();
 
                             if (isComplete(infoDeferred))
                                 {
@@ -1748,9 +1744,9 @@ public abstract class TypeConstant
         if (isAnnotated())
             {
             TypeConstant typeUnderlying = getUnderlyingType(); // remove "Access:PRIVATE" piece
-            if (typeUnderlying instanceof AnnotatedTypeConstant)
+            if (typeUnderlying instanceof AnnotatedTypeConstant typeAnno)
                 {
-                return ((AnnotatedTypeConstant) typeUnderlying).buildPrivateInfo(errs);
+                return typeAnno.buildPrivateInfo(errs);
                 }
 
             TypeConstant typeAnno = typeUnderlying;
@@ -1774,6 +1770,13 @@ public abstract class TypeConstant
             {
             constId = (IdentityConstant) getDefiningConstant();
             struct  = (ClassStructure)   constId.getComponent();
+
+            if (struct instanceof PackageStructure pkg && pkg.isModuleImport())
+                {
+                ModuleStructure module = pkg.getImportedModule();
+                struct  = module.isFingerprint() ? module.getFingerprintOrigin() : module;
+                constId = struct.getIdentityConstant();
+                }
             }
         catch (RuntimeException e)
             {
@@ -2391,12 +2394,12 @@ public abstract class TypeConstant
                 break;
 
             case INTERFACE:
-                if (constId instanceof NativeRebaseConstant)
+                if (constId instanceof NativeRebaseConstant idNative)
                     {
                     // for a native rebase, the interface becomes a class, and that class implements
                     // the original interface and Object
                     TypeConstant typeNatural = (TypeConstant) pool.register(
-                            ((NativeRebaseConstant) constId).getClassConstant().getType());
+                            idNative.getClassConstant().getType());
                     if (isParamsSpecified())
                         {
                         typeNatural = pool.ensureParameterizedTypeConstant(typeNatural, getParamTypesArray());
@@ -4452,9 +4455,9 @@ public abstract class TypeConstant
         // recurse through children
         for (Component child : structContrib.children())
             {
-            if (child instanceof MultiMethodStructure)
+            if (child instanceof MultiMethodStructure mms)
                 {
-                for (MethodStructure method : ((MultiMethodStructure) child).methods())
+                for (MethodStructure method : mms.methods())
                     {
                     if (!method.isLambda())
                         {
@@ -4726,9 +4729,9 @@ public abstract class TypeConstant
         int              cCustomMethods = 0;
         for (Component child : prop.children())
             {
-            if (child instanceof MultiMethodStructure)
+            if (child instanceof MultiMethodStructure mms)
                 {
-                for (MethodStructure method : ((MultiMethodStructure) child).methods())
+                for (MethodStructure method : mms.methods())
                     {
                     if (method.isPotentialInitializer())
                         {
@@ -5303,9 +5306,9 @@ public abstract class TypeConstant
             return typeRight.calculateRelation(typeLeftResolved);
             }
 
-        if (typeLeft instanceof RecursiveTypeConstant)
+        if (typeLeft instanceof RecursiveTypeConstant typeRecursive)
             {
-            return calculateRelation(((RecursiveTypeConstant) typeLeft).getReferredToType());
+            return calculateRelation(typeRecursive.getReferredToType());
             }
 
         Map<TypeConstant, Relation> mapRelations = ensureRelationMap();
@@ -6766,11 +6769,11 @@ public abstract class TypeConstant
             return false;
             }
 
-        TypeConstant typeThis = this instanceof UnresolvedTypeConstant
-                ? ((UnresolvedTypeConstant) this).getResolvedType()
+        TypeConstant typeThis = this instanceof UnresolvedTypeConstant typeUnresolvedThis
+                ? typeUnresolvedThis.getResolvedType()
                 : this;
-        TypeConstant typeThat = obj instanceof UnresolvedTypeConstant
-                ? ((UnresolvedTypeConstant) obj).getResolvedType()
+        TypeConstant typeThat = obj instanceof UnresolvedTypeConstant typeUnresolvedThat
+                ? typeUnresolvedThat.getResolvedType()
                 : (TypeConstant) obj;
 
         return typeThis != null     && typeThat != null
@@ -6896,10 +6899,7 @@ public abstract class TypeConstant
             else
                 {
                 // the right type is relational; no duck typing for parameterized left
-                if (cParamsLeft > 0)
-                    {
-                    return false;
-                    }
+                return cParamsLeft <= 0;
                 }
             }
         return true;
@@ -7016,7 +7016,7 @@ public abstract class TypeConstant
     private transient volatile TypeInfo m_typeinfo;
     private static final AtomicReferenceFieldUpdater<TypeConstant, TypeInfo> s_typeinfo =
             AtomicReferenceFieldUpdater.newUpdater(TypeConstant.class, TypeInfo.class, "m_typeinfo");
-    private transient volatile int m_cRecursiveDepth;
+    private transient final AtomicInteger m_cRecursiveDepth = new AtomicInteger();
 
     /**
      * The last time that we checked the invalidations from the ConstantPool, we cached the number

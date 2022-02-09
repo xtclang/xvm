@@ -93,8 +93,8 @@ public class ModuleStructure
      */
     public boolean isMainModule()
         {
-        assert (moduletype == ModuleType.Primary) == getName().equals(getFileStructure().getModuleName());
-        return moduletype == ModuleType.Primary;
+        return moduletype == ModuleType.Primary &&
+                getName().equals(getFileStructure().getModuleName());
         }
 
     /**
@@ -106,20 +106,11 @@ public class ModuleStructure
      */
     public boolean isFingerprint()
         {
-        switch (moduletype)
+        return switch (moduletype)
             {
-            case Optional:
-            case Desired:
-            case Required:
-                return true;
-
-            case Primary:
-            case Embedded:
-                return false;
-
-            default:
-                throw new IllegalStateException();
-            }
+            case Optional, Desired, Required -> true;
+            case Primary, Embedded           -> false;
+            };
         }
 
     /**
@@ -572,13 +563,12 @@ public class ModuleStructure
             return true;
             }
 
-        if (!(obj instanceof ModuleStructure && super.equals(obj)))
+        if (!(obj instanceof ModuleStructure that && super.equals(obj)))
             {
             return false;
             }
 
         // compare versions
-        ModuleStructure that = (ModuleStructure) obj;
         return this.moduletype == that.moduletype
                 && Handy.equals(this.vtreeImportAllowVers, that.vtreeImportAllowVers)
                 && Handy.equals(this.listImportPreferVers, that.listImportPreferVers)

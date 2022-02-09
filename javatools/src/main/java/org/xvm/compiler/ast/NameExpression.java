@@ -1129,14 +1129,6 @@ public class NameExpression
         {
         if (isConstant())
             {
-            if (m_plan == Plan.Singleton && m_arg instanceof PackageConstant idPackage)
-                {
-                PackageStructure pkg = (PackageStructure) idPackage.getComponent();
-                if (pkg.isModuleImport())
-                    {
-                    return pkg.getImportedModule().getIdentityConstant();
-                    }
-                }
             return toConstant();
             }
 
