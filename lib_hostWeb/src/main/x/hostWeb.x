@@ -89,7 +89,7 @@ module hostWeb.xtclang.org
                     }
                 else
                     {
-                    injector = new host.Injector(appHomeDir);
+                    injector = new Injector(appHomeDir);
                     }
 
                 @Inject ModuleRepository repository;
