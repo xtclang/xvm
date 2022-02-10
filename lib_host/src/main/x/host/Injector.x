@@ -4,7 +4,7 @@
 service Injector(Directory appHomeDir)
         implements ResourceProvider
     {
-    @Lazy ConsoleBuffer consoleBuffer.calc()
+    @Lazy ConsoleImpl consoleImpl.calc()
         {
         File consoleFile = appHomeDir.fileFor("console.log");
         if (consoleFile.exists)
@@ -16,25 +16,25 @@ service Injector(Directory appHomeDir)
             {
             consoleFile.ensure();
             }
-        return new ConsoleBuffer(new ConsoleBack(consoleFile));
+        return new ConsoleImpl(consoleFile);
         }
 
     /**
-     * The "client" side of the ConsoleBuffer that operates in the injected space.
+     * The file-based Console implementation.
      */
-    const ConsoleBuffer(ConsoleBack backService)
+    class ConsoleImpl(File consoleFile)
             implements Console
         {
         @Override
         void print(Object o)
             {
-            backService.print(o.toString());
+            write(o.is(String) ? o : o.toString());
             }
 
         @Override
         void println(Object o = "")
             {
-            backService.println(o.toString());
+            writeln(o.is(String) ? o : o.toString());
             }
 
         @Override
@@ -49,24 +49,12 @@ service Injector(Directory appHomeDir)
             throw new UnsupportedOperation();
             }
 
-        @Override
-        Appender<Char> appendTo(Appender<Char> buf)
-            {
-            return buf.addAll("Console");
-            }
-        }
-
-    /**
-     * The "service" side of the ConsoleBuffer.
-     */
-    class ConsoleBack(File consoleFile)
-        {
-        void print(String s)
+        void write(String s)
             {
             consoleFile.append(s.utf8());
             }
 
-        void println(String s)
+        void writeln(String s)
             {
             // consider remembering the position if the file size calls for pruning
             consoleFile.append(s.utf8()).append(['\n'.toByte()]);
@@ -84,7 +72,7 @@ service Injector(Directory appHomeDir)
             case Console:
                 if (name == "console")
                     {
-                    return &consoleBuffer.maskAs(Console);
+                    return &consoleImpl.maskAs(Console);
                     }
                 wrongName = True;
                 break;

@@ -91,9 +91,8 @@ public class xRTFunction
     @Override
     public int createConstHandle(Frame frame, Constant constant)
         {
-        if (constant instanceof MethodConstant)
+        if (constant instanceof MethodConstant idFunc)
             {
-            MethodConstant  idFunc     = (MethodConstant) constant;
             MethodStructure structFunc = (MethodStructure) idFunc.getComponent();
 
             assert structFunc.isFunction();
@@ -1108,7 +1107,7 @@ public class xRTFunction
                         : super.call1Impl(frame, hTarget, ahVar, iReturn);
                 }
 
-            if (!validatePassThrough(frame.f_context, getMethod(), ahVar))
+            if (!validatePassThrough(frame.f_context, ctxTarget, getMethod(), ahVar))
                 {
                 return frame.raiseException(xException.mutableObject(frame));
                 }
@@ -1133,7 +1132,7 @@ public class xRTFunction
                         : super.callTImpl(frame, hTarget, ahVar, iReturn);
                 }
 
-            if (!validatePassThrough(frame.f_context, getMethod(), ahVar))
+            if (!validatePassThrough(frame.f_context, ctxTarget, getMethod(), ahVar))
                 {
                 return frame.raiseException(xException.mutableObject(frame));
                 }
@@ -1158,7 +1157,7 @@ public class xRTFunction
                         : super.callNImpl(frame, hTarget, ahVar, aiReturn);
                 }
 
-            if (!validatePassThrough(frame.f_context, getMethod(), ahVar))
+            if (!validatePassThrough(frame.f_context, ctxTarget, getMethod(), ahVar))
                 {
                 return frame.raiseException(xException.mutableObject(frame));
                 }
@@ -1203,7 +1202,7 @@ public class xRTFunction
                 return super.call1Impl(frame, null, ahVar, iReturn);
                 }
 
-            if (!validatePassThrough(frame.f_context, getMethod(), ahVar))
+            if (!validatePassThrough(frame.f_context, hService.f_context, getMethod(), ahVar))
                 {
                 return frame.raiseException(xException.mutableObject(frame));
                 }
@@ -1221,7 +1220,7 @@ public class xRTFunction
                 return super.callTImpl(frame, null, ahVar, iReturn);
                 }
 
-            if (!validatePassThrough(frame.f_context, getMethod(), ahVar))
+            if (!validatePassThrough(frame.f_context, hService.f_context, getMethod(), ahVar))
                 {
                 return frame.raiseException(xException.mutableObject(frame));
                 }
@@ -1239,7 +1238,7 @@ public class xRTFunction
                 return super.callNImpl(frame, null, ahVar, aiReturn);
                 }
 
-            if (!validatePassThrough(frame.f_context, getMethod(), ahVar))
+            if (!validatePassThrough(frame.f_context, hService.f_context, getMethod(), ahVar))
                 {
                 return frame.raiseException(xException.mutableObject(frame));
                 }
@@ -1264,6 +1263,20 @@ public class xRTFunction
             f_ctx = ctx;
             }
 
+        @Override
+        public boolean isService()
+            {
+            return true;
+            }
+
+        @Override
+        public boolean isPassThrough(Container container)
+            {
+            // the args will be validated on the call
+            return true;
+            }
+
+
         // ----- FunctionHandle interface ----------------------------------------------------------
 
         @Override
@@ -1274,7 +1287,7 @@ public class xRTFunction
                 return super.call1(frame, hTarget, ahVar, iReturn);
                 }
 
-            if (!validatePassThrough(frame.f_context, getMethod(), ahVar))
+            if (!validatePassThrough(frame.f_context, f_ctx, getMethod(), ahVar))
                 {
                 return frame.raiseException(xException.mutableObject(frame));
                 }
@@ -1290,7 +1303,7 @@ public class xRTFunction
                 return super.callT(frame, hTarget, ahVar, iReturn);
                 }
 
-            if (!validatePassThrough(frame.f_context, getMethod(), ahVar))
+            if (!validatePassThrough(frame.f_context, f_ctx, getMethod(), ahVar))
                 {
                 return frame.raiseException(xException.mutableObject(frame));
                 }
@@ -1306,7 +1319,7 @@ public class xRTFunction
                 return super.callN(frame, hTarget, ahVar, aiReturn);
                 }
 
-            if (!validatePassThrough(frame.f_context, getMethod(), ahVar))
+            if (!validatePassThrough(frame.f_context, f_ctx, getMethod(), ahVar))
                 {
                 return frame.raiseException(xException.mutableObject(frame));
                 }
@@ -1322,10 +1335,15 @@ public class xRTFunction
      * Check if all the arguments are pass-through; replace the proxyable ones with the
      * corresponding proxy handles.
      *
+     * @param ctxSrc  the service context that the arguments "belong" to
+     * @param ctxDst  the service context that the arguments are to be sent to
+     * @param method  the method that is to be called on the "destination" context
+     * @param ahArg   the actual arguments
+     *
      * @return true iff all the arguments are pass-through or have been successfully proxied
      */
-    private static boolean validatePassThrough(ServiceContext ctx, MethodStructure method,
-                                               ObjectHandle[] ahArg)
+    private static boolean validatePassThrough(ServiceContext ctxSrc, ServiceContext ctxDst,
+                                               MethodStructure method, ObjectHandle[] ahArg)
         {
         // Note: this logic could be moved to ServiceContext.sendInvokeXXX()
         for (int i = 0, c = ahArg.length; i < c; i++)
@@ -1337,9 +1355,9 @@ public class xRTFunction
                 break;
                 }
 
-            if (!hArg.isPassThrough(ctx.f_container))
+            if (!hArg.isPassThrough(ctxDst.f_container))
                 {
-                hArg = hArg.getTemplate().createProxyHandle(ctx, hArg, method.getParamTypes()[i]);
+                hArg = hArg.getTemplate().createProxyHandle(ctxSrc, hArg, method.getParamTypes()[i]);
                 if (hArg == null)
                     {
                     return false;

@@ -6,16 +6,32 @@ module TestSimple
     import ecstasy.collections.*;
     import collections.*;
 
-    package host  import host.xtclang.org;
-
     void run()
         {
-        @Inject Directory homeDir;
+        console.println(new Point(0, 0));
+        console.println(new SPoint(0, 0));
+        console.println(new CPoint(0, 0));
+        }
 
-        Directory d = host.ensureHome(homeDir, "test");
-        console.println(d);
+    class Point(Int x, Int y)
+        {
+        @Override
+        String toString()
+            {
+            return $"({x}, {y})";
+            }
+        }
 
-        assert Module m := host.isModuleImport();
-        console.println(m);
+    service SPoint(Int x, Int y)
+        {
+        @Override
+        String toString()
+            {
+            return $"S({x}, {y})";
+            }
+        }
+
+    const CPoint(Int x, Int y)
+        {
         }
     }
