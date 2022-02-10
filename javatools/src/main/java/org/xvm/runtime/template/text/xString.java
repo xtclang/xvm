@@ -287,17 +287,15 @@ public class xString
     private static char[] getChars(ArrayHandle hArray)
         {
         DelegateHandle hDelegate = hArray.m_hDelegate;
-        if (hDelegate instanceof SliceHandle)
+        if (hDelegate instanceof SliceHandle hSlice)
             {
-            SliceHandle     hSlice = (SliceHandle) hDelegate;
             CharArrayHandle hChars = (CharArrayHandle) hSlice.f_hSource;
             return xRTCharDelegate.getChars(hChars,
                     (int) hSlice.f_ofStart, (int) hSlice.m_cSize, hSlice.f_fReverse);
             }
 
-        if (hDelegate instanceof CharArrayHandle)
+        if (hDelegate instanceof CharArrayHandle hChars)
             {
-            CharArrayHandle hChars = (CharArrayHandle) hDelegate;
             return xRTCharDelegate.getChars(hChars, 0, (int) hChars.m_cSize, false);
             }
         throw new UnsupportedOperationException();
