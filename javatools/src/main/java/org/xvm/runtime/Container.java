@@ -96,7 +96,7 @@ public abstract class Container
             {
             ConstantPool pool = f_idModule.getConstantPool();
 
-            try (var x = ConstantPool.withPool(pool))
+            try (var ignore = ConstantPool.withPool(pool))
                 {
                 m_contextMain = ctx = createServiceContext(f_idModule.getName());
                 xService.INSTANCE.createServiceHandle(ctx,

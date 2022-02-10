@@ -45,10 +45,8 @@ public abstract class ConstHeap
             return hValue;
             }
 
-        if (constValue instanceof SingletonConstant)
+        if (constValue instanceof SingletonConstant constSingleton)
             {
-            SingletonConstant constSingleton = (SingletonConstant) constValue;
-
             hValue = constSingleton.getHandle();
             return hValue == null
                 ? new DeferredSingletonHandle(constSingleton)
@@ -56,10 +54,8 @@ public abstract class ConstHeap
             }
 
         // support for the "local property" mode
-        if (constValue instanceof PropertyConstant)
+        if (constValue instanceof PropertyConstant idProp)
             {
-            PropertyConstant idProp = (PropertyConstant) constValue;
-
             assert !idProp.isConstant();
 
             return saveConstHandle(constValue, new DeferredPropertyHandle(idProp));

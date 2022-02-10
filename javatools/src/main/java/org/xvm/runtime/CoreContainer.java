@@ -28,8 +28,6 @@ import org.xvm.runtime.template.numbers.xIntLiteral.IntNHandle;
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
-import org.xvm.runtime.template.xService.ServiceHandle;
-
 import org.xvm.runtime.template._native.xTerminalConsole;
 
 import org.xvm.runtime.template._native.lang.src.xRTCompiler;
@@ -68,7 +66,7 @@ public class CoreContainer
         ensureServiceContext();
 
         ConstantPool pool = f_idModule.getConstantPool();
-        try (var x = ConstantPool.withPool(pool))
+        try (var ignore = ConstantPool.withPool(pool))
             {
             initResources(pool);
             }
@@ -76,7 +74,7 @@ public class CoreContainer
 
     public void invoke0(String sMethodName, ObjectHandle... ahArg)
         {
-        try (var x = ConstantPool.withPool(f_idModule.getConstantPool()))
+        try (var ignore = ConstantPool.withPool(f_idModule.getConstantPool()))
             {
             MethodConstant idMethod = findModuleMethod(sMethodName, ahArg);
             if (idMethod == null)
@@ -260,11 +258,11 @@ public class CoreContainer
             xRTRandom templateRTRandom = (xRTRandom) f_templates.getTemplate("_native.numbers.RTRandom");
             if (templateRTRandom != null)
                 {
-                TypeConstant  typeRandom = frame.poolContext().ensureEcstasyTypeConstant("numbers.Random");
-                ServiceHandle hRnd       = templateRTRandom.createRandomHandle(
-                    createServiceContext("Random"),
-                    templateRTRandom.getCanonicalClass(), typeRandom, lSeed);
-                return hRnd;
+                TypeConstant typeRandom = frame.poolContext().ensureEcstasyTypeConstant("numbers.Random");
+
+                return templateRTRandom.createRandomHandle(
+                        createServiceContext("Random"),
+                        templateRTRandom.getCanonicalClass(), typeRandom, lSeed);
                 }
             }
 
@@ -279,7 +277,7 @@ public class CoreContainer
                         frame.poolContext().ensureEcstasyTypeConstant("numbers.Random");
                 m_hRandom = hRnd = templateRTRandom.createRandomHandle(
                     createServiceContext("Random"),
-                    templateRTRandom.getCanonicalClass(), typeRandom, 0l);
+                    templateRTRandom.getCanonicalClass(), typeRandom, 0L);
                 }
             }
 
@@ -582,7 +580,6 @@ public class CoreContainer
 
     private ObjectHandle m_hLocalClock;
     private ObjectHandle m_hRandom;
-    private ObjectHandle m_hWebServer;
     private ObjectHandle m_hOSStorage;
     private ObjectHandle m_hFileStore;
     private ObjectHandle m_hRootDir;

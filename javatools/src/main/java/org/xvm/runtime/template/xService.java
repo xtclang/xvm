@@ -489,14 +489,6 @@ public class xService
         int invoke(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hValue);
         }
 
-    // an operation against a property that takes one parameter and returns one value
-    @FunctionalInterface
-    public interface PropertyOperation11
-        {
-        int invoke(Frame frame, ObjectHandle hTarget, PropertyConstant idProp,
-                   ObjectHandle hValue, int iReturn);
-        }
-
     // native function adapters
     @FunctionalInterface
     public interface NativeOperation

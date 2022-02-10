@@ -353,10 +353,9 @@ public class ClassComposition
                     Object nid = entry.getKey();
 
                     // disregard nested (private) and synthetic properties
-                    if (nid instanceof String)
+                    if (nid instanceof String sName)
                         {
                         FieldInfo field = entry.getValue();
-                        String    sName = (String) nid;
                         if (sName.charAt(0) != '$' && field.isRegular())
                             {
                             listNames.add(sName);

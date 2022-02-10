@@ -294,9 +294,8 @@ public abstract class Utils
             while (++index < aiReturn.length)
                 {
                 ObjectHandle hValue = ahValue[index];
-                if (hValue instanceof DeferredCallHandle)
+                if (hValue instanceof DeferredCallHandle hDeferred)
                     {
-                    DeferredCallHandle hDeferred = ((DeferredCallHandle) hValue);
                     hDeferred.addContinuation(this::updateDeferredValue);
                     return hDeferred.proceed(frameCaller, this);
                     }
@@ -348,9 +347,8 @@ public abstract class Utils
             while (++index < aiReturn.length)
                 {
                 ObjectHandle hValue = ahValue[index];
-                if (hValue instanceof DeferredCallHandle)
+                if (hValue instanceof DeferredCallHandle hDeferred)
                     {
-                    DeferredCallHandle hDeferred = ((DeferredCallHandle) hValue);
                     hDeferred.addContinuation(this::updateDeferredValue);
                     return hDeferred.proceed(frameCaller, this);
                     }
@@ -1118,7 +1116,7 @@ public abstract class Utils
         /**
          * @param action   the action
          * @param hTarget  the target Var
-         * @param fPost    if true, the the operation is performed after the current value is returned
+         * @param fPost    if true, the operation is performed after the current value is returned
  *                 (e.g. i--); otherwise - before that (e.g. --i)
          * @param iReturn  the register to place the result of the operation into
          */
