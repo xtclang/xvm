@@ -151,7 +151,7 @@ public class DebugConsole
             switch (m_stepMode)
                 {
                 case StepInto:
-                    if (frame.isNativeStack() || frame.f_function.isSynthetic())
+                    if (frame.isNative() || frame.f_function.isSynthetic())
                         {
                         return;
                         }
