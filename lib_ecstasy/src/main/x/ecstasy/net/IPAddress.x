@@ -260,8 +260,6 @@ const IPAddress(Byte[] bytes)
                     }
                 else if (ch == '.')
                     {
-// TODO can't end with '.'
-
                     if (Digits.first)
                         {
                         return False, [], $"The IPv4 address contains a blank value: {text.quoted()}";
@@ -308,6 +306,10 @@ const IPAddress(Byte[] bytes)
         if (offset < length)
             {
             return False, [], $"More than 4 parts in the IPv4 address: {text.quoted()}";
+            }
+        else if (text[length-1] == '.')
+            {
+            return False, [], $"The IPv4 address ends with a '.': {text.quoted()}";
             }
 
         return True, bytes, Null;
