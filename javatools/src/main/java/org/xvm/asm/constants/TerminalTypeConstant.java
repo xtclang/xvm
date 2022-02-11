@@ -1965,6 +1965,11 @@ public class TerminalTypeConstant
             case FormalTypeChild:
             case Property: // formal types do not consume
             case DynamicFormal:
+            case IsConst:
+            case IsEnum:
+            case IsModule:
+            case IsPackage:
+            case IsClass:
                 return Usage.NO;
 
             case NativeClass:
@@ -2041,6 +2046,11 @@ public class TerminalTypeConstant
             case Package:
             case TypeParameter:
             case FormalTypeChild:
+            case IsConst:
+            case IsEnum:
+            case IsModule:
+            case IsPackage:
+            case IsClass:
                 return Usage.NO;
 
             case Property:
