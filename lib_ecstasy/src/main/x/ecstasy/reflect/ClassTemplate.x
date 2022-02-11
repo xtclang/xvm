@@ -411,6 +411,18 @@ interface ClassTemplate
             }
 
         @Override
+        TypeTemplate type.get()
+            {
+            return annotation.template.type;
+            }
+
+        @Override
+        Contribution[] contribs.get()
+            {
+            return [];
+            }
+
+        @Override
         conditional (AnnotationTemplate, Composition!) deannotate()
             {
             return True, annotation, composition;

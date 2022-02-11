@@ -5,9 +5,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Component.Contribution;
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MultiMethodStructure;
@@ -31,6 +33,7 @@ import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
 
 import org.xvm.runtime.template.collections.xArray;
+import org.xvm.runtime.template.collections.xArray.Mutability;
 import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 
 import org.xvm.runtime.template.text.xString;
@@ -74,7 +77,7 @@ public class xRTClassTemplate
 
             ACTION = (xEnum) registry.getTemplate("reflect.ClassTemplate.Composition.Action");
 
-            CREATE_CONTRIB_METHOD         = struct.findMethod("createContribution", 5);
+            CREATE_CONTRIB_METHOD         = struct.findMethod("createContribution", 6);
             CREATE_TYPE_PARAMETERS_METHOD = struct.findMethod("createTypeParameters", 2);
 
             markNativeProperty("implicitName");
@@ -245,6 +248,7 @@ public class xRTClassTemplate
             ConstantPool pool        = frameCaller.poolContext();
             Contribution contrib     = listContrib.get(index);
             TypeConstant typeContrib = contrib.getTypeConstant();
+            ObjectHandle haParams    = xNullable.NULL;
             ObjectHandle hDelegatee  = xNullable.NULL; // TODO
             ObjectHandle haNames     = xNullable.NULL;
             ObjectHandle haTypes     = xNullable.NULL;
@@ -253,8 +257,30 @@ public class xRTClassTemplate
             switch (contrib.getComposition())
                 {
                 case Annotation:
-                    sAction = "AnnotatedBy";
+                    {
+                    Annotation anno    = contrib.getAnnotation();
+                    Constant[] aParam  = anno.getParams();
+                    int        cParams = aParam.length;
+
+                    ObjectHandle[] ahParam;
+                    if (cParams == 0)
+                        {
+                        ahParam = Utils.OBJECTS_NONE;
+                        }
+                    else
+                        {
+                        ahParam = new ObjectHandle[cParams];
+                        for (int i = 0; i < cParams; i++)
+                            {
+                            ahParam[i] = frame.getConstHandle(aParam[i]);
+                            }
+                        // TODO GG: handle deferred
+                        }
+
+                    haParams = xArray.makeObjectArrayHandle(ahParam, Mutability.Constant);
+                    sAction  = "AnnotatedBy";
                     break;
+                    }
                 case Extends:
                     sAction = "Extends";
                     break;
@@ -299,11 +325,12 @@ public class xRTClassTemplate
             ObjectHandle[] ahVar = new ObjectHandle[CREATE_CONTRIB_METHOD.getMaxVars()];
             ahVar[0] = Utils.ensureInitializedEnum(frameCaller, ACTION.getEnumByName(sAction));
             ahVar[1] = typeContrib.ensureTypeHandle(pool);
-            ahVar[2] = hDelegatee;
-            ahVar[3] = haNames;
-            ahVar[4] = haTypes;
+            ahVar[2] = haParams;
+            ahVar[3] = hDelegatee;
+            ahVar[4] = haNames;
+            ahVar[5] = haTypes;
 
-            return frameCaller.call1(CREATE_CONTRIB_METHOD, null, ahVar, Op.A_STACK);
+            return frameCaller.call1(CREATE_CONTRIB_METHOD, hComponent, ahVar, Op.A_STACK);
             };
 
         return xArray.createAndFill(frame, ensureContribArrayComposition(),
@@ -467,7 +494,7 @@ public class xRTClassTemplate
      */
     protected int invokeDeannotate(Frame frame, ComponentTemplateHandle hComponent, int[] aiReturn)
         {
-        // a Composition that is a ClassTemplate is not annotated
+        // ClassTemplate annotations are actually contributions
         return frame.assignValue(aiReturn[0], xBoolean.FALSE);
         }
 

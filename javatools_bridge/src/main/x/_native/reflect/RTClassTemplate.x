@@ -1,5 +1,7 @@
 import ecstasy.reflect.AnnotationTemplate;
+import ecstasy.reflect.Argument;
 import ecstasy.reflect.ClassTemplate;
+import ecstasy.reflect.ClassTemplate.AnnotatingComposition;
 import ecstasy.reflect.ClassTemplate.Composition;
 import ecstasy.reflect.ClassTemplate.Contribution;
 import ecstasy.reflect.MultiMethodTemplate;
@@ -53,14 +55,26 @@ class RTClassTemplate
     @Override @RO String? implicitName;
 
     // helper function to create a Contribution
-    static Contribution createContribution(Action           action,
-                                          Type              ingredientType,
-                                          PropertyTemplate? delegatee,
-                                          String[]?         constraintNames,
-                                          Type[]?           constraintTypes)
+    Contribution createContribution(Action            action,
+                                    Type              ingredientType,
+                                    Object[]?         parameters,
+                                    PropertyTemplate? delegatee,
+                                    String[]?         constraintNames,
+                                    Type[]?           constraintTypes)
         {
         assert Composition         ingredient := ingredientType.template.fromClass();
         Map<String, TypeTemplate>? constraints = Null;
+
+        if (action == AnnotatedBy)
+            {
+            assert ingredient.is(ClassTemplate) && parameters != Null;
+
+            Argument[] arguments = parameters.size == 0
+                    ? []
+                    : new Array(parameters.size, i -> new Argument(parameters[i].as(const)));
+
+            ingredient = new AnnotatingComposition(new AnnotationTemplate(ingredient, arguments), this);
+            }
 
         if (constraintNames != Null && constraintTypes != Null)
             {
@@ -69,7 +83,7 @@ class RTClassTemplate
             assert count == constraintTypes.size;
 
             TypeTemplate[] constraintTemplates =
-                    new Array<TypeTemplate> (count, i -> constraintTypes[i].template);
+                    new Array<TypeTemplate>(count, i -> constraintTypes[i].template);
             constraints = new ListMap(constraintNames, constraintTemplates);
             }
 

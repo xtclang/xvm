@@ -129,10 +129,8 @@ public class xConst
     @Override
     public int createConstHandle(Frame frame, Constant constant)
         {
-        if (constant instanceof RangeConstant)
+        if (constant instanceof RangeConstant constRange)
             {
-            RangeConstant constRange = (RangeConstant) constant;
-
             ObjectHandle  h1 = frame.getConstHandle(constRange.getFirst());
             ObjectHandle  h2 = frame.getConstHandle(constRange.getLast());
             BooleanHandle f1 = xBoolean.makeHandle(constRange.isFirstExcluded());
