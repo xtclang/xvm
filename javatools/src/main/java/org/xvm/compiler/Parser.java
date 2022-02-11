@@ -5,7 +5,6 @@ import java.io.File;
 import java.io.IOException;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -187,7 +186,7 @@ public class Parser
                     }
                 }
             }
-        catch (RuntimeException e)
+        catch (RuntimeException ignore)
             {
             }
         finally
@@ -242,7 +241,7 @@ public class Parser
         do
             {
             List<AnnotationExpression> annotations = null;
-            AnnotationExpression       annotation  = null;
+            AnnotationExpression       annotation;
             while ((annotation = parseAnnotation(false)) != null)
                 {
                 if (annotations == null)
@@ -314,7 +313,7 @@ public class Parser
 
         Token var = new Token(type.getEndPosition(), type.getEndPosition(), Id.IDENTIFIER, "test");
         Statement stmt = new VariableDeclarationStatement(type, var, true);
-        StatementBlock body = new StatementBlock(Arrays.asList(stmt));
+        StatementBlock body = new StatementBlock(List.of(stmt));
         TypeCompositionStatement module = new TypeCompositionStatement(m_source,
                 type.getStartPosition(), type.getEndPosition(), null, null, null,
                 new Token(0, 0, Id.MODULE), null, null, null, null, null, body, null);
@@ -1083,7 +1082,7 @@ public class Parser
 
                     if (exprType == null)
                         {
-                        exprType = parseExpression(true);
+                        exprType = parseExtendedExpression();
                         }
                     listExpr.add(exprType);
 
@@ -1403,7 +1402,7 @@ public class Parser
             lEndPos = body.getEndPosition();
             }
 
-        Token      tokAsn = tokAsn = match(Id.ASN);
+        Token      tokAsn = match(Id.ASN);
         Expression value  = null;
         if (tokAsn != null)
             {
@@ -1985,7 +1984,7 @@ public class Parser
                         }
                     }
                 }
-            catch (CompilerException e) {}
+            catch (CompilerException ignore) {}
 
             if (stmtAsn != null)
                 {
@@ -2445,7 +2444,7 @@ public class Parser
                     {
                     ArrayList<Expression> listTupleValues = new ArrayList<>();
                     listTupleValues.add(expr);
-                    while (match(Id.COMMA) != null);
+                    while (match(Id.COMMA) != null)
                         {
                         listTupleValues.add(peek(Id.ANY)
                                 ? new IgnoredNameExpression(current())
@@ -2513,7 +2512,7 @@ public class Parser
                 // encountering an expression followed by anything other than an identifier (for
                 // a declaration) or a comma indicates that we're going down the wrong path
                 // REVIEW does this correctly parse @annotated types? should "Annotations" be added to "PrimaryExpression"? (seems logical)
-                Expression expr = parseExpression(true);
+                Expression expr = parseExtendedExpression();
 
                 // next token   meaning
                 // ----------   ----------------------------------------
@@ -2793,18 +2792,11 @@ public class Parser
 
         VariableDeclarationStatement var = new VariableDeclarationStatement(type, expectNameOrAny(), false);
 
-        Token tokAsn;
-        switch (peek().getId())
+        Token tokAsn = switch (peek().getId())
             {
-            case ASN:
-            case COND_ASN:
-            case COND_NN_ASN:
-                tokAsn = current();
-                break;
-            default:
-                tokAsn = expect(Id.ASN);
-                break;
-            }
+            case ASN, COND_ASN, COND_NN_ASN -> current();
+            default                         -> expect(Id.ASN);
+            };
 
         return new AssignmentStatement(var, tokAsn, parseExpression());
         }
@@ -2854,7 +2846,7 @@ public class Parser
         }
 
     /**
-     * Parse any expression.
+     * Parse an expression.
      *
      * @return an expression
      */
@@ -2864,15 +2856,13 @@ public class Parser
         }
 
     /**
-     * Parse any expression.
-     *
-     * @param fExtended  true to allow parsing of an extended type expression
+     * Parse an extended expression.
      *
      * @return an expression
      */
-    Expression parseExpression(boolean fExtended)
+    Expression parseExtendedExpression()
         {
-        return parseElseExpression(fExtended);
+        return parseElseExpression(true);
         }
 
     /**
@@ -3500,7 +3490,7 @@ public class Parser
                                         params = null;
                                         }
                                     }
-                                catch (CompilerException e) {}
+                                catch (CompilerException ignore) {}
                                 }
 
                             if (expr instanceof NamedTypeExpression)
@@ -3916,7 +3906,7 @@ public class Parser
                             params = null;
                             }
                         }
-                    catch (CompilerException e) {}
+                    catch (CompilerException ignore) {}
                     }
 
                 // test to see if this is a tuple literal of the form "Tuple:(", or some other
@@ -3966,7 +3956,7 @@ public class Parser
                             parseLambdaBody(), tokLParen.getStartPosition());
                     }
 
-                Expression expr = parseExpression(true);
+                Expression expr = parseExtendedExpression();
                 switch (peek().getId())
                     {
                     case COMMA:
@@ -4134,7 +4124,7 @@ public class Parser
                     {
                     file = m_source.resolvePath(sFile);
                     }
-                catch (IOException e) {}
+                catch (IOException ignore) {}
 
                 Token   tokData = null;
                 boolean fErr    = false;
@@ -4149,7 +4139,7 @@ public class Parser
                             {
                             abData = m_source.includeBinary(sFile);
                             }
-                        catch (IOException e) {}
+                        catch (IOException ignore) {}
                         if (abData == null)
                             {
                             abData = new byte[0];
@@ -4165,7 +4155,7 @@ public class Parser
                             Source source = m_source.includeString(sFile);
                             sData = source == null ? null : source.toRawString();
                             }
-                        catch (IOException e) {}
+                        catch (IOException ignore) {}
                         if (sData == null)
                             {
                             sData = "";
@@ -4238,7 +4228,7 @@ public class Parser
                     if (tokDot.hasTrailingWhitespace())
                         {
                         log(Severity.ERROR, INVALID_PATH, lPos, tokDot.getEndPosition(), sb.toString());
-                        throw new CompilerException("illegal include-file path: " + sb.toString());
+                        throw new CompilerException("illegal include-file path: " + sb);
                         }
                     // fall through
                 case IDENTIFIER:
@@ -4259,7 +4249,7 @@ public class Parser
                                 if (tokDot.hasTrailingWhitespace())
                                     {
                                     log(Severity.ERROR, INVALID_PATH, lPos, tokDot.getEndPosition(), sb.toString());
-                                    throw new CompilerException("illegal include-file path: " + sb.toString());
+                                    throw new CompilerException("illegal include-file path: " + sb);
                                     }
                                 break;
 
@@ -4525,7 +4515,7 @@ public class Parser
                     if (match(Id.COMMA) == null)
                         {
                         // special handling for the possibility that this is a range, not an array
-                        if (sType.equals("") && exprs.size() == 1 && expr instanceof RelOpExpression
+                        if (sType.equals("") && exprs.size() == 1 && expr instanceof RelOpExpression exprRange
                                 && ((RelOpExpression) expr).getOperator().getId() == Id.DOTDOT)
                             {
                             // it's a range, not an array, so it could have either a closing right
@@ -4536,7 +4526,6 @@ public class Parser
                                 tokClose = expect(Id.R_SQUARE);
                                 }
 
-                            RelOpExpression exprRange = (RelOpExpression) expr;
                             return new RelOpExpression(tokOpen, exprRange.getExpression1(),
                                     exprRange.getOperator(), exprRange.getExpression2(), tokClose);
                             }
@@ -4632,7 +4621,7 @@ public class Parser
                     {
                     file = m_source.resolvePath(sFile);
                     }
-                catch (IOException e) {}
+                catch (IOException ignore) {}
 
                 if (file == null || !file.exists()
                         || (fDir != file.isDirectory())
@@ -4858,7 +4847,8 @@ public class Parser
                 Token tokKeyword = current();
                 if (!fExtended)
                     {
-                    log(Severity.ERROR, EXT_TYPE_SYNTAX, tokKeyword.getStartPosition(), tokKeyword.getEndPosition());
+                    log(Severity.ERROR, EXT_TYPE_SYNTAX, tokKeyword.getStartPosition(),
+                            tokKeyword.getEndPosition(), tokKeyword.getValueText());
                     }
                 type = new KeywordTypeExpression(tokKeyword);
                 return type;
@@ -4871,7 +4861,8 @@ public class Parser
                 tokAccess = current();
                 if (!fExtended)
                     {
-                    log(Severity.ERROR, EXT_TYPE_SYNTAX, tokAccess.getStartPosition(), tokAccess.getEndPosition());
+                    log(Severity.ERROR, EXT_TYPE_SYNTAX, tokAccess.getStartPosition(),
+                            tokAccess.getEndPosition(), tokAccess.getValueText());
                     }
                 // fall through
             default:
@@ -5993,7 +5984,7 @@ public class Parser
                 {
                 case ENC_COMMENT:
                     String sComment = (String) m_token.getValue();
-                    if (sComment.length() > 0 && sComment.startsWith("*"))
+                    if (sComment.startsWith("*"))
                         {
                         m_doc = m_token;
                         }
@@ -6043,7 +6034,7 @@ public class Parser
             }
         }
 
-    private class Mark
+    private static class Mark
         {
         long    pos;
         Token   token;
@@ -6431,16 +6422,16 @@ public class Parser
      */
     public static final String INVALID_PATH      = "PARSER-24";
     /**
-     * Incompatible comparison operator for equality.
+     * Incompatible chained equality operators: Cannot mix \"==\" and \"!=\".
      */
     public static final String BAD_CHAINED_EQ    = "PARSER-25";
     /**
-     * Incompatible comparison operator for ordering.
+     * Incompatible chained ordering operators: Cannot mix \"<\"/\"<=\" and \">\"/\">=\".
      */
     public static final String BAD_CHAINED_CMP   = "PARSER-26";
     /**
-     * Extended type syntax unexpected.
-     * Use parenthesis around the type to enable the extended type syntax.
+     * Unexpected keyword {0} indicates an extended type; use parenthesis around the type to enable
+     * the extended type syntax.
      */
     public static final String EXT_TYPE_SYNTAX   = "PARSER-27";
 
