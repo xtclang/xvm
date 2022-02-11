@@ -21,7 +21,6 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
@@ -302,7 +301,7 @@ public class xRTClassTemplate
             ahVar[1] = typeContrib.ensureTypeHandle(pool);
             ahVar[2] = hDelegatee;
             ahVar[3] = haNames;
-            ahVar[3] = haTypes;
+            ahVar[4] = haTypes;
 
             return frameCaller.call1(CREATE_CONTRIB_METHOD, null, ahVar, Op.A_STACK);
             };
@@ -316,8 +315,6 @@ public class xRTClassTemplate
      */
     public int getPropertyMixesInto(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
         {
-        ClassStructure clz       = (ClassStructure) hComponent.getComponent();
-        GenericHandle  hTemplate = null; // TODO
         return frame.raiseException("Not implemented");
         }
 
@@ -395,8 +392,6 @@ public class xRTClassTemplate
      */
     public int getPropertySourceInfo(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
         {
-        ClassStructure clz   = (ClassStructure) hComponent.getComponent();
-        GenericHandle  hInfo = null; // TODO
         return frame.raiseException("Not implemented");
         }
 
@@ -464,8 +459,6 @@ public class xRTClassTemplate
      */
     protected int invokeEnsureClass(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
         {
-        ClassStructure clz = (ClassStructure) hComponent.getComponent();
-        // TODO CP
         return frame.raiseException("Not implemented");
         }
 
