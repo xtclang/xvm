@@ -25,7 +25,7 @@ const String
     /**
      * The array of characters that form the content of the String.
      */
-    private Char[] chars;
+    Char[] chars;
 
 
     // ----- operators -----------------------------------------------------------------------------
