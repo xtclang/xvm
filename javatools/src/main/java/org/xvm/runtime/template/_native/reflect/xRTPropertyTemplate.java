@@ -115,7 +115,7 @@ public class xRTPropertyTemplate
         }
 
     /**
-     * Implements property: {@code isConstant.get()}.
+     * Implements property: {@code immutable AnnotationTemplate[] annotations.get()}.
      */
     public int getPropertyAnnotations(Frame frame, ComponentTemplateHandle hProp, int iReturn)
         {
