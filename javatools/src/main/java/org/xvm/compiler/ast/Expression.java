@@ -1522,7 +1522,7 @@ public abstract class Expression
         {
         int     cLVals = aLVal.length;
         int     cRVals = getValueCount();
-        boolean fCond  = getCodeContainer().isReturnConditional();
+        boolean fCond  = isConditionalResult();
 
         assert cLVals <= cRVals || fCond && cLVals == cRVals + 1 || !isCompletable();
 
@@ -1571,10 +1571,31 @@ public abstract class Expression
                 {
                 fLocalPropOk &= aLVal[i].supportsLocalPropMode();
                 }
-            Argument[] aArg = generateArguments(ctx, code, fLocalPropOk, true, errs);
-            for (int i = 0; i < cLVals; ++i)
+
+            boolean    fCheckArg0 = fCond && cLVals > 1;
+            Argument[] aArg       = generateArguments(ctx, code, fLocalPropOk, !fCheckArg0, errs);
+
+            if (fCheckArg0)
                 {
-                aLVal[i].assign(aArg[i], code, errs);
+                Argument argCond = aArg[0];
+                assert !argCond.isStack();
+
+                aLVal[0].assign(argCond, code, errs);
+
+                Label label = new Label("skip_assign");
+                code.add(new JumpFalse(argCond, label));
+                for (int i = 1; i < cLVals; ++i)
+                    {
+                    aLVal[i].assign(aArg[i], code, errs);
+                    }
+                code.add(label);
+                }
+            else
+                {
+                for (int i = 0; i < cLVals; ++i)
+                    {
+                    aLVal[i].assign(aArg[i], code, errs);
+                    }
                 }
             return;
             }

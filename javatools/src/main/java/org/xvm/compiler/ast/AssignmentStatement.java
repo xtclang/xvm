@@ -314,6 +314,12 @@ public class AssignmentStatement
         }
 
     @Override
+    protected boolean allowsConditional(Expression exprChild)
+        {
+        return getCategory() == Category.CondRight && exprChild == rvalue;
+        }
+
+    @Override
     protected boolean allowsShortCircuit(AstNode nodeChild)
         {
         // there are a few reasons to disallow short-circuiting, such as when we have a declaration

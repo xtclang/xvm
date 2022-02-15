@@ -48,7 +48,7 @@ public class ReturnStatement
 
     public ReturnStatement(Token keyword, Expression expr)
         {
-        this(keyword, Arrays.asList(expr));
+        this(keyword, Arrays.asList(expr)); // mutable list
         }
 
     public ReturnStatement(Token keyword, List<Expression> exprs)
@@ -89,7 +89,6 @@ public class ReturnStatement
 
 
     // ----- compilation ---------------------------------------------------------------------------
-
 
     @Override
     protected boolean allowsConditional(Expression exprChild)
@@ -471,23 +470,22 @@ public class ReturnStatement
                     {
                     assert cRets == cExprs;
 
-                    boolean fCheck = fConditional;
-
                     Argument[] aArgs = new Argument[cRets];
                     for (int i = 0; i < cRets; ++i)
                         {
-                        aArgs[i] = listExprs.get(i).generateArgument(ctx, code, true, i > 0 || !fCheck, errs);
+                        aArgs[i] = listExprs.get(i).generateArgument(ctx, code, true,
+                                        i > 0 || !fConditional, errs);
                         }
 
-                    Label labelFalse = fCheck ? new Label("false") : null;
-                    if (fCheck)
+                    Label labelFalse = fConditional ? new Label("false") : null;
+                    if (fConditional)
                         {
                         code.add(new JumpFalse(aArgs[0], labelFalse));
                         }
 
                     code.add(new Return_N(aArgs));
 
-                    if (fCheck)
+                    if (fConditional)
                         {
                         code.add(labelFalse);
                         code.add(new Return_1(pool.valFalse()));

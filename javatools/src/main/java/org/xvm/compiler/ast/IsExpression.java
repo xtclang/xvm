@@ -9,6 +9,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.TypeConstant;
 
@@ -17,6 +18,7 @@ import org.xvm.asm.op.JumpFalse;
 import org.xvm.asm.op.JumpNType;
 import org.xvm.asm.op.JumpType;
 import org.xvm.asm.op.Label;
+import org.xvm.asm.op.Move;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
@@ -50,9 +52,13 @@ public class IsExpression
         return lEndPos;
         }
 
-    /**
-     * @return true iff the expression implements the "n type" / "n value" code path
-     */
+    @Override
+    protected boolean hasSingleValueImpl()
+        {
+        return false;
+        }
+
+    @Override
     protected boolean hasMultiValueImpl()
         {
         return true;
@@ -62,12 +68,6 @@ public class IsExpression
     public TypeConstant[] getImplicitTypes(Context ctx)
         {
         return new TypeConstant[] {pool().typeBoolean(), expr2.getImplicitType(ctx)};
-        }
-
-    @Override
-    public boolean isConditionalResult()
-        {
-        return true;
         }
 
     @Override
@@ -99,6 +99,13 @@ public class IsExpression
         boolean        fSingle     = atypeRequired.length <= 1;
         TypeConstant[] atypeActual = new TypeConstant[fSingle ? 1 : 2];
         Constant[]     aconstVal   = null;
+
+        if (!fSingle && !getParent().allowsConditional(this))
+            {
+            log(errs, Severity.ERROR, Compiler.CONDITIONAL_RETURN_NOT_ALLOWED,
+                    "(Boolean, Object) is()");
+            return null;
+            }
 
         atypeActual[0] = pool.typeBoolean();
 
@@ -228,73 +235,52 @@ public class IsExpression
         }
 
     @Override
-    public boolean isRuntimeConstant()
+    public boolean isConditionalResult()
         {
-        return expr1.isRuntimeConstant();
+        return true;
         }
 
     @Override
-    public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
+    public void generateAssignments(Context ctx, Code code, Assignable[] aLVal, ErrorListener errs)
         {
-        if (LVal.isLocalArgument())
+        int cLVals = aLVal.length;
+        if (cLVals == 0)
             {
-            Argument argTarget = expr1.generateArgument(ctx, code, true, true, errs);
-            Argument argType;
+            return;
+            }
 
-            Expression exprTest = expr2;
-            if (exprTest.isConstant())
+        if (!aLVal[0].isLocalArgument())
+            {
+            super.generateAssignments(ctx, code, aLVal, errs);
+            return;
+            }
+
+        Argument   argCond   = aLVal[0].getLocalArgument();
+        Argument   argTarget = expr1.generateArgument(ctx, code, true, cLVals == 1, errs);
+        Expression exprTest  = expr2;
+        Argument   argType   = exprTest.isConstant()
+                ? exprTest.getType().getParamType(0).resolveAutoNarrowingBase()
+                : exprTest.generateArgument(ctx, code, false, true, errs);
+
+        code.add(new IsType(argTarget, argType, argCond));
+        if (cLVals > 1)
+            {
+            if (argCond.isStack())
                 {
-                argType = exprTest.getType().getParamType(0).resolveAutoNarrowingBase();
+                // since we need both to check it and return the value, it cannot be on stack
+                // TODO: consider using a new "Dupe" op or make "Move(STACK, STACK)" work like PUSH
+                Assignable varDupe = createTempVar(code, pool().typeBoolean(), false);
+                Register   regDupe = varDupe.getRegister();
+                code.add(new Move(argCond, regDupe)); // pop stack into argTest
+                code.add(new Move(regDupe, argCond)); // push it back on stack
+                argCond = regDupe;
                 }
-            else
-                {
-                argType = exprTest.generateArgument(ctx, code, false, true, errs);
-                }
-            code.add(new IsType(argTarget, argType, LVal.getLocalArgument()));
-            }
-        else
-            {
-            super.generateAssignment(ctx, code, LVal, errs);
-            }
-        }
 
-    @Override
-    public Argument[] generateArguments(
-            Context ctx, Code code, boolean fLocalPropOk, boolean fUsedOnce, ErrorListener errs)
-        {
-        if (getValueCount() != 2)
-            {
-            return super.generateArguments(ctx, code, fLocalPropOk, fUsedOnce, errs);
+            Label label = new Label("skip_assign");
+            code.add(new JumpFalse(argCond, label));
+            aLVal[1].assign(argTarget, code, errs);
+            code.add(label);
             }
-
-        Argument     argTarget = expr1.generateArgument(ctx, code, false, false, errs);
-        Expression   exprTest  = expr2;
-        TypeConstant typeTest;
-        Argument     argType;
-        if (exprTest.isConstant())
-            {
-            argType = typeTest = exprTest.getType().getParamType(0).resolveAutoNarrowingBase();
-            }
-        else
-            {
-            typeTest = getTypes()[1];
-            argType  = exprTest.generateArgument(ctx, code, false, true, errs);
-            }
-
-        Assignable varBool = createTempVar(code, pool().typeBoolean(), fUsedOnce);
-        Argument   argBool = varBool.getRegister();
-        code.add(new IsType(argTarget, argType, argBool));
-        if (fUsedOnce)
-            {
-            return new Argument[]{argBool, argTarget};
-            }
-
-        Assignable varObj  = createTempVar(code, typeTest, fUsedOnce);
-        Label      label   = new Label("skip_copy");
-        code.add(new JumpFalse(argBool, label));
-        varObj.assign(argTarget, code, errs);
-        code.add(label);
-        return new Argument[]{argBool, varObj.getRegister()};
         }
 
     @Override
@@ -311,5 +297,5 @@ public class IsExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected long lEndPos;
+    private final long lEndPos;
     }

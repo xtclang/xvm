@@ -264,12 +264,6 @@ public class SwitchExpression
         }
 
     @Override
-    protected boolean allowsConditional(Expression exprChild)
-        {
-        return false;
-        }
-
-    @Override
     public void generateAssignments(Context ctx, Code code, Assignable[] aLVal, ErrorListener errs)
         {
         if (isConstant())
@@ -334,6 +328,13 @@ public class SwitchExpression
         {
         // until we validate, assume completable
         return m_casemgr == null || !m_casemgr.isConditionAborting();
+        }
+
+    @Override
+    public boolean isConditionalResult()
+        {
+        return getParent() instanceof ReturnStatement stmtReturn &&
+            stmtReturn.getCodeContainer().isReturnConditional();
         }
 
     @Override

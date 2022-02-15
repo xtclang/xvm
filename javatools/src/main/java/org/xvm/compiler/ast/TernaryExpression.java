@@ -67,6 +67,13 @@ public class TernaryExpression
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
+    protected boolean allowsConditional(Expression exprChild)
+        {
+        return getParent().allowsConditional(this) &&
+                (exprChild == exprThen || exprChild == exprElse);
+        }
+
+    @Override
     protected boolean hasSingleValueImpl()
         {
         return false;

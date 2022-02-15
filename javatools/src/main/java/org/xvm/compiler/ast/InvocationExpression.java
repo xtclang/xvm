@@ -831,11 +831,11 @@ public class InvocationExpression
             if (argMethod instanceof MethodConstant idMethod)
                 {
                 MethodStructure method      = m_method;
-                boolean         fCondReturn = method.isConditionalReturn();
                 TypeConstant[]  atypeParams = idMethod.getRawParams();
                 int             cTypeParams = method.getTypeParamCount();
                 int             cParams     = method.getVisibleParamCount();
                 int             cReturns    = atypeReturn == null ? 0 : atypeReturn.length;
+                boolean         fCondReturn = method.isConditionalReturn() && cReturns > 1;
 
                 if (cTypeParams > 0)
                     {

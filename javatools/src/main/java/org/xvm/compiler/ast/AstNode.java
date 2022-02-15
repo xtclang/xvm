@@ -534,7 +534,7 @@ public abstract class AstNode
      */
     protected boolean allowsConditional(Expression exprChild)
         {
-        return true;
+        return false;
         }
 
     /**

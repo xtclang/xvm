@@ -830,6 +830,12 @@ public class NameExpression
         }
 
     @Override
+    public boolean isConditionalResult()
+        {
+        return getValueCount() == 1 && isConstant() && toConstant().equals(pool().valFalse());
+        }
+
+    @Override
     public boolean isShortCircuiting()
         {
         return left != null && left.isShortCircuiting();
