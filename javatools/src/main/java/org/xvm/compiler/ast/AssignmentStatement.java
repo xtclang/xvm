@@ -219,8 +219,8 @@ public class AssignmentStatement
                 AstNode parent = getParent();
                 return parent instanceof IfStatement
                     || parent instanceof WhileStatement
-                    || parent instanceof ForStatement && ((ForStatement) parent).findCondition(this) >= 0
-                    || parent instanceof AssertStatement;
+                    || parent instanceof ForStatement    parentFor    && parentFor   .findCondition(this) >= 0
+                    || parent instanceof AssertStatement parentAssert && parentAssert.findCondition(this) >= 0;
 
             case COLON:
                 return true;
@@ -834,13 +834,12 @@ public class AssignmentStatement
                     int          cLVals   = LVals.length;
                     int          cAll     = cLVals + 1;
                     Assignable[] LValsAll = new Assignable[cAll];
-                    LValsAll[0] = isConditional()
-                            ? lvalueExpr.new Assignable(getConditionRegister())
-                            : lvalueExpr.new Assignable();  // stand-alone assign discards Boolean
+                    LValsAll[0] = lvalueExpr.new Assignable(getConditionRegister());
                     System.arraycopy(LVals, 0, LValsAll, 1, cLVals);
                     if (fCompletes &= lvalueExpr.isCompletable())
                         {
                         rvalue.generateAssignments(ctx, code, LValsAll, errs);
+                        // TODO GG: !!!!!!!  !isConditional() and RValue !conditional then we need temporaries and a cond jump
                         fCompletes &= rvalue.isCompletable();
                         }
                     }

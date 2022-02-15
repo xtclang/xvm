@@ -77,6 +77,7 @@ public class Parser
         next();
         }
 
+
     // ----- parsing -------------------------------------------------------------------------------
 
     /**
@@ -1099,7 +1100,8 @@ public class Parser
                     // if the next token is an assignment operator, then this is a multi
                     // declaration/assignment
                     Token tokAssign;
-                    if (fInMethod && modifiers == null && (tokAssign = match(Id.ASN)) != null)
+                    if (fInMethod && modifiers == null
+                            && ((tokAssign = match(Id.ASN)) != null || (tokAssign = match(Id.COND_ASN)) != null))
                         {
                         // compile as multiple assignment (and possible variable declarations)
                         int cLVals = listExpr.size();

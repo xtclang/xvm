@@ -110,15 +110,15 @@ public class AssertStatement
         }
 
     /**
-     * @param exprChild  an expression that is a child of this statement
+     * @param nodeChild  an expression (or AssignmentStatement) that is a child of this statement
      *
      * @return the index of the expression in the list of conditions within this statement, or -1
      */
-    public int findCondition(Expression exprChild)
+    public int findCondition(AstNode nodeChild)
         {
         for (int i = 0, c = getConditionCount(); i < c; ++i)
             {
-            if (conds.get(i) == exprChild)
+            if (conds.get(i) == nodeChild)
                 {
                 return i;
                 }
