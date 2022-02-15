@@ -98,21 +98,12 @@ public class xClass
             typeClz = typeClz.resolveGenerics(frame.poolContext(),
                         frame.getGenericsResolver(typeClz.containsDynamicType(null)));
 
-            ClassTemplate template;
-            switch (idClz.getComponent().getFormat())
+            ClassTemplate template = switch (idClz.getComponent().getFormat())
                 {
-                case ENUMVALUE:
-                    template = xEnumValue.INSTANCE;
-                    break;
-
-                case ENUM:
-                    template = xEnumeration.INSTANCE;
-                    break;
-
-                default:
-                    template = this;
-                    break;
-                }
+                case ENUMVALUE -> xEnumValue.INSTANCE;
+                case ENUM      -> xEnumeration.INSTANCE;
+                default        -> this;
+                };
 
             TypeComposition clz = template.ensureClass(typeClz);
 
@@ -499,10 +490,8 @@ public class xClass
         @Override
         public boolean equals(Object obj)
             {
-            if (obj instanceof ClassHandle)
+            if (obj instanceof ClassHandle that)
                 {
-                ClassHandle that = (ClassHandle) obj;
-
                 TypeConstant typeThis = this.getType().getParamType(0);
                 TypeConstant typeThat = that.getType().getParamType(0);
                 return typeThis.equals(typeThat);
