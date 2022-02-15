@@ -1517,7 +1517,8 @@ public class ServiceContext
                                     hReturn = hReturn.getTemplate().createProxyHandle(frame.f_context, hReturn, null);
                                     if (hReturn == null)
                                         {
-                                        hException = xException.mutableObject(frame);
+                                        hException = xException.illegalArgument(frame,
+                                            "Mutable return value from \"" + this + '"');
                                         hTuple = null;
                                         break;
                                         }
@@ -1556,7 +1557,8 @@ public class ServiceContext
                                             createProxyHandle(frame.f_context, hReturn, null);
                                 if (hReturn == null)
                                     {
-                                    hException = xException.mutableObject(frame);
+                                    hException = xException.illegalArgument(frame,
+                                        "Mutable return value from \"" + this + '"');
                                     ahReturn = null;
                                     break;
                                     }
