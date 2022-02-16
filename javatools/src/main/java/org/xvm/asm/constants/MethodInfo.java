@@ -381,22 +381,16 @@ public class MethodInfo
             {
             MethodBody       body     = aBody[i];
             IdentityConstant constClz = constId.getClassIdentity();
-            boolean fRetain;
 
-            switch (body.getImplementation())
+            boolean fRetain = switch (body.getImplementation())
                 {
-                case Implicit:
-                case SansCode:
-                case Declared: // this allows duplicates to survive (ignore retain set)
-                case Default:  // this allows duplicates to survive (ignore retain set)
-                case Native:
-                    fRetain = true;
-                    break;
+                // allow these duplicates to survive (ignore retain set)
+                case Implicit, SansCode, Declared, Default, Native
+                    -> true;
+                default
+                    -> setClass.contains(constClz) || setDefault.contains(constClz);
+                };
 
-                default:
-                    fRetain = setClass.contains(constClz) || setDefault.contains(constClz);
-                    break;
-                }
             if (fRetain)
                 {
                 if (list != null)
@@ -1096,9 +1090,8 @@ public class MethodInfo
         // an accessor for a property with a field always has super()
         MethodStructure method    = bodyHead.getMethodStructure();
         Component       container = method.getParent().getParent();
-        if (container instanceof PropertyStructure)
+        if (container instanceof PropertyStructure property)
             {
-            PropertyStructure property = (PropertyStructure) container;
             if (method == property.getGetter() || method == property.getSetter())
                 {
                 PropertyInfo infoProp = infoType.findProperty(property.getIdentityConstant());
@@ -1227,12 +1220,11 @@ public class MethodInfo
             return true;
             }
 
-        if (!(obj instanceof MethodInfo))
+        if (!(obj instanceof MethodInfo that))
             {
             return false;
             }
 
-        MethodInfo that = (MethodInfo) obj;
         return Arrays.equals(this.m_aBody, that.m_aBody);
         }
 

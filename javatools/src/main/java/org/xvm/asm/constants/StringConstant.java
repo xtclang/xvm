@@ -36,7 +36,7 @@ public class StringConstant
             throws IOException
         {
         super(pool);
-        m_sVal = readUtf8String(in);
+        m_sVal  = readUtf8String(in);
         m_nHash = m_sVal.hashCode();
         }
 
@@ -51,8 +51,8 @@ public class StringConstant
         super(pool);
 
         assert sVal != null;
-        m_sVal = sVal;
-        m_nHash = m_sVal.hashCode();
+        m_sVal  = sVal;
+        m_nHash = sVal.hashCode();
         }
 
 
@@ -115,13 +115,7 @@ public class StringConstant
                         : ((IntConstant) that).getValue().getInt();
                 assert n >= 0 && n * s.length() < 1000000;
 
-                StringBuilder sb = new StringBuilder(n * s.length());
-                for (int i = 0; i < n; ++i)
-                    {
-                    sb.append(s);
-                    }
-
-                return getConstantPool().ensureStringConstant(sb.toString());
+                return getConstantPool().ensureStringConstant(s.repeat(n));
                 }
 
             case "==String":
@@ -205,7 +199,7 @@ public class StringConstant
     private final String m_sVal;
 
     /**
-     * Cached hashcode, String#hashCode has apparently become complex enough to not be inlineable.
+     * Cached hashcode, String#hashCode has apparently become complex enough to not be inlinable.
      */
     private final int m_nHash;
     }

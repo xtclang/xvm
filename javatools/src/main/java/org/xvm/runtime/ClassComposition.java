@@ -316,10 +316,10 @@ public class ClassComposition
         {
         CallChain chain = f_mapGetters.get(idProp);
         return chain == null
-            ? ensureGetterChain(idProp)
-            : chain == NIL_CHAIN
-                ? null
-                : chain;
+                ? ensureGetterChain(idProp)
+                : chain == NIL_CHAIN
+                    ? null
+                    : chain;
         }
 
     /**
@@ -336,8 +336,8 @@ public class ClassComposition
             {
             MethodBody[] chain = f_typeInception.ensureTypeInfo().getOptimizedGetChain(id);
             return chain == null
-                ? NIL_CHAIN
-                : CallChain.createPropertyCallChain(chain);
+                    ? NIL_CHAIN
+                    : CallChain.createPropertyCallChain(chain);
             });
         }
 
@@ -346,10 +346,10 @@ public class ClassComposition
         {
         CallChain chain = f_mapSetters.get(idProp);
         return chain == null
-            ? ensurePropertySetterChain(idProp)
-            : chain == NIL_CHAIN
-                ? null
-                : chain;
+                ? ensurePropertySetterChain(idProp)
+                : chain == NIL_CHAIN
+                    ? null
+                    : chain;
         }
 
     /**
@@ -366,8 +366,8 @@ public class ClassComposition
             {
             MethodBody[] chain = f_typeInception.ensureTypeInfo().getOptimizedSetChain(id);
             return chain == null
-                ? NIL_CHAIN
-                : CallChain.createPropertyCallChain(chain);
+                    ? NIL_CHAIN
+                    : CallChain.createPropertyCallChain(chain);
             });
         }
 
@@ -684,10 +684,10 @@ public class ClassComposition
             }
 
         m_mapFields = mapFields.isEmpty()
-            ? Collections.EMPTY_MAP
-            : mapFields.size() > 8
-                ? new LinkedHashMap<>(mapFields)
-                : mapFields;
+                ? Collections.EMPTY_MAP
+                : mapFields.size() > 8
+                    ? new LinkedHashMap<>(mapFields)
+                    : mapFields;
         }
 
     /**

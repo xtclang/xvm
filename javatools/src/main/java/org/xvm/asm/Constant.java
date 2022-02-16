@@ -15,7 +15,6 @@ import java.util.function.Consumer;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.PseudoConstant;
-import org.xvm.asm.constants.ResolvableConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.UnresolvedNameConstant;
 import org.xvm.asm.constants.ValueConstant;
@@ -602,13 +601,13 @@ public abstract class Constant
     @Override
     public boolean equals(Object obj)
         {
-        if (!(obj instanceof Constant))
+        if (!(obj instanceof Constant that))
             {
             return false;
             }
 
-        Constant constThis = resolve();
-        Constant constThat = ((Constant) obj).resolve();
+        Constant constThis = this.resolve();
+        Constant constThat = that.resolve();
         return constThis == constThat || (constThis.getFormat() == constThat.getFormat()
                 && constThis.compareDetails(constThat) == 0);
         }
@@ -664,7 +663,7 @@ public abstract class Constant
         }
 
     /**
-     * Translate a comparison operator and and ordered result into a constant value.
+     * Translate a comparison operator and ordered result into a constant value.
      *
      * @param nOrder  a value of -1, 0, or 1 (or more loosely: negative, zero, or positive)
      * @param op      a comparison operator
@@ -675,25 +674,17 @@ public abstract class Constant
     protected Constant translateOrder(int nOrder, Token.Id op)
         {
         ConstantPool pool = getConstantPool();
-        switch (op)
+        return switch (op)
             {
-            case COMP_EQ:
-                return pool.valOf(nOrder == 0);
-            case COMP_NEQ:
-                return pool.valOf(nOrder != 0);
-            case COMP_LT:
-                return pool.valOf(nOrder < 0);
-            case COMP_LTEQ:
-                return pool.valOf(nOrder <= 0);
-            case COMP_GT:
-                return pool.valOf(nOrder > 0);
-            case COMP_GTEQ:
-                return pool.valOf(nOrder >= 0);
-            case COMP_ORD:
-                return pool.valOrd(nOrder);
-            default:
-                throw new IllegalStateException();
-            }
+            case COMP_EQ   -> pool.valOf(nOrder == 0);
+            case COMP_NEQ  -> pool.valOf(nOrder != 0);
+            case COMP_LT   -> pool.valOf(nOrder < 0);
+            case COMP_LTEQ -> pool.valOf(nOrder <= 0);
+            case COMP_GT   -> pool.valOf(nOrder > 0);
+            case COMP_GTEQ -> pool.valOf(nOrder >= 0);
+            case COMP_ORD  -> pool.valOrd(nOrder);
+            default        -> throw new IllegalStateException();
+            };
         }
 
     /**
@@ -916,32 +907,16 @@ public abstract class Constant
          */
         public boolean isTypeable()
             {
-            switch (this)
+            return switch (this)
                 {
-                case Module:
-                case Package:
-                case Class:
-                case Typedef:
-                case Property:
-                case TypeParameter:
-                case FormalTypeChild:
-                case DynamicFormal:
-                case ThisClass:
-                case ParentClass:
-                case ChildClass:
-                case DecoratedClass:
-                case NativeClass:
-                case UnresolvedName:
-                case IsConst:
-                case IsEnum:
-                case IsModule:
-                case IsPackage:
-                case IsClass:
-                    return true;
+                case Module, Package, Class, Typedef, Property, TypeParameter, FormalTypeChild,
+                     DynamicFormal, ThisClass, ParentClass, ChildClass, DecoratedClass, NativeClass,
+                     UnresolvedName, IsConst, IsEnum, IsModule, IsPackage, IsClass
+                    -> true;
 
-                default:
-                    return false;
-                }
+                default
+                    -> false;
+                };
             }
 
         /**

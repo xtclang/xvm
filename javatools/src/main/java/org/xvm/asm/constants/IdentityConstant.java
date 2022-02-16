@@ -200,7 +200,7 @@ public abstract class IdentityConstant
      */
     public boolean isNested()
         {
-        Boolean fNested = this.m_fNested;
+        Boolean fNested = m_fNested;
         return fNested == null ? m_fNested = computeIsNested() : fNested;
         }
 

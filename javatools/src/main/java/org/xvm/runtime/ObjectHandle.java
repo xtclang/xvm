@@ -22,13 +22,15 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.ClassComposition.FieldInfo;
 
 import org.xvm.runtime.template.Proxy;
-import org.xvm.runtime.template.text.xChar;
 import org.xvm.runtime.template.xObject;
 import org.xvm.runtime.template.xService.ServiceHandle;
 
 import org.xvm.runtime.template.collections.xArray;
 
 import org.xvm.runtime.template.reflect.xRef.RefHandle;
+
+import org.xvm.runtime.template.text.xChar;
+
 import org.xvm.util.Handy;
 
 
