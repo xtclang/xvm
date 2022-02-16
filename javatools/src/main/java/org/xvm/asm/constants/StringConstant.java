@@ -37,6 +37,7 @@ public class StringConstant
         {
         super(pool);
         m_sVal = readUtf8String(in);
+        m_nHash = m_sVal.hashCode();
         }
 
     /**
@@ -51,6 +52,7 @@ public class StringConstant
 
         assert sVal != null;
         m_sVal = sVal;
+        m_nHash = m_sVal.hashCode();
         }
 
 
@@ -191,7 +193,7 @@ public class StringConstant
     @Override
     public int hashCode()
         {
-        return m_sVal.hashCode();
+        return m_nHash;
         }
 
 
@@ -200,5 +202,10 @@ public class StringConstant
     /**
      * The constant character string value.
      */
-    private String m_sVal;
+    private final String m_sVal;
+
+    /**
+     * Cached hashcode, String#hashCode has apparently become complex enough to not be inlineable.
+     */
+    private final int m_nHash;
     }

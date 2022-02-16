@@ -5,6 +5,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.Objects;
 import java.util.function.Consumer;
 
 import org.xvm.asm.Constant;
@@ -195,8 +196,10 @@ public abstract class NamedConstant
     @Override
     public int hashCode()
         {
-        return m_constParent.hashCode() * 17
-                + m_constName.hashCode();
+        int nHash = m_nHash;
+        return nHash == 0
+            ? m_nHash = m_constParent.hashCode() * 17 + m_constName.hashCode()
+            : nHash;
         }
 
 
@@ -224,4 +227,9 @@ public abstract class NamedConstant
      * The constant that holds the name of the structure identified by this constant.
      */
     private StringConstant m_constName;
+
+    /**
+     * Cached hash.
+     */
+    private int m_nHash;
     }

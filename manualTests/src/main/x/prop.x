@@ -2,14 +2,45 @@ module TestProps
     {
     @Inject Console console;
     @Inject Clock   clock;
+    @Inject Timer   timer;
 
     void run()
         {
+        testStandardProperty();
         testMethodProperty();
         testLazyProperty();
         testModuleProperty();
         testDelegation();
         testAccess();
+        }
+
+    class Standard(Int x);
+
+    void testStandardProperty()
+        {
+        Standard s = new Standard(1);
+        Int iterations = 1_000_000;
+        timer.reset();
+        for (Int i = 0; i < iterations; ++i)
+            {
+            }
+        Duration timeBase = timer.elapsed;
+        timer.reset();
+        for (Int i = 0; i < iterations; ++i)
+            {
+            s.x += i; // 1
+            s.x += i; // 2
+            s.x += i; // 3
+            s.x += i; // 4
+            s.x += i; // 5
+            s.x += i; // 6
+            s.x += i; // 7
+            s.x += i; // 8
+            s.x += i; // 9
+            s.x += i; // 10
+            }
+        Duration time = timer.elapsed;
+        console.println($"get/set property latency {((time - timeBase) / (iterations * 10)).nanoseconds} ns");
         }
 
     void testMethodProperty()

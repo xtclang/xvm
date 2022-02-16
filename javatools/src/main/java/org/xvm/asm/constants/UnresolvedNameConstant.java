@@ -50,6 +50,13 @@ public class UnresolvedNameConstant
 
     // ----- type-specific functionality -----------------------------------------------------------
 
+
+    @Override
+    public Constant resolve()
+        {
+        return unwrap();
+        }
+
     /**
      * @return the name of the constant
      */
@@ -218,10 +225,7 @@ public class UnresolvedNameConstant
     @Override
     protected int compareDetails(Constant that)
         {
-        if (that instanceof ResolvableConstant)
-            {
-            that = ((ResolvableConstant) that).unwrap();
-            }
+        that = that.resolve();
 
         if (isNameResolved())
             {

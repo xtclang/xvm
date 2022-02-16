@@ -2196,16 +2196,8 @@ public class TerminalTypeConstant
             return -1;
             }
 
-        Constant constThis = this.m_constId;
-        if (constThis instanceof ResolvableConstant)
-            {
-            constThis = ((ResolvableConstant) constThis).unwrap();
-            }
-        Constant constThat = that.m_constId;
-        if (constThat instanceof ResolvableConstant)
-            {
-            constThat = ((ResolvableConstant) constThat).unwrap();
-            }
+        Constant constThis = this.m_constId.resolve();
+        Constant constThat = that.m_constId.resolve();
         return constThis.compareTo(constThat);
         }
 

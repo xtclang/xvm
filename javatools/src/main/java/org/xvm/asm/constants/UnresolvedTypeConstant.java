@@ -52,6 +52,12 @@ public class UnresolvedTypeConstant
 
     // ----- type-specific functionality -----------------------------------------------------------
 
+    @Override
+    public Constant resolve()
+        {
+        return unwrap();
+        }
+
     /**
      * @return true if the UnresolvedTypeConstant has been resolved
      */
@@ -475,10 +481,7 @@ public class UnresolvedTypeConstant
     @Override
     protected int compareDetails(Constant that)
         {
-        if (that instanceof ResolvableConstant)
-            {
-            that = ((ResolvableConstant) that).unwrap();
-            }
+        that = that.resolve();
 
         if (isTypeResolved())
             {

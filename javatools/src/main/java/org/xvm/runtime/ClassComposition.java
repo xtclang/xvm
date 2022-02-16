@@ -4,6 +4,7 @@ package org.xvm.runtime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -76,6 +77,7 @@ public class ClassComposition
         f_typeInception   = pool.ensureAccessTypeConstant(typeInception, Access.PRIVATE);
         f_typeStructure   = pool.ensureAccessTypeConstant(typeInception, Access.STRUCT);
         f_typeRevealed    = typeInception;
+        f_fStruct         = typeInception.getAccess() == Access.STRUCT;
         f_mapCompositions = new ConcurrentHashMap<>();
         f_mapProxies      = new ConcurrentHashMap<>();
         f_mapProperties   = new ConcurrentHashMap<>();
@@ -95,6 +97,7 @@ public class ClassComposition
         f_typeInception   = clzInception.f_typeInception;
         f_typeStructure   = clzInception.f_typeStructure;
         f_typeRevealed    = typeRevealed;
+        f_fStruct         = typeRevealed.getAccess() == Access.STRUCT;
         f_mapCompositions = f_clzInception.f_mapCompositions;
         f_mapProxies      = f_clzInception.f_mapProxies;
         f_mapProperties   = f_clzInception.f_mapProperties;
@@ -255,7 +258,7 @@ public class ClassComposition
     @Override
     public boolean isStruct()
         {
-        return f_typeRevealed.getAccess() == Access.STRUCT;
+        return f_fStruct;
         }
 
     @Override
@@ -311,27 +314,61 @@ public class ClassComposition
     @Override
     public CallChain getPropertyGetterChain(PropertyConstant idProp)
         {
+        CallChain chain = f_mapGetters.get(idProp);
+        return chain == null
+            ? ensureGetterChain(idProp)
+            : chain == NIL_CHAIN
+                ? null
+                : chain;
+        }
+
+    /**
+     * Compute the "getter" {@link CallChain} for a given property.
+     *
+     * @param idProp the property id
+     *
+     * @return the {@link CallChain}
+     */
+    private CallChain ensureGetterChain(PropertyConstant idProp)
+        {
         return f_mapGetters.computeIfAbsent(idProp,
             id ->
-                {
-                MethodBody[] chain = f_typeInception.ensureTypeInfo().getOptimizedGetChain(id);
-                return chain == null
-                        ? null
-                        : CallChain.createPropertyCallChain(chain);
-                });
+            {
+            MethodBody[] chain = f_typeInception.ensureTypeInfo().getOptimizedGetChain(id);
+            return chain == null
+                ? NIL_CHAIN
+                : CallChain.createPropertyCallChain(chain);
+            });
         }
 
     @Override
     public CallChain getPropertySetterChain(PropertyConstant idProp)
         {
+        CallChain chain = f_mapSetters.get(idProp);
+        return chain == null
+            ? ensurePropertySetterChain(idProp)
+            : chain == NIL_CHAIN
+                ? null
+                : chain;
+        }
+
+    /**
+     * Compute the "setter" {@link CallChain} for a given property.
+     *
+     * @param idProp the property id
+     *
+     * @return the {@link CallChain}
+     */
+    private CallChain ensurePropertySetterChain(PropertyConstant idProp)
+        {
         return f_mapSetters.computeIfAbsent(idProp,
             id ->
-                {
-                MethodBody[] chain = f_typeInception.ensureTypeInfo().getOptimizedSetChain(id);
-                return chain == null
-                        ? null
-                        : CallChain.createPropertyCallChain(chain);
-                });
+            {
+            MethodBody[] chain = f_typeInception.ensureTypeInfo().getOptimizedSetChain(id);
+            return chain == null
+                ? NIL_CHAIN
+                : CallChain.createPropertyCallChain(chain);
+            });
         }
 
     @Override
@@ -646,7 +683,11 @@ public class ClassComposition
                 }
             }
 
-        m_mapFields = mapFields.isEmpty() ? Collections.EMPTY_MAP : mapFields;
+        m_mapFields = mapFields.isEmpty()
+            ? Collections.EMPTY_MAP
+            : mapFields.size() > 8
+                ? new LinkedHashMap<>(mapFields)
+                : mapFields;
         }
 
     /**
@@ -872,6 +913,11 @@ public class ClassComposition
     private final TypeConstant f_typeRevealed;
 
     /**
+     * {@code true} if {@link #f_typeRevealed} is a struct
+     */
+    private final boolean f_fStruct;
+
+    /**
      * {@link FieldInfo}s for class fields keyed by nids.
      */
     private Map<Object, FieldInfo> m_mapFields;
@@ -927,4 +973,9 @@ public class ClassComposition
 
     // cached auto-generated structure initializer
     private MethodStructure m_methodInit;
+
+    /**
+     * Marker for a cached null {@link CallChain}.
+     */
+    private static final CallChain NIL_CHAIN = new CallChain(MethodBody.NO_BODIES);
     }

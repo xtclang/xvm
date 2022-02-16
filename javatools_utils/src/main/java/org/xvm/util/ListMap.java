@@ -35,7 +35,7 @@ public class ListMap<K,V>
         {
         m_list = cInitSize >= 0
             ? new ArrayList<>(cInitSize)
-            : Collections.EMPTY_LIST;
+            : (ArrayList<SimpleEntry<K,V>>) EMPTY_ARRAY_LIST;
         }
 
     /**
@@ -43,7 +43,7 @@ public class ListMap<K,V>
      *
      * @param map  the map to clone
      */
-    public ListMap(ListMap map)
+    public ListMap(ListMap<K, V> map)
         {
         m_list = new ArrayList<>(map.m_list);
         }
@@ -55,6 +55,11 @@ public class ListMap<K,V>
         if (entry != null)
             {
             return entry.setValue(value);
+            }
+
+        if (m_list == EMPTY_ARRAY_LIST)
+            {
+            throw new UnsupportedOperationException();
             }
 
         m_list.add(new SimpleEntry<K, V>(key, value));
@@ -74,7 +79,7 @@ public class ListMap<K,V>
      */
     public List<Entry<K,V>> asList()
         {
-        List<Entry<K,V>> list = m_list;
+        List<Entry<K,V>> list = (List) m_list;
         assert (list = Collections.unmodifiableList(list)) != null;
         return list;
         }
@@ -86,11 +91,13 @@ public class ListMap<K,V>
      *
      * @return the entry if it exists; otherwise null
      */
-    protected Entry<K,V> getEntry(K key)
+    protected SimpleEntry<K,V> getEntry(Object key)
         {
-        for (Entry<K,V> entry : m_list)
+        ArrayList<SimpleEntry<K,V>> list = m_list;
+        for (int i = 0, c = list.size(); i < c; ++i) // avoid Iterator creation
             {
-            if (Handy.equals(key, entry.getKey()))
+            SimpleEntry<K, V> entry = list.get(i);
+            if (entry.getKey().equals(key))
                 {
                 return entry;
                 }
@@ -99,22 +106,29 @@ public class ListMap<K,V>
         return null;
         }
 
+    @Override
+    public V get(Object key)
+        {
+        SimpleEntry<K, V> entry = getEntry(key);
+        return entry == null ? null : entry.getValue();
+        }
+
     /**
      * The contents of the map are stored in an ArrayList of SimpleEntry
      * objects.
      */
-    private final List<Entry<K, V>> m_list;
+    private final ArrayList<SimpleEntry<K, V>> m_list;
 
     /**
      * The AbstractMap implementation needs an underlying "entry set" to be
      * provided; this is that set, but just sitting on top of {@link #m_list}.
      */
-    private final Set<Entry<K, V>> m_setEntries = new AbstractSet<Entry<K, V>>()
+    private final Set<Entry<K, V>> m_setEntries = new AbstractSet<>()
         {
         @Override
         public Iterator<Entry<K, V>> iterator()
             {
-            return m_list.iterator();
+            return (Iterator) m_list.iterator();
             }
 
         @Override
@@ -125,7 +139,12 @@ public class ListMap<K,V>
         };
 
     /**
+     * An empty ArrayList.
+     */
+    private static final ArrayList<?> EMPTY_ARRAY_LIST = new ArrayList<>(0);
+
+    /**
      * An empty ListMap.
      */
-    public static ListMap EMPTY = new ListMap<>(-1);
+    public static final ListMap EMPTY = new ListMap<>(-1);
     }

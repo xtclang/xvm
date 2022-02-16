@@ -121,6 +121,16 @@ public abstract class Constant
         }
 
     /**
+     * Resolve the constant.
+     *
+     * @return the resolved constant, possibly {@code this}
+     */
+    public Constant resolve()
+        {
+        return this;
+        }
+
+    /**
      * @return true iff this constant represents a property at runtime, whether or not the exact
      *         identity of the property is known at compile time
      */
@@ -597,12 +607,8 @@ public abstract class Constant
             return false;
             }
 
-        Constant constThis = this instanceof ResolvableConstant
-                ? ((ResolvableConstant) this).unwrap()
-                : this;
-        Constant constThat = obj instanceof ResolvableConstant
-                ? ((ResolvableConstant) obj).unwrap()
-                : (Constant) obj;
+        Constant constThis = resolve();
+        Constant constThat = ((Constant) obj).resolve();
         return constThis == constThat || (constThis.getFormat() == constThat.getFormat()
                 && constThis.compareDetails(constThat) == 0);
         }
@@ -624,12 +630,8 @@ public abstract class Constant
             return 0;
             }
 
-        Constant constThis = this instanceof ResolvableConstant
-                ? ((ResolvableConstant) this).unwrap()
-                : this;
-        Constant constThat = that instanceof ResolvableConstant
-                ? ((ResolvableConstant) that).unwrap()
-                : that;
+        Constant constThis = resolve();
+        Constant constThat = that.resolve();
         if (constThis == constThat)
             {
             return 0;

@@ -200,6 +200,17 @@ public abstract class IdentityConstant
      */
     public boolean isNested()
         {
+        Boolean fNested = this.m_fNested;
+        return fNested == null ? m_fNested = computeIsNested() : fNested;
+        }
+
+    /**
+     * Compute the value for {@link #isNested}.
+     *
+     * @return {@code true} if nested
+     */
+    private Boolean computeIsNested()
+        {
         return switch (getFormat())
             {
             case Typedef, Property, MultiMethod, Method -> true;
@@ -804,4 +815,9 @@ public abstract class IdentityConstant
      * Cached canonical NestedIdentity.
      */
     private transient NestedIdentity m_canonicalNid;
+
+    /**
+     * Cached result for {@link #isNested()}.
+     */
+    private transient Boolean m_fNested;
     }
