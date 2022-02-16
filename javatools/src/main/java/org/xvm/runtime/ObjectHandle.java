@@ -22,12 +22,14 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.ClassComposition.FieldInfo;
 
 import org.xvm.runtime.template.Proxy;
+import org.xvm.runtime.template.text.xChar;
 import org.xvm.runtime.template.xObject;
 import org.xvm.runtime.template.xService.ServiceHandle;
 
 import org.xvm.runtime.template.collections.xArray;
 
 import org.xvm.runtime.template.reflect.xRef.RefHandle;
+import org.xvm.util.Handy;
 
 
 /**
@@ -777,7 +779,9 @@ public abstract class ObjectHandle
         @Override
         public String toString()
             {
-            return super.toString() + m_lValue;
+            return super.toString() + (m_clazz.getTemplate() == xChar.INSTANCE
+                    ? Handy.quotedChar((char) m_lValue)
+                    : String.valueOf(m_lValue));
             }
         }
 
