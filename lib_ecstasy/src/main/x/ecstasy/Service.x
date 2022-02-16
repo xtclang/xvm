@@ -434,7 +434,7 @@ interface Service
     @Override
     String toString()
         {
-        return this:service.toString();
+        return serviceName;
         }
 
     @Override

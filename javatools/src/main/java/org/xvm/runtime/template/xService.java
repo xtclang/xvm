@@ -75,8 +75,6 @@ public class xService
         setAtomic.add("timeout");
         s_setAtomicProperties = setAtomic;
 
-        markNativeMethod("toString", VOID, STRING);
-
         getCanonicalType().invalidateTypeInfo();
         }
 
@@ -411,16 +409,6 @@ public class xService
             }
 
         throw new IllegalStateException("Invalid context");
-        }
-
-    @Override
-    protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
-        {
-        ServiceHandle  hService = (ServiceHandle) hTarget;
-        ServiceContext ctx      = hService.f_context;
-
-        return frame.assignValue(iReturn,
-            xString.makeHandle(ctx.f_sName + " (id=" + ctx.f_nId + ')'));
         }
 
 
