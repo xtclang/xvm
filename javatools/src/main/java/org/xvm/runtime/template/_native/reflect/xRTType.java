@@ -166,11 +166,10 @@ public class xRTType
     @Override
     public int createConstHandle(Frame frame, Constant constant)
         {
-        if (constant instanceof TypeConstant)
+        if (constant instanceof TypeConstant typeTarget)
             {
             ConstantPool pool = frame.poolContext();
 
-            TypeConstant typeTarget = (TypeConstant) constant;
             assert typeTarget.isTypeOfType();
 
             TypeConstant typeData = typeTarget.getParamType(0);
@@ -660,7 +659,7 @@ public class xRTType
 
             if (!fStructConstr)
                 {
-                // add a struct constructor (e.g. for deserialization)
+                // add a synthetic struct constructor handle (e.g. for deserialization)
                 TypeConstant[] atypeParams;
                 Parameter[]    aParams;
                 if (typeParent == null)
@@ -726,12 +725,12 @@ public class xRTType
                 System.arraycopy(ahArg, 1, ahArg, 0, ahArg.length-1);
                 }
 
-            TypeComposition clzTarget    = f_clzTarget;
-            ClassTemplate    template    = clzTarget.getTemplate();
-            MethodStructure  constructor = f_constructor;
-            ConstantPool     pool        = frame.poolContext();
-            TypeConstant     typeTuple   = pool.ensureTupleType(clzTarget.getType());
-            TypeComposition clzTuple     = xTuple.INSTANCE.ensureClass(typeTuple);
+            TypeComposition clzTarget   = f_clzTarget;
+            ClassTemplate   template    = clzTarget.getTemplate();
+            MethodStructure constructor = f_constructor;
+            ConstantPool    pool        = frame.poolContext();
+            TypeConstant    typeTuple   = pool.ensureTupleType(clzTarget.getType());
+            TypeComposition clzTuple    = xTuple.INSTANCE.ensureClass(typeTuple);
 
             int iResult = constructor == null
                 ? template.proceedConstruction(frame, null, false, ahArg[0], ahArg, Op.A_STACK)
@@ -1163,12 +1162,11 @@ public class xRTType
             if (type.isSingleDefiningConstant())
                 {
                 Constant constDef = type.getDefiningConstant();
-                if (constDef instanceof PropertyConstant)
+                if (constDef instanceof PropertyConstant idProp)
                     {
-                    PropertyConstant idProp     = (PropertyConstant) constDef;
-                    TypeConstant     typeParent = idProp.getParentConstant().getType();
-                    PropertyInfo     infoProp   = frame.poolContext().ensureAccessTypeConstant(
-                        typeParent, Access.PRIVATE).ensureTypeInfo().findProperty(idProp);
+                    TypeConstant typeParent = idProp.getParentConstant().getType();
+                    PropertyInfo infoProp   = frame.poolContext().ensureAccessTypeConstant(
+                            typeParent, Access.PRIVATE).ensureTypeInfo().findProperty(idProp);
 
                     if (infoProp != null)
                         {
@@ -1378,23 +1376,13 @@ public class xRTType
     public static EnumHandle makeAccessHandle(Frame frame, Access access)
         {
         xEnum enumAccess = (xEnum) INSTANCE.f_templates.getTemplate("reflect.Access");
-        switch (access)
+        return switch (access)
             {
-            case PUBLIC:
-                return enumAccess.getEnumByName("Public");
-
-            case PROTECTED:
-                return enumAccess.getEnumByName("Protected");
-
-            case PRIVATE:
-                return enumAccess.getEnumByName("Private");
-
-            case STRUCT:
-                return enumAccess.getEnumByName("Struct");
-
-            default:
-                throw new IllegalStateException("unknown access value: " + access);
-            }
+            case PUBLIC    -> enumAccess.getEnumByName("Public");
+            case PROTECTED -> enumAccess.getEnumByName("Protected");
+            case PRIVATE   -> enumAccess.getEnumByName("Private");
+            case STRUCT    -> enumAccess.getEnumByName("Struct");
+            };
         }
 
     /**
@@ -1420,37 +1408,28 @@ public class xRTType
             case TerminalType:
                 if (type.isSingleDefiningConstant())
                     {
-                    switch (type.getDefiningConstant().getFormat())
+                    return switch (type.getDefiningConstant().getFormat())
                         {
-                        case NativeClass:
-                            return enumForm.getEnumByName("Pure");
+                        case NativeClass ->
+                            enumForm.getEnumByName("Pure");
 
-                        case Module:
-                        case Package:
-                        case Class:
-                        case ThisClass:
-                        case ParentClass:
-                        case ChildClass:
-                        case IsClass:
-                        case IsConst:
-                        case IsEnum:
-                        case IsModule:
-                        case IsPackage:
-                            return enumForm.getEnumByName("Class");
+                        case Module, Package, Class, ThisClass, ParentClass, ChildClass,
+                             IsClass, IsConst, IsEnum, IsModule, IsPackage ->
+                            enumForm.getEnumByName("Class");
 
-                        case Property:
-                            return enumForm.getEnumByName("FormalProperty");
+                        case Property ->
+                            enumForm.getEnumByName("FormalProperty");
 
-                        case TypeParameter:
-                            return enumForm.getEnumByName("FormalParameter");
+                        case TypeParameter ->
+                            enumForm.getEnumByName("FormalParameter");
 
-                        case FormalTypeChild:
-                            return enumForm.getEnumByName("FormalChild");
+                        case FormalTypeChild ->
+                            enumForm.getEnumByName("FormalChild");
 
-                        default:
+                        default ->
                             throw new IllegalStateException("unsupported format: " +
-                                    type.getDefiningConstant().getFormat());
-                        }
+                                type.getDefiningConstant().getFormat());
+                        };
                     }
                 else
                     {
@@ -1533,8 +1512,7 @@ public class xRTType
             return hDeferred;
             }
 
-        int iResult = Utils.constructArgument(frame, hArg.getType(), hArg, null);
-        switch (iResult)
+        switch (Utils.constructArgument(frame, hArg.getType(), hArg, null))
             {
             case Op.R_NEXT:
                 return frame.popStack();

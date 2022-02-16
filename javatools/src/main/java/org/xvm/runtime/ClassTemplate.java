@@ -426,7 +426,7 @@ public abstract class ClassTemplate
      * Continuation of the {@link #construct} sequence after the struct has been created.
      *
      * @param frame        the current frame
-     * @param constructor  (optional) the constructor to call; must be null the struct
+     * @param constructor  (optional) the constructor to call; must be null if the struct
      *                     has already been initialized (fInitStruct == false)
      * @param fInitStruct  if true, the struct needs to be initialized; otherwise it already
      *                     has been and "constructor" must be null
