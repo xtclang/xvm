@@ -36,7 +36,7 @@ const IPAddress(Byte[] bytes)
     construct(String text)
         {
         (Boolean success, this.bytes, String? error) = parse(text);
-        assert:arg success as error ?: "Illegal IP address: {text.quoted()}";
+        assert:arg success as error ?: $"Illegal IP address: {text.quoted()}";
         }
 
     assert()
@@ -342,11 +342,11 @@ const IPAddress(Byte[] bytes)
         // https://www.ietf.org/rfc/rfc2732.txt
         if (text[offset] == '[' && text[length-1] == ']')
             {
-            offset += 1;
-            length -= 2;
+            offset += 1; // chop off '['
+            length -= 1; // chop off ']'
             if (offset >= length)
                 {
-                return False, [], "Empty IPv6 address string: {text.quoted()}";
+                return False, [], $"Empty IPv6 address string: {text.quoted()}";
                 }
             }
 
