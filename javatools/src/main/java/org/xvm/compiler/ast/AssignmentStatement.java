@@ -834,12 +834,35 @@ public class AssignmentStatement
                     int          cLVals   = LVals.length;
                     int          cAll     = cLVals + 1;
                     Assignable[] LValsAll = new Assignable[cAll];
-                    LValsAll[0] = lvalueExpr.new Assignable(getConditionRegister());
-                    System.arraycopy(LVals, 0, LValsAll, 1, cLVals);
+                    boolean      fCond    = isConditional();
+                    Register     regCond  = getConditionRegister();
+
+                    LValsAll[0] = lvalueExpr.new Assignable(regCond);
                     if (fCompletes &= lvalueExpr.isCompletable())
                         {
-                        rvalue.generateAssignments(ctx, code, LValsAll, errs);
-                        // TODO GG: !!!!!!!  !isConditional() and RValue !conditional then we need temporaries and a cond jump
+                        if (fCond || rvalue.isConditionalResult())
+                            {
+                            System.arraycopy(LVals, 0, LValsAll, 1, cLVals);
+                            rvalue.generateAssignments(ctx, code, LValsAll, errs);
+                            }
+                        else
+                            {
+                            // neither the parent (e.g. "if" or "for") nor the r-value (invocation)
+                            // are conditional; need to generate the conditional check ourselves
+                            for (int i = 1; i < cAll; i++)
+                                {
+                                LValsAll[i] = lvalueExpr.new Assignable(new Register(LVals[i-1].getType()));
+                                }
+                            rvalue.generateAssignments(ctx, code, LValsAll, errs);
+
+                            Label label = new Label("skip_copy");
+                            code.add(new JumpFalse(regCond, label));
+                            for (int i = 0; i < cLVals; i++)
+                                {
+                                LVals[i].assign(LValsAll[i+1].getRegister(), code, errs);
+                                }
+                            code.add(label);
+                            }
                         fCompletes &= rvalue.isCompletable();
                         }
                     }
