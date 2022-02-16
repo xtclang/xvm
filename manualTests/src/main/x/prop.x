@@ -19,7 +19,7 @@ module TestProps
     void testStandardProperty()
         {
         Standard s = new Standard(1);
-        Int iterations = 1_000_000;
+        Int iterations = 100_000;
         timer.reset();
         for (Int i = 0; i < iterations; ++i)
             {
