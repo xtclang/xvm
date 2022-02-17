@@ -87,7 +87,9 @@ public class Annotation
         {
         ConstantPool pool = getConstantPool();
 
-        m_constClass = (ClassConstant) pool.getConstant(m_iClass);
+        m_constClass = pool.getConstant(m_iClass);
+
+        assert m_constClass instanceof ClassConstant;
 
         int cParams = m_aiParam == null ? 0 : m_aiParam.length;
         if (cParams == 0)
@@ -138,9 +140,8 @@ public class Annotation
     public TypeConstant getAnnotationType()
         {
         Constant constAnno = getAnnotationClass();
-        if (constAnno instanceof UnresolvedNameConstant)
+        if (constAnno instanceof UnresolvedNameConstant constUnresolved)
             {
-            UnresolvedNameConstant constUnresolved = (UnresolvedNameConstant) constAnno;
             UnresolvedTypeConstant typeUnresolved =
                     new UnresolvedTypeConstant(getConstantPool(), constUnresolved);
             // when the annotation name is resolved - update the type constant
@@ -229,13 +230,12 @@ public class Annotation
     @Override
     protected int compareDetails(Constant obj)
         {
-        if (!(obj instanceof Annotation))
+        if (!(obj instanceof Annotation that))
             {
             return -1;
             }
         Annotation that = (Annotation) obj;
         int n = this.getAnnotationClass().compareTo(that.getAnnotationClass());
-
         if (n == 0)
             {
             Constant[] aThisParam = this.m_aParams;
@@ -298,7 +298,9 @@ public class Annotation
     @Override
     public void registerConstants(ConstantPool pool)
         {
-        m_constClass = (ClassConstant) pool.register(getAnnotationClass());
+        m_constClass = pool.register(getAnnotationClass());
+
+        assert m_constClass instanceof ClassConstant;
 
         Constant[] aParams = m_aParams;
         for (int i = 0, c = aParams.length; i < c; ++i)
@@ -326,14 +328,14 @@ public class Annotation
         }
 
     @Override
-    public boolean validate(ErrorListener errlist)
+    public boolean validate(ErrorListener errs)
         {
-        boolean fHalt = super.validate(errlist);
+        boolean fHalt = super.validate(errs);
 
         // it must be a mixin type
         if (getAnnotationType().getExplicitClassFormat() != Component.Format.MIXIN)
             {
-            fHalt |= log(errlist, Severity.ERROR, VE_ANNOTATION_NOT_MIXIN,
+            fHalt |= log(errs, Severity.ERROR, VE_ANNOTATION_NOT_MIXIN,
                     getAnnotationClass().getValueString());
             }
 
@@ -374,7 +376,7 @@ public class Annotation
     protected void dump(PrintWriter out, String sIndent)
         {
         out.print(sIndent);
-        out.println(toString());
+        out.println(this);
         }
 
 
@@ -407,7 +409,7 @@ public class Annotation
     private int m_iClass;
 
     /**
-     * During disassembly, this holds the index of the the annotation parameters.
+     * During disassembly, this holds the index of the annotation parameters.
      */
     private int[] m_aiParam;
 

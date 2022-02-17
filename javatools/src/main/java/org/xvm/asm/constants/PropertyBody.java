@@ -370,18 +370,12 @@ public class PropertyBody
      */
     public boolean isAbstract()
         {
-        switch (getImplementation())
+        return switch (getImplementation())
             {
-            case Delegating:
-            case Native:
-                return false;
-
-            case Explicit:
-                return isExplicitAbstract();
-
-            default:
-                return true;
-            }
+            case Delegating, Native -> false;
+            case Explicit           -> isExplicitAbstract();
+            default                 -> true;
+            };
         }
 
     /**
@@ -447,12 +441,11 @@ public class PropertyBody
             return true;
             }
 
-        if (!(obj instanceof PropertyBody))
+        if (!(obj instanceof PropertyBody that))
             {
             return false;
             }
 
-        PropertyBody that = (PropertyBody) obj;
         return Handy.equals(this.m_structProp, that.m_structProp)
             && this.m_type .equals(that.m_type)
             && this.m_impl      == that.m_impl
