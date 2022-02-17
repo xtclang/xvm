@@ -785,7 +785,7 @@ public class Compiler
      */
     public static final String RETURN_REQUIRED                    = "COMPILER-49";
     /**
-     * Could not find an operation resulting in {0} type.
+     * Could not find an operation on {0} and {1} resulting in {2} type.
      */
     public static final String INVALID_OPERATION                  = "COMPILER-50";
     /**

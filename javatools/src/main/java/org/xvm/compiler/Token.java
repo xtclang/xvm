@@ -6,7 +6,6 @@ import java.util.Map;
 
 import org.xvm.asm.ErrorListener;
 
-import org.xvm.util.Handy;
 import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.appendChar;
@@ -166,7 +165,7 @@ public class Token
         {
         if (m_id != Id.IDENTIFIER)
             {
-            throw new IllegalStateException("not an identifier! (" + toString() + ")");
+            throw new IllegalStateException("not an identifier! (" + this + ")");
             }
 
         Id id = Id.valueByContextSensitiveText((String) getValue());
@@ -327,7 +326,7 @@ public class Token
      * @param sCode      the error code that identifies the error message
      * @param aoParam    the parameters for the error message; may be null
      *
-     * @return true to attempt to abort the process that reported the error, or false to attempt
+     * @return true to attempt to abort the process that reported the error, or false to attempt to
      *         continue the process
      */
     public boolean log(ErrorListener errs, Source source, Severity severity, String sCode, Object... aoParam)
@@ -346,18 +345,15 @@ public class Token
 
     public String toDebugString()
         {
-        StringBuilder sb = new StringBuilder();
-        sb.append('[')
-          .append(Source.calculateLine(m_lStartPos))
-          .append(",")
-          .append(Source.calculateOffset(m_lStartPos))
-          .append(" - ")
-          .append(Source.calculateLine(m_lEndPos))
-          .append(",")
-          .append(Source.calculateOffset(m_lEndPos))
-          .append("] ");
-
-        return sb.append(toString()).toString();
+        return "[" +
+                Source.calculateLine(m_lStartPos) +
+                "," +
+                Source.calculateOffset(m_lStartPos) +
+                " - " +
+                Source.calculateLine(m_lEndPos) +
+                "," +
+                Source.calculateOffset(m_lEndPos) +
+                "] " + this;
         }
 
     @Override
@@ -681,6 +677,12 @@ public class Token
             this.Special          = fSpecial;
             }
 
+        @Override
+        public String toString()
+            {
+            return TEXT == null ? super.toString() : '\"' + TEXT + '"';
+            }
+
         /**
          * Look up an Id enum by its ordinal.
          *
@@ -811,7 +813,7 @@ public class Token
     /**
      * Ending position (exclusive) in the source of this token.
      */
-    private long m_lEndPos;
+    private final long m_lEndPos;
 
     /**
      * Identifier of the token.
@@ -821,7 +823,7 @@ public class Token
     /**
      * Value of the Token (if it is a literal).
      */
-    private Object m_oValue;
+    private final Object m_oValue;
 
     /**
      * Each token knows if it follows whitespace.

@@ -138,6 +138,8 @@ public class BiTypeExpression
 
             // this can happen when we attempt to convert expressions to type expressions
             log(errs, Severity.ERROR, Compiler.INVALID_OPERATION,
+                    type1.getType().removeImmutable().removeAccess().getValueString(),
+                    type2.getType().removeImmutable().removeAccess().getValueString(),
                     typeRequired == null
                         ? type1.ensureTypeConstant().getValueString()
                         : typeRequired.getValueString());

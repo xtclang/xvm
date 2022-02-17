@@ -902,9 +902,9 @@ public class RelOpExpression
         // error: somehow, we got this far, but we couldn't find an op that matched the
         // necessary types
         operator.log(errs, getSource(), Severity.ERROR, Compiler.INVALID_OPERATION,
-                typeRequired == null
-                        ? type1.getValueString()
-                        : typeRequired.getValueString());
+                type1.removeImmutable().removeAccess().getValueString(),
+                type2.removeImmutable().removeAccess().getValueString(),
+                typeRequired == null ? type1.getValueString() : typeRequired.getValueString());
         return null;
         }
 
