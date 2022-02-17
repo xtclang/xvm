@@ -234,7 +234,7 @@ public class Annotation
             {
             return -1;
             }
-        Annotation that = (Annotation) obj;
+
         int n = this.getAnnotationClass().compareTo(that.getAnnotationClass());
         if (n == 0)
             {
