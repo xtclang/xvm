@@ -94,7 +94,7 @@ public class ListExpression
         }
 
     /**
-     * @return the base type for this ListExpression, which is one of Array, Collection, List or Set
+     * @return the base type for this ListExpression, which is Array or Set
      */
     private TypeConstant getBaseType(Context ctx, TypeConstant typeRequired)
         {
@@ -104,7 +104,7 @@ public class ListExpression
             if (typeRequired != null && typeRequired.isSingleUnderlyingClass(true))
                 {
                 TypeConstant typeBase = typeRequired.getSingleUnderlyingClass(true).getType();
-                if (pool.typeSet().isA(typeBase))
+                if (!pool.typeArray().isA(typeBase) && pool.typeSet().isA(typeBase))
                     {
                     return pool.typeSet();
                     }
@@ -364,11 +364,10 @@ public class ListExpression
     private TypeConstant calculateElementType(TypeConstant typeRequired)
         {
         TypeConstant typeElement = typeRequired.resolveGenericType("Element");
-        if (typeElement == null && typeRequired instanceof IntersectionTypeConstant)
+        if (typeElement == null && typeRequired instanceof IntersectionTypeConstant typeIntersect)
             {
             // try to calculate an element type that would probably accommodate the required type
-            Set<TypeConstant> setSeqType = ((IntersectionTypeConstant) typeRequired).
-                collectMatching(pool().typeList(), null);
+            Set<TypeConstant> setSeqType = typeIntersect.collectMatching(pool().typeList(), null);
             if (!setSeqType.isEmpty())
                 {
                 for (TypeConstant typeSeq : setSeqType)
