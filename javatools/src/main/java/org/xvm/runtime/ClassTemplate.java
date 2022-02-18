@@ -2306,21 +2306,45 @@ public abstract class ClassTemplate
                         {
                         if (aAnnoMixin.length > 0)
                             {
-                            Annotation      anno          = aAnnoMixin[ixAnno++];
-                            Constant[]      aconstArgs    = anno.getParams();
-                            ClassConstant   idAnno        = (ClassConstant) anno.getAnnotationClass();
-                            ClassStructure  structAnno    = (ClassStructure) idAnno.getComponent();
-                            MethodStructure constructAnno = structAnno.findMethod("construct", aconstArgs.length);
-                            if (constructAnno.isNoOp())
+                            Annotation      anno       = aAnnoMixin[ixAnno++];
+                            Constant[]      aconstArgs = anno.getParams();
+                            int             cArgs      = aconstArgs.length;
+                            ClassConstant   idAnno     = (ClassConstant) anno.getAnnotationClass();
+                            ClassStructure  structAnno = (ClassStructure) idAnno.getComponent();
+                            MethodStructure ctorAnno   = structAnno.findMethod("construct", cArgs);
+                            boolean         fNoOp;
+
+                            if (ctorAnno.isSynthetic() && cArgs == ctorAnno.getVisibleParamCount())
+                                {
+                                // for a synthetic annotation constructor all constants except
+                                // register-based ones are initialized by the default initializer
+                                // in the step 1 (also see TypeConstant#mergeMixinTypeInfo())
+                                fNoOp = true;
+                                for (int i = 0; i < cArgs; i++)
+                                    {
+                                    Constant constArg = aconstArgs[i];
+                                    if (constArg instanceof RegisterConstant)
+                                        {
+                                        fNoOp = false;
+                                        break;
+                                        }
+                                    }
+                                }
+                            else
+                                {
+                                fNoOp = ctorAnno.isNoOp();
+                                }
+
+                            if (fNoOp)
                                 {
                                 iResult = Op.R_NEXT;
                                 }
                             else
                                 {
-                                ObjectHandle[] ahArgs = new ObjectHandle[constructAnno.getMaxVars()];
+                                ObjectHandle[] ahArgs = new ObjectHandle[ctorAnno.getMaxVars()];
 
                                 Frame frameCtor = frameCaller.createFrame1(
-                                        constructAnno, hStruct, ahArgs, Op.A_IGNORE);
+                                    ctorAnno, hStruct, ahArgs, Op.A_IGNORE);
 
                                 // if an annotation argument is represented by a RegisterConstant,
                                 // then it's either a default value or a current frame's register
@@ -2329,18 +2353,18 @@ public abstract class ClassTemplate
                                 // and since we are going to pass it as an argument for the
                                 // constructor, we need to use the constructor's frame to
                                 // [potentially] create that deferred handle
-                                for (int i = 0, c = aconstArgs.length; i < c; i++)
+                                for (int i = 0; i < cArgs; i++)
                                     {
                                     Constant constArg = aconstArgs[i];
 
                                     ahArgs[i] = constArg instanceof RegisterConstant constReg
                                             ? constReg.getRegisterIndex() == Op.A_DEFAULT
                                                 ? ObjectHandle.DEFAULT
-                                                : frameCaller.getConstHandle(constArg)
+                                                : constReg.getHandle(frameCaller)
                                         : frameCtor.getConstHandle(constArg);
                                     }
 
-                                prepareFinalizer(frameCtor, constructAnno, ahArgs);
+                                prepareFinalizer(frameCtor, ctorAnno, ahArgs);
 
                                 iResult = frameCaller.callInitialized(frameCtor);
                                 }

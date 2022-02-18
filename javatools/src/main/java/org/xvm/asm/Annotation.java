@@ -171,16 +171,6 @@ public class Annotation
         m_aParams = aParams;
         }
 
-    /**
-     * @return an equivalent annotation without parameters
-     */
-    public Annotation getNakedAnnotation()
-        {
-        return m_aParams.length == 0
-            ? this
-            : new Annotation(getConstantPool(), m_constClass, null);
-        }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 

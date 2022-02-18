@@ -131,6 +131,16 @@ public class PropertyBody
         }
 
     /**
+     * @return a new PropertyBody that is identical to this one in all aspects, except with the
+     *         specified initial value
+     */
+    public PropertyBody withInitialValue(Constant constInit)
+        {
+        return new PropertyBody(m_structProp, m_impl, m_constDelegate, m_type, m_fRO, m_fRW,
+                m_fCustom, m_effectGet, m_effectSet, m_fField, m_fConstant, constInit, null);
+        }
+
+    /**
      * @return the container of the property
      */
     public IdentityConstant getParent()

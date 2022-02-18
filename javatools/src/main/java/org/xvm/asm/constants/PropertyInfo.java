@@ -518,6 +518,21 @@ public class PropertyInfo
         }
 
     /**
+     * @return a new PropertyInfo that is identical to this one in all aspects, except with the
+     *         specified initial value
+     */
+    public PropertyInfo withInitialValue(Constant constInit)
+        {
+        PropertyBody[] aBodyOld = m_aBody;
+        int            cBodies  = aBodyOld.length;
+        PropertyBody[] aBodyNew = Arrays.copyOf(aBodyOld, cBodies);
+
+        aBodyNew[0] = aBodyNew[0].withInitialValue(constInit);
+
+        return new PropertyInfo(aBodyNew, m_type, m_fRequireField, m_fSuppressVar, m_nRank);
+        }
+
+    /**
      * @return the container of the property
      */
     public IdentityConstant getParent()
@@ -1397,12 +1412,11 @@ public class PropertyInfo
             return true;
             }
 
-        if (!(obj instanceof PropertyInfo))
+        if (!(obj instanceof PropertyInfo that))
             {
             return false;
             }
 
-        PropertyInfo that = (PropertyInfo) obj;
         return this.m_fRequireField == that.m_fRequireField
             && this.m_fSuppressVar  == that.m_fSuppressVar
             && Handy.equals(this.m_aBody, that.m_aBody);

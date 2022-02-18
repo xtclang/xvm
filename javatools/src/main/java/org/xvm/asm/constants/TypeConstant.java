@@ -40,6 +40,7 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.PackageStructure;
+import org.xvm.asm.Parameter;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
 import org.xvm.asm.TypedefStructure;
@@ -5171,11 +5172,39 @@ public abstract class TypeConstant
 
         typeTarget.layerOnTypeParams(mapTypeParams, typeMixin, mapMixinParams, errs);
 
-        // TODO GG: replace with a call to layerOnProps
+        Map<String, Constant> mapParams = null;
+        if (annoMixin != null)
+            {
+            Constant[] aconstParam = annoMixin.getParams();
+            int        cParams     = aconstParam.length;
+            if (cParams > 0)
+                {
+                // find a synthetic constructor, which is emitted by the TypeCompositionStatement
+                // for "short-hand" class declarations, e.g. 'mixin WebService(String path = "/")'
+                MethodStructure constructAuto = infoMixin.getClassStructure().
+                        findMethod("construct", MethodStructure::isSynthetic);
+                if (constructAuto != null)
+                    {
+                    mapParams = new HashMap<>();
+                    for (int i = 0; i < cParams; i++)
+                        {
+                        Constant constInit = aconstParam[i];
+                        if (!(constInit instanceof RegisterConstant))
+                            {
+                            Parameter param = constructAuto.getParam(i);
+                            mapParams.put(param.getName(), constInit);
+                            }
+                        }
+                    }
+                }
+            }
+
         for (Map.Entry<PropertyConstant, PropertyInfo> entry : mapMixinProps.entrySet())
             {
-            layerOnMixinProp(pool, infoSource, idBase, mapProps, mapVirtProps,
-                    entry.getKey(), entry.getValue(), errs);
+            PropertyConstant prop = entry.getKey();
+
+            layerOnMixinProp(pool, infoSource, idBase, mapProps, mapVirtProps, prop,
+                entry.getValue(), mapParams == null ? null : mapParams.get(prop.getName()), errs);
             }
 
         typeTarget.layerOnMethods(idBase, false, annoMixin != null, null, mapMethods, mapVirtMethods,
@@ -5213,6 +5242,7 @@ public abstract class TypeConstant
      * @param mapVirtProps  virtual properties already collected from the base
      * @param idMixinProp   the identity of the property at the mixin
      * @param infoProp      the property info from the mixin
+     * @param constInit     (optional) an initial value for the property
      * @param errs          the error listener
      */
     protected void layerOnMixinProp(
@@ -5223,12 +5253,18 @@ public abstract class TypeConstant
             Map<Object, PropertyInfo>           mapVirtProps,
             PropertyConstant                    idMixinProp,
             PropertyInfo                        infoProp,
+            Constant                            constInit,
             ErrorListener                       errs)
         {
         Object           nidContrib = idMixinProp.getNestedIdentity(); // resolved
         PropertyConstant idResult   = (PropertyConstant) idBaseClass.appendNestedIdentity(pool, nidContrib);
         PropertyInfo     propBase   = infoBase.findPropertyByNid(nidContrib);
-        if (propBase != null && infoProp.getIdentity().equals(propBase.getIdentity()))
+
+        if (constInit != null)
+            {
+            infoProp = infoProp.withInitialValue(constInit);
+            }
+        else if (propBase != null && infoProp.getIdentity().equals(propBase.getIdentity()))
             {
             // keep whatever the base has got
             return;
