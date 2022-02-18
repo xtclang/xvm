@@ -204,6 +204,12 @@ public class ConvertExpression
             }
         }
 
+    @Override
+    public Assignable[] generateAssignables(Context ctx, Code code, ErrorListener errs)
+        {
+        return expr.generateAssignables(ctx, code, errs);
+        }
+
 
     // ----- debugging assistance ------------------------------------------------------------------
 
