@@ -466,18 +466,15 @@ public class TerminalTypeConstant
         Constant constId = m_constId;
 
         // resolve any previously unresolved constant at this point
-        if (constId instanceof ResolvableConstant)
+        Constant resolved = constId.resolve();
+        if (resolved != constId && resolved != null)
             {
-            Constant constResolved = ((ResolvableConstant) constId).getResolvedConstant();
-            if (constResolved != null)
-                {
-                // note that this TerminalTypeConstant could not have previously been registered
-                // with the pool because it was not resolved, so changing the reference to the
-                // underlying constant is still safe at this point
-                m_constId = constId = constResolved;
+            // note that this TerminalTypeConstant could not have previously been registered
+            // with the pool because it was not resolved, so changing the reference to the
+            // underlying constant is still safe at this point
+            m_constId = constId = resolved;
 
-                assert !constId.containsUnresolved();
-                }
+            assert !constId.containsUnresolved();
             }
 
         return constId;

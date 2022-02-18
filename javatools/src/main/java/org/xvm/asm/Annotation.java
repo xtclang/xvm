@@ -9,7 +9,6 @@ import java.io.PrintWriter;
 import java.util.function.Consumer;
 
 import org.xvm.asm.constants.ClassConstant;
-import org.xvm.asm.constants.ResolvableConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.UnresolvedNameConstant;
 import org.xvm.asm.constants.UnresolvedTypeConstant;
@@ -118,16 +117,13 @@ public class Annotation
         Constant constClass = m_constClass;
 
         // resolve any previously unresolved constant at this point
-        if (constClass instanceof ResolvableConstant)
+        Constant resolved = constClass.resolve();
+        if (resolved != constClass && resolved != null)
             {
-            Constant constResolved = ((ResolvableConstant) constClass).getResolvedConstant();
-            if (constResolved != null)
-                {
-                // note that this TerminalTypeConstant could not have previously been registered
-                // with the pool because it was not resolved, so changing the reference to the
-                // underlying constant is still safe at this point
-                m_constClass = constClass = constResolved;
-                }
+            // note that this TerminalTypeConstant could not have previously been registered
+            // with the pool because it was not resolved, so changing the reference to the
+            // underlying constant is still safe at this point
+            m_constClass = constClass = resolved;
             }
 
         return constClass;

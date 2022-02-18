@@ -27,20 +27,20 @@ public interface ResolvableConstant
      */
     default Constant unwrap()
         {
-        ResolvableConstant constWrapper = this;
-        while (true)
+        Constant next = getResolvedConstant();
+        if (next == null)
             {
-            Constant constUnwrapped = constWrapper.getResolvedConstant();
-            if (constUnwrapped instanceof ResolvableConstant)
-                {
-                constWrapper = (ResolvableConstant) constUnwrapped;
-                }
-            else
-                {
-                return constUnwrapped == null
-                        ? (Constant) constWrapper
-                        : constUnwrapped;
-                }
+            return (Constant) this;
             }
+
+        Constant last;
+        do
+            {
+            last = next;
+            next = last.resolve();
+            }
+        while (next != last);
+
+        return last;
         }
     }

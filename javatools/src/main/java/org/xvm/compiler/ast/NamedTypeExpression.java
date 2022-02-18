@@ -24,7 +24,6 @@ import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PseudoConstant;
-import org.xvm.asm.constants.ResolvableConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.TypeParameterConstant;
@@ -203,9 +202,9 @@ public class NamedTypeExpression
             m_constUnresolved = new UnresolvedNameConstant(pool(), getNames(), isExplicitlyNonAutoNarrowing());
             m_constId = constId = m_constUnresolved;
             }
-        else if (constId instanceof ResolvableConstant)
+        else
             {
-            m_constId = constId = ((ResolvableConstant) constId).unwrap();
+            m_constId = constId = constId.resolve();
             }
         return constId;
         }
