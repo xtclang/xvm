@@ -362,31 +362,18 @@ public class ConstantPool
                     {
                     constant = new LiteralConstant(this, Format.FPLiteral, s, oValue);
                     }
-                switch (format)
+                return switch (format)
                     {
-                    case BFloat16:
-                        return constant.toBFloat16Constant();
-                    case Float16:
-                        return constant.toFloat16Constant();
-                    case Float32:
-                        return constant.toFloat32Constant();
-                    case Float64:
-                        return constant.toFloat64Constant();
-                    case Float128:
-                        return constant.toFloat128Constant();
-                    case FloatN:
-                        return constant.toFloatNConstant();
-
-                    case Dec32:
-                    case Dec64:
-                    case Dec128:
-                        return constant.toDecimalConstant(format);
-                    case DecN:
-                        return constant.toDecNConstant();
-
-                    default:
-                        throw new IllegalStateException();
-                    }
+                    case BFloat16             -> constant.toBFloat16Constant();
+                    case Float16              -> constant.toFloat16Constant();
+                    case Float32              -> constant.toFloat32Constant();
+                    case Float64              -> constant.toFloat64Constant();
+                    case Float128             -> constant.toFloat128Constant();
+                    case FloatN               -> constant.toFloatNConstant();
+                    case Dec32, Dec64, Dec128 -> constant.toDecimalConstant(format);
+                    case DecN                 -> constant.toDecNConstant();
+                    default                   -> throw new IllegalStateException();
+                    };
                 }
 
             case CInt16:
@@ -544,21 +531,14 @@ public class ConstantPool
      */
     public DecimalConstant ensureDecConstant(Decimal dec)
         {
-        Format format;
-        switch (dec.getBitLength())
+        Format format = switch (dec.getBitLength())
             {
-            case 32:
-                format = Format.Dec32;
-                break;
-            case 64:
-                format = Format.Dec64;
-                break;
-            case 128:
-                format = Format.Dec128;
-                break;
-            default:
-                throw new IllegalArgumentException("unsupported decimal type: " + dec.getClass().getSimpleName());
-            }
+            case 32  -> Format.Dec32;
+            case 64  -> Format.Dec64;
+            case 128 -> Format.Dec128;
+            default  -> throw new IllegalArgumentException(
+                            "unsupported decimal type: " + dec.getClass().getSimpleName());
+            };
 
         DecimalConstant constant = (DecimalConstant) ensureLocatorLookup(format).get(dec);
         if (constant == null)
@@ -1088,16 +1068,15 @@ public class ConstantPool
             throw new IllegalArgumentException("illegal package name: " + sPackage);
             }
 
-        switch (constParent.getFormat())
+        return switch (constParent.getFormat())
             {
-            case Module:
-            case Package:
-                return (PackageConstant) register(new PackageConstant(this, constParent, sPackage));
+            case Module, Package ->
+                (PackageConstant) register(new PackageConstant(this, constParent, sPackage));
 
-            default:
+            default ->
                 throw new IllegalArgumentException("constant " + constParent.getFormat()
-                        + " is not a Module or Package");
-            }
+                    + " is not a Module or Package");
+            };
         }
 
     /**
@@ -1111,19 +1090,15 @@ public class ConstantPool
      */
     public ClassConstant ensureClassConstant(IdentityConstant constParent, String sClass)
         {
-        switch (constParent.getFormat())
+        return switch (constParent.getFormat())
             {
-            case Module:
-            case Package:
-            case Class:
-            case Method:
-            case Property:
-                return (ClassConstant) register(new ClassConstant(this, constParent, sClass));
+            case Module, Package, Class, Method, Property ->
+                (ClassConstant) register(new ClassConstant(this, constParent, sClass));
 
-            default:
+            default ->
                 throw new IllegalArgumentException("constant " + constParent.getFormat()
-                        + " is not a valid parent");
-            }
+                    + " is not a valid parent");
+            };
         }
 
     /**
@@ -1417,27 +1392,18 @@ public class ConstantPool
         {
         assert constParent != null;
 
-        MultiMethodConstant constMultiMethod;
-        switch (constParent.getFormat())
+        MultiMethodConstant constMultiMethod = switch (constParent.getFormat())
             {
-            case MultiMethod:
-                constMultiMethod = (MultiMethodConstant) constParent;
-                break;
+            case MultiMethod ->
+                (MultiMethodConstant) constParent;
 
-            case Module:
-            case Package:
-            case Class:
-            case Method:
-            case Property:
-            case TypeParameter:
-            case FormalTypeChild:
-                constMultiMethod = ensureMultiMethodConstant(constParent, sName);
-                break;
+            case Module, Package, Class, Method, Property, TypeParameter, FormalTypeChild ->
+                ensureMultiMethodConstant(constParent, sName);
 
-            default:
+            default ->
                 throw new IllegalArgumentException("constant " + constParent.getFormat()
-                        + " is not a Module, Package, Class, Method, or Property");
-            }
+                    + " is not a Module, Package, Class, Method, or Property");
+            };
 
         return (MethodConstant) register(new MethodConstant(this, constMultiMethod,
                 aconstParams, aconstReturns));
@@ -1456,29 +1422,19 @@ public class ConstantPool
         assert constParent != null;
         assert constSig    != null;
 
-        MultiMethodConstant constMultiMethod;
-        switch (constParent.getFormat())
+        MultiMethodConstant constMultiMethod = switch (constParent.getFormat())
             {
-            case MultiMethod:
-                constMultiMethod = (MultiMethodConstant) constParent;
-                break;
+            case MultiMethod ->
+                (MultiMethodConstant) constParent;
 
-            case Module:
-            case Package:
-            case Class:
-            case NativeClass:
-            case Method:
-            case Property:
-            case TypeParameter:
-            case FormalTypeChild:
-            case DynamicFormal:
-                constMultiMethod = ensureMultiMethodConstant(constParent, constSig.getName());
-                break;
+            case Module, Package, Class, NativeClass, Method, Property,
+                 TypeParameter, FormalTypeChild, DynamicFormal ->
+                ensureMultiMethodConstant(constParent, constSig.getName());
 
-            default:
+            default ->
                 throw new IllegalArgumentException("constant " + constParent.getFormat()
-                        + " is not a Module, Package, Class, Method, or Property");
-            }
+                    + " is not a Module, Package, Class, Method, or Property");
+            };
 
         return (MethodConstant) register(new MethodConstant(this, constMultiMethod, constSig));
         }
@@ -1886,22 +1842,12 @@ public class ConstantPool
      */
     public TypeConstant ensureThisTypeConstant(Constant constClass, Access access)
         {
-        ThisClassConstant constId;
-        switch (constClass.getFormat())
+        ThisClassConstant constId = switch (constClass.getFormat())
             {
-            case ThisClass:
-                constId = (ThisClassConstant) constClass;
-                break;
-
-            case Module:
-            case Package:
-            case Class:
-                constId = ensureThisClassConstant((IdentityConstant) constClass);
-                break;
-
-            default:
-                throw new IllegalStateException("constant=" + constClass);
-            }
+            case ThisClass              -> (ThisClassConstant) constClass;
+            case Module, Package, Class -> ensureThisClassConstant((IdentityConstant) constClass);
+            default                     -> throw new IllegalStateException("constant=" + constClass);
+            };
 
         // get the raw type
         TypeConstant constType = (TypeConstant) ensureLocatorLookup(Format.TerminalType).get(constId);
@@ -2987,12 +2933,10 @@ public class ConstantPool
             return true;
             }
 
-        if (!(obj instanceof ConstantPool))
+        if (!(obj instanceof ConstantPool that))
             {
             return false;
             }
-
-        ConstantPool that = (ConstantPool) obj;
 
         // compare each constant in the pool for equality
         return this.m_listConst.equals(that.m_listConst);
