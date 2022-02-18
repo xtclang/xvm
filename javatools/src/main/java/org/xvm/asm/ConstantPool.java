@@ -1709,18 +1709,20 @@ public class ConstantPool
             }
 
         TypeConstant typeParent;
+        boolean      fCheckAuto;
         if (clzBase.equals(clzParent) || clzBase.hasContribution(idParent, true))
             {
             // we've reached the "top"
             typeParent = fFormal ? clzBase.getFormalType() : clzBase.getCanonicalType();
-            if (constTarget instanceof ThisClassConstant)
-                {
-                typeParent  = ((ThisClassConstant) constTarget).getDeclarationLevelClass().
-                                    getType().adoptParameters(this, typeParent);
-                fAutoNarrow = true;
-                }
+            fCheckAuto = true;
             }
-        else if (clzParent.isVirtualChild())
+        else if (!clzParent.isVirtualChild())
+            {
+            // we've reached the "virtual top"
+            typeParent = fFormal ? clzParent.getFormalType() : clzParent.getCanonicalType();
+            fCheckAuto = true;
+            }
+        else
             {
             // as we recurse, always parameterize the parent, which is never auto-narrowing
             typeParent = ensureVirtualTypeConstant(clzBase, clzParent, fFormal, true, constTarget);
@@ -1728,11 +1730,14 @@ public class ConstantPool
                 {
                 return null;
                 }
+            fCheckAuto = false;
             }
-        else
+
+        if (fCheckAuto && constTarget instanceof ThisClassConstant)
             {
-            // somehow the classes didn't coalesce
-            return null;
+            typeParent  = ((ThisClassConstant) constTarget).getDeclarationLevelClass().
+                                getType().adoptParameters(this, typeParent);
+            fAutoNarrow = true;
             }
 
         TypeConstant typeTarget = fAutoNarrow
