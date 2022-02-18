@@ -151,11 +151,13 @@ const String
         }
 
     /**
-     * Count the number of occurrences of the specified character in this String.
+     * Split the String into an array of Strings, by finding each occurrence of the specified
+     * separator character within the String, and collecting the array of Strings demarcated by that
+     * character.
      *
-     * @param value  the character to search for
+     * @param separator  the character that separates the items in the String
      *
-     * @return the number of times that the specified character occurs in this String
+     * @return an array of Strings
      */
     String![] split(Char separator)
         {
@@ -178,6 +180,201 @@ const String
         results += substring(start);
 
         return results;
+        }
+
+    /**
+     * Split the String into an map of String keys and String values, by finding each occurrence of
+     * the specified entry separator character within the String, and collecting the array of
+     * Strings demarcated by that character.
+     *
+     * @param separator  the character that separates the items in the String
+     *
+     * @return an array of Strings
+     */
+    Map<String!, String!> splitMap(Char kvSeparator='=', Char entrySeparator=',')
+        {
+        if (size == 0)
+            {
+            return Map:[];
+            }
+
+        return new StringMap(this, kvSeparator, entrySeparator);
+        }
+
+    /**
+     * A lightweight, immutable Map implementation over a delimited String. Note that the
+     * implementation does not attempt to de-duplicate keys; the search for a specified key is
+     * sequential, e.g. a call to `get(k)` in the Map will return the value from  the first entry
+     * with that key.
+     */
+    protected static const StringMap(String data, Char kvSep, Char entrySep)
+            implements Map<String, String>
+            incorporates collections.maps.KeySetBasedMap<String, String>
+        {
+        @Override
+        conditional Orderer? ordered()
+            {
+            return True, Null;
+            }
+
+        @Override
+        @Lazy Int size.calc()
+            {
+            return data.count(entrySep) + 1;
+            }
+
+        @Override
+        Boolean empty.get()
+            {
+            return False;
+            }
+
+        @Override
+        Boolean contains(String key)
+            {
+            return find(key);
+            }
+
+        @Override
+        conditional String get(String key)
+            {
+            if ((Int keyStart, Int sepOffset, Int valueEnd) := find(key))
+                {
+                return True, valueEnd > sepOffset+1 ? data[sepOffset+1..valueEnd) : "";
+                }
+            return False;
+            }
+
+        conditional (Int keyStart, Int sepOffset, Int valueEnd) find(String key)
+            {
+            String data      = data;
+            Int    length    = data.size;
+            Int    offset    = 0;
+            Int    keyLength = key.size;
+            Int    keyOffset = 0;
+            EachEntry: while (offset + keyLength <= length)
+                {
+                keyOffset = offset;
+                Boolean match = True;
+                for (Char keyChar : key)
+                    {
+                    Char mapChar = data[offset++];
+                    if (mapChar != keyChar)
+                        {
+                        if (mapChar == entrySep)
+                            {
+                            continue EachEntry;
+                            }
+                        else
+                            {
+                            match = False;
+                            break;
+                            }
+                        }
+                    }
+
+                if (offset >= length)
+                    {
+                    // key is at the very end, with no delimiter
+                    return match, keyOffset, length, length;
+                    }
+
+                Int  sepOffset = offset;
+                Char sepChar   = data[offset++];
+                if (match && sepChar == entrySep)
+                    {
+                    // key is followed immediately by the entry separator, so value is blank
+                    return True, keyOffset, sepOffset, sepOffset;
+                    }
+
+                // find the separator offset
+                while (offset < length && data[offset] != entrySep)
+                    {
+                    ++offset;
+                    }
+
+                if (match && sepChar == kvSep)
+                    {
+                    // we did find the key, and now we have found the end of the value
+                    return True, keyOffset, sepOffset, offset;
+                    }
+
+                ++offset;
+                }
+
+            return False;
+            }
+
+        @Override
+        @Lazy Set<String> keys.calc()
+            {
+            return new KeySet();
+            }
+
+        const KeySet
+                implements Set<String>
+            {
+            @Override
+            conditional Orderer? ordered()
+                {
+                return True, Null;
+                }
+
+            @Override
+            Int size.get()
+                {
+                return this.StringMap.size;
+                }
+
+            @Override
+            Boolean empty.get()
+                {
+                return False;
+                }
+
+            @Override
+            Boolean contains(String value)
+                {
+                return this.StringMap.contains(value);
+                }
+
+            @Override
+            Iterator<String> iterator()
+                {
+                return new Iterator<String>()
+                    {
+                    String data   = this.StringMap.data;
+                    Int    offset = 0;
+
+                    @Override
+                    conditional String next()
+                        {
+                        Int length = data.size;
+                        if (offset >= length)
+                            {
+                            return False;
+                            }
+
+                        // find the end of the entry
+                        Int endEntry = length;
+                        endEntry := data.indexOf(entrySep, offset);
+
+                        // the delimiter between key and value is optional (i.e. value assumed
+                        // to be "")
+                        Int endKey = endEntry;
+                        if (endKey := data.indexOf(kvSep, offset), endKey > endEntry)
+                            {
+                            endKey = endEntry;
+                            }
+
+                        String key = data[offset..endKey);
+                        offset = endEntry + 1;
+
+                        return True, key;
+                        }
+                    };
+                }
+            }
         }
 
     /**

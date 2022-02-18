@@ -2,15 +2,14 @@ module TestSimple
     {
     @Inject Console console;
 
-    package collections import collections.xtclang.org;
-    import ecstasy.collections.*;
-    import collections.*;
-
     void run()
         {
-        Int   l  = 100;
-        Int32 j  = l.toInt32();
-        l      -= --j;          // this used to throw StackOverflow during compilation
-        console.println(l);
+        for (String s : ["abc=123&xyz=789", "abc,abc=123,xyz", "abc", "abc="])
+            {
+            var map = s.splitMap(entrySeparator='&');
+            console.println($"string={s}, map={map}");
+            console.println($"map[abc]={map["abc"]}, map[def]={map["def"]}, map[xyz]={map["xyz"]}");
+            console.println();
+            }
         }
     }
