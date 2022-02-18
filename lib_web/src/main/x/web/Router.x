@@ -281,7 +281,7 @@ class Router
             {
             HttpHeaders         headers = new HttpHeaders(headerNames, headerValues);
             HttpMethod          method  = HttpMethod.fromName(methodName);
-            HttpRequest         httpReq = new HttpRequest(URI.create(uri), headers, method, body);
+            HttpRequest         httpReq = new HttpRequest(new URI(uri), headers, method, body);
             List<UriRouteMatch> routes  = findClosestRoute(httpReq);
             HttpResponse        response;
 
