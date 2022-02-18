@@ -81,9 +81,6 @@ const Path
                 construct Path(parent, Parent);
                 break;
 
-            case "":
-                throw new IllegalArgument("Name is required");
-
             default:
                 assert:arg !name.startsWith('/') as $"Name \"{name}\" does not specify a relative path";
                 String remain = name;
