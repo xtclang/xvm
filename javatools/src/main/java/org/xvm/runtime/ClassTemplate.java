@@ -2333,8 +2333,8 @@ public abstract class ClassTemplate
                                     {
                                     Constant constArg = aconstArgs[i];
 
-                                    ahArgs[i] = constArg instanceof RegisterConstant
-                                            ? ((RegisterConstant) constArg).getRegisterIndex() == Op.A_DEFAULT
+                                    ahArgs[i] = constArg instanceof RegisterConstant constReg
+                                            ? constReg.getRegisterIndex() == Op.A_DEFAULT
                                                 ? ObjectHandle.DEFAULT
                                                 : frameCaller.getConstHandle(constArg)
                                         : frameCtor.getConstHandle(constArg);

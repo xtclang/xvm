@@ -32,9 +32,9 @@ public abstract class ConstHeap
      */
     protected ObjectHandle ensureConstHandle(Frame frame, Constant constValue)
         {
-        if (constValue instanceof RegisterConstant)
+        if (constValue instanceof RegisterConstant constReg)
             {
-            return ((RegisterConstant) constValue).getHandle(frame);
+            return constReg.getHandle(frame);
             }
 
         // NOTE: we cannot use computeIfAbsent, since createConstHandle can be recursive,
@@ -109,9 +109,9 @@ public abstract class ConstHeap
      */
     protected ObjectHandle saveConstHandle(Constant constValue, ObjectHandle hValue)
         {
-        if (hValue instanceof InitializingHandle)
+        if (hValue instanceof InitializingHandle hInit)
             {
-            ObjectHandle hConst = ((InitializingHandle) hValue).getInitialized();
+            ObjectHandle hConst = hInit.getInitialized();
             if (hConst == null)
                 {
                 return hValue;
