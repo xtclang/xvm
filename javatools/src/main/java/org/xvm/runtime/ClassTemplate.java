@@ -2312,30 +2312,35 @@ public abstract class ClassTemplate
                             ClassConstant   idAnno     = (ClassConstant) anno.getAnnotationClass();
                             ClassStructure  structAnno = (ClassStructure) idAnno.getComponent();
                             MethodStructure ctorAnno   = structAnno.findMethod("construct", cArgs);
-                            boolean         fNoOp;
 
-                            if (ctorAnno.isSynthetic() && cArgs == ctorAnno.getVisibleParamCount())
-                                {
-                                // for a synthetic annotation constructor all constants except
-                                // register-based ones are initialized by the default initializer
-                                // in the step 1 (also see TypeConstant#mergeMixinTypeInfo())
-                                fNoOp = true;
-                                for (int i = 0; i < cArgs; i++)
-                                    {
-                                    Constant constArg = aconstArgs[i];
-                                    if (constArg instanceof RegisterConstant)
-                                        {
-                                        fNoOp = false;
-                                        break;
-                                        }
-                                    }
-                                }
-                            else
-                                {
-                                fNoOp = ctorAnno.isNoOp();
-                                }
+// TODO GG: the code below is incorrect for complex arrangements, such as:
+//    mixin Get(String path = "")
+//            extends HttpEndpoint(HttpMethod.GET, path)
+//            into Method {}
+//                            boolean         fNoOp;
+//
+//                            if (ctorAnno.isSynthetic() && cArgs == ctorAnno.getVisibleParamCount())
+//                                {
+//                                // for a synthetic annotation constructor all constants except
+//                                // register-based ones are initialized by the default initializer
+//                                // in the step 1 (also see TypeConstant#mergeMixinTypeInfo())
+//                                fNoOp = true;
+//                                for (int i = 0; i < cArgs; i++)
+//                                    {
+//                                    Constant constArg = aconstArgs[i];
+//                                    if (constArg instanceof RegisterConstant)
+//                                        {
+//                                        fNoOp = false;
+//                                        break;
+//                                        }
+//                                    }
+//                                }
+//                            else
+//                                {
+//                                fNoOp = ctorAnno.isNoOp();
+//                                }
 
-                            if (fNoOp)
+                            if (ctorAnno.isNoOp())
                                 {
                                 iResult = Op.R_NEXT;
                                 }
