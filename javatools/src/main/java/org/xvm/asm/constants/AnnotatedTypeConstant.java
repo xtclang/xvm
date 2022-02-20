@@ -553,6 +553,7 @@ public class AnnotatedTypeConstant
                             typeCurr.getUnderlyingType().getValueString(),
                             typeMixin.getValueString(),
                             typeInto.getValueString());
+                        return null;
                         }
 
                     listAnnoClz.add(typeAnno.getAnnotation().getAnnotationClass());
@@ -703,13 +704,12 @@ public class AnnotatedTypeConstant
     @Override
     protected int compareDetails(Constant obj)
         {
-        if (!(obj instanceof AnnotatedTypeConstant))
+        if (!(obj instanceof AnnotatedTypeConstant that))
             {
             return -1;
             }
-        AnnotatedTypeConstant that = (AnnotatedTypeConstant) obj;
-        int n = this.m_annotation.compareTo(that.m_annotation);
 
+        int n = this.m_annotation.compareTo(that.m_annotation);
         if (n == 0)
             {
             n = this.m_constType.compareTo(that.m_constType);
