@@ -3,12 +3,12 @@
  *
  * @see [RFC 2616 §9.2](https://www.w3.org/Protocols/rfc2616/rfc2616-sec9.html.
  */
-enum HttpMethod
+enum HttpMethod(Boolean permitsRequestBody=False, Boolean requiresRequestBody=False)
     {
     /**
      * @see [RFC 2616 §9.2](https://www.w3.org/Protocols/rfc2616/rfc2616-sec9.html#sec9.2)
      */
-    OPTIONS,
+    OPTIONS(True),
 
     /**
      * @see [RFC 2616 §9.3](https://www.w3.org/Protocols/rfc2616/rfc2616-sec9.html#sec9.3)
@@ -23,17 +23,17 @@ enum HttpMethod
     /**
      * @see [RFC 2616 §9.5](https://www.w3.org/Protocols/rfc2616/rfc2616-sec9.html#sec9.5)
      */
-    POST,
+    POST(True, True),
 
     /**
      * @see [RFC 2616 §9.6](https://www.w3.org/Protocols/rfc2616/rfc2616-sec9.html#sec9.6)
      */
-    PUT,
+    PUT(True, True),
 
     /**
      * @see [RFC 2616 §9.7](https://www.w3.org/Protocols/rfc2616/rfc2616-sec9.html#sec9.7)
      */
-    DELETE,
+    DELETE(True),
 
     /**
      * @see [RFC 2616 §9.8](https://www.w3.org/Protocols/rfc2616/rfc2616-sec9.html#sec9.8)
@@ -48,15 +48,20 @@ enum HttpMethod
     /**
      * @see [RFC 25789](https://tools.ietf.org/html/rfc5789)
      */
-    PATCH,
+    PATCH(True, True),
 
     /**
-     * A custom non-standard HTTP method.
+     * Any non-standard HTTP method.
      */
-    CUSTOM;
+    OTHER(True),
+    ;
 
     /**
-     * Returns an HTTP method from the method name.
+     * Determine the HttpMethod from the "method name".
+     *
+     * @param name  the _method_ portion of an [HttpMessage], as defined by the HTTP standard
+     *
+     * @return the HttpMethod, or [OTHER] if none matches the name.
      */
     static HttpMethod fromName(String name)
         {
@@ -64,32 +69,7 @@ enum HttpMethod
             {
             return method;
             }
-        return CUSTOM;
-        }
 
-    /**
-     * Determine whether the given method requires a request body.
-     *
-     * @param method the HttpMethod
-     * @return True if the method requires a request body
-     */
-    static Boolean requiresRequestBody(HttpMethod method)
-        {
-        return method == POST || method == PUT || method == PATCH;
+        return OTHER;
         }
-
-    /**
-     * Determine whether the given method allows a request body.
-     *
-     * @param method the HttpMethod
-     * @return True if the method requires a request body
-     */
-    static Boolean permitsRequestBody(HttpMethod method)
-        {
-        return requiresRequestBody(method)
-                || method == OPTIONS
-                || method == DELETE
-                || method == CUSTOM;
-        }
-
     }

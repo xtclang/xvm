@@ -34,6 +34,9 @@
  * It should now return a 404 again
  *
  */
+@HttpModule
+@HttpsRequired
+@LoginRequired
 module TestWebApp
     {
     package web import web.xtclang.org;
@@ -42,7 +45,10 @@ module TestWebApp
     import web.Consumes;
     import web.Delete;
     import web.Get;
+    import web.HttpModule;
     import web.HttpStatus;
+    import web.HttpsRequired;
+    import web.LoginRequired;
     import web.NotFound;
     import web.PathParam;
     import web.Post;
@@ -58,34 +64,34 @@ module TestWebApp
         /**
          * Add or update a user.
          *
-         * @param who   the user name extracted from the URI path
+         * @param userId   the user name extracted from the URI path
          * @param user  the User to add or update, decoded from the json request body
          */
-        @Post("/{who}")
+        @Post("/{userId}")
         @Consumes("application/json")
-        void putUser(@PathParam String who, @Body User user)
+        void putUser(@PathParam String userId, @Body User user)
             {
             // ToDo: There could probably be validation here which could show handling of exceptions or status codes etc.
-            // For example, validate the who parameter matches the name in the User.
+            // For example, validate the userId parameter matches the name in the User.
             // This could be a simple assertion that would result in a 400 response
             // Having said that, exceptions are a poor way to indicate a response code and instead
             // just return multiple values, e.g. the response body and a HttpStatus
-            users.put(who, user);
+            users.put(userId, user);
             }
 
         /**
          * Get a user.
          * If this method returns False, the web framework converts it to a 404 response.
          *
-         * @param who   the name of the User to get
+         * @param userId   the name of the User to get
          *
          * @return a True iff a User associated with the specified name exists
          * @return the User value associated with the specified name (conditional)
          */
-        @Get("/{who}")
-        conditional User getUser(String who)
+        @Get("/{userId}")
+        conditional User getUser(String userId)
             {
-            if (User user := users.get(who))
+            if (User user := users.get(userId))
                 {
                 return True, user;
                 }
@@ -95,19 +101,19 @@ module TestWebApp
         /**
          * Delete a user.
          *
-         * @param who  the name of the User to delete
+         * @param userId  the name of the User to delete
          *
          * @return HttpStatus.OK if the User was deleted or HttpStatus.NotFound
          *         if no User exists for the specified name
          */
-        @Delete("/{who}")
-        HttpStatus deleteUser(String who)
+        @Delete("/{userId}")
+        HttpStatus deleteUser(String userId)
             {
-            if (!users.contains(who))
+            if (!users.contains(userId))
                 {
                 return HttpStatus.NotFound;
                 }
-            users.remove(who);
+            users.remove(userId);
             return HttpStatus.OK;
             }
         }
@@ -128,6 +134,9 @@ module TestWebApp
         WebServer server = new WebServer(8080)
                 .addRoutes(new UsersApi(), "/users")
                 .start();
+// TODO instead:
+//        @Inject HttpConnector conn;
+//        conn.addRoutes(new UsersApi(), "/users");
 
         console.println("Started WebServer http://localhost:8080");
 

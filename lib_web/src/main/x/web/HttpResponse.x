@@ -28,7 +28,7 @@ class HttpResponse(HttpStatus status = HttpStatus.OK)
         if (tuple.size <= index)
             {
             // method had a void return type so there is no response body
-            if (HttpMethod.permitsRequestBody(method))
+            if (method.permitsRequestBody)
                 {
                 // method allows a body so set the length to zero
                 response.headers.add("Content-Length", "0");
@@ -61,7 +61,6 @@ class HttpResponse(HttpStatus status = HttpStatus.OK)
         return response;
         }
 
-
     Tuple<Int, String[], String[][], Byte[]> asTuple()
         {
         (String[] names, String[][] values) = headers.toArrays();
@@ -85,5 +84,4 @@ class HttpResponse(HttpStatus status = HttpStatus.OK)
             }
         return out.bytes;
         }
-
     }

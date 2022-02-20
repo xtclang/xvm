@@ -53,6 +53,7 @@ class Router
      */
     private MediaTypeCodecRegistry codecRegistry;
 
+
     // ----- Freezable interface -------------------------------------------------------------------
 
     @Override
@@ -131,7 +132,7 @@ class Router
                     consumes.add(new MediaType(endpoint.mediaType));
                     }
 
-                routes.add(new DefaultUriRoute(endpoint.method, template,
+                routes.add(new DefaultUriRoute(endpoint.httpMethod, template,
                         executable, consumes, produces, preProcessors, postProcessors));
                 }
             }
@@ -168,7 +169,7 @@ class Router
     private List<UriRouteMatch> findClosestRoute(HttpRequest req)
         {
         HttpMethod  method        = req.method;
-        Boolean     permitsBody   = HttpMethod.permitsRequestBody(method);
+        Boolean     permitsBody   = method.permitsRequestBody;
         MediaType?  contentType   = req.contentType;
         MediaType[] acceptedTypes = req.accepts;
 
