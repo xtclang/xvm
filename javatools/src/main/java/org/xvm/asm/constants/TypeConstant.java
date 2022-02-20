@@ -2387,6 +2387,11 @@ public abstract class TypeConstant
                                 "extends");
                         break;
                         }
+
+                    if (!fInto)
+                        {
+                        typeInto = typeExtends.getExplicitClassInto(true);
+                        }
                     }
                 else if (!fInto)
                     {
