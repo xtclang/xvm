@@ -95,23 +95,6 @@ public class NewExpression
         }
 
     /**
-     * @return the parent of the object being new'd, for example "parent.new Child()", or null if
-     *         the object being new'd is of a top level class
-     */
-    public Expression getLeftExpression()
-        {
-        return left;
-        }
-
-    /**
-     * @return the type of the object being new'd; never null
-     */
-    public TypeExpression getTypeExpression()
-        {
-        return type;
-        }
-
-    /**
      * @return true iff the new expression is for a "virtual new" (this.new(...))
      */
     public boolean isVirtualNew()
@@ -142,15 +125,6 @@ public class NewExpression
     public int getDimensionCount()
         {
         return Math.max(dims, 0);
-        }
-
-    /**
-     * @return the body of the anonymous inner class, or null if this "new" is not instantiating an
-     *         anonymous inner class
-     */
-    public StatementBlock getAnonymousInnerClassBody()
-        {
-        return body;
         }
 
     @Override
@@ -342,9 +316,9 @@ public class NewExpression
                 typeResult = type.ensureTypeConstant(ctx, errs);
                 if (typeResult.containsUnresolved())
                     {
-                    if (typeResult instanceof AnnotatedTypeConstant)
+                    if (typeResult instanceof AnnotatedTypeConstant typeAnno)
                         {
-                        typeResult     = ((AnnotatedTypeConstant) typeResult).stripParameters();
+                        typeResult     = typeAnno.stripParameters();
                         m_fDynamicAnno = true;
                         }
                     else
@@ -491,13 +465,12 @@ public class NewExpression
 
             // strip the annotations and, if necessary, apply them later
             Annotation[] annos;
-            if (typeResult instanceof AnnotatedTypeConstant)
+            if (typeResult instanceof AnnotatedTypeConstant typeAnno)
                 {
                 List<Annotation> listClass = new ArrayList<>();
                 List<Annotation> listMixin = new ArrayList<>();
 
-                typeTarget = ((AnnotatedTypeConstant) typeResult).
-                                extractAnnotation(listClass, listMixin, errs);
+                typeTarget = typeAnno.extractAnnotation(listClass, listMixin, errs);
                 if (typeTarget == null)
                     {
                     // errors must have been reported
@@ -1176,9 +1149,9 @@ public class NewExpression
         ConstantPool pool = pool();
 
         TypeConstant typeUnderlying = typeAnno.getUnderlyingType();
-        if (typeUnderlying instanceof AnnotatedTypeConstant)
+        if (typeUnderlying instanceof AnnotatedTypeConstant typeUnder)
             {
-            typeUnderlying = generateDynamicParameters(ctx, code, (AnnotatedTypeConstant) typeUnderlying, errs);
+            typeUnderlying = generateDynamicParameters(ctx, code, typeUnder, errs);
             }
 
         Constant[] aConst = typeAnno.getAnnotationParams();
@@ -1186,15 +1159,15 @@ public class NewExpression
         for (int j = 0, c = aConst.length; j < c; j++)
             {
             Constant constArg = aConst[j];
-            if (constArg instanceof ExpressionConstant)
+            if (constArg instanceof ExpressionConstant constExpr)
                 {
-                Expression exprArg = ((ExpressionConstant) constArg).getExpression();
+                Expression exprArg = constExpr.getExpression();
 
                 Argument argArg = exprArg.generateArgument(ctx, code, true, false, errs);
                 Register regArg;
-                if (argArg instanceof Register)
+                if (argArg instanceof Register regA)
                     {
-                    regArg = (Register) argArg;
+                    regArg = regA;
                     }
                 else
                     {

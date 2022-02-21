@@ -57,8 +57,8 @@ public class ExpressionConstant
     @Override
     protected int compareDetails(Constant that)
         {
-        return that instanceof ExpressionConstant
-            && this.m_expr.equals(((ExpressionConstant) that).m_expr)
+        return that instanceof ExpressionConstant exprThat
+            && this.m_expr.equals(exprThat.m_expr)
                 ?  0
                 : -1;
         }
@@ -93,5 +93,5 @@ public class ExpressionConstant
     /**
      * The underlying expression.
      */
-    private transient Expression m_expr;
+    private final transient Expression m_expr;
     }

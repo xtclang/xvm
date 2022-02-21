@@ -149,9 +149,9 @@ public class AnnotationExpression
                     continue;
                     }
 
-                if (exprArg instanceof LabeledExpression)
+                if (exprArg instanceof LabeledExpression exprLbl)
                     {
-                    exprArg = ((LabeledExpression) exprArg).getUnderlyingExpression();
+                    exprArg = exprLbl.getUnderlyingExpression();
                     }
 
                 if (exprArg instanceof LiteralExpression exprLit)
@@ -167,10 +167,10 @@ public class AnnotationExpression
                         aconstArgs[iArg] = exprLit.getLiteralConstant();
                         }
                     }
-                else if (exprArg instanceof NameExpression)
+                else if (exprArg instanceof NameExpression exprName)
                     {
                     aconstArgs[iArg] = new UnresolvedNameConstant(pool,
-                            ((NameExpression) exprArg).collectNames(1), false);
+                            exprName.collectNames(1), false);
                     }
                 else
                     {
@@ -268,8 +268,8 @@ public class AnnotationExpression
             for (int iArg = 0; iArg < cArgs; ++iArg)
                 {
                 Expression exprOld = listArgs.get(iArg);
-                int        iParam  = exprOld instanceof LabeledExpression
-                        ? constructor.getParam(((LabeledExpression) exprOld).getName()).getIndex()
+                int        iParam  = exprOld instanceof LabeledExpression exprLbl
+                        ? constructor.getParam(exprLbl.getName()).getIndex()
                         : iArg;
 
                 Expression exprNew = exprOld.validate(ctx, atypeParams[iParam], errs);

@@ -67,8 +67,7 @@ public class AnnotatedTypeExpression
     public boolean isIntoRef()
         {
         return m_fDisassociateRef
-            || ((type instanceof AnnotatedTypeExpression)
-                && ((AnnotatedTypeExpression) type).isIntoRef());
+            || type instanceof AnnotatedTypeExpression exprType && exprType.isIntoRef();
         }
 
     /**
@@ -78,8 +77,7 @@ public class AnnotatedTypeExpression
     public boolean isVar()
         {
         return m_fVar
-            || ((type instanceof AnnotatedTypeExpression)
-                && ((AnnotatedTypeExpression) type).isVar());
+            || type instanceof AnnotatedTypeExpression exprType && exprType.isVar();
         }
 
     /**
@@ -88,8 +86,7 @@ public class AnnotatedTypeExpression
     public boolean isInjected()
         {
         return m_fInjected
-            || ((type instanceof AnnotatedTypeExpression)
-                && ((AnnotatedTypeExpression) type).isInjected());
+            || type instanceof AnnotatedTypeExpression exprType && exprType.isInjected();
         }
 
     /**
@@ -98,8 +95,7 @@ public class AnnotatedTypeExpression
     public boolean isFinal()
         {
         return m_fFinal
-            || ((type instanceof AnnotatedTypeExpression)
-                && ((AnnotatedTypeExpression) type).isFinal());
+            || type instanceof AnnotatedTypeExpression exprType && exprType.isFinal();
         }
 
     /**
@@ -120,9 +116,9 @@ public class AnnotatedTypeExpression
             }
 
         // REVIEW in what order?
-        if (type instanceof AnnotatedTypeExpression)
+        if (type instanceof AnnotatedTypeExpression exprType)
             {
-            ((AnnotatedTypeExpression) type).collectRefAnnotations(list);
+            exprType.collectRefAnnotations(list);
             }
         }
 
@@ -285,8 +281,8 @@ public class AnnotatedTypeExpression
             }
         else if (typeReferent.isA(typeAnno.ensureTypeInfo(errs).getInto()))
             {
-            typeReq = typeReferent instanceof AnnotatedTypeConstant
-                    ? ((AnnotatedTypeConstant) typeReferent).getAnnotationType()
+            typeReq = typeReferent instanceof AnnotatedTypeConstant exprAnno
+                    ? exprAnno.getAnnotationType()
                     : typeAnno;
             }
         else if (m_fAnonInner && m_fDisassociateClass)

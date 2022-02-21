@@ -80,8 +80,8 @@ public class VariableDeclarationStatement
      */
     public boolean hasRefAnnotations()
         {
-        return type instanceof AnnotatedTypeExpression &&
-                !((AnnotatedTypeExpression) type).getRefAnnotations().isEmpty();
+        return type instanceof AnnotatedTypeExpression exprAnno &&
+                !exprAnno.getRefAnnotations().isEmpty();
         }
 
     /**
@@ -239,15 +239,15 @@ public class VariableDeclarationStatement
                         for (int j = 0, c = aConst.length; j < c; j++)
                             {
                             Constant constArg = aConst[j];
-                            if (constArg instanceof ExpressionConstant)
+                            if (constArg instanceof ExpressionConstant constExpr)
                                 {
-                                Expression exprArg = ((ExpressionConstant) constArg).getExpression();
+                                Expression exprArg = constExpr.getExpression();
 
                                 Argument argArg = exprArg.generateArgument(ctx, code, true, false, errs);
                                 Register regArg;
-                                if (argArg instanceof Register)
+                                if (argArg instanceof Register regA)
                                     {
-                                    regArg = (Register) argArg;
+                                    regArg = regA;
                                     }
                                 else
                                     {
