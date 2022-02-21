@@ -2,6 +2,7 @@ package org.xvm.compiler.ast;
 
 
 import java.io.File;
+
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
@@ -271,31 +272,24 @@ public class TypeCompositionStatement
             case ENUM:
             case MIXIN:
                 Component structParent = structThis.getParent();
-                switch (structParent.getFormat())
+                return switch (structParent.getFormat())
                     {
-                    case MODULE:
-                    case PACKAGE:
-                        return Zone.TopLevel;
+                    case MODULE, PACKAGE ->
+                        Zone.TopLevel;
 
-                    case CLASS:
-                    case INTERFACE:
-                    case SERVICE:
-                    case CONST:
-                    case ENUM:
-                    case ENUMVALUE:
-                    case MIXIN:
-                        return Zone.InClass;
+                    case CLASS, INTERFACE, SERVICE, CONST, ENUM, ENUMVALUE, MIXIN ->
+                        Zone.InClass;
 
-                    case METHOD:
-                        return Zone.InMethod;
+                    case METHOD ->
+                        Zone.InMethod;
 
-                    case PROPERTY:
-                        return Zone.InProperty;
+                    case PROPERTY ->
+                        Zone.InProperty;
 
-                    default:
+                    default ->
                         throw new IllegalStateException("this=" + structThis.getFormat()
-                                + ", parent=" + structParent.getFormat());
-                    }
+                            + ", parent=" + structParent.getFormat());
+                    };
 
             case ENUMVALUE:
                 // enum values are ALWAYS nested inside an enumeration class
@@ -512,40 +506,17 @@ public class TypeCompositionStatement
             case MIXIN:
                 if (container.isClassContainer())
                     {
-                    Format format;
-                    switch (category.getId())
+                    Format format = switch (category.getId())
                         {
-                        case CLASS:
-                            format = Format.CLASS;
-                            break;
-
-                        case INTERFACE:
-                            format = Format.INTERFACE;
-                            break;
-
-                        case SERVICE:
-                            format = Format.SERVICE;
-                            break;
-
-                        case CONST:
-                            format = Format.CONST;
-                            break;
-
-                        case ENUM:
-                            format = Format.ENUM;
-                            break;
-
-                        case ENUM_VAL:
-                            format = Format.ENUMVALUE;
-                            break;
-
-                        case MIXIN:
-                            format = Format.MIXIN;
-                            break;
-
-                        default:
-                            throw new IllegalStateException();
-                        }
+                        case CLASS     -> Format.CLASS;
+                        case INTERFACE -> Format.INTERFACE;
+                        case SERVICE   -> Format.SERVICE;
+                        case CONST     -> Format.CONST;
+                        case ENUM      -> Format.ENUM;
+                        case ENUM_VAL  -> Format.ENUMVALUE;
+                        case MIXIN     -> Format.MIXIN;
+                        default        -> throw new IllegalStateException();
+                        };
 
                     component = container.createClass(getDefaultAccess(), format, sName, constCond);
                     if (m_fAnon)
@@ -591,8 +562,8 @@ public class TypeCompositionStatement
             AstNode nodeModule = this;
             while (nodeModule != null)
                 {
-                if (nodeModule instanceof TypeCompositionStatement
-                        && ((TypeCompositionStatement) nodeModule).category.getId() == Id.MODULE)
+                if (nodeModule instanceof TypeCompositionStatement stmtModule
+                        && stmtModule.category.getId() == Id.MODULE)
                     {
                     break;
                     }
@@ -846,7 +817,7 @@ public class TypeCompositionStatement
                 // type parameters are not permitted
                 disallowTypeParams(errs);
                 // number of type arguments must match the number of the enum's type parameters
-                assert container instanceof ClassStructure && container.getFormat() == Format.ENUM;
+                assert container.getFormat() == Format.ENUM;
                 ClassStructure enumeration = (ClassStructure) container;
                 if (enumeration.getTypeParamCount() != (typeArgs == null ? 0 : typeArgs.size()))
                     {
@@ -901,6 +872,8 @@ public class TypeCompositionStatement
             default:
                 throw new IllegalStateException();
             }
+
+        assert component.isSingleton() == fSingleton;
 
         // validate and register annotations
         if (annotations != null && !annotations.isEmpty())
@@ -988,14 +961,16 @@ public class TypeCompositionStatement
                 }
             }
 
-        int                 cImports      = 0;
-        ModuleStructure     moduleImport  = null;
-        boolean             fHasDefault   = false;
-        Format              format        = component.getFormat();
-        ComponentBifurcator bifurcator    = new ComponentBifurcator(component);
-        ConditionalConstant condPrev      = null;
-        List<Component>     componentList = new ArrayList<>();
+        int                  cImports      = 0;
+        ModuleStructure      moduleImport  = null;
+        boolean              fHasDefault   = false;
+        Format               format        = component.getFormat();
+        ComponentBifurcator  bifurcator    = new ComponentBifurcator(component);
+        ConditionalConstant  condPrev      = null;
+        List<ClassStructure> componentList = new ArrayList<>();
+
         componentList.add(component);
+
         // note: from this point down (and through the remainder of compilation), the component may
         // be conditionally bifurcated. (it's even possible that already there are multiple
         // components with the same identity, due to conditionality, but what is meant here is that
@@ -1012,7 +987,7 @@ public class TypeCompositionStatement
             if (!Handy.equals(condCur, condPrev))
                 {
                 componentList.clear();
-                bifurcator.collectMatchingComponents(condCur, componentList);
+                bifurcator.collectMatchingComponents(condCur, (List<Component>) (List) componentList);
                 condPrev = condCur;
                 }
 
@@ -1024,7 +999,7 @@ public class TypeCompositionStatement
                     if (format == Format.INTERFACE)
                         {
                         TypeConstant type = composition.getType().ensureTypeConstant();
-                        for (ClassStructure struct : (List<? extends ClassStructure>) (List) componentList)
+                        for (ClassStructure struct : componentList)
                             {
                             // when an interface "extends" an interface, it is actually implementing
                             struct.addContribution(Composition.Implements, type);
@@ -1051,7 +1026,7 @@ public class TypeCompositionStatement
                             typeDefaultInto = null;
 
                             TypeConstant type = composition.getType().ensureTypeConstant();
-                            for (ClassStructure struct : (List<? extends ClassStructure>) (List) componentList)
+                            for (ClassStructure struct : componentList)
                                 {
                                 // register the class that the component extends
                                 struct.addContribution(Composition.Extends, type);
@@ -1144,14 +1119,11 @@ public class TypeCompositionStatement
                                 moduleImport.fingerprintDesired();
                                 break;
 
-                            case IMPORT:
-                            case IMPORT_REQ:
-                                moduleImport.fingerprintRequired();
-                                break;
-
                             case IMPORT_EMBED:
                                 // the embedding is performed much later, long after the fingerprint
                                 // is fully formed; for now, just mark the module import as required
+                            case IMPORT:
+                            case IMPORT_REQ:
                                 moduleImport.fingerprintRequired();
                                 break;
 
@@ -1229,7 +1201,7 @@ public class TypeCompositionStatement
                             fAlreadyIntos = composition.condition == null;
 
                             // register the "into" clause
-                            for (ClassStructure struct : (List<? extends ClassStructure>) (List) componentList)
+                            for (ClassStructure struct : componentList)
                                 {
                                 struct.addContribution(Composition.Into,
                                         composition.getType().ensureTypeConstant());
@@ -1252,7 +1224,7 @@ public class TypeCompositionStatement
                     else
                         {
                         // register the "implements"
-                        for (ClassStructure struct : (List<? extends ClassStructure>) (List) componentList)
+                        for (ClassStructure struct : componentList)
                             {
                             TypeConstant typeImplements = composition.getType().ensureTypeConstant();
                             if (typeImplements.equals(typeDefaultImpl))
@@ -1270,9 +1242,9 @@ public class TypeCompositionStatement
                     Expression       exprTarget = ((Delegates) composition).getDelegatee();
                     String           sTarget;
                     PropertyConstant idTarget;
-                    if (exprTarget instanceof NameExpression && ((NameExpression) exprTarget).isSimpleName())
+                    if (exprTarget instanceof NameExpression exprName && exprName.isSimpleName())
                         {
-                        sTarget = ((NameExpression) exprTarget).getName();
+                        sTarget = exprName.getName();
                         }
                     else
                         {
@@ -1298,7 +1270,7 @@ public class TypeCompositionStatement
                     // remember the property identity that holds the target
                     ((Delegates) composition).setPropertyName(sTarget);
 
-                    for (ClassStructure struct : (List<? extends ClassStructure>) (List) componentList)
+                    for (ClassStructure struct : componentList)
                         {
                         // register the class whose interface the component delegates, and the
                         // property whose value indicates the object to delegate to
@@ -1318,7 +1290,7 @@ public class TypeCompositionStatement
                         // these are all OK; other checks will be done after the types are resolvable
                         if (incorp.isAnnotation())
                             {
-                            for (ClassStructure struct : (List<? extends ClassStructure>) (List) componentList)
+                            for (ClassStructure struct : componentList)
                                 {
                                 // register the annotation
                                 struct.addAnnotation(incorp.ensureAnnotation(pool));
@@ -1339,7 +1311,7 @@ public class TypeCompositionStatement
                                     }
                                 }
 
-                            for (ClassStructure struct : (List<? extends ClassStructure>) (List) componentList)
+                            for (ClassStructure struct : componentList)
                                 {
                                 // register the mixin that the component incorporates
                                 struct.addIncorporates(composition.getType().ensureTypeConstant(),
@@ -1389,12 +1361,12 @@ public class TypeCompositionStatement
 
         // need to go through all components for the next bit
         componentList.clear();
-        bifurcator.collectMatchingComponents(null, componentList);
+        bifurcator.collectMatchingComponents(null, (List<Component>) (List) componentList);
 
         // add default "implement" and/or "extend"
         if (!fAlreadyExtends && (typeDefaultImpl != null || typeDefaultSuper != null))
             {
-            for (ClassStructure struct : (List<? extends ClassStructure>) (List) componentList)
+            for (ClassStructure struct : componentList)
                 {
                 assert struct.getContributionsAsList().stream().noneMatch(contribution ->
                         contribution.getComposition() == Composition.Extends);
@@ -1413,7 +1385,7 @@ public class TypeCompositionStatement
         // add default applies-to ("into")
         if (!fAlreadyIntos && typeDefaultInto != null)
             {
-            for (ClassStructure struct : (List<? extends ClassStructure>) (List) componentList)
+            for (ClassStructure struct : componentList)
                 {
                 assert struct.getContributionsAsList().stream().noneMatch(contribution ->
                         contribution.getComposition() == Composition.Into);
@@ -1488,7 +1460,7 @@ public class TypeCompositionStatement
                 return;
                 }
 
-            if (clz instanceof PackageStructure && ((PackageStructure) clz).isModuleImport())
+            if (clz instanceof PackageStructure prop && prop.isModuleImport())
                 {
                 // the containing class may depend on this package import, but a module import
                 // itself does not depend on anything else
@@ -2397,10 +2369,9 @@ public class TypeCompositionStatement
 
         for (CompositionNode composition : compositions)
             {
-            if (composition instanceof Delegates)
+            if (composition instanceof Delegates compDelegate)
                 {
-                String sProp = ((Delegates) composition).getPropertyName();
-
+                String       sProp   = compDelegate.getPropertyName();
                 TypeConstant typePri = pool().ensureAccessTypeConstant(
                                             component.getFormalType(), Access.PRIVATE);
                 TypeInfo     infoThis = typePri.ensureTypeInfo(errs);
