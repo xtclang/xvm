@@ -9,6 +9,7 @@ module TestAnnotations
         testMixin2();
         testMethodMixin();
         testClassMixin();
+        testDefaultParams();
         }
 
     function void (Int) logger = (Int v) ->
@@ -214,5 +215,20 @@ module TestAnnotations
             return super(buf);
             }
         }
+
+    void testDefaultParams()
+        {
+        TaggedObject taggedMap = new @TaggedObject(weight=1) HashMap<Int, Int>();
+        assert taggedMap.tag == "none" && taggedMap.weight == 1;
+
+        TaggedConst taggedRange = new @TaggedConst(hash=2) Range<Int>(0, 1);
+        assert taggedRange.hash == 2 && taggedRange.tag == "const" && taggedRange.weight == 1;
+        }
+
+    mixin TaggedObject(String tag="none", Int weight=-1)
+        into Object;
+
+    mixin TaggedConst(Int weight=1, Int hash=-1)
+        extends TaggedObject("const", weight);
     }
 

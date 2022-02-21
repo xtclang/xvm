@@ -145,7 +145,9 @@ public class AnnotationExpression
                     {
                     aconstArgs[iArg] = exprArg.isConstant()
                             ? exprArg.toConstant()
-                            : new ExpressionConstant(pool, exprArg);
+                            : exprArg instanceof NonBindingExpression
+                                ? pool.valDefault()
+                                : new ExpressionConstant(pool, exprArg);
                     continue;
                     }
 
@@ -581,7 +583,7 @@ public class AnnotationExpression
     protected long                lStartPos;
     protected long                lEndPos;
 
-    // these two fields allow us to pretend to be an Annotation by generating a type on the fly, if
+    // these fields allow us to pretend to be an Annotation by generating a type on the fly, if
     // necessary
     private transient AstNode    m_node;
     private transient Annotation m_anno;

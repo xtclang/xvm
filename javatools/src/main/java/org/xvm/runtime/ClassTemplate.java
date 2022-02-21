@@ -849,6 +849,12 @@ public abstract class ClassTemplate
         {
         assert idProp != null;
 
+        if (!isGenericHandle())
+            {
+            return frame.raiseException("Not supported property: " + idProp.getName() +
+                    " for " + hTarget.getType().getValueString());
+            }
+
         GenericHandle hThis  = (GenericHandle) hTarget;
         FieldInfo     field  = hThis.getFieldInfo(idProp);
         ObjectHandle  hValue = field.isTransient()
