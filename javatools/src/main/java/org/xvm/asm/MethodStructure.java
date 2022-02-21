@@ -863,8 +863,7 @@ public class MethodStructure
         Component parent = getParent().getParent();
         while (!(parent instanceof ClassStructure))
             {
-            if (parent instanceof PropertyStructure
-                && ((PropertyStructure) parent).isRefAnnotated())
+            if (parent instanceof PropertyStructure prop && prop.isRefAnnotated())
                 {
                 ++cSteps;
                 }
@@ -1311,17 +1310,17 @@ public class MethodStructure
      */
     private List<SingletonConstant> addSingleton(Constant constant, List<SingletonConstant> list)
         {
-        if (constant instanceof SingletonConstant)
+        if (constant instanceof SingletonConstant constSingle)
             {
             if (list == null)
                 {
                 list = new ArrayList<>(7);
                 }
-            list.add((SingletonConstant) constant);
+            list.add(constSingle);
             }
-        else if (constant instanceof ArrayConstant)
+        else if (constant instanceof ArrayConstant constArray)
             {
-            for (Constant constElement : ((ArrayConstant) constant).getValue())
+            for (Constant constElement : constArray.getValue())
                 {
                 list = addSingleton(constElement, list);
                 }
@@ -1353,9 +1352,9 @@ public class MethodStructure
         for (int i = 0; i <= iPC; i++)
             {
             Op op = aOp[i].ensureOp();
-            if (op instanceof Nop)
+            if (op instanceof Nop nop)
                 {
-                nLine += ((Nop) op).getLineCount();
+                nLine += nop.getLineCount();
                 }
             }
         return nLine == 1 ? 0 : nLine;
@@ -2051,16 +2050,16 @@ public class MethodStructure
                 do
                     {
                     op = list.get(list.size() - 1);
-                    while (op instanceof Op.Prefix)
+                    while (op instanceof Op.Prefix opPrefix)
                         {
-                        op = ((Op.Prefix) op).getNextOp();
+                        op = opPrefix.getNextOp();
                         }
                     }
                 while (op == null);
 
-                if (op instanceof OpVar)
+                if (op instanceof OpVar opVar)
                     {
-                    return ((OpVar) op).getRegister();
+                    return opVar.getRegister();
                     }
 
                 throw new IllegalStateException("op=" + op);
@@ -2149,8 +2148,8 @@ public class MethodStructure
                         {
                         Op op0 = aOp[0];
                         return op0 instanceof Nop
-                            || op0 instanceof Construct_0
-                                && ((Construct_0) op0).isNoOp(f_method.getLocalConstants());
+                            || op0 instanceof Construct_0 opCtor0
+                                && opCtor0.isNoOp(f_method.getLocalConstants());
                         }
                     // fall through
                 default:
@@ -2427,7 +2426,14 @@ public class MethodStructure
                 // note that the last call to eliminateRedundantCode() did not modify the code, so
                 // each op will already have been stamped with the correct address and scope depth
 
-                ensureConstantRegistry(pool);
+                try
+                    {
+                    ensureConstantRegistry(pool);
+                    }
+                catch (RuntimeException e)
+                    {
+                    throw new IllegalStateException("Fail to register constants: " + f_method, e);
+                    }
                 }
             }
 
