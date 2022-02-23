@@ -1510,7 +1510,7 @@ public class TypeCompositionStatement
             }
 
         boolean fModuleImport = false;
-        if (format == Format.PACKAGE && m_moduleImported == null)
+        if (format == Format.PACKAGE)
             {
             for (CompositionNode composition : compositions)
                 {
@@ -1529,15 +1529,11 @@ public class TypeCompositionStatement
                             {
                             // this is obviously an error -- we can't compile without the module
                             // being available
-                            Import              imp     = (Import) composition;
-                            NamedTypeExpression type    = (NamedTypeExpression) imp.type;
-                            String              sModule = type.getName();
-                            type.log(errs, Severity.ERROR, Compiler.MODULE_MISSING, sModule);
+                            Import              imp  = (Import) composition;
+                            NamedTypeExpression type = (NamedTypeExpression) imp.type;
+                            type.log(errs, Severity.ERROR, Compiler.MODULE_MISSING, type.getName());
                             }
-                        else
-                            {
-                            m_moduleImported = structAct;
-                            }
+
                         fModuleImport = true;
                         break;
                     }
@@ -3071,13 +3067,6 @@ public class TypeCompositionStatement
      * True iff this is a virtual child class.
      */
     private boolean m_fVirtChild;
-
-    /**
-     * For a package that imports a module, this is the actual module that is imported (not just the
-     * fingerprint.) Note that during compilation, the other module may itself be in the process of
-     * compilation, so it may be in the same "compiler pass" as this module for any given pass.
-     */
-    transient private ModuleStructure m_moduleImported;
 
     /**
      * Cached list of the "extends" composition arguments.
