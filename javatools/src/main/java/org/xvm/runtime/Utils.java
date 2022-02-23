@@ -27,6 +27,7 @@ import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
+import org.xvm.runtime.ServiceContext.Synchronicity;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xEnum;
@@ -673,7 +674,11 @@ public abstract class Utils
 
                     // create a pseudo frame to deal with the wait, but don't allow any other fiber
                     // to interleave until a response comes back (as in "forbidden" reentrancy)
-                    Frame frameWait = createWaitFrame(frame, cfResult, Op.A_BLOCK);
+                    ctxCurr.setSynchronicity(frame.f_fiber, Synchronicity.Critical);
+                    cfResult.whenComplete((r, e) ->
+                        ctxCurr.setSynchronicity(null, Synchronicity.Concurrent));
+
+                    Frame frameWait = createWaitFrame(frame, cfResult, Op.A_IGNORE);
                     frameWait.addContinuation(continuation);
 
                     return frame.call(frameWait);
@@ -828,6 +833,9 @@ public abstract class Utils
 
         frameNext.f_aInfo[0] = frame.new VarInfo(xFutureVar.TYPE, Frame.VAR_DYNAMIC_REF);
 
+        // add a wait completion notification; the service is responsible for timing out
+        cfResult.whenComplete((r, x) -> frame.f_fiber.onResponse());
+
         return frameNext;
         }
 
@@ -860,6 +868,9 @@ public abstract class Utils
             frameNext.f_aInfo[i] = frame.new VarInfo(xFutureVar.TYPE, Frame.VAR_DYNAMIC_REF);
             }
 
+        // add a wait completion notification; the service is responsible for timing out
+        cfResult.whenComplete((r, x) -> frame.f_fiber.onResponse());
+
         return frameNext;
         }
 
@@ -877,20 +888,11 @@ public abstract class Utils
                     {
                     assert frame.f_aiReturn == null;
 
-                    boolean      fNoReentrancy = frame.f_iReturn == A_BLOCK;
-                    FutureHandle hFuture       = (FutureHandle) frame.f_ahVar[0];
+                    FutureHandle hFuture = (FutureHandle) frame.f_ahVar[0];
 
-                    if (hFuture.isAssigned(frame))
-                        {
-                        return frame.returnValue(hFuture, true);
-                        }
-
-                    // add a notification and wait for the assignment/completion;
-                    // the service is responsible for timing out
-                    hFuture.getFuture().whenComplete(
-                        (r, x) -> frame.f_fiber.onResponse());
-
-                    return fNoReentrancy ? R_PAUSE : R_REPEAT;
+                    return hFuture.isAssigned(frame)
+                            ? frame.returnValue(hFuture, true)
+                            : R_REPEAT;
                     }
 
                 assert frame.f_iReturn == A_MULTI;
@@ -905,8 +907,6 @@ public abstract class Utils
                         }
                     else
                         {
-                        hFuture.getFuture().whenComplete(
-                            (r, x) -> frame.f_fiber.onResponse());
                         return R_REPEAT;
                         }
                     }
@@ -1432,8 +1432,8 @@ public abstract class Utils
                                 : null;
 
                         if (constArg == null ||
-                                constArg instanceof RegisterConstant &&
-                                ((RegisterConstant) constArg).getRegisterIndex() == Op.A_DEFAULT)
+                                constArg instanceof RegisterConstant constReg &&
+                                constReg.getRegisterIndex() == Op.A_DEFAULT)
                             {
                             constArg = constructMixin.getParam(iArg).getDefaultValue();
                             }

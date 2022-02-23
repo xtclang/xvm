@@ -124,17 +124,14 @@ public class Fiber
     /**
      * @return true iff this fiber chain has a common origin with the specified fiber
      */
-    public boolean isAssociated(Fiber fiber)
+    public boolean isAssociated(Fiber that)
         {
-        Fiber fiberThis = this;
-        Fiber fiberThat = fiber;
-
-        if (fiberThis.f_context == fiberThat.f_context)
+        if (this.f_context == that.f_context)
             {
-            return fiberThis == fiberThat;
+            return this == that;
             }
 
-        Fiber fiberCaller = fiberThis.f_fiberCaller;
+        Fiber fiberCaller = this.f_fiberCaller;
         if (fiberCaller == null)
             {
             return false;
@@ -142,7 +139,7 @@ public class Fiber
 
         // by switching the target to "that" we alternate the descending checks:
         // (f1 ~ f2) --> (f2.prev ~ f1) --> (f1.prev ~ f2.prev) --> ...
-        return fiberThat.isAssociated(fiberCaller);
+        return that.isAssociated(fiberCaller);
         }
 
     public long getId()
@@ -199,20 +196,14 @@ public class Fiber
      */
     public Frame getFrame()
         {
-        switch (m_status)
+        return switch (m_status)
             {
-            default:
-            case Initial:
-                return null;
-
-            case Running:
-                return f_context.getCurrentFrame();
-
-            case Waiting:
-            case Paused:
-            case Terminating:
-                return m_frame;
-            }
+            case Initial     -> null;
+            case Running     -> f_context.getCurrentFrame();
+            case Waiting,
+                 Paused,
+                 Terminating -> m_frame;
+            };
         }
 
     /*
@@ -338,10 +329,8 @@ public class Fiber
             {
             m_oPendingRequests = request;
             }
-        else if (oPending instanceof Request)
+        else if (oPending instanceof Request requestPrev)
             {
-            Request requestPrev = (Request) oPending;
-
             Map<CompletableFuture, Request> mapPending = new HashMap<>();
             mapPending.put(requestPrev.f_future, requestPrev);
             mapPending.put(request.f_future, request);
@@ -652,11 +641,11 @@ public class Fiber
     private Frame m_frame;
 
     /**
-     * this flag serves a hint that the execution could possibly be resumed;
-     * it's set by the responding fiber and reset when the execution resumes;
-     * the use of this flag is tolerant to the possibility that the "waiting" state times-out
-     * and the execution resumes before the flag is set; however, we will never lose a
-     * "a response has arrived" notification and get stuck waiting
+     * This flag serves a hint that the execution could possibly be resumed; it's set by the
+     * responding fiber and reset when the execution resumes; the use of this flag is tolerant to
+     * the possibility that the "waiting" state times-out and the execution resumes before the flag
+     * is set or that the flag is set proactively or optimistically; however, we must never lose
+     * this "response has arrived" notification and get stuck waiting.
      */
     public volatile boolean m_fResponded;
 

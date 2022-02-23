@@ -145,17 +145,27 @@ public class ServiceContext
 
         if (hSection == xNullable.NULL)
             {
-            m_fiberSyncOwner = null;
-            m_synchronicity  = Synchronicity.Concurrent;
+            setSynchronicity(null, Synchronicity.Concurrent);
             }
         else
             {
             ObjectHandle hCritical = ((GenericHandle) hSection).getField(null, "critical");
 
-            m_fiberSyncOwner = fiber;
-            m_synchronicity  = ((BooleanHandle) hCritical).get() ?
-                    Synchronicity.Critical : Synchronicity.Synchronized;
+            setSynchronicity(fiber, ((BooleanHandle) hCritical).get() ?
+                    Synchronicity.Critical : Synchronicity.Synchronized);
             }
+        }
+
+    /**
+     * Set the synchronicity values.
+     *
+     * @param fiber          the owner fiber
+     * @param synchronicity  the Synchronicity value
+     */
+    public void setSynchronicity(Fiber fiber, Synchronicity synchronicity)
+        {
+        m_fiberSyncOwner = fiber;
+        m_synchronicity  = synchronicity;
         }
 
     /**

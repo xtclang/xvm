@@ -1929,25 +1929,24 @@ public abstract class Op
     // ----- pre-defined arguments -----------------------------------------------------------------
 
     /**
-     * Pre-defined argument: a frame-local stack
+     * Pre-defined return register: a frame-local stack
      */
     public static final int A_STACK         = -1;
 
     /**
-     * Pre-defined argument: a write-only "black hole" return register, akin to {@code /dev/null}
+     * Pre-defined return register: a write-only "black hole", akin to {@code /dev/null}
      */
     public static final int A_IGNORE        = -2;
 
     /**
-     * Pre-defined argument: a write-only "non-blocking black hole" return register.
+     * Pre-defined return register: a write-only "non-blocking black hole".
      */
     public static final int A_IGNORE_ASYNC  = -3;
 
     /**
-     * Pre-defined argument: an indicator for a "blocking wait" return value. It's similar to
-     * {@link #A_IGNORE}, but effectively turns on the "forbidden" reentrancy.
+     * Pre-defined return register: reserved
      */
-    public static final int A_BLOCK         = -4;
+    public static final int A_RESERVED      = -4;
 
     /**
      * Pre-defined argument: an argument value to be retrieved from a method structure

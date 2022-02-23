@@ -680,7 +680,6 @@ public class Frame
             {
             case Op.A_IGNORE:
             case Op.A_IGNORE_ASYNC:
-            case Op.A_BLOCK:
                 return Op.R_NEXT;
 
             case Op.A_STACK:
@@ -959,10 +958,9 @@ public class Frame
         return switch (f_iReturn)
             {
             case Op.A_IGNORE,
-                 Op.A_IGNORE_ASYNC,
-                 Op.A_BLOCK         -> Op.R_RETURN;
-            case Op.A_TUPLE         -> returnValue(f_aiReturn[0], xTuple.H_VOID, false);
-            default                 -> returnValue(f_iReturn, xTuple.H_VOID, false);
+                 Op.A_IGNORE_ASYNC -> Op.R_RETURN;
+            case Op.A_TUPLE        -> returnValue(f_aiReturn[0], xTuple.H_VOID, false);
+            default                -> returnValue(f_iReturn, xTuple.H_VOID, false);
             };
         }
 
@@ -1116,7 +1114,6 @@ public class Frame
             {
             case Op.A_IGNORE:
             case Op.A_IGNORE_ASYNC:
-            case Op.A_BLOCK:
                 return Op.R_RETURN;
 
             case Op.A_MULTI:
