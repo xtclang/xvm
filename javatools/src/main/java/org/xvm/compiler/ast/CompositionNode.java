@@ -138,18 +138,23 @@ public abstract class CompositionNode
     public static class Extends
             extends CompositionNode
         {
-        public Extends(Expression condition, Token keyword, TypeExpression type, List<Expression> args)
+        public Extends(Expression condition, Token keyword, TypeExpression type)
             {
             super(condition, keyword, type);
-            this.args = args;
+            }
+
+        public Extends(Expression condition, Token keyword, TypeExpression type,
+                       List<Expression> args, long lEndPos)
+            {
+            super(condition, keyword, type);
+            this.args    = args;
+            this.lEndPos = lEndPos;
             }
 
         @Override
         public long getEndPosition()
             {
-            return condition == null && args != null && !args.isEmpty()
-                    ? args.get(args.size()-1).getEndPosition()
-                    : super.getEndPosition();
+            return lEndPos == 0 ? super.getEndPosition() : lEndPos;
             }
 
         @Override
@@ -189,6 +194,7 @@ public abstract class CompositionNode
             }
 
         protected List<Expression> args;
+        protected long             lEndPos;
 
         private static final Field[] CHILD_FIELDS = fieldsForNames(Extends.class,
                 "condition", "type", "args");

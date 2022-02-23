@@ -375,7 +375,7 @@ public class AnonInnerClass
 
         TypeExpression exprSuper = processFormalTypes((NamedTypeExpression) exprType, idSuper);
 
-        list.add(0, new Extends(null, genKeyword(exprSuper, Id.EXTENDS), exprSuper, null));
+        list.add(0, new Extends(null, genKeyword(exprSuper, Id.EXTENDS), exprSuper));
         }
 
     /**

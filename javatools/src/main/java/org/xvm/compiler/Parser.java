@@ -531,7 +531,8 @@ public class Parser
                 {
                 TypeExpression   type = parseTypeExpression();
                 List<Expression> args = parseArgumentList(false, false, false);
-                compositions.add(new CompositionNode.Extends(exprCondition, keyword, type, args));
+                compositions.add(new CompositionNode.Extends(exprCondition, keyword, type, args,
+                        prev().getEndPosition()));
                 fAny = true;
                 }
             else if ((keyword = match(Id.IMPLEMENTS)) != null)
