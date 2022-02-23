@@ -229,9 +229,9 @@ public abstract class Op
 
             assert opActual != this;
 
-            if (opActual instanceof Jump)
+            if (opActual instanceof Jump opJump)
                 {
-                iPC += ((Jump) opActual).getRelativeAddress();
+                iPC += opJump.getRelativeAddress();
                 }
             else
                 {
@@ -467,8 +467,8 @@ public abstract class Op
         public Op getSuffix()
             {
             Op op = m_op;
-            return op instanceof Prefix
-                    ? ((Prefix) op).getSuffix()
+            return op instanceof Prefix opPrefix
+                    ? opPrefix.getSuffix()
                     : op;
             }
 
@@ -485,9 +485,9 @@ public abstract class Op
                 {
                 m_op = op;
                 }
-            else if (m_op instanceof Prefix)
+            else if (m_op instanceof Prefix opPrefix)
                 {
-                ((Prefix) m_op).append(op);
+                opPrefix.append(op);
                 }
             else
                 {
@@ -846,9 +846,9 @@ public abstract class Op
      */
     public static void resetRegister(Argument arg)
         {
-        if (arg instanceof Register)
+        if (arg instanceof Register reg)
             {
-            ((Register) arg).resetIndex();
+            reg.resetIndex();
             }
         }
 
@@ -863,9 +863,9 @@ public abstract class Op
             {
             for (Argument arg : aArg)
                 {
-                if (arg instanceof Register)
+                if (arg instanceof Register reg)
                     {
-                    ((Register) arg).resetIndex();
+                    reg.resetIndex();
                     }
                 }
             }
@@ -886,9 +886,9 @@ public abstract class Op
             // this means we have just loaded the ops from disk
             scope.ensureVar(nArg);
             }
-        else if (arg instanceof Register && ((Register) arg).isUnknown())
+        else if (arg instanceof Register reg && reg.isUnknown())
             {
-            ((Register) arg).assignIndex(scope.allocVar());
+            reg.assignIndex(scope.allocVar());
             }
         }
 
@@ -914,9 +914,9 @@ public abstract class Op
             {
             for (Argument arg : aArg)
                 {
-                if (arg instanceof Register && ((Register) arg).isUnknown())
+                if (arg instanceof Register reg && reg.isUnknown())
                     {
-                    ((Register) arg).assignIndex(scope.allocVar());
+                    reg.assignIndex(scope.allocVar());
                     }
                 }
             }
@@ -932,7 +932,7 @@ public abstract class Op
      */
     protected static boolean isReadable(Argument arg)
         {
-        return !(arg instanceof Register) || ((Register) arg).isReadable();
+        return !(arg instanceof Register reg) || reg.isReadable();
         }
 
     /**
@@ -945,7 +945,7 @@ public abstract class Op
      */
     protected static boolean isWritable(Argument arg)
         {
-        return arg instanceof Register && ((Register) arg).isWritable();
+        return arg instanceof Register reg && reg.isWritable();
         }
 
     /**
