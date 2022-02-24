@@ -1128,7 +1128,9 @@ public abstract class AstNode
                         return null;
                         }
                     }
-                mapNamed.put(sName, exprArg);
+
+                // extract the underlying expression
+                mapNamed.put(sName, exprLabel.getUnderlyingExpression());
                 }
             else
                 {
