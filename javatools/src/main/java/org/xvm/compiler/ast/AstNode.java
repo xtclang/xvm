@@ -248,16 +248,16 @@ public abstract class AstNode
 
             if (oVal != null)
                 {
-                if (oVal instanceof AstNode)
+                if (oVal instanceof AstNode node)
                     {
-                    AstNode nodeNew = ((AstNode) oVal).clone();
+                    AstNode nodeNew = node.clone();
 
                     that.adopt(nodeNew);
                     oVal = nodeNew;
                     }
-                else if (oVal instanceof List)
+                else if (oVal instanceof List list)
                     {
-                    List<AstNode>      listOld = (List<AstNode>) oVal;
+                    List<AstNode>      listOld = list;
                     ArrayList<AstNode> listNew = new ArrayList<>();
                     for (AstNode node : listOld)
                         {
@@ -848,13 +848,13 @@ public abstract class AstNode
      */
     protected boolean canResolveNames()
         {
-        if (this instanceof NameResolver.NameResolving)
+        if (this instanceof NameResolver.NameResolving resolver)
             {
             // the problem is this: that a NameResolver that hasn't been invoked as part of the
             // natural pass of the resolveNames() recursion has not had a chance to figure out what
             // the effect its imports may have on name resolution, and thus we can't ask it what a
             // name means
-            return !((NameResolver.NameResolving) this).getNameResolver().isFirstTime();
+            return !resolver.getNameResolver().isFirstTime();
             }
 
         // for all other components (that don't override this method because they know more about
@@ -1112,9 +1112,9 @@ public abstract class AstNode
             {
             Expression exprArg = listExprArgs.get(i);
 
-            if (exprArg instanceof LabeledExpression)
+            if (exprArg instanceof LabeledExpression exprLabel)
                 {
-                String sName = ((LabeledExpression) exprArg).getName();
+                String sName = exprLabel.getName();
 
                 if (mapNamed == null)
                     {
@@ -1307,10 +1307,9 @@ public abstract class AstNode
                     }
                 else if (typeParam != null && !errsTemp.hasSeriousErrors())
                     {
-                    if (exprArg instanceof NameExpression)
+                    if (exprArg instanceof NameExpression exprName)
                         {
-                        typeExpr = ((NameExpression) exprArg).
-                            getImplicitType(ctx, typeParam, ErrorListener.BLACKHOLE);
+                        typeExpr = exprName.getImplicitType(ctx, typeParam, ErrorListener.BLACKHOLE);
                         }
 
                     log(errsTemp, Severity.ERROR, Compiler.INCOMPATIBLE_PARAMETER_TYPE,
@@ -1719,23 +1718,23 @@ public abstract class AstNode
                 {
                 iter.remove();
                 }
-            else if (value instanceof Map)
+            else if (value instanceof Map map)
                 {
-                if (((Map) value).isEmpty())
+                if (map.isEmpty())
                     {
                     iter.remove();
                     }
                 }
-            else if (value instanceof Collection)
+            else if (value instanceof Collection coll)
                 {
-                if (((Collection) value).isEmpty())
+                if (coll.isEmpty())
                     {
                     iter.remove();
                     }
                 }
-            else if (value instanceof Object[])
+            else if (value instanceof Object[] ao)
                 {
-                if (((Object[]) value).length == 0)
+                if (ao.length == 0)
                     {
                     iter.remove();
                     }
@@ -1814,13 +1813,13 @@ public abstract class AstNode
                 String  sIndent1 = fLastC ? sIndentLastC : sIndentKid;
                 String  sIndent2 = fLastC ? (fLastK ? sIndentLastK : sIndentLastC) : sIndentKid;
 
-                if (kid instanceof AstNode)
+                if (kid instanceof AstNode node)
                     {
                     if (fFirstK)
                         {
                         out.println();
                         }
-                    ((AstNode) kid).dump(out, sIndent1, sIndent2);
+                    node.dump(out, sIndent1, sIndent2);
                     }
                 else if (kid instanceof Map.Entry)
                     {
@@ -1930,8 +1929,8 @@ public abstract class AstNode
      */
     protected static <T> ArrayList<T> ensureArrayList(List<T> list)
         {
-        return list instanceof ArrayList
-                ? (ArrayList<T>) list
+        return list instanceof ArrayList alist
+                ? alist
                 : new ArrayList<>(list);
         }
 
@@ -2059,9 +2058,9 @@ public abstract class AstNode
             if (state == HAS_NEXT || prepareNextElement())
                 {
                 state = HAS_PREV;
-                if (value instanceof AstNode)
+                if (value instanceof AstNode node)
                     {
-                    return (AstNode) value;
+                    return node;
                     }
                 else
                     {
@@ -2074,7 +2073,7 @@ public abstract class AstNode
 
         private boolean prepareNextElement()
             {
-            if (value instanceof Iterator && ((Iterator) value).hasNext())
+            if (value instanceof Iterator iter && iter.hasNext())
                 {
                 state = HAS_NEXT;
                 return true;
@@ -2155,10 +2154,10 @@ public abstract class AstNode
                     return;
                     }
 
-                if (value instanceof Iterator)
+                if (value instanceof Iterator iter)
                     {
                     // tell the underlying iterator to remove the value
-                    ((Iterator) value).remove();
+                    iter.remove();
                     state = NOT_PREP;
                     return;
                     }
@@ -2185,9 +2184,9 @@ public abstract class AstNode
                     return;
                     }
 
-                if (value instanceof ListIterator)
+                if (value instanceof ListIterator iter)
                     {
-                    ((ListIterator) value).set(newChild);
+                    iter.set(newChild);
                     return;
                     }
                 }
