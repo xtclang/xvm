@@ -64,8 +64,8 @@ public class xInjectedRef
         Constant[] aParams = anno.getParams();
 
         Constant constName = aParams.length == 0 ? null : aParams[0];
-        String   sResource = constName instanceof StringConstant
-                                ? ((StringConstant) constName).getValue()
+        String   sResource = constName instanceof StringConstant constString
+                                ? constString.getValue()
                                 : sName;
         if (aParams.length < 2)
             {
@@ -106,7 +106,8 @@ public class xInjectedRef
             hValue = frame.f_context.f_container.getInjectable(frame, sResource, typeResource, hOpts);
             if (hValue == null)
                 {
-                return frame.raiseException("Unknown injectable resource \"" + sResource +'"');
+                return frame.raiseException("Unknown injectable resource \"" +
+                        typeResource.getValueString() + ' ' + sResource + '"');
                 }
 
             if (Op.isDeferred(hValue))

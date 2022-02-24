@@ -951,8 +951,8 @@ public abstract class ClassTemplate
         Annotation   anno      = prop.getRefAnnotations()[0];
         Constant[]   aParams   = anno.getParams();
         Constant     constName = aParams.length == 0 ? null : aParams[0];
-        String       sResource = constName instanceof StringConstant
-                                ? ((StringConstant) constName).getValue()
+        String       sResource = constName instanceof StringConstant constString
+                                ? constString.getValue()
                                 : prop.getName();
 
         ObjectHandle hOpts = aParams.length < 2 ? xNullable.NULL : frame.getConstHandle(aParams[1]);
@@ -967,7 +967,8 @@ public abstract class ClassTemplate
         if (hValue == null)
             {
             return frame.raiseException(
-                xException.illegalState(frame, "Unknown injectable property \"" + idProp + '"'));
+                xException.illegalState(frame, "Unknown injectable resource \"" +
+                    prop.getType().getValueString() + ' ' + sResource + '"'));
             }
 
         // store off the value (even if deferred), so a concurrent operation wouldn't "double dip"
