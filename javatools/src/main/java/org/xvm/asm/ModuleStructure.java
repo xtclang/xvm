@@ -661,5 +661,5 @@ public class ModuleStructure
      * If this is a fingerprint, during compilation this will hold the actual module from which the
      * fingerprint is being created.
      */
-    transient private ModuleStructure moduleActual;
+    private transient ModuleStructure moduleActual;
     }

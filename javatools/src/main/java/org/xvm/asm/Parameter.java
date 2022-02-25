@@ -421,11 +421,7 @@ public class Parameter
     @Override
     protected void registerConstants(ConstantPool pool)
         {
-        for (int i = 0, c = m_aAnnotations.length; i < c; i++)
-            {
-            m_aAnnotations[i] = (Annotation) pool.register(m_aAnnotations[i]);
-            }
-
+        m_aAnnotations = (Annotation[])   Constant.registerConstants(pool, m_aAnnotations);
         m_constType    = (TypeConstant)   pool.register(m_constType   );
         m_constName    = (StringConstant) pool.register(m_constName   );
         m_constDefault =                  pool.register(m_constDefault);

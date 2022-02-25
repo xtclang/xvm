@@ -165,7 +165,7 @@ public class PropertyStructure
         }
 
     /**
-     * @return mark this property as a generic type parameter
+     * Mark this property as a generic type parameter.
      */
     public void markAsGenericTypeParameter()
         {
@@ -545,9 +545,9 @@ public class PropertyStructure
                     if (typeExtends.isExplicitClassIdentity(true))
                         {
                         Constant constExtends = typeExtends.getDefiningConstant();
-                        if (constExtends instanceof IdentityConstant)
+                        if (constExtends instanceof IdentityConstant idExtends)
                             {
-                            structMixin = (ClassStructure) ((IdentityConstant) constExtends).getComponent();
+                            structMixin = (ClassStructure) idExtends.getComponent();
                             }
                         }
                     }

@@ -1717,10 +1717,7 @@ public class MethodStructure
         {
         super.registerConstants(pool);
 
-        for (int i = 0, c = m_aAnnotations.length; i < c; i++)
-            {
-            m_aAnnotations[i] = (Annotation) pool.register(m_aAnnotations[i]);
-            }
+        m_aAnnotations = (Annotation[]) Constant.registerConstants(pool, m_aAnnotations);
 
         if (m_idFinally != null)
             {
@@ -1746,13 +1743,9 @@ public class MethodStructure
             {
             // we didn't disassemble the individual ops, but we are responsible for registering the
             // constants that ops refer to
-            Constant[] aconst = m_aconstLocal;
-            if (aconst != null)
+            if (m_aconstLocal != null)
                 {
-                for (int i = 0, c = aconst.length; i < c; ++i)
-                    {
-                    aconst[i] = pool.register(aconst[i]);
-                    }
+                m_aconstLocal = Constant.registerConstants(pool, m_aconstLocal);
                 }
             }
         else if (m_code != null)
@@ -1888,36 +1881,6 @@ public class MethodStructure
             {
             out.println(indentLines(ensureCode().toString(), nextIndent(sIndent)));
             }
-        }
-
-    /**
-     * Collect the default arguments for the specified method.
-     *
-     * @param pool   the ConstantPool to use
-     * @param cArgs  the number of explicitly specified arguments
-     *               (must be no less than the number of non-default arguments)
-     *
-     * @return the array of constants or null if no defaults are needed
-     */
-    public Constant[] collectDefaultArgs(ConstantPool pool, int cArgs)
-        {
-        int cParamsAll  = getParamCount();
-        int cTypeParams = getTypeParamCount();
-        int cDefault    = cParamsAll - cTypeParams - cArgs;
-        if (cDefault == 0)
-            {
-            return null;
-            }
-
-        Constant[] aconstDefault = new Constant[cDefault];
-        for (int i = 0; i < cDefault; i++)
-            {
-            Parameter param = getParam(cTypeParams + cArgs + i);
-            assert param.hasDefaultValue();
-
-            aconstDefault[i] = param.getDefaultValue();
-            }
-        return aconstDefault;
         }
 
 
@@ -2889,11 +2852,7 @@ public class MethodStructure
             normalize();
             if (m_aconstSrc != null)
                 {
-                int cLines = m_aconstSrc.length;
-                for (int i = 0; i < cLines; ++i)
-                    {
-                    m_aconstSrc[i] = (StringConstant) pool.register(m_aconstSrc[i]);
-                    }
+                m_aconstSrc = (StringConstant[]) Constant.registerConstants(pool, m_aconstSrc);
                 }
             }
 
