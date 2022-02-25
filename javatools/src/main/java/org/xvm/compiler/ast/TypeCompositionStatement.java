@@ -1368,8 +1368,7 @@ public class TypeCompositionStatement
             {
             for (ClassStructure struct : componentList)
                 {
-                assert struct.getContributionsAsList().stream().noneMatch(contribution ->
-                        contribution.getComposition() == Composition.Extends);
+                assert struct.findContribution(Composition.Extends) == null;
 
                 if (typeDefaultSuper != null)
                     {
@@ -1862,7 +1861,7 @@ public class TypeCompositionStatement
             // will look for is any constructor that has a matching number of parameters (or a
             // higher number of parameters if the additional parameters are optional), and each
             // parameter type must match the type specified in the short-hand constructor notation
-            boolean fFound = false;
+            MethodConstant idShortHandConstructor = null;
             if (constructors != null)
                 {
                 NextConstructor:
@@ -1903,7 +1902,7 @@ public class TypeCompositionStatement
                             }
 
                         // should only find one match; make sure we didn't already find one
-                        if (fFound)
+                        if (idShortHandConstructor != null)
                             {
                             StringBuilder sb = new StringBuilder();
                             sb.append("construct(");
@@ -1929,12 +1928,12 @@ public class TypeCompositionStatement
                             break;
                             }
 
-                        fFound = true;
+                        idShortHandConstructor = constructor.getIdentityConstant();
                         }
                     }
                 }
 
-            if (!fFound)
+            if (idShortHandConstructor == null)
                 {
                 // create a constructor based on the "short-hand notation" implicit constructor
                 // definition
@@ -1962,7 +1961,10 @@ public class TypeCompositionStatement
                 // default implementation when it emits code
                 constructor.setSynthetic(true);
                 constructors = (MultiMethodStructure) constructor.getParent();
+
+                idShortHandConstructor = constructor.getIdentityConstant();
                 }
+            m_idShortHandConstructor = idShortHandConstructor;
             }
 
         // all non-interfaces must have at least one constructor, even if the class is abstract
@@ -1977,6 +1979,9 @@ public class TypeCompositionStatement
             // set the synthetic flag so that the constructor knows to provide its own
             // default implementation when it emits code
             constructor.setSynthetic(true);
+
+            assert m_idShortHandConstructor == null;
+            m_idShortHandConstructor = constructor.getIdentityConstant();
             }
         else if (component.isSingleton())
             {
@@ -2342,19 +2347,54 @@ public class TypeCompositionStatement
             return;
             }
 
-        ClassStructure component = (ClassStructure) getComponent();
-        Format         format    = component.getFormat();
-        if (format != Format.INTERFACE)
-            {
-            MultiMethodStructure constructors = (MultiMethodStructure) component.getChild("construct");
-            assert constructors != null;
+        ClassStructure component   = (ClassStructure) getComponent();
+        MethodConstant idShorthand = m_idShortHandConstructor;
 
-            for (MethodStructure constructor : constructors.methods())
+        ValidateShorthand:
+        if (component.getFormat() != Format.INTERFACE && idShorthand != null)
+            {
+            // make sure the shorthand constructor hasn't been removed
+            // (see NewExpression#destroyDefaultConstructor)
+            MethodStructure constructor = component.findMethod(idShorthand.getSignature());
+            if (constructor == null)
                 {
-                if (constructor.isSynthetic() && !constructor.ensureCode().hasOps())
+                break ValidateShorthand;
+                }
+
+            RootContext ctxConstruct = null;
+            if (constructorParams != null && !constructorParams.isEmpty())
+                {
+                ctxConstruct = ensureConstructorContext(ctxConstruct, constructor);
+
+                // resolve the default values for constructor parameters
+                if (!validateDefaultParameters(ctxConstruct, constructor, errs))
                     {
-                    generateConstructor(component, constructor, errs);
+                    return;
                     }
+                }
+
+            Contribution     contribExt    = component.findContribution(Composition.Extends);
+            TypeConstant     typeSuper     = null;
+            List<Expression> listSuperArgs = null;
+
+            if (contribExt != null)
+                {
+                ctxConstruct = ensureConstructorContext(ctxConstruct, constructor);
+
+                typeSuper     = pool().ensureAccessTypeConstant(contribExt.getTypeConstant(), Access.PROTECTED);
+                listSuperArgs = validateSuperParameters(ctxConstruct, typeSuper, errs);
+                if (listSuperArgs == null)
+                    {
+                    // error must have been reported
+                    return;
+                    }
+                }
+
+            if (constructor.isSynthetic() && !constructor.ensureCode().hasOps())
+                {
+                ctxConstruct = ensureConstructorContext(ctxConstruct, constructor);
+
+                generateConstructor(ctxConstruct, constructor, typeSuper, listSuperArgs, errs);
                 }
             }
 
@@ -2403,73 +2443,84 @@ public class TypeCompositionStatement
         }
 
     /**
-     * Emit the synthetic constructor's code.
+     * A simple helper to create a new context for shorthand constructor processing.
      */
-    private void generateConstructor(ClassStructure component, MethodStructure constructor,
-                                     ErrorListener errs)
+    private RootContext ensureConstructorContext(RootContext ctxConstruct, MethodStructure constructor)
         {
-        // the constructor has two responsibilities:
-        // 1) set each property based on the parameter name, value passed in as an arg
-        // 2) call the super constructor
-        Code           code      = constructor.ensureCode();
+        if (ctxConstruct != null)
+            {
+            return ctxConstruct;
+            }
+
         StatementBlock blockBody = body;
         if (body == null)
             {
             blockBody = adopt(new StatementBlock(Collections.EMPTY_LIST));
             }
-        RootContext ctxConstruct = blockBody.new RootContext(constructor);
-        Context     ctxValidate  = ctxConstruct.validatingContext();
-        boolean     fValid       = true;
+        return blockBody.new RootContext(constructor);
+        }
 
-        if (constructor.getDefaultParamCount() > 0)
+    /**
+     * Validate shorthand constructor's default parameters.
+     */
+    private boolean validateDefaultParameters(RootContext ctxConstruct, MethodStructure constructor,
+                                              ErrorListener errs)
+        {
+        Context         ctx        = ctxConstruct.validatingContext();
+        boolean         fValid     = true;
+        List<Parameter> listParams = constructorParams;
+
+        for (int i = 0, cParams = listParams.size(); i < cParams; ++i)
             {
-            // resolve the default values
-            org.xvm.asm.Parameter[] aParams = constructor.getParamArray();
-            for (int i = 0, cParams = aParams.length; i < cParams; ++i)
+            org.xvm.asm.Parameter param = constructor.getParam(i);
+            if (!param.hasDefaultValue())
                 {
-                org.xvm.asm.Parameter param = aParams[i];
-                if (!param.hasDefaultValue())
-                    {
-                    continue;
-                    }
-
-                Expression exprOld = constructorParams.get(i).value;
-
-                TypeConstant typeParam = param.getType();
-                ctxValidate = ctxConstruct.enterInferring(typeParam);
-
-                Expression exprNew = exprOld.validate(ctxValidate, typeParam, errs);
-
-                ctxValidate = ctxValidate.exit();
-
-                if (exprNew == null)
-                    {
-                    fValid = false;
-                    }
-                else if (exprNew.isConstant())
-                    {
-                    param.setDefaultValue(exprNew.toConstant());
-                    }
-                else
-                    {
-                    exprOld.log(errs, Severity.ERROR, Compiler.CONSTANT_REQUIRED);
-                    fValid = false;
-                    }
+                continue;
                 }
 
-            if (!fValid)
+            TypeConstant typeParam = param.getType();
+            Expression   exprOld   = listParams.get(i).value;
+
+            assert exprOld != null;
+            if (exprOld.isValidated())
                 {
-                return;
+                System.err.println("**** already validated " + constructor.getIdentityConstant().getPathString());
+                continue;
+                }
+
+            ctx = ctx.enterInferring(typeParam);
+
+            Expression exprNew = exprOld.validate(ctx, typeParam, errs);
+
+            ctx = ctx.exit();
+
+            if (exprNew == null)
+                {
+                fValid = false;
+                }
+            else if (exprNew.isConstant())
+                {
+                param.setDefaultValue(exprNew.toConstant());
+                }
+            else
+                {
+                exprOld.log(errs, Severity.ERROR, Compiler.CONSTANT_REQUIRED);
+                fValid = false;
                 }
             }
 
-        Contribution contribExtends = component.findContribution(Composition.Extends);
-        TypeConstant typeSuper      = contribExtends == null ? null : contribExtends.getTypeConstant();
+        return fValid;
+        }
 
-        TypeInfo         infoSuper;
-        MethodConstant   idSuper;
+    /**
+     * Validate "extend" parameters.
+     */
+    private List<Expression> validateSuperParameters(RootContext ctxConstruct, TypeConstant typeSuper,
+                                                     ErrorListener errs)
+        {
         MethodStructure  constructSuper;
-        List<Expression> listArgs;
+        List<Expression> listSuperArgs;
+
         if (args == null)
             {
             // Examples:
@@ -2478,8 +2529,7 @@ public class TypeCompositionStatement
             //
             //    const Point3d(Int x, Int y, Int z = 0)
             //        extends Point(x, y);
-
-            listArgs = m_listExtendArgs;
+            listSuperArgs = m_listExtendArgs;
             }
         else
             {
@@ -2495,88 +2545,104 @@ public class TypeCompositionStatement
             //              ...
             //              }
             //          }
-            listArgs = args;
+            listSuperArgs = args;
             }
 
-        if (listArgs != null && !listArgs.isEmpty())
+        // null indicates an error
+        if (listSuperArgs == null)
             {
-            assert typeSuper != null;
+            listSuperArgs = Collections.EMPTY_LIST;
             }
 
-        if (typeSuper == null)
+        ClassStructure component = (ClassStructure) getComponent();
+        Context        ctx       = ctxConstruct.validatingContext();
+        TypeInfo       infoSuper = typeSuper.ensureTypeInfo(errs);
+        MethodConstant idSuper   = findMethod(ctx, typeSuper, infoSuper, "construct",
+                                    listSuperArgs, MethodKind.Constructor, true, false, null, errs);
+        if (idSuper == null)
             {
-            infoSuper      = null;
-            idSuper        = null;
-            constructSuper = null;
+            // if an error has already been logged, this is an additional information
+            log(errs, Severity.ERROR, Compiler.IMPLICIT_SUPER_CONSTRUCTOR_MISSING,
+                    component.getIdentityConstant().getValueString(), typeSuper.getValueString());
+            return null;
             }
-        else
-            {
-            infoSuper = pool().ensureAccessTypeConstant(typeSuper, Access.PROTECTED).
-                            ensureTypeInfo(errs);
-            idSuper   = findMethod(ctxValidate, infoSuper.getType(), infoSuper, "construct", listArgs,
-                            MethodKind.Constructor, true, false, null, errs);
-            if (idSuper == null)
-                {
-                // if an error have already been logged, this is additional information
-                log(errs, Severity.ERROR, Compiler.IMPLICIT_SUPER_CONSTRUCTOR_MISSING,
-                        component.getIdentityConstant().getValueString(), typeSuper.getValueString());
-                return;
-                }
-            constructSuper = infoSuper.getMethodById(idSuper).getHead().getMethodStructure();
-            }
+
+        constructSuper       = infoSuper.getMethodById(idSuper).getHead().getMethodStructure();
+        m_idSuperConstructor = constructSuper.getIdentityConstant();
 
         // validate
-        if (constructSuper != null && listArgs != null)
+        if (constructSuper != null && !listSuperArgs.isEmpty())
             {
-            if (containsNamedArgs(listArgs))
+            if (containsNamedArgs(listSuperArgs))
                 {
-                listArgs = rearrangeNamedArgs(constructSuper, listArgs, errs);
-                if (listArgs == null)
+                listSuperArgs = rearrangeNamedArgs(constructSuper, listSuperArgs, errs);
+                if (listSuperArgs == null)
                     {
                     // invalid names encountered
-                    return;
+                    return null;
                     }
                 }
 
-            TypeConstant[] atypeArgs = idSuper.getRawParams();
-            for (int i = 0, c = listArgs.size(); i < c; i++)
+            boolean        fValid      = true;
+            TypeConstant[] atypeArgs   = idSuper.getRawParams();
+            for (int i = 0, c = listSuperArgs.size(); i < c; i++)
                 {
-                Expression exprOld = listArgs.get(i);
-                Expression exprNew = exprOld.validate(ctxValidate, atypeArgs[i], errs);
+                Expression exprOld = listSuperArgs.get(i);
+                if (exprOld.isValidated())
+                    {
+                    // this could happen for anonymous inner clases, in which case arguemnts
+                    // are validated by NewExpression
+                    assert component.isAnonInnerClass();
+                    continue;
+                    }
+                Expression exprNew = exprOld.validate(ctx, atypeArgs[i], errs);
                 if (exprNew == null)
                     {
                     fValid = false;
                     }
                 else if (exprNew != exprOld)
                     {
-                    listArgs.set(i, exprNew);
+                    listSuperArgs.set(i, exprNew);
                     }
                 }
 
             if (!fValid)
                 {
-                return;
+                return null;
                 }
             }
+        return listSuperArgs;
+        }
 
-        // emit code
-        Context ctxEmit = ctxConstruct.emittingContext(code);
+    /**
+     * Emit the synthetic constructor's code.
+     */
+    private void generateConstructor(RootContext ctxConstruct, MethodStructure constructor,
+                                     TypeConstant typeSuper, List<Expression> listSuperArgs,
+                                     ErrorListener errs)
+        {
+        // the constructor has two responsibilities:
+        // 1) set each property based on the parameter name, value passed in as an arg
+        // 2) call the super constructor
+        ClassStructure component = (ClassStructure) getComponent();
+        Code           code      = constructor.ensureCode();
+        Context        ctxEmit   = ctxConstruct.emittingContext(code);
         if (args == null)
             {
             // parameters that don't exist on the super must be properties on "this"
             // and we need to assign them
-            TypeInfo infoThis = pool().ensureAccessTypeConstant(
-                    component.getFormalType(), Access.PRIVATE).ensureTypeInfo(errs);
+            TypeInfo infoSuper = typeSuper == null ? null : typeSuper.ensureTypeInfo(errs);
+            TypeInfo infoThis  = pool().ensureAccessTypeConstant(
+                component.getFormalType(), Access.PRIVATE).ensureTypeInfo(errs);
 
-            List<org.xvm.asm.Parameter> params = constructor.getParams();
-            for (int i = 0, c = params.size(); i < c; ++i)
+            for (int i = 0, c = constructor.getParamCount(); i < c; ++i)
                 {
-                org.xvm.asm.Parameter param  = params.get(i);
+                org.xvm.asm.Parameter param  = constructor.getParam(i);
                 String                sParam = param.getName();
 
                 PropertyInfo propSuper = infoSuper == null
-                        ? null
-                        : infoSuper.findProperty(sParam);
+                    ? null
+                    : infoSuper.findProperty(sParam);
                 if (propSuper == null || propSuper.isAbstract())
                     {
                     // there must be a property by the same name on "this"
@@ -2584,7 +2650,7 @@ public class TypeCompositionStatement
                     if (propThis == null || !propThis.isVar())
                         {
                         constructorParams.get(i).log(errs, Severity.ERROR, Compiler.IMPLICIT_PROP_MISSING,
-                                sParam);
+                            sParam);
                         }
                     else
                         {
@@ -2597,33 +2663,35 @@ public class TypeCompositionStatement
                         else
                             {
                             constructorParams.get(i).log(errs, Severity.ERROR, Compiler.IMPLICIT_PROP_WRONG_TYPE,
-                                    sParam, typeVal.getValueString(), typeProp.getValueString());
+                                sParam, typeVal.getValueString(), typeProp.getValueString());
                             }
                         }
                     }
                 }
             }
 
-        if (constructSuper == null)
+        MethodConstant idSuper = m_idSuperConstructor;
+        if (idSuper == null)
             {
             if (constructor.isAnonymousClassWrapperConstructor())
                 {
-                 // call the default initializer
+                // call the default initializer
                 code.add(new SynInit());
                 }
             }
         else
             {
-            int        cSuperArgs = constructSuper.getParamCount();
-            Argument[] aSuperArgs = new Argument[cSuperArgs];
-            int        cArgs      = listArgs == null ? 0 : listArgs.size();
+            MethodStructure constructSuper = (MethodStructure) idSuper.getComponent();
+            int             cSuperArgs     = constructSuper.getParamCount();
+            Argument[]      aSuperArgs     = new Argument[cSuperArgs];
+            int             cArgs          = listSuperArgs.size();
 
             // generate the super constructor arguments (filling in the default values)
             for (int i = 0; i < cSuperArgs; i++)
                 {
                 if (i < cArgs)
                     {
-                    aSuperArgs[i] = listArgs.get(i).generateArgument(ctxEmit, code, true, true, errs);
+                    aSuperArgs[i] = listSuperArgs.get(i).generateArgument(ctxEmit, code, true, true, errs);
                     }
                 else
                     {
@@ -2635,7 +2703,7 @@ public class TypeCompositionStatement
             if (constructor.isAnonymousClassWrapperConstructor() &&
                     !constructSuper.isAnonymousClassWrapperConstructor())
                 {
-                 // call the default initializer
+                // call the default initializer
                 code.add(new SynInit());
                 }
 
@@ -2670,7 +2738,7 @@ public class TypeCompositionStatement
 
     private void requireConstructorParamValues(ErrorListener errs)
         {
-        // constructor parameters are not permitted
+        // constructor parameters require default values
         List<Parameter> listParams = constructorParams;
         if (listParams != null && !listParams.isEmpty())
             {
@@ -3072,6 +3140,9 @@ public class TypeCompositionStatement
      * Cached list of the "extends" composition arguments.
      */
     transient private List<Expression> m_listExtendArgs;
+
+    transient private MethodConstant m_idSuperConstructor;
+    transient private MethodConstant m_idShortHandConstructor;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(TypeCompositionStatement.class,
             "condition", "annotations", "typeParams", "constructorParams", "typeArgs", "args",
