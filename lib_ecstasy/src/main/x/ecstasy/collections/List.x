@@ -261,32 +261,18 @@ interface List<Element>
         {
         if (Orderer? orderer := ordered(), orderer != Null)
             {
-            // binary search
-            Int lo = startAt;
-            Int hi = size - 1;
-            while (lo <= hi)
+            if (Int index := binarySearch(value, orderer))
                 {
-                Int     mid = (lo + hi) >>> 1;
-                Element cur = this[mid];
-                switch (orderer(value, cur))
+                while (index > startAt && this[index-1] == value)
                     {
-                    case Lesser:
-                        hi = mid - 1;
-                        break;
-                    case Equal:
-                        Int first = mid;
-                        while (first > startAt && this[first-1] == value)
-                            {
-                            --first;
-                            }
-                        return True, first;
-                    case Greater:
-                        lo = mid + 1;
-                        break;
+                    --index;
                     }
+                return True, index;
                 }
+            return False;
             }
-        else if (indexed, Int size := this.knownSize())
+
+        if (indexed, Int size := knownSize())
             {
             for (Int i = startAt.maxOf(0); i < size; ++i)
                 {
@@ -295,18 +281,16 @@ interface List<Element>
                     return True, i;
                     }
                 }
-            }
-        else
-            {
-            Loop: for (Element e : iterator())
-                {
-                if (Loop.count >= startAt && e == value)
-                    {
-                    return True, Loop.count;
-                    }
-                }
+            return False;
             }
 
+        Loop: for (Element e : iterator())
+            {
+            if (Loop.count >= startAt && e == value)
+                {
+                return True, Loop.count;
+                }
+            }
         return False;
         }
 
@@ -361,37 +345,22 @@ interface List<Element>
         {
         if (Orderer? orderer := ordered(), orderer != Null)
             {
-            // binary search
-            Int lo     = 0;
-            Int hi     = (size-1).minOf(startAt);
-            Int origHi = hi;
-            while (lo <= hi)
+            if (Int index := binarySearch(value, orderer))
                 {
-                Int     mid = (lo + hi) >>> 1;
-                Element cur = this[mid];
-                switch (orderer(value, cur))
+                Int stop = startAt.minOf(size-1);
+                while (index < stop && this[index+1] == value)
                     {
-                    case Lesser:
-                        hi = mid - 1;
-                        break;
-                    case Equal:
-                        Int last = mid;
-                        while (last < origHi && this[last+1] == value)
-                            {
-                            ++last;
-                            }
-                        return True, last;
-                    case Greater:
-                        lo = mid + 1;
-                        break;
+                    ++index;
                     }
+                return True, index;
                 }
+
             return False;
             }
 
         if (indexed)
             {
-            for (Int i = (size-1).minOf(startAt); i >= 0; --i)
+            for (Int i = startAt.minOf(size-1); i >= 0; --i)
                 {
                 if (this[i] == value)
                     {
@@ -414,8 +383,8 @@ interface List<Element>
                 }
             }
         return last >= 0
-                ? False
-                : (True, last);
+                ? (True, last)
+                : False;
         }
 
     /**
@@ -454,6 +423,59 @@ interface List<Element>
             }
 
         return False;
+        }
+
+    /**
+     * Look for the specified `value` in the list, with the assumption that the list is ordered.
+     *
+     * @param value    the value to search for
+     * @param compare  the ordering comparison function to use
+     *
+     * @return True iff this list contains the `value`
+     * @return the index at which the specified value was found, or the insertion point if the
+     *         value was not found
+     */
+    (Boolean found, Int index) binarySearch(Element value, Orderer? compare=Null)
+        {
+        if (compare == Null)
+            {
+            // TODO GG: uncomment this and see what happens: assert Element.is(Type<Orderable>);
+            assert compare := Element.ordered();
+            }
+
+        return binarySearch(compare(value, _));
+        }
+
+    /**
+     * Binary search the list using the supplied function.
+     *
+     * @param compare  the ordering comparison function to use
+     *
+     * @return True iff a match was found
+     * @return the index at which the specified value was found, or the insertion point if the
+     *         value was not found
+     */
+    (Boolean found, Int index) binarySearch(function Ordered(Element) order)
+        {
+        Int first = 0;
+        Int last  = size - 1;
+        do
+            {
+            Int midpoint = (first + last) >>> 1;
+            switch (order(this[midpoint]))
+                {
+                case Lesser:
+                    last = midpoint - 1;
+                    break;
+                case Equal:
+                    return True, midpoint;
+                case Greater:
+                    first = midpoint + 1;
+                    break;
+                }
+            }
+        while (first <= last);
+        return False, first;
         }
 
     /**

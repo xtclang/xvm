@@ -35,7 +35,7 @@ interface Iterable<Element>
      */
     Element[] toArray(Array.Mutability? mutability = Null)
         {
-        Element[] result = new Array<Element>(size); // mutable
+        Element[] result = new Element[](size); // mutable
 
         loop: for (Element element : this)
             {

@@ -560,10 +560,10 @@ class Array<Element>
             }
 
         // copy everything except the "shouldRemove" elements to a new array
-        Int            newSize = size - indexes.size;
-        Array<Element> result  = new Array<Element>(newSize);
-        Int            delete  = indexes[0];
-        Int            deletedCount = 0;
+        Int       newSize      = size - indexes.size;
+        Element[] result       = new Element[](newSize);
+        Int       delete       = indexes[0];
+        Int       deletedCount = 0;
         for (Int index = 0; index < size; ++index)
             {
             if (index == delete)
