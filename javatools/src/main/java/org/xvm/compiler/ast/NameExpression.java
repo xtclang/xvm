@@ -2540,7 +2540,13 @@ public class NameExpression
                                 : left.getImplicitType(ctx);
                         TypeInfo   infoLeft   = getTypeInfo(ctx, typeLeft, errs);
                         MethodInfo infoMethod = infoLeft.getMethodBySignature(idMethod.getSignature());
-                        method   = infoMethod.getTopmostMethodStructure(infoLeft);
+                        if (infoMethod == null)
+                            {
+                            log(errs, Severity.ERROR, Compiler.METHOD_INACCESSIBLE,
+                                    idMethod.getValueString(), typeLeft.getValueString());
+                            return null;
+                            }
+                        method = infoMethod.getTopmostMethodStructure(infoLeft);
                         assert method != null;
                         }
 
