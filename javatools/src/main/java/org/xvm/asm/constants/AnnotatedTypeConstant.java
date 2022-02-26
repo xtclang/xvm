@@ -154,9 +154,9 @@ public class AnnotatedTypeConstant
             }
 
         Constant idAnno = getAnnotationClass();
-        if (idAnno instanceof ClassConstant)
+        if (idAnno instanceof ClassConstant idClz)
             {
-            ClassStructure mixin = (ClassStructure) ((ClassConstant) idAnno).getComponent();
+            ClassStructure mixin = (ClassStructure) idClz.getComponent();
 
             if (!mixin.isParameterizedDeep())
                 {
@@ -212,9 +212,9 @@ public class AnnotatedTypeConstant
         TypeConstant typeUnderlying = getUnderlyingType();
         boolean      fDiff          = false;
 
-        if (typeUnderlying instanceof AnnotatedTypeConstant)
+        if (typeUnderlying instanceof AnnotatedTypeConstant typeAnno)
             {
-            TypeConstant typeU = ((AnnotatedTypeConstant) typeUnderlying).stripParameters();
+            TypeConstant typeU = typeAnno.stripParameters();
 
             fDiff          = typeU != typeUnderlying;
             typeUnderlying = typeU;
@@ -240,8 +240,8 @@ public class AnnotatedTypeConstant
             }
 
         TypeConstant typeUnderlying = getUnderlyingType();
-        return typeUnderlying instanceof AnnotatedTypeConstant &&
-             ((AnnotatedTypeConstant) typeUnderlying).containsRegisterParameters();
+        return typeUnderlying instanceof AnnotatedTypeConstant typeAnno &&
+                typeAnno.containsRegisterParameters();
         }
 
 

@@ -577,12 +577,10 @@ public class VirtualChildTypeConstant
         CompareNext:
         if (n == 0)
             {
-            if (!(obj instanceof VirtualChildTypeConstant))
+            if (!(obj instanceof VirtualChildTypeConstant that))
                 {
                 return -1;
                 }
-
-            VirtualChildTypeConstant that = (VirtualChildTypeConstant) obj;
 
             n = this.m_constName.compareTo(that.m_constName);
             if (n != 0)

@@ -135,7 +135,7 @@ public class MethodConstant
      */
     public boolean isLambda()
         {
-        // a missing signature can only occur for a lambda
+        // a missing signature can only occur for a lambda;
         // a lambda identity always occurs for a lambda
         boolean fLambda = m_iLambda > 0;
         assert fLambda || m_constSig != null;
@@ -322,11 +322,11 @@ public class MethodConstant
         }
 
     @Override
-    public boolean trailingSegmentEquals(IdentityConstant that)
+    public boolean trailingSegmentEquals(IdentityConstant idThat)
         {
-        return that instanceof MethodConstant && (isLambda()
-                ? this.m_iLambda == ((MethodConstant) that).m_iLambda
-                : this.m_constSig.equals(((MethodConstant) that).m_constSig));
+        return idThat instanceof MethodConstant that && (isLambda()
+                ? this.m_iLambda       == that.m_iLambda
+                : this.m_constSig.equals(that.m_constSig));
         }
 
     @Override
@@ -506,12 +506,11 @@ public class MethodConstant
     @Override
     protected int compareDetails(Constant obj)
         {
-        if (!(obj instanceof MethodConstant))
+        if (!(obj instanceof MethodConstant that))
             {
             return -1;
             }
 
-        MethodConstant that = (MethodConstant) obj;
         int n = this.m_constParent.compareTo(that.m_constParent);
         if (n == 0)
             {
@@ -644,7 +643,7 @@ public class MethodConstant
     /**
      * The lambda synthetic identity, separate from the signature.
      */
-    private int m_iLambda;
+    private final int m_iLambda;
 
     /**
      * Cached type.

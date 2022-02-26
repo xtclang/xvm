@@ -448,12 +448,11 @@ public class PropertyClassTypeConstant
         int n = super.compareDetails(obj);
         if (n == 0)
             {
-            if (!(obj instanceof PropertyClassTypeConstant))
+            if (!(obj instanceof PropertyClassTypeConstant that))
                 {
                 return -1;
                 }
 
-            PropertyClassTypeConstant that = (PropertyClassTypeConstant) obj;
             n = this.m_idProp.compareTo(that.m_idProp);
             }
         return n;

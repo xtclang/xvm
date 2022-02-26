@@ -218,15 +218,14 @@ public class TypeParameterConstant
         }
 
     @Override
-    protected int compareDetails(Constant that)
+    protected int compareDetails(Constant obj)
         {
-        if (!(that instanceof TypeParameterConstant))
+        if (!(obj instanceof TypeParameterConstant that))
             {
             return -1;
             }
 
-        TypeParameterConstant regThat = (TypeParameterConstant) that;
-        int nDif = this.f_iReg - regThat.f_iReg;
+        int nDif = this.f_iReg - that.f_iReg;
         if (nDif != 0 || f_tloReEntry.get())
             {
             return nDif;
@@ -235,7 +234,7 @@ public class TypeParameterConstant
         f_tloReEntry.set(Boolean.TRUE);
         try
             {
-            return getParentConstant().compareTo(regThat.getParentConstant());
+            return getParentConstant().compareTo(that.getParentConstant());
             }
         finally
             {
