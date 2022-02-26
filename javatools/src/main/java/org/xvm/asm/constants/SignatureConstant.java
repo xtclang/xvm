@@ -594,7 +594,7 @@ public class SignatureConstant
     @Override
     protected synchronized int compareDetails(Constant obj)
         {
-        if (!(obj instanceof SignatureConstant that) || containsUnresolved())
+        if (!(obj instanceof SignatureConstant that))
             {
             return -1;
             }
@@ -618,12 +618,14 @@ public class SignatureConstant
                 }
             }
 
-        // while completely non-obvious at first look, caching this result has a tremendous impact
-        // on the big-O, by short-circuiting a recursive comparison caused by signatures containing
-        // TypeParameterConstants
-        m_sigPrev  = that;
-        m_nCmpPrev = n;
-
+        if (!containsUnresolved())
+            {
+            // while completely non-obvious at first look, caching this result has a tremendous impact
+            // on the big-O, by short-circuiting a recursive comparison caused by signatures containing
+            // TypeParameterConstants
+            m_sigPrev  = that;
+            m_nCmpPrev = n;
+            }
         return n;
         }
 
