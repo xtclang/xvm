@@ -62,9 +62,9 @@ public class UnresolvedNameConstant
      */
     public String getName()
         {
-        if (m_constId instanceof IdentityConstant)
+        if (m_constId instanceof IdentityConstant constId)
             {
-            return ((IdentityConstant) m_constId).getName();
+            return constId.getName();
             }
 
         String[]      names = m_asName;
@@ -201,14 +201,14 @@ public class UnresolvedNameConstant
         {
         if (isNameResolved())
             {
-            Constant constId = unwrap();
-            if (constId instanceof IdentityConstant)
+            Constant constant = unwrap();
+            if (constant instanceof IdentityConstant constId)
                 {
-                return ((IdentityConstant) m_constId).getLocator();
+                return constId.getLocator();
                 }
-            else if (constId instanceof PseudoConstant)
+            if (constant instanceof PseudoConstant constPseudo)
                 {
-                return ((PseudoConstant) m_constId).getLocator();
+                return constPseudo.getLocator();
                 }
             }
         return null;
@@ -232,10 +232,10 @@ public class UnresolvedNameConstant
             return unwrap().compareTo(that);
             }
 
-        if (that instanceof UnresolvedNameConstant)
+        if (that instanceof UnresolvedNameConstant thatUnresolved)
             {
             String[] asThis = m_asName;
-            String[] asThat = ((UnresolvedNameConstant) that).m_asName;
+            String[] asThat = thatUnresolved.m_asName;
             int      cThis  = asThis.length;
             int      cThat  = asThat.length;
             for (int i = 0, c = Math.min(cThis, cThat); i < c; ++i)
@@ -249,7 +249,7 @@ public class UnresolvedNameConstant
             int n = cThis - cThat;
             if (n == 0)
                 {
-                n = (m_fNoNarrow ? 1 : 0) - (((UnresolvedNameConstant) that).m_fNoNarrow ? 1 : 0);
+                n = (m_fNoNarrow ? 1 : 0) - (thatUnresolved.m_fNoNarrow ? 1 : 0);
                 }
             return n;
             }
@@ -275,14 +275,14 @@ public class UnresolvedNameConstant
     protected void assemble(DataOutput out)
             throws IOException
         {
-        Constant constId = unwrap();
-        if (constId instanceof IdentityConstant)
+        Constant constant = unwrap();
+        if (constant instanceof IdentityConstant constId)
             {
-            ((IdentityConstant) constId).assemble(out);
+            constId.assemble(out);
             }
-        else if (constId instanceof PseudoConstant)
+        else if (constant instanceof PseudoConstant costPseudo)
             {
-            ((PseudoConstant) constId).assemble(out);
+            costPseudo.assemble(out);
             }
         else
             {
@@ -325,7 +325,7 @@ public class UnresolvedNameConstant
     /**
      * The unresolved name, as an array of simple names.
      */
-    private String[] m_asName;
+    private final String[] m_asName;
 
     /**
      * The resolved constant, or null if the name has not yet been resolved to a constant.
@@ -335,7 +335,7 @@ public class UnresolvedNameConstant
     /**
      * True iff the type name is explicitly non-narrowing.
      */
-    private boolean m_fNoNarrow;
+    private final boolean m_fNoNarrow;
 
     /**
      * A consumer that needs to be called when this name constant is resolved.

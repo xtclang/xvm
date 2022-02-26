@@ -105,7 +105,6 @@ public class UnresolvedTypeConstant
         if (!m_fRecursive)
             {
             assert m_type == null || m_type == constant;
-            assert constant instanceof TypeConstant;
             m_type = (TypeConstant) constant;
             }
         }
@@ -488,10 +487,9 @@ public class UnresolvedTypeConstant
             return getResolvedType().compareDetails(that);
             }
 
-        if (that instanceof UnresolvedTypeConstant)
+        if (that instanceof UnresolvedTypeConstant thatUnresolved)
             {
-            return m_constId.compareDetails(
-                        ((UnresolvedTypeConstant) that).m_constId);
+            return m_constId.compareDetails(thatUnresolved.m_constId);
             }
 
         // need to return a value that allows for stable sorts, but unless this==that, the
