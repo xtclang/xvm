@@ -626,12 +626,6 @@ class OrderedMapSlice<Key extends Orderable, Value>
             }
 
         @Override
-        conditional Orderer ordered()
-            {
-            return True, outer.compare;
-            }
-
-        @Override
         Boolean contains(Key key)
             {
             return outer.contains(key);

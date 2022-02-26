@@ -514,14 +514,6 @@ interface ClassTemplate
         return False;
         }
 
-    /**
-     * TODO CP please explain
-     *
-     * @return True iff the class represents an inflated property
-     * @return (optional) the PropertyTemplate this class comes from
-     */
-    conditional PropertyTemplate fromProperty();
-
      /**
      * Determine if the class is an inner class, which must be instantiated virtually.
      *
