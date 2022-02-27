@@ -11,6 +11,8 @@ import java.util.Map;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
+import org.xvm.asm.ErrorList;
+import org.xvm.asm.ErrorListener.ErrorInfo;
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
@@ -449,6 +451,37 @@ public class Compiler
 
 
     // ----- text output and error handling --------------------------------------------------------
+
+    @Override
+    protected void log(ErrorList errs)
+        {
+        List<ErrorInfo> listErrs = errs.getErrors();
+        int             cErrs    = listErrs.size();
+
+        if (cErrs > 0)
+            {
+            // if there are any COMPILER errors, suppress all VERIFY errors
+            boolean fSuppressVerify = false;
+
+            for (ErrorInfo err : listErrs)
+                {
+                if (err.getCode().startsWith("COMPILER"))
+                    {
+                    fSuppressVerify = true;
+                    break;
+                    }
+                }
+
+            for (ErrorInfo err : listErrs)
+                {
+                if (fSuppressVerify && err.getCode().startsWith("VERIFY"))
+                    {
+                    continue;
+                    }
+                log(err.getSeverity(), err.toString());
+                }
+            }
+        }
 
     @Override
     public String desc()
