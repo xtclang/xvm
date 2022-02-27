@@ -91,10 +91,9 @@ public class Disassembler
 
     public static void dump(Component component)
         {
-        if (component instanceof MethodStructure)
+        if (component instanceof MethodStructure method)
             {
-            MethodStructure method = (MethodStructure) component;
-            MethodConstant  id     = method.getIdentityConstant();
+            MethodConstant id = method.getIdentityConstant();
 
             if (method.hasCode() && method.ensureCode() != null && !method.isNative())
                 {
@@ -116,15 +115,17 @@ public class Disassembler
     @Override
     public String desc()
         {
-        return "Ecstasy disassembler:\n" +
-               '\n' +
-               "Examines a compiled Ecstasy module.\n" +
-               '\n' +
-               "Usage:\n" +
-               '\n' +
-               "    xam <options> <modulename>\n" +
-               "or:\n" +
-               "    xam <options> <filename>.xtc\n";
+        return """
+            Ecstasy disassembler:
+
+            Examines a compiled Ecstasy module.
+
+            Usage:
+
+                xam <options> <modulename>
+            or:
+                xam <options> <filename>.xtc
+            """;
         }
 
 

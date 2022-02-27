@@ -127,7 +127,7 @@ public class Runner
             ObjectHandle[] ahArg = Utils.OBJECTS_NONE;
             if (asArg != null)
                 {
-                try (var x = ConstantPool.withPool(connector.getConstantPool()))
+                try (var ignore = ConstantPool.withPool(connector.getConstantPool()))
                     {
                     int            cArgs  = asArg.length;
                     StringHandle[] ahName = new StringHandle[cArgs];
@@ -142,7 +142,7 @@ public class Runner
 
             connector.join();
             }
-        catch (InterruptedException e)
+        catch (InterruptedException ignore)
             {
             }
         }
@@ -153,15 +153,17 @@ public class Runner
     @Override
     public String desc()
         {
-        return "Ecstasy runner:\n" +
-               '\n' +
-               "Executes a compiled Ecstasy module.\n" +
-               '\n' +
-               "Usage:\n" +
-               '\n' +
-               "    xec <options> <modulename>\n" +
-               "or:\n" +
-               "    xec <options> <filename>.xtc\n";
+        return """
+            Ecstasy runner:
+
+            Executes a compiled Ecstasy module.
+
+            Usage:
+
+                xec <options> <modulename>
+            or:
+                xec <options> <filename>.xtc
+            """;
         }
 
 

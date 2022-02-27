@@ -198,7 +198,7 @@ public class Compiler
         ModuleStructure  moduleNative = repoBuild.loadModule(Constants.PROTOTYPE_MODULE);
         if (moduleNative != null)
             {
-            try (var x = ConstantPool.withPool(moduleNative.getConstantPool()))
+            try (var ignore = ConstantPool.withPool(moduleNative.getConstantPool()))
                 {
                 ClassStructure clzNakedRef  = (ClassStructure) moduleNative.getChild("NakedRef");
                 TypeConstant   typeNakedRef = clzNakedRef.getFormalType();
@@ -453,13 +453,14 @@ public class Compiler
     @Override
     public String desc()
         {
-        return "Ecstasy compiler:\n" +
-               '\n' +
-               "Converts \".x\" files into a compiled \".xtc\" Ecstasy module.\n" +
-               '\n' +
-               "Usage:\n" +
-               '\n' +
-               "    xtc <options> <filename>.x ...";
+        return """
+            Ecstasy compiler:
+
+            Converts ".x" files into a compiled ".xtc" Ecstasy module.
+
+            Usage:
+
+                xtc <options> <filename>.x ...""";
         }
 
 
@@ -598,18 +599,12 @@ public class Compiler
                 return true;
                 }
 
-            switch (strictLevel)
+            return switch (strictLevel)
                 {
-                case None:
-                case Suppressed:
-                    return sev.compareTo(Severity.ERROR) >= 0;
+                case None, Suppressed -> sev.compareTo(Severity.ERROR) >= 0;
+                case Normal, Stickler -> sev.compareTo(Severity.WARNING) >= 0;
+                };
 
-                case Normal:
-                case Stickler:
-                    return sev.compareTo(Severity.WARNING) >= 0;
-                }
-
-            return super.isBadEnoughToPrint(sev);
             }
 
         @Override

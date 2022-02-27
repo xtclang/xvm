@@ -808,7 +808,7 @@ public abstract class Launcher
                                     listArgs.add(asArgs[iCopy]);
                                     }
                                 store(ArgV, true, listArgs);
-                                break NextArg;
+                                break;
                                 }
                             else
                                 {
@@ -822,7 +822,7 @@ public abstract class Launcher
 
                 if (sPrev != null && sArg != null)
                     {
-                    // this arg is a "option value" portion of some previous "option name"
+                    // this arg is an "option value" portion of some previous "option name"
                     Form    form   = formOf(sPrev);
                     boolean fMulti = allowMultiple(sPrev);
                     Object  oVal   = null;
@@ -862,7 +862,7 @@ public abstract class Launcher
                                 {
                                 oVal = Integer.valueOf(sArg);
                                 }
-                            catch (NumberFormatException e) {}
+                            catch (NumberFormatException ignore) {}
                             break;
 
                         case String:
@@ -1155,12 +1155,12 @@ public abstract class Launcher
         /**
          * The configured map options.
          */
-        private Map<String, Option> m_mapOptions  = new HashMap<>();
+        private final Map<String, Option> m_mapOptions  = new HashMap<>();
 
         /**
          * The values of the various command line options.
          */
-        private ListMap<String, Object> m_mapValues = new ListMap<>();
+        private final ListMap<String, Object> m_mapValues = new ListMap<>();
 
         /**
          * Set to true if an "AsIs" option is present.
@@ -1220,9 +1220,9 @@ public abstract class Launcher
      */
     protected BuildRepository extractBuildRepo(ModuleRepository repoLib)
         {
-        if (repoLib instanceof BuildRepository)
+        if (repoLib instanceof BuildRepository repoBuild)
             {
-            return (BuildRepository) repoLib;
+            return repoBuild;
             }
 
         LinkedRepository repoLinked = (LinkedRepository) repoLib;
@@ -2523,9 +2523,9 @@ public abstract class Launcher
                 Statement stmt = ast();
                 if (stmt != null)
                     {
-                    if (stmt instanceof TypeCompositionStatement)
+                    if (stmt instanceof TypeCompositionStatement stmtType)
                         {
-                        m_stmtType = (TypeCompositionStatement) stmt;
+                        m_stmtType = stmtType;
                         }
                     else
                         {
