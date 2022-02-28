@@ -1978,7 +1978,7 @@ public class MethodStructure
             ensureAppending();
 
             int nLineDelta = m_nCurLine - m_nPrevLine;
-            if (nLineDelta != 0)
+            if (nLineDelta != 0 && !op.isEnter())
                 {
                 m_nPrevLine = m_nCurLine;
                 add(new Nop(nLineDelta));
