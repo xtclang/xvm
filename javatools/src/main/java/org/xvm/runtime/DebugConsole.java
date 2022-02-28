@@ -70,38 +70,29 @@ public class DebugConsole
     @Override
     public synchronized int checkBreakPoint(Frame frame, int iPC)
         {
-        boolean fDebug;
-        switch (m_stepMode)
+        boolean fDebug = switch (m_stepMode)
             {
-            case NaturalCall:
-                fDebug = false;
-                break;
+            case NaturalCall ->
+                false;
 
-            case StepOver:
-                fDebug = frame == m_frame;
-                break;
+            case StepOver ->
+                frame == m_frame;
 
-            case StepOut:
+            case StepOut ->
                 // handled by onReturn()
-                fDebug = false;
-                break;
+                false;
 
-            case StepInto:
-                fDebug = m_frame.f_fiber.isAssociated(frame.f_fiber) ||
-                           frame.f_fiber.isAssociated(m_frame.f_fiber);
-                break;
+            case StepInto ->
+                m_frame.f_fiber.isAssociated(  frame.f_fiber) ||
+                  frame.f_fiber.isAssociated(m_frame.f_fiber);
 
-            case StepLine:
-                fDebug = frame == m_frame && iPC == m_iPC;
-                break;
+            case StepLine ->
+                frame == m_frame && iPC == m_iPC;
 
-            case None:
-                fDebug = m_setLineBreaks != null && m_setLineBreaks.stream().anyMatch(bp -> bp.matches(frame, iPC));
-                break;
-
-            default:
-                throw new IllegalStateException();
-            }
+            case None ->
+                m_setLineBreaks != null &&
+                m_setLineBreaks.stream().anyMatch(bp -> bp.matches(frame, iPC));
+            };
 
         return fDebug
                 ? enterCommand(frame, iPC, true)
@@ -1101,13 +1092,12 @@ public class DebugConsole
      */
     private String renderDisplay()
         {
-        switch (m_viewMode)
+        return switch (m_viewMode)
             {
-            case Frames: return renderDebugger();
-            case Console: return renderConsole();
-            case Services: return renderServices();
-            default: return "unknown view mode " + m_viewMode;
-            }
+            case Frames   -> renderDebugger();
+            case Console  -> renderConsole();
+            case Services -> renderServices();
+            };
         }
 
     /**
@@ -1435,10 +1425,10 @@ public class DebugConsole
                     fCanExpand = true;
                     }
 
-                if (hVar instanceof ArrayHandle)
+                if (hVar instanceof ArrayHandle hArray)
                     {
                     fArray    = true;
-                    cElements = ((ArrayHandle) hVar).m_hDelegate.m_cSize;
+                    cElements = hArray.m_hDelegate.m_cSize;
                     if (cElements > 0)
                         {
                         fCanExpand = true;
@@ -1515,9 +1505,8 @@ public class DebugConsole
                 sb.append('=');
                 }
 
-            if (hVal instanceof ArrayHandle)
+            if (hVal instanceof ArrayHandle hArray)
                 {
-                ArrayHandle hArray = (ArrayHandle) hVal;
                 // TODO GG show the array values
                 }
             sb.append(hVal);
@@ -1688,49 +1677,48 @@ public class DebugConsole
 
     private String renderHelp()
         {
-        StringBuilder sb = new StringBuilder();
-        sb.append("\n");
-        sb.append("Command              Description\n");
-        sb.append("-------------------  ---------------------------------------------\n");
-        sb.append("F <frame#>           Switch to the specified Frame number\n");
-        sb.append("X <var#>             Expand (or contract) the specified variable number\n");
-        sb.append("V <var#>             Toggle the view mode (output format) for the specified variable number\n");
-        sb.append("E <expr>             Evaluate the specified expression\n");
-        sb.append("WE <expr>            Add a \"watch\" for the specified expression\n");
-        sb.append("WO <var#>            Add a watch on the specified referent (the object itself)\n");
-        sb.append("WR <var#>            Add a watch on the specified reference (the property or variable)\n");
-        sb.append("W- <var#>            Remove the specified watch\n");
-        sb.append("D <var#>             Display the structure view of the specified variable number\n");
-        sb.append("DS <var#>            Display the \"toString()\" value of the specified variable number\n");
-        sb.append("\n");
-        sb.append("S                    Step over\n");
-        sb.append("S+                   Step in\n");
-        sb.append("S-                   Step out of frame\n");
-        sb.append("SL                   Step (run) to current line\n");
-        sb.append("R                    Run to next breakpoint\n");
-        sb.append("\n");
-        sb.append("B+                   Add breakpoint for the current line\n");
-        sb.append("B-                   Remove breakpoint for the current line\n");
-        sb.append("BT                   Toggle breakpoint for the current line\n");
-        sb.append("B+ <name> <line>     Add specified breakpoint\n");
-        sb.append("B- <name> <line>     Remove specified breakpoint\n");
-        sb.append("BT <name> <line>     Toggle specified breakpoint\n");
-        sb.append("BE+ <exception>      Break on exception\n");
-        sb.append("BE- <exception>      Remove exception breakpoint\n");
-        sb.append("BE+ *                Break on all exceptions\n");
-        sb.append("BE- *                Remove the \"all exception\" breakpoint\n");
-        sb.append("B- *                 Clear all breakpoints\n");
-        sb.append("BT *                 Toggle all breakpoints (enable all iff all enabled; otherwise disable all)\n");
-        sb.append("B                    List current breakpoints\n");
-        sb.append("B- <breakpoint#>     Remove specified breakpoint (from the breakpoint list)\n");
-        sb.append("BT <breakpoint#>     Toggle specified breakpoint (from the breakpoint list)\n");
-        sb.append("\n");
-        sb.append("VC                   View Console\n");
-        sb.append("VD                   View Debugger\n");
-        sb.append("VF                   View Services and Fibers\n");
-        sb.append("VS <width> <height>  Set view width and optional height for debugger and console views\n");
-        sb.append("?                    Display this help message");
-        return sb.toString();
+        return """
+            
+             Command              Description
+             -------------------  ---------------------------------------------
+             F <frame#>           Switch to the specified Frame number
+             X <var#>             Expand (or contract) the specified variable number
+             V <var#>             Toggle the view mode (output format) for the specified variable number
+             E <expr>             Evaluate the specified expression
+             WE <expr>            Add a "watch" for the specified expression
+             WO <var#>            Add a watch on the specified referent (the object itself)
+             WR <var#>            Add a watch on the specified reference (the property or variable)
+             W- <var#>            Remove the specified watch
+             D <var#>             Display the structure view of the specified variable number
+             DS <var#>            Display the "toString()" value of the specified variable number
+            
+             S                    Step over
+             S+                   Step in
+             S-                   Step out of frame
+             SL                   Step (run) to current line
+             R                    Run to next breakpoint
+            
+             B+                   Add breakpoint for the current line
+             B-                   Remove breakpoint for the current line
+             BT                   Toggle breakpoint for the current line
+             B+ <name> <line>     Add specified breakpoint
+             B- <name> <line>     Remove specified breakpoint
+             BT <name> <line>     Toggle specified breakpoint
+             BE+ <exception>      Break on exception
+             BE- <exception>      Remove exception breakpoint
+             BE+ *                Break on all exceptions
+             BE- *                Remove the "all exception" breakpoint
+             B- *                 Clear all breakpoints
+             BT *                 Toggle all breakpoints (enable all iff all enabled; otherwise disable all)
+             B                    List current breakpoints
+             B- <breakpoint#>     Remove specified breakpoint (from the breakpoint list)
+             BT <breakpoint#>     Toggle specified breakpoint (from the breakpoint list)
+            
+             VC                   View Console
+             VD                   View Debugger
+             VF                   View Services and Fibers
+             VS <width> <height>  Set view width and optional height for debugger and console views
+             ?                    Display this help message""";
         }
 
 
@@ -1758,12 +1746,7 @@ public class DebugConsole
         assert cSpaces >= 0;
         if (cSpaces > 0)
             {
-            StringBuilder sb = new StringBuilder(cch);
-            for (int i = 0; i < cSpaces; ++i)
-                {
-                sb.append(' ');
-                }
-            s = sb.append(s).toString();
+            s = " ".repeat(cSpaces) + s;
             }
         return s;
         }
@@ -1849,13 +1832,9 @@ public class DebugConsole
         @Override
         public boolean equals(Object o)
             {
-            if (!(o instanceof BreakPoint))
-                {
-                return false;
-                }
-            BreakPoint that = (BreakPoint) o;
-            return lineNumber == that.lineNumber &&
-                   className.equals(that.className);
+            return o instanceof BreakPoint that &&
+                    this.lineNumber   == that.lineNumber &&
+                    this.className.equals(that.className);
             }
 
         @Override
@@ -2005,10 +1984,10 @@ public class DebugConsole
             this.canExpand = canExpand;
             this.expanded  = expanded;
 
-            isArray = hVar instanceof ArrayHandle;
-            if (isArray)
+            if (hVar instanceof ArrayHandle hArray)
                 {
-                size = ((ArrayHandle) hVar).m_hDelegate.m_cSize;
+                isArray = true;
+                size    = hArray.m_hDelegate.m_cSize;
                 }
             }
 
@@ -2187,7 +2166,7 @@ public class DebugConsole
     /**
      * The "global" debug state (visible in any frame).
      */
-    private DebugStash m_debugStash = new DebugStash();
+    private final DebugStash m_debugStash = new DebugStash();
 
     /**
      * The displayed array of variable names.
