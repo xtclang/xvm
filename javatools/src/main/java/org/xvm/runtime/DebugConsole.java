@@ -1419,7 +1419,7 @@ public class DebugConsole
             TypeComposition composition = hVar.getComposition();
             if (composition != null)
                 {
-                listFields = composition.getFieldNames();
+                listFields = getFieldNames(composition);
                 if (!listFields.isEmpty())
                     {
                     fCanExpand = true;
@@ -1497,7 +1497,7 @@ public class DebugConsole
         TypeComposition composition = hVal.getComposition();
         List<String>    listNames   = composition == null
                 ? Collections.EMPTY_LIST
-                : composition.getFieldNames();
+                : getFieldNames(composition);
         if (listNames.isEmpty())
             {
             if (fField)
@@ -1505,7 +1505,7 @@ public class DebugConsole
                 sb.append('=');
                 }
 
-            if (hVal instanceof ArrayHandle hArray)
+            if (hVal instanceof ArrayHandle)
                 {
                 // TODO GG show the array values
                 }
@@ -1529,6 +1529,20 @@ public class DebugConsole
                 renderVar(hField, true, sb, sTab + "   ");
                 }
             }
+        }
+
+    private List<String> getFieldNames(TypeComposition composition)
+        {
+        List<String> list = new ArrayList<>();
+        for (Object nid : composition.getFieldNids())
+            {
+            if (nid instanceof String s &&
+                    !composition.getFieldInfo(s).isSynthetic())
+                {
+                list.add(s);
+                }
+            }
+        return list;
         }
 
     private int longestOf(String[] as)
