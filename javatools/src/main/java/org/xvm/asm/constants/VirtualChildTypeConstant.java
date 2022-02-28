@@ -179,9 +179,9 @@ public class VirtualChildTypeConstant
         if (info != null)
             {
             Component child = info.getComponent();
-            if (child instanceof ClassStructure)
+            if (child instanceof ClassStructure clz)
                 {
-                return (ClassStructure) child;
+                return clz;
                 }
             }
 
@@ -190,6 +190,12 @@ public class VirtualChildTypeConstant
 
 
     // ----- TypeConstant methods ------------------------------------------------------------------
+
+    @Override
+    public boolean isComposedOfAny(Set<IdentityConstant> setIds)
+        {
+        return setIds.contains(getSingleUnderlyingClass(true));
+        }
 
     @Override
     public boolean isImmutabilitySpecified()
