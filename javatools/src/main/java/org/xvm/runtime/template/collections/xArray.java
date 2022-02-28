@@ -542,17 +542,17 @@ public class xArray
     @Override
     public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2)
         {
+        if (super.compareIdentity(hValue1, hValue2))
+            {
+            return true;
+            }
+
         ArrayHandle hArray1 = (ArrayHandle) hValue1;
         ArrayHandle hArray2 = (ArrayHandle) hValue2;
 
-        if (hArray1.isMutable() || hArray2.isMutable() ||
-                (hArray1.m_hDelegate.getTemplate()  != hArray2.m_hDelegate.getTemplate()))
-            {
-            return false;
-            }
-
-        return hArray1.m_hDelegate.getTemplate().
-            compareIdentity(hArray1.m_hDelegate, hArray2.m_hDelegate);
+        return !hArray1.isMutable() && !hArray2.isMutable() &&
+            hArray1.m_hDelegate.getTemplate().
+                compareIdentity(hArray1.m_hDelegate, hArray2.m_hDelegate);
         }
 
 
