@@ -258,6 +258,17 @@ mixin KeySetBasedMap<Key, Value>
             implements Map<Key, Value>.Entry
             incorporates KeyEntry<Key, Value>
         {
+        construct()
+            {
+            construct KeyEntry();
+            }
+
+        construct(Key key)
+            {
+            construct KeyEntry(key);
+            }
+
+
         // ----- Entry interface -----------------------------------------------------------------------
 
         @Override
