@@ -37,11 +37,7 @@ public class MoveThis
      */
     public MoveThis(int cSteps, Argument argDest)
         {
-        assert cSteps >= 0;
-
-        m_cSteps  = cSteps;
-        m_argTo   = argDest;
-        m_nAccess = A_PUBLIC;
+        this(cSteps, argDest, Access.PUBLIC);
         }
 
     /**

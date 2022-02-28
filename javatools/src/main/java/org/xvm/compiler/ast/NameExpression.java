@@ -971,9 +971,11 @@ public class NameExpression
                     {
                     assert getMeaning() == Meaning.Class || getMeaning() == Meaning.Reserved;
 
+                    Access access = getType().getAccess();
+
                     if (argRaw instanceof ParentClassConstant constParent)
                         {
-                        code.add(new MoveThis(constParent.getDepth(), argLVal));
+                        code.add(new MoveThis(constParent.getDepth(), argLVal, access));
                         return;
                         }
 
@@ -981,7 +983,7 @@ public class NameExpression
                         {
                         int cSteps = m_targetInfo == null ? 1 :  m_targetInfo.getStepsOut();
 
-                        code.add(new MoveThis(cSteps, argLVal));
+                        code.add(new MoveThis(cSteps, argLVal, access));
                         return;
                         }
                     break;
@@ -999,7 +1001,7 @@ public class NameExpression
                     TypeConstant typeReferent = typeRef.getParamType(0);
 
                     Register regTemp = createRegister(typeReferent, false);
-                    code.add(new MoveThis(cSteps, regTemp));
+                    code.add(new MoveThis(cSteps, regTemp, typeRef.getAccess()));
                     code.add(new MoveRef(regTemp, argLVal));
                     return;
                     }
@@ -1031,9 +1033,10 @@ public class NameExpression
 
                         case Outer:
                             {
-                            int      cSteps   = m_targetInfo.getStepsOut();
-                            Register regOuter = createRegister(m_targetInfo.getType(), true);
-                            code.add(new MoveThis(cSteps, regOuter));
+                            int          cSteps   = m_targetInfo.getStepsOut();
+                            TypeConstant type     = m_targetInfo.getType();
+                            Register     regOuter = createRegister(type, true);
+                            code.add(new MoveThis(cSteps, regOuter, type.getAccess()));
                             code.add(new P_Get(idProp, regOuter, argLVal));
                             break;
                             }
@@ -1168,14 +1171,7 @@ public class NameExpression
                     }
 
                 Register regOuter = createRegister(typeOuter, fUsedOnce);
-                if (typeOuter.getAccess() == Access.PUBLIC)
-                    {
-                    code.add(new MoveThis(cSteps, regOuter));
-                    }
-                else
-                    {
-                    code.add(new MoveThis(cSteps, regOuter, typeOuter.getAccess()));
-                    }
+                code.add(new MoveThis(cSteps, regOuter, typeOuter.getAccess()));
                 return regOuter;
                 }
 
@@ -1200,7 +1196,7 @@ public class NameExpression
                     }
 
                 Register regOuter = createRegister(typeOuter, fUsedOnce);
-                code.add(new MoveThis(cSteps, regOuter));
+                code.add(new MoveThis(cSteps, regOuter, typeOuter.getAccess()));
 
                 Register regRef = createRegister(typeRef, fUsedOnce);
                 code.add(new MoveRef(regOuter, regRef));
@@ -1238,7 +1234,7 @@ public class NameExpression
                         TypeConstant typeOuter = m_targetInfo.getType();
                         Register     regOuter  = createRegister(typeOuter, true);
 
-                        code.add(new MoveThis(cSteps, regOuter));
+                        code.add(new MoveThis(cSteps, regOuter, typeOuter.getAccess()));
                         if (idProp.isFutureVar())
                             {
                             code.add(new Var_D(idProp.getRefType(typeOuter)));
