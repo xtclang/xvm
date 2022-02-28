@@ -97,9 +97,8 @@ public class xEnum
     @Override
     public int createConstHandle(Frame frame, Constant constant)
         {
-        if (constant instanceof SingletonConstant)
+        if (constant instanceof SingletonConstant constValue)
             {
-            SingletonConstant constValue = (SingletonConstant) constant;
             EnumHandle hValue = (EnumHandle) constValue.getHandle();
 
             if (hValue == null)
@@ -369,9 +368,8 @@ public class xEnum
         @Override
         public boolean equals(Object obj)
             {
-            if (obj instanceof EnumHandle)
+            if (obj instanceof EnumHandle that)
                 {
-                EnumHandle that = (EnumHandle) obj;
                 return m_clazz == that.m_clazz && m_index == that.m_index;
                 }
             return false;

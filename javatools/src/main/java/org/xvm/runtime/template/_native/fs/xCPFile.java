@@ -46,10 +46,8 @@ public class xCPFile
     @Override
     public int createConstHandle(Frame frame, Constant constant)
         {
-        if (constant instanceof FSNodeConstant && constant.getFormat() == Format.FSFile)
+        if (constant instanceof FSNodeConstant constFile && constant.getFormat() == Format.FSFile)
             {
-            FSNodeConstant constFile = (FSNodeConstant) constant;
-
             GenericHandle  hStruct = new GenericHandle(s_clzStruct);
             ObjectHandle[] ahVar   = Utils.ensureSize(Utils.OBJECTS_NONE, s_constructor.getMaxVars());
             ahVar[0] = new ConstantHandle(constFile);

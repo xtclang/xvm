@@ -111,9 +111,9 @@ public abstract class xUnconstrainedInteger
     @Override
     public int createConstHandle(Frame frame, Constant constant)
         {
-        if (constant instanceof IntConstant)
+        if (constant instanceof IntConstant constInt)
             {
-            return frame.pushStack(makeInt((((IntConstant) constant).getValue())));
+            return frame.pushStack(makeInt(constInt.getValue()));
             }
 
         return super.createConstHandle(frame, constant);
@@ -135,7 +135,7 @@ public abstract class xUnconstrainedInteger
                 {
                 PackedInteger pi = ((xIntLiteral.IntNHandle) hTarget).m_piValue;
                 int cBytes = f_fSigned ? pi.getSignedByteSize() : pi.getUnsignedByteSize();
-                return frame.assignValue(iReturn, xInt64.makeHandle(cBytes * 8));
+                return frame.assignValue(iReturn, xInt64.makeHandle(cBytes * 8L));
                 }
 
             case "leftmostBit":

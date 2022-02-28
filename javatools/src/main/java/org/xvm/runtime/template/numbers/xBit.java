@@ -63,9 +63,9 @@ public class xBit
     @Override
     public int createConstHandle(Frame frame, Constant constant)
         {
-        if (constant instanceof IntConstant)
+        if (constant instanceof IntConstant constInt)
             {
-            return frame.pushStack(makeHandle(((IntConstant) constant).getValue().getLong() != 0L));
+            return frame.pushStack(makeHandle(constInt.getValue().getLong() != 0L));
             }
         if (constant.getFormat() == Format.Bit)
             {
@@ -111,10 +111,9 @@ public class xBit
                 ClassTemplate template = f_templates.getTemplate(typeRet);
                 boolean       fValue   = ((JavaLong) hTarget).getValue() != 0;
 
-                if (template instanceof xConstrainedInteger)
+                if (template instanceof xConstrainedInteger templateTo)
                     {
-                    return frame.assignValue(iReturn,
-                        ((xConstrainedInteger) template).makeJavaLong(fValue ? 1L : 0L));
+                    return frame.assignValue(iReturn, templateTo.makeJavaLong(fValue ? 1L : 0L));
                     }
 
                 if (template instanceof xBoolean)

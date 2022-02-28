@@ -93,10 +93,10 @@ public class xString
     @Override
     public int createConstHandle(Frame frame, Constant constant)
         {
-        if (constant instanceof StringConstant)
+        if (constant instanceof StringConstant hString)
             {
             return frame.pushStack(new StringHandle(getCanonicalClass(),
-                    ((StringConstant) constant).getValue().toCharArray()));
+                    hString.getValue().toCharArray()));
             }
 
         return super.createConstHandle(frame, constant);
@@ -521,9 +521,9 @@ public class xString
         @Override
         public boolean equals(Object obj)
             {
-            if (obj instanceof StringHandle)
+            if (obj instanceof StringHandle hString)
                 {
-                return Arrays.equals(m_achValue, ((StringHandle) obj).m_achValue);
+                return Arrays.equals(m_achValue, hString.m_achValue);
                 }
             return false;
             }

@@ -40,10 +40,9 @@ abstract public class BaseDecFP
     @Override
     public int createConstHandle(Frame frame, Constant constant)
         {
-        if (constant instanceof DecimalConstant)
+        if (constant instanceof DecimalConstant constDec)
             {
-            Decimal dec = ((DecimalConstant) constant).getValue();
-            return frame.pushStack(makeHandle(dec));
+            return frame.pushStack(makeHandle(constDec.getValue()));
             }
 
         return super.createConstHandle(frame, constant);

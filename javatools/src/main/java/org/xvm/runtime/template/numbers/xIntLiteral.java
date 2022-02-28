@@ -360,22 +360,18 @@ public class xIntLiteral
 
                 // REVIEW GG for unchecked use case
 
-                if (template instanceof xConstrainedInteger)
+                if (template instanceof xConstrainedInteger templateTo)
                     {
-                    return ((xConstrainedInteger) template).
-                        convertLong(frame, piValue, iReturn);
+                    return templateTo.convertLong(frame, piValue, iReturn);
                     }
-                if (template instanceof BaseInt128)
+                if (template instanceof BaseInt128 templateTo)
                     {
-                    BaseInt128  template128 = (BaseInt128) template;
-                    BigInteger  biValue     = piValue.getBigInteger();
-                    LongLong    llValue     = LongLong.fromBigInteger(biValue);
+                    BigInteger  biValue = piValue.getBigInteger();
+                    LongLong    llValue = LongLong.fromBigInteger(biValue);
 
-                    if (!template128.f_fSigned && llValue.signum() < 0)
-                        {
-                        return template128.overflow(frame);
-                        }
-                    return frame.assignValue(iReturn, template128.makeLongLong(llValue));
+                    return templateTo.f_fSigned || llValue.signum() >= 0
+                        ? frame.assignValue(iReturn, templateTo.makeLongLong(llValue))
+                        : templateTo.overflow(frame);
                     }
                 break;
             }
@@ -458,7 +454,7 @@ public class xIntLiteral
         @Override
         public boolean equals(Object obj)
             {
-            return obj instanceof IntNHandle && m_piValue.equals(((IntNHandle) obj).m_piValue);
+            return obj instanceof IntNHandle that && m_piValue.equals(that.m_piValue);
             }
 
         @Override

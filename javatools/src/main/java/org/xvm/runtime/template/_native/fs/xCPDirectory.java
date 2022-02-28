@@ -46,10 +46,8 @@ public class xCPDirectory
     @Override
     public int createConstHandle(Frame frame, Constant constant)
         {
-        if (constant instanceof FSNodeConstant && constant.getFormat() == Format.FSDir)
+        if (constant instanceof FSNodeConstant constDir && constant.getFormat() == Format.FSDir)
             {
-            FSNodeConstant constDir = (FSNodeConstant) constant;
-
             GenericHandle  hStruct = new GenericHandle(s_clzStruct);
             ObjectHandle[] ahVar   = Utils.ensureSize(Utils.OBJECTS_NONE, s_constructor.getMaxVars());
             ahVar[0] = new ConstantHandle(constDir);

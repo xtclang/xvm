@@ -49,7 +49,7 @@ public class xListMap
     @Override
     public int createConstHandle(Frame frame, Constant constant)
         {
-        if (constant instanceof MapConstant)
+        if (constant instanceof MapConstant constMap)
             {
             TypeConstant typeMap = constant.getType();
             if (typeMap.containsFormalType(true))
@@ -58,7 +58,7 @@ public class xListMap
                         frame.getGenericsResolver(typeMap.containsDynamicType(null)));
                 }
 
-            Map<Constant, Constant> mapValues = ((MapConstant) constant).getValue();
+            Map<Constant, Constant> mapValues = constMap.getValue();
             int                     cEntries  = mapValues.size();
 
             ObjectHandle[] ahKey        = new ObjectHandle[cEntries];

@@ -217,9 +217,9 @@ public class xClass
         TypeConstant typeTarget  = getClassType(hTarget);
         Constant     constTarget = typeTarget.getDefiningConstant();
 
-        if  (constTarget instanceof IdentityConstant)
+        if  (constTarget instanceof IdentityConstant id)
             {
-            Component component = ((IdentityConstant) constTarget).getComponent();
+            Component component = id.getComponent();
             return frame.assignValue(iReturn, xRTComponentTemplate.makeComponentHandle(component));
             }
 

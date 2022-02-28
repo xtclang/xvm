@@ -31,10 +31,9 @@ public class xFloat32
     @Override
     public int createConstHandle(Frame frame, Constant constant)
         {
-        if (constant instanceof Float32Constant)
+        if (constant instanceof Float32Constant constFloat)
             {
-            double dValue = ((Float32Constant) constant).getValue();
-            return frame.pushStack(makeHandle(dValue));
+            return frame.pushStack(makeHandle(constFloat.getValue()));
             }
 
         return super.createConstHandle(frame, constant);

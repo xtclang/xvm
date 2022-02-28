@@ -127,8 +127,8 @@ public abstract class xConstrainedInteger
     @Override
     public ClassTemplate getTemplate(TypeConstant type)
         {
-        return type instanceof AnnotatedTypeConstant &&
-            ((AnnotatedTypeConstant) type).getAnnotationClass().equals(pool().clzUnchecked())
+        return type instanceof AnnotatedTypeConstant typeAnno &&
+                    typeAnno.getAnnotationClass().equals(pool().clzUnchecked())
              ? getUncheckedTemplate()
              : this;
         }
@@ -152,10 +152,9 @@ public abstract class xConstrainedInteger
     @Override
     public int createConstHandle(Frame frame, Constant constant)
         {
-        if (constant instanceof IntConstant)
+        if (constant instanceof IntConstant constInt)
             {
-            return frame.pushStack(new JavaLong(getCanonicalClass(),
-                    (((IntConstant) constant).getValue().getLong())));
+            return frame.pushStack(new JavaLong(getCanonicalClass(), constInt.getValue().getLong()));
             }
 
         return super.createConstHandle(frame, constant);
@@ -387,10 +386,9 @@ public abstract class xConstrainedInteger
                     return frame.assignValue(iReturn, hTarget);
                     }
 
-                if (template instanceof xConstrainedInteger)
+                if (template instanceof xConstrainedInteger templateTo)
                     {
-                    xConstrainedInteger templateTo = (xConstrainedInteger) template;
-                    long                lValue     = ((JavaLong) hTarget).getValue();
+                    long lValue = ((JavaLong) hTarget).getValue();
 
                     // there is one overflow case that needs to be handled here: UInt64 -> Int*
                     if (f_fChecked && lValue < 0 && this instanceof xUInt64)
@@ -401,25 +399,22 @@ public abstract class xConstrainedInteger
                     return templateTo.convertLong(frame, lValue, iReturn, f_fChecked);
                     }
 
-                if (template instanceof xUnconstrainedInteger)
+                if (template instanceof xUnconstrainedInteger templateTo)
                     {
-                    xUnconstrainedInteger templateTo = (xUnconstrainedInteger) template;
-                    PackedInteger         piValue    = PackedInteger.valueOf(((JavaLong) hTarget).getValue());
+                    PackedInteger piValue = PackedInteger.valueOf(((JavaLong) hTarget).getValue());
                     return frame.assignValue(iReturn, templateTo.makeInt(piValue));
                     }
 
-                if (template instanceof BaseBinaryFP)
+                if (template instanceof BaseBinaryFP templateTo)
                     {
-                    BaseBinaryFP templateTo = (BaseBinaryFP) template;
-                    long         lValue     = ((JavaLong) hTarget).getValue();
+                    long lValue = ((JavaLong) hTarget).getValue();
 
                     return templateTo.convertLong(frame, lValue, iReturn);
                     }
 
-                if (template instanceof BaseInt128)
+                if (template instanceof BaseInt128 templateTo)
                     {
-                    BaseInt128 templateTo = (BaseInt128) template;
-                    long        lValue     = ((JavaLong) hTarget).getValue();
+                    long lValue = ((JavaLong) hTarget).getValue();
 
                     if (f_fChecked && f_fSigned && lValue < 0 && !templateTo.f_fSigned)
                         {
@@ -791,43 +786,41 @@ public abstract class xConstrainedInteger
      */
     static public byte[] toByteArray(long l, int cBytes)
         {
-        switch (cBytes)
+        return switch (cBytes)
             {
-            case 8:
-                return new byte[]
-                    {
-                    (byte) (l >> 56),
-                    (byte) (l >> 48),
-                    (byte) (l >> 40),
-                    (byte) (l >> 32),
-                    (byte) (l >> 24),
-                    (byte) (l >> 16),
-                    (byte) (l >> 8 ),
-                    (byte) l,
-                    };
-
-            case 4:
-                return new byte[] {
-                    (byte) (l >> 24),
-                    (byte) (l >> 16),
-                    (byte) (l >> 8 ),
-                    (byte) l,
-                    };
-
-            case 2:
-                return new byte[] {
-                    (byte) (l >> 8),
-                    (byte) l,
+            case 8 -> new byte[]
+                {
+                (byte) (l >> 56),
+                (byte) (l >> 48),
+                (byte) (l >> 40),
+                (byte) (l >> 32),
+                (byte) (l >> 24),
+                (byte) (l >> 16),
+                (byte) (l >> 8),
+                (byte) l,
                 };
 
-            case 1:
-                return new byte[] {
-                    (byte) l,
-                    };
+            case 4 -> new byte[]
+                {
+                (byte) (l >> 24),
+                (byte) (l >> 16),
+                (byte) (l >> 8),
+                (byte) l,
+                };
 
-            default:
-                throw new IllegalStateException();
-            }
+            case 2 -> new byte[]
+                {
+                (byte) (l >> 8),
+                (byte) l,
+                };
+
+            case 1 -> new byte[]
+                {
+                (byte) l,
+                };
+
+            default -> throw new IllegalStateException();
+            };
         }
 
     /**

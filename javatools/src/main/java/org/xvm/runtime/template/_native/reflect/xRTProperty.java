@@ -75,10 +75,10 @@ public class xRTProperty
     @Override
     public int createConstHandle(Frame frame, Constant constant)
         {
-        if (constant instanceof PropertyClassTypeConstant)
+        if (constant instanceof PropertyClassTypeConstant constProp)
             {
-            TypeConstant typeParent = ((PropertyClassTypeConstant) constant).getParentType();
-            PropertyInfo infoProp   = ((PropertyClassTypeConstant) constant).getPropertyInfo();
+            TypeConstant typeParent = constProp.getParentType();
+            PropertyInfo infoProp   = constProp.getPropertyInfo();
             ObjectHandle hProperty  = makeHandle(frame, typeParent, infoProp);
 
             return Op.isDeferred(hProperty)

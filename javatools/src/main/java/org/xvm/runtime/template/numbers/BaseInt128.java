@@ -82,9 +82,9 @@ public abstract class BaseInt128
     @Override
     public int createConstHandle(Frame frame, Constant constant)
         {
-        if (constant instanceof IntConstant)
+        if (constant instanceof IntConstant constInt)
             {
-            PackedInteger piValue = ((IntConstant) constant).getValue();
+            PackedInteger piValue = constInt.getValue();
 
             return frame.pushStack(makeLongLong(
                 LongLong.fromBigInteger(piValue.getBigInteger())));
@@ -175,15 +175,14 @@ public abstract class BaseInt128
                     return frame.assignValue(iReturn, hTarget);
                     }
 
-                if (template instanceof xConstrainedInteger)
+                if (template instanceof xConstrainedInteger templateTo)
                     {
-                    return convertToConstrainedType(frame, (xConstrainedInteger) template, hTarget, iReturn);
+                    return convertToConstrainedType(frame, templateTo, hTarget, iReturn);
                     }
 
-                if (template instanceof BaseInt128)
+                if (template instanceof BaseInt128 templateTo)
                     {
-                    BaseInt128 templateTo = (BaseInt128) template;
-                    LongLong    llValue    = ((LongLongHandle) hTarget).getValue();
+                    LongLong llValue = ((LongLongHandle) hTarget).getValue();
 
                     if (f_fSigned && llValue.signum() < 0 && !templateTo.f_fSigned)
                         {
@@ -541,8 +540,7 @@ public abstract class BaseInt128
         @Override
         public boolean equals(Object obj)
             {
-            return obj instanceof LongLongHandle &&
-                m_llValue.equals(((LongLongHandle) obj).getValue());
+            return obj instanceof LongLongHandle that && this.m_llValue.equals(that.m_llValue);
             }
 
         @Override

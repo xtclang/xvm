@@ -228,7 +228,7 @@ public class xFPLiteral
         @Override
         public boolean equals(Object obj)
             {
-            return obj instanceof FPNHandle && m_decValue.equals(((FPNHandle) obj).m_decValue);
+            return obj instanceof FPNHandle that && this.m_decValue.equals(that.m_decValue);
             }
 
         @Override

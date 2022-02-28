@@ -31,10 +31,9 @@ public class xFloat16
     @Override
     public int createConstHandle(Frame frame, Constant constant)
         {
-        if (constant instanceof Float16Constant)
+        if (constant instanceof Float16Constant constFloat)
             {
-            double dValue = ((Float16Constant) constant).getValue();
-            return frame.pushStack(makeHandle(dValue));
+            return frame.pushStack(makeHandle(constFloat.getValue()));
             }
 
         return super.createConstHandle(frame, constant);

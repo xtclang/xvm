@@ -68,10 +68,9 @@ public class xChar
     @Override
     public int createConstHandle(Frame frame, Constant constant)
         {
-        if (constant instanceof CharConstant)
+        if (constant instanceof CharConstant constChar)
             {
-            return frame.pushStack(new JavaLong(getCanonicalClass(),
-                    (((CharConstant) constant).getValue())));
+            return frame.pushStack(new JavaLong(getCanonicalClass(), constChar.getValue()));
             }
 
         return super.createConstHandle(frame, constant);

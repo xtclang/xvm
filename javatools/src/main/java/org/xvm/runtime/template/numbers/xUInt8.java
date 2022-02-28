@@ -68,10 +68,9 @@ public class xUInt8
     @Override
     public int createConstHandle(Frame frame, Constant constant)
         {
-        if (constant instanceof ByteConstant)
+        if (constant instanceof ByteConstant constByte)
             {
-            return frame.pushStack(
-                    makeHandle(((ByteConstant) constant).getValue().longValue()));
+            return frame.pushStack(makeHandle(constByte.getValue().longValue()));
             }
 
         return super.createConstHandle(frame, constant);

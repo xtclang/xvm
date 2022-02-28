@@ -71,10 +71,8 @@ public class xByteArray
     @Override
     public int createConstHandle(Frame frame, Constant constant)
         {
-        if (constant instanceof UInt8ArrayConstant)
+        if (constant instanceof UInt8ArrayConstant constBytes)
             {
-            UInt8ArrayConstant constBytes = (UInt8ArrayConstant) constant;
-
             return frame.pushStack(makeByteArrayHandle(constBytes.getValue(), Mutability.Constant));
             }
 
@@ -189,18 +187,17 @@ public class xByteArray
         long           ofStart   = 0;
         boolean        fReverse  = false;
 
-        if (hDelegate instanceof SliceHandle)
+        if (hDelegate instanceof SliceHandle hSlice)
             {
-            SliceHandle hSlice = (SliceHandle) hDelegate;
             hDelegate = hSlice.f_hSource;
             ofStart   = hSlice.f_ofStart;
             fReverse  = hSlice.f_fReverse;
             }
 
         ClassTemplate tDelegate = hDelegate.getTemplate();
-        if (tDelegate instanceof ByteView)
+        if (tDelegate instanceof ByteView hView)
             {
-            return ((ByteView) tDelegate).getBytes(hDelegate, ofStart, cSize, fReverse);
+            return hView.getBytes(hDelegate, ofStart, cSize, fReverse);
             }
         throw new UnsupportedOperationException();
         }
@@ -214,18 +211,15 @@ public class xByteArray
 
         long ofStart = 0;
 
-        if (hDelegate instanceof SliceHandle)
+        if (hDelegate instanceof SliceHandle hSlice)
             {
-            SliceHandle hSlice = (SliceHandle) hDelegate;
             hDelegate = hSlice.f_hSource;
             ofStart   = hSlice.f_ofStart;
             }
 
         ClassTemplate tDelegate = hDelegate.getTemplate();
-        if (tDelegate instanceof BitView)
+        if (tDelegate instanceof BitView tView)
             {
-            ByteView tView = (ByteView) tDelegate;
-
             for (int i = 0, c = abVal.length; i < c; i++)
                 {
                 tView.assignByte(hDelegate, ofStart + i, abVal[i]);

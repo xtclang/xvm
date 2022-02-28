@@ -59,10 +59,8 @@ public class xCPFileStore
     @Override
     public int createConstHandle(Frame frame, Constant constant)
         {
-        if (constant instanceof FileStoreConstant)
+        if (constant instanceof FileStoreConstant constStore)
             {
-            FileStoreConstant constStore = (FileStoreConstant) constant;
-
             GenericHandle  hStruct = new GenericHandle(s_clzStruct);
             ObjectHandle[] ahVar   = Utils.ensureSize(Utils.OBJECTS_NONE, s_constructor.getMaxVars());
             ahVar[0] = xString.makeHandle(constStore.getPath());
@@ -100,7 +98,7 @@ public class xCPFileStore
         {
         switch (method.getName())
             {
-            // protected (Boolean isdir, String name, String created, String modified, Int size) loadNode(Object constNode)
+            // protected (Boolean isDir, String name, String created, String modified, Int size) loadNode(Object constNode)
             case "loadNode":
                 {
                 ConstantHandle hNode     = (ConstantHandle) ahArg[0];

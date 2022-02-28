@@ -55,9 +55,9 @@ public class xUInt64
     @Override
     public int createConstHandle(Frame frame, Constant constant)
         {
-        if (constant instanceof IntConstant)
+        if (constant instanceof IntConstant constInt)
             {
-            PackedInteger piValue = ((IntConstant) constant).getValue();
+            PackedInteger piValue = constInt.getValue();
             long          lValue;
             if (piValue.isBig())
                 {

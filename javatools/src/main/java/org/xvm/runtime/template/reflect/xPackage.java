@@ -64,9 +64,8 @@ public class xPackage
     @Override
     public int createConstHandle(Frame frame, Constant constant)
         {
-        if (constant instanceof PackageConstant)
+        if (constant instanceof PackageConstant idPackage)
             {
-            PackageConstant idPackage   = (PackageConstant) constant;
             TypeConstant    typePackage = idPackage.getType();
             TypeComposition clazz       = ensureClass(typePackage, typePackage);
 
@@ -185,10 +184,10 @@ public class xPackage
      */
     public int invokeIsModuleImport(Frame frame, PackageHandle hTarget, int[] aiReturn)
         {
-        ClassStructure pkg = hTarget.getStructure();
-        if (pkg instanceof PackageStructure && ((PackageStructure) pkg).isModuleImport())
+        ClassStructure struct = hTarget.getStructure();
+        if (struct instanceof PackageStructure pkg && pkg.isModuleImport())
             {
-            ModuleStructure module        = ((PackageStructure) pkg).getImportedModule();
+            ModuleStructure module        = pkg.getImportedModule();
             ModuleConstant  idModule      = module.getIdentityConstant();
             ConstantPool    pool          = frame.poolContext();
             Constant        constInstance = pool.ensureSingletonConstConstant(idModule);
@@ -276,8 +275,7 @@ public class xPackage
         @Override
         public boolean equals(Object obj)
             {
-            return obj instanceof PackageHandle &&
-                getId().equals(((PackageHandle) obj).getId());
+            return obj instanceof PackageHandle that && this.getId().equals(that.getId());
             }
         }
     }
