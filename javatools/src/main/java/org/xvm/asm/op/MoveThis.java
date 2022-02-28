@@ -23,7 +23,7 @@ import static org.xvm.util.Handy.writePackedLong;
 /**
  * MOV_THIS #, lvalue-dest          ; # (an inline unsigned byte) specifies the count of this-to-outer-this
  *                                  ; steps (0=this, 1=ImmediatelyOuter.this, etc.)
- * MOV_THISA #, lvalue-dest, A_*    ; same as above with an additional access modifier
+ * MOV_THIS_A #, lvalue-dest, A_*   ; same as above with an additional access modifier
  *                                    (A_TARGET, A_PUBLIC, A_PROTECTED, A_PRIVATE, A_STRUCT)
  */
 public class MoveThis
@@ -45,7 +45,7 @@ public class MoveThis
         }
 
     /**
-     * Construct a MOV_THISA op for the passed arguments.
+     * Construct a MOV_THIS_A op for the passed arguments.
      *
      * @param cSteps   the count of this-to-outer-this steps (0=this, 1=ImmediatelyOuter.this, etc.)
      * @param argDest  the destination Argument
@@ -151,24 +151,14 @@ public class MoveThis
 
             if (m_nAccess != 0)
                 {
-                Access access;
-                switch (m_nAccess)
+                Access access = switch (m_nAccess)
                     {
-                    case A_PUBLIC:
-                        access = Access.PUBLIC;
-                        break;
-                    case A_PROTECTED:
-                        access = Access.PROTECTED;
-                        break;
-                    case A_PRIVATE:
-                        access = Access.PRIVATE;
-                        break;
-                    case A_STRUCT:
-                        access = Access.STRUCT;
-                        break;
-                    default:
-                        throw new IllegalStateException();
-                    }
+                    case A_PUBLIC    -> Access.PUBLIC;
+                    case A_PROTECTED -> Access.PROTECTED;
+                    case A_PRIVATE   -> Access.PRIVATE;
+                    case A_STRUCT    -> Access.STRUCT;
+                    default          -> throw new IllegalStateException();
+                    };
                 hOuter = hOuter.ensureAccess(access);
                 }
 
