@@ -3713,7 +3713,8 @@ public abstract class TypeConstant
                         // We keep constructors in the map of methods only for "self" and not
                         // any "super" contributions, except for: i) virtual constructors that are
                         // retained "as is" to enforce the corresponding constructor contracts or
-                        // ii) virtual child constructors, that are then marked as "implicit".
+                        // ii) virtual child constructors within the "extend" class chain, that are
+                        // then marked as "implicit".
                         //
                         // When a real constructor matches a virtual one (i), the "virtual origin"
                         // information is retained on the non-virtual (real) constructor.
@@ -3758,8 +3759,14 @@ public abstract class TypeConstant
 
                         if (isVirtualChild() && !fSelf)
                             {
-                            methodContrib = methodContrib.markImplicitConstructor();
-                            fKeep         = true;
+                            // keep the virtual constructor *only* for the "extend" class chain
+                            ClassConstant idContribClz = (ClassConstant)
+                                                        methodContrib.getIdentity().getNamespace();
+                            if (constId.extendsClass(idContribClz))
+                                {
+                                methodContrib = methodContrib.markImplicitConstructor();
+                                fKeep         = true;
+                                }
                             }
                         }
                     }
