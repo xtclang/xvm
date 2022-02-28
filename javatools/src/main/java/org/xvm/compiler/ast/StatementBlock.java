@@ -113,7 +113,7 @@ public class StatementBlock
         stmt.setParent(this);
 
         boolean fHasEnclosed = containsEnclosed;
-        boolean fAddEnclosed = stmt instanceof StatementBlock && ((StatementBlock) stmt).boundary;
+        boolean fAddEnclosed = stmt instanceof StatementBlock block && block.boundary;
         assert !(fHasEnclosed & fAddEnclosed);
         if (fHasEnclosed)
             {
@@ -230,9 +230,9 @@ public class StatementBlock
             for (ImportStatement stmt : importsWild)
                 {
                 Constant constant = stmt.getNameResolver().getConstant();
-                if (constant instanceof IdentityConstant && constant.isClass())
+                if (constant instanceof IdentityConstant id && constant.isClass())
                     {
-                    ClassStructure clz = (ClassStructure) ((IdentityConstant) constant).getComponent();
+                    ClassStructure clz = (ClassStructure) id.getComponent();
                     if (clz != null)
                         {
                         if (clz.getChild(sName) instanceof ClassStructure)
@@ -364,12 +364,12 @@ public class StatementBlock
                 }
 
             AstNode parent = getParent();
-            if (parent instanceof LambdaExpression)
+            if (parent instanceof LambdaExpression exprLambda)
                 {
                 // go through all the parameters looking for any implicit de-reference params
                 // (a new local variable will be created for each, effectively hiding the original
                 // parameter)
-                MethodStructure method = ((LambdaExpression) parent).getLambda();
+                MethodStructure method = exprLambda.getLambda();
                 if (method != null)
                     {
                     for (org.xvm.asm.Parameter param : method.getParamArray())
@@ -521,15 +521,15 @@ public class StatementBlock
         sb.append('{');
 
         int firstNonEnum = 0;
-        if (stmts.get(0) instanceof TypeCompositionStatement
-                && ((TypeCompositionStatement) stmts.get(0)).category.getId() == Token.Id.ENUM_VAL)
+        if (stmts.get(0) instanceof TypeCompositionStatement stmtType
+                && stmtType.category.getId() == Token.Id.ENUM_VAL)
             {
             boolean multiline = false;
             for (int i = 0, c = stmts.size(); i < c; ++i)
                 {
                 Statement stmt = stmts.get(i);
-                if (stmt instanceof TypeCompositionStatement stmtType
-                        && stmtType.category.getId() == Token.Id.ENUM_VAL)
+                if (stmt instanceof TypeCompositionStatement stmtTypeComp
+                        && stmtTypeComp.category.getId() == Token.Id.ENUM_VAL)
                     {
                     multiline |= stmtType.doc != null || stmtType.body != null;
                     ++firstNonEnum;
@@ -616,8 +616,8 @@ public class StatementBlock
                 parent = parent.getParent();
                 }
 
-            return parent.getParent() instanceof NewExpression
-                    ? (NewExpression) parent.getParent()
+            return parent.getParent() instanceof NewExpression exprNew
+                    ? exprNew
                     : null;
             }
 
@@ -671,12 +671,7 @@ public class StatementBlock
                 NewExpression exprNew = getAnonymousInnerClassExpression();
                 return (ClassStructure) exprNew.anon.getComponent();
                 }
-            Component parent = f_method;
-            while (!(parent instanceof ClassStructure))
-                {
-                parent = parent.getParent();
-                }
-            return (ClassStructure) parent;
+            return f_method.getContainingClass();
             }
 
         @Override
@@ -800,9 +795,9 @@ public class StatementBlock
         public void requireThis(long lPos, ErrorListener errs)
             {
             AstNode parent   = getParent();
-            boolean fHasThis = parent instanceof LambdaExpression
-                ? ((LambdaExpression) parent).isRequiredThis()
-                : !isFunction();
+            boolean fHasThis = parent instanceof LambdaExpression exprLambda
+                    ? exprLambda.isRequiredThis()
+                    : !isFunction();
 
             if (!fHasThis)
                 {
@@ -814,11 +809,11 @@ public class StatementBlock
         public boolean isVarWritable(String sName)
             {
             Argument arg = ensureNameMap().get(sName);
-            if (arg instanceof Register)
+            if (arg instanceof Register reg)
                 {
-                return ((Register) arg).isWritable();
+                return reg.isWritable();
                 }
-            else if (arg instanceof PropertyConstant)
+            if (arg instanceof PropertyConstant)
                 {
                 // the context only answers the question of what the _first_ name is, so
                 // in the case of "a.b.c", this method is called only for "a", so if someone
@@ -901,9 +896,9 @@ public class StatementBlock
             TypeInfo         infoPrev  = null;
             ErrorListener    errsTemp  = errs.branch(null);
             IdentityConstant idOuter   = getEnclosingClass().getIdentityConstant();
-            if (idOuter instanceof ClassConstant)
+            if (idOuter instanceof ClassConstant idClz)
                 {
-                idOuter = ((ClassConstant) idOuter).getOutermost();
+                idOuter = idClz.getOutermost();
                 }
 
             while (node != null)
@@ -1068,9 +1063,9 @@ public class StatementBlock
 
                     // check if we are nested inside an anonymous inner class and attempting to
                     // capture a variable from the context of the NewExpression
-                    if (node instanceof NewExpression)
+                    if (node instanceof NewExpression exprNew)
                         {
-                        AnonInnerClassContext ctx = ((NewExpression) node).getCaptureContext();
+                        AnonInnerClassContext ctx = exprNew.getCaptureContext();
                         if (ctx != null)
                             {
                             Argument argCapture = ctx.getVar(sName);
@@ -1199,7 +1194,7 @@ public class StatementBlock
             {
             Map<String, Argument> mapByName = ensureNameMap();
             Argument              arg       = mapByName.get(sName);
-            if (arg instanceof Register && ((Register) arg).isPredefined())
+            if (arg instanceof Register reg && reg.isPredefined())
                 {
                 return arg;
                 }
@@ -1461,9 +1456,9 @@ public class StatementBlock
                     if (entry.getValue().isEffectivelyFinal())
                         {
                         Argument arg = ensureNameMap().get(entry.getKey());
-                        if (arg instanceof Register)
+                        if (arg instanceof Register reg)
                             {
-                            ((Register) arg).markEffectivelyFinal();
+                            reg.markEffectivelyFinal();
                             }
                         }
                     }
@@ -1652,10 +1647,7 @@ public class StatementBlock
          * @param stepsOut    the number of "outer" steps needed to get from the current context
          *                    to the target container
          */
-        public TargetInfo(
-                String        name,
-                TypeConstant  typeTarget,
-                int           stepsOut)
+        public TargetInfo(String name, TypeConstant typeTarget, int stepsOut)
             {
             assert typeTarget.isExplicitClassIdentity(true);
 
