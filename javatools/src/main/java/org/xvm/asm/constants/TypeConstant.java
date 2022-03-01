@@ -40,7 +40,6 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.PackageStructure;
-import org.xvm.asm.Parameter;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
 import org.xvm.asm.TypedefStructure;
@@ -5184,30 +5183,20 @@ public abstract class TypeConstant
 
         typeTarget.layerOnTypeParams(mapTypeParams, typeMixin, mapMixinParams, errs);
 
-        Map<String, Constant> mapParams = null;
+        Map<String, Constant> mapDefaults = null;
         if (annoMixin != null)
             {
-            Constant[] aconstParam = annoMixin.getParams();
-            int        cParams     = aconstParam.length;
-            if (cParams > 0)
+            Constant[] aconstArgs = annoMixin.getParams();
+
+            // find a shorthand constructor, which is emitted by the TypeCompositionStatement
+            // e.g. 'mixin WebService(String path = "/")'
+            // or 'mixin Get(String path = "") extends HttpEndpoint(HttpMethod.GET, path)'
+            MethodStructure ctorShorthand = infoMixin.getClassStructure().
+                    findMethod("construct", MethodStructure::isShorthandConstructor);
+            if (ctorShorthand != null)
                 {
-                // find a synthetic constructor, which is emitted by the TypeCompositionStatement
-                // for "short-hand" class declarations, e.g. 'mixin WebService(String path = "/")'
-                MethodStructure constructAuto = infoMixin.getClassStructure().
-                        findMethod("construct", MethodStructure::isSynthetic);
-                if (constructAuto != null)
-                    {
-                    mapParams = new HashMap<>();
-                    for (int i = 0; i < cParams; i++)
-                        {
-                        Constant constInit = aconstParam[i];
-                        if (!(constInit instanceof RegisterConstant))
-                            {
-                            Parameter param = constructAuto.getParam(i);
-                            mapParams.put(param.getName(), constInit);
-                            }
-                        }
-                    }
+                mapDefaults = new HashMap<>();
+                ctorShorthand.collectDefaultParams(aconstArgs, mapDefaults);
                 }
             }
 
@@ -5215,8 +5204,8 @@ public abstract class TypeConstant
             {
             PropertyConstant prop = entry.getKey();
 
-            layerOnMixinProp(pool, infoSource, idBase, mapProps, mapVirtProps, prop,
-                entry.getValue(), mapParams == null ? null : mapParams.get(prop.getName()), errs);
+            layerOnMixinProp(pool, infoSource, idBase, mapProps, mapVirtProps, prop, entry.getValue(),
+                    mapDefaults == null ? null : mapDefaults.get(prop.getName()), errs);
             }
 
         typeTarget.layerOnMethods(idBase, false, annoMixin != null, null, mapMethods, mapVirtMethods,
@@ -5878,23 +5867,6 @@ public abstract class TypeConstant
             return null;
             }
 
-//        Constant     constLeft  = typeLeft.getDefiningConstant();
-//        Constant     constRight = typeRight.getDefiningConstant();
-//
-//        if (constLeft instanceof KeywordConstant)
-//            {
-//            switch (constLeft.getFormat())
-//                {
-//                case IsConst:
-//                case IsEnum:
-//                case IsModule:
-//                case IsPackage:
-//                case IsClass:
-//                default:
-//                    throw new IllegalStateException();
-//                }
-//            }
-//
         if (!typeLeft.isSingleDefiningConstant()    || !typeRight.isSingleDefiningConstant() ||
             !typeLeft.isExplicitClassIdentity(true) || !typeRight.isExplicitClassIdentity(true))
             {
@@ -6814,7 +6786,7 @@ public abstract class TypeConstant
             return true;
             }
 
-        if (!(obj instanceof TypeConstant))
+        if (!(obj instanceof TypeConstant that))
             {
             return false;
             }
@@ -6824,7 +6796,7 @@ public abstract class TypeConstant
                 : this;
         TypeConstant typeThat = obj instanceof UnresolvedTypeConstant typeUnresolvedThat
                 ? typeUnresolvedThat.getResolvedType()
-                : (TypeConstant) obj;
+                : that;
 
         return typeThis != null     && typeThat != null
             && typeThis.getFormat() == typeThat.getFormat()

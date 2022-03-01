@@ -24,6 +24,7 @@ import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PendingTypeConstant;
+import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -37,6 +38,7 @@ import org.xvm.asm.op.Var_DN;
 import org.xvm.compiler.Compiler;
 
 import org.xvm.compiler.ast.AstNode;
+import org.xvm.compiler.ast.TypeCompositionStatement;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.Utils;
@@ -155,6 +157,25 @@ public class MethodStructure
     public boolean isVirtualConstructor()
         {
         return getName().equals("construct") && getParent().getParent().getFormat() == Format.INTERFACE;
+        }
+
+    /**
+     * @return true iff this is a "shorthand" constructor
+     */
+    public boolean isShorthandConstructor()
+        {
+        return isAuxiliary();
+        }
+
+    /**
+     * Mark this constructor as a "shorthand".
+     *
+     * @see TypeCompositionStatement#generateCode
+     */
+    public void markAsShorthand()
+        {
+        assert isConstructor();
+        markAuxiliary();
         }
 
     /**
@@ -1360,6 +1381,63 @@ public class MethodStructure
         return nLine == 1 ? 0 : nLine;
         }
 
+    /**
+     * Unlike regular classes, mixins can be applied to the underlying classes dynamically via
+     * annotations. In that case, computation of default values for field-based properties requires
+     * additional information that is kept on synthetic (shorthand) mixin constructors.
+     *
+     * @param idSuper       the "super" constructor
+     * @param aconstSuper   the array of Constants that is passed to the super constructor; all
+     *                      non-constant arguments are represented by nulls
+     */
+    public void setShorthandInitialization(MethodConstant idSuper, Constant[] aconstSuper)
+        {
+        assert isShorthandConstructor();
+
+        m_idSuper     = idSuper;
+        m_aconstSuper = aconstSuper == null ? Constant.NO_CONSTS : aconstSuper;
+        }
+
+    /**
+     * Collect default values for field-based properties that are known to this synthetic
+     * (shorthand) mixin constructor.
+     *
+     * @param aconstArgs  the constant arguments that are passed to this shorthand constructor
+     *                    from {@link Annotation#getParams() an annotation mixin}
+     * @param mapValues   the map of the default values keyed by the property names
+     */
+    public void collectDefaultParams(Constant[] aconstArgs, Map<String, Constant> mapValues)
+        {
+        int cArgs = aconstArgs.length;
+        for (int i = 0, c = getParamCount(); i < c; i++)
+            {
+            Parameter param = getParam(i);
+            if (i < cArgs)
+                {
+                Constant constArg = aconstArgs[i];
+                if (constArg != null)
+                    {
+                    if (!(constArg instanceof RegisterConstant))
+                        {
+                        mapValues.put(param.getName(), constArg);
+                        }
+                    continue;
+                    }
+                }
+
+            if (param.hasDefaultValue())
+                {
+                mapValues.put(param.getName(), param.getDefaultValue());
+                }
+            }
+
+        if (m_idSuper != null)
+            {
+            MethodStructure ctorSuper = (MethodStructure) m_idSuper.getComponent();
+            ctorSuper.collectDefaultParams(m_aconstSuper, mapValues);
+            }
+        }
+
 
     // ----- GenericTypeResolver interface ---------------------------------------------------------
 
@@ -1383,6 +1461,7 @@ public class MethodStructure
 
         return null;
         }
+
 
     // ----- Component methods ---------------------------------------------------------------------
 
@@ -1679,6 +1758,26 @@ public class MethodStructure
             aParams[i] = param;
             }
 
+        m_idSuper = (MethodConstant) pool.getConstant(readIndex(in));
+
+        Constant[] aconstSuper;
+        if (m_idSuper == null)
+            {
+            aconstSuper = Constant.NO_CONSTS;
+            }
+        else
+            {
+            int cSuperArgs = readMagnitude(in);
+
+            aconstSuper = new Constant[cSuperArgs];
+            for (int i = 0; i < cSuperArgs; i++)
+                {
+                // array may have nulls, indicating non-constant args
+                aconstSuper[i] = pool.getConstant(readIndex(in));
+                }
+            }
+         m_aconstSuper = aconstSuper;
+
         // read local "constant pool"
         int        cConsts = readMagnitude(in);
         Constant[] aconst  = cConsts == 0 ? Constant.NO_CONSTS : new Constant[cConsts];
@@ -1734,6 +1833,12 @@ public class MethodStructure
             param.registerConstants(pool);
             }
 
+        if (m_idSuper != null)
+            {
+            m_idSuper     = (MethodConstant) pool.register(m_idSuper);
+            m_aconstSuper = Constant.registerConstants(pool, m_aconstSuper);
+            }
+
         // local constants:
         // (1) if code was created for this method, then it needs to register the constants;
         // (2) otherwise, if the local constants are present (because we read them in), then make
@@ -1783,6 +1888,16 @@ public class MethodStructure
         for (Parameter param : m_aParams)
             {
             param.assemble(out);
+            }
+
+        writePackedLong(out, Constant.indexOf(m_idSuper));
+        if (m_idSuper != null)
+            {
+            writePackedLong(out, m_aconstSuper.length);
+            for (Constant constArg : m_aconstSuper)
+                {
+                writePackedLong(out, Constant.indexOf(constArg));
+                }
             }
 
         // produce the op bytes and "local constant pool"
@@ -2936,6 +3051,18 @@ public class MethodStructure
      * The parameter types.
      */
     private Parameter[] m_aParams;
+
+    /**
+     * If this method represents a {@link #isShorthandConstructor() shorthand constructor} for a
+     * mixin, this is an Id of the super constructor that this constructor "supers" to.
+     */
+    private MethodConstant m_idSuper;
+
+    /**
+     * If this method represents a {@link #isShorthandConstructor() shorthand constructor} for a
+     * mixin, this array contains constant arguments that need to be passed to the super constructor.
+     */
+    private Constant[] m_aconstSuper;
 
     /**
      * The ops.

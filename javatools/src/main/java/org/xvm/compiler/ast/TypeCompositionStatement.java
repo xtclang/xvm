@@ -43,6 +43,7 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
+import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
@@ -1861,7 +1862,7 @@ public class TypeCompositionStatement
             // will look for is any constructor that has a matching number of parameters (or a
             // higher number of parameters if the additional parameters are optional), and each
             // parameter type must match the type specified in the short-hand constructor notation
-            MethodConstant idShortHandConstructor = null;
+            boolean fFound = false;
             if (constructors != null)
                 {
                 NextConstructor:
@@ -1902,7 +1903,7 @@ public class TypeCompositionStatement
                             }
 
                         // should only find one match; make sure we didn't already find one
-                        if (idShortHandConstructor != null)
+                        if (fFound)
                             {
                             StringBuilder sb = new StringBuilder();
                             sb.append("construct(");
@@ -1928,12 +1929,13 @@ public class TypeCompositionStatement
                             break;
                             }
 
-                        idShortHandConstructor = constructor.getIdentityConstant();
+                        constructor.markAsShorthand();
+                        fFound = true;
                         }
                     }
                 }
 
-            if (idShortHandConstructor == null)
+            if (!fFound)
                 {
                 // create a constructor based on the "short-hand notation" implicit constructor
                 // definition
@@ -1960,11 +1962,9 @@ public class TypeCompositionStatement
                 // set the synthetic flag so that the constructor knows to provide its own
                 // default implementation when it emits code
                 constructor.setSynthetic(true);
+                constructor.markAsShorthand();
                 constructors = (MultiMethodStructure) constructor.getParent();
-
-                idShortHandConstructor = constructor.getIdentityConstant();
                 }
-            m_idShortHandConstructor = idShortHandConstructor;
             }
 
         // all non-interfaces must have at least one constructor, even if the class is abstract
@@ -1979,9 +1979,7 @@ public class TypeCompositionStatement
             // set the synthetic flag so that the constructor knows to provide its own
             // default implementation when it emits code
             constructor.setSynthetic(true);
-
-            assert m_idShortHandConstructor == null;
-            m_idShortHandConstructor = constructor.getIdentityConstant();
+            constructor.markAsShorthand();
             }
         else if (component.isSingleton())
             {
@@ -2347,15 +2345,13 @@ public class TypeCompositionStatement
             return;
             }
 
-        ClassStructure component   = (ClassStructure) getComponent();
-        MethodConstant idShorthand = m_idShortHandConstructor;
+        ClassStructure component = (ClassStructure) getComponent();
 
         ValidateShorthand:
-        if (component.getFormat() != Format.INTERFACE && idShorthand != null)
+        if (component.getFormat() != Format.INTERFACE)
             {
-            // make sure the shorthand constructor hasn't been removed
-            // (see NewExpression#destroyDefaultConstructor)
-            MethodStructure constructor = component.findMethod(idShorthand.getSignature());
+            MethodStructure constructor =
+                    component.findMethod("construct", MethodStructure::isShorthandConstructor);
             if (constructor == null)
                 {
                 break ValidateShorthand;
@@ -2373,17 +2369,17 @@ public class TypeCompositionStatement
                     }
                 }
 
-            Contribution     contribExt    = component.findContribution(Composition.Extends);
-            TypeConstant     typeSuper     = null;
-            List<Expression> listSuperArgs = null;
+            Contribution   contribExt = component.findContribution(Composition.Extends);
+            TypeConstant   typeSuper  = null;
+            MethodConstant idSuper    = null;
 
             if (contribExt != null)
                 {
                 ctxConstruct = ensureConstructorContext(ctxConstruct, constructor);
 
-                typeSuper     = pool().ensureAccessTypeConstant(contribExt.getTypeConstant(), Access.PROTECTED);
-                listSuperArgs = validateSuperParameters(ctxConstruct, typeSuper, errs);
-                if (listSuperArgs == null)
+                typeSuper = pool().ensureAccessTypeConstant(contribExt.getTypeConstant(), Access.PROTECTED);
+                idSuper   = validateSuperParameters(ctxConstruct, constructor, typeSuper, errs);
+                if (idSuper == null)
                     {
                     // error must have been reported
                     return;
@@ -2394,7 +2390,7 @@ public class TypeCompositionStatement
                 {
                 ctxConstruct = ensureConstructorContext(ctxConstruct, constructor);
 
-                generateConstructor(ctxConstruct, constructor, typeSuper, listSuperArgs, errs);
+                generateConstructor(ctxConstruct, constructor, typeSuper, idSuper, errs);
                 }
             }
 
@@ -2484,7 +2480,6 @@ public class TypeCompositionStatement
             assert exprOld != null;
             if (exprOld.isValidated())
                 {
-                System.err.println("**** already validated " + constructor.getIdentityConstant().getPathString());
                 continue;
                 }
 
@@ -2513,10 +2508,13 @@ public class TypeCompositionStatement
         }
 
     /**
-     * Validate "extend" parameters.
+     * Validate "extend" parameters and mark the constructor with constant arguments.
+     *
+     * @return the MethodConstant for the super constructor; null if the validation failed
      */
-    private List<Expression> validateSuperParameters(RootContext ctxConstruct, TypeConstant typeSuper,
-                                                     ErrorListener errs)
+    private MethodConstant validateSuperParameters(
+            RootContext ctxConstruct, MethodStructure constructor, TypeConstant typeSuper,
+            ErrorListener errs)
         {
         MethodStructure  constructSuper;
         List<Expression> listSuperArgs;
@@ -2567,10 +2565,10 @@ public class TypeCompositionStatement
             return null;
             }
 
-        constructSuper       = infoSuper.getMethodById(idSuper).getHead().getMethodStructure();
-        m_idSuperConstructor = constructSuper.getIdentityConstant();
+        constructSuper = infoSuper.getMethodById(idSuper).getHead().getMethodStructure();
 
         // validate
+        Constant[] aconstSuper = null;
         if (constructSuper != null && !listSuperArgs.isEmpty())
             {
             if (containsNamedArgs(listSuperArgs))
@@ -2590,7 +2588,7 @@ public class TypeCompositionStatement
                 Expression exprOld = listSuperArgs.get(i);
                 if (exprOld.isValidated())
                     {
-                    // this could happen for anonymous inner clases, in which case arguemnts
+                    // this could happen for anonymous inner classes, in which case arguments
                     // are validated by NewExpression
                     assert component.isAnonInnerClass();
                     continue;
@@ -2599,10 +2597,22 @@ public class TypeCompositionStatement
                 if (exprNew == null)
                     {
                     fValid = false;
+                    continue;
                     }
-                else if (exprNew != exprOld)
+
+                if (exprNew != exprOld)
                     {
                     listSuperArgs.set(i, exprNew);
+                    }
+
+                Constant constant = exprNew.toConstant();
+                if (constant != null && !(constant instanceof RegisterConstant))
+                    {
+                    if (aconstSuper == null)
+                        {
+                        aconstSuper = new Constant[c];
+                        }
+                    aconstSuper[i] = constant;
                     }
                 }
 
@@ -2611,14 +2621,24 @@ public class TypeCompositionStatement
                 return null;
                 }
             }
-        return listSuperArgs;
+
+        m_listExtendArgs = listSuperArgs;
+        idSuper          = constructSuper.getIdentityConstant();
+
+        if (component.getFormat() == Format.MIXIN)
+            {
+            // annotation mixins are applied to the underlying classes dynamically and need to
+            // compute default values at run-time (see TypeConstant#mergeMixinTypeInfo)
+            constructor.setShorthandInitialization(idSuper, aconstSuper);
+            }
+        return idSuper;
         }
 
     /**
      * Emit the synthetic constructor's code.
      */
     private void generateConstructor(RootContext ctxConstruct, MethodStructure constructor,
-                                     TypeConstant typeSuper, List<Expression> listSuperArgs,
+                                     TypeConstant typeSuper, MethodConstant idSuper,
                                      ErrorListener errs)
         {
         // the constructor has two responsibilities:
@@ -2640,9 +2660,7 @@ public class TypeCompositionStatement
                 org.xvm.asm.Parameter param  = constructor.getParam(i);
                 String                sParam = param.getName();
 
-                PropertyInfo propSuper = infoSuper == null
-                    ? null
-                    : infoSuper.findProperty(sParam);
+                PropertyInfo propSuper = infoSuper == null ? null : infoSuper.findProperty(sParam);
                 if (propSuper == null || propSuper.isAbstract())
                     {
                     // there must be a property by the same name on "this"
@@ -2670,7 +2688,7 @@ public class TypeCompositionStatement
                 }
             }
 
-        MethodConstant idSuper = m_idSuperConstructor;
+        List<Expression> listSuperArgs = m_listExtendArgs;
         if (idSuper == null)
             {
             if (constructor.isAnonymousClassWrapperConstructor())
@@ -3139,10 +3157,7 @@ public class TypeCompositionStatement
     /**
      * Cached list of the "extends" composition arguments.
      */
-    transient private List<Expression> m_listExtendArgs;
-
-    transient private MethodConstant m_idSuperConstructor;
-    transient private MethodConstant m_idShortHandConstructor;
+    private transient List<Expression> m_listExtendArgs;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(TypeCompositionStatement.class,
             "condition", "annotations", "typeParams", "constructorParams", "typeArgs", "args",
