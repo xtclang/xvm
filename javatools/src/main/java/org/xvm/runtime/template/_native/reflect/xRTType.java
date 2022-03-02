@@ -330,11 +330,11 @@ public class xRTType
     public int invokeAdd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
         // hArg may be a Type, a Method, or a Property
-        if (hArg instanceof TypeHandle)
+        if (hArg instanceof TypeHandle hTypeThat)
             {
             ConstantPool pool     = frame.poolContext();
             TypeConstant typeThis = ((TypeHandle) hTarget).getDataType();
-            TypeConstant typeThat = ((TypeHandle) hArg   ).getDataType();
+            TypeConstant typeThat = hTypeThat.getDataType();
             if (!typeThis.isShared(pool) || !typeThat.isShared(pool))
                 {
                 return frame.raiseException(xException.invalidType(frame,
@@ -361,11 +361,11 @@ public class xRTType
     public int invokeSub(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
         // hArg may be a Type, a Method, or a Property
-        if (hArg instanceof TypeHandle)
+        if (hArg instanceof TypeHandle hTypeThat)
             {
             ConstantPool pool     = frame.poolContext();
             TypeConstant typeThis = ((TypeHandle) hTarget).getDataType();
-            TypeConstant typeThat = ((TypeHandle) hArg   ).getDataType();
+            TypeConstant typeThat = hTypeThat.getDataType();
             if (typeThis.isShared(pool) && typeThat.isShared(pool))
                 {
                 TypeConstant typeResult = pool.ensureDifferenceTypeConstant(typeThis, typeThat);
@@ -392,11 +392,11 @@ public class xRTType
     public int invokeAnd(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
         // hArg is a Type
-        if (hArg instanceof TypeHandle)
+        if (hArg instanceof TypeHandle hTypeThat)
             {
             ConstantPool pool     = frame.poolContext();
             TypeConstant typeThis = ((TypeHandle) hTarget).getDataType();
-            TypeConstant typeThat = ((TypeHandle) hArg   ).getDataType();
+            TypeConstant typeThat = hTypeThat.getDataType();
             if (typeThis.isShared(pool) && typeThat.isShared(pool))
                 {
                 // TODO
@@ -415,15 +415,15 @@ public class xRTType
     public int invokeOr(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
         // hArg is a Type
-        if (hArg instanceof TypeHandle)
+        if (hArg instanceof TypeHandle hTypeThat)
             {
             ConstantPool pool     = frame.poolContext();
             TypeConstant typeThis = ((TypeHandle) hTarget).getDataType();
-            TypeConstant typeThat = ((TypeHandle) hArg   ).getDataType();
+            TypeConstant typeThat = hTypeThat.getDataType();
             if (typeThis.isShared(pool) && typeThat.isShared(pool))
                 {
                 TypeConstant typeResult = pool.ensureIntersectionTypeConstant(typeThis, typeThat);
-                return frame.assignValue(iReturn, typeResult.ensureTypeHandle(frame.poolContext()));
+                return frame.assignValue(iReturn, typeResult.ensureTypeHandle(pool));
                 }
             return frame.raiseException(xException.invalidType(frame,
                 "No common TypeSystem for (" + typeThis + " | " + typeThat + ")"));
@@ -1078,8 +1078,8 @@ public class xRTType
                 for (int i = 0; i < cArgs; i++)
                     {
                     Constant constArg = aconstArg[i];
-                    ahArg[i] = constArg instanceof RegisterConstant
-                        ? makeArgumentHandle(frame, (RegisterConstant) constArg)
+                    ahArg[i] = constArg instanceof RegisterConstant constReg
+                        ? makeRegisterHandle(frame, constReg.getRegisterIndex())
                         : makeArgumentHandle(frame, constArg);
                     }
                 }
@@ -1226,9 +1226,9 @@ public class xRTType
                     break;
                 }
             }
-        else if (type instanceof RecursiveTypeConstant)
+        else if (type instanceof RecursiveTypeConstant typeRecursive)
             {
-            sName = ((RecursiveTypeConstant) type).getTypedef().getName();
+            sName = typeRecursive.getTypedef().getName();
             }
 
         return sName == null
@@ -1528,7 +1528,7 @@ public class xRTType
             }
         }
 
-    private ObjectHandle makeArgumentHandle(Frame frame, RegisterConstant constReg)
+    private ObjectHandle makeRegisterHandle(Frame frame, int nRegister)
         {
         TypeComposition clz  = REGISTER_CLZCOMP;
         MethodStructure ctor = REGISTER_CONSTRUCT;
@@ -1540,7 +1540,7 @@ public class xRTType
             }
 
         ObjectHandle[] ahArg = new ObjectHandle[ctor.getMaxVars()];
-        ahArg[0] = xInt64.makeHandle(constReg.getRegisterIndex());
+        ahArg[0] = xInt64.makeHandle(nRegister);
 
         int iResult = clz.getTemplate().construct(frame, ctor, clz, null, ahArg, Op.A_STACK);
         switch (iResult)
@@ -1706,10 +1706,10 @@ public class xRTType
             }
 
         @Override
-        public int compareTo(ObjectHandle that)
+        public int compareTo(ObjectHandle obj)
             {
-            return that instanceof TypeHandle
-                    ? this.getDataType().compareTo(((TypeHandle) that).getDataType())
+            return obj instanceof TypeHandle that
+                    ? this.getDataType().compareTo(that.getDataType())
                     : 1;
             }
 
@@ -1722,8 +1722,8 @@ public class xRTType
         @Override
         public boolean equals(Object obj)
             {
-            return obj instanceof TypeHandle &&
-                    this.getDataType().equals(((TypeHandle) obj).getDataType());
+            return obj instanceof TypeHandle that &&
+                    this.getDataType().equals(that.getDataType());
             }
 
         @Override
