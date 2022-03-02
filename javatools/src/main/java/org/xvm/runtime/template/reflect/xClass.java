@@ -29,6 +29,8 @@ import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
+import org.xvm.runtime.template.xException;
+import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xOrdered;
 
 import org.xvm.runtime.template.collections.xArray;
@@ -162,7 +164,7 @@ public class xClass
         switch (method.getName())
             {
             case "allocate":
-                return invokeAllocate(frame, hTarget, aiReturn);
+                return invokeAllocate(frame, hTarget, ahArg[0], aiReturn);
 
             case "isSingleton":
                 return invokeIsSingleton(frame, hTarget, aiReturn);
@@ -243,7 +245,7 @@ public class xClass
     /**
      * Implementation for: {@code conditional StructType allocate()}.
      */
-    public int invokeAllocate(Frame frame, ObjectHandle hTarget, int[] aiReturn)
+    public int invokeAllocate(Frame frame, ObjectHandle hTarget, ObjectHandle hParent, int[] aiReturn)
         {
         TypeConstant typePublic = getClassType(hTarget);
 
@@ -254,45 +256,57 @@ public class xClass
 
         typePublic = typePublic.removeImmutable().removeAccess();
 
-        ClassTemplate   template = f_templates.getTemplate(typePublic);
-        TypeComposition clz      = typePublic.ensureClass(frame);
+        ClassTemplate   template  = f_templates.getTemplate(typePublic);
+        TypeComposition clzPublic = typePublic.ensureClass(frame);
 
+        if (hParent == ObjectHandle.DEFAULT || hParent == xNullable.NULL)
+            {
+            if (typePublic.isVirtualChild())
+                {
+                return frame.raiseException(
+                    xException.illegalArgument(frame, "Parent instance required"));
+                }
+            hParent = null;
+            }
+
+        ServiceContext contextAlloc;
         switch (template.getStructure().getFormat())
             {
             case SERVICE:
-                {
-                ServiceContext contextNew = frame.f_context.f_container.
-                        createServiceContext(template.f_sName);
-
-                switch (contextNew.sendAllocateRequest(frame, clz, Op.A_STACK))
-                    {
-                    case Op.R_NEXT:
-                        return frame.assignValues(aiReturn, xBoolean.TRUE, frame.popStack());
-
-                    case Op.R_CALL:
-                        frame.m_frameNext.addContinuation(frameCaller ->
-                            frameCaller.assignValues(aiReturn, xBoolean.TRUE, frameCaller.popStack())
-                            );
-                        return Op.R_CALL;
-
-                    case Op.R_EXCEPTION:
-                        return Op.R_EXCEPTION;
-
-                    default:
-                        throw new IllegalStateException();
-                    }
-                }
+                contextAlloc = frame.f_context.f_container.createServiceContext(template.f_sName);
+                break;
 
             case CLASS:
             case CONST:
-            case MIXIN:
-                {
-                ObjectHandle hStruct = template.createStruct(frame, clz);
-                return completeStructAllocation(frame, hStruct, clz, aiReturn);
-                }
+                if (hParent == null || !hParent.isService())
+                    {
+                    return completeStructAllocation(frame,
+                            template.createStruct(frame, clzPublic), hParent, aiReturn);
+                    }
+                contextAlloc = hParent.getService().f_context;
+                break;
 
             default:
                 return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+            }
+
+
+        switch (contextAlloc.sendAllocateRequest(frame, clzPublic, hParent, Op.A_STACK))
+            {
+            case Op.R_NEXT:
+                return frame.assignValues(aiReturn, xBoolean.TRUE, frame.popStack());
+
+            case Op.R_CALL:
+                frame.m_frameNext.addContinuation(frameCaller ->
+                    frameCaller.assignValues(aiReturn, xBoolean.TRUE, frameCaller.popStack())
+                    );
+                return Op.R_CALL;
+
+            case Op.R_EXCEPTION:
+                return Op.R_EXCEPTION;
+
+            default:
+                throw new IllegalStateException();
             }
         }
 
@@ -300,9 +314,10 @@ public class xClass
      * The final part of the struct allocation.
      */
     public static int completeStructAllocation(Frame frame, ObjectHandle hStruct,
-                                               TypeComposition clz, int[] aiReturn)
+                                               ObjectHandle hParent, int[] aiReturn)
         {
-        MethodStructure methodAI = clz.ensureAutoInitializer(frame.poolContext());
+        TypeComposition clzPublic = hStruct.getComposition().ensureAccess(Constants.Access.PUBLIC);
+        MethodStructure methodAI  = clzPublic.ensureAutoInitializer(frame.poolContext());
         if (methodAI != null)
             {
             switch (frame.call1(methodAI, hStruct, Utils.OBJECTS_NONE, Op.A_IGNORE))
@@ -322,6 +337,12 @@ public class xClass
                     throw new IllegalStateException();
                 }
             }
+
+        if (hParent != null)
+            {
+            ((GenericHandle) hStruct).setField(frame, GenericHandle.OUTER, hParent);
+            }
+
         return frame.assignValues(aiReturn, xBoolean.TRUE, hStruct);
         }
 

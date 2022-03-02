@@ -1112,21 +1112,29 @@ public class ServiceContext
         }
 
     /**
-     * Send and asynchronous "allocate service" request to this context.
+     * Send and asynchronous "allocate structure" request to this context.
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
-    public int sendAllocateRequest(Frame frameCaller, TypeComposition clazz, int iReturn)
+    public int sendAllocateRequest(Frame frameCaller, TypeComposition clazz,
+                                   ObjectHandle hParent, int iReturn)
         {
         assert iReturn != Op.A_IGNORE;
+
+        if (hParent != null && !hParent.isPassThrough(f_container))
+            {
+            return frameCaller.raiseException(xException.mutableObject(frameCaller));
+            }
 
         Op opAllocate = new Op()
             {
             public int process(Frame frame, int iPC)
                 {
-                xService service = (xService) clazz.getTemplate();
+                xService service = (xService) (hParent != null && hParent.isService()
+                        ? hParent.getService().getTemplate()
+                        : clazz.getTemplate());
 
-                return service.allocateSync(frame, clazz, 0);
+                return service.allocateSync(frame, clazz, hParent, 0);
                 }
 
             public String toString()

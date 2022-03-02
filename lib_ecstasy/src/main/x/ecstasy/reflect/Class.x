@@ -77,6 +77,8 @@ const Class<PublicType, ProtectedType extends PublicType,
                         PrivateType   extends ProtectedType,
                         StructType    extends Struct>
     {
+    typedef function StructType(PublicType.OuterType?) as Allocator;
+
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -92,7 +94,7 @@ const Class<PublicType, ProtectedType extends PublicType,
      */
     construct(Composition            composition,
               ListMap<String, Type>? canonicalParams = Null,
-              function StructType()? allocateStruct  = Null,
+              Allocator?             allocateStruct  = Null,
               function StructType()? allocateDefault = Null)
         {
         if (Type[] formalTypes := PublicType.parameterized(), formalTypes.size > 0)
@@ -370,16 +372,16 @@ const Class<PublicType, ProtectedType extends PublicType,
     /**
      * The factory for structure instances, if the class is not abstract in this [TypeSystem].
      */
-    protected function StructType()? allocateStruct;
+    protected Allocator? allocateStruct;
 
     /**
      * The singleton instance, which is either an `immutable Const` or a `Service`.
      */
     private @Lazy PublicType singletonInstance.calc()
         {
-        function StructType()? alloc = allocateStruct;
+        Allocator? alloc = allocateStruct;
         assert baseTemplate.singleton && alloc != Null;
-        PublicType instance = instantiate(alloc());
+        PublicType instance = instantiate(alloc(Null));
         assert &instance.isConst || &instance.isService;
         return instance;
         }
@@ -551,13 +553,13 @@ const Class<PublicType, ProtectedType extends PublicType,
     /**
      * Allocate an empty structure for this class.
      */
-    conditional StructType allocate()
+    conditional StructType allocate(PublicType.OuterType? outer = Null)
         {
         ClassTemplate baseTemplate = this.baseTemplate;
-        function StructType()? alloc = allocateStruct;
+        Allocator?    alloc        = allocateStruct;
         return baseTemplate.isAbstract || baseTemplate.singleton || alloc == Null
                 ? False
-                : (True, alloc());
+                : (True, alloc(outer));
         }
 
     /**

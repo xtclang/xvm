@@ -119,14 +119,15 @@ public class xService
         }
 
     /**
-     * The part of the allocation logic that is executed on the allocated service's context.
+     * The part of the struct allocation logic that is executed on the allocated service's context.
+     * Note, that the clazz could be a virtual child of the parent's service.
      */
-    public int allocateSync(Frame frame, TypeComposition clazz, int iReturn)
+    public int allocateSync(Frame frame, TypeComposition clazz, ObjectHandle hParent, int iReturn)
         {
-        ServiceHandle hStruct = (ServiceHandle) createStruct(frame, clazz);
+        ObjectHandle hStruct = clazz.getTemplate().createStruct(frame, clazz);
 
-        switch (xClass.completeStructAllocation(frame, hStruct, clazz,
-                new int[] {Op.A_IGNORE, Op.A_STACK}))
+        switch (xClass.completeStructAllocation(frame, hStruct, hParent,
+                            new int[] {Op.A_IGNORE, Op.A_STACK}))
             {
             case Op.R_NEXT:
                 return frame.assignValue(iReturn, hStruct);
