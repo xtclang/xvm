@@ -732,8 +732,10 @@ public class xRTType
             TypeConstant    typeTuple   = pool.ensureTupleType(clzTarget.getType());
             TypeComposition clzTuple    = xTuple.INSTANCE.ensureClass(typeTuple);
 
+            // constructor could be null for a synthetic run-time structure-based constructor
+            // created above by "getPropertyConstructors" method
             int iResult = constructor == null
-                ? template.proceedConstruction(frame, null, false, ahArg[0], ahArg, Op.A_STACK)
+                ? template.proceedConstruction(frame, null, false, ahArg[0], Utils.OBJECTS_NONE, Op.A_STACK)
                 : template.construct(frame, constructor, clzTarget, hParent, ahArg, Op.A_STACK);
             switch (iResult)
                 {
