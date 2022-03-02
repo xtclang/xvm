@@ -1107,7 +1107,7 @@ public class xRTFunction
                         : super.call1Impl(frame, hTarget, ahVar, iReturn);
                 }
 
-            if (!validatePassThrough(frame.f_context, ctxTarget, getMethod(), ahVar))
+            if (!frame.f_context.validatePassThrough(ctxTarget, getMethod(), ahVar))
                 {
                 return frame.raiseException(xException.mutableObject(frame));
                 }
@@ -1132,7 +1132,7 @@ public class xRTFunction
                         : super.callTImpl(frame, hTarget, ahVar, iReturn);
                 }
 
-            if (!validatePassThrough(frame.f_context, ctxTarget, getMethod(), ahVar))
+            if (!frame.f_context.validatePassThrough(ctxTarget, getMethod(), ahVar))
                 {
                 return frame.raiseException(xException.mutableObject(frame));
                 }
@@ -1157,7 +1157,7 @@ public class xRTFunction
                         : super.callNImpl(frame, hTarget, ahVar, aiReturn);
                 }
 
-            if (!validatePassThrough(frame.f_context, ctxTarget, getMethod(), ahVar))
+            if (!frame.f_context.validatePassThrough(ctxTarget, getMethod(), ahVar))
                 {
                 return frame.raiseException(xException.mutableObject(frame));
                 }
@@ -1202,7 +1202,7 @@ public class xRTFunction
                 return super.call1Impl(frame, null, ahVar, iReturn);
                 }
 
-            if (!validatePassThrough(frame.f_context, hService.f_context, getMethod(), ahVar))
+            if (!frame.f_context.validatePassThrough(hService.f_context, getMethod(), ahVar))
                 {
                 return frame.raiseException(xException.mutableObject(frame));
                 }
@@ -1220,7 +1220,7 @@ public class xRTFunction
                 return super.callTImpl(frame, null, ahVar, iReturn);
                 }
 
-            if (!validatePassThrough(frame.f_context, hService.f_context, getMethod(), ahVar))
+            if (!frame.f_context.validatePassThrough(hService.f_context, getMethod(), ahVar))
                 {
                 return frame.raiseException(xException.mutableObject(frame));
                 }
@@ -1238,7 +1238,7 @@ public class xRTFunction
                 return super.callNImpl(frame, null, ahVar, aiReturn);
                 }
 
-            if (!validatePassThrough(frame.f_context, hService.f_context, getMethod(), ahVar))
+            if (!frame.f_context.validatePassThrough(hService.f_context, getMethod(), ahVar))
                 {
                 return frame.raiseException(xException.mutableObject(frame));
                 }
@@ -1287,7 +1287,7 @@ public class xRTFunction
                 return super.call1(frame, hTarget, ahVar, iReturn);
                 }
 
-            if (!validatePassThrough(frame.f_context, f_ctx, getMethod(), ahVar))
+            if (!frame.f_context.validatePassThrough(f_ctx, getMethod(), ahVar))
                 {
                 return frame.raiseException(xException.mutableObject(frame));
                 }
@@ -1303,7 +1303,7 @@ public class xRTFunction
                 return super.callT(frame, hTarget, ahVar, iReturn);
                 }
 
-            if (!validatePassThrough(frame.f_context, f_ctx, getMethod(), ahVar))
+            if (!frame.f_context.validatePassThrough(f_ctx, getMethod(), ahVar))
                 {
                 return frame.raiseException(xException.mutableObject(frame));
                 }
@@ -1319,7 +1319,7 @@ public class xRTFunction
                 return super.callN(frame, hTarget, ahVar, aiReturn);
                 }
 
-            if (!validatePassThrough(frame.f_context, f_ctx, getMethod(), ahVar))
+            if (!frame.f_context.validatePassThrough(f_ctx, getMethod(), ahVar))
                 {
                 return frame.raiseException(xException.mutableObject(frame));
                 }
@@ -1330,43 +1330,6 @@ public class xRTFunction
 
 
     // ----- helpers -------------------------------------------------------------------------------
-
-    /**
-     * Check if all the arguments are pass-through; replace the proxyable ones with the
-     * corresponding proxy handles.
-     *
-     * @param ctxSrc  the service context that the arguments "belong" to
-     * @param ctxDst  the service context that the arguments are to be sent to
-     * @param method  the method that is to be called on the "destination" context
-     * @param ahArg   the actual arguments
-     *
-     * @return true iff all the arguments are pass-through or have been successfully proxied
-     */
-    private static boolean validatePassThrough(ServiceContext ctxSrc, ServiceContext ctxDst,
-                                               MethodStructure method, ObjectHandle[] ahArg)
-        {
-        // Note: this logic could be moved to ServiceContext.sendInvokeXXX()
-        for (int i = 0, c = ahArg.length; i < c; i++)
-            {
-            ObjectHandle hArg = ahArg[i];
-            if (hArg == null)
-                {
-                // arguments tail is always empty
-                break;
-                }
-
-            if (!hArg.isPassThrough(ctxDst.f_container))
-                {
-                hArg = hArg.getTemplate().createProxyHandle(ctxSrc, hArg, method.getParamTypes()[i]);
-                if (hArg == null)
-                    {
-                    return false;
-                    }
-                ahArg[i] = hArg;
-                }
-            }
-        return true;
-        }
 
     /**
      * Create a function handle representing an asynchronous (service) call.

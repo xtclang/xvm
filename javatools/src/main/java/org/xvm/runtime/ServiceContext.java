@@ -72,6 +72,7 @@ public class ServiceContext
         f_templates = container.f_templates;
         }
 
+
     // ----- accessors -----------------------------------------------------------------------------
 
     public Runtime getRuntime()
@@ -1012,6 +1013,41 @@ public class ServiceContext
     // ----- helpers -------------------------------------------------------------------------------
 
     /**
+     * Check if all the arguments are pass-through from this service to the destination service;
+     * replace the proxyable ones with the corresponding proxy handles.
+     *
+     * @param ctxDst  the service context that the arguments are to be sent to
+     * @param method  the method that is to be called on the "destination" context
+     * @param ahArg   the actual arguments
+     *
+     * @return true iff all the arguments are pass-through or have been successfully proxied
+     */
+    public boolean validatePassThrough(ServiceContext ctxDst,
+                                       MethodStructure method, ObjectHandle[] ahArg)
+        {
+        for (int i = 0, c = ahArg.length; i < c; i++)
+            {
+            ObjectHandle hArg = ahArg[i];
+            if (hArg == null)
+                {
+                // arguments tail is always empty
+                break;
+                }
+
+            if (!hArg.isPassThrough(ctxDst.f_container))
+                {
+                hArg = hArg.getTemplate().createProxyHandle(this, hArg, method.getParamTypes()[i]);
+                if (hArg == null)
+                    {
+                    return false;
+                    }
+                ahArg[i] = hArg;
+                }
+            }
+        return true;
+        }
+
+    /**
      * Post and asynchronous "call later" message to this context. Any exception thrown by the
      * called function will be reported as an "UnhandledExceptionNotification" (see Service.x).
      *
@@ -1120,11 +1156,6 @@ public class ServiceContext
                                    ObjectHandle hParent, int iReturn)
         {
         assert iReturn != Op.A_IGNORE;
-
-        if (hParent != null && !hParent.isPassThrough(f_container))
-            {
-            return frameCaller.raiseException(xException.mutableObject(frameCaller));
-            }
 
         Op opAllocate = new Op()
             {

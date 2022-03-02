@@ -290,6 +290,10 @@ public class xClass
                 return frame.assignValue(aiReturn[0], xBoolean.FALSE);
             }
 
+        if (hParent != null && !hParent.isPassThrough(null))
+            {
+            return frame.raiseException(xException.mutableObject(frame));
+            }
 
         switch (contextAlloc.sendAllocateRequest(frame, clzPublic, hParent, Op.A_STACK))
             {

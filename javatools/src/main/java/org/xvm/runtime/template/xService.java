@@ -149,7 +149,14 @@ public class xService
     public int construct(Frame frame, MethodStructure constructor, TypeComposition clazz,
                          ObjectHandle hParent, ObjectHandle[] ahArg, int iReturn)
         {
-        ServiceContext contextNew = frame.f_context.f_container.createServiceContext(f_sName);
+        ServiceContext context    = frame.f_context;
+        ServiceContext contextNew = context.f_container.createServiceContext(f_sName);
+
+        if (hParent != null && !hParent.isPassThrough(null) ||
+                !context.validatePassThrough(contextNew, constructor, ahArg))
+            {
+            return frame.raiseException(xException.mutableObject(frame));
+            }
 
         return contextNew.sendConstructRequest(frame, clazz, constructor, hParent, ahArg, iReturn);
         }
