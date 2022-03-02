@@ -1408,6 +1408,13 @@ public class MethodStructure
      */
     public void collectDefaultParams(Constant[] aconstArgs, Map<String, Constant> mapValues)
         {
+        // recurse "depth-first" to give precedence to subclasses
+        if (m_idSuper != null)
+            {
+            MethodStructure ctorSuper = (MethodStructure) m_idSuper.getComponent();
+            ctorSuper.collectDefaultParams(m_aconstSuper, mapValues);
+            }
+
         int cArgs = aconstArgs.length;
         for (int i = 0, c = getParamCount(); i < c; i++)
             {
@@ -1429,12 +1436,6 @@ public class MethodStructure
                 {
                 mapValues.put(param.getName(), param.getDefaultValue());
                 }
-            }
-
-        if (m_idSuper != null)
-            {
-            MethodStructure ctorSuper = (MethodStructure) m_idSuper.getComponent();
-            ctorSuper.collectDefaultParams(m_aconstSuper, mapValues);
             }
         }
 

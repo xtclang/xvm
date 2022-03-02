@@ -66,7 +66,7 @@ module TestSimple
             }
         }
 
-    @M("extra")
+    @M("extra", "anno3")
     const Test
         {
         String value = init();
@@ -99,8 +99,8 @@ module TestSimple
         {
         }
 
-    mixin M(String extra = "no-extra")
-            extends MBase
+    mixin M(String extra = "no-extra", String anno="anno2")
+            extends MBase(anno, "nop2")
             into Object
         {
         }
