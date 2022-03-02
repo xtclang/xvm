@@ -22,6 +22,7 @@ import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
+import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
@@ -100,7 +101,7 @@ public class xClass
 
             ClassTemplate template = switch (idClz.getComponent().getFormat())
                 {
-                case ENUMVALUE -> xEnumValue.INSTANCE;
+                case ENUMVALUE -> xEnumValue  .INSTANCE;
                 case ENUM      -> xEnumeration.INSTANCE;
                 default        -> this;
                 };
@@ -244,34 +245,63 @@ public class xClass
      */
     public int invokeAllocate(Frame frame, ObjectHandle hTarget, int[] aiReturn)
         {
-        TypeConstant typeClz    = hTarget.getType();
-        TypeConstant typePublic = typeClz.getParamType(0);
+        TypeConstant typePublic = getClassType(hTarget);
 
-        if (typePublic.isImmutabilitySpecified())
+        if (typePublic.ensureTypeInfo().isSingleton())
             {
-            typePublic = typePublic.getUnderlyingType();
-            }
-        if (typePublic.isAccessSpecified())
-            {
-            typePublic = typePublic.getUnderlyingType();
+            return frame.assignValue(aiReturn[0], xBoolean.FALSE);
             }
 
-        ClassTemplate template = f_templates.getTemplate(typePublic);
+        typePublic = typePublic.removeImmutable().removeAccess();
+
+        ClassTemplate   template = f_templates.getTemplate(typePublic);
+        TypeComposition clz      = typePublic.ensureClass(frame);
 
         switch (template.getStructure().getFormat())
             {
+            case SERVICE:
+                {
+                ServiceContext contextNew = frame.f_context.f_container.
+                        createServiceContext(template.f_sName);
+
+                switch (contextNew.sendAllocateRequest(frame, clz, Op.A_STACK))
+                    {
+                    case Op.R_NEXT:
+                        return frame.assignValues(aiReturn, xBoolean.TRUE, frame.popStack());
+
+                    case Op.R_CALL:
+                        frame.m_frameNext.addContinuation(frameCaller ->
+                            frameCaller.assignValues(aiReturn, xBoolean.TRUE, frameCaller.popStack())
+                            );
+                        return Op.R_CALL;
+
+                    case Op.R_EXCEPTION:
+                        return Op.R_EXCEPTION;
+
+                    default:
+                        throw new IllegalStateException();
+                    }
+                }
+
             case CLASS:
             case CONST:
             case MIXIN:
-            case ENUMVALUE:
-                break;
+                {
+                ObjectHandle hStruct = template.createStruct(frame, clz);
+                return completeStructAllocation(frame, hStruct, clz, aiReturn);
+                }
 
             default:
                 return frame.assignValue(aiReturn[0], xBoolean.FALSE);
             }
+        }
 
-        TypeComposition clz      = typePublic.ensureClass(frame);
-        ObjectHandle    hStruct  = template.createStruct(frame, clz);
+    /**
+     * The final part of the struct allocation.
+     */
+    public static int completeStructAllocation(Frame frame, ObjectHandle hStruct,
+                                               TypeComposition clz, int[] aiReturn)
+        {
         MethodStructure methodAI = clz.ensureAutoInitializer(frame.poolContext());
         if (methodAI != null)
             {

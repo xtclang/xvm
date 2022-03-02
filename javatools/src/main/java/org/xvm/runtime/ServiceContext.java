@@ -1064,7 +1064,7 @@ public class ServiceContext
         return request.f_future;
         }
 
-    /*
+    /**
      * Send and asynchronous Op-based message to this context with one return value. The caller
      * will be blocked until the asynchronous operation completes.
      *
@@ -1083,13 +1083,13 @@ public class ServiceContext
         return frameCaller.assignFutureResult(iReturn, request.f_future);
         }
 
-    /*
-     * Send and asynchronous "construct service" request to this context. The caller
-     * will be blocked until the asynchronous construction completes.
+    /**
+     * Send and asynchronous "construct service" request to this context.
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
-    public int sendConstructRequest(Frame frameCaller, MethodStructure constructor, TypeComposition clazz,
+    public int sendConstructRequest(Frame frameCaller, TypeComposition clazz,
+                                    MethodStructure constructor,
                                     ObjectHandle hParent, ObjectHandle[] ahArg, int iReturn)
         {
         Op opConstruct = new Op()
@@ -1109,6 +1109,33 @@ public class ServiceContext
             };
 
         return sendOp1Request(frameCaller, opConstruct, iReturn);
+        }
+
+    /**
+     * Send and asynchronous "allocate service" request to this context.
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
+     */
+    public int sendAllocateRequest(Frame frameCaller, TypeComposition clazz, int iReturn)
+        {
+        assert iReturn != Op.A_IGNORE;
+
+        Op opAllocate = new Op()
+            {
+            public int process(Frame frame, int iPC)
+                {
+                xService service = (xService) clazz.getTemplate();
+
+                return service.allocateSync(frame, clazz, 0);
+                }
+
+            public String toString()
+                {
+                return "Allocate: " + ServiceContext.this.f_sName;
+                }
+            };
+
+        return sendOp1Request(frameCaller, opAllocate, iReturn);
         }
 
     /**
@@ -1297,7 +1324,7 @@ public class ServiceContext
         return sendOp1Request(frameCaller, opGet, iReturn);
         }
 
-    /*
+    /**
      * Send and asynchronous property "update" operation request. The caller will be blocked until
      * the asynchronous operation completes.
      *
@@ -1341,7 +1368,7 @@ public class ServiceContext
         return sendOp1Request(frameCaller, opSet, Op.A_IGNORE);
         }
 
-    /*
+    /**
      * Send and asynchronous "constant initialization" message.
      */
     public CompletableFuture<ObjectHandle> sendConstantRequest(Frame frameCaller,

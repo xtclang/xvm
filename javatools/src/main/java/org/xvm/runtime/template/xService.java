@@ -27,6 +27,8 @@ import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xEnum.EnumHandle;
 
+import org.xvm.runtime.template.reflect.xClass;
+
 import org.xvm.runtime.template.text.xString;
 
 import org.xvm.runtime.template._native.xRTServiceControl;
@@ -84,6 +86,9 @@ public class xService
         return this == INSTANCE ? INCEPTION_CLASS : (ClassConstant) super.getInceptionClassConstant();
         }
 
+    /**
+     * The part of the construction logic that is executed on the constructed service's context.
+     */
     public int constructSync(Frame frame, MethodStructure constructor, TypeComposition clazz,
                              ObjectHandle hParent, ObjectHandle[] ahArg, int iReturn)
         {
@@ -113,21 +118,50 @@ public class xService
             }
         }
 
+    /**
+     * The part of the allocation logic that is executed on the allocated service's context.
+     */
+    public int allocateSync(Frame frame, TypeComposition clazz, int iReturn)
+        {
+        ServiceHandle hStruct = (ServiceHandle) createStruct(frame, clazz);
+
+        switch (xClass.completeStructAllocation(frame, hStruct, clazz,
+                new int[] {Op.A_IGNORE, Op.A_STACK}))
+            {
+            case Op.R_NEXT:
+                return frame.assignValue(iReturn, hStruct);
+
+            case Op.R_CALL:
+                frame.m_frameNext.addContinuation(frameCaller ->
+                    frameCaller.assignValue(iReturn, frameCaller.popStack()));
+                return Op.R_CALL;
+
+            case Op.R_EXCEPTION:
+                return Op.R_EXCEPTION;
+
+            default:
+                throw new IllegalStateException();
+            }
+        }
+
     @Override
     public int construct(Frame frame, MethodStructure constructor, TypeComposition clazz,
                          ObjectHandle hParent, ObjectHandle[] ahArg, int iReturn)
         {
         ServiceContext contextNew = frame.f_context.f_container.createServiceContext(f_sName);
 
-        return contextNew.sendConstructRequest(frame, constructor, clazz, hParent, ahArg, iReturn);
+        return contextNew.sendConstructRequest(frame, clazz, constructor, hParent, ahArg, iReturn);
         }
 
     @Override
     public ObjectHandle createStruct(Frame frame, TypeComposition clazz)
         {
-        // called via constructSync()
+        // called via constructSync() or allocateSync()
         ServiceContext context = frame.f_context;
         ServiceHandle  hStruct = new ServiceHandle(clazz.ensureAccess(Access.STRUCT), context);
+
+        // prime the context with the service "struct" handle; it will be replaced with a "public"
+        // one by constructSync() above
         context.setService(hStruct);
         return hStruct;
         }

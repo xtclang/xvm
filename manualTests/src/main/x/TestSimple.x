@@ -67,7 +67,7 @@ module TestSimple
         }
 
     @M("extra", "anno3")
-    const Test
+    service Test
         {
         String value = init();
 
@@ -83,7 +83,7 @@ module TestSimple
             }
         }
 
-    const Test2
+    service Test2
         {
         String value = INIT;
 
