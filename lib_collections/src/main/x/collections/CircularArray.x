@@ -388,14 +388,14 @@ class CircularArray<Element>
             {
             while (--removing >= 0)
                 {
-                contents[--head & mask] == Null;
+                contents[--head & mask] = Null;
                 }
             }
         else
             {
             while (--removing >= 0)
                 {
-                contents[tail++ & mask] == Null;
+                contents[tail++ & mask] = Null;
                 }
             }
 

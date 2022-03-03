@@ -6,6 +6,10 @@ import java.lang.reflect.Field;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
+import org.xvm.compiler.Compiler;
+
+import org.xvm.util.Severity;
+
 
 /**
  * An expression statement is just an expression that someone stuck a semicolon on the end of.
@@ -78,6 +82,12 @@ public class ExpressionStatement
                 {
                 expr = exprNew;
                 }
+            }
+
+        if (fValid && !expr.isStandalone())
+            {
+            log(errs, Severity.ERROR, Compiler.EXPRESSION_NOT_STATEMENT);
+            fValid = false;
             }
 
         return fValid

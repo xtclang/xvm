@@ -144,6 +144,12 @@ public class ElseExpression
         }
 
     @Override
+    public boolean isStandalone()
+        {
+        return expr1.isStandalone() && expr2.isStandalone();
+        }
+
+    @Override
     public boolean isShortCircuiting()
         {
         // this expression "grounds" any short circuit that happens on the left side of the ":"

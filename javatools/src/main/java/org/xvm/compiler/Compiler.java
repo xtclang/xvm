@@ -1314,6 +1314,10 @@ public class Compiler
      */
     public static final String TYPE_PARAMS_INACCESSIBLE            = "COMPILER-179";
     /**
+     * The form of the expression cannot be used as a statement.
+     */
+    public static final String EXPRESSION_NOT_STATEMENT            = "COMPILER-180";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                     = "COMPILER-NI";

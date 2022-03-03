@@ -159,6 +159,12 @@ public class ThrowExpression
         }
 
     @Override
+    public boolean isStandalone()
+        {
+        return true;
+        }
+
+    @Override
     public boolean isAssignableTo(TypeConstant typeThat)
         {
         // sure, this expression can be one of those, whatever that is

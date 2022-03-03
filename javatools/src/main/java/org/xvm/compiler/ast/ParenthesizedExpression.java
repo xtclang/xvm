@@ -47,6 +47,11 @@ public class ParenthesizedExpression
         return expr.toTypeExpression();
         }
 
+    @Override
+    public boolean isStandalone()
+        {
+        return expr.isStandalone();
+        }
 
     // ----- debugging assistance ------------------------------------------------------------------
 

@@ -1168,6 +1168,12 @@ public class InvocationExpression
         }
 
     @Override
+    public boolean isStandalone()
+        {
+        return true;
+        }
+
+    @Override
     public boolean isTraceworthy()
         {
         return m_fCall;

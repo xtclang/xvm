@@ -100,6 +100,12 @@ public class SequentialAssignExpression
         return finishValidation(ctx, typeRequired, type, fit, null, errs);
         }
 
+    @Override
+    public boolean isStandalone()
+        {
+        return true;
+        }
+
     private Assignable ensureTarget(Context ctx, Code code, ErrorListener errs)
         {
         Assignable LVal = m_LValTarget;

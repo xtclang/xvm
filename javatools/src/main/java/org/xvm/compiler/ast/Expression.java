@@ -924,6 +924,14 @@ public abstract class Expression
         }
 
     /**
+     * @return true iff the expression can stand alone as its own Statement
+     */
+    public boolean isStandalone()
+        {
+        return false;
+        }
+
+    /**
      * Called by a child Expression that wants to replace itself with a different Expression.
      *
      * @param that  an expression to use in lieu of this expression as a child of an AstNode
