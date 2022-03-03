@@ -362,7 +362,10 @@ public abstract class ObjectHandle
     @Override
     public String toString()
         {
-        return "(" + getComposition() + ") ";
+        TypeComposition clz = getComposition();
+
+        // don't add "immutable" for immutable types
+        return "(" + (m_fMutable || clz.getType().isImmutable() ? "" : "immutable ") + clz + ") ";
         }
 
     public static class GenericHandle

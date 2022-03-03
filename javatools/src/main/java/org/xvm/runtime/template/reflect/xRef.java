@@ -591,9 +591,9 @@ public class xRef
             {
             aAnno = composition.getType().getAnnotations();
             }
-        else if (composition instanceof PropertyComposition)
+        else if (composition instanceof PropertyComposition clzProp)
             {
-            PropertyInfo inoProp = ((PropertyComposition) composition).getPropertyInfo();
+            PropertyInfo inoProp = clzProp.getPropertyInfo();
             aAnno = inoProp.getRefAnnotations();
             }
 
@@ -618,9 +618,9 @@ public class xRef
         {
         TypeComposition composition = hRef.getComposition();
 
-        if (composition instanceof PropertyComposition)
+        if (composition instanceof PropertyComposition clzProp)
             {
-            PropertyInfo infoProp = ((PropertyComposition) composition).getPropertyInfo();
+            PropertyInfo infoProp      = clzProp.getPropertyInfo();
             TypeConstant typeContainer = infoProp.getType();
             throw new UnsupportedOperationException("TODO GG");
             }
@@ -662,11 +662,10 @@ public class xRef
      */
     protected int maskAs(Frame frame, ObjectHandle hTarget, TypeHandle hType, int iReturn)
         {
-        if (hTarget instanceof GenericHandle)
+        if (hTarget instanceof GenericHandle hGeneric)
             {
             TypeConstant typeMasked = hType.getUnsafeDataType();
-            ObjectHandle hMasked    = ((GenericHandle) hTarget).
-                                        maskAs(frame.f_context.f_container, typeMasked);
+            ObjectHandle hMasked    = hGeneric.maskAs(frame.f_context.f_container, typeMasked);
 
             return hMasked == null
                 ? frame.raiseException(xException.illegalCast(frame, typeMasked.getValueString()))
@@ -690,7 +689,7 @@ public class xRef
      */
     protected int revealAs(Frame frame, ObjectHandle hTarget, TypeHandle hType, int[] aiReturn)
         {
-        if (hTarget instanceof GenericHandle)
+        if (hTarget instanceof GenericHandle hGeneric)
             {
             ConstantPool pool       = frame.poolContext();
             TypeConstant typeReveal = hType.getDataType();
@@ -700,7 +699,7 @@ public class xRef
                 typeReveal = pool.ensureAccessTypeConstant(hTarget.getType(), Access.STRUCT);
                 }
 
-            ObjectHandle hRevealed = ((GenericHandle) hTarget).revealAs(frame, typeReveal);
+            ObjectHandle hRevealed = hGeneric.revealAs(frame, typeReveal);
 
             return hRevealed == null
                 ? frame.assignValue(aiReturn[0], xBoolean.FALSE)
@@ -839,17 +838,12 @@ public class xRef
 
         public boolean isProperty()
             {
-            switch (m_iVar)
+            return switch (m_iVar)
                 {
-                case REF_REFERENT:
-                    return getField(null, OUTER) != null;
-
-                case REF_PROPERTY:
-                    return true;
-
-                default:
-                    return false;
-                }
+                case REF_REFERENT -> getField(null, OUTER) != null;
+                case REF_PROPERTY -> true;
+                default           -> false;
+                };
             }
 
         public ObjectHandle getReferentHolder()
@@ -949,23 +943,14 @@ public class xRef
         public String toString()
             {
             String s = super.toString();
-            switch (m_iVar)
+            return switch (m_iVar)
                 {
-                case REF_REFERENT:
-                    return isAssigned(null) ? s + getReferent() : s;
-
-                case REF_REF:
-                    return s + "--> " + m_hReferent;
-
-                case REF_PROPERTY:
-                    return s + "-> " + m_hReferent.getComposition() + "#" + m_sName;
-
-                case REF_ARRAY:
-                    return m_hReferent + "[" + ((IndexedRefHandle) this).f_lIndex + "]";
-
-                default:
-                    return s + "-> #" + m_iVar;
-                }
+                case REF_REFERENT -> s + (isAssigned(null) ? getReferent() : "<unassigned>");
+                case REF_REF      -> s + "--> " + m_hReferent;
+                case REF_PROPERTY -> s + "-> " + m_hReferent.getComposition() + "#" + m_sName;
+                case REF_ARRAY    -> m_hReferent + "[" + ((IndexedRefHandle) this).f_lIndex + "]";
+                default           -> s + "-> #" + m_iVar;
+                };
             }
 
         /**
