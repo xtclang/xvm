@@ -787,6 +787,12 @@ public class NewExpression
         }
 
     @Override
+    public boolean isStandalone()
+        {
+        return true;
+        }
+
+    @Override
     public boolean isCompletable()
         {
         for (Expression expr : args)
