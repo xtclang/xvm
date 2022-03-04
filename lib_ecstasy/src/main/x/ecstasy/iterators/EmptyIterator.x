@@ -166,7 +166,6 @@ const EmptyIterator<Element>
         return this, this;
         }
 
-
     @Override
     Element reduce(Element identity, function Element accumulate(Element, Element))
         {
