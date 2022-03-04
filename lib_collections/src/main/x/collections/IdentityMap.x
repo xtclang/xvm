@@ -10,13 +10,13 @@ import ecstasy.reflect.Ref.Identity;
 /**
  * A Map implementation that organizes its keys by [reference identity](Ref.Identity).
  */
-class IdentityHashMap<Key, Value>
+class IdentityMap<Key, Value>
         implements Map<Key, Value>
     {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Construct a new [IdentityHashMap].
+     * Construct a new [IdentityMap].
      *
      * @param initCapacity  the number of expected entries
      */
@@ -26,7 +26,7 @@ class IdentityHashMap<Key, Value>
         }
 
     /**
-     * Construct a new [IdentityHashMap].
+     * Construct a new [IdentityMap].
      *
      * @param map  the map to use to store the underlying identity information
      */
@@ -73,21 +73,21 @@ class IdentityHashMap<Key, Value>
         }
 
     @Override
-    IdentityHashMap put(Key key, Value value)
+    IdentityMap put(Key key, Value value)
         {
         storage.put(&key.identity, (key, value));
         return this;
         }
 
     @Override
-    IdentityHashMap remove(Key key)
+    IdentityMap remove(Key key)
         {
         storage.remove(&key.identity);
         return this;
         }
 
     @Override
-    IdentityHashMap clear()
+    IdentityMap clear()
         {
         storage.clear();
         return this;
@@ -140,13 +140,13 @@ class IdentityHashMap<Key, Value>
         @Override
         Int size.get()
             {
-            return this.IdentityHashMap.size;
+            return this.IdentityMap.size;
             }
 
         @Override
         Boolean contains(Entry entry)
             {
-            if (Value value := this.IdentityHashMap.get(entry.key))
+            if (Value value := this.IdentityMap.get(entry.key))
                 {
                 return value == entry.value;
                 }
@@ -157,7 +157,7 @@ class IdentityHashMap<Key, Value>
         @Override
         Collection<Entry> remove(Entry entry)
             {
-            this.IdentityHashMap.remove(entry.key, entry.value);
+            this.IdentityMap.remove(entry.key, entry.value);
             return this;
             }
 
@@ -253,13 +253,11 @@ class IdentityHashMap<Key, Value>
             implements Entry
         {
         protected/private @Unassigned StorageEntry storageEntry;
-        protected/private @Unassigned Identity     identity;
 
-        private Boolean reified;
+        protected/private Boolean reified;
 
         protected CursorEntry advance(StorageEntry storageEntry)
             {
-            this.identity     = storageEntry.key;
             this.key          = storageEntry.value[0];
             this.storageEntry = storageEntry;
             return this;
