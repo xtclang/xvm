@@ -233,7 +233,7 @@ module web.xtclang.org
      * TODO not used
      */
     mixin WebService(String path = "/")
-            into Class;
+            into (service | const);
 
     /**
      * A generic HTTP endpoint.
