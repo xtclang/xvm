@@ -2,6 +2,7 @@
  * A Duration represents a magnitude of time, with picosecond resolution.
  */
 const Duration(UInt128 picoseconds)
+        default(NONE)
     {
     static IntLiteral PICOS_PER_NANO   = 1000;
     static IntLiteral PICOS_PER_MICRO  = 1000 * PICOS_PER_NANO;
