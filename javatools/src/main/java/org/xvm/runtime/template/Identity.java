@@ -116,6 +116,12 @@ public class Identity
             return System.identityHashCode(m_hValue);
             }
 
+        @Override
+        public boolean equals(Object obj)
+            {
+            return obj instanceof IdentityHandle that && this.m_hValue == that.m_hValue;
+            }
+
         private final ObjectHandle m_hValue;
         }
     }
