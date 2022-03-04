@@ -40,9 +40,9 @@ import maps.EntryValues;
  * specialized nodes allow the general case to be optimized to a bare minimum structure.
  *
  * The iterators provided by this map are stable in presence of structural changes to the map and
- * **will not** throw [ConcurrentModification], return duplicate entries, or skip entries which
- * remain present over the course of iteration. The iterator **may** return entries which were
- * inserted _after_ the creation of the iterator.
+ * **will not** throw [ConcurrentModification], return duplicate entries, return entries that have
+ * been removed, or skip entries which remain present over the course of iteration. The iterator
+ * **may** return entries which were inserted _after_ the creation of the iterator.
  */
 class HasherMap<Key, Value>
         implements HasherReplicable<Key>
@@ -152,24 +152,11 @@ class HasherMap<Key, Value>
     protected static @Abstract class HashBucket<Key, Value>
             implements Duplicable
         {
-        /**
-         * True iff this node can represent more than one hash code.
-         */
-        @RO Boolean isMultiHash.get()
+        @Override
+        HashBucket duplicate(Boolean shallow=False)
             {
-            return False;
+            return super();
             }
-
-        /**
-         * The hash code represented by this HashBucket. (If the HashBucket represents more than one
-         * hash code, then accessing this property will throw an exception.)
-         */
-        @RO @Abstract Int hash; // TODO GG: should not require @Abstract here
-
-        /**
-         * How many key/value pairs are within this HashBucket.
-         */
-        @RO @Abstract Int size;
 
         /**
          * Internal bit-packed field.
@@ -210,21 +197,16 @@ class HasherMap<Key, Value>
         /**
          * Determine if the node is currently being iterated.
          */
-        @RO Boolean inIteration.get()
+        HashBucket copyOnWriteIfNecessary()
             {
-            return !this.is(immutable) && stats & 0x7F != 0;
-            }
+            if (!this.is(immutable) && stats & 0x7F != 0)
+                {
+                val result = this.duplicate(shallow=True);
+                this.discard();
+                return result;
+                }
 
-        /**
-         * Determine if the node has been discarded. A discarded node can only be "held" by an
-         * iterator that was in the process of iterating the node, when another operation attempted
-         * to modify the node, but because [inIteration] was True, the operation had to "copy on
-         * write", and as a result, the original node (this node) was discarded, i.e. is no longer
-         * the "master copy" of the node that is being held by the map.
-         */
-        @RO Boolean discarded.get()
-            {
-            return stats & 0x80 != 0;
+            return this;
             }
 
         /**
@@ -245,6 +227,36 @@ class HasherMap<Key, Value>
             {
             discard();
             }
+
+        /**
+         * Determine if the node has been discarded. A discarded node can only be "held" by an
+         * iterator that was in the process of iterating the node when another operation attempted
+         * to modify the node, and [copyOnWriteIfNecessary] made a new master copy of the node
+         * (which then caused this node to be discarded).
+         */
+        @RO Boolean discarded.get()
+            {
+            return stats & 0x80 != 0;
+            }
+
+        /**
+         * True iff this node can represent more than one hash code.
+         */
+        @RO Boolean isMultiHash.get()
+            {
+            return False;
+            }
+
+        /**
+         * The hash code represented by this HashBucket. (If the HashBucket represents more than one
+         * hash code, then accessing this property will throw an exception.)
+         */
+        @RO @Abstract Int hash; // TODO GG: should not require @Abstract here
+
+        /**
+         * How many key/value pairs are within this HashBucket.
+         */
+        @RO @Abstract Int size;
 
         /**
          * Obtain n-th key of this node, iff this is not a multi-hash node.
@@ -429,11 +441,11 @@ class HasherMap<Key, Value>
         {
         construct(Int hash, Key key1, Value value1, Key key2, Value value2)
             {
-            keys = new Key[](4);
+            keys = new Key[](2);
             keys.add(key1);
             keys.add(key2);
 
-            values = new Value[](4);
+            values = new Value[](2);
             values.add(value1);
             values.add(value2);
             }
@@ -505,9 +517,10 @@ class HasherMap<Key, Value>
                     return False;
                     }
 
-                keys.add(key);
-                values.add(value);
-                return True, this;
+                ListNode<Key, Value> result = copyOnWriteIfNecessary();
+                result.keys.add(key);
+                result.values.add(value);
+                return True, result;
                 }
 
             // replace the list with a tree
@@ -527,17 +540,10 @@ class HasherMap<Key, Value>
                     return True, Null;
                     }
 
-                ListNode<Key, Value> result = this;
-                if (inIteration)
-                    {
-                    // "copy on write"
-                    result = this.duplicate();
-                    this.discard();
-                    }
-
-                Key[]   keys   = result.keys;
-                Value[] values = result.values;
-                Int     last   = count-1;
+                ListNode<Key, Value> result = copyOnWriteIfNecessary();
+                Key[]                keys   = result.keys;
+                Value[]              values = result.values;
+                Int                  last   = count-1;
                 if (index != last)
                     {
                     // take the last one in the list, and move it up to the index of the key that
@@ -605,11 +611,19 @@ class HasherMap<Key, Value>
             }
 
         /**
-         * Internal copy constructor.
+         * Internal shallow copy constructor.
          */
         private construct(HashBucket<Key, Value>[] nodes)
             {
             this.nodes = nodes;
+            }
+
+        @Override
+        TreeNode duplicate(Boolean shallow=False)
+            {
+            return shallow
+                    ? new TreeNode(nodes.clone())
+                    : super();
             }
 
         /**
@@ -694,14 +708,7 @@ class HasherMap<Key, Value>
             else
                 {
                 // create a single node for the new entry, and add that node to the nodes bin-tree
-                TreeNode<Key, Value> result = this;
-                if (inIteration)
-                    {
-                    // copy on write is required because we're adding a leaf node
-                    result = new TreeNode<Key, Value>(nodes.clone());
-                    this.discard();
-                    }
-
+                TreeNode<Key, Value> result = copyOnWriteIfNecessary();
                 val newNode = new SingleNode<Key, Value>(hash, key, value);
                 result.nodes.insert(index, newNode);
                 return True, result;
@@ -720,23 +727,14 @@ class HasherMap<Key, Value>
                     {
                     if (newBucket == Null)
                         {
-                        Int count = nodes.size;
-                        if (count == 2)
+                        if (nodes.size == 2)
                             {
                             // we do not keep a tree node of size 1
                             this.discard();
-                            Int retain = index == 1 ? 0 : 1;
-                            return True, nodes[retain];
+                            return True, nodes[1-index];
                             }
 
-                        TreeNode<Key, Value> result = this;
-                        if (inIteration)
-                            {
-                            // copy on write is necessary
-                            result = new TreeNode<Key, Value>(nodes.clone());
-                            this.discard();
-                            }
-
+                        TreeNode<Key, Value> result = copyOnWriteIfNecessary();
                         result.nodes.delete(index);
                         return True, result;
                         }
