@@ -292,18 +292,22 @@ interface Ref<Referent>
      * * It provides comparison of any two references.
      */
     static interface Identity
-            extends Hashable
+            extends immutable Hashable
         {
         @Override
-        static <CompileType extends Hashable> Int hashCode(CompileType value)
+        static <CompileType extends Identity> Int hashCode(CompileType value)
             {
-            return &value.identity.hashCode();
+            // the implementation of the Identity hash code is naturally self-referential; this code
+            // cannot work in actuality; see also: infinite recursion
+            return value.hashCode();
             }
 
         @Override
-        static <CompileType extends Hashable> Boolean equals(CompileType value1, CompileType value2)
+        static <CompileType extends Identity> Boolean equals(CompileType value1, CompileType value2)
             {
-            return &value1 == &value2;
+            // the implementation of the Identity equality is naturally self-referential; this code
+            // cannot work in actuality; see also: infinite recursion
+            return value1 == value2;
             }
         }
     }
