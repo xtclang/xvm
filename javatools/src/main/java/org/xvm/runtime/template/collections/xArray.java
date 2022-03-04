@@ -307,7 +307,7 @@ public class xArray
                         hValue = frame.getConstHandle(typeEl.getDefaultValue());
                         if (Op.isDeferred(hValue))
                             {
-                            hValue.proceed(frame, frameCaller ->
+                            return hValue.proceed(frame, frameCaller ->
                                 fill(frameCaller, hArray, cSize, frameCaller.popStack(), iReturn));
                             }
                         }
