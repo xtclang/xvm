@@ -97,7 +97,7 @@ class IdentityMap<Key, Value>
     @Lazy public/private Set<Key> keys.calc()
         {
         EntryKeys<Key, Value> keys = new EntryKeys<Key, Value>(this);
-        if (this.is(immutable))
+        if (this.IdentityMap.is(immutable))
             {
             keys = keys.makeImmutable();
             }
@@ -108,7 +108,7 @@ class IdentityMap<Key, Value>
     @Lazy public/private Collection<Value> values.calc()
         {
         EntryValues<Key, Value> values = new EntryValues<Key, Value>(this);
-        if (this.is(immutable))
+        if (this.IdentityMap.is(immutable))
             {
             values = values.makeImmutable();
             }
@@ -119,7 +119,7 @@ class IdentityMap<Key, Value>
     @Lazy public/private Collection<Map<Key,Value>.Entry> entries.calc()
         {
         EntrySet entries = new EntrySet();
-        if (this.is(immutable))
+        if (this.IdentityMap.is(immutable))
             {
             entries = entries.makeImmutable();
             }

@@ -1145,7 +1145,27 @@ public class NameExpression
         switch (m_plan)
             {
             case None:
-                assert getMeaning() != Meaning.Label;
+                switch (getMeaning())
+                    {
+                    case Reserved:
+                    if (left instanceof NameExpression nameLeft &&
+                            nameLeft.m_plan == Plan.OuterThis)
+                        {
+                        // indicates a "this.C" scenario used inside a "property class" for this
+                        // class property
+                        TypeConstant typeOuter = argRaw.getType();
+                        Register     regOuter  = createRegister(typeOuter, fUsedOnce);
+                        code.add(new MoveThis(1, regOuter, typeOuter.getAccess()));
+                        argRaw = regOuter;
+                        }
+                    break;
+
+                    case Label:
+                        throw new IllegalStateException();
+
+                    default:
+                        break;
+                    }
 
                 if (m_mapTypeParams != null)
                     {
@@ -1168,6 +1188,14 @@ public class NameExpression
                     {
                     typeOuter = getType();
                     cSteps    = ((ParentClassConstant) argRaw).getDepth();
+                    }
+
+                if (left instanceof NameExpression nameLeft &&
+                        nameLeft.m_plan == Plan.OuterThis)
+                    {
+                    // indicates a "this.C" scenario used inside a "property class" for a child
+                    // class property
+                    cSteps++;
                     }
 
                 Register regOuter = createRegister(typeOuter, fUsedOnce);

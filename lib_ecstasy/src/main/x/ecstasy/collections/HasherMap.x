@@ -335,7 +335,7 @@ class HasherMap<Key, Value>
          *
          * @param node  the node to adopt
          *
-         * @return True iff the HashBucket needs to be repaced
+         * @return True iff the HashBucket needs to be replaced
          * @return the new HashBucket to use in lieu of this
          */
         conditional HashBucket! adopt(HashBucket! node)
@@ -1002,7 +1002,7 @@ class HasherMap<Key, Value>
     @Lazy public/private Set<Key> keys.calc()
         {
         KeySet keys = new KeySet();
-        if (this.is(immutable))
+        if (this.HasherMap.is(immutable))
             {
             keys.makeImmutable();
             }
@@ -1013,7 +1013,7 @@ class HasherMap<Key, Value>
     @Lazy public/private Collection<Value> values.calc()
         {
         EntryValues<Key, Value> values = new EntryValues<Key, Value>(this);
-        if (this.is(immutable))
+        if (this.HasherMap.is(immutable))
             {
             values.makeImmutable();
             }
@@ -1024,7 +1024,7 @@ class HasherMap<Key, Value>
     @Lazy public/private Collection<Entry> entries.calc()
         {
         EntrySet entries = new EntrySet();
-        if (this.is(immutable))
+        if (this.HasherMap.is(immutable))
             {
             entries.makeImmutable();
             }

@@ -131,7 +131,7 @@ class SkiplistMap<Key extends Orderable, Value>
     @Lazy public/private OrderedSet<Key> keys.calc()
         {
         KeySet keys = new KeySet();
-        if (this.is(immutable))
+        if (this.SkiplistMap.is(immutable))
             {
             keys.makeImmutable();
             }
@@ -142,7 +142,7 @@ class SkiplistMap<Key extends Orderable, Value>
     @Lazy public/private Collection<Value> values.calc()
         {
         EntryValues<Key, Value> values = new EntryValues<Key, Value>(this);
-        if (this.is(immutable))
+        if (this.SkiplistMap.is(immutable))
             {
             values.makeImmutable();
             }
@@ -153,7 +153,7 @@ class SkiplistMap<Key extends Orderable, Value>
     @Lazy public/private Collection<Entry> entries.calc()
         {
         EntrySet entries = new EntrySet();
-        if (this.is(immutable))
+        if (this.SkiplistMap.is(immutable))
             {
             entries.makeImmutable();
             }
@@ -1782,7 +1782,7 @@ class SkiplistMap<Key extends Orderable, Value>
             }
 
         /**
-         * For upgrading index size, choose thte next bigger IntNumber type.
+         * For upgrading index size, choose the next bigger IntNumber type.
          *
          * @param indexType  an IntNumber type, one of Int8, Int16, Int32, or Int64
          *
@@ -1801,7 +1801,7 @@ class SkiplistMap<Key extends Orderable, Value>
             }
 
         /**
-         * For downgrading an index size, choose thte next smaller IntNumber type.
+         * For downgrading an index size, choose the next smaller IntNumber type.
          *
          * @param indexType  an IntNumber type, one of Int8, Int16, Int32, or Int64
          *

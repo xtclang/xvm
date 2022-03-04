@@ -9,26 +9,42 @@ module TestSimple
 
     void run()
         {
-        Test tOK = new Test(new Reporter().makeImmutable());
-        tOK.test();
+        Test t = new Test(1);
+        console.println($"t.value2={t.value2} t.desc={t.desc}");
 
-        Test tErr = new Test(new Reporter()); // used to be allowed - passing mutable state to a service!!
-        tErr.test();
+        t.test();
         }
 
-    class Reporter()
+    class Test(Int value1)
         {
-        void report()
+        @Lazy Int value2.calc()
             {
-            console.println(this);
+            return this.Test.value1;
             }
-        }
 
-    service Test(Reporter reporter)
-        {
         void test()
             {
-            reporter.report();
+            Child c = new Child();
+            console.println($"c.desc() {c.desc()}");
+            }
+
+        @Lazy String desc.calc()
+            {
+            Type t = this.&Test.actualType;
+            return t.toString();
+            }
+
+        class Child
+            {
+            @Lazy Int value3.calc()
+                {
+                return this.Test.value2 + 40;
+                }
+
+            String desc()
+                {
+                return " Child " + value3;
+                }
             }
         }
     }
