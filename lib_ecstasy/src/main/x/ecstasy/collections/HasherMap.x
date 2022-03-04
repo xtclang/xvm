@@ -322,12 +322,10 @@ class HasherMap<Key, Value>
             HashBucket<Key, Value>? oldBucket = buckets[index];
             if (oldBucket == Null)
                 {
-                // TODO CP: how did this compile: buckets[index] == this;
                 buckets[index] = this;
                 }
             else if (HashBucket<Key, Value> newBucket := oldBucket.adopt(this))
                 {
-                // TODO CP: how did this compile: buckets[index] == newBucket;
                 buckets[index] = newBucket;
                 }
             }
