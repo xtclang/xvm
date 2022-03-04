@@ -301,7 +301,7 @@ const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
      * A collection of the map's entries, backed by the map.
      */
     protected const Entries
-            implements Collection<Map.Entry>
+            implements Collection<Map<Key,Value>.Entry>
         {
         @Override
         @RO Int size.get()
@@ -316,7 +316,7 @@ const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
             }
 
         @Override
-        Boolean contains(Map.Entry entry)
+        Boolean contains(Element entry)
             {
             if (Value value := this.ConcurrentHasherMap.get(entry.key))
                 {
@@ -328,9 +328,9 @@ const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
             }
 
         @Override
-        Boolean containsAll(Collection!<Map.Entry> that)
+        Boolean containsAll(Collection<Element> that)
             {
-            for (Map.Entry entry : that)
+            for (val entry : that)
                 {
                 if (!contains(entry))
                     {
@@ -344,7 +344,7 @@ const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
 
         @Override
         @Op("+")
-        Entries add(Map.Entry entry)
+        Entries add(Element entry)
             {
             put(entry.key, entry.value);
             return this;
@@ -352,9 +352,9 @@ const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
 
         @Override
         @Op("+")
-        Entries addAll(Iterable<Map.Entry> that)
+        Entries addAll(Iterable<Element> that)
             {
-            for (Map.Entry entry : that)
+            for (Element entry : that)
                 {
                 put(entry.key, entry.value);
                 }
@@ -363,9 +363,9 @@ const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
             }
 
         @Override
-        Entries addAll(Iterator<Map.Entry> iter)
+        Entries addAll(Iterator<Element> iter)
             {
-            while (Map.Entry entry := iter.next())
+            while (val entry := iter.next())
                 {
                 put(entry.key, entry.value);
                 }
@@ -374,21 +374,21 @@ const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
             }
 
         @Override
-        conditional Entries addIfAbsent(Map.Entry entry)
+        conditional Entries addIfAbsent(Element entry)
             {
             return putIfAbsent(entry.key, entry.value) ? (True, this) : False;
             }
 
         @Override
         @Op("-")
-        Entries remove(Map.Entry entry)
+        Entries remove(Element entry)
             {
             this.ConcurrentHasherMap.remove(entry.key, entry.value);
             return this;
             }
 
         @Override
-        conditional Entries removeIfPresent(Map.Entry entryThat)
+        conditional Entries removeIfPresent(Element entryThat)
             {
             return processIfPresent(entryThat.key, entry ->
                 {
@@ -408,9 +408,9 @@ const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
             }
 
         @Override
-        Iterator<Map.Entry> iterator()
+        Iterator<Map<Key, Value>.Entry> iterator()
             {
-            Partition[] partitions = this.ConcurrentHasherMap.partitions;
+            Partition<Key,Value>[] partitions = this.ConcurrentHasherMap.partitions;
             if (partitions.size == 1)
                 {
                 return partitions[0].entries.iterator();
@@ -420,7 +420,7 @@ const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
             Int first = step % partitions.size;
             Int second = (first + step) % partitions.size;
 
-            GrowableCompoundIterator<Map.Entry> iter = new GrowableCompoundIterator(
+            GrowableCompoundIterator<Map<Key, Value>.Entry> iter = new GrowableCompoundIterator(
                     partitions[first].entries.iterator(),
                     partitions[second].entries.iterator());
 

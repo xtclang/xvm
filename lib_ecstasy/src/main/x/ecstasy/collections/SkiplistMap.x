@@ -130,19 +130,34 @@ class SkiplistMap<Key extends Orderable, Value>
     @Override
     @Lazy public/private OrderedSet<Key> keys.calc()
         {
-        return new KeySet();
+        KeySet keys = new KeySet();
+        if (this.is(immutable))
+            {
+            keys.makeImmutable();
+            }
+        return keys;
         }
 
     @Override
     @Lazy public/private Collection<Value> values.calc()
         {
-        return new EntryValues<Key, Value>(this);
+        EntryValues<Key, Value> values = new EntryValues<Key, Value>(this);
+        if (this.is(immutable))
+            {
+            values.makeImmutable();
+            }
+        return values;
         }
 
     @Override
     @Lazy public/private Collection<Entry> entries.calc()
         {
-        return new EntrySet();
+        EntrySet entries = new EntrySet();
+        if (this.is(immutable))
+            {
+            entries.makeImmutable();
+            }
+        return entries;
         }
 
     @Override
@@ -434,7 +449,6 @@ class SkiplistMap<Key extends Orderable, Value>
      */
     protected class CollectionImpl<Element>
             implements Collection<Element>
-            implements Freezable
         {
         @Override
         Int size.get()
@@ -670,13 +684,6 @@ class SkiplistMap<Key extends Orderable, Value>
                 return that;
                 }
             }
-
-        @Override
-        immutable CollectionImpl freeze(Boolean inPlace = False)
-            {
-            assert this.SkiplistMap.is(immutable SkiplistMap);
-            return makeImmutable();
-            }
         }
 
 
@@ -688,6 +695,7 @@ class SkiplistMap<Key extends Orderable, Value>
     protected class KeySet
             extends CollectionImpl<Key>
             implements OrderedSet<Key>
+            incorporates conditional KeySetFreezer<Key extends Shareable>
         {
         @Override
         protected class IteratorImpl
@@ -716,6 +724,26 @@ class SkiplistMap<Key extends Orderable, Value>
             {
             this.SkiplistMap.remove(key);
             return this;
+            }
+
+        /**
+         * Conditional Freezable implementation.
+         */
+        private static mixin KeySetFreezer<Element extends Orderable+Shareable>
+// TODO GG:     into SkiplistMap<Element>.KeySet               // (without ", Object" there is a verify error)
+                into SkiplistMap<Element, Object>.KeySet
+                implements Freezable
+            {
+            @Override
+            immutable Freezable+Set<Key> freeze(Boolean inPlace = False)
+                {
+                if (this.is(immutable))
+                    {
+                    return this;
+                    }
+
+                return new ListSet<Key>(this, size).freeze(True);
+                }
             }
         }
 
@@ -747,7 +775,11 @@ class SkiplistMap<Key extends Orderable, Value>
         @Override
         Boolean contains(Entry entry)
             {
-            TODO this.SkiplistMap.remove(entry.key, entry.value);
+            if (Value value := this.SkiplistMap.get(entry.key))
+                {
+                return value == entry.value;
+                }
+            return False;
             }
 
         @Override
@@ -818,7 +850,7 @@ class SkiplistMap<Key extends Orderable, Value>
                     }
                 else
                     {
-                    throw new OutOfBounds("entry does not exist for key=" + key);
+                    throw new OutOfBounds($"entry does not exist for key=\"{key}\"");
                     }
                 }
 
