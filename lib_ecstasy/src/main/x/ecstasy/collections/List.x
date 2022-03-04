@@ -457,25 +457,54 @@ interface List<Element>
      */
     (Boolean found, Int index) binarySearch(function Ordered(Element) order)
         {
-        Int first = 0;
-        Int last  = size - 1;
-        do
+        switch (Int size = this.size)
             {
-            Int midpoint = (first + last) >>> 1;
-            switch (order(this[midpoint]))
-                {
-                case Lesser:
-                    last = midpoint - 1;
-                    break;
-                case Equal:
-                    return True, midpoint;
-                case Greater:
-                    first = midpoint + 1;
-                    break;
-                }
+            case 0:
+                return False, 0;
+
+            case 1:
+                return switch (order(this[0]))
+                    {
+                    case Lesser:  (False, 0);
+                    case Equal:   (True,  0);
+                    case Greater: (False, 1);
+                    };
+
+            case 2..4:
+                // linear probe assumed to be faster than binary search for a small list
+                Each: for (Element each : this)
+                    {
+                    switch (order(each))
+                        {
+                        case Lesser:
+                            return (False, Each.count);
+                        case Equal:
+                            return (True,  Each.count);
+                        }
+                    }
+                return False, size;
+
+            default:
+                Int first = 0;
+                Int last  = size - 1;
+                do
+                    {
+                    Int midpoint = (first + last) >>> 1;
+                    switch (order(this[midpoint]))
+                        {
+                        case Lesser:
+                            last = midpoint - 1;
+                            break;
+                        case Equal:
+                            return True, midpoint;
+                        case Greater:
+                            first = midpoint + 1;
+                            break;
+                        }
+                    }
+                while (first <= last);
+                return False, first;
             }
-        while (first <= last);
-        return False, first;
         }
 
     /**
