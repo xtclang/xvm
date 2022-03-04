@@ -230,7 +230,6 @@ module web.xtclang.org
 
     /**
      * A mixin that represents a set of endpoints for a specific URI path.
-     * TODO not used
      */
     mixin WebService(String path = "/")
             into (service | const);
