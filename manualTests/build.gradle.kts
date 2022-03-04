@@ -143,3 +143,21 @@ tasks.register<JavaExec>("host") {
         }
     }
 }
+
+tasks.register<JavaExec>("hostWeb") {
+    group       = "Test"
+    description = "Start the web hosting module"
+
+    dependsOn(xdk.tasks["build"])
+
+    classpath(javatoolsJar)
+
+    val opts = listOf<String>(
+        "-L", "${xdk.buildDir}/xdk/lib/",
+        "-L", "${xdk.buildDir}/xdk/javatools/javatools_bridge.xtc",
+        "-L", "$buildDir",
+        "${xdk.buildDir}/xdk/lib/hostWeb.xtc")
+
+    args(opts)
+    mainClass.set("org.xvm.tool.Runner")
+}
