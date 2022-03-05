@@ -797,7 +797,7 @@ public class Context
             if (!asn.isDefinitelyAssigned())
                 {
                 // DVar is always readable (TODO: ensure the "get" is overridden)
-                return arg instanceof Register && ((Register) arg).isDVar();
+                return arg instanceof Register && ((Register) arg).isVar();
                 }
 
             return !(arg instanceof Register) || ((Register) arg).isReadable();

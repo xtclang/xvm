@@ -172,7 +172,7 @@ public abstract class OpVar
      */
     public TypeConstant getRegisterType()
         {
-        return m_reg.isDVar()
+        return m_reg.isVar()
                 ? m_reg.ensureRegType(!m_reg.isWritable())
                 : m_reg.getType();
         }

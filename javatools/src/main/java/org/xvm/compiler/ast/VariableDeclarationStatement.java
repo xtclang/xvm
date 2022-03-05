@@ -220,7 +220,7 @@ public class VariableDeclarationStatement
 
         // declare a named var
         Register reg = m_reg;
-        if (reg.isDVar())
+        if (reg.isVar())
             {
             if (!m_fConstAnno && type instanceof AnnotatedTypeExpression exprAnnoType)
                 {

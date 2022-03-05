@@ -2768,7 +2768,7 @@ public class NameExpression
      */
     public boolean isDynamicVar()
         {
-        return m_arg instanceof Register reg && reg.isDVar();
+        return m_arg instanceof Register reg && reg.isVar();
         }
 
     /**

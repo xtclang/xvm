@@ -113,9 +113,9 @@ public class Register
     // ----- Register methods ----------------------------------------------------------------------
 
     /**
-     * @return true iff this register was created by a DVAR op
+     * @return true iff this register represents a non-dereferenced value
      */
-    public boolean isDVar()
+    public boolean isVar()
         {
         return m_typeReg != null;
         }
@@ -380,7 +380,7 @@ public class Register
      */
     public boolean isNormal()
         {
-        return !isPredefined() && isReadable() && isWritable() && !isDVar();
+        return !isPredefined() && isReadable() && isWritable() && !isVar();
         }
 
     @Override
@@ -603,9 +603,9 @@ public class Register
             }
 
         @Override
-        public boolean isDVar()
+        public boolean isVar()
             {
-            return Register.this.isDVar();
+            return Register.this.isVar();
             }
 
         @Override
