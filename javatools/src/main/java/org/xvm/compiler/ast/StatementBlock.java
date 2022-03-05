@@ -1477,7 +1477,7 @@ public class StatementBlock
                         AnonInnerClassContext ctxCapture = entry.getValue();
                         Assignment            asnOrig    = ctxCapture.getVarAssignment(sName);
                         boolean               fModified  = getVarAssignment(sName) != asnOrig;
-                        ctxCapture.markVarRead(true, sName, null, null);
+                        ctxCapture.markVarRead(true, sName, null, true, null);
                         if (fModified)
                             {
                             ctxCapture.setVarAssignment(sName, asnOrig.applyAssignmentFromCapture());

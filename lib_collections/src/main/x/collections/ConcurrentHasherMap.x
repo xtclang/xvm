@@ -717,8 +717,7 @@ const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
                         }
                     catch (Exception e)
                         {
-                        // TODO GG: &result.completeExceptionally(e); doesn't compile
-                        rVar.completeExceptionally(e);
+                        &result.completeExceptionally(e);
                         }
                     });
                 }

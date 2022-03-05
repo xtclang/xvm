@@ -777,7 +777,7 @@ public class InvocationExpression
                 {
                 if (argMethod instanceof Register)
                     {
-                    ctx.markVarRead(exprName.getNameToken(), errs);
+                    ctx.markVarRead(exprName.getNameToken(), true, errs);
                     }
                 else
                     {
@@ -791,7 +791,7 @@ public class InvocationExpression
                         Token tokName = exprName.getNameToken();
                         long  lPos    = tokName.getStartPosition();
                         Token tokThis = new Token(lPos, lPos, Id.THIS);
-                        ctx.markVarRead(tokThis, errs);
+                        ctx.markVarRead(tokThis, true, errs);
                         }
                     }
                 }

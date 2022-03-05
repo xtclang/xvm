@@ -765,15 +765,11 @@ public class NameExpression
                         ctx.useFormalType(type, errs);
                         }
 
-                    // unassigned vars are allowed to be "referenced" with the '&' prefix
-                    if (!isSuppressDeref())
-                        {
-                        ctx.markVarRead(getNameToken(), errs);
-                        }
+                    ctx.markVarRead(getNameToken(), !isSuppressDeref(), errs);
                     break;
 
                 case Reserved:
-                    ctx.markVarRead(getNameToken(), errs);
+                    ctx.markVarRead(getNameToken(), true, errs);
                     break;
 
                 case Property:

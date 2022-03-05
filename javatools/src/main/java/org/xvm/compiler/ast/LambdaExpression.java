@@ -1104,10 +1104,13 @@ public class LambdaExpression
                                 "Label capturing (\"" + sCapture + "\")");
                         }
 
+                    regCapture = regCapture.getOriginalRegister(); // remove any inferences
                     if (entry.getValue())
                         {
                         // it's a read/write capture; capture the Var
-                        typeCapture = pool.ensureParameterizedTypeConstant(pool.typeVar(), typeCapture);
+                        typeCapture = regCapture.isVar()
+                                ? regCapture.ensureRegType(true)
+                                : pool.ensureParameterizedTypeConstant(pool.typeVar(), typeCapture);
                         Register regVal = regCapture;
                         Register regVar = new Register(typeCapture, Op.A_STACK);
                         code.add(new MoveVar(regVal, regVar));
@@ -1118,7 +1121,9 @@ public class LambdaExpression
                         {
                         // it's a read-only capture, but since we were unable to prove that the
                         // register was effectively final, we need to capture the Ref
-                        typeCapture = pool.ensureParameterizedTypeConstant(pool.typeRef(), typeCapture);
+                        typeCapture = regCapture.isVar()
+                                ? regCapture.ensureRegType(true)
+                                : pool.ensureParameterizedTypeConstant(pool.typeVar(), typeCapture);
                         Register regVal = regCapture;
                         Register regVar = new Register(typeCapture, Op.A_STACK);
                         code.add(new MoveRef(regVal, regVar));
@@ -1390,7 +1395,8 @@ public class LambdaExpression
             }
 
         @Override
-        protected void markVarRead(boolean fNested, String sName, Token tokName, ErrorListener errs)
+        protected void markVarRead(boolean fNested, String sName, Token tokName, boolean fDeref,
+                                   ErrorListener errs)
             {
             // variable capture will create a parameter (a variable in this scope) for the lambda,
             // so if the variable isn't already declared in this scope, but it exists in the outer
@@ -1430,7 +1436,7 @@ public class LambdaExpression
                     }
                 }
 
-            super.markVarRead(fNested, sName, tokName, errs);
+            super.markVarRead(fNested, sName, tokName, fDeref, errs);
             }
 
         /**

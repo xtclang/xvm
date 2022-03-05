@@ -682,9 +682,9 @@ public class Context
 
         // we need to call resolveRegisterType() even on registers that are local
         // since some formal types could have been narrowed afterwards
-        if (arg instanceof Register)
+        if (arg instanceof Register reg)
             {
-            arg = resolveRegisterType(branch, (Register) arg);
+            arg = resolveRegisterType(branch, reg);
             }
         return arg;
         }
@@ -723,7 +723,7 @@ public class Context
     public boolean isVarDeclaredInThisScope(String sName)
         {
         Argument arg = getNameMap().get(sName);
-        return arg instanceof Register && ((Register) arg).isInPlace();
+        return arg instanceof Register reg && reg.isInPlace();
         }
 
     /**
@@ -797,10 +797,10 @@ public class Context
             if (!asn.isDefinitelyAssigned())
                 {
                 // DVar is always readable (TODO: ensure the "get" is overridden)
-                return arg instanceof Register && ((Register) arg).isVar();
+                return arg instanceof Register reg && reg.isVar();
                 }
 
-            return !(arg instanceof Register) || ((Register) arg).isReadable();
+            return !(arg instanceof Register reg) || reg.isReadable();
             }
 
         // the only other readable variable names are reserved variables, and we need to ask
@@ -811,24 +811,28 @@ public class Context
     /**
      * Mark the specified variable as being read from within this context.
      *
-     * @param tokName     the variable name as a token from the source code
-     * @param errs        the error list to log to
+     * @param tokName  the variable name as a token from the source code
+     * @param fDeref   true if the variable is dereferenced (e.g.: val); false if dereference is
+     *                 suppressed (e.g: &val)
+     * @param errs     the error list to log to
      */
-    public final void markVarRead(Token tokName, ErrorListener errs)
+    public final void markVarRead(Token tokName, boolean fDeref, ErrorListener errs)
         {
-        markVarRead(false, tokName.getValueText(), tokName, errs);
+        markVarRead(false, tokName.getValueText(), tokName, fDeref, errs);
         }
 
     /**
      * Mark the specified variable as being read from within this context.
-     *
      * @param fNested  true if the variable is being read from within a context nested within
      *                 this context
      * @param sName    the variable name
      * @param tokName  the variable name as a token from the source code (optional)
+     * @param fDeref   true if the variable is dereferenced (e.g.: val); false if dereference is
+     *                 suppressed (e.g: &val)
      * @param errs     the error list to log to (optional)
      */
-    protected void markVarRead(boolean fNested, String sName, Token tokName, ErrorListener errs)
+    protected void markVarRead(boolean fNested, String sName, Token tokName, boolean fDeref,
+                               ErrorListener errs)
         {
         if (fNested || isVarReadable(sName))
             {
@@ -840,7 +844,7 @@ public class Context
                 Context ctxOuter = getOuterContext();
                 if (ctxOuter != null)
                     {
-                    ctxOuter.markVarRead(true, sName, tokName, errs);
+                    ctxOuter.markVarRead(true, sName, tokName, fDeref, errs);
                     }
                 }
             }
@@ -865,7 +869,8 @@ public class Context
                     // repeating the same error logging
                     setVarAssignment(sName, Assignment.AssignedOnce);
                     }
-                else
+                else if (fDeref) // unassigned non-dereferenced vars are allowed to be read
+
                     {
                     tokName.log(errs, getSource(), Severity.ERROR, Compiler.VAR_UNASSIGNED, sName);
 
@@ -900,7 +905,7 @@ public class Context
         if (isVarDeclaredInThisScope(sName))
             {
             Argument arg = getVar(sName);
-            return arg instanceof Register && ((Register) arg).isWritable();
+            return arg instanceof Register reg && reg.isWritable();
             }
 
         // we don't actually explicitly check for reserved names, but this has the effect of
@@ -1231,10 +1236,10 @@ public class Context
         {
         if (branch == Branch.Always)
             {
-            if (argNew instanceof Register && isVarDeclaredInThisScope(sName))
+            if (argNew instanceof Register reg && isVarDeclaredInThisScope(sName))
                 {
                 // the narrowing register is replacing a local register; remember that fact
-                ((Register) argNew).markInPlace();
+                reg.markInPlace();
                 }
             ensureNameMap().put(sName, argNew);
             }
@@ -1330,13 +1335,13 @@ public class Context
         Argument argOld = map.get(sName);
         if (argOld != null)
             {
-            if (argOld instanceof Register)
+            if (argOld instanceof Register regOld)
                 {
                 TypeConstant typeOld = argOld.getType();
                 TypeConstant typeNew = argNew.getType();
 
                 TypeConstant typeJoin = typeNew.intersect(pool(), typeOld);
-                map.put(sName, ((Register) argOld).narrowType(typeJoin));
+                map.put(sName, regOld.narrowType(typeJoin));
                 }
             else
                 {
@@ -1642,9 +1647,9 @@ public class Context
     public Register generateThisRegister(Code code, boolean fAllowConstructor, ErrorListener errs)
         {
         Argument arg = resolveReservedName(fAllowConstructor ? "this" : "this:target", null, errs);
-        if (arg instanceof Register)
+        if (arg instanceof Register reg)
             {
-            return (Register) arg;
+            return reg;
             }
 
         TargetInfo target  = (TargetInfo) arg;
@@ -1838,14 +1843,13 @@ public class Context
                         ctxOuter.replaceArgument(sName, Branch.Always, argFalse);
                         }
                     }
-                else if (argOrig instanceof Register)
+                else if (argOrig instanceof Register regOrig)
                     {
                     // we may need to restore the original type
                     TypeConstant typeOrig = argOrig.getType();
 
                     if (!typeFalse.isA(typeOrig) || !typeTrue.isA(typeOrig))
                         {
-                        Register regOrig = (Register) argOrig;
                         ctxOuter.replaceArgument(sName, Branch.Always,
                             regOrig.narrowType(regOrig.getOriginalType()));
                         }
@@ -2576,7 +2580,7 @@ public class Context
             }
 
         @Override
-        protected void markVarRead(boolean fNested, String sName, Token tokName, ErrorListener errs)
+        protected void markVarRead(boolean fNested, String sName, Token tokName, boolean fDeref, ErrorListener errs)
             {
             if (!isVarDeclaredInThisScope(sName) && getOuterContext().isVarReadable(sName))
                 {
@@ -2584,7 +2588,7 @@ public class Context
                 ensureCaptureMap().putIfAbsent(sName, false);
                 }
 
-            super.markVarRead(fNested, sName, tokName, errs);
+            super.markVarRead(fNested, sName, tokName, fDeref, errs);
             }
 
         @Override

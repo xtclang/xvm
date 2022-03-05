@@ -373,7 +373,10 @@ public class Parameter
             {
             TypeConstant typeVar = getType();
             TypeConstant typeVal = typeVar.getParamType(0);
-            m_regDeref = new Register(typeVal);
+            Register     reg     = new Register(typeVal);
+            reg.specifyRegType(typeVar);
+
+            m_regDeref = reg;
             }
 
         return m_regDeref;
