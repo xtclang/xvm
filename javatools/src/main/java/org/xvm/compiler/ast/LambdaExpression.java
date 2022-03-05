@@ -160,8 +160,8 @@ public class LambdaExpression
             for (int i = 0; i < c; ++i)
                 {
                 Expression expr = paramNames.get(i);
-                as[i] = expr instanceof NameExpression
-                        ? ((NameExpression) expr).getName()
+                as[i] = expr instanceof NameExpression exprName
+                        ? exprName.getName()
                         : null;
                 }
             }
@@ -382,10 +382,9 @@ public class LambdaExpression
 
         assert typeRequired != null; // the calcFit() above would have returned a "Fit""
 
-        if (typeRequired instanceof IntersectionTypeConstant)
+        if (typeRequired instanceof IntersectionTypeConstant typeInter)
             {
-            Set<TypeConstant> setFunctions = ((IntersectionTypeConstant) typeRequired).
-                    collectMatching(pool.typeFunction(), null);
+            Set<TypeConstant> setFunctions = typeInter.collectMatching(pool.typeFunction(), null);
             for (TypeConstant typeFunction : setFunctions)
                 {
                 TypeConstant[] atypeReqParams  = pool.extractFunctionParams(typeFunction);
@@ -477,10 +476,9 @@ public class LambdaExpression
         if (typeRequired != null)
             {
             typeReqFn = typeRequired = typeRequired.resolveTypedefs();
-            if (typeRequired instanceof IntersectionTypeConstant)
+            if (typeRequired instanceof IntersectionTypeConstant typeInter)
                 {
-                Set<TypeConstant> setFunctions = ((IntersectionTypeConstant) typeRequired).
-                        collectMatching(pool.typeFunction(), null);
+                Set<TypeConstant> setFunctions = typeInter.collectMatching(pool.typeFunction(), null);
                 for (TypeConstant typeFunction : setFunctions)
                     {
                     TypeConstant[] atypeTestP = pool.extractFunctionParams(typeFunction);
@@ -666,9 +664,9 @@ public class LambdaExpression
             for (int i = 0; i < cParams; ++i)
                 {
                 Expression expr = paramNames.get(i);
-                if (expr instanceof NameExpression)
+                if (expr instanceof NameExpression exprName)
                     {
-                    String sName = ((NameExpression) expr).getName();
+                    String sName = exprName.getName();
                     asParams[i] = sName;
                     if (!(expr instanceof IgnoredNameExpression))
                         {
@@ -960,10 +958,10 @@ public class LambdaExpression
             for (int i = 0; i < cParams; ++i)
                 {
                 Expression expr = paramNames.get(i);
-                if (expr instanceof NameExpression)
+                if (expr instanceof NameExpression exprName)
                     {
                     // note: could also be an IgnoredNameExpression
-                    asParams[i] = ((NameExpression) expr).getName();
+                    asParams[i] = exprName.getName();
                     }
                 else
                     {

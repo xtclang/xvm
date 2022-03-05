@@ -334,16 +334,11 @@ public class Register
      */
     public boolean isReadable()
         {
-        switch (m_iArg)
+        return switch (m_iArg)
             {
-            case Op.A_IGNORE:
-            case Op.A_IGNORE_ASYNC:
-            case Op.A_LABEL:
-                return false;
-
-            default:
-                return true;
-            }
+            case Op.A_IGNORE, Op.A_IGNORE_ASYNC, Op.A_LABEL -> false;
+            default                                         -> true;
+            };
         }
 
     /**
@@ -391,9 +386,8 @@ public class Register
             return true;
             }
 
-        if (obj instanceof Register)
+        if (obj instanceof Register that)
             {
-            Register that = (Register) obj;
             return this.m_iArg              == that.m_iArg
                 && this.m_fRO               == that.m_fRO
                 && this.m_fEffectivelyFinal == that.m_fEffectivelyFinal
@@ -709,7 +703,7 @@ public class Register
         @Override
         public String getIdString()
             {
-            return "shadow of " + Register.this.toString();
+            return "shadow of " + Register.this;
             }
 
         /**
@@ -720,11 +714,6 @@ public class Register
 
 
     // ----- fields --------------------------------------------------------------------------------
-
-    /**
-     * Empty array of registers.
-     */
-    public static final Register[] NO_REGS = new Register[0];
 
     /**
      * Register representing a default method argument.

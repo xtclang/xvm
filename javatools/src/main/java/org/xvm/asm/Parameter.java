@@ -177,11 +177,10 @@ public class Parameter
 
         int          cExtract = 0;
         TypeConstant typeBase = typeParam.resolveTypedefs();
-        while (typeBase instanceof AnnotatedTypeConstant)
+        while (typeBase instanceof AnnotatedTypeConstant typeAnno)
             {
-            AnnotatedTypeConstant typeAnno  = (AnnotatedTypeConstant) typeBase;
-            Annotation            anno      = typeAnno.getAnnotation();
-            TypeConstant          typeMixin = anno.getAnnotationType();
+            Annotation   anno      = typeAnno.getAnnotation();
+            TypeConstant typeMixin = anno.getAnnotationType();
 
             if (typeMixin.getExplicitClassFormat() != Component.Format.MIXIN)
                 {
@@ -487,7 +486,7 @@ public class Parameter
     protected void dump(PrintWriter out, String sIndent)
         {
         out.print(sIndent);
-        out.println(toString());
+        out.println(this);
         }
 
 
@@ -507,12 +506,11 @@ public class Parameter
             return true;
             }
 
-        if (!(obj instanceof Parameter))
+        if (!(obj instanceof Parameter that))
             {
             return false;
             }
 
-        Parameter that = (Parameter) obj;
         return this.f_iParam == that.f_iParam && this.f_fOrdinary == that.f_fOrdinary
                 && this.m_constType.equals(that.m_constType)
                 && Handy.equals(this.m_constName, that.m_constName)
