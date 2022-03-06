@@ -308,21 +308,28 @@ public class VirtualChildTypeConstant
     @Override
     public TypeConstant adoptParameters(ConstantPool pool, TypeConstant[] atypeParams)
         {
+        TypeConstant typeBase = this;
         if (atypeParams == null)
             {
             // this is a "normalization" call
+            TypeConstant typeParent  = getParentType();
+            TypeConstant typeParentN = typeParent.adoptParameters(pool, atypeParams);
+            if (typeParentN != typeParent)
+                {
+                typeBase = cloneSingle(pool, typeParentN);
+                }
             atypeParams = ConstantPool.NO_TYPES;
             }
 
         ClassStructure clz = getChildStructure();
         if (clz.isParameterized())
             {
-            return pool.ensureParameterizedTypeConstant(this,
+            return pool.ensureParameterizedTypeConstant(typeBase,
                 clz.normalizeParameters(pool, atypeParams));
             }
 
         // not parameterized
-        return this;
+        return typeBase;
         }
 
     @Override

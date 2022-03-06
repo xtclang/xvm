@@ -730,8 +730,7 @@ class SkiplistMap<Key extends Orderable, Value>
          * Conditional Freezable implementation.
          */
         private static mixin KeySetFreezer<Element extends Orderable+Shareable>
-// TODO GG:     into SkiplistMap<Element>.KeySet               // (without ", Object" there is a verify error)
-                into SkiplistMap<Element, Object>.KeySet
+                into SkiplistMap<Element>.KeySet
                 implements Freezable
             {
             @Override
