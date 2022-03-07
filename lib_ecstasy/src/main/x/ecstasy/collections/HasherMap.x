@@ -1379,8 +1379,7 @@ class HasherMap<Key, Value>
          * Conditional Freezable implementation.
          */
         private static mixin KeySetFreezer<Element extends Shareable>
-// TODO GG:     into HasherMap<Element>.KeySet               // (without ", Object" there is a verify error)
-                into HasherMap<Element, Object>.KeySet
+                into HasherMap<Element>.KeySet
                 implements Freezable
             {
             @Override
