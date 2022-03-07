@@ -80,6 +80,12 @@ const RTType<DataType, OuterType>
         }
 
     @Override
+    @Lazy Iterator<DataType> emptyIterator.calc()
+        {
+        return createEmptyIterator();
+        }
+
+    @Override
     @Lazy Map<String, MultiMethod<DataType>> multimethods.calc()
         {
         return collectMultimethods();

@@ -1050,7 +1050,7 @@ class HasherMap<Key, Value>
         Iterator<Element> iterator()
             {
             return empty
-                    ? new EmptyIterator<Element>()      // TODO GG: consider placing on Type.x
+                    ? Element.emptyIterator
                     : new IteratorImpl();
             }
 

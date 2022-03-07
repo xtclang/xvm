@@ -1643,6 +1643,10 @@ public class xRTType
         hHasher.setField(null, GenericHandle.OUTER, hType);
         hHasher.setField(null, "calculate",  xNullable.NULL);
 
+        GenericHandle hIter = (GenericHandle) hType.getField(null, "emptyIterator");
+        hIter.setField(null, GenericHandle.OUTER, hType);
+        hIter.setField(null, "calculate",  xNullable.NULL);
+
         return hType;
         }
 

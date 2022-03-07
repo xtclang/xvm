@@ -165,7 +165,7 @@ class IdentityMap<Key, Value>
         Iterator<Entry> iterator()
             {
             return empty
-                    ? new EmptyIterator<Entry>()
+                    ? Entry.as(Type<Entry>).emptyIterator
                     : new EntryIterator(storage.entries.iterator());
             }
 

@@ -107,7 +107,7 @@ const EmptyIterator<Element>
         {
         return Result == Element
                 ? this
-                : new EmptyIterator<Result>();
+                : Result.emptyIterator;
         }
 
     @Override
@@ -115,7 +115,7 @@ const EmptyIterator<Element>
         {
         return Result == Element
                 ? this
-                : new EmptyIterator<Result>();
+                : Result.emptyIterator;
         }
 
     @Override

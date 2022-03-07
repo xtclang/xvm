@@ -474,6 +474,14 @@ interface Type<DataType, OuterType>
         return createHasher();
         }
 
+    /**
+     * @return an empty iterator of this type
+     */
+    @RO Iterator<DataType> emptyIterator.get()
+        {
+        return createEmptyIterator();
+        }
+
 
     // ----- operators -----------------------------------------------------------------------------
 
@@ -1147,6 +1155,15 @@ interface Type<DataType, OuterType>
                 }
             }
         return False;
+        }
+
+    /**
+     * The implementation of [emptyIterator.get()].
+     */
+    protected Iterator<DataType> createEmptyIterator()
+        {
+        Type!<> typeActual = this.DataType;
+        return new iterators.EmptyIterator<typeActual.DataType>().as(Iterator<DataType>);
         }
     }
 

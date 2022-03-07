@@ -460,35 +460,8 @@ class SkiplistMap<Key extends Orderable, Value>
         Iterator<Element> iterator()
             {
             return empty
-                    ? emptyIterator
+                    ? Element.emptyIterator
                     : new IteratorImpl();
-
-            private @Lazy Iterator<Element> emptyIterator.calc()
-                {
-                assert empty;
-                static class EmptyIterator<Element>
-                        implements Iterator<Element>
-                    {
-                    @Override
-                    conditional Element next()
-                        {
-                        return False;
-                        }
-
-                    @Override
-                    Boolean knownDistinct()
-                        {
-                        return True;
-                        }
-
-                    @Override
-                    conditional Int knownSize()
-                        {
-                        return True, 0;
-                        }
-                    }
-                return new EmptyIterator<Element>().makeImmutable();
-                }
             }
 
         /**
