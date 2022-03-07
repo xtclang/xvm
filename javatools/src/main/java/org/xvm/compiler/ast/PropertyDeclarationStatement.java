@@ -69,10 +69,10 @@ public class PropertyDeclarationStatement
         TypeExpression typeNext = type;
         while (typeNext.isIntroductoryType())
             {
-            if (typeNext instanceof AnnotatedTypeExpression)
+            if (typeNext instanceof AnnotatedTypeExpression typeAnno)
                 {
                 // remove the annotation from the type chain, and add it to the list of annotations
-                AnnotationExpression anno = ((AnnotatedTypeExpression) type).getAnnotation();
+                AnnotationExpression anno = typeAnno.getAnnotation();
                 anno.setParent(this);
                 if (annotations == null || annotations.isEmpty())
                     {
@@ -468,17 +468,17 @@ public class PropertyDeclarationStatement
                         // function, e.g. "function Int(Int) prop = n -> n;" and a more complicated
                         // scenario being a MapConstant that contains such a function
                         Set<MethodConstant> setMethods = new HashSet<>();
-                        if (constValue instanceof MethodConstant)
+                        if (constValue instanceof MethodConstant idMethod)
                             {
-                            setMethods.add((MethodConstant) constValue);
+                            setMethods.add(idMethod);
                             }
                         else
                             {
                             constValue.forEachUnderlying(c ->
                                 {
-                                if (c instanceof MethodConstant)
+                                if (c instanceof MethodConstant idMethod)
                                     {
-                                    setMethods.add((MethodConstant) c);
+                                    setMethods.add(idMethod);
                                     }
                                 });
                             }

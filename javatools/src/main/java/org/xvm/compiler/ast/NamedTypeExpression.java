@@ -279,10 +279,9 @@ public class NamedTypeExpression
                 return true;
                 }
 
-            if (parent instanceof AnnotatedTypeExpression &&
-                    type == ((AnnotatedTypeExpression) parent).type)
+            if (parent instanceof AnnotatedTypeExpression exprAnno && type == exprAnno.type)
                 {
-                type = (TypeExpression) parent;
+                type = exprAnno;
                 }
 
             parent = parent.getParent();
@@ -301,13 +300,13 @@ public class NamedTypeExpression
                 {
                 log(errs, Severity.ERROR, Compiler.AUTO_NARROWING_ILLEGAL);
                 }
-            else if (constId instanceof ClassConstant) // isAutoNarrowingAllowed()
+            else if (constId instanceof ClassConstant idClz) // isAutoNarrowingAllowed()
                 {
                 ClassStructure clzThis = getComponent().getContainingClass();
                 if (clzThis != null && clzThis.getIdentityConstant().getFormat() == Format.Class)
                     {
                     return ((ClassConstant) clzThis.getIdentityConstant()).
-                            calculateAutoNarrowingConstant((ClassConstant) constId);
+                            calculateAutoNarrowingConstant(idClz);
                     }
                 }
             }
@@ -328,9 +327,9 @@ public class NamedTypeExpression
         int          cNamesThis = listThis == null ? 0 : listThis.size();
         List<String> listNames;
 
-        if (left instanceof NamedTypeExpression)
+        if (left instanceof NamedTypeExpression exprName)
             {
-            listNames = ((NamedTypeExpression) left).collectNames(cNames + cNamesThis);
+            listNames = exprName.collectNames(cNames + cNamesThis);
             }
         else
             {
@@ -412,7 +411,7 @@ public class NamedTypeExpression
         Access               access     = getExplicitAccess();
         List<TypeExpression> listParams = paramTypes;
 
-        if (constId instanceof TypeConstant)
+        if (constId instanceof TypeConstant type)
             {
             // access needs to be null
             if (access != null)
@@ -426,7 +425,7 @@ public class NamedTypeExpression
                 throw new IllegalStateException("log error: type params unexpected");
                 }
 
-            return (TypeConstant) constId;
+            return type;
             }
 
         // constId has been already "auto-narrowed" by resolveNames()
@@ -987,10 +986,10 @@ public class NamedTypeExpression
                             // transform Type's typedefs, for example:
                             //      Element.Comparer => Type<Element>.Comparer
                             Constant idLeft = m_resolver.getBaseConstant();
-                            if (idLeft instanceof PropertyConstant)
+                            if (idLeft instanceof PropertyConstant idProp)
                                 {
                                 typeRef = typeRef.resolveGenerics(pool,
-                                        ((PropertyConstant) idLeft).getFormalType().getType());
+                                        idProp.getFormalType().getType());
                                 }
                             else if (idLeft instanceof TypeParameterConstant)
                                 {

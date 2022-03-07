@@ -84,9 +84,9 @@ public class SwitchExpression
         TypeCollector collector = new TypeCollector(pool());
         for (AstNode node : contents)
             {
-            if (node instanceof Expression)
+            if (node instanceof Expression expr)
                 {
-                collector.add(((Expression) node).getImplicitTypes(ctx));
+                collector.add(expr.getImplicitTypes(ctx));
                 }
             }
         return collector.inferMulti(null);
@@ -98,9 +98,9 @@ public class SwitchExpression
         TypeFit fit = TypeFit.Fit;
         for (AstNode node : contents)
             {
-            if (node instanceof Expression)
+            if (node instanceof Expression expr)
                 {
-                fit = fit.combineWith(((Expression) node).testFitMulti(ctx, atypeRequired, errs));
+                fit = fit.combineWith(expr.testFitMulti(ctx, atypeRequired, errs));
                 if (!fit.isFit())
                     {
                     return fit;
@@ -148,14 +148,14 @@ public class SwitchExpression
         for (int iNode = 0, cNodes = listNodes.size(); iNode < cNodes; ++iNode)
             {
             AstNode node = listNodes.get(iNode);
-            if (node instanceof CaseStatement)
+            if (node instanceof CaseStatement stmtCase)
                 {
                 if (fInCase)
                     {
                     ctxCase = ctxCase.enterOr();
                     }
 
-                fValid &= mgr.validateCase(ctxCase, (CaseStatement) node, errs);
+                fValid &= mgr.validateCase(ctxCase, stmtCase, errs);
 
                 if (fInCase)
                     {
@@ -306,9 +306,9 @@ public class SwitchExpression
         for (int i = 0; i < cNodes; ++i)
             {
             AstNode node = aNodes.get(i);
-            if (node instanceof CaseStatement)
+            if (node instanceof CaseStatement stmtCase)
                 {
-                labelCur = ((CaseStatement) node).getLabel();
+                labelCur = stmtCase.getLabel();
                 }
             else
                 {

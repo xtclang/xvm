@@ -137,7 +137,7 @@ public class SwitchStatement
         for (int i = 0; i < cStmts; ++i)
             {
             Statement stmt = listStmts.get(i);
-            if (stmt instanceof CaseStatement)
+            if (stmt instanceof CaseStatement stmtCase)
                 {
                 if (ctxBlock != null)
                     {
@@ -161,7 +161,7 @@ public class SwitchStatement
                     m_listGroups.add(group);
                     }
 
-                fValid &= mgr.validateCase(ctx, (CaseStatement) stmt, errs);
+                fValid &= mgr.validateCase(ctx, stmtCase, errs);
                 }
             else
                 {

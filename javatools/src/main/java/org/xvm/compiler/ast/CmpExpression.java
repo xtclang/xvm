@@ -273,32 +273,32 @@ public class CmpExpression
                 break CheckInference;
                 }
 
-            if (expr1New instanceof NameExpression)
+            if (expr1New instanceof NameExpression expr1Name)
                 {
                 if (type2.equals(pool().typeNull()))
                     {
                     m_fArg2Null = true;
-                    fValid      = checkNullComparison(ctx, (NameExpression) expr1New, errs);
+                    fValid      = checkNullComparison(ctx, expr1Name, errs);
                     break CheckInference;
                     }
                 if (type2.isTypeOfType())
                     {
-                    checkFormalType(ctx, (NameExpression) expr1New, type2);
+                    checkFormalType(ctx, expr1Name, type2);
                     break CheckInference;
                     }
                 }
 
-            if (expr2New instanceof NameExpression)
+            if (expr2New instanceof NameExpression expr2Name)
                 {
                 if (type1.equals(pool().typeNull()))
                     {
                     m_fArg1Null = true;
-                    fValid      = checkNullComparison(ctx, (NameExpression) expr2New, errs);
+                    fValid      = checkNullComparison(ctx, expr2Name, errs);
                     break CheckInference;
                     }
                 if (type1.isTypeOfType())
                     {
-                    checkFormalType(ctx, (NameExpression) expr2New, type1);
+                    checkFormalType(ctx, expr2Name, type1);
                     break CheckInference;
                     }
                 }
