@@ -88,12 +88,12 @@ public class PropertyInfo
         {
         assert that != null && errs != null;
 
-        PropertyConstant constId = getIdentity();
-        assert constId.getName().equals(that.getName());
+        PropertyConstant idProp = getIdentity();
+        assert idProp.getName().equals(that.getName());
 
         if (this.isFormalType() ^ that.isFormalType())
             {
-            constId.log(errs, Severity.ERROR, VE_PROPERTY_ILLEGAL,
+            idProp.log(errs, Severity.ERROR, VE_PROPERTY_ILLEGAL,
                     that.getIdentity().getValueString());
             return this;
             }
@@ -101,7 +101,7 @@ public class PropertyInfo
         // it is illegal to combine anything with a constant
         if (this.isConstant() || that.isConstant())
             {
-            constId.log(errs, Severity.ERROR, VE_CONST_INCOMPATIBLE,
+            idProp.log(errs, Severity.ERROR, VE_CONST_INCOMPATIBLE,
                     that.getIdentity().getValueString());
             return this;
             }
@@ -113,7 +113,7 @@ public class PropertyInfo
         boolean      fAllowWidening = fMixin || !fSelf;
         if (!(typeThat.isA(typeThis) || fAllowWidening && typeThis.isA(typeThat)))
             {
-            constId.log(errs, Severity.ERROR, VE_PROPERTY_TYPES_INCOMPATIBLE,
+            idProp.log(errs, Severity.ERROR, VE_PROPERTY_TYPES_INCOMPATIBLE,
                     that.getIdentity().getPathString(),
                     typeThis.getValueString(), typeThat.getValueString());
             return this;
@@ -188,7 +188,7 @@ public class PropertyInfo
             if (!bodyAdd.isExplicitOverride() && !this.containsBody(bodyAdd.getIdentity())
                     && !bodyAdd.isSynthetic()) // synthetic might not be marked
                 {
-                constId.log(errs, Severity.ERROR, VE_PROPERTY_OVERRIDE_REQUIRED,
+                idProp.log(errs, Severity.ERROR, VE_PROPERTY_OVERRIDE_REQUIRED,
                         bodyAdd.getIdentity().getValueString(),
                         aBase[0].getIdentity().getValueString());
                 }
@@ -215,7 +215,7 @@ public class PropertyInfo
                         && !bodyAdd.isSynthetic() // synthetic might not be marked
                         && !fMixin)
                     {
-                    constId.log(errs, Severity.ERROR, VE_PROPERTY_TYPES_INCOMPATIBLE,
+                    idProp.log(errs, Severity.ERROR, VE_PROPERTY_TYPES_INCOMPATIBLE,
                             bodyAdd.getIdentity().getValueString(),
                             typeAdd.getValueString(),
                             typeResult.getValueString());
@@ -268,7 +268,7 @@ public class PropertyInfo
                         TypeConstant typeAnnoBase = aAnnoBase[iAnnoBase].getAnnotationType();
                         if (typeAnnoAdd.equals(typeAnnoBase))
                             {
-                            constId.log(errs, Severity.WARNING, VE_DUP_ANNOTATION_IGNORED,
+                            idProp.log(errs, Severity.WARNING, VE_DUP_ANNOTATION_IGNORED,
                                     that.getIdentity().getParentConstant().getValueString(),
                                     getName(),
                                     annoAdd.getAnnotationClass().getValueString());
@@ -277,7 +277,7 @@ public class PropertyInfo
 
                         if (typeAnnoAdd.isA(typeAnnoBase))
                             {
-                            constId.log(errs, Severity.WARNING, VE_SUP_ANNOTATION_IGNORED,
+                            idProp.log(errs, Severity.WARNING, VE_SUP_ANNOTATION_IGNORED,
                                     that.getIdentity().getParentConstant().getValueString(),
                                     getName(),
                                     typeAnnoAdd.getValueString(),
@@ -299,7 +299,7 @@ public class PropertyInfo
         // the property extension cannot re-introduce a Var if it has been suppressed by the base
         if (this.isSetterUnreachable() && that.isVar())
             {
-            constId.log(errs, Severity.ERROR, VE_PROPERTY_SET_PRIVATE_SUPER,
+            idProp.log(errs, Severity.ERROR, VE_PROPERTY_SET_PRIVATE_SUPER,
                     that.getIdentity().getParentConstant().getValueString(),
                     getName());
             }
@@ -311,7 +311,7 @@ public class PropertyInfo
                 (accessThisVar != null && accessThatVar != null &&
                         accessThatVar.isLessAccessibleThan(accessThisVar)))
             {
-            constId.log(errs, Severity.ERROR, VE_PROPERTY_ACCESS_LESSENED,
+            idProp.log(errs, Severity.ERROR, VE_PROPERTY_ACCESS_LESSENED,
                     that.getIdentity().getParentConstant().getValueString(),
                     getName());
             }
@@ -382,14 +382,14 @@ public class PropertyInfo
     /**
      * Retain only property bodies that originate from the identities specified in the passed sets.
      *
-     * @param constId     the identity of the property for this operation
+     * @param idProp      the identity of the property for this operation
      * @param setClass    the set of identities that call chain bodies can come from
      * @param setClass    the set of identities that call chain bodies can come from
      * @param setDefault  the set of identities that default bodies can come from
      *
      * @return the resulting PropertyInfo, or null if nothing has been retained
      */
-    public PropertyInfo retainOnly(PropertyConstant      constId,
+    public PropertyInfo retainOnly(PropertyConstant      idProp,
                                    Set<IdentityConstant> setClass,
                                    Set<IdentityConstant> setDefault)
         {
@@ -398,7 +398,7 @@ public class PropertyInfo
         for (int i = 0, c = aBody.length; i < c; ++i)
             {
             PropertyBody     body     = aBody[i];
-            IdentityConstant constClz = constId.getClassIdentity();
+            IdentityConstant constClz = idProp.getClassIdentity();
             boolean fRetain;
             switch (body.getImplementation())
                 {
@@ -594,22 +594,22 @@ public class PropertyInfo
      * from multiple contributions to the type. Each contribution would use a different
      * PropertyConstant to identify the property.
      *
-     * @param constId  a PropertyConstant that may or may not identify this property
+     * @param idProp  a PropertyConstant that may or may not identify this property
      *
      * @return true iff the specified PropertyConstant refers to this PropertyInfo
      */
-    public boolean isIdentityValid(PropertyConstant constId)
+    public boolean isIdentityValid(PropertyConstant idProp)
         {
-        if (constId.getName().equals(this.getName()))
+        if (idProp.getName().equals(this.getName()))
             {
-            if (containsBody(constId))
+            if (containsBody(idProp))
                 {
                 return true;
                 }
 
             // there is a possibility that the property has been "duck-typeable", which is only
             // allowable for interfaces
-            Component parent = constId.getNamespace().getComponent();
+            Component parent = idProp.getNamespace().getComponent();
             return parent != null && parent.getFormat() == Format.INTERFACE;
             }
 
