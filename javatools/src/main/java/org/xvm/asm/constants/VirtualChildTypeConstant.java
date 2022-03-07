@@ -313,7 +313,7 @@ public class VirtualChildTypeConstant
             {
             // this is a "normalization" call
             TypeConstant typeParent  = getParentType();
-            TypeConstant typeParentN = typeParent.adoptParameters(pool, atypeParams);
+            TypeConstant typeParentN = typeParent.normalizeParameters();
             if (typeParentN != typeParent)
                 {
                 typeBase = cloneSingle(pool, typeParentN);
