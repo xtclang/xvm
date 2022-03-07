@@ -251,12 +251,12 @@ class HasherMap<Key, Value>
          * The hash code represented by this HashBucket. (If the HashBucket represents more than one
          * hash code, then accessing this property will throw an exception.)
          */
-        @RO @Abstract Int hash; // TODO GG: should not require @Abstract here
+        @RO Int hash;
 
         /**
          * How many key/value pairs are within this HashBucket.
          */
-        @RO @Abstract Int size;
+        @RO Int size;
 
         /**
          * Obtain n-th key of this node, iff this is not a multi-hash node.

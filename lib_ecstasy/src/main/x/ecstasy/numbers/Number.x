@@ -109,7 +109,7 @@
     /**
      * The Sign of the number.
      */
-    @Abstract @RO Signum sign;
+    @RO Signum sign;
 
     /**
      * The magnitude of this number (its distance from zero), which may use a different Number type

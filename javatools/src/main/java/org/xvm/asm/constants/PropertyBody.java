@@ -383,7 +383,7 @@ public class PropertyBody
         return switch (getImplementation())
             {
             case Delegating, Native -> false;
-            case Explicit           -> isExplicitAbstract();
+            case Explicit           -> isExplicitAbstract() || isImplicitAbstract();
             default                 -> true;
             };
         }
@@ -405,6 +405,18 @@ public class PropertyBody
         PropertyStructure prop = m_structProp;
         return prop != null && m_impl != Implementation.Implicit
                 && TypeInfo.containsAnnotation(prop.getPropertyAnnotations(), "Abstract");
+        }
+
+    /**
+     * @return true if the property is implicitly abstract (a non-injected read-only property
+     *         without a getter on an abstract class)
+     */
+    public boolean isImplicitAbstract()
+        {
+        PropertyStructure prop = m_structProp;
+        return prop != null && m_impl != Implementation.Implicit
+                && !isInjected() && !hasGetter()
+                && isExplicitReadOnly() && prop.getContainingClass().isExplicitlyAbstract();
         }
 
     /**

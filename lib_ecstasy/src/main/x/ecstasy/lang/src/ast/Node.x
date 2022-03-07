@@ -11,12 +11,12 @@ import io.TextPosition;
     /**
      * The position of the node in the source code.
      */
-    @Abstract @RO TextPosition start;
+    @RO TextPosition start;
 
     /**
      * The ending position (exclusive) of the node in the source code.
      */
-    @Abstract @RO TextPosition end;
+    @RO TextPosition end;
 
     /**
      * Create a dot-delimited string from an array of tokens.

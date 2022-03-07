@@ -125,13 +125,13 @@
      * True iff the floating point value is positive infinity or negative infinity. Floating point
      * values can be infinite as the result of math overflow, for example.
      */
-    @Abstract @RO Boolean infinity;
+    @RO Boolean infinity;
 
     /**
      * True iff the floating point value is a `NaN` (_Not-a-Number_). Floating point values can be
      * `NaN` as the result of math underflow, for example.
      */
-    @Abstract @RO Boolean NaN;
+    @RO Boolean NaN;
 
     /**
      * The radix of the significand.
@@ -139,7 +139,7 @@
      * The IEEE 754 defines the _radix_ as _the base for the representation of binary or
      * decimal floating-point numbers, two or ten_.
      */
-    @Abstract @RO Int radix;
+    @RO Int radix;
 
     /**
      * The precision, in "digits" (of the `radix`) of the floating point number.
@@ -148,7 +148,7 @@
      * as _the maximum number p of significant digits that can be represented in a format, or the
      * number of digits to that a result is rounded_.
      */
-    @Abstract @RO Int precision;
+    @RO Int precision;
 
     /**
      * The maximum exponent value for the floating point format of this number.
@@ -159,7 +159,7 @@
      * The value of the maximum exponent is specified as an `IntNumber` due to the potential for it
      * being quite large for certain floating point types.
      */
-    @Abstract @RO IntNumber emax;
+    @RO IntNumber emax;
 
     /**
      * The minimum exponent value for the floating point format of this number.
@@ -170,7 +170,7 @@
      * The value of the minimum exponent is specified as an `IntNumber` due to the potential for its
      * magnitude being quite large for certain floating point types.
      */
-    @Abstract @RO IntNumber emin;
+    @RO IntNumber emin;
 
     /**
      * The exponent bias for the floating point format of this number.
@@ -183,7 +183,7 @@
      * The value of the exponent bias is specified as an `IntNumber` due to the potential for it
      * being quite large for certain floating point types.
      */
-    @Abstract @RO IntNumber bias;
+    @RO IntNumber bias;
 
     /**
      * The size, in bits, of the significand data in the floating point number.
@@ -194,7 +194,7 @@
      * the leading digit. In these formats, the biased exponent or combination field encodes or
      * implies the leading significand digit_.
      */
-    @Abstract @RO Int significandBitLength;
+    @RO Int significandBitLength;
 
     /**
      * The size, in bits, of the exponent data.
@@ -202,7 +202,7 @@
      * The "exponent field width in bits" is defined by IEEE 754; in the standard, it is
      * referred to as _w_.
      */
-    @Abstract @RO Int exponentBitLength;
+    @RO Int exponentBitLength;
 
 
     // ----- floating point operations -------------------------------------------------------------

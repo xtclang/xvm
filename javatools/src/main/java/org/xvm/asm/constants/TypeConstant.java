@@ -4986,7 +4986,11 @@ public abstract class TypeConstant
                             getValueString(), sName);
                     }
 
-                if (fHasRO && !(fHasAbstract || fHasOverride || fHasInject || methodGet != null))
+                 // see PropertyBody#isImplicitAbstract()
+                boolean fAbstractClass = prop.getContainingClass().isExplicitlyAbstract();
+
+                if (fHasRO && !fAbstractClass && !fHasAbstract && !fHasOverride && !fHasInject &&
+                        methodGet == null)
                     {
                     log(errs, Severity.ERROR, VE_PROPERTY_READONLY_NO_SPEC,
                             getValueString(), sName);

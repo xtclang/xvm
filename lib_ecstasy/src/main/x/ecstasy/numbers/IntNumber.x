@@ -39,13 +39,13 @@
      * If any bits are set in this integer, then return an integer with only the most significant
      * (left-most) of those bits set, otherwise return zero.
      */
-    @Abstract @RO IntNumber leftmostBit;
+    @RO IntNumber leftmostBit;
 
     /**
      * If any bits are set in this integer, then return an integer with only the least significant
      * (right-most) of those bits set, otherwise return zero.
      */
-    @Abstract @RO IntNumber rightmostBit;
+    @RO IntNumber rightmostBit;
 
     /**
      * The number of bits that are zero preceding the most significant (left-most) `1` bit.

@@ -11,7 +11,7 @@
     /**
      * The location information for the error.
      */
-    @Abstract @RO String location;
+    @RO String location;
 
     /**
      * The severity of the error information.
@@ -32,7 +32,7 @@
      * The unformatted error message for the error code. (This property encapsulates the resource
      * resolution that provides an unformatted message for an error code.)
      */
-    @Abstract @RO String unformattedMessage;
+    @RO String unformattedMessage;
 
     /**
      * A formatted error message describing the error code, with the parameters included.
