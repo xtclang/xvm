@@ -334,9 +334,9 @@ public class WhileStatement
                                 conds.set(i, condNew);
                                 }
 
-                            if (condNew instanceof Expression && ((Expression) condNew).isConstant())
+                            if (condNew instanceof Expression exprCond && exprCond.isConstant())
                                 {
-                                if (((Expression) condNew).isConstantFalse())
+                                if (exprCond.isConstantFalse())
                                     {
                                     fAlwaysTrue = false;
 
@@ -519,16 +519,16 @@ public class WhileStatement
         boolean fAlwaysFalse = true;
         for (AstNode cond : conds)
             {
-            if (cond instanceof Expression && ((Expression) cond).isConstant())
+            if (cond instanceof Expression exprCond && exprCond.isConstant())
                 {
-                if (((Expression) cond).isConstantFalse())
+                if (exprCond.isConstantFalse())
                     {
                     fAlwaysTrue = false;
                     break;
                     }
                 else
                     {
-                    assert ((Expression) cond).isConstantTrue();
+                    assert exprCond.isConstantTrue();
                     fAlwaysFalse = false;
                     }
                 }
@@ -667,7 +667,7 @@ public class WhileStatement
         //   EXIT                   ; omitted if no declarations
         //   Break:
         boolean fHasDecls = conds.stream().anyMatch(cond ->
-                cond instanceof AssignmentStatement && ((AssignmentStatement) cond).hasDeclarations());
+                cond instanceof AssignmentStatement stmtAsn && stmtAsn.hasDeclarations());
         boolean fOwnScope = fHasDecls || fHasLabelVars;
         if (fOwnScope)
             {
