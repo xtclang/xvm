@@ -227,7 +227,10 @@ public abstract class Op
             opPrefix = aop[iPC];
             opActual = opPrefix.ensureOp();
 
-            assert opActual != this;
+            if (opActual == this)
+                {
+                // REVIEW: this indicates a probability of an infinite loop; should we report it?
+                }
 
             if (opActual instanceof Jump opJump)
                 {

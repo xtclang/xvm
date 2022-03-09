@@ -9,42 +9,23 @@ module TestSimple
 
     void run()
         {
-        Test t = new Test(1);
-        console.println($"t.value2={t.value2} t.desc={t.desc}");
-
-        t.test();
         }
 
-    class Test(Int value1)
+    void test()
         {
-        @Lazy Int value2.calc()
+        Int i = 0;
+        while (True)
             {
-            return this.Test.value1;
-            }
-
-        void test()
-            {
-            Child c = new Child();
-            console.println($"c.desc() {c.desc()}");
-            }
-
-        @Lazy String desc.calc()
-            {
-            Type t = this.&Test.actualType;
-            return t.toString();
-            }
-
-        class Child
-            {
-            @Lazy Int value3.calc()
+            if (i >= j) // this line used to cause an assertion during code analysis
                 {
-                return this.Test.value2 + 40;
-                }
-
-            String desc()
-                {
-                return " Child " + value3;
+                break;
                 }
             }
+        console.println(i);
+        }
+
+    Int j.get()
+        {
+        return 0;
         }
     }
