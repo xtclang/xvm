@@ -7,25 +7,28 @@ module TestSimple
     import ecstasy.collections.*;
     import collections.*;
 
-    void run()
+    void run( )
         {
         }
 
-    void test()
+    void test(String? error)
         {
-        Int i = 0;
-        while (True)
+        if (error != Null)
             {
-            if (i >= j) // this line used to cause an assertion during code analysis
+            return;
+            }
+
+        Int i = 0;
+        while (i++ < 2)
+            {
+            if (i == 0)
                 {
-                break;
+                error = "hello";
+                }
+            else
+                {
+                error ?:= "Illegal"; // this used to fail to compile
                 }
             }
-        console.println(i);
-        }
-
-    Int j.get()
-        {
-        return 0;
         }
     }

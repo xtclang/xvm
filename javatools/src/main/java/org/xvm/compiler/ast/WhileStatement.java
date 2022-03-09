@@ -5,11 +5,13 @@ import java.lang.reflect.Field;
 
 import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -225,7 +227,10 @@ public class WhileStatement
         // AST nodes nested further down the tree, including e.g. lambdas that may make different
         // capture decisions based on that data
         Context                 ctxOrig    = ctx;
-        Map<String, Assignment> mapLoopAsn = ctxOrig.prepareJump(ctxOrig);
+        Map<String, Assignment> mapLoopAsn = new HashMap<>();
+        Map<String, Argument>   mapLoopArg = new HashMap<>();
+
+        ctxOrig.prepareJump(ctxOrig, mapLoopAsn, mapLoopArg);
 
         // the validated conditions will end up in this temporary array; each will be a clone of the
         // original in "conds"
@@ -262,7 +267,7 @@ public class WhileStatement
             // we use a potentially unnecessary context here as a place to jam in any assumptions
             // that we learned on a previous trial run through the loop
             ctx = ctxOrig.enter();
-            ctx.merge(mapLoopAsn);
+            ctx.merge(mapLoopAsn, mapLoopArg);
             int cExits  = 1;
 
             // the current context and error list are required by getLabelVar() if, in the process
@@ -278,22 +283,21 @@ public class WhileStatement
                 ++cExits;
                 }
 
-            if (!fDoWhile)
-                {
-                // the test expression plays a role of an "if", since the block cannot be entered
-                // if this expression evaluates to "false"
-                ctx = ctx.enterIf();
-                }
-
             // we have two parts to validate, the conditions and the block. unfortunately, these
             // come in two different orders, either the conditions first (for a while loop) followed
             // by the block, or the block first (for a do..while) followed by the conditions.
-            boolean fAlwaysTrue = true;
+            boolean fAlwaysTrue = false;
             for (int iPart = 1; iPart <= 2; ++iPart)
                 {
                 if ((iPart == 2) == fDoWhile)
                     {
-                    // validate the condition(s)
+                    // validate the condition(s); note that in the case of "while-do", the test
+                    // expression plays a role of an "if", since the block cannot be entered
+                    // if this expression evaluates to "false"; in the case of "do-while", it
+                    // is *only* used to calculate the impact of the "while"
+                    ctx = ctx.enterIf();
+                    ++cExits;
+
                     for (int i = 0; i < cConds; ++i)
                         {
                         AstNode condOld = conds.get(i);
@@ -338,8 +342,6 @@ public class WhileStatement
                                 {
                                 if (exprCond.isConstantFalse())
                                     {
-                                    fAlwaysTrue = false;
-
                                     if (fDoWhile)
                                         {
                                         // do..while(False) does not loop
@@ -361,39 +363,34 @@ public class WhileStatement
                                 else
                                     {
                                     assert ((Expression) condNew).isConstantTrue();
+                                    fAlwaysTrue = true;
                                     }
-                                }
-                            else
-                                {
-                                fAlwaysTrue = false;
                                 }
                             }
                         }
+
+                    // a "while(cond) {...}" loop only transfers the "when true" branch of
+                    // assignment from the condition to the body of the loop
+                    if (fAlwaysTrue)
+                        {
+                        if (block.getStatements().isEmpty())
+                            {
+                            log(errs, Severity.ERROR, Compiler.INFINITE_LOOP);
+                            errs.merge();
+                            return null;
+                            }
+                        ctx = ctx.enterInfiniteLoop();
+                        }
+                    else
+                        {
+                        ctx = ctx.enterFork(true);
+                        }
+                    ++cExits;
                     }
                 else // validate the block
                     {
                     // remember whether the block was even reachable
                     boolean fReachable = ctx.isReachable();
-
-                    // a "while(cond) {...}" loop only transfers the "when true" branch of
-                    // assignment from the condition to the body of the loop
-                    if (!fDoWhile)
-                        {
-                        if (fAlwaysTrue)
-                            {
-                            if (block.getStatements().isEmpty())
-                                {
-                                log(errs, Severity.ERROR, Compiler.INFINITE_LOOP);
-                                errs.merge();
-                                return null;
-                                }
-                            ctx = ctx.enterInfiniteLoop();
-                            }
-                        else
-                            {
-                            ctx = ctx.enterFork(true);
-                            }
-                        }
 
                     // validate the block
                     StatementBlock blockNew = (StatementBlock) block.validate(ctx, errs);
@@ -404,11 +401,6 @@ public class WhileStatement
                     else
                         {
                         block = blockNew;
-                        }
-
-                    if (!fDoWhile)
-                        {
-                        ctx = ctx.exit();  // "enterFork()"
                         }
 
                     // apply the assignment contributions from the various continue statements, if any
@@ -443,16 +435,15 @@ public class WhileStatement
                     }
                 }
 
-            if (!fDoWhile)
-                {
-                ctx = ctx.exit(); // "enterIf()"
-                }
-
             // see if there are any assignments that would change our starting assumptions
-            Map<String, Assignment> mapAfter = ctx.prepareJump(ctxOrig);
-            if (!mapAfter.equals(mapLoopAsn))
+            Map<String, Assignment> mapAsnAfter = new HashMap<>();
+            Map<String, Argument>   mapArgAfter = new HashMap<>();
+            ctx.prepareJump(ctxOrig, mapAsnAfter, mapArgAfter);
+
+            if (!mapAsnAfter.equals(mapLoopAsn))
                 {
-                mapLoopAsn = mapAfter;
+                mapLoopAsn = mapAsnAfter;
+                mapLoopArg = mapArgAfter;
                 fRepeat    = true;
                 }
 
@@ -486,11 +477,12 @@ public class WhileStatement
                 m_ctxLabelVars  = null;
                 m_errsLabelVars = null;
 
-                // unwind any local contexts
+                // unwind local contexts
                 while (cExits-- > 0)
                     {
                     ctx = ctx.exit();
                     }
+                assert ctx == ctxOrig;
 
                 if (fAlwaysTrue)
                     {

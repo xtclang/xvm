@@ -4,7 +4,6 @@ package org.xvm.compiler.ast;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -400,31 +399,47 @@ public class Context
             return Collections.emptyMap();
             }
 
-        // begin with a snap-shot of the current modifications
         Map<String, Assignment> mapMods = new HashMap<>();
-        boolean                 fDemux  = false;
+        prepareJump(ctxDest, mapMods, null);
+        return mapMods;
+        }
 
+    /**
+     * Determine the effects of an abrupt exit from this context to the specified context.
+     *
+     * @param ctxDest     the context (somewhere in the context tree at or above this context) that
+     *                    is being transitioned to
+     * @param mapAsnMods  the map to put the variable assignment contributions that need to be made
+     *                    if the code exits abruptly at this point and
+     *                    breaks/continues/short-circuits to the specified context
+     * @param mapArgMods  the map to put the variable argument contributions that need to be made
+     */
+    public void prepareJump(Context ctxDest, Map<String, Assignment> mapAsnMods,
+                            Map<String, Argument> mapArgMods)
+        {
+        // don't pollute a reachable destination with assignments from an unreachable point in code
+        if (!this.isReachable() && ctxDest.isReachable())
+            {
+            return;
+            }
+
+        // begin with a snap-shot of the current modifications
+        boolean fDemux   = false;
         Context ctxInner = this;
         while (ctxInner != ctxDest)
             {
             // calculate impact of the already-accumulated assignment deltas across this context
             // boundary
-            for (Iterator<String> iter = mapMods.keySet().iterator(); iter.hasNext(); )
-                {
-                String sName = iter.next();
-                if (ctxInner.isVarDeclaredInThisScope(sName))
-                    {
-                    // that variable doesn't exist where we're going
-                    iter.remove();
-                    }
-                }
 
-            // collect all other pending modifications that will be promoted to the outer context
+            // 1) remove variables that don't exist where we're going
+            mapAsnMods.keySet().removeIf(sName -> ctxDest.getVar(sName) == null);
+
+            // 2) collect all other pending modifications that will be promoted to the outer context
             for (String sName : ctxInner.getDefiniteAssignments().keySet())
                 {
-                if (!mapMods.containsKey(sName) && !ctxInner.isVarDeclaredInThisScope(sName))
+                if (!mapAsnMods.containsKey(sName) && !ctxInner.isVarDeclaredInThisScope(sName))
                     {
-                    mapMods.put(sName, getVarAssignment(sName));
+                    mapAsnMods.put(sName, getVarAssignment(sName));
                     }
                 }
 
@@ -434,38 +449,68 @@ public class Context
 
         if (fDemux)
             {
-            for (Entry<String, Assignment> entry : mapMods.entrySet())
+            for (Entry<String, Assignment> entry : mapAsnMods.entrySet())
                 {
                 entry.setValue(entry.getValue().demux());
                 }
             }
 
-        return mapMods;
+        if (mapArgMods != null)
+            {
+            for (String sName : mapAsnMods.keySet())
+                {
+                mapArgMods.put(sName, getVar(sName));
+                }
+            }
         }
 
     /**
      * Merge a previously prepared set of variable assignment information into this context.
      *
-     * @param mapAdd  a result from a previous call to {@link #prepareJump}
+     * @param mapAdd  a map of assignments from a previous call to {@link #prepareJump}
      */
     public void merge(Map<String, Assignment> mapAdd)
         {
-        Map<String, Assignment> mapAsn = ensureDefiniteAssignments();
-        if (isReachable())
+        merge(mapAdd, Collections.EMPTY_MAP);
+        }
+
+    /**
+     * Merge a previously prepared set of variable assignment information into this context.
+     *
+     * @param mapAddAsn  a map of assignments from a previous call to {@link #prepareJump}
+     * @param mapAddArg  a map of arguments from a previous call to {@link #prepareJump}
+     */
+    public void merge(Map<String, Assignment> mapAddAsn, Map<String, Argument> mapAddArg)
+        {
+        Map<String, Assignment> mapAsn     = ensureDefiniteAssignments();
+        boolean                 fCompletes = isReachable();
+
+        for (Entry<String, Assignment> entry : mapAddAsn.entrySet())
             {
-            for (Entry<String, Assignment> entry : mapAdd.entrySet())
+            String     sName  = entry.getKey();
+            Assignment asnNew = entry.getValue();
+
+            if (fCompletes)
                 {
-                String     sName  = entry.getKey();
-                Assignment asnNew = entry.getValue();
-                Assignment asnOld = getVarAssignment(sName);
-                mapAsn.put(sName, asnOld.join(asnNew));
+                asnNew = getVarAssignment(sName).join(asnNew);
+                }
+            mapAsn.put(sName, asnNew);
+
+            Register regNew = (Register) mapAddArg.get(sName);
+            if (regNew != null)
+                {
+                Argument argOld = getVar(sName);
+                assert argOld != null;
+
+                if (!argOld.equals(regNew) && argOld.getType().isA(regNew.getType()))
+                    {
+                    // the new type is wider - take it instead of the old narrower one
+                    assert !regNew.isInPlace();
+                    ensureNameMap().put(sName, regNew);
+                    }
                 }
             }
-        else
-            {
-            mapAsn.putAll(mapAdd);
-            setReachable(true);
-            }
+        setReachable(true);
         }
 
     /**
@@ -1995,7 +2040,11 @@ public class Context
                             asnCurrent = fWhenTrue ? asnCurrent.whenFalse() : asnCurrent.whenTrue();
                             asnCurrent = asnCurrent.join(asnPromote);
                             }
-                        mapAssign.put(sName, asnCurrent);
+
+                        if (!asnCurrent.equals(getVarAssignment(sName)))
+                            {
+                            mapAssign.put(sName, asnCurrent);
+                            }
                         }
                     }
                 }
