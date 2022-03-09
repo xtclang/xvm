@@ -69,7 +69,7 @@ public class ForEachStatement
 
     public ForEachStatement(Token keyword, AssignmentStatement cond, StatementBlock block)
         {
-        super(keyword, new ArrayList<>(Collections.singletonList(cond)));
+        super(keyword, Collections.singletonList(cond));
         this.block = block;
         }
 
@@ -948,9 +948,9 @@ public class ForEachStatement
             code.add(new Invoke_0N(regIter, idNext, new Argument[] {regCond, regEntry}));
             code.add(new JumpFalse(regCond, getEndLabel()));
 
-            Assignable[] alval = m_exprLValue.generateAssignables(ctx, code, errs);
+            Assignable[] aLVal = m_exprLValue.generateAssignables(ctx, code, errs);
 
-            Assignable lvalKey  = alval[0];
+            Assignable lvalKey  = aLVal[0];
             boolean    fTempKey = !lvalKey.isLocalArgument();
             Argument   argKey   = fTempKey
                     ? new Register(typeKey, Op.A_STACK)
@@ -962,9 +962,9 @@ public class ForEachStatement
                 lvalKey.assign(argKey, code, errs);
                 }
 
-            if (alval.length == 2)
+            if (aLVal.length == 2)
                 {
-                Assignable lvalVal  = alval[1];
+                Assignable lvalVal  = aLVal[1];
                 boolean    fTempVal = !lvalVal.isLocalArgument();
                 Argument   argVal   = fTempVal
                         ? new Register(typeValue, Op.A_STACK)

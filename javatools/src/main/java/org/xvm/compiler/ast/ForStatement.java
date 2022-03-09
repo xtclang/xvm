@@ -370,15 +370,15 @@ public class ForStatement
                     }
                 }
 
-            if (cond instanceof Expression && ((Expression) cond).isConstant())
+            if (cond instanceof Expression expr && expr.isConstant())
                 {
-                if (((Expression) cond).isConstantFalse())
+                if (expr.isConstantFalse())
                     {
                     fAlwaysTrue = false;
                     }
                 else
                     {
-                    assert ((Expression) cond).isConstantTrue();
+                    assert expr.isConstantTrue();
                     }
                 }
             else
@@ -525,16 +525,16 @@ public class ForStatement
         boolean fAlwaysFalse = !conds.isEmpty(); // no conditions means "true"
         for (AstNode cond : conds)
             {
-            if (cond instanceof Expression && ((Expression) cond).isConstant())
+            if (cond instanceof Expression expr && expr.isConstant())
                 {
-                if (((Expression) cond).isConstantFalse())
+                if (expr.isConstantFalse())
                     {
                     fAlwaysTrue = false;
                     break;
                     }
                 else
                     {
-                    assert ((Expression) cond).isConstantTrue();
+                    assert expr.isConstantTrue();
                     fAlwaysFalse = false;
                     }
                 }
