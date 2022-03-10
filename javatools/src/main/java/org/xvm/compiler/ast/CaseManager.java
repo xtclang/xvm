@@ -266,10 +266,10 @@ public class CaseManager<CookieType>
                         {
                         AstNode nodeLVal = ((AssignmentStatement) nodeNew).getLValue();
 
-                        atype = nodeLVal instanceof VariableDeclarationStatement
-                                    ? new TypeConstant[]{((VariableDeclarationStatement) nodeLVal).getType()}
-                              : nodeLVal instanceof MultipleLValueStatement
-                                    ? ((MultipleLValueStatement) nodeLVal).getTypes()
+                        atype = nodeLVal instanceof VariableDeclarationStatement stmtVarDecl
+                                    ? new TypeConstant[]{stmtVarDecl.getType()}
+                              : nodeLVal instanceof MultipleLValueStatement stmtMulti
+                                    ? stmtMulti.getTypes()
                                     : nodeLVal.getLValueExpression().getTypes();
                         }
                     }
@@ -434,9 +434,9 @@ public class CaseManager<CookieType>
             long           lRange    = 0L;
             int            cFields   = 1;
             TypeConstant[] atypeAlt  = null;
-            if (exprCase instanceof TupleExpression)
+            if (exprCase instanceof TupleExpression exprTuple)
                 {
-                List<Expression> listFields = ((TupleExpression) exprCase).exprs;
+                List<Expression> listFields = exprTuple.exprs;
                 cFields = listFields.size();
                 for (int i = 0; i < cFields; ++i)
                     {
@@ -555,10 +555,10 @@ public class CaseManager<CookieType>
                                     {
                                     // treated as "default:", so ignore
                                     }
-                                else if (constCase instanceof RangeConstant)
+                                else if (constCase instanceof RangeConstant constRange)
                                     {
-                                    incorporateInt(((RangeConstant) constCase).getFirst().getIntValue());
-                                    incorporateInt(((RangeConstant) constCase).getLast().getIntValue());
+                                    incorporateInt(constRange.getFirst().getIntValue());
+                                    incorporateInt(constRange.getLast() .getIntValue());
                                     }
                                 else
                                     {
@@ -611,9 +611,9 @@ public class CaseManager<CookieType>
                 exprType.narrowType(ctx, Branch.Always, typeCase);
                 }
             }
-        else if (constCase instanceof ArrayConstant)
+        else if (constCase instanceof ArrayConstant constArray)
             {
-            Constant[] aConstCase = ((ArrayConstant) constCase).getValue();
+            Constant[] aConstCase = constArray.getValue();
             for (int i = 0, c = 64 - Long.numberOfLeadingZeros(m_lTypeExpr); i < c; i++)
                 {
                 if ((m_lTypeExpr & (1L << i)) != 0)
@@ -693,16 +693,16 @@ public class CaseManager<CookieType>
         else if (m_labelDefault == null && !areAllCasesCovered())
             {
             m_fCompletes = true;
-            if (m_nodeSwitch instanceof Expression)
+            if (m_nodeSwitch instanceof Statement stmtSwitch)
+                {
+                m_labelDefault = stmtSwitch.getEndLabel();
+                }
+            else
                 {
                 // this means that the switch expression would "short circuit" (not result in a value),
                 // which is not allowed
                 m_nodeSwitch.log(errs, Severity.ERROR, Compiler.SWITCH_DEFAULT_REQUIRED);
                 fValid = false;
-                }
-            else
-                {
-                m_labelDefault = ((Statement) m_nodeSwitch).getEndLabel();
                 }
             }
 
@@ -745,10 +745,10 @@ public class CaseManager<CookieType>
                     {
                     Label    label     = aLabelCase[i];
                     Constant constCase = aConstCase[i];
-                    if (constCase instanceof RangeConstant)
+                    if (constCase instanceof RangeConstant constRange)
                         {
-                        int iFirst = ((RangeConstant) constCase).getFirst().getIntValue().sub(m_pintMin).getInt();
-                        int iLast  = ((RangeConstant) constCase).getLast().getIntValue().sub(m_pintMin).getInt();
+                        int iFirst = constRange.getFirst().getIntValue().sub(m_pintMin).getInt();
+                        int iLast  = constRange.getLast().getIntValue().sub(m_pintMin).getInt();
                         if (iFirst > iLast)
                             {
                             int iTemp = iFirst;
@@ -771,10 +771,10 @@ public class CaseManager<CookieType>
 
                 // fill in any gaps
                 Label labelMiss = m_labelDefault;
-                if (labelMiss == null && m_nodeSwitch instanceof Statement)
+                if (labelMiss == null && m_nodeSwitch instanceof Statement stmtSwitch)
                     {
                     // statement "defaults" to skipping out of the statement altogether
-                    labelMiss = ((Statement) m_nodeSwitch).getEndLabel();
+                    labelMiss = stmtSwitch.getEndLabel();
                     }
                 for (int i = 0; i < cRange; ++i)
                     {
@@ -917,14 +917,15 @@ public class CaseManager<CookieType>
         Object oThisLo, oThisHi;
         if (fRangeThis)
             {
-            if (constThis instanceof RangeConstant range)
+            if (constThis instanceof RangeConstant constRange)
                 {
-                oThisLo = range.getFirst();
-                oThisHi = range.getLast();
-                if (oThisLo instanceof ValueConstant && oThisHi instanceof ValueConstant)
+                oThisLo = constRange.getFirst();
+                oThisHi = constRange.getLast();
+                if (oThisLo instanceof ValueConstant valLo &&
+                    oThisHi instanceof ValueConstant valHi)
                     {
-                    oThisLo = ((ValueConstant) oThisLo).getValue();
-                    oThisHi = ((ValueConstant) oThisHi).getValue();
+                    oThisLo = valLo.getValue();
+                    oThisHi = valHi.getValue();
                     }
                 else
                     {
@@ -940,6 +941,7 @@ public class CaseManager<CookieType>
             {
             oThisLo = oThisHi = ((ValueConstant) constThis).getValue();
             }
+
         if (!(oThisLo instanceof Comparable cmpThisLo &&
               oThisHi instanceof Comparable cmpThisHi))
             {
@@ -949,10 +951,10 @@ public class CaseManager<CookieType>
         Object oThatLo, oThatHi;
         if (fRangeThat)
             {
-            if (constThat instanceof RangeConstant range)
+            if (constThat instanceof RangeConstant constRange)
                 {
-                oThatLo = range.getFirst();
-                oThatHi = range.getLast();
+                oThatLo = constRange.getFirst();
+                oThatHi = constRange.getLast();
                 if (oThatLo instanceof ValueConstant valueLo &&
                     oThatHi instanceof ValueConstant valueHi)
                     {
@@ -1055,9 +1057,9 @@ public class CaseManager<CookieType>
                         return true;
                         }
 
-                    if (constCase instanceof RangeConstant)
+                    if (constCase instanceof RangeConstant constRange)
                         {
-                        cCovered += ((RangeConstant) constCase).size();
+                        cCovered += constRange.size();
 
                         // compensate for all previous intersections with this range
                         for (Constant constPrev : m_listsetCase)
