@@ -14,6 +14,7 @@ import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.TypeConstant;
 
@@ -476,12 +477,18 @@ public class SwitchStatement
             CaseBlockContext      ctx0    = listBlocks.get(0);
             for (Entry<String, Integer> entry : mapAllNames.entrySet())
                 {
+                String sName = entry.getKey();
                 if (entry.getValue() != cBlocks)
                     {
+                    // there is no consensus across the case blocks - restore the original type
+                    Argument argOrig = getVar(sName);
+                    if (argOrig instanceof Register reg && !reg.isInPlace())
+                        {
+                        mapThis.put(sName, reg.restoreType());
+                        }
                     continue;
                     }
 
-                String   sName   = entry.getKey();
                 Argument argPrev = ctx0.getNameMap().get(sName);
                 for (int i = 1; i < cBlocks; i++)
                     {

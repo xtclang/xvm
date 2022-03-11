@@ -1895,8 +1895,7 @@ public class Context
 
                     if (!typeFalse.isA(typeOrig) || !typeTrue.isA(typeOrig))
                         {
-                        ctxOuter.replaceArgument(sName, Branch.Always,
-                            regOrig.narrowType(regOrig.getOriginalType()));
+                        ctxOuter.replaceArgument(sName, Branch.Always, regOrig.restoreType());
                         }
                     }
                 }

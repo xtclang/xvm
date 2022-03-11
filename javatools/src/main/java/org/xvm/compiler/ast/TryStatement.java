@@ -566,9 +566,7 @@ public class TryStatement
                     // this can only happen if the original type was already a shadow
                     assert argOrig instanceof Register;
 
-                    Register regOrig = (Register) argOrig;
-                    ctxOuter.replaceArgument(sName, branch,
-                        regOrig.narrowType(regOrig.getOriginalType()));
+                    ctxOuter.replaceArgument(sName, branch, ((Register) argOrig).restoreType());
                     }
                 }
             }

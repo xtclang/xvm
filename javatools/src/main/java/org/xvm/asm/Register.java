@@ -194,6 +194,14 @@ public class Register
         }
 
     /**
+     * Create a shadow register that has the same type as the original register.
+     */
+    public Register restoreType()
+        {
+        return new ShadowRegister(getOriginalType());
+        }
+
+    /**
      * @return the original register, which could be different from "this" for narrowed registers
      */
     public Register getOriginalRegister()
@@ -626,6 +634,14 @@ public class Register
             {
             // no reason to shadow the shadow
             return Register.this.narrowType(typeNarrowed);
+            }
+
+        @Override
+        public Register restoreType()
+            {
+            return getType().equals(getOriginalType())
+                    ? this
+                    : super.restoreType();
             }
 
         @Override

@@ -5,6 +5,7 @@ import java.lang.reflect.Field;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -298,220 +299,287 @@ public class ForEachStatement
     @Override
     protected Statement validateImpl(Context ctx, ErrorListener errs)
         {
-        boolean fValid = true;
+        // each attempt to validate the loop will log errors into a temporary error list; whichever
+        // run is the "keeper" will have its temporary errors moved over (relogged) into the
+        // original error listener
+        ErrorListener errsOrig = errs;
 
-        // the for() statement has its own scope
-        ctx = ctx.enter();
+        // by holding on to the original context, we can determine the impact on the incoming
+        // context that would occur by the beginning of the second iteration of the loop, and
+        // use that information to correctly provide forward-looking assignment information to
+        // AST nodes nested further down the tree, including e.g. lambdas that may make different
+        // capture decisions based on that data
+        Context                 ctxOrig    = ctx;
+        Map<String, Assignment> mapLoopAsn = new HashMap<>();
+        Map<String, Argument>   mapLoopArg = new HashMap<>();
 
-        // save off the current context and errors, in case we have to lazily create some loop vars
-        m_ctxLabelVars  = ctx;
-        m_errsLabelVars = errs;
+        ctxOrig.prepareJump(ctxOrig, mapLoopAsn, mapLoopArg);
 
-        // ultimately, the condition has to be re-written, because it is inevitably short-hand for
-        // a measure of syntactic sugar; in order of precedence, the condition can be:
-        //
-        //   1) iterator   :  L: for (T value          : container.as(Iterator<T>)) {...}
-        //   2) range      :  L: for (T value          : container.as(Range<T>   )) {...}
-        //   3) sequence   :  L: for (T value          : container.as(Sequence<T>)) {...}
-        //   4) map keys   :  L: for (K key            : container.as(Map<K,T>   )) {...}
-        //   5) map entries:  L: for ((K key, T value) : container.as(Map<K,T>   )) {...}
-        //   6) iterable   :  L: for (T value          : container.as(Iterable<T>)) {...}
-        AssignmentStatement cond = getCondition();
-        assert cond.isForEachCondition();
+        StatementBlock      blockOrig = block;
+        AssignmentStatement condOrig  = getCondition();
 
-        // create an IfContext in case there are short-circuiting conditions that result in
-        // narrowing inferences (see comment in SwitchStatement.validateImpl)
-        ctx = ctx.enterIf();
+        // don't let this repeat ad nauseam
+        int cTries = 0;
 
-        // validate the LValue declarations and any LValue sub-expressions
-        AstNode condLVal = cond.getLValue();
-        if (condLVal instanceof Statement condOld)
+        while (true)
             {
-            Statement condNew = condOld.validate(ctx, errs);
-            if (condNew == null)
-                {
-                fValid = false;
-                }
-            else
-                {
-                condLVal = condNew;
-                }
-            }
-        else
-            {
-            Expression condOld = (Expression) condLVal;
-            Expression condNew = condOld.validate(ctx, null, errs);
-            if (condNew == null)
-                {
-                fValid = false;
-                }
-            else
-                {
-                condLVal = condNew;
-                }
-            }
-        Expression exprLVal = condLVal.getLValueExpression();
-        if (!exprLVal.isValidated())
-            {
-            Expression exprNew = exprLVal.validate(ctx, null, errs);
-            if (exprNew == null)
-                {
-                fValid = false;
-                }
-            else
-                {
-                exprLVal = exprNew;
-                }
-            }
-        m_exprLValue = exprLVal;
-        exprLVal.requireAssignable(ctx, errs);
+            boolean fValid  = true;
+            boolean fRepeat = false;
 
-        // figure out which category the R-Value should be
-        Expression   exprRVal  = cond.getRValue();
-        ConstantPool pool      = pool();
-        Plan         plan      = null;
-        TypeConstant typeLVal  = exprLVal.getType();
-        TypeConstant typeRVal  = null;
-        boolean      fFoundFit = false;
+            // clone the condition(s) and the body
+            conds = Collections.singletonList(condOrig.clone());
+            block = (StatementBlock) blockOrig.clone();
 
-        if (typeLVal != null)
-            {
-            ctx = ctx.enterInferring(typeLVal);
-            }
+            // create a temporary error list
+            errs = errsOrig.branch(this);
 
-        for (int i = Plan.ITERATOR.ordinal(); i <= Plan.ITERABLE.ordinal(); ++i)
-            {
-            plan     = Plan.valueOf(i);
-            typeRVal = switch (plan)
+            // we use a potentially unnecessary context here as a place to jam in any assumptions
+            // that we learned on a previous trial run through the loop
+            ctx = ctxOrig.enter();
+            ctx.merge(mapLoopAsn, mapLoopArg);
+
+            // save off the current context and errors, in case we have to lazily create some loop vars
+            m_ctxLabelVars  = ctx;
+            m_errsLabelVars = errs;
+
+            // ultimately, the condition has to be re-written, because it is inevitably short-hand for
+            // a measure of syntactic sugar; in order of precedence, the condition can be:
+            //
+            //   1) iterator   :  L: for (T value          : container.as(Iterator<T>)) {...}
+            //   2) range      :  L: for (T value          : container.as(Range<T>   )) {...}
+            //   3) sequence   :  L: for (T value          : container.as(Sequence<T>)) {...}
+            //   4) map keys   :  L: for (K key            : container.as(Map<K,T>   )) {...}
+            //   5) map entries:  L: for ((K key, T value) : container.as(Map<K,T>   )) {...}
+            //   6) iterable   :  L: for (T value          : container.as(Iterable<T>)) {...}
+            AssignmentStatement cond = getCondition();
+            assert cond.isForEachCondition();
+
+            // create an IfContext in case there are short-circuiting conditions that result in
+            // narrowing inferences (see comment in SwitchStatement.validateImpl)
+            ctx = ctx.enterIf();
+
+            // validate the LValue declarations and any LValue sub-expressions
+            AstNode condLVal = cond.getLValue();
+            if (condLVal instanceof Statement condOld)
                 {
-                case ITERATOR -> pool.typeIterator();
-                case RANGE    -> pool.typeRange();
-                case SEQUENCE -> pool.typeList();
-                case MAP      -> pool.typeMap();
-                case ITERABLE -> pool.typeIterable();
-                };
-
-            if (exprRVal.testFit(ctx, typeRVal, null).isFit())
-                {
-                fFoundFit = true;
-                break;
-                }
-            }
-        // if none of the above matched, we leave it on Iterable, so that the expression will fail
-        // to validate with that required type (i.e. treat Iterable as the default required type)
-        m_plan = plan;
-
-        if (fValid && fFoundFit)
-            {
-            // get as specific as possible with the required type for the R-Value
-            TypeConstant[] atypeLVals = exprLVal.getTypes();
-            int            cLVals     = atypeLVals.length;
-            int            cMaxLVals  = plan == Plan.MAP ? 2 : 1;
-            if (cLVals < 1 || cLVals > cMaxLVals)
-                {
-                condLVal.log(errs, Severity.ERROR, Compiler.INVALID_LVALUE_COUNT, 1, cMaxLVals);
-                fValid = false;
-                }
-            else
-                {
-                typeRVal = pool.ensureParameterizedTypeConstant(typeRVal, atypeLVals);
-                }
-            }
-
-        Expression exprRValNew = exprRVal.validate(ctx, typeRVal, errs);
-        if (exprRValNew == null)
-            {
-            fValid = false;
-            }
-        else
-            {
-            m_exprRValue = exprRValNew;
-
-            if (fValid)
-                {
-                // update "var"/"val" type declarations on the LValues with their actual types
-                TypeConstant[] aTypeLVals;
-                switch (plan)
+                Statement condNew = condOld.validate(ctx, errs);
+                if (condNew == null)
                     {
-                    default:
-                    case ITERATOR:
-                    case RANGE:
-                    case SEQUENCE:
-                    case ITERABLE:
-                        aTypeLVals = new TypeConstant[] { getElementType() };
-                        break;
-
-                    case MAP:
-                        aTypeLVals = new TypeConstant[] { getKeyType(), getValueType() };
-
-                        if (isLabeled())
-                            {
-                            Register regLabel = (Register) ctx.getVar(getLabelName());
-                            if (regLabel != null)
-                                {
-                                regLabel.specifyActualType(pool.ensureParameterizedTypeConstant(
-                                        regLabel.getType(), aTypeLVals));
-                                }
-                            }
-                        break;
+                    fValid = false;
                     }
-
-                assert aTypeLVals.length >= exprLVal.getValueCount();
-                exprLVal.updateLValueFromRValueTypes(ctx, aTypeLVals);
+                else
+                    {
+                    condLVal = condNew;
+                    }
                 }
-            }
+            else
+                {
+                Expression condOld = (Expression) condLVal;
+                Expression condNew = condOld.validate(ctx, null, errs);
+                if (condNew == null)
+                    {
+                    fValid = false;
+                    }
+                else
+                    {
+                    condLVal = condNew;
+                    }
+                }
+            Expression exprLVal = condLVal.getLValueExpression();
+            if (!exprLVal.isValidated())
+                {
+                Expression exprNew = exprLVal.validate(ctx, null, errs);
+                if (exprNew == null)
+                    {
+                    fValid = false;
+                    }
+                else
+                    {
+                    exprLVal = exprNew;
+                    }
+                }
+            m_exprLValue = exprLVal;
+            exprLVal.requireAssignable(ctx, errs);
 
-        if (typeLVal != null)
-            {
-            ctx = ctx.exit();
-            }
+            // figure out which category the R-Value should be
+            Expression   exprRVal  = cond.getRValue();
+            ConstantPool pool      = pool();
+            Plan         plan      = null;
+            TypeConstant typeLVal  = exprLVal.getType();
+            TypeConstant typeRVal  = null;
+            boolean      fFoundFit = false;
 
-        // regardless of the validity of the R-Value let's mark the L-Value as assigned
-        exprLVal.markAssignment(ctx, false, errs);
+            if (typeLVal != null)
+                {
+                ctx = ctx.enterInferring(typeLVal);
+                }
 
-        StatementBlock blockOld = block;
+            for (int i = Plan.ITERATOR.ordinal(); i <= Plan.ITERABLE.ordinal(); ++i)
+                {
+                plan     = Plan.valueOf(i);
+                typeRVal = switch (plan)
+                    {
+                    case ITERATOR -> pool.typeIterator();
+                    case RANGE    -> pool.typeRange();
+                    case SEQUENCE -> pool.typeList();
+                    case MAP      -> pool.typeMap();
+                    case ITERABLE -> pool.typeIterable();
+                    };
 
-        // while the block doesn't get its own scope, it only sees the "true" fork of the condition
-        ctx = ctx.enterFork(true);
+                if (exprRVal.testFit(ctx, typeRVal, null).isFit())
+                    {
+                    fFoundFit = true;
+                    break;
+                    }
+                }
+            // if none of the above matched, we leave it on Iterable, so that the expression will fail
+            // to validate with that required type (i.e. treat Iterable as the default required type)
+            m_plan = plan;
 
-        StatementBlock blockNew = (StatementBlock) blockOld.validate(ctx, errs);
-        if (blockNew != blockOld)
-            {
-            if (blockNew == null)
+            if (fValid && fFoundFit)
+                {
+                // get as specific as possible with the required type for the R-Value
+                TypeConstant[] atypeLVals = exprLVal.getTypes();
+                int            cLVals     = atypeLVals.length;
+                int            cMaxLVals  = plan == Plan.MAP ? 2 : 1;
+                if (cLVals < 1 || cLVals > cMaxLVals)
+                    {
+                    condLVal.log(errs, Severity.ERROR, Compiler.INVALID_LVALUE_COUNT, 1, cMaxLVals);
+                    fValid = false;
+                    }
+                else
+                    {
+                    typeRVal = pool.ensureParameterizedTypeConstant(typeRVal, atypeLVals);
+                    }
+                }
+
+            Expression exprRValNew = exprRVal.validate(ctx, typeRVal, errs);
+            if (exprRValNew == null)
                 {
                 fValid = false;
                 }
             else
                 {
-                block = blockNew;
-                }
-            }
+                m_exprRValue = exprRValNew;
 
-        List<Map<String, Assignment>> listContinues = m_listContinues;
-        if (listContinues != null)
-            {
-            for (Map<String, Assignment> mapAsn : listContinues)
+                if (fValid)
+                    {
+                    // update "var"/"val" type declarations on the LValues with their actual types
+                    TypeConstant[] aTypeLVals;
+                    switch (plan)
+                        {
+                        default:
+                        case ITERATOR:
+                        case RANGE:
+                        case SEQUENCE:
+                        case ITERABLE:
+                            aTypeLVals = new TypeConstant[] { getElementType() };
+                            break;
+
+                        case MAP:
+                            aTypeLVals = new TypeConstant[] { getKeyType(), getValueType() };
+
+                            if (isLabeled())
+                                {
+                                Register regLabel = (Register) ctx.getVar(getLabelName());
+                                if (regLabel != null)
+                                    {
+                                    regLabel.specifyActualType(pool.ensureParameterizedTypeConstant(
+                                            regLabel.getType(), aTypeLVals));
+                                    }
+                                }
+                            break;
+                        }
+
+                    assert aTypeLVals.length >= exprLVal.getValueCount();
+                    exprLVal.updateLValueFromRValueTypes(ctx, aTypeLVals);
+                    }
+                }
+
+            if (typeLVal != null)
                 {
-                ctx.merge(mapAsn);
+                ctx = ctx.exit();
+                }
+
+            // regardless of the validity of the R-Value let's mark the L-Value as assigned
+            exprLVal.markAssignment(ctx, false, errs);
+
+            StatementBlock blockOld = block;
+
+            // while the block doesn't get its own scope, it only sees the "true" fork of the condition
+            ctx = ctx.enterFork(true);
+
+            StatementBlock blockNew = (StatementBlock) blockOld.validate(ctx, errs);
+            if (blockNew != blockOld)
+                {
+                if (blockNew == null)
+                    {
+                    fValid = false;
+                    }
+                else
+                    {
+                    block = blockNew;
+                    }
+                }
+
+            List<Map<String, Assignment>> listContinues = m_listContinues;
+            if (listContinues != null)
+                {
+                for (Map<String, Assignment> mapAsn : listContinues)
+                    {
+                    ctx.merge(mapAsn);
+                    }
+                }
+
+            // see if there are any assignments that would change our starting assumptions
+            Map<String, Assignment> mapAsnAfter = new HashMap<>();
+            Map<String, Argument>   mapArgAfter = new HashMap<>();
+            ctx.prepareJump(ctxOrig, mapAsnAfter, mapArgAfter);
+
+            if (!mapAsnAfter.equals(mapLoopAsn))
+                {
+                mapLoopAsn = mapAsnAfter;
+                mapLoopArg = mapArgAfter;
+                fRepeat    = true;
+                }
+
+            // don't let this repeat forever
+            if (++cTries > 10 && fRepeat)
+                {
+                log(errs, Severity.ERROR, Compiler.FATAL_ERROR);
+                fValid  = false;
+                fRepeat = false;
+                }
+
+            if (fRepeat)
+                {
+                // discard the clones created in this pass
+                cond.discard(true);
+                block.discard(true);
+                }
+            else
+                {
+                // discard the original nodes (we cloned them already)
+                condOrig.discard(true);
+                blockOrig.discard(true);
+
+                // leaving the "true" fork of the condition
+                ctx = ctx.exit();
+
+                // leaving the "if" scope
+                ctx = ctx.exit();
+
+                // leaving the scope of the for() statement
+                ctx = ctx.exit();
+
+                // lazily created loop vars are only created inside the validation of this statement
+                m_ctxLabelVars  = null;
+                m_errsLabelVars = null;
+
+                errs.merge();
+                return fValid ? this : null;
                 }
             }
-
-        // leaving the "true" fork of the condition
-        ctx = ctx.exit();
-
-        // leaving the "if" scope
-        ctx = ctx.exit();
-
-        // leaving the scope of the for() statement
-        ctx = ctx.exit();
-
-        // lazily created loop vars are only created inside the validation of this statement
-        m_ctxLabelVars  = null;
-        m_errsLabelVars = null;
-
-        return fValid
-                ? this
-                : null;
         }
 
     @Override

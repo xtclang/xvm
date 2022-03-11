@@ -688,11 +688,7 @@ const URI
                     default:
                         if (!regnameValid(ch))
                             {
-                            // TODO GG error ?:= $"Illegal character {ch.quoted()} in the authority portion of {text.quoted()}";
-                            if (error == Null)
-                                {
-                                error = $"Illegal character {ch.quoted()} in the authority portion of {text.quoted()}";
-                                }
+                            error ?:= $"Illegal character {ch.quoted()} in the authority portion of {text.quoted()}";
                             }
                         break;
                     }
