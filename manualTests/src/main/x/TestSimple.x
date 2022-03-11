@@ -7,28 +7,31 @@ module TestSimple
     import ecstasy.collections.*;
     import collections.*;
 
-    void run( )
+    void run()
         {
+        test(Null, 0);
         }
 
-    void test(String? error)
+    void test(String? s, Int i)
         {
-        if (error != Null)
+        if (s != Null)
             {
             return;
             }
 
-        Int i = 0;
-        while (i++ < 2)
+        switch (i)
             {
-            if (i == 0)
-                {
-                error = "hello";
-                }
-            else
-                {
-                error ?:= "Illegal"; // this used to fail to compile
-                }
+            case 0:
+                s = "zero";
+                break;
+
+            case -1:
+            default:
+                s = "error";
+                continue;
             }
+
+        s = s.trim(); // this used to fail to compile
+        console.println(s);
         }
     }

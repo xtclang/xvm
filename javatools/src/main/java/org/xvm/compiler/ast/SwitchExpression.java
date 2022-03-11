@@ -131,14 +131,7 @@ public class SwitchExpression
         // validate the switch condition
         boolean fValid = mgr.validateCondition(ctx, cond, errs);
 
-        // the case manager enters a new context if the switch condition declares variables
-        Context ctxCase = mgr.getSwitchContext();
-        if (ctxCase == null)
-            {
-            ctxCase = ctx;
-            }
-
-        ctxCase = ctxCase.enterIf();
+        Context ctxCase = ctx.enterIf();
 
         ConstantPool   pool      = pool();
         TypeCollector  collector = new TypeCollector(pool);

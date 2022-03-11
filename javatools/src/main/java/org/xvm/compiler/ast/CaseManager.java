@@ -76,16 +76,7 @@ public class CaseManager<CookieType>
      */
     public boolean hasDeclarations()
         {
-        return m_ctxSwitch != null;
-        }
-
-    /**
-     * @return a nesting context created automatically if the switch condition declares any
-     *         variables
-     */
-    public Context getSwitchContext()
-        {
-        return m_ctxSwitch;
+        return m_fHasDecl;
         }
 
     /**
@@ -254,12 +245,8 @@ public class CaseManager<CookieType>
                 if (node instanceof AssignmentStatement stmtCond)
                     {
                     // assignment represents a side-effect, so disable the constant optimizations
-                    fAllConst = false;
-
-                    if (m_ctxSwitch == null && stmtCond.hasDeclarations())
-                        {
-                        m_ctxSwitch = ctx = ctx.enter();
-                        }
+                    fAllConst   = false;
+                    m_fHasDecl |= stmtCond.hasDeclarations();
 
                     nodeNew = stmtCond.validate(ctx, errs);
                     if (nodeNew != null)
@@ -678,9 +665,6 @@ public class CaseManager<CookieType>
         {
         boolean fValid = true;
 
-        // the context must match
-        assert m_ctxSwitch == null || ctx == m_ctxSwitch;
-
         if (m_labelCurrent != null)
             {
             m_caseCurrent.log(errs, Severity.ERROR, Compiler.SWITCH_CASE_DANGLING);
@@ -704,11 +688,6 @@ public class CaseManager<CookieType>
                 m_nodeSwitch.log(errs, Severity.ERROR, Compiler.SWITCH_DEFAULT_REQUIRED);
                 fValid = false;
                 }
-            }
-
-        if (m_ctxSwitch != null)
-            {
-            m_ctxSwitch.exit();
             }
 
         // store the resulting information
@@ -1339,9 +1318,9 @@ public class CaseManager<CookieType>
     private final AstNode m_nodeSwitch;
 
     /**
-     * If the switch condition requires a scope, this creates a context.
+     * Set to true if a scope to be created for the switch.
      */
-    private Context m_ctxSwitch;
+    private boolean m_fHasDecl;
 
     /**
      * The actual number of condition values.

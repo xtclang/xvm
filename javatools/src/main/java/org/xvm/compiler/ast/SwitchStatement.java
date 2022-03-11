@@ -5,13 +5,17 @@ import java.lang.reflect.Field;
 
 import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import java.util.Map.Entry;
+
+import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
+
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.Enter;
 import org.xvm.asm.op.Exit;
@@ -93,10 +97,8 @@ public class SwitchStatement
     @Override
     protected Statement validateImpl(Context ctx, ErrorListener errs)
         {
-        boolean fValid  = true;
-        Context ctxOrig = ctx;
-
-        CaseManager<CaseGroup> mgr = new CaseManager<>(this);
+        boolean                fValid = true;
+        CaseManager<CaseGroup> mgr    = new CaseManager<>(this);
 
         m_listGroups = new ArrayList<>();
         m_casemgr    = mgr;
@@ -108,23 +110,18 @@ public class SwitchStatement
         //       {
         //       case 1: // "args" is know to be an array of one Int value
         //       }
+        // this context will also be used to keep variables declared by the switch condition and
+        // compute inferences if the switch statement doesn't complete (all possible branches are
+        // covered or there is a default)
+        SwitchContext ctxSwitch = new SwitchContext(ctx, mgr);
 
-        ctx = ctx.enter();
+        fValid &= mgr.validateCondition(ctxSwitch, conds, errs);
 
-        fValid &= mgr.validateCondition(ctx, conds, errs);
-
-        // the case manager enters a new context if the switch condition declares variables
-        Context ctxCond = mgr.getSwitchContext();
-        if (ctxCond != null)
-            {
-            ctx = ctxCond;
-            }
-
-        List<Statement> listStmts = block.stmts;
-        int             cStmts    = listStmts.size();
-        boolean         fInCase   = false;
-        Context         ctxBlock  = null;
-        CaseGroup       group     = null;
+        List<Statement>  listStmts = block.stmts;
+        int              cStmts    = listStmts.size();
+        boolean          fInCase   = false;
+        CaseBlockContext ctxBlock  = null;
+        CaseGroup        group     = null;
         for (int i = 0; i < cStmts; ++i)
             {
             Statement stmt = listStmts.get(i);
@@ -152,7 +149,7 @@ public class SwitchStatement
                     m_listGroups.add(group);
                     }
 
-                fValid &= mgr.validateCase(ctx, stmtCase, errs);
+                fValid &= mgr.validateCase(ctxSwitch, stmtCase, errs);
                 }
             else
                 {
@@ -165,7 +162,7 @@ public class SwitchStatement
 
                     assert ctxBlock == null;
 
-                    ctxBlock = new CaseBlockContext(ctx);
+                    ctxBlock = ctxSwitch.enterBlock();
                     if (fValid)
                         {
                         // for now, we only infer a type from a single-case blocks
@@ -235,16 +232,9 @@ public class SwitchStatement
             }
 
         // notify the case manager that we're finished collecting everything
-        fValid &= mgr.validateEnd(ctx, errs);
+        fValid &= mgr.validateEnd(ctxSwitch, errs);
 
-        ctx = ctx.exit();
-
-        // if a switch statement covers all of the possible values, or has a default label, then the
-        // switch statement does not complete normally
-        if (!mgr.isCompletable())
-            {
-            ctxOrig.setReachable(false);
-            }
+        ctx = ctxSwitch.exit();
 
         if (m_listContinues != null)
             {
@@ -407,6 +397,130 @@ public class SwitchStatement
     // ----- inner classes -------------------------------------------------------------------------
 
     /**
+     * The context for the SwitchStatement that is used to compute inferences if the switch
+     * {@link CaseManager#isCompletable() doesn't complete}.
+     */
+    protected static class SwitchContext
+            extends Context
+        {
+        protected SwitchContext(Context ctxOuter, CaseManager mgr)
+            {
+            super(ctxOuter, true);
+
+            f_mgr = mgr;
+            }
+
+        /**
+         * @return a nested "case block" of this context.
+         */
+        protected CaseBlockContext enterBlock()
+            {
+            CaseBlockContext ctxBlock = new CaseBlockContext(this);
+            f_listBlocks.add(ctxBlock);
+            return ctxBlock;
+            }
+
+        @Override
+        public Context exit()
+            {
+            Context ctxOuter = getOuterContext();
+
+            boolean fCompletes = f_mgr.isCompletable();
+
+            promoteAssignments(ctxOuter);
+
+            // if a switch statement covers all of the possible values, or has a default label,
+            // then the switch statement does not complete normally and may be able to promote
+            // narrowed types to the outer context
+            if (!fCompletes)
+                {
+                promoteNarrowedTypes();
+                ctxOuter.setReachable(false);
+                }
+            return ctxOuter;
+            }
+
+        @Override
+        protected void promoteNarrowedTypes()
+            {
+            // to be able to promote a narrowed type, that type should satisfy *all* blocks;
+            // any block that doesn't explicitly do it causes any narrowing type to be discarded
+            // TODO: this logic may cause a false positive (error) for blocks ending with "continue";
+            //       need to add some information to the CasBlockContext to handle that scenario
+            List<CaseBlockContext> listBlocks = f_listBlocks;
+            int                    cBlocks    = listBlocks.size();
+
+            if (cBlocks == 1)
+                {
+                // degenerated case - just take all the only block has
+                listBlocks.get(0).promoteNarrowedTypes();
+                return;
+                }
+
+            // collect all narrowed names, counting the occurrences
+            Map<String, Integer> mapAllNames = new HashMap<>();
+            for (CaseBlockContext ctxBlock : listBlocks)
+                {
+                for (Entry<String, Argument> entry : ctxBlock.getNameMap().entrySet())
+                    {
+                    String sName = entry.getKey();
+                    if (!ctxBlock.isVarDeclaredInThisScope(sName))
+                        {
+                        mapAllNames.compute(sName, (k, v) -> v == null ? 1 : v + 1);
+                        }
+                    }
+                }
+
+            // now only process arguments that were narrowed by *every* block
+            Map<String, Argument> mapThis = ensureNameMap();
+            CaseBlockContext      ctx0    = listBlocks.get(0);
+            for (Entry<String, Integer> entry : mapAllNames.entrySet())
+                {
+                if (entry.getValue() != cBlocks)
+                    {
+                    continue;
+                    }
+
+                String   sName   = entry.getKey();
+                Argument argPrev = ctx0.getNameMap().get(sName);
+                for (int i = 1; i < cBlocks; i++)
+                    {
+                    Argument argNext = listBlocks.get(i).getNameMap().get(sName);
+
+                    TypeConstant typePrev = argPrev.getType();
+                    TypeConstant typeNext = argNext.getType();
+
+                    if (typePrev.isA(typeNext))
+                        {
+                        mapThis.put(sName, argNext);
+                        argPrev = argNext;
+                        }
+                    else if (typeNext.isA(typePrev))
+                        {
+                        mapThis.put(sName, argPrev);
+                        }
+                    else
+                        {
+                        // no consensus; don't promote anything (though, theoretically speaking we
+                        // could find an intermediate type "in between" the original and the widest
+                        // of all case blocks)
+                        mapThis.remove(sName);
+                        break;
+                        }
+                    }
+                }
+
+            if (!mapThis.isEmpty())
+                {
+                super.promoteNarrowedTypes();
+                }
+            }
+
+        private final CaseManager            f_mgr;
+        private final List<CaseBlockContext> f_listBlocks = new ArrayList<>();
+        }
+
+    /**
      * While not immediately apparent, a case block never completes normally; it must break,
      * continue (fall through), or otherwise fail to complete (e.g. throw or return), otherwise an
      * error occurs (detected during emit). However, it cannot be simply discarded (instead of
@@ -416,7 +530,7 @@ public class SwitchStatement
     protected static class CaseBlockContext
             extends Context
         {
-        protected CaseBlockContext(Context ctxOuter)
+        protected CaseBlockContext(SwitchContext ctxOuter)
             {
             super(ctxOuter, true);
             }
@@ -486,7 +600,7 @@ public class SwitchStatement
      * "continue" statement within that group; it's null until the first continue statement is
      * encountered in the group.
      */
-    private transient List<Map.Entry<AstNode, Map<String, Assignment>>> m_listContinues;
+    private transient List<Entry<AstNode, Map<String, Assignment>>> m_listContinues;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(SwitchStatement.class, "conds", "block");
     }
