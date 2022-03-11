@@ -1891,7 +1891,7 @@ public class Context
                 else if (argOrig instanceof Register regOrig)
                     {
                     // we may need to restore the original type
-                    TypeConstant typeOrig = argOrig.getType();
+                    TypeConstant typeOrig = regOrig.getType();
 
                     if (!typeFalse.isA(typeOrig) || !typeTrue.isA(typeOrig))
                         {

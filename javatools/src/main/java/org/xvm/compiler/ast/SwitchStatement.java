@@ -120,15 +120,6 @@ public class SwitchStatement
             ctx = ctxCond;
             }
 
-        // TODO this is probably all wrong now; needs REVIEW CP
-        if (mgr.usesIfLadder())
-            {
-            // a switch that uses an "if ladder" may have side effects of the various case
-            // statements that effect assignment, so treat the context containing the case
-            // statements as one big branch whose completion represents one possible path
-            ctx = ctx.enter();
-            }
-
         List<Statement> listStmts = block.stmts;
         int             cStmts    = listStmts.size();
         boolean         fInCase   = false;
@@ -241,13 +232,6 @@ public class SwitchStatement
                 }
 
             ctxBlock.exit();
-            }
-
-        // close the context used for an "if ladder"
-        // REVIEW (see corresponding section above)
-        if (mgr.usesIfLadder())
-            {
-            ctx = ctx.exit();
             }
 
         // notify the case manager that we're finished collecting everything
