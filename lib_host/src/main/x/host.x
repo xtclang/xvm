@@ -68,9 +68,7 @@ module host.xtclang.org
 
         if (String dbModuleName := detectDatabase(fileTemplate))
             {
-            // Directory workDir = appHomeDir.parent ?: assert; // TODO GG - breaks the second "if" below
-            Directory? workDir = appHomeDir.parent;
-            assert workDir != Null;
+            Directory workDir = appHomeDir.parent ?: assert;
 
             if (DbHost dbHost := createDbHost(workDir, dbModuleName, errors))
                 {
