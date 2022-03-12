@@ -741,14 +741,13 @@ public class InvocationExpression
             if (argMethod == null)
                 {
                 // as the last resort, validate the arguments before trying to resolve the name again
-                ErrorListener  errsTemp2 = errs.branch(this);
-                TypeConstant[] atypeArgs = validateExpressions(ctx, listArgs, null, errsTemp2);
+                // (regardless of the outcome, the validation errors should be reported)
+                TypeConstant[] atypeArgs = validateExpressions(ctx, listArgs, null, errs);
                 if (atypeArgs == null)
                     {
                     errsTemp.merge();
                     return null;
                     }
-                errsTemp2.merge(); // may have warnings
 
                 argMethod = resolveName(ctx, true, typeLeft, atypeReturn, errs);
                 if (argMethod == null)

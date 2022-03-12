@@ -9,29 +9,20 @@ module TestSimple
 
     void run()
         {
-        test(Null, 0);
+        Int[] ints = new Array(1, i ->
+            {
+            Int x = ""; // type mismatch used to not be reported
+            return x;
+            });
+
+        report(() ->
+            {
+            Int x = y;  // unresolvable "y" used to not be reported
+            return "hello";
+            });
         }
 
-    void test(String? s, Int i)
+    void test(function String () report)
         {
-        if (s != Null)
-            {
-            return;
-            }
-
-        switch (i)
-            {
-            case 0:
-                s = "zero";
-                break;
-
-            case -1:
-            default:
-                s = "error";
-                continue;
-            }
-
-        s = s.trim(); // this used to fail to compile
-        console.println(s);
         }
     }

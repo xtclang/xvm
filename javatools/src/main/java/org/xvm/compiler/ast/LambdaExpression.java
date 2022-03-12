@@ -522,22 +522,18 @@ public class LambdaExpression
 
         fValid &= collectParamNamesAndTypes(atypeReqParams, atypeParams, asParams, errs);
 
-        if (!fValid)
-            {
-            return finishValidation(ctx, typeRequired, null, TypeFit.NoFit, null, errs);
-            }
-
+        // even if we know we cannot proceed, we need to validate the lambda to report on errors
+        // that would not have been otherwise reported
         m_typeRequired = typeReqFn;
         m_lambda       = instantiateLambda(errs);
 
         // the logic below is basically a copy of the "extractReturnTypes" method,
         // which we couldn't use since we need two things back: the types and the new context
-        TypeFit        fit       = TypeFit.Fit;
         StatementBlock blockTemp = (StatementBlock) body.clone();
         if (!new StageMgr(blockTemp, Stage.Validated, errs).fastForward(20))
             {
             blockTemp.discard(true);
-            return finishValidation(ctx, typeRequired, null, TypeFit.NoFit, null, errs);
+            return null;
             }
 
         LambdaContext ctxLambda = enterCapture(ctx, blockTemp, atypeParams, asParams);
@@ -545,7 +541,7 @@ public class LambdaExpression
         if (blockNew == null)
             {
             blockTemp.discard(true);
-            fit = TypeFit.NoFit;
+            fValid = false;
             }
         else
             {
@@ -558,6 +554,12 @@ public class LambdaExpression
         // collected VAS information from the lambda context
         ctxLambda.exit();
 
+        if (!fValid)
+            {
+            return null;
+            }
+
+        TypeFit        fit = TypeFit.Fit;
         TypeConstant[] atypeRets;
         boolean        fCond;
         if (m_collector == null)
