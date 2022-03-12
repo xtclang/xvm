@@ -141,7 +141,7 @@ public class xBitArray
         }
 
     /**
-     * Extract a array of bits from the ArrayDelegate<Bit> handle.
+     * Extract an array of bits from the ArrayDelegate<Bit> handle.
      */
     public static byte[] getBits(ArrayHandle hArray)
         {
@@ -151,18 +151,17 @@ public class xBitArray
         long    ofStart  = 0;
         boolean fReverse = false;
 
-        if (hDelegate instanceof SliceHandle)
+        if (hDelegate instanceof SliceHandle hSlice)
             {
-            SliceHandle hSlice = (SliceHandle) hDelegate;
             hDelegate = hSlice.f_hSource;
             ofStart   = hSlice.f_ofStart;
             fReverse  = hSlice.f_fReverse;
             }
 
         ClassTemplate tDelegate = hDelegate.getTemplate();
-        if (tDelegate instanceof BitView)
+        if (tDelegate instanceof BitView tView)
             {
-            return ((BitView) tDelegate).getBits(hDelegate, ofStart, cSize, fReverse);
+            return tView.getBits(hDelegate, ofStart, cSize, fReverse);
             }
         throw new UnsupportedOperationException();
         }
@@ -176,18 +175,15 @@ public class xBitArray
 
         long ofStart = 0;
 
-        if (hDelegate instanceof SliceHandle)
+        if (hDelegate instanceof SliceHandle hSlice)
             {
-            SliceHandle hSlice = (SliceHandle) hDelegate;
             hDelegate = hSlice.f_hSource;
             ofStart   = hSlice.f_ofStart;
             }
 
         ClassTemplate tDelegate = hDelegate.getTemplate();
-        if (tDelegate instanceof BitView)
+        if (tDelegate instanceof BitView tView)
             {
-            BitView tView = (BitView) tDelegate;
-
             for (int i = 0, c = abVal.length; i < c; i++)
                 {
                 tView.assignByte(hDelegate, (ofStart/8) + i, abVal[i]);
