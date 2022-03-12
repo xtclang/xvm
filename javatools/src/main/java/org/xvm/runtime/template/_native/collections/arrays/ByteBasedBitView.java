@@ -33,10 +33,9 @@ public abstract class ByteBasedBitView
     @Override
     public DelegateHandle createBitViewDelegate(DelegateHandle hSource, Mutability mutability)
         {
-        if (hSource instanceof SliceHandle)
+        if (hSource instanceof SliceHandle hSlice)
             {
             // bytes.slice().asBitArray() -> bytes.asBitArray().slice()
-            SliceHandle     hSlice = (SliceHandle) hSource;
             ByteArrayHandle hBytes = (ByteArrayHandle) hSlice.f_hSource;
             ViewHandle      hView  = new ViewHandle(getCanonicalClass(),
                                         hBytes, hBytes.m_cSize*8, mutability);

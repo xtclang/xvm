@@ -61,10 +61,8 @@ public class xRTViewFromByteToInt8
         DelegateHandle hSource = hView.f_hSource;
         ClassTemplate  tSource = hSource.getTemplate();
 
-        if (tSource instanceof ByteView)
+        if (tSource instanceof ByteView tView)
             {
-            ByteView tView = (ByteView) tSource;
-
             byte[] abValue = tView.getBytes(hSource, ofStart, cSize, fReverse);
 
             return xRTInt8Delegate.INSTANCE.makeHandle(abValue, cSize, mutability);
@@ -80,10 +78,8 @@ public class xRTViewFromByteToInt8
         DelegateHandle hSource = hView.f_hSource;
         ClassTemplate  tSource = hSource.getTemplate();
 
-        if (tSource instanceof ByteView)
+        if (tSource instanceof ByteView tView)
             {
-            ByteView tView = (ByteView) tSource;
-
             byte bValue = tView.extractByte(hSource, lIndex);
 
             return frame.assignValue(iReturn, xInt8.INSTANCE.makeJavaLong(bValue));
@@ -100,10 +96,8 @@ public class xRTViewFromByteToInt8
         DelegateHandle hSource = hView.f_hSource;
         ClassTemplate  tSource = hSource.getTemplate();
 
-        if (tSource instanceof ByteView)
+        if (tSource instanceof ByteView tView)
             {
-            ByteView tView = (ByteView) tSource;
-
             tView.assignByte(hSource, lIndex, (byte) ((JavaLong) hValue).getValue());
             return Op.R_NEXT;
             }

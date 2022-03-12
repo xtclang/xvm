@@ -634,8 +634,8 @@ public abstract class LongBasedDelegate
         @Override
         public boolean equals(Object obj)
             {
-            return obj instanceof LongArrayHandle
-                && Arrays.equals(m_alValue, ((LongArrayHandle) obj).m_alValue);
+            return obj instanceof LongArrayHandle that
+                && Arrays.equals(this.m_alValue, that.m_alValue);
             }
         }
 

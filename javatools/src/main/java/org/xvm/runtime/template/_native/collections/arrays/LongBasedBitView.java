@@ -38,10 +38,9 @@ public abstract class LongBasedBitView
     @Override
     public DelegateHandle createBitViewDelegate(DelegateHandle hSource, Mutability mutability)
         {
-        if (hSource instanceof SliceHandle)
+        if (hSource instanceof SliceHandle hSlice)
             {
             // ints.slice().asBitArray() -> ints.asBitArray().slice()
-            SliceHandle     hSlice = (SliceHandle) hSource;
             LongArrayHandle hLong  = (LongArrayHandle) hSlice.f_hSource;
             ViewHandle      hView  = new ViewHandle(getCanonicalClass(),
                                             hLong, hLong.m_cSize*f_nBitsPerValue, mutability);

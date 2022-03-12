@@ -396,8 +396,8 @@ public abstract class ByteBasedDelegate
         @Override
         public boolean equals(Object obj)
             {
-            return obj instanceof ByteArrayHandle
-                && Arrays.equals(m_abValue, ((ByteArrayHandle) obj).m_abValue);
+            return obj instanceof ByteArrayHandle that
+                && Arrays.equals(this.m_abValue, that.m_abValue);
             }
         }
     }

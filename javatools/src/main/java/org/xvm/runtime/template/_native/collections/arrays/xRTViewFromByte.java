@@ -55,11 +55,10 @@ public class xRTViewFromByte
     public DelegateHandle createByteView(DelegateHandle hSource, Mutability mutability,
                                          int nBytes)
         {
-        if (hSource instanceof SliceHandle)
+        if (hSource instanceof SliceHandle hSlice)
             {
             // e.g.: bytes.slice().asInt64Array() -> bytes.asInt64Array().slice()
-            SliceHandle hSlice = (SliceHandle) hSource;
-            ViewHandle  hView  = new ViewHandle(getCanonicalClass(), hSlice.f_hSource,
+            ViewHandle hView = new ViewHandle(getCanonicalClass(), hSlice.f_hSource,
                                     hSlice.f_hSource.m_cSize/nBytes, mutability);
 
             return slice(hView, hSlice.f_ofStart/nBytes, hSlice.m_cSize/nBytes, hSlice.f_fReverse);

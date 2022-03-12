@@ -118,12 +118,12 @@ public class xRTViewFromBit
         public final DelegateHandle f_hSource;
 
         protected ViewHandle(TypeComposition clazz, DelegateHandle hSource,
-                             long cSlze, Mutability mutability)
+                             long cSize, Mutability mutability)
             {
             super(clazz, mutability);
 
             f_hSource = hSource;
-            m_cSize   = cSlze;
+            m_cSize   = cSize;
             }
         }
     }

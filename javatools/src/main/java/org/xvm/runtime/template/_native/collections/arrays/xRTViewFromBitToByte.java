@@ -55,11 +55,10 @@ public class xRTViewFromBitToByte
     public DelegateHandle createBitViewDelegate(DelegateHandle hSource, TypeConstant typeElement,
                                                 Mutability mutability)
         {
-        if (hSource instanceof SliceHandle)
+        if (hSource instanceof SliceHandle hSlice)
             {
             // bits.slice().asByteArray() -> bits.asByteArray().slice()
-            SliceHandle hSlice = (SliceHandle) hSource;
-            ViewHandle  hView  = new ViewHandle(getCanonicalClass(),
+            ViewHandle hView = new ViewHandle(getCanonicalClass(),
                     hSlice.f_hSource, hSlice.f_hSource.m_cSize/8, mutability);
 
             return slice(hView, hSlice.f_ofStart/8, hSlice.m_cSize/8, hSlice.f_fReverse);
@@ -78,9 +77,9 @@ public class xRTViewFromBitToByte
         DelegateHandle hSource = hView.f_hSource;
         ClassTemplate  tSource = hSource.getTemplate();
 
-        if (tSource instanceof BitView)
+        if (tSource instanceof BitView tView)
             {
-            byte[] abBits = ((BitView) tSource).getBytes(hSource, ofStart, cSize, fReverse);
+            byte[] abBits = tView.getBytes(hSource, ofStart, cSize, fReverse);
 
             return xRTUInt8Delegate.INSTANCE.makeHandle(abBits, cSize, mutability);
             }
@@ -95,11 +94,9 @@ public class xRTViewFromBitToByte
         DelegateHandle hSource = hView.f_hSource;
         ClassTemplate  tSource = hSource.getTemplate();
 
-        if (tSource instanceof ByteView)
+        if (tSource instanceof ByteView tView)
             {
             // the underlying delegate is a BitView, which is a ByteView
-            ByteView tView = (ByteView) tSource;
-
             return frame.assignValue(iReturn,
                     xUInt8.INSTANCE.makeJavaLong(tView.extractByte(hSource, lIndex)));
             }
@@ -115,11 +112,9 @@ public class xRTViewFromBitToByte
         DelegateHandle hSource = hView.f_hSource;
         ClassTemplate  tSource = hSource.getTemplate();
 
-        if (tSource instanceof ByteView)
+        if (tSource instanceof ByteView tView)
             {
             // the underlying delegate is a BitView, which is a ByteView
-            ByteView tView = (ByteView) tSource;
-
             tView.assignByte(hSource, lIndex, (byte) ((JavaLong) hValue).getValue());
             return Op.R_NEXT;
             }

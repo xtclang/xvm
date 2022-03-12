@@ -62,14 +62,12 @@ public class xRTViewFromByteToInt64
         DelegateHandle hSource = hView.f_hSource;
         ClassTemplate  tSource = hSource.getTemplate();
 
-        if (tSource instanceof ByteView)
+        if (tSource instanceof ByteView tView)
             {
-            ByteView tView = (ByteView) tSource;
-
             long[] alValue = new long[(int) cSize];
             for (int i = 0; i < cSize; i++)
                 {
-                byte[] ab = tView.getBytes(hSource, ofStart + i*8, 8, fReverse);
+                byte[] ab = tView.getBytes(hSource, ofStart + i*8L, 8, fReverse);
 
                 alValue[i] = Handy.byteArrayToLong(ab, 0);
                 }
@@ -87,10 +85,8 @@ public class xRTViewFromByteToInt64
         DelegateHandle hSource = hView.f_hSource;
         ClassTemplate  tSource = hSource.getTemplate();
 
-        if (tSource instanceof ByteView)
+        if (tSource instanceof ByteView tView)
             {
-            ByteView tView = (ByteView) tSource;
-
             byte[] ab = tView.getBytes(hSource, lIndex*8, 8, false);
             long   l  = Handy.byteArrayToLong(ab, 0);
 
@@ -108,10 +104,8 @@ public class xRTViewFromByteToInt64
         DelegateHandle hSource = hView.f_hSource;
         ClassTemplate  tSource = hSource.getTemplate();
 
-        if (tSource instanceof ByteView)
+        if (tSource instanceof ByteView tView)
             {
-            ByteView tView = (ByteView) tSource;
-
             long lValue = ((JavaLong) hValue).getValue();
 
             tView.assignByte(hSource, (lIndex++)*8, (byte) ((lValue >>> 56) & 0xFF));
