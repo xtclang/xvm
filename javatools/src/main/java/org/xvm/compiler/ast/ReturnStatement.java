@@ -176,8 +176,8 @@ public class ReturnStatement
                                 !(expr instanceof InvocationExpression))
                             {
                             // it is supposed to be a void return; allow a Future<Tuple>
-                            if (expr instanceof NameExpression &&
-                                    ((NameExpression) expr).isDynamicVar() && expr.getType().isTuple())
+                            if (expr instanceof NameExpression exprName &&
+                                    exprName.isDynamicVar() && expr.getType().isTuple())
                                 {
                                 m_fFutureReturn = true;
                                 }
@@ -220,11 +220,11 @@ public class ReturnStatement
             Expression exprNew;
 
             TypeConstant typeRequired = cRets >= 1 ? aRetTypes[0] : null;
-            if (fConditional && exprOld instanceof TernaryExpression)
+            if (fConditional && exprOld instanceof TernaryExpression exprTernary)
                 {
                 // ternary expression needs to know the fact that it returns a conditional type
                 m_fConditionalTernary = true;
-                ((TernaryExpression) exprOld).markConditional();
+                exprTernary.markConditional();
                 typeRequired = cRets == 2 ? aRetTypes[1] : null;
                 }
 
