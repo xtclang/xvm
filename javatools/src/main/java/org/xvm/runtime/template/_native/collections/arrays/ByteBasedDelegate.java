@@ -236,6 +236,7 @@ public abstract class ByteBasedDelegate
 
     // ----- ClassTemplate API ---------------------------------------------------------------------
 
+    @Override
     public int invokePreInc(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
         {
         ByteArrayHandle hDelegate = (ByteArrayHandle) hTarget;
@@ -245,9 +246,70 @@ public abstract class ByteBasedDelegate
             return frame.raiseException(xException.outOfBounds(frame, lIndex, hDelegate.m_cSize));
             }
 
-        // TODO GG: range check is missing!
-        return frame.assignValue(iReturn,
-                makeElementHandle(++hDelegate.m_abValue[(int) lIndex]));
+        byte bValue = ++hDelegate.m_abValue[(int) lIndex];
+        if (bValue == Byte.MIN_VALUE)
+            {
+            --hDelegate.m_abValue[(int) lIndex];
+            return overflow(frame);
+            }
+        return frame.assignValue(iReturn, makeElementHandle(bValue));
+        }
+
+    @Override
+    public int invokePreDec(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
+        {
+        ByteArrayHandle hDelegate = (ByteArrayHandle) hTarget;
+
+        if (lIndex < 0 || lIndex >= hDelegate.m_cSize)
+            {
+            return frame.raiseException(xException.outOfBounds(frame, lIndex, hDelegate.m_cSize));
+            }
+
+        byte bValue = --hDelegate.m_abValue[(int) lIndex];
+        if (bValue == Byte.MAX_VALUE)
+            {
+            ++hDelegate.m_abValue[(int) lIndex];
+            return overflow(frame);
+            }
+        return frame.assignValue(iReturn, makeElementHandle(bValue));
+        }
+
+    @Override
+    public int invokePostInc(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
+        {
+        ByteArrayHandle hDelegate = (ByteArrayHandle) hTarget;
+
+        if (lIndex < 0 || lIndex >= hDelegate.m_cSize)
+            {
+            return frame.raiseException(xException.outOfBounds(frame, lIndex, hDelegate.m_cSize));
+            }
+
+        byte bValue = hDelegate.m_abValue[(int) lIndex]--;
+        if (bValue == Byte.MAX_VALUE)
+            {
+            hDelegate.m_abValue[(int) lIndex]++;
+            return overflow(frame);
+            }
+        return frame.assignValue(iReturn, makeElementHandle(bValue));
+        }
+
+    @Override
+    public int invokePostDec(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
+        {
+        ByteArrayHandle hDelegate = (ByteArrayHandle) hTarget;
+
+        if (lIndex < 0 || lIndex >= hDelegate.m_cSize)
+            {
+            return frame.raiseException(xException.outOfBounds(frame, lIndex, hDelegate.m_cSize));
+            }
+
+        byte bValue = hDelegate.m_abValue[(int) lIndex]--;
+        if (bValue == Byte.MIN_VALUE)
+            {
+            hDelegate.m_abValue[(int) lIndex]--;
+            return overflow(frame);
+            }
+        return frame.assignValue(iReturn, makeElementHandle(bValue));
         }
 
     @Override

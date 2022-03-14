@@ -19,6 +19,7 @@ import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
+import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xOrdered;
 
 import org.xvm.runtime.template.text.xString;
@@ -72,6 +73,28 @@ public class xBit
             return frame.pushStack(makeHandle(((ByteConstant) constant).getValue().intValue() != 0));
             }
         return super.createConstHandle(frame, constant);
+        }
+
+    @Override
+    public int construct(Frame frame, MethodStructure constructor, TypeComposition clazz,
+                         ObjectHandle hParent, ObjectHandle[] ahVar, int iReturn)
+        {
+        if (ahVar.length >= 1 && ahVar[0] instanceof xIntLiteral.IntNHandle hIntN)
+            {
+            try
+                {
+                long lBit = hIntN.getValue().getInt();
+                if (lBit == 0 || lBit == 1)
+                    {
+                    return frame.assignValue(iReturn, makeHandle(lBit == 1));
+                    }
+                }
+            catch (IllegalStateException ignore) {}
+
+            return frame.raiseException(xException.illegalArgument(frame,
+                hIntN.getValue().toString()));
+            }
+        return frame.raiseException(xException.unsupportedOperation(frame));
         }
 
     @Override
