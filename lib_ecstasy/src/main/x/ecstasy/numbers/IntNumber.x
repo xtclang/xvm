@@ -221,7 +221,7 @@
      */
     Nibble toNibble()
         {
-        return new Nibble(toInt64());
+        return Nibble.of(toInt64() & 0xF);
         }
 
     /**

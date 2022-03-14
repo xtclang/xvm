@@ -33,14 +33,16 @@ const Nibble
         }
 
     /**
-     * Construct a Nibble from an integer value.
+     * Obtain the nibble corresponding to an integer value.
      *
      * @param n  an integer value in the range `[0..F]`
+     *
+     * @return the corresponding Nibble
      */
-    construct(Int n)
+    static Nibble of(Int n)
         {
         assert:arg 0 <= n <= 0xF;
-        bits = values[n].bits;
+        return values[n];
         }
 
     /**
