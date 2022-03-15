@@ -54,7 +54,7 @@ public class xRTStringDelegate
         ConstantPool pool = pool();
         return pool.ensureParameterizedTypeConstant(
                 getInceptionClassConstant().getType(),
-                pool.ensureEcstasyTypeConstant("text.String"));
+                pool.typeString());
         }
 
     @Override
@@ -367,8 +367,8 @@ public class xRTStringDelegate
         @Override
         public boolean equals(Object obj)
             {
-            return obj instanceof StringArrayHandle
-                && Arrays.equals(m_asValue, ((StringArrayHandle) obj).m_asValue);
+            return obj instanceof StringArrayHandle that
+                && Arrays.equals(this.m_asValue, that.m_asValue);
             }
         }
     }

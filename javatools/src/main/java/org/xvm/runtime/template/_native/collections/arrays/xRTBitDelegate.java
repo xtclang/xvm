@@ -59,15 +59,7 @@ public class xRTBitDelegate
         return xBit.makeHandle(f);
         }
 
-    /**
-     * Create a bit array handle.
-     *
-     * @param abValue     the underlying bytes
-     * @param cBits       the bit array arity
-     * @param mutability  the mutability
-     *
-     * @return the array handle
-     */
+    @Override
     public BitArrayHandle makeHandle(byte[] abValue, long cBits, Mutability mutability)
         {
         return new BitArrayHandle(getCanonicalClass(), abValue, cBits, mutability);

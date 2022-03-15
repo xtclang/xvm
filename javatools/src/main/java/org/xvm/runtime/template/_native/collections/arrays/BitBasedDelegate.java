@@ -25,8 +25,6 @@ public abstract class BitBasedDelegate
         extends ByteBasedDelegate
         implements BitView
     {
-    public static BitBasedDelegate INSTANCE;
-
     protected BitBasedDelegate(TemplateRegistry templates, ClassStructure structure)
         {
         super(templates, structure);
@@ -146,7 +144,7 @@ public abstract class BitBasedDelegate
         long           cSize     = hDelegate.m_cSize;
         byte[]         abValue   = hDelegate.m_abValue;
 
-        if (cSize == abValue.length)
+        if (storage(cSize + 1) > abValue.length)
             {
             abValue = hDelegate.m_abValue = grow(hDelegate.m_abValue, storage(cSize) + 1);
             }
