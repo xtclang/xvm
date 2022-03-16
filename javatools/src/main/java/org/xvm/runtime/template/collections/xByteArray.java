@@ -14,7 +14,6 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 
-import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xException;
 
 import org.xvm.runtime.template.numbers.xInt64;
@@ -56,7 +55,6 @@ public class xByteArray
         mixin.markNativeMethod("asInt8Array", VOID, null);
         mixin.markNativeMethod("asInt16Array", VOID, null);
         mixin.markNativeMethod("asInt64Array", VOID, null);
-        mixin.markNativeMethod("toBitArray", null, null);
         mixin.markNativeMethod("toInt64", VOID, null);
 
         getCanonicalType().invalidateTypeInfo();
@@ -77,35 +75,6 @@ public class xByteArray
             }
 
         return super.createConstHandle(frame, constant);
-        }
-
-    @Override
-    public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                             ObjectHandle hArg, int iReturn)
-        {
-        switch (method.getName())
-            {
-            case "toBitArray":
-                {
-                ArrayHandle hArray = (ArrayHandle) hTarget;
-                byte[]      aBytes = xByteArray.getBytes(hArray);
-
-                Mutability mutability = hArg == ObjectHandle.DEFAULT
-                        ? Mutability.Constant
-                        : Mutability.values()[((xEnum.EnumHandle) hArg).getOrdinal()];
-
-                if (hArray.m_mutability == Mutability.Constant && mutability != Mutability.Constant)
-                    {
-                    // if the array is not constant, getBytes() returns a copy
-                    aBytes = aBytes.clone();
-                    }
-
-                return frame.assignValue(iReturn,
-                        xArray.makeBitArrayHandle(aBytes, aBytes.length >>> 3, mutability));
-                }
-            }
-
-        return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
         }
 
     @Override
@@ -178,7 +147,7 @@ public class xByteArray
         }
 
     /**
-     * Extract a array of bytes from the Array<Byte> handle.
+     * Extract an array of bytes from the Array<Byte> handle.
      */
     public static byte[] getBytes(ArrayHandle hArray)
         {

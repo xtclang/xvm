@@ -41,6 +41,13 @@ public abstract class ByteBasedBitView
                                         hBytes, hBytes.m_cSize*8, mutability);
             return slice(hView, hSlice.f_ofStart*8, hSlice.m_cSize*8, false);
             }
+
+        if (hSource instanceof xRTViewFromBit.ViewHandle hView)
+            {
+            return new ViewHandle(getCanonicalClass(),
+                    (ByteArrayHandle) hView.f_hSource, hSource.m_cSize*8, mutability);
+            }
+
         return new ViewHandle(getCanonicalClass(),
                 (ByteArrayHandle) hSource, hSource.m_cSize*8, mutability);
         }

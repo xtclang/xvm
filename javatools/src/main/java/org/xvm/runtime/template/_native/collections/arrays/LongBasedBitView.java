@@ -46,6 +46,13 @@ public abstract class LongBasedBitView
                                             hLong, hLong.m_cSize*f_nBitsPerValue, mutability);
             return slice(hView, hSlice.f_ofStart*f_nBitsPerValue, hSlice.m_cSize*f_nBitsPerValue, false);
             }
+
+        if (hSource instanceof xRTViewFromBit.ViewHandle hView)
+            {
+            return new ViewHandle(getCanonicalClass(),
+                    (LongArrayHandle) hView.f_hSource, hSource.m_cSize, mutability);
+            }
+
         return new ViewHandle(getCanonicalClass(),
                 (LongArrayHandle) hSource, hSource.m_cSize*f_nBitsPerValue, mutability);
         }
