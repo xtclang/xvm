@@ -2,7 +2,6 @@ package org.xvm.runtime.template.collections;
 
 
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -11,14 +10,12 @@ import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TemplateRegistry;
-import org.xvm.runtime.TypeComposition;
 
-import org.xvm.runtime.template._native.collections.arrays.xRTViewToBitFromNibble;
 import org.xvm.runtime.template.xException;
 
 import org.xvm.runtime.template._native.collections.arrays.xRTDelegate.DelegateHandle;
 import org.xvm.runtime.template._native.collections.arrays.xRTViewFromBitToByte;
-import org.xvm.runtime.template._native.collections.arrays.xRTViewFromBitToNibble;
+import org.xvm.runtime.template._native.collections.arrays.xRTViewToBitFromNibble;
 
 
 /**
@@ -64,8 +61,7 @@ public class xNibbleArray
             {
             case "asBitArray":
                 {
-                ArrayHandle hArray   = (ArrayHandle) hTarget;
-                long        cNibbles = hArray.m_hDelegate.m_cSize;
+                ArrayHandle hArray = (ArrayHandle) hTarget;
 
                 Mutability     mutability = hArray.m_mutability;
                 DelegateHandle hDelegate  = xRTViewToBitFromNibble.INSTANCE.createBitViewDelegate(
