@@ -77,8 +77,9 @@ public class xArray
         {
         if (this == INSTANCE)
             {
-            registerNativeTemplate(new xBitArray (f_templates, f_struct, true));
-            registerNativeTemplate(new xByteArray(f_templates, f_struct, true));
+            registerNativeTemplate(new xBitArray   (f_templates, f_struct, true));
+            registerNativeTemplate(new xByteArray  (f_templates, f_struct, true));
+            registerNativeTemplate(new xNibbleArray(f_templates, f_struct, true));
             }
         }
 
@@ -229,11 +230,11 @@ public class xArray
             if (fDeferred)
                 {
                 Frame.Continuation stepNext = frameCaller ->
-                    createListSet(frameCaller, typeEl, ahValue, Op.A_STACK);
+                    createListSet(frameCaller, typeEl, ahValue);
                 return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
                 }
 
-            return createListSet(frame, typeEl, ahValue, Op.A_STACK);
+            return createListSet(frame, typeEl, ahValue);
             }
         else
             {
@@ -616,21 +617,21 @@ public class xArray
     // ----- helper methods ------------------------------------------------------------------------
 
     /**
-     * Construct an immutable ListSet handle based on the specified array of handles.
+     * Construct an immutable ListSet handle based on the specified array of handles and put on the
+     * frame's stack.
      *
      * @param frame    the current frame
      * @param typeEl   the array element type
      * @param ahValue  the array handles
-     * @param iResult  the register to place the result into
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
-    private int createListSet(Frame frame, TypeConstant typeEl, ObjectHandle[] ahValue, int iResult)
+    private int createListSet(Frame frame, TypeConstant typeEl, ObjectHandle[] ahValue)
         {
         TypeConstant    typeArray = frame.poolContext().ensureArrayType(typeEl);
         TypeComposition clzArray  = f_templates.resolveClass(typeArray);
 
-        return createListSet(frame, createImmutableArray(clzArray, ahValue), iResult);
+        return createListSet(frame, createImmutableArray(clzArray, ahValue), Op.A_STACK);
         }
 
     /**
@@ -638,7 +639,6 @@ public class xArray
      *
      * @param frame    the current frame
      * @param hArray   the array handle
-     * @param iResult  the register to place the result into
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */

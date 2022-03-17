@@ -20,6 +20,7 @@ import org.xvm.runtime.template._native.collections.arrays.BitView;
 import org.xvm.runtime.template._native.collections.arrays.xRTDelegate.DelegateHandle;
 import org.xvm.runtime.template._native.collections.arrays.xRTSlicingDelegate.SliceHandle;
 import org.xvm.runtime.template._native.collections.arrays.xRTViewFromBitToByte;
+import org.xvm.runtime.template._native.collections.arrays.xRTViewFromBitToNibble;
 
 
 /**
@@ -46,6 +47,7 @@ public class xBitArray
         ClassTemplate mixin = f_templates.getTemplate("collections.arrays.BitArray");
 
         mixin.markNativeMethod("asByteArray", VOID, null);
+        mixin.markNativeMethod("asNibbleArray", VOID, null);
         mixin.markNativeMethod("toUInt8", VOID, null);
         mixin.markNativeMethod("toByteArray", null, null);
 
@@ -106,10 +108,28 @@ public class xBitArray
 
                 Mutability     mutability = hArray.m_mutability;
                 DelegateHandle hDelegate  = xRTViewFromBitToByte.INSTANCE.createBitViewDelegate(
-                        hArray.m_hDelegate, frame.poolContext().typeByte(), mutability);
+                        hArray.m_hDelegate, mutability);
 
                 return frame.assignValue(iReturn, new ArrayHandle(
                         xByteArray.INSTANCE.getCanonicalClass(), hDelegate, mutability));
+                }
+
+            case "asNibbleArray":
+                {
+                ArrayHandle hArray = (ArrayHandle) hTarget;
+                long        cBits  = hArray.m_hDelegate.m_cSize;
+                if (cBits % 4 != 0)
+                    {
+                    return frame.raiseException(xException.outOfBounds(
+                            frame, "Invalid array size: " + cBits));
+                    }
+
+                Mutability     mutability = hArray.m_mutability;
+                DelegateHandle hDelegate  = xRTViewFromBitToNibble.INSTANCE.createBitViewDelegate(
+                        hArray.m_hDelegate, mutability);
+
+                return frame.assignValue(iReturn, new ArrayHandle(
+                        xNibbleArray.INSTANCE.getCanonicalClass(), hDelegate, mutability));
                 }
 
             case "toUInt8":

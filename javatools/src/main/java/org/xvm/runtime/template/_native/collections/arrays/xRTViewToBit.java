@@ -10,7 +10,6 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.TemplateRegistry;
-
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.collections.xArray.Mutability;
@@ -39,6 +38,8 @@ public class xRTViewToBit
         {
         if (this == INSTANCE)
             {
+            registerNativeTemplate(new xRTViewToBitFromNibble(f_templates, f_struct, true));
+
             registerNativeTemplate(new xRTViewToBitFromInt8  (f_templates, f_struct, true));
             registerNativeTemplate(new xRTViewToBitFromInt16 (f_templates, f_struct, true));
             registerNativeTemplate(new xRTViewToBitFromInt32 (f_templates, f_struct, true));
@@ -56,6 +57,8 @@ public class xRTViewToBit
         // register native views
         ConstantPool                    pool     = pool();
         Map<TypeConstant, xRTViewToBit> mapViews = new HashMap<>();
+
+        mapViews.put(pool.typeNibble(), xRTViewToBitFromNibble.INSTANCE);
 
         mapViews.put(pool.typeCInt8() , xRTViewToBitFromInt8  .INSTANCE);
         mapViews.put(pool.typeCInt16(), xRTViewToBitFromInt16 .INSTANCE);

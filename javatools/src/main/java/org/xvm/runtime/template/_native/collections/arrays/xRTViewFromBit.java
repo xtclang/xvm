@@ -3,8 +3,6 @@ package org.xvm.runtime.template._native.collections.arrays;
 
 import org.xvm.asm.ClassStructure;
 
-import org.xvm.asm.constants.TypeConstant;
-
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
@@ -36,7 +34,8 @@ public class xRTViewFromBit
         {
         if (this == INSTANCE)
             {
-            registerNativeTemplate(new xRTViewFromBitToByte(f_templates, f_struct, true));
+            registerNativeTemplate(new xRTViewFromBitToByte  (f_templates, f_struct, true));
+            registerNativeTemplate(new xRTViewFromBitToNibble(f_templates, f_struct, true));
             }
         }
 
@@ -48,12 +47,10 @@ public class xRTViewFromBit
     /**
      * Create an ArrayDelegate<NumType> view into the specified ArrayDelegate<Bit> source.
      *
-     * @param hSource      the source (of bit type) delegate
-     * @param typeElement  the numeric type to create the view for
-     * @param mutability   the desired mutability
+     * @param hSource     the source (of bit type) delegate
+     * @param mutability  the desired mutability
      */
-    public DelegateHandle createBitViewDelegate(DelegateHandle hSource, TypeConstant typeElement,
-                                                Mutability mutability)
+    public DelegateHandle createBitViewDelegate(DelegateHandle hSource, Mutability mutability)
         {
         throw new UnsupportedOperationException();
         }
@@ -68,9 +65,9 @@ public class xRTViewFromBit
         DelegateHandle hSource = hView.f_hSource;
         ClassTemplate  tSource = hSource.getTemplate();
 
-        if (tSource instanceof ByteView)
+        if (tSource instanceof ByteView tView)
             {
-            return ((ByteView) tSource).getBytes(hSource, ofStart, cBytes, fReverse);
+            return tView.getBytes(hSource, ofStart, cBytes, fReverse);
             }
 
         throw new UnsupportedOperationException();
@@ -83,9 +80,9 @@ public class xRTViewFromBit
         DelegateHandle hSource = hView.f_hSource;
         ClassTemplate  tSource = hSource.getTemplate();
 
-        if (tSource instanceof ByteView)
+        if (tSource instanceof ByteView tView)
             {
-            return ((ByteView) tSource).extractByte(hSource, of);
+            return tView.extractByte(hSource, of);
             }
 
         throw new UnsupportedOperationException();
@@ -98,9 +95,9 @@ public class xRTViewFromBit
         DelegateHandle hSource = hView.f_hSource;
         ClassTemplate  tSource = hSource.getTemplate();
 
-        if (tSource instanceof ByteView)
+        if (tSource instanceof ByteView tView)
             {
-            ((ByteView) tSource).assignByte(hSource, of, bValue);
+            tView.assignByte(hSource, of, bValue);
             return;
             }
 

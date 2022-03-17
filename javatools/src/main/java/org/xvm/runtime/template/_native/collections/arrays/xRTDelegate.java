@@ -58,6 +58,8 @@ public class xRTDelegate
         {
         if (this == INSTANCE)
             {
+            registerNativeTemplate(new xRTNibbleDelegate  (f_templates, f_struct, true));
+
             registerNativeTemplate(new xRTBooleanDelegate (f_templates, f_struct, true));
             registerNativeTemplate(new xRTBitDelegate     (f_templates, f_struct, true));
             registerNativeTemplate(new xRTCharDelegate    (f_templates, f_struct, true));
@@ -83,7 +85,7 @@ public class xRTDelegate
         ConstantPool                   pool         = pool();
         Map<TypeConstant, xRTDelegate> mapDelegates = new HashMap<>();
 
-        TypeConstant typeString = pool.ensureEcstasyTypeConstant("text.String");
+        mapDelegates.put(pool.typeNibble(),  xRTNibbleDelegate .INSTANCE);
 
         mapDelegates.put(pool.typeBoolean(), xRTBooleanDelegate.INSTANCE);
         mapDelegates.put(pool.typeBit(),     xRTBitDelegate    .INSTANCE);
@@ -99,7 +101,7 @@ public class xRTDelegate
         mapDelegates.put(pool.typeCUInt32(), xRTUInt32Delegate .INSTANCE);
         mapDelegates.put(pool.typeCUInt64(), xRTUInt64Delegate .INSTANCE);
 
-        mapDelegates.put(typeString,         xRTStringDelegate .INSTANCE);
+        mapDelegates.put(pool.typeString(),  xRTStringDelegate .INSTANCE);
 
         DELEGATES = mapDelegates;
 
