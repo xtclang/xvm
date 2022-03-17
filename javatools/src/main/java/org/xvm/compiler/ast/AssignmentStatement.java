@@ -79,9 +79,9 @@ public class AssignmentStatement
             return true;
             }
 
-        if (lvalue instanceof MultipleLValueStatement)
+        if (lvalue instanceof MultipleLValueStatement stmtMulti)
             {
-            for (AstNode LVal : ((MultipleLValueStatement) lvalue).LVals)
+            for (AstNode LVal : stmtMulti.LVals)
                 {
                 if (LVal instanceof VariableDeclarationStatement)
                     {
@@ -103,18 +103,18 @@ public class AssignmentStatement
         if (aDecls == null)
             {
             AstNode LVal = lvalue;
-            if (LVal instanceof VariableDeclarationStatement)
+            if (LVal instanceof VariableDeclarationStatement stmtVar)
                 {
-                aDecls = new VariableDeclarationStatement[] {(VariableDeclarationStatement) LVal};
+                aDecls = new VariableDeclarationStatement[] {stmtVar};
                 }
-            else if (LVal instanceof MultipleLValueStatement)
+            else if (LVal instanceof MultipleLValueStatement stmtMulti)
                 {
                 ArrayList<VariableDeclarationStatement> list = new ArrayList<>();
-                for (AstNode node : ((MultipleLValueStatement) LVal).LVals)
+                for (AstNode node : stmtMulti.LVals)
                     {
-                    if (node instanceof VariableDeclarationStatement)
+                    if (node instanceof VariableDeclarationStatement stmtVar)
                         {
-                        list.add((VariableDeclarationStatement) node);
+                        list.add(stmtVar);
                         }
                     }
                 aDecls = list.isEmpty()
@@ -410,16 +410,16 @@ public class AssignmentStatement
         Context      ctxLValue = ctx;
 
         // a LValue represented by a statement indicates one or more variable declarations
-        if (nodeLeft instanceof Statement lvalueOld)
+        if (nodeLeft instanceof Statement stmtLeft)
             {
-            assert nodeLeft instanceof VariableDeclarationStatement ||
-                   nodeLeft instanceof MultipleLValueStatement;
+            assert stmtLeft instanceof VariableDeclarationStatement ||
+                   stmtLeft instanceof MultipleLValueStatement;
 
             LValueContext ctxLV = new LValueContext(ctx);
 
             errs = errs.branch(this);
 
-            Statement lvalueNew = lvalueOld.validate(ctxLV, errs);
+            Statement lvalueNew = stmtLeft.validate(ctxLV, errs);
 
             if (lvalueNew == null)
                 {
@@ -542,8 +542,7 @@ public class AssignmentStatement
                         ctxRValue = ctxRValue.enterInferring(typeLeft);
                         }
 
-                    if (exprLeft instanceof NameExpression &&
-                            ((NameExpression) exprLeft).isDynamicVar())
+                    if (exprLeft instanceof NameExpression exprName && exprName.isDynamicVar())
                         {
                         // test for a future assignment first
                         TypeConstant typeFuture = pool.ensureFutureVar(typeLeft);
@@ -559,15 +558,15 @@ public class AssignmentStatement
                         ctxRValue = ctxRValue.exit();
                         }
 
-                    if (exprRight instanceof InvocationExpression &&
-                            ((InvocationExpression) exprRight).isAsync() &&
-                        exprLeft instanceof NameExpression)
+                    if (exprRight instanceof InvocationExpression exprInvoke &&
+                            exprInvoke.isAsync() &&
+                            exprLeft instanceof NameExpression exprName)
                         {
                         // auto-convert to a @Future register, e.g.
                         //      Int i = svc.f^();
                         // into
                         //      @Future Int i = svc.f^();
-                        Argument argLeft = ctxLValue.getVar(((NameExpression) exprLeft).getName());
+                        Argument argLeft = ctxLValue.getVar(exprName.getName());
                         if (argLeft instanceof Register regLeft)
                             {
                             TypeConstant typeRef = regLeft.ensureRegType(false);
@@ -705,9 +704,9 @@ public class AssignmentStatement
 
                 BiExpression exprFakeRValue    = createBiExpression(exprLeftCopy, op, exprRight);
                 Expression   exprFakeRValueNew = exprFakeRValue.validate(ctxRValue, typeLeft, errs);
-                if (exprFakeRValueNew instanceof BiExpression)
+                if (exprFakeRValueNew instanceof BiExpression exprBi)
                     {
-                    exprRightNew = ((BiExpression) exprFakeRValueNew).getExpression2();
+                    exprRightNew = exprBi.getExpression2();
                     if (getCategory() == Category.CondLeft)
                         {
                         atypeRight = exprRightNew.getTypes();
@@ -772,8 +771,8 @@ public class AssignmentStatement
                 // code gen optimization for the common case of a combined declaration and
                 // constant assignment of a single value
                 if (lvalueExpr.isSingle()
-                        && lvalue instanceof VariableDeclarationStatement
-                        && !((VariableDeclarationStatement) lvalue).hasRefAnnotations()
+                        && lvalue instanceof VariableDeclarationStatement stmtVar
+                        && !stmtVar.hasRefAnnotations()
                         && rvalue.supportsCompactInit((VariableDeclarationStatement) lvalue))
                     {
                     assert lvalueExpr.isCompletable();
@@ -781,9 +780,9 @@ public class AssignmentStatement
                     break;
                     }
 
-                if (lvalue instanceof Statement)
+                if (lvalue instanceof Statement stmt)
                     {
-                    fCompletes = ((Statement) lvalue).completes(ctx, fCompletes, code, errs);
+                    fCompletes = stmt.completes(ctx, fCompletes, code, errs);
                     }
 
                 Assignable[] LVals = lvalueExpr.generateAssignables(ctx, code, errs);
@@ -797,9 +796,9 @@ public class AssignmentStatement
 
             case CondRight:
                 {
-                if (lvalue instanceof Statement)
+                if (lvalue instanceof Statement stmt)
                     {
-                    fCompletes = ((Statement) lvalue).completes(ctx, fCompletes, code, errs);
+                    fCompletes = stmt.completes(ctx, fCompletes, code, errs);
                     }
 
                 if (op.getId() == Id.COND_NN_ASN)
