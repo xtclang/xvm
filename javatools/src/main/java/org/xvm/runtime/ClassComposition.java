@@ -300,6 +300,21 @@ public class ClassComposition
     @Override
     public CallChain getMethodCallChain(Object nidMethod)
         {
+        CallChain chain = f_mapMethods.get(nidMethod);
+        return chain == null
+                ? ensureMethodChain(nidMethod)
+                : chain;
+        }
+
+    /**
+     * Compute the invocation {@link CallChain} for a given method.
+     *
+     * @param nidMethod the method nid
+     *
+     * @return the {@link CallChain}
+     */
+    private CallChain ensureMethodChain(Object nidMethod)
+        {
         return f_mapMethods.computeIfAbsent(nidMethod,
             nid ->
                 {
@@ -307,8 +322,7 @@ public class ClassComposition
                         ? f_typeStructure.ensureTypeInfo()
                         : f_typeInception.ensureTypeInfo();
                 return new CallChain(info.getOptimizedMethodChain(nid));
-                }
-            );
+                });
         }
 
     @Override
@@ -333,12 +347,12 @@ public class ClassComposition
         {
         return f_mapGetters.computeIfAbsent(idProp,
             id ->
-            {
-            MethodBody[] chain = f_typeInception.ensureTypeInfo().getOptimizedGetChain(id);
-            return chain == null
-                    ? NIL_CHAIN
-                    : CallChain.createPropertyCallChain(chain);
-            });
+                {
+                MethodBody[] chain = f_typeInception.ensureTypeInfo().getOptimizedGetChain(id);
+                return chain == null
+                        ? NIL_CHAIN
+                        : CallChain.createPropertyCallChain(chain);
+                });
         }
 
     @Override
@@ -363,12 +377,12 @@ public class ClassComposition
         {
         return f_mapSetters.computeIfAbsent(idProp,
             id ->
-            {
-            MethodBody[] chain = f_typeInception.ensureTypeInfo().getOptimizedSetChain(id);
-            return chain == null
-                    ? NIL_CHAIN
-                    : CallChain.createPropertyCallChain(chain);
-            });
+                {
+                MethodBody[] chain = f_typeInception.ensureTypeInfo().getOptimizedSetChain(id);
+                return chain == null
+                        ? NIL_CHAIN
+                        : CallChain.createPropertyCallChain(chain);
+                });
         }
 
     @Override
