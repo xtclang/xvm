@@ -66,7 +66,7 @@ public class xRTViewToBitFromNibble
 
         if (hSource instanceof xRTViewFromBit.ViewHandle hView)
             {
-            return hView;
+            return hView.f_hSource;
             }
 
         return new ViewHandle(getCanonicalClass(),

@@ -9,7 +9,13 @@ module TestSimple
 
     void run()
         {
-        Int x = 0;
-        ++x -= x++;  // used to assert in the compiler
+        Byte[] bytes4 = [0xDE, 0xAD, 0xCA, 0xFE];
+        console.println(bytes4);
+
+        Nibble[] nibbles8 = bytes4.asNibbleArray();
+        UInt32 n32 = nibbles8.toUInt32(); // this used to throw CCE
+
+        console.println(n32);
+        assert n32.toByteArray() == bytes4;
         }
     }
