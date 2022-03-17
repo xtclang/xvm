@@ -217,7 +217,7 @@ const ConstOrdinalList
                 else
                     {
                     // packed array mode
-                    val = unpackOne(contents, packedOffset, bitsPerVal, curIndex - curNodeIndex);
+                    val = unpackOne(contents, packedOffset, curIndex - curNodeIndex, bitsPerVal);
                     }
 
                 ++curIndex;
@@ -250,7 +250,7 @@ const ConstOrdinalList
                     (Int jumpIndex, nextNodeOffset) = contents.unpackInt(nextNodeOffset);
                     if (jumpIndex != 0)
                         {
-                        (Int jumpOffset, nextNodeOffset) = contents.unpackInt(nextNodeOffset);
+                        (_, nextNodeOffset) = contents.unpackInt(nextNodeOffset);
                         }
 
                     // read the relative index of the next node
@@ -625,8 +625,8 @@ const ConstOrdinalList
             assert nodeNext?.index > node.index;
 
             Int    jumpIndex = node.jumpIndex == 0 ? 0 : node.jumpIndex - node.index;
-            Int    nextIndex = nodeNext?.index - node.index : 0;
             Int    valCount  = node.runLenEnc ? -node.length : node.length;
+            Int    nextIndex = nodeNext?.index - node.index : valCount;
             Int    val       = 0;
             Byte[] packed    = [];
             if (node.runLenEnc)

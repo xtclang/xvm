@@ -120,11 +120,17 @@ public class ConstOrdinalListTest
             + ", bytes=" + cb
             + ", compression=" + calcPct(list.size() * 4 + 4, cb));
 
-        assert list.isEmpty() == col.isEmpty();
-        assert list.size()    == col.size();
+        if (list.isEmpty() != col.isEmpty())
+            {
+            throw new IllegalStateException("empty check");
+            }
+        if (list.size() != col.size())
+            {
+            throw new IllegalStateException("size check");
+            }
         if (!list.equals(col))
             {
-            assert list.equals(col);
+            throw new IllegalStateException("equality check");
             }
 
         for (int i = 0, c = list.size(); i < c; ++i)
@@ -139,5 +145,5 @@ public class ConstOrdinalListTest
         return nPct < 0 ? nPct + "%" : "+" + nPct + "%";
         }
 
-    private static Random s_rnd = new Random();
+    private final static Random s_rnd = new Random();
     }

@@ -38,7 +38,7 @@ import static org.xvm.util.PackedInteger.writeLong;
  * </li><li>Repetition of the same value can be represented as a "repeating node";
  * </li><li>The most common value can be omitted altogether, since absence of data implies that
  *          value;
- * </li><li>When values need to be stored, only the necessary signficiant number of bits need be
+ * </li><li>When values need to be stored, only the necessary significant number of bits need be
  *          used.
  * </li></ul>
  * <p/>
@@ -712,6 +712,8 @@ public class ConstOrdinalList
 
             RawNode nodeRaw = new RawNode();
             assert nodeNext == null || nodeNext.id > node.id;
+            // REVIEW CP: should not be 0, should be size (i.e. index of first non-existent int beyond end of array)
+            //            it works now due to the "ofNext >= ab.length" in "currentNode()" method
             nodeRaw.idNext  = nodeNext == null ? 0 : nodeNext.id - node.id;
 
             if (node.rle)

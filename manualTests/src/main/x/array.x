@@ -352,6 +352,13 @@ module TestArray
             {
             console.println($"col[{i}]={col[i]}");
             }
+
+        Iterator<Int> iter = col.iterator();
+        Loop: while (Int val := iter.next())
+            {
+            assert val == vals[Loop.count] && val == col[Loop.count];
+            }
+
         console.println($"col={col}");
         console.println($"bytes={col.contents}");
         }
