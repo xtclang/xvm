@@ -142,7 +142,7 @@ module TestArray
         console.println("ints=" + ints);
 
         Byte[] bytes = new Array<Byte>(3, i -> i.toByte());
-        console.println("ints=" + bytes);
+        console.println("bytes=" + bytes);
 
         Boolean[] booleans = new Array<Boolean>(3, i -> i % 2 == 0);
         console.println("booleans=" + booleans);

@@ -1245,19 +1245,27 @@ mixin BitArray<Element extends Bit>
     // ----- Stringable methods --------------------------------------------------------------------
 
     @Override
-    Int estimateStringLength()
+    Int estimateStringLength(
+            String                    sep    = "",
+            String?                   pre    = "0b",
+            String?                   post   = Null,
+            Int?                      limit  = Null,
+            String                    trunc  = "...",
+            function String(Element)? render = Null)
         {
-        return 2 + size;
+        return super(sep, pre, post, limit, trunc, render);
         }
 
     @Override
-    Appender<Char> appendTo(Appender<Char> buf)
+    Appender<Char> appendTo(
+            Appender<Char>            buf,
+            String                    sep    = "",
+            String?                   pre    = "0b",
+            String?                   post   = Null,
+            Int?                      limit  = Null,
+            String                    trunc  = "...",
+            function String(Element)? render = Null)
         {
-        "0b".appendTo(buf);
-        for (Bit bit : this)
-            {
-            bit.appendTo(buf);
-            }
-        return buf;
+        return super(buf, sep, pre, post, limit, trunc, render);
         }
     }

@@ -510,19 +510,27 @@ mixin NibbleArray<Element extends Nibble>
     // ----- Stringable methods --------------------------------------------------------------------
 
     @Override
-    Int estimateStringLength()
+    Int estimateStringLength(
+            String                    sep    = "",
+            String?                   pre    = "0x",
+            String?                   post   = Null,
+            Int?                      limit  = Null,
+            String                    trunc  = "...",
+            function String(Element)? render = Null)
         {
-        return 2 + size;
+        return super(sep, pre, post, limit, trunc, render);
         }
 
     @Override
-    Appender<Char> appendTo(Appender<Char> buf)
+    Appender<Char> appendTo(
+            Appender<Char>            buf,
+            String                    sep    = "",
+            String?                   pre    = "0x",
+            String?                   post   = Null,
+            Int?                      limit  = Null,
+            String                    trunc  = "...",
+            function String(Element)? render = Null)
         {
-        "0x".appendTo(buf);
-        for (Nibble nibble : this)
-            {
-            nibble.appendTo(buf);
-            }
-        return buf;
+        return super(buf, sep, pre, post, limit, trunc, render);
         }
     }

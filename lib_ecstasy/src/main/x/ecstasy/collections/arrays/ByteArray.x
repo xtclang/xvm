@@ -959,16 +959,35 @@ mixin ByteArray<Element extends Byte>
     // ----- Stringable methods --------------------------------------------------------------------
 
     @Override
-    Int estimateStringLength()
+    Int estimateStringLength(
+            String                    sep    = "",
+            String?                   pre    = "0x",
+            String?                   post   = Null,
+            Int?                      limit  = Null,
+            String                    trunc  = "...",
+            function String(Element)? render = Null)
         {
         return 2 + size*2;
+//
+//        return sep == "" && pre == "0x" && post == Null && render == Null
+//                ? asNibbleArray().estimateStringLength(sep, pre, post, limit?*2 : Null, trunc, render)
+//                : super(sep, pre, post, limit, trunc, render);
         }
 
     @Override
-    Appender<Char> appendTo(Appender<Char> buf)
+    Appender<Char> appendTo(
+            Appender<Char>            buf,
+            String                    sep    = "",
+            String?                   pre    = "0x",
+            String?                   post   = Null,
+            Int?                      limit  = Null,
+            String                    trunc  = "...",
+            function String(Element)? render = Null)
         {
         // TODO GG - make NibbleArray work
-        // return asNibbleArray().appendTo(buf);
-        return super(buf);
+        return super(buf, ", ", "[", "]", limit, trunc, render);
+//        return sep == "" && pre == "0x" && post == Null && render == Null
+//                ? asNibbleArray().appendTo(buf, sep, pre, post, limit?*2 : Null, trunc, render)
+//                : super(buf, sep, pre, post, limit, trunc, render);
         }
     }

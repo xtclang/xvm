@@ -91,4 +91,32 @@ interface Set<Element>
         {
         return new ComplementSet<Element>(this, universalSet);
         }
+
+
+    // ----- Stringable methods --------------------------------------------------------------------
+
+    @Override
+    Int estimateStringLength(
+            String                    sep    = ", ",
+            String?                   pre    = "{",
+            String?                   post   = "}",
+            Int?                      limit  = Null,
+            String                    trunc  = "...",
+            function String(Element)? render = Null)
+        {
+        return super(sep, pre, post, limit, trunc, render);
+        }
+
+    @Override
+    Appender<Char> appendTo(
+            Appender<Char>            buf,
+            String                    sep    = ", ",
+            String?                   pre    = "{",
+            String?                   post   = "}",
+            Int?                      limit  = Null,
+            String                    trunc  = "...",
+            function String(Element)? render = Null)
+        {
+        return super(buf, sep, pre, post, limit, trunc, render);
+        }
     }

@@ -691,25 +691,4 @@ const ConstOrdinalList
 
         return nodesBytes;
         }
-
-
-    // ----- Stringable methods --------------------------------------------------------------------
-
-    @Override
-    String toString()
-        {
-        if (size == 0)
-            {
-            return "[]";
-            }
-
-        StringBuffer buf = new StringBuffer(size * 4);
-        buf.add('[');
-        for (Int n : this)
-            {
-            n.appendTo(buf);
-            buf.add(',').add(' ');
-            }
-        return buf.truncate(-2).add(']').toString();
-        }
     }

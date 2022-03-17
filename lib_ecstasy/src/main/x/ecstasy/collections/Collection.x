@@ -43,6 +43,7 @@
 interface Collection<Element>
         extends Iterable<Element>
         extends Appender<Element>
+        extends Stringable
     {
     /**
      * An Orderer is a function that compares two elements for order.
@@ -860,7 +861,43 @@ interface Collection<Element>
         }
 
 
-    // ----- String formatting ---------------------------------------------------------------------
+    // ----- Stringable methods --------------------------------------------------------------------
+
+    @Override
+    Int estimateStringLength(
+            String                    sep    = ", ",
+            String?                   pre    = "[",
+            String?                   post   = "]",
+            Int?                      limit  = Null,
+            String                    trunc  = "...",
+            function String(Element)? render = Null)
+        {
+        Int elementCount = size;
+        Int displayCount = limit ?: elementCount;
+        Int count        = (pre?.size : 0) + (post?.size : 0);
+
+        if (render == Null && Element.is(Type<Stringable>))
+            {
+            val iter = this.iterator();
+            if (displayCount < elementCount)
+                {
+                iter   = iter.limit(displayCount);
+                count += trunc.size;
+                }
+            for (Element e : iter)
+                {
+                count += e.estimateStringLength();
+                }
+            }
+        else
+            {
+            // random educated guess for an element size, because we don't want to actually render
+            // each element at this point
+            count += displayCount * 4;
+            }
+
+        return count + (displayCount-1) * sep.size;
+        }
 
     /**
      * Append the contents of the `Collection` to the specified buffer.
@@ -875,22 +912,16 @@ interface Collection<Element>
      *
      * @return the buffer
      */
+    @Override
     Appender<Char> appendTo(
             Appender<Char>            buf,
             String                    sep    = ", ",
-            String?                   pre    = Null,
-            String?                   post   = Null,
+            String?                   pre    = "[",
+            String?                   post   = "]",
             Int?                      limit  = Null,
             String                    trunc  = "...",
             function String(Element)? render = Null)
         {
-        if (pre == Null && post == Null)
-            {
-            (pre, post) = this.is(Set)
-                    ? ("{", "}")
-                    : ("[", "]");
-            }
-
         pre?.appendTo(buf);
 
         function Appender<Char>(Element) appendElement = switch ()
@@ -923,12 +954,6 @@ interface Collection<Element>
 
         post?.appendTo(buf);
         return buf;
-        }
-
-    @Override
-    String toString()
-        {
-        return appendTo(new StringBuffer(this.is(Stringable) ? this.estimateStringLength() : 0)).toString();
         }
 
 
