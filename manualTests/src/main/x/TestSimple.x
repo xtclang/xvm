@@ -9,13 +9,11 @@ module TestSimple
 
     void run()
         {
-        Byte[] bytes4 = [0xDE, 0xAD, 0xCA, 0xFE];
-        console.println(bytes4);
+        Map<String, Int> map = Map:["A"=0, "B"=1, "C"=3, "D"=4];
 
-        Nibble[] nibbles8 = bytes4.asNibbleArray();
-        UInt32 n32 = nibbles8.toUInt32(); // this used to throw CCE
+        console.println(map);
 
-        console.println(n32);
-        assert n32.toByteArray() == bytes4;
+        StringBuffer buf = new StringBuffer(map.estimateStringLength(sep="; ", keySep="->"));
+        console.println(map.appendTo(buf, pre="Map: ", post=Null, sep="; ", keySep="->"));
         }
     }

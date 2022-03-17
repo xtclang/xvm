@@ -672,17 +672,7 @@ interface Map<Key, Value>
         @Override
         String toString()
             {
-            Key   key   = this.key;
-            Value value = this.value;
-            if (key.is(Stringable) && value.is(Stringable))
-                {
-                val buf = new StringBuffer(key.estimateStringLength() + 1
-                                       + value.estimateStringLength());
-                key.appendTo(buf).add(' ');
-                return value.appendTo(buf).toString();
-                }
-
-            return key.toString() + ' ' + value.toString();
+            return $"{key}={value}";
             }
 
         /**
@@ -697,75 +687,113 @@ interface Map<Key, Value>
         }
 
 
-    // ----- Stringable ----------------------------------------------------------------------------
+    // ----- Stringable methods --------------------------------------------------------------------
 
     @Override
-    Int estimateStringLength()
+    Int estimateStringLength(
+            String?                 sep         = ", ",
+            String?                 pre         = "[",
+            String?                 post        = "]",
+            String?                 keySep      = "=",
+            Int?                    limit       = Null,
+            String?                 trunc       = "...",
+            function String(Key)?   keyRender   = Null,
+            function String(Value)? valueRender = Null)
         {
-        if (Key.is(Type<Stringable>) && Value.is(Type<Stringable>))
+        Int entryCount   = size;
+        Int displayCount = limit ?: entryCount;
+        Int count        = (pre?.size : 0) + (post?.size : 0) +
+                           ((sep?.size : 0) + (keySep?.size : 0)) * displayCount;
+
+        if (keyRender == Null && valueRender == Null &&
+                Key.is(Type<Stringable>) && Value.is(Type<Stringable>))
             {
-            Int total = 3 * size;
-            for ((Key key, Value value) : this)
+            val iter = entries.iterator();
+            if (displayCount < entryCount)
                 {
-                total += key.estimateStringLength() + value.estimateStringLength();
+                iter   = iter.limit(displayCount);
+                count += trunc?.size : 0;
                 }
-            return total;
+            for (Map<Key, Value>.Entry entry : iter)
+                {
+                count += entry.key.estimateStringLength() + entry.value.estimateStringLength();
+                }
+            return count;
             }
 
         // no inexpensive way to guess
-        return 0;
+        return count + displayCount*8;
         }
 
+
+    /**
+     * Append the contents of the `Map` to the specified buffer.
+     *
+     * @param buf          the buffer to append to
+     * @param sep          the separator string that will be placed between entries
+     * @param pre          the string to precede the entries
+     * @param post         the string to follow the entries
+     * @param keySep       the separator string that will be placed between keys and values
+     * @param limit        the maximum number of elements to include in the string
+     * @param trunc        the string that indicates that the maximum number of elements was exceeded
+     * @param renderKey    the optional function to use to render each key to a string
+     * @param renderValue  the optional function to use to render each value to a string
+     *
+     * @return the buffer
+     */
     @Override
-    Appender<Char> appendTo(Appender<Char> buf)
+    Appender<Char> appendTo(
+            Appender<Char>          buf,
+            String?                 sep         = ", ",
+            String?                 pre         = "[",
+            String?                 post        = "]",
+            String?                 keySep      = "=",
+            Int?                    limit       = Null,
+            String?                 trunc       = "...",
+            function String(Key)?   keyRender   = Null,
+            function String(Value)? valueRender = Null)
         {
-        buf.add('[');
+        pre?.appendTo(buf);
 
-        if (Key.is(Type<Stringable>) && Value.is(Type<Stringable>))
+        function Appender<Char>(Key) appendKey = switch ()
             {
-            Loop: for ((Key key, Value value) : this)
-                {
-                if (!Loop.first)
-                    {
-                    ", ".appendTo(buf);
-                    }
-                key.appendTo(buf);
-                buf.add('=');
-                value.appendTo(buf);
-                }
-            }
-        else
+            case keyRender != Null        : (k -> keyRender(k).appendTo(buf));
+            case Key.is(Type<Stringable>) : (k -> k.appendTo(buf));
+            default: (k -> k.is(Stringable) ? k.appendTo(buf) : buf.addAll(k.toString()));
+            };
+
+        function Appender<Char>(Value) appendValue = switch ()
             {
-            Loop: for ((Key key, Value value) : this)
-                {
-                if (!Loop.first)
-                    {
-                    ", ".appendTo(buf);
-                    }
+            case valueRender != Null        : (v -> valueRender(v).appendTo(buf));
+            case Value.is(Type<Stringable>) : (v -> v.appendTo(buf));
+            default: (v -> v.is(Stringable) ? v.appendTo(buf) : buf.addAll(v.toString()));
+            };
 
-                if (key.is(Stringable))
-                    {
-                    key.appendTo(buf);
-                    }
-                else
-                    {
-                    key.toString().appendTo(buf);
-                    }
-
-                buf.add('=');
-
-                if (value.is(Stringable))
-                    {
-                    value.appendTo(buf);
-                    }
-                else
-                    {
-                    value.toString().appendTo(buf);
-                    }
-                }
+        if (limit == Null || limit < 0)
+            {
+            limit = Int.maxvalue;
             }
 
-        return buf.add(']');
+        Loop: for ((Key key, Value value) : this)
+            {
+            if (!Loop.first)
+                {
+                sep?.appendTo(buf);
+                }
+
+            if (Loop.count >= limit)
+                {
+                trunc?.appendTo(buf);
+                break;
+                }
+
+            appendKey(key);
+            keySep?.appendTo(buf);
+            appendValue(value);
+            }
+
+        post?.appendTo(buf);
+        return buf;
         }
 
 
