@@ -24,7 +24,7 @@ class HttpHeaders
     /**
      * The map of headers.
      */
-    private HasherMap<String, String[]> headers = new HasherMap(new CaseInsensitiveHasher());
+    private HasherMap<String, String[]> headers = new HasherMap(CaseInsensitiveHasher);
 
     /**
      * Add the specified header value.
