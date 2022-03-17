@@ -402,7 +402,14 @@ public class AssignmentStatement
                 // we'll create a fake R-value expression later to handle all of the duties of
                 // checking definite assignment, types, etc., so we need a pristine copy of the
                 // L-value expression to use for that purpose
+                if (!nodeLeft.isLValueSyntax())
+                    {
+                    nodeLeft.log(errs, Severity.ERROR, Compiler.ASSIGNABLE_REQUIRED);
+                    return null;
+                    }
+
                 exprLeftCopy = (Expression) nodeLeft.getLValueExpression().clone();
+                break;
             }
 
         ConstantPool pool      = pool();
