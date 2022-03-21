@@ -676,6 +676,26 @@ public class MethodDeclarationStatement
                             anno.getValueString());
                     return;
                     }
+
+                if (method.isStatic())
+                    {
+                    // - the only annotation allowed on functions (funky interface methods) is
+                    //   "@Override"
+                    // - the only annotations allowed on constructors are "@Override" (on virtual
+                    //   constructors) and "@Synchronized"
+                    if (anno.getAnnotationClass().equals(pool().clzOverride()))
+                        {
+                        continue;
+                        }
+                    if (method.isConstructor() &&
+                            anno.getAnnotationClass().equals(pool().clzSynchronized()))
+                        {
+                        continue;
+                        }
+                    log(errs, Severity.ERROR, Compiler.ANNOTATION_NOT_APPLICABLE,
+                            anno.getValueString());
+                    return;
+                    }
                 }
             }
 

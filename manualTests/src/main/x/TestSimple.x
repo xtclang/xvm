@@ -2,18 +2,30 @@ module TestSimple
     {
     @Inject Console console;
 
-    package collections import collections.xtclang.org;
-
-    import ecstasy.collections.*;
-    import collections.*;
-
     void run()
         {
-        Map<String, Int> map = Map:["A"=0, "B"=1, "C"=3, "D"=4];
+        }
 
-        console.println(map);
+    class Test
+        {
+        @Special("c1")
+        construct()
+            {
+            }
 
-        StringBuffer buf = new StringBuffer(map.estimateStringLength(sep="; ", keySep="->"));
-        console.println(map.appendTo(buf, pre="Map: ", post=Null, sep="; ", keySep="->"));
+        @Special("m1")
+        void meth(Int i)
+            {
+            }
+
+        @Special("f1")
+        static void func(Int i)
+            {
+            }
+        }
+
+    mixin Special(String path)
+            into Method
+        {
         }
     }
