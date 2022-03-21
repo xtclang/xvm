@@ -639,119 +639,116 @@ public class NameExpression
             }
 
         // translate the raw argument into the appropriate contextual meaning
-        TypeFit      fit      = TypeFit.NoFit;
-        TypeConstant type     = planCodeGen(ctx, argRaw, atypeParams, typeRequired, errs);
-                     argRaw   = m_arg; // may have been modified by planCodeGen()
-        Constant     constVal = null;
-        if (type != null)
+        TypeConstant type = planCodeGen(ctx, argRaw, atypeParams, typeRequired, errs);
+        if (type == null)
             {
-            fit = TypeFit.Fit;
+            // an error must've been reported
+            return null;
+            }
+        argRaw = m_arg; // may have been modified by planCodeGen()
 
-            if (typeRequired == null || isAssignable(ctx, type, typeRequired))
-                {
-                switch (getMeaning())
+        Constant constVal = null;
+        switch (getMeaning())
+            {
+            case Class:
+                // other than "Outer.this", class is ALWAYS a constant; it results in a
+                // ClassConstant, a PseudoConstant, a SingletonConstant, or a TypeConstant
+                switch (m_plan)
                     {
-                    case Class:
-                        // other than "Outer.this", class is ALWAYS a constant; it results in a
-                        // ClassConstant, a PseudoConstant, a SingletonConstant, or a TypeConstant
-                        switch (m_plan)
-                            {
-                            case None:
-                                constVal = (Constant) argRaw;
-                                break;
-
-                            case OuterThis:
-                            case OuterRef:
-                                // not a constant
-                                break;
-
-                            case Singleton:
-                                // theoretically, the singleton could be a parent of the current
-                                // class, so we could have a PseudoConstant for it
-                                assert argRaw instanceof IdentityConstant ||
-                                       argRaw instanceof PseudoConstant;
-
-                                IdentityConstant idClass = argRaw instanceof PseudoConstant constPseudo
-                                        ? constPseudo.getDeclarationLevelClass()
-                                        : (IdentityConstant) argRaw;
-                                constVal = pool.ensureSingletonConstConstant(idClass);
-                                break;
-
-                            case TypeOfClass:
-                                constVal = type;
-                                break;
-
-                            default:
-                                throw new IllegalStateException("plan=" + m_plan);
-                            }
+                    case None:
+                        constVal = (Constant) argRaw;
                         break;
 
-                    case Type:
-                        // the class could either be identified (in the raw) by an identity
-                        // constant a relative (pseudo) constant or a typedef
+                    case OuterThis:
+                    case OuterRef:
+                        // not a constant
+                        break;
+
+                    case Singleton:
+                        // theoretically, the singleton could be a parent of the current
+                        // class, so we could have a PseudoConstant for it
                         assert argRaw instanceof IdentityConstant ||
-                               argRaw instanceof PseudoConstant   ||
-                               argRaw instanceof TypedefConstant  ;
+                               argRaw instanceof PseudoConstant;
+
+                        IdentityConstant idClass = argRaw instanceof PseudoConstant constPseudo
+                                ? constPseudo.getDeclarationLevelClass()
+                                : (IdentityConstant) argRaw;
+                        constVal = pool.ensureSingletonConstConstant(idClass);
+                        break;
+
+                    case TypeOfClass:
                         constVal = type;
                         break;
 
-                    case Property:
-                        // a non-constant property is ONLY a constant in identity mode; a constant
-                        // property is only a constant iff the property itself has a compile-time
-                        // constant
-                        PropertyConstant id = (PropertyConstant) argRaw;
-                        switch (m_plan)
+                    default:
+                        throw new IllegalStateException("plan=" + m_plan);
+                    }
+                break;
+
+            case Type:
+                // the class could either be identified (in the raw) by an identity
+                // constant a relative (pseudo) constant or a typedef
+                assert argRaw instanceof IdentityConstant ||
+                       argRaw instanceof PseudoConstant   ||
+                       argRaw instanceof TypedefConstant  ;
+                constVal = type;
+                break;
+
+            case Property:
+                // a non-constant property is ONLY a constant in identity mode; a constant
+                // property is only a constant iff the property itself has a compile-time
+                // constant
+                PropertyConstant id = (PropertyConstant) argRaw;
+                switch (m_plan)
+                    {
+                    case Singleton:
+                    case PropertyDeref:
+                        if (id.isConstant())
                             {
-                            case Singleton:
-                            case PropertyDeref:
-                                if (id.isConstant())
-                                    {
-                                    PropertyStructure prop = (PropertyStructure) id.getComponent();
-                                    constVal = prop.hasInitialValue()
-                                            ? prop.getInitialValue()
-                                            : pool.ensureSingletonConstConstant(id);
-                                    }
-                                break;
-
-                            case PropertySelf:
-                                {
-                                assert type.isA(pool.typeProperty());
-
-                                TypeConstant typeParent = left == null
-                                        ? ctx.getThisType()
-                                        : m_fClassAttribute || !isIdentityMode(ctx, false)
-                                                ? left.getType()
-                                                : left.getType().getParamType(0);
-                                constVal = pool.ensurePropertyClassTypeConstant(typeParent, id);
-                                break;
-                                }
-
-                            case None:
-                                {
-                                assert type.isA(pool.typeProperty());
-                                assert left == null || left.getType().isA(pool.typeClass());
-
-                                TypeConstant typeParent = left == null
-                                        ? ctx.getThisType()
-                                        : m_fClassAttribute
-                                                ? left.getType()
-                                                : left.getType().getParamType(0);
-                                constVal = pool.ensurePropertyClassTypeConstant(typeParent, id);
-                                break;
-                                }
+                            PropertyStructure prop = (PropertyStructure) id.getComponent();
+                            constVal = prop.hasInitialValue()
+                                    ? prop.getInitialValue()
+                                    : pool.ensureSingletonConstConstant(id);
                             }
                         break;
 
-                    case Method:
+                    case PropertySelf:
                         {
-                        MethodConstant idMethod = (MethodConstant) argRaw;
-                        if (m_plan == Plan.None && m_mapTypeParams == null)
-                            {
-                            constVal = idMethod;
-                            }
+                        assert type.isA(pool.typeProperty());
+
+                        TypeConstant typeParent = left == null
+                                ? ctx.getThisType()
+                                : m_fClassAttribute || !isIdentityMode(ctx, false)
+                                        ? left.getType()
+                                        : left.getType().getParamType(0);
+                        constVal = pool.ensurePropertyClassTypeConstant(typeParent, id);
+                        break;
+                        }
+
+                    case None:
+                        {
+                        assert type.isA(pool.typeProperty());
+                        assert left == null || left.getType().isA(pool.typeClass());
+
+                        TypeConstant typeParent = left == null
+                                ? ctx.getThisType()
+                                : m_fClassAttribute
+                                        ? left.getType()
+                                        : left.getType().getParamType(0);
+                        constVal = pool.ensurePropertyClassTypeConstant(typeParent, id);
                         break;
                         }
                     }
+                break;
+
+            case Method:
+                {
+                MethodConstant idMethod = (MethodConstant) argRaw;
+                if (m_plan == Plan.None && m_mapTypeParams == null)
+                    {
+                    constVal = idMethod;
+                    }
+                break;
                 }
             }
 
@@ -816,7 +813,7 @@ public class NameExpression
                 }
             }
 
-        return finishValidation(ctx, typeRequired, type, fit, constVal, errs);
+        return finishValidation(ctx, typeRequired, type, TypeFit.Fit, constVal, errs);
         }
 
     @Override
@@ -828,7 +825,7 @@ public class NameExpression
     @Override
     public boolean isConditionalResult()
         {
-        return getValueCount() == 1 && isConstant() && toConstant().equals(pool().valFalse());
+        return getValueCount() == 1 && isConstantFalse();
         }
 
     @Override
