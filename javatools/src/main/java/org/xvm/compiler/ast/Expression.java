@@ -426,7 +426,7 @@ public abstract class Expression
         int cTypesRequired = atypeRequired == null ? 0 : atypeRequired.length;
         if (cTypesRequired > 1)
             {
-            if (cTypesRequired > 2 || !getCodeContainer().isReturnConditional())
+            if (!getParent().allowsConditional(this))
                 {
                 return new UnpackExpression(this, null).validateMulti(ctx, atypeRequired, errs);
                 }

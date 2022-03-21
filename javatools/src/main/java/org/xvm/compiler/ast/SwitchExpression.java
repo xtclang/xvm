@@ -67,6 +67,12 @@ public class SwitchExpression
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
+    protected boolean allowsConditional(Expression exprChild)
+        {
+        return getParent().allowsShortCircuit(this) && contents.contains(exprChild);
+        }
+
+    @Override
     protected boolean hasSingleValueImpl()
         {
         return false;

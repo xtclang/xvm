@@ -34,10 +34,14 @@ public class ElseExpression
         }
 
 
-    // ----- accessors -----------------------------------------------------------------------------
-
-
     // ----- compilation ---------------------------------------------------------------------------
+
+    @Override
+    protected boolean allowsConditional(Expression exprChild)
+        {
+        return getParent().allowsShortCircuit(this) &&
+                (exprChild == expr1 || exprChild == expr2);
+        }
 
     @Override
     protected boolean hasSingleValueImpl()
@@ -97,10 +101,8 @@ public class ElseExpression
 
         expr1 = expr1New;
 
-        TypeConstant[] atype1 = expr1New.getTypes();
-        TypeConstant[] atype2Req = atype1 == null
-                ? null
-                : selectCommonTypes(atype1, new TypeConstant[atype1.length]);
+        TypeConstant[] atype1    = expr1New.getTypes();
+        TypeConstant[] atype2Req = selectCommonTypes(atype1, new TypeConstant[atype1.length]);
 
         if (atypeRequired != null && atypeRequired.length > 0 &&
                 (atype2Req == null || !expr2.testFitMulti(ctx, atype2Req, null).isFit()))
@@ -126,8 +128,18 @@ public class ElseExpression
             return replaceThisWith(expr1New);
             }
 
-        TypeConstant[] atype2      = expr2New.getTypes();
-        TypeConstant[] atypeResult = selectCommonTypes(atype1, atype2);
+        // the only allowed type mismatch is a conditional result on the left (expr1) and the value
+        // of "False" on the right (expr2)
+        TypeConstant[] atypeResult;
+        if (expr1New.isConditionalResult() && expr2New.isConstantFalse())
+            {
+            atypeResult  = atype1;
+            m_fCondFalse = true;
+            }
+        else
+            {
+            atypeResult = selectCommonTypes(atype1, expr2New.getTypes());
+            }
 
         Constant[] aconstVal = null;
         if (expr1New.isConstant())
@@ -206,7 +218,14 @@ public class ElseExpression
             Label labelEnd = new Label("end_:_" + m_nLabel);
             code.add(new Jump(labelEnd));
             code.add(m_labelElse);
-            expr2.generateAssignments(ctx, code, aLVal, errs);
+            if (m_fCondFalse)
+                {
+                aLVal[0].assign(pool().valFalse(), code, errs);
+                }
+            else
+                {
+                expr2.generateAssignments(ctx, code, aLVal, errs);
+                }
             code.add(labelEnd);
             }
         }
@@ -214,7 +233,8 @@ public class ElseExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
-    private static    int   m_nCounter;
-    private transient int   m_nLabel;
-    private transient Label m_labelElse;
+    private static    int     m_nCounter;
+    private transient int     m_nLabel;
+    private transient Label   m_labelElse;
+    private transient boolean m_fCondFalse;
     }

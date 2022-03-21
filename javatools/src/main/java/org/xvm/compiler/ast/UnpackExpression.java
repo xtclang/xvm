@@ -96,9 +96,9 @@ public class UnpackExpression
             return toConstants();
             }
 
-        if (expr instanceof TupleExpression)
+        if (expr instanceof TupleExpression exprTuple)
             {
-            List<Expression> exprs  = ((TupleExpression) expr).getExpressions();
+            List<Expression> exprs  = exprTuple.getExpressions();
             int              cExprs = exprs.size();
             Argument[]       aArgs  = new Argument[cExprs];
             for (int i = 0; i < cExprs; ++i)

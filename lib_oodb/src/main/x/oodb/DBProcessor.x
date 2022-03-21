@@ -388,12 +388,7 @@ interface DBProcessor<Message extends immutable Const>
          */
         conditional (Duration repeatInterval, Policy repeatPolicy) isRepeating()
             {
-            // TODO GG return schedule?.isRepeating() : False;
-            if (Schedule schedule ?= schedule)
-                {
-                return schedule.isRepeating();
-                }
-            return False;
+            return schedule?.isRepeating() : False;
             }
 
         /**
