@@ -771,10 +771,10 @@ public class AnnotatedTypeConstant
             // make sure that this annotation is not repeated
             ClassConstant idAnno = (ClassConstant) m_annotation.getAnnotationClass();
             for (TypeConstant typeNext = typeBase;
-                              typeNext instanceof AnnotatedTypeConstant;
-                              typeNext = ((AnnotatedTypeConstant) typeNext).m_constType)
+                              typeNext instanceof AnnotatedTypeConstant typeAnno;
+                              typeNext = typeAnno.m_constType)
                 {
-                if (((AnnotatedTypeConstant) typeNext).m_annotation.getAnnotationClass().equals(idAnno))
+                if (typeAnno.m_annotation.getAnnotationClass().equals(idAnno))
                     {
                     log(errs, Severity.ERROR, VE_ANNOTATION_REDUNDANT, idAnno.getValueString());
                     fBad = true;
