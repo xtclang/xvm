@@ -979,8 +979,8 @@ public abstract class Expression
         {
         checkValidated();
 
-        return m_oType instanceof TypeConstant[]
-                ? ((TypeConstant[]) m_oType).length
+        return m_oType instanceof TypeConstant[] aTypes
+                ? aTypes.length
                 : 1;
         }
 
@@ -1043,9 +1043,9 @@ public abstract class Expression
         {
         checkValidated();
 
-        if (m_oType instanceof TypeConstant)
+        if (m_oType instanceof TypeConstant type)
             {
-            return (TypeConstant) m_oType;
+            return type;
             }
 
         TypeConstant[] atype = (TypeConstant[]) m_oType;
@@ -1062,9 +1062,9 @@ public abstract class Expression
      */
     public String getTypeString(Context ctx)
         {
-        if (m_oType instanceof TypeConstant)
+        if (m_oType instanceof TypeConstant type)
             {
-            return ((TypeConstant) m_oType).getValueString();
+            return type.getValueString();
             }
 
         if (m_oType instanceof TypeConstant[] aTypes)
@@ -1098,12 +1098,9 @@ public abstract class Expression
      */
     public TypeConstant[] getTypes()
         {
-        if (!(m_oType instanceof TypeConstant[]))
-            {
-            m_oType = new TypeConstant[] {getType()};
-            }
-
-        return (TypeConstant[]) m_oType;
+        return m_oType instanceof TypeConstant[] aTypes
+                ? aTypes
+                : new TypeConstant[] {getType()};
         }
 
     /**
@@ -1304,9 +1301,9 @@ public abstract class Expression
             return null;
             }
 
-        if (m_oConst instanceof Constant)
+        if (m_oConst instanceof Constant constant)
             {
-            return (Constant) m_oConst;
+            return constant;
             }
 
         return ((Constant[]) m_oConst)[0];
@@ -1329,12 +1326,9 @@ public abstract class Expression
             return null;
             }
 
-        if (!(m_oConst instanceof Constant[]))
-            {
-            m_oConst = new Constant[] {toConstant()};
-            }
-
-        return (Constant[]) m_oConst;
+        return m_oConst instanceof Constant[] aConst
+                ? aConst
+                : new Constant[] {toConstant()};
         }
 
     /**
