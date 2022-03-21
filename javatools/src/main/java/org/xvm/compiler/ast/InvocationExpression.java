@@ -1202,7 +1202,8 @@ public class InvocationExpression
     protected boolean allowsShortCircuit(AstNode nodeChild)
         {
         return super.allowsShortCircuit(nodeChild) &&
-                (nodeChild == expr || args.contains(nodeChild));
+                (nodeChild == expr ||
+                 nodeChild instanceof Expression exprChild && args.contains(exprChild));
         }
 
     @Override
