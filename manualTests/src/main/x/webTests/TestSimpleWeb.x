@@ -5,7 +5,7 @@
  *      gradle hostWeb
  *
  * 2. Compile this test:
- *      gradle compileOne -PtestName=TestSimpleWeb
+ *      gradle compileOne -PtestName=webTests/TestSimpleWeb
  *
  * 3. Load this test:
  *      curl -i -w '\n' -X POST http://localhost:8080/host/run/TestSimpleWeb
