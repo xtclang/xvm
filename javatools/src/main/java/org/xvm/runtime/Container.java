@@ -343,17 +343,6 @@ public abstract class Container
         }
 
     /**
-     * Add a native resource supplier for an injection.
-     *
-     * @param key  the injection key
-     * @param fn   the resource supplier bi-function
-     */
-    public void addResourceSupplier(InjectionKey key, BiFunction<Frame, ObjectHandle, ObjectHandle> fn)
-        {
-        f_mapResources.put(key, fn);
-        }
-
-    /**
      * Add a natural resource supplier for an injection.
      *
      * @param key        the injection key

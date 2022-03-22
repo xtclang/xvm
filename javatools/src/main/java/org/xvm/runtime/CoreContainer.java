@@ -2,7 +2,9 @@ package org.xvm.runtime;
 
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import java.util.function.BiFunction;
@@ -55,6 +57,22 @@ public class CoreContainer
         {
         super(runtime, null, templates, heapCore, idModule);
         }
+
+
+    // ----- Container methods ---------------------------------------------------------------------
+
+    @Override
+    public ObjectHandle getInjectable(Frame frame, String sName, TypeConstant type, ObjectHandle hOpts)
+        {
+        InjectionKey key = f_mapResourceNames.get(sName);
+
+        return key != null && key.f_type.isA(type)
+                ? f_mapResources.get(key).apply(frame, hOpts)
+                : null;
+        }
+
+
+    // ----- CoreContainer specific functionality --------------------------------------------------
 
     public void start()
         {
@@ -117,31 +135,28 @@ public class CoreContainer
         // +++ NanosTimer
         xNanosTimer templateRTTimer = (xNanosTimer)
                 f_templates.getTemplate("_native.temporal.NanosTimer");
-        if (templateRTTimer != null)
-            {
-            TypeConstant typeTimer = pool.ensureEcstasyTypeConstant("temporal.Timer");
+        assert templateRTTimer != null;
 
-            BiFunction<Frame, ObjectHandle, ObjectHandle> supplierTimer = (frame, hOpts) ->
-                templateRTTimer.createServiceHandle(
-                    createServiceContext("Timer"),
-                    templateRTTimer.getCanonicalClass(), typeTimer);
-            addResourceSupplier(new InjectionKey("timer", typeTimer), supplierTimer);
-            }
+        TypeConstant typeTimer = pool.ensureEcstasyTypeConstant("temporal.Timer");
+        BiFunction<Frame, ObjectHandle, ObjectHandle> supplierTimer = (frame, hOpts) ->
+            templateRTTimer.createServiceHandle(
+                createServiceContext("Timer"),
+                templateRTTimer.getCanonicalClass(), typeTimer);
+        addResourceSupplier(new InjectionKey("timer", typeTimer), supplierTimer);
 
         // +++ Console
         xTerminalConsole templateRTConsole = (xTerminalConsole)
                 f_templates.getTemplate("_native.TerminalConsole");
-        if (templateRTConsole != null)
-            {
-            TypeConstant typeConsole = pool.ensureEcstasyTypeConstant("io.Console");
+        assert templateRTConsole != null;
 
-            BiFunction<Frame, ObjectHandle, ObjectHandle> supplierConsole = (frame, hOpts) ->
-                templateRTConsole.createServiceHandle(
-                    createServiceContext("Console"),
-                    templateRTConsole.getCanonicalClass(), typeConsole);
+        TypeConstant typeConsole = pool.ensureEcstasyTypeConstant("io.Console");
 
-            addResourceSupplier(new InjectionKey("console", typeConsole), supplierConsole);
-            }
+        BiFunction<Frame, ObjectHandle, ObjectHandle> supplierConsole = (frame, hOpts) ->
+            templateRTConsole.createServiceHandle(
+                createServiceContext("Console"),
+                templateRTConsole.getCanonicalClass(), typeConsole);
+
+        addResourceSupplier(new InjectionKey("console", typeConsole), supplierConsole);
 
         // +++ Random
         TypeConstant typeRandom = pool.ensureEcstasyTypeConstant("numbers.Random");
@@ -175,6 +190,20 @@ public class CoreContainer
         TypeConstant typeProps = pool.ensureParameterizedTypeConstant(pool.typeMap(),
                                     pool.typeString(), pool.typeString());
         addResourceSupplier(new InjectionKey("properties" , typeProps), this::ensureProperties);
+        }
+
+    /**
+     * Add a native resource supplier for an injection.
+     *
+     * @param key  the injection key
+     * @param fn   the resource supplier bi-function
+     */
+    protected void addResourceSupplier(InjectionKey key, BiFunction<Frame, ObjectHandle, ObjectHandle> fn)
+        {
+        assert !f_mapResources.containsKey(key);
+
+        f_mapResources.put(key, fn);
+        f_mapResourceNames.put(key.f_sName, key);
         }
 
     protected ObjectHandle ensureDefaultClock(Frame frame, ObjectHandle hOpts)
@@ -590,4 +619,9 @@ public class CoreContainer
     private ObjectHandle m_hRepository;
     private ObjectHandle m_hCompiler;
     private ObjectHandle m_hProperties;
+
+    /**
+     * Map of resource names for a name based lookup.
+     */
+    protected final Map<String, InjectionKey> f_mapResourceNames = new HashMap<>();
     }
