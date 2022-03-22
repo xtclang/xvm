@@ -1641,7 +1641,7 @@ class HasherMap<Key, Value>
     /**
      * Primes used for bucket array sizes (to ensure a prime modulo).
      */
-    protected static Int[] PRIMES =
+    static Int[] PRIMES =
         [
         7, 13, 23, 37, 47, 61, 79, 107, 137, 181, 229, 283, 349, 419, 499, 599, 727, 863, 1013,
         1187, 1399, 1697, 2039, 2503, 3253, 4027, 5113, 6679, 8999, 11987, 16381, 21023, 28351,
