@@ -135,10 +135,10 @@ ElseComposition
 
 Composition
     "extends" TypeExpression ArgumentList-opt
-    "implements" TypeExpression
-    "delegates" TypeExpression "(" Expression ")"
+    "implements" ExtendedTypeExpression
+    "delegates" ExtendedTypeExpression "(" Expression ")"
     "incorporates" IncorporatesFinish
-    "into" TypeExpression
+    "into" ExtendedTypeExpression
     ImportClause QualifiedName VersionRequirement-opt
     "default" "(" Expression ")"
 
