@@ -33,12 +33,10 @@ public class InjectionKey
             return true;
             }
 
-        if (!(o instanceof InjectionKey))
+        if (!(o instanceof InjectionKey that))
             {
             return false;
             }
-
-        InjectionKey that = (InjectionKey) o;
 
         return Objects.equals(this.f_sName, that.f_sName) &&
                Objects.equals(this.f_type,  that.f_type);
