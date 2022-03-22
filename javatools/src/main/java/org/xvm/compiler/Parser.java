@@ -539,7 +539,7 @@ public class Parser
                 {
                 do
                     {
-                    compositions.add(new CompositionNode.Implements(exprCondition, keyword, parseTypeExpression()));
+                    compositions.add(new CompositionNode.Implements(exprCondition, keyword, parseExtendedTypeExpression()));
                     }
                 while (match(Id.COMMA) != null);
                 fAny = true;
@@ -548,7 +548,7 @@ public class Parser
                 {
                 do
                     {
-                    TypeExpression type = parseTypeExpression();
+                    TypeExpression type = parseExtendedTypeExpression();
                     expect(Id.L_PAREN);
                     Expression expr = parseExpression();
                     Token tokEnd = expect(Id.R_PAREN);
@@ -617,7 +617,7 @@ public class Parser
                 }
             else if ((keyword = match(Id.INTO)) != null)
                 {
-                compositions.add(new CompositionNode.Into(exprCondition, keyword, parseTypeExpression()));
+                compositions.add(new CompositionNode.Into(exprCondition, keyword, parseExtendedTypeExpression()));
                 fAny = true;
                 }
             else // not context sensitive keywords
