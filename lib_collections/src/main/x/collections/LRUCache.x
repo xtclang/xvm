@@ -135,15 +135,8 @@ service LRUCache<Key extends immutable Hashable, Value extends Shareable>(Int ma
     /**
      * The class that holds a single cache entry.
      */
-    protected static class Entry<Key, Value>(Key    key,
-                                             Value  value,
-                                             // TODO GG this does not work:
-                                             // Entry? nextLRU = Null,
-                                             // Entry? prevLRU = Null,
-                                             // errors: COMPILER-43: Type mismatch: Nullable | collections:LRUCache.Entry<collections:LRUCache.Key, collections:LRUCache.Value> expected, Nullable | collections:LRUCache.Entry found. ("node.nextLRU")
-                                             Entry<Key, Value>? nextLRU = Null,
-                                             Entry<Key, Value>? prevLRU = Null,
-                                            )
+    protected static class Entry<Key, Value>
+            (Key key, Value value, Entry? nextLRU = Null, Entry? prevLRU = Null)
         {
         }
 

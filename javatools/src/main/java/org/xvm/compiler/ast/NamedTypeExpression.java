@@ -1076,7 +1076,10 @@ public class NamedTypeExpression
                         // (e.g. List.Cursor property referring to the containing List type);
                         // default to the formal type unless the type parameters are explicitly
                         // specified by this expression or the context is static (e.g. function)
-                        if (clzTarget.isParameterized() && paramTypes == null && !component.isStatic())
+                        if (paramTypes == null && clzTarget.isParameterized() &&
+                            (!component.isStatic() ||
+                              component instanceof MethodStructure method &&
+                                    method.isConstructor() && !method.isPropertyInitializer()))
                             {
                             typeTarget = pool.ensureClassTypeConstant(constTarget, null,
                                 clzTarget.getFormalType().getParamTypesArray());

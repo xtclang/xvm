@@ -38,12 +38,8 @@ class HashSet<Element extends Hashable>
             }
         }
 
-    /**
-     * [Duplicable] constructor.
-     *
-     * @param that  another HashSet to copy the contents from when constructing this HashSet
-     */
-    construct(HashSet<Element> that)
+    @Override
+    construct(HashSet that)
         {
         super(that);
         }

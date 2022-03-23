@@ -475,12 +475,8 @@ const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
             super(hasher, initCapacity);
             }
 
-        /**
-         * Duplicable constructor.
-         *
-         * @param that  the Partition to duplicate
-         */
-        construct(Partition<Key, Value> that)
+        @Override
+        construct(Partition that)
             {
             this.partitionCount = that.partitionCount;
             super(that);
