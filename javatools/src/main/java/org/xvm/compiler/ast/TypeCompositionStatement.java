@@ -311,6 +311,18 @@ public class TypeCompositionStatement
     // ---- AstNode methods ------------------------------------------------------------------------
 
     @Override
+    public boolean isAutoNarrowingAllowed(TypeExpression type)
+        {
+        // auto-narrowing is only allowed for constructor type parameters
+        if (constructorParams == null)
+            {
+            return false;
+            }
+        AstNode nodeChild = findChild(type);
+        return nodeChild instanceof Parameter param && constructorParams.contains(param);
+        }
+
+    @Override
     protected void discard(boolean fRecurse)
         {
         super.discard(fRecurse);
@@ -1892,10 +1904,6 @@ public class TypeCompositionStatement
                                 return;
                                 }
                             // note: it is too early in the compilation cycle to use "isA()"
-                            if (typeConsParam.containsAutoNarrowing(false))
-                                {
-                                typeConsParam = typeConsParam.resolveAutoNarrowingBase();
-                                }
                             if (!atypeParams[i].equals(typeConsParam))
                                 {
                                 continue NextConstructor;
