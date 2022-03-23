@@ -302,7 +302,10 @@ public class NamedTypeExpression
                 }
             else if (constId instanceof ClassConstant idClz) // isAutoNarrowingAllowed()
                 {
-                ClassStructure clzThis = getComponent().getContainingClass();
+                Component      component = getComponent();
+                ClassStructure clzThis   = component instanceof ClassStructure clz
+                    ? clz
+                    : component.getContainingClass();
                 if (clzThis != null && clzThis.getIdentityConstant().getFormat() == Format.Class)
                     {
                     return ((ClassConstant) clzThis.getIdentityConstant()).
@@ -925,12 +928,15 @@ public class NamedTypeExpression
             //
 
             boolean       fAllowFormal = false;
+            boolean       fParent      = false;
             boolean       fRetainConst = true;
             ClassConstant idTarget;
             switch (constTarget.getFormat())
                 {
-                case ThisClass:
                 case ParentClass:
+                    fParent = true;
+                    // fall through
+                case ThisClass:
                     // we can only generate an implicit formal type for "this" or "parent"
                     fAllowFormal = true;
                     idTarget     = (ClassConstant) ((PseudoConstant) constTarget).getDeclarationLevelClass();
@@ -1056,8 +1062,10 @@ public class NamedTypeExpression
                             }
                         boolean fFormalChild = fFormalParent && fAllowFormal && paramTypes == null;
 
-                        typeTarget = pool.ensureVirtualTypeConstant(
-                                clzBase, clzTarget, fFormalParent, fFormalChild, constTarget);
+                        typeTarget = fParent
+                                ? clzTarget.getFormalType()
+                                : pool.ensureVirtualTypeConstant(
+                                    clzBase, clzTarget, fFormalParent, fFormalChild, constTarget);
                         assert typeTarget != null;
                         }
                     else if (clzClass.isVirtualDescendant(idTarget))
