@@ -819,6 +819,7 @@ public class MethodDeclarationStatement
 
                 if (valueNew != null)
                     {
+                    value = valueNew;
                     if (valueNew.isConstant())
                         {
                         parameter.setDefaultValue(value.toConstant());

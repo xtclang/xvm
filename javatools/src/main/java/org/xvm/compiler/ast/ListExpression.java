@@ -3,6 +3,7 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
@@ -137,6 +138,12 @@ public class ListExpression
     @Override
     public TypeFit testFit(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
+        // an empty map looks like an empty list to the parser
+        if (typeRequired.isA(pool().typeMap()) && exprs.isEmpty())
+            {
+            return TypeFit.Fit;
+            }
+
         InferFromRequired:
         if (typeRequired != null)
             {
@@ -171,6 +178,14 @@ public class ListExpression
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
+        // an empty map looks like an empty list to the parser
+        if (typeRequired.isA(pool().typeMap()) && exprs.isEmpty())
+            {
+            MapExpression exprNew =  new MapExpression(new NamedTypeExpression(this, typeRequired),
+                    Collections.EMPTY_LIST, Collections.EMPTY_LIST, getEndPosition());
+            return replaceThisWith(exprNew).validate(ctx, typeRequired, errs);
+            }
+
         ConstantPool     pool        = pool();
         TypeFit          fit         = TypeFit.Fit;
         List<Expression> listExprs   = exprs;

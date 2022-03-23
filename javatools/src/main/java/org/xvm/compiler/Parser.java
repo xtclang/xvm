@@ -4500,7 +4500,7 @@ public class Parser
         switch (sType)
             {
             case "":
-                // this could be either an array or a range
+                // this could be an array, or a range, or a map
                 // (fall through)
             case "Collection":
             case "Set":
@@ -4517,20 +4517,46 @@ public class Parser
                     exprs.add(expr);
                     if (match(Id.COMMA) == null)
                         {
-                        // special handling for the possibility that this is a range, not an array
-                        if (sType.equals("") && exprs.size() == 1 && expr instanceof RelOpExpression exprRange
-                                && ((RelOpExpression) expr).getOperator().getId() == Id.DOTDOT)
+                        if (sType.equals("") && exprs.size() == 1)
                             {
-                            // it's a range, not an array, so it could have either a closing right
-                            // paren or right square bracket
-                            Token tokClose = match(Id.R_PAREN);
-                            if (tokClose == null)
+                            // special handling for a map
+                            if (peek().getId() == Id.ASN)
                                 {
-                                tokClose = expect(Id.R_SQUARE);
-                                }
+                                List<Expression> keys   = new ArrayList<>();
+                                List<Expression> values = new ArrayList<>();
+                                while (match(Id.R_SQUARE) == null)
+                                    {
+                                    keys.add(keys.isEmpty() ? expr : parseExpression());
+                                    expect(Id.ASN);
+                                    values.add(parseExpression());
+                                    if (match(Id.COMMA) == null)
+                                        {
+                                        expect(Id.R_SQUARE);
+                                        break;
+                                        }
+                                    }
 
-                            return new RelOpExpression(tokOpen, exprRange.getExpression1(),
-                                    exprRange.getOperator(), exprRange.getExpression2(), tokClose);
+                                long           ofMap    = tokOpen.getStartPosition();
+                                Token          tokName  = new Token(ofMap, ofMap, Id.IDENTIFIER, "Map");
+                                TypeExpression exprType = new NamedTypeExpression(null,
+                                        Collections.singletonList(tokName), null, null, null, ofMap);
+                                return new MapExpression(exprType, keys, values, prev().getEndPosition());
+                                }
+                            // special handling for the possibility that this is a range, not an array
+                            else if (expr instanceof RelOpExpression exprRange
+                                    && ((RelOpExpression) expr).getOperator().getId() == Id.DOTDOT)
+                                {
+                                // it's a range, not an array, so it could have either a closing right
+                                // paren or right square bracket
+                                Token tokClose = match(Id.R_PAREN);
+                                if (tokClose == null)
+                                    {
+                                    tokClose = expect(Id.R_SQUARE);
+                                    }
+
+                                return new RelOpExpression(tokOpen, exprRange.getExpression1(),
+                                        exprRange.getOperator(), exprRange.getExpression2(), tokClose);
+                                }
                             }
 
                         expect(Id.R_SQUARE);

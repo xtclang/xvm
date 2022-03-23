@@ -25,10 +25,10 @@ const DBObjectInfo(
         Validator[]                   validators      = [],
         Rectifier[]                   rectifiers      = [],
         Distributor[]                 distributors    = [],
-        Map<String, Type>             typeParams      = Map:[],
-        Map<String, Class[]>          concreteClasses = Map:[],
+        Map<String, Type>             typeParams      = [],
+        Map<String, Class[]>          concreteClasses = [],
         LifeCycle                     lifeCycle       = Current,
-        Map<String, immutable Object> options         = Map:[],
+        Map<String, immutable Object> options         = [],
         )
     {
     enum LifeCycle {Current, Deprecated, Removed}

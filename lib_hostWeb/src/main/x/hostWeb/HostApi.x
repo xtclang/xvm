@@ -79,14 +79,13 @@ service HostApi
             if (webModule)
                 {
                 Tuple result = container.invoke("collectRoots_", Tuple:());
-                Roots roots  = result.size == 0 ? Map:[] : result[0].as(Roots);
+                Roots roots  = result.size == 0 ? [] : result[0].as(Roots);
                 if (roots.size == 0)
                     {
                     // REVIEW: how to communicate the errors?
                     return HttpStatus.BadRequest;
                     }
 
-assert:debug;
                 for ((String path, WebService webService) : roots)
                     {
                     server.addRoutes(webService, path);

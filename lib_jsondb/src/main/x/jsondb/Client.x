@@ -999,7 +999,7 @@ service Client<Schema extends RootSchema>
                     Int   size     = childIds.size;
                     if (size == 0)
                         {
-                        return Map:[];
+                        return [];
                         }
 
                     ListMap<String, DBObjectInfo> infos = new ListMap(size);

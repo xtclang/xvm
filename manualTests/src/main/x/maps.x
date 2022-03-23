@@ -87,7 +87,7 @@ module TestMaps
         {
         map1.put(1, "v1");
 
-        Map<Int, String> map2 = Map:[1="v1"];
+        Map<Int, String> map2 = [1="v1"];
 
         assert map1 == map2;
         }

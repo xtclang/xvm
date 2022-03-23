@@ -195,7 +195,7 @@ const String
         {
         if (size == 0)
             {
-            return Map:[];
+            return [];
             }
 
         return new StringMap(this, kvSeparator, entrySeparator);

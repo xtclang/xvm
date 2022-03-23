@@ -97,6 +97,7 @@ public class NamedTypeExpression
                             Token.Id.IDENTIFIER, type.getValueString())); // used for "toString" only
         setTypeConstant(type);
         setStage(Stage.Validated);
+        setParent(exprSource);
         }
 
     /**

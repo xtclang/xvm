@@ -1635,7 +1635,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         /**
          * The "seal" for each modified ObjectStore, keyed by ObjectStore id.
          */
-        Map<Int, String?> sealById = Map:[];
+        Map<Int, String?> sealById = [];
 
         /**
          * During prepare processing, this is used to hold the store IDs that enlist during a step.
