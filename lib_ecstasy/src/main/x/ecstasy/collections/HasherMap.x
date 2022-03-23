@@ -93,12 +93,8 @@ class HasherMap<Key, Value>
             }
         }
 
-    /**
-     * Duplicable constructor.
-     *
-     * @param that  another HasherMap to copy the contents from when constructing this HasherMap
-     */
-    construct(HasherMap<Key, Value> that)
+    @Override
+    construct(HasherMap that)
         {
         this.hasher      = that.hasher;
         this.buckets     = new HashBucket<Key, Value>?[that.buckets.size](i -> that.buckets[i]?.duplicate() : Null);
@@ -351,7 +347,7 @@ class HasherMap<Key, Value>
             extends HashBucket<Key, Value>
         {
         @Override
-        construct(SingleNode<Key, Value> that)
+        construct(SingleNode that)
             {
             this.hash  = that.hash;
             this.key   = that.key;
@@ -449,7 +445,7 @@ class HasherMap<Key, Value>
             }
 
         @Override
-        construct(ListNode<Key, Value> that)
+        construct(ListNode that)
             {
             this.hash   = that.hash;
             this.keys   = that.keys.clone();
@@ -602,7 +598,7 @@ class HasherMap<Key, Value>
             }
 
         @Override
-        construct(TreeNode<Key, Value> that)
+        construct(TreeNode that)
             {
             // deep clone the sub nodes
             this.nodes.map(node -> node.duplicate(), new HashBucket<Key, Value>[](that.nodes.size.maxOf(4)));

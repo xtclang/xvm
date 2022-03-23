@@ -58,10 +58,8 @@ class ListMap<Key, Value>
             }
         }
 
-    /**
-     * [Duplicable] constructor, which produces a mutable copy of the passed ListMap.
-     */
-    construct(ListMap<Key, Value> that) // TODO GG isn't "<Key, Value>" implied?
+    @Override
+    construct(ListMap that)
         {
         this.keyArray = that.keyArray.toArray(Mutable);
         this.valArray = that.valArray.toArray(Mutable);

@@ -36,12 +36,8 @@ class HashMap<Key extends Hashable, Value>
         super(hasher, that);
         }
 
-    /**
-     * Duplicable constructor.
-     *
-     * @param that  the HashMap to duplicate
-     */
-    construct(HashMap<Key, Value> that)
+    @Override
+    construct(HashMap that)
         {
         super(that);
         }

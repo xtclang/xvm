@@ -48,12 +48,8 @@ class ArrayOrderedSet<Element>
         this.compare = compare;
         }
 
-    /**
-     * Copy constructor.
-     *
-     * @param that  the ArrayOrderedSet to copy
-     */
-    construct(ArrayOrderedSet<Element> that)
+    @Override
+    construct(ArrayOrderedSet that)
         {
         // this.array   = that.array.duplicate(); // TODO CP
         this.array   = that.array.clone();
