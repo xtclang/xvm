@@ -114,10 +114,7 @@ public class ListExpression
             return pool.typeArray();
             }
 
-        TypeConstant typeExplicit = type.ensureTypeConstant(ctx, null);
-
-        // TODO GG: why this? assert !typeExplicit.isParamsSpecified();
-        return typeExplicit;
+        return type.ensureTypeConstant(ctx, null);
         }
 
     private TypeConstant getImplicitElementType(Context ctx)
@@ -138,8 +135,10 @@ public class ListExpression
     @Override
     public TypeFit testFit(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
+        ConstantPool pool = pool();
+
         // an empty map looks like an empty list to the parser
-        if (typeRequired.isA(pool().typeMap()) && exprs.isEmpty())
+        if (typeRequired.isA(pool.typeMap()) && exprs.isEmpty())
             {
             return TypeFit.Fit;
             }
@@ -154,7 +153,9 @@ public class ListExpression
                 }
 
             TypeConstant typeBase   = getBaseType(ctx, typeRequired);
-            TypeConstant typeTarget = pool().ensureParameterizedTypeConstant(typeBase, typeElement);
+            TypeConstant typeTarget = typeBase.isParamsSpecified()
+                    ? typeBase
+                    : pool.ensureParameterizedTypeConstant(typeBase, typeElement);
 
             if (!isA(ctx, typeTarget, typeRequired))
                 {
@@ -178,15 +179,16 @@ public class ListExpression
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
+        ConstantPool pool = pool();
+
         // an empty map looks like an empty list to the parser
-        if (typeRequired.isA(pool().typeMap()) && exprs.isEmpty())
+        if (typeRequired.isA(pool.typeMap()) && exprs.isEmpty())
             {
             MapExpression exprNew =  new MapExpression(new NamedTypeExpression(this, typeRequired),
                     Collections.EMPTY_LIST, Collections.EMPTY_LIST, getEndPosition());
             return replaceThisWith(exprNew).validate(ctx, typeRequired, errs);
             }
 
-        ConstantPool     pool        = pool();
         TypeFit          fit         = TypeFit.Fit;
         List<Expression> listExprs   = exprs;
         int              cExprs      = listExprs.size();
