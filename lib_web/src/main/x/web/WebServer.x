@@ -1,23 +1,15 @@
-import ecstasy.http.Response;
-import ecstasy.http.Server;
-
 /**
  * A web server.
  */
-@Concurrent service WebServer
-        implements Server.Handler
+@Concurrent
+service WebServer(Int port)
+        implements Handler
     {
-    construct (Int port = 8080)
-        {
-        this.port = port;
-        }
-
-    public/private Int port;
-
     /**
      * The HTTP server.
      */
-    private Server? server = Null;
+    @Unassigned
+    private HttpServer httpServer;
 
     /**
      * The Router that routes requests to endpoints.
@@ -41,72 +33,62 @@ import ecstasy.http.Server;
     /**
      * Start this web server.
      */
-    WebServer start()
+    void start()
         {
         this.router = router.freeze();
-        Server server = new Server(port, this);
-        server.start();
-        this.server = server;
-        return this;
+
+        @Inject(opts=port) HttpServer server;
+
+        server.attachHandler(this);
+
+        this.httpServer = server;
         }
 
     /**
-     * Stop this web server.
-     */
-    void stop()
-        {
-        Server? s = this.server;
-        if (s.is(Server))
-            {
-            s.stop();
-            }
-        }
-
-    /**
-     * Determine whether this web service is running.
-     *
-     * @return True iff this web server is running
-     */
-    Boolean isRunning()
-        {
-        return this.server?.isRunning() : False;
-        }
-
-    /**
-     * The Server.Handler implementation to handle all the requests
-     * to the web server.
+     * The Handler implementation to handle all the requests to this web server.
      */
     @Override
-    void handle(String uri, String method, String[] headerNames, String[][] headerValues,
-                Byte[] body, Response response)
+    void handle(Object context, String uri, String method,
+                String[] headerNames, String[][] headerValues, Byte[] body)
         {
-        Handler handler = new Handler(router);
-        handler.handle^(uri, method, headerNames, headerValues, body, response);
+        Handler handler = new RequestHandler(httpServer, router);
+        handler.handle^(context, uri, method, headerNames, headerValues, body);
         }
 
     /**
      * A handler for HTTP requests.
      */
     @Concurrent
-    private static service Handler(Router router)
-            implements Server.Handler
+    private static service RequestHandler(HttpServer httpServer, Router router)
+            implements Handler
         {
         @Override
-        void handle(String uri, String methodName, String[] headerNames, String[][] headerValues,
-                    Byte[] body, Response response)
+        void handle(Object context, String uri, String methodName,
+                    String[] headerNames, String[][] headerValues, Byte[] body)
             {
-            @Future Tuple<Int, String[], String[][], Byte[]> result = router.handle(uri, methodName, headerNames, headerValues, body);
+            @Future Tuple<Int, String[], String[][], Byte[]> result =
+                router.handle(uri, methodName, headerNames, headerValues, body);
+
             &result.whenComplete((t, e) ->
                 {
-                if (t.is(Tuple<Int, String[], String[][], Byte[]>))
+                if (t == Null)
                     {
-                    response.send^(t[0], t[1], t[2], t[3]);
+                    httpServer.send^(context, 500, [], [], []);
                     }
                 else
                     {
-                    response.send^(500, [], [], []);
+                    httpServer.send^(context, t[0], t[1], t[2], t[3]);
                     }
                 });
             }
+        }
+
+    static interface Handler
+        {
+        /**
+         * Handle an HTTP request.
+         */
+        void handle(Object context, String uri, String method,
+                    String[] headerNames, String[][] headerValues, Byte[] body);
         }
     }

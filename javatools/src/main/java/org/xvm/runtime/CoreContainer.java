@@ -23,6 +23,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 
+import org.xvm.runtime.template._native.web.xRTServer;
 import org.xvm.runtime.template.collections.xArray;
 
 import org.xvm.runtime.template.numbers.xIntLiteral.IntNHandle;
@@ -173,6 +174,11 @@ public class CoreContainer
         addResourceSupplier(new InjectionKey("homeDir", typeDirectory), this::ensureHomeDir);
         addResourceSupplier(new InjectionKey("curDir" , typeDirectory), this::ensureCurDir);
         addResourceSupplier(new InjectionKey("tmpDir" , typeDirectory), this::ensureTmpDir);
+
+        // +++ WebServer
+        xRTServer templateServer = xRTServer.INSTANCE;
+        addResourceSupplier(new InjectionKey("server", templateServer.getCanonicalType()),
+                templateServer::ensureServer);
 
         // +++ Linker
         TypeConstant typeLinker = pool.ensureEcstasyTypeConstant("mgmt.Container.Linker");

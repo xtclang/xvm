@@ -131,55 +131,10 @@ module TestWebApp
         console.println("Testing Web App");
 
         // Create the web server, add the endpoints, and start.
-        WebServer server = new WebServer(8080)
-                .addRoutes(new UsersApi(), "/users")
-                .start();
-// TODO instead:
-//        @Inject HttpConnector conn;
-//        conn.addRoutes(new UsersApi(), "/users");
+        WebServer server = new WebServer(8080);
+        server.addRoutes(new UsersApi(), "/users");
+        server.start();
 
         console.println("Started WebServer http://localhost:8080");
-
-        // this will effectively wait for the specified duration...
-        wait(server, Duration:60s);
-        }
-
-    void wait(WebServer server, Duration duration)
-        {
-        @Inject Timer timer;
-
-        @Future Tuple<> result;
-
-        // schedule a "forced shutdown"
-        timer.schedule(duration, () ->
-            {
-            if (!&result.assigned)
-                {
-                @Inject Console console;
-                console.println("Shutting down the test");
-                server.stop();
-                result=Tuple:();
-                }
-            });
-
-        private void checkRunning(WebServer server, Timer timer, FutureVar<Tuple> result)
-            {
-            if (server.isRunning())
-                {
-                timer.schedule(Duration.ofSeconds(10), &checkRunning(server, timer, result));
-                return;
-                }
-
-            if (!result.assigned)
-                {
-                @Inject Console console;
-                console.println("The web server has stopped");
-                result.set(Tuple:());
-                }
-            }
-
-        // schedule a periodic check
-        timer.schedule(Duration.ofSeconds(10), &checkRunning(server, timer, &result));
-        return result;
         }
     }
