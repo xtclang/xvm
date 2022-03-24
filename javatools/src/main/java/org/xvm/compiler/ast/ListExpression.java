@@ -116,7 +116,7 @@ public class ListExpression
 
         TypeConstant typeExplicit = type.ensureTypeConstant(ctx, null);
 
-        assert !typeExplicit.isParamsSpecified();
+        // TODO GG: why this? assert !typeExplicit.isParamsSpecified();
         return typeExplicit;
         }
 
