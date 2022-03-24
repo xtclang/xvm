@@ -62,6 +62,12 @@ public class ExpressionStatement
         }
 
     @Override
+    public boolean isCompletable()
+        {
+        return expr.isCompletable();
+        }
+
+    @Override
     public boolean isTodo()
         {
         return expr.isTodo();

@@ -405,7 +405,7 @@ public class StatementBlock
                         }
                     }
 
-                if (errs.isAbortDesired())
+                if (stmtNew == null || !stmtNew.isCompletable() || errs.isAbortDesired())
                     {
                     break;
                     }
