@@ -11,6 +11,7 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TemplateRegistry;
@@ -32,23 +33,16 @@ import org.xvm.util.ConsoleLog;
 public class xTerminalConsole
         extends xService
     {
-    public static final Console        CONSOLE     = System.console();
-    public static final BufferedReader CONSOLE_IN;
-    public static final PrintWriter    CONSOLE_OUT;
-    public static final ConsoleLog     CONSOLE_LOG = new ConsoleLog();
-    static
-        {
-        CONSOLE_IN  = CONSOLE == null || CONSOLE.reader() == null
-                ? new BufferedReader(new InputStreamReader(System.in))
-                : new BufferedReader(CONSOLE.reader());
-        CONSOLE_OUT = CONSOLE == null || CONSOLE.writer() == null
-                ? new PrintWriter(System.out, true)
-                : CONSOLE.writer();
-        }
+    public static xTerminalConsole INSTANCE;
 
     public xTerminalConsole(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
         super(templates, structure, false);
+
+        if (fInstance)
+            {
+            INSTANCE = this;
+            }
         }
 
     @Override
@@ -60,6 +54,12 @@ public class xTerminalConsole
         markNativeMethod("echo"    , BOOLEAN, BOOLEAN);
 
         getCanonicalType().invalidateTypeInfo();
+        }
+
+    @Override
+    public TypeConstant getCanonicalType()
+        {
+        return pool().ensureEcstasyTypeConstant("io.Console");
         }
 
     @Override
@@ -149,7 +149,39 @@ public class xTerminalConsole
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
         }
 
-    private static Frame.Continuation PRINT = frameCaller ->
+    /**
+     * Injection support.
+     */
+    public ObjectHandle ensureConsole(Frame frame, ObjectHandle hOpts)
+        {
+        ObjectHandle hConsole = m_hConsole;
+        if (hConsole == null)
+            {
+            hConsole = m_hConsole = createServiceHandle(
+                    frame.f_context.f_container.createServiceContext("Console"),
+                        getCanonicalClass(), getCanonicalType());
+            }
+        return hConsole;
+        }
+
+
+    // ---- constants and data fields --------------------------------------------------------------
+
+    public static final Console        CONSOLE     = System.console();
+    public static final BufferedReader CONSOLE_IN;
+    public static final PrintWriter    CONSOLE_OUT;
+    public static final ConsoleLog     CONSOLE_LOG = new ConsoleLog();
+    static
+        {
+        CONSOLE_IN  = CONSOLE == null || CONSOLE.reader() == null
+                ? new BufferedReader(new InputStreamReader(System.in))
+                : new BufferedReader(CONSOLE.reader());
+        CONSOLE_OUT = CONSOLE == null || CONSOLE.writer() == null
+                ? new PrintWriter(System.out, true)
+                : CONSOLE.writer();
+        }
+
+    private static final Frame.Continuation PRINT = frameCaller ->
         {
         char[] ach = ((StringHandle) frameCaller.popStack()).getValue();
         CONSOLE_LOG.log(ach, false);
@@ -158,7 +190,7 @@ public class xTerminalConsole
         return Op.R_NEXT;
         };
 
-    private static Frame.Continuation PRINTLN = frameCaller ->
+    private static final Frame.Continuation PRINTLN = frameCaller ->
         {
         char[] ach = ((StringHandle) frameCaller.popStack()).getValue();
         CONSOLE_LOG.log(ach, true);
@@ -167,4 +199,9 @@ public class xTerminalConsole
         };
 
     private boolean m_fEcho = true;
+
+    /**
+     * Cached Console handle.
+     */
+    private ObjectHandle m_hConsole;
     }

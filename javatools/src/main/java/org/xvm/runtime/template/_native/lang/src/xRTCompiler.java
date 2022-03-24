@@ -53,15 +53,28 @@ import org.xvm.util.Severity;
 public class xRTCompiler
         extends xService
     {
+    public static xRTCompiler INSTANCE;
+
     public xRTCompiler(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
         super(templates, structure, false);
+
+        if (fInstance)
+            {
+            INSTANCE = this;
+            }
         }
 
     @Override
     public void initNative()
         {
         markNativeMethod("compile", null, null);
+        }
+
+    @Override
+    public TypeConstant getCanonicalType()
+        {
+        return pool().ensureEcstasyTypeConstant("lang.src.Compiler");
         }
 
     @Override
@@ -123,8 +136,8 @@ public class xRTCompiler
             for (ModuleRepository repo : repoCore.asList())
                 {
                 // take all read-only repositories
-                if (repo instanceof DirRepository  && ((DirRepository) repo).isReadOnly() ||
-                    repo instanceof FileRepository && ((FileRepository) repo).isReadOnly())
+                if (repo instanceof DirRepository  repoDir  && repoDir .isReadOnly() ||
+                    repo instanceof FileRepository repoFile && repoFile.isReadOnly())
                     {
                     listNew.add(repo);
                     }
@@ -200,6 +213,22 @@ public class xRTCompiler
         {
         CompilerHandle hCompiler = new CompilerHandle(clz.maskAs(typeMask), context, new CompilerAdapter());
         context.setService(hCompiler);
+        return hCompiler;
+        }
+
+    /**
+     * Injection support.
+     */
+    public ObjectHandle ensureCompiler(Frame frame, ObjectHandle hOpts)
+        {
+        ObjectHandle hCompiler = m_hCompiler;
+        if (hCompiler == null)
+            {
+            m_hCompiler = hCompiler = createServiceHandle(
+                frame.f_context.f_container.createServiceContext("Compiler"),
+                    getCanonicalClass(), getCanonicalType());
+            }
+
         return hCompiler;
         }
 
@@ -375,4 +404,9 @@ public class xRTCompiler
         private Version          m_version = new Version("CI");
         private List<String>     m_log = new ArrayList<>();
         }
+
+    /**
+     * Cached Compiler handle.
+     */
+    private ObjectHandle m_hCompiler;
     }

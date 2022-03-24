@@ -22,12 +22,12 @@ import org.xvm.runtime.Utils;
 import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xService;
 
-import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
-import org.xvm.runtime.template._native.reflect.xRTFunction.NativeFunctionHandle;
-
 import org.xvm.runtime.template.numbers.LongLong;
 import org.xvm.runtime.template.numbers.BaseInt128.LongLongHandle;
 import org.xvm.runtime.template.numbers.xUInt128;
+
+import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
+import org.xvm.runtime.template._native.reflect.xRTFunction.NativeFunctionHandle;
 
 import org.xvm.util.ListSet;
 
@@ -39,11 +39,16 @@ import org.xvm.util.ListSet;
 public class xNanosTimer
         extends xService
     {
-    // -----  constructors -------------------------------------------------------------------------
+    public static xNanosTimer INSTANCE;
 
     public xNanosTimer(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
         super(templates, structure, false);
+
+        if (fInstance)
+            {
+            INSTANCE = this;
+            }
         }
 
     @Override
@@ -59,6 +64,12 @@ public class xNanosTimer
         markNativeMethod("schedule", new String[]{"temporal.Duration", "temporal.Timer.Alarm"}, null);
 
         getCanonicalType().invalidateTypeInfo();
+        }
+
+    @Override
+    public TypeConstant getCanonicalType()
+        {
+        return pool().ensureEcstasyTypeConstant("temporal.Timer");
         }
 
     @Override
@@ -127,6 +138,16 @@ public class xNanosTimer
         ObjectHandle hPicos     = ((GenericHandle) hRemaining).getField(null, "picoseconds");
 
         return ((LongLongHandle) hPicos).getValue().div(PICOS_PER_MILLI_LL).getLowValue();
+        }
+
+    /**
+     * Injection support.
+     */
+    public ObjectHandle ensureTimer(Frame frame, ObjectHandle hOpts)
+        {
+        return createServiceHandle(
+                frame.f_context.f_container.createServiceContext("Timer"),
+                    getCanonicalClass(), getCanonicalType());
         }
 
 

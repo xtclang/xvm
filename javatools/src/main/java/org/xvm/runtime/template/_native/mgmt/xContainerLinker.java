@@ -12,6 +12,7 @@ import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.SignatureConstant;
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
@@ -33,16 +34,22 @@ import org.xvm.runtime.template._native.reflect.xRTFileTemplate;
 import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
 
-
 /**
  * Native Container functionality.
  */
 public class xContainerLinker
         extends xService
     {
+    public static xContainerLinker INSTANCE;
+
     public xContainerLinker(TemplateRegistry registry, ClassStructure structure, boolean fInstance)
         {
         super(registry, structure, false);
+
+        if (fInstance)
+            {
+            INSTANCE = this;
+            }
         }
 
     @Override
@@ -59,6 +66,11 @@ public class xContainerLinker
         getCanonicalType().invalidateTypeInfo();
         }
 
+    @Override
+    public TypeConstant getCanonicalType()
+        {
+        return pool().ensureEcstasyTypeConstant("mgmt.Container.Linker");
+        }
 
     @Override
     public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
@@ -145,6 +157,22 @@ public class xContainerLinker
             }
 
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
+        }
+
+    /**
+     * Injection support.
+     */
+    public ObjectHandle ensureLinker(Frame frame, ObjectHandle hOpts)
+        {
+        ObjectHandle hLinker = m_hLinker;
+        if (hLinker == null)
+            {
+            m_hLinker = hLinker = createServiceHandle(
+                    frame.f_context.f_container.createServiceContext("Linker"),
+                        getCanonicalClass(), getCanonicalType());
+            }
+
+        return hLinker;
         }
 
     public static class CollectResources
@@ -250,4 +278,9 @@ public class xContainerLinker
         }
 
     static SignatureConstant GET_RESOURCE;
+
+    /**
+     * Cached Linker handle.
+     */
+    private ObjectHandle m_hLinker;
     }
