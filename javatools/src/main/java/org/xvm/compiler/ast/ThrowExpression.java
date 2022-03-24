@@ -25,11 +25,10 @@ import org.xvm.util.Severity;
 
 
 /**
- * A "throw expression" is a non-completing expression that throws an exception.
+ * A "throw expression" is a commonly non-completing expression that throws an exception.
  *
  * <p/>TODO serious issues with types, because the expression cannot complete, yet it factors into
  *          type analysis. for example, "if (x?.y : assert)" does not evaluate to Boolean
- *      -> parent expression should always check isCompletable() before factoring in type info?
  *      -> need to create a "subtype of all types" pseudo-type for compile-time that non-completing
  *         expressions can report as their type (that has an isA() implementation that returns true)
  */
@@ -278,7 +277,8 @@ public class ThrowExpression
     @Override
     public boolean isCompletable()
         {
-        return false;
+        // example to consider: "throw failure?;"
+        return isShortCircuiting();
         }
 
     @Override
@@ -321,8 +321,8 @@ public class ThrowExpression
         generateThrow(ctx, code, errs);
 
         TypeConstant[] aTypes = getTypes();
-        int cArgs = aTypes.length;
-        Register[] aArgs = new Register[cArgs];
+        int            cArgs  = aTypes.length;
+        Register[]     aArgs  = new Register[cArgs];
         for (int i = 0; i < cArgs; ++i)
             {
             aArgs[i] = generateBlackHole(aTypes[i]);

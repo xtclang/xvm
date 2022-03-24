@@ -326,7 +326,7 @@ public class SwitchExpression
     public boolean isCompletable()
         {
         // until we validate, assume completable
-        return m_casemgr == null || !m_casemgr.isConditionAborting();
+        return isShortCircuiting() || m_casemgr == null || !m_casemgr.isConditionAborting();
         }
 
     @Override

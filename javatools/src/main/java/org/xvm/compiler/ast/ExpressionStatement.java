@@ -126,7 +126,7 @@ public class ExpressionStatement
         {
         StringBuilder sb = new StringBuilder();
         sb.append(expr);
-        if (term)
+        if (!term)
             {
             sb.append(';');
             }

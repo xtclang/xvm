@@ -499,6 +499,13 @@ public class ReturnStatement
         return false;
         }
 
+    @Override
+    public boolean isCompletable()
+        {
+        // example to consider: "return result?;"
+        return exprs != null && exprs.stream().anyMatch(Expression::isShortCircuiting);
+        }
+
 
     // ----- debugging assistance ------------------------------------------------------------------
 
