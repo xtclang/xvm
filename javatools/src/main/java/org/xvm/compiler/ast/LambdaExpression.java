@@ -286,6 +286,9 @@ public class LambdaExpression
 
         if (getParentBlock().isTerminatedAbnormally())
             {
+            // stub out the lambda structure
+            configureLambda(TypeConstant.NO_TYPES, Handy.NO_ARGS, 0, new boolean[0], TypeConstant.NO_TYPES);
+
             mgr.deferChildren();
             mgr.markComplete();
             return;

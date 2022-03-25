@@ -4,28 +4,10 @@ module TestSimple
 
     void run()
         {
-        }
-
-    class Test
-        {
-        @Special("c1")
-        construct()
+        Int value = TODO("value");
+        function Int (Int) fn = (i) ->
             {
-            }
-
-        @Special("m1")
-        void meth(Int i)
-            {
-            }
-
-        @Special("f1")
-        static void func(Int i)
-            {
-            }
-        }
-
-    mixin Special(String path)
-            into Method
-        {
+            return value;
+            };
         }
     }
