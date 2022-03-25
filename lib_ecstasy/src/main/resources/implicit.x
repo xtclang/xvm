@@ -98,8 +98,6 @@ import ecstasy.io.OutputStream;
 import ecstasy.io.Reader;
 import ecstasy.io.Writer;
 
-import ecstasy.net.URI;
-
 import ecstasy.numbers.BFloat16;
 import ecstasy.numbers.Bit;
 import ecstasy.numbers.Dec32;
@@ -168,4 +166,3 @@ import ecstasy.text.Char;
 import ecstasy.text.String;
 import ecstasy.text.Stringable;
 import ecstasy.text.StringBuffer;
-
