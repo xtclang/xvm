@@ -31,6 +31,7 @@ import org.xvm.runtime.template.numbers.xBit;
 import org.xvm.runtime.template.numbers.xDec64;
 import org.xvm.runtime.template.numbers.xFloat64;
 import org.xvm.runtime.template.numbers.xInt64;
+import org.xvm.runtime.template.numbers.xIntLiteral.IntNHandle;
 import org.xvm.runtime.template.numbers.xUInt64;
 import org.xvm.runtime.template.numbers.xUInt8;
 
@@ -41,9 +42,16 @@ import org.xvm.runtime.template.numbers.xUInt8;
 public class xRTRandom
         extends xService
     {
+    public static xRTRandom INSTANCE;
+
     public xRTRandom(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
         super(templates, structure, false);
+
+        if (fInstance)
+            {
+            INSTANCE = this;
+            }
         }
 
     @Override
@@ -68,6 +76,12 @@ public class xRTRandom
         markNativeMethod("float", VOID     , FLOAT);
 
         getCanonicalType().invalidateTypeInfo();
+        }
+
+    @Override
+    public TypeConstant getCanonicalType()
+        {
+        return pool().ensureEcstasyTypeConstant("numbers.Random");
         }
 
     @Override
@@ -132,6 +146,31 @@ public class xRTRandom
             }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
+        }
+
+    /**
+     * Injection support.
+     */
+    public ObjectHandle ensureDefaultRandom(Frame frame, ObjectHandle hOpts)
+        {
+        long lSeed = hOpts instanceof JavaLong   ? ((JavaLong) hOpts).getValue() :
+                     hOpts instanceof IntNHandle ? ((IntNHandle) hOpts).getValue().getLong() :
+                     0;
+        if (lSeed != 0)
+            {
+            return createRandomHandle(frame.f_context.f_container.createServiceContext("Random"),
+                    getCanonicalClass(), getCanonicalType(), lSeed);
+            }
+
+        ObjectHandle hRnd = m_hRandom;
+        if (hRnd == null)
+            {
+            m_hRandom = hRnd = createRandomHandle(
+                frame.f_context.f_container.createServiceContext("Random"),
+                    getCanonicalClass(), getCanonicalType(), 0L);
+            }
+
+        return hRnd;
         }
 
 
@@ -234,4 +273,9 @@ public class xRTRandom
 
         return random == null ? ThreadLocalRandom.current() : random;
         }
+
+    /**
+     * Cached Random handle.
+     */
+    private ObjectHandle m_hRandom;
     }

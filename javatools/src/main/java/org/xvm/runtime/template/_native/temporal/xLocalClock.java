@@ -40,11 +40,16 @@ import org.xvm.runtime.template._native.reflect.xRTFunction.NativeFunctionHandle
 public class xLocalClock
         extends xService
     {
-    public static Timer TIMER = new Timer("ecstasy:LocalClock", true);
+    public static xLocalClock INSTANCE;
 
     public xLocalClock(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
         {
         super(templates, structure, false);
+
+        if (fInstance)
+            {
+            INSTANCE = this;
+            }
         }
 
     @Override
@@ -56,6 +61,12 @@ public class xLocalClock
         markNativeMethod("schedule", new String[]{"temporal.DateTime", "temporal.Clock.Alarm"}, null);
 
         getCanonicalType().invalidateTypeInfo();
+        }
+
+    @Override
+    public TypeConstant getCanonicalType()
+        {
+        return pool().ensureEcstasyTypeConstant("temporal.Clock");
         }
 
     @Override
@@ -92,6 +103,34 @@ public class xLocalClock
             }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
+        }
+
+    /**
+     * Injection support.
+     */
+    public ObjectHandle ensureLocalClock(Frame frame, ObjectHandle hOpts)
+        {
+        ObjectHandle hClock = m_hLocalClock;
+        if (hClock == null)
+            {
+            m_hLocalClock = hClock = createServiceHandle(
+                frame.f_context.f_container.createServiceContext("LocalClock"),
+                    getCanonicalClass(), getCanonicalType());
+            }
+
+        return hClock;
+        }
+
+    public ObjectHandle ensureDefaultClock(Frame frame, ObjectHandle hOpts)
+        {
+        // TODO
+        return ensureLocalClock(frame, hOpts);
+        }
+
+    public ObjectHandle ensureUTCClock(Frame frame, ObjectHandle hOpts)
+        {
+        // TODO
+        return ensureLocalClock(frame, hOpts);
         }
 
 
@@ -201,6 +240,8 @@ public class xLocalClock
 
     // ----- constants and fields ------------------------------------------------------------------
 
+    public static Timer TIMER = new Timer("ecstasy:LocalClock", true);
+
     protected static final long     PICOS_PER_MILLI    = xNanosTimer.PICOS_PER_MILLI;
     protected static final LongLong PICOS_PER_MILLI_LL = xNanosTimer.PICOS_PER_MILLI_LL;
 
@@ -213,4 +254,9 @@ public class xLocalClock
      * Cached TimeZone handle.
      */
     private GenericHandle m_hTimeZone;
+
+    /**
+     * Cached LocalClock handle.
+     */
+    private ObjectHandle m_hLocalClock;
     }

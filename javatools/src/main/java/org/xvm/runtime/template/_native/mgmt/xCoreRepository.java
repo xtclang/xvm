@@ -33,9 +33,16 @@ import org.xvm.runtime.template._native.reflect.xRTModuleTemplate;
 public class xCoreRepository
         extends ClassTemplate
     {
+    public static xCoreRepository INSTANCE;
+
     public xCoreRepository(TemplateRegistry registry, ClassStructure structure, boolean fInstance)
         {
         super(registry, structure);
+
+        if (fInstance)
+            {
+            INSTANCE = this;
+            }
         }
 
     @Override
@@ -49,6 +56,12 @@ public class xCoreRepository
         markNativeMethod("getModule", STRING, null);
 
         getCanonicalType().invalidateTypeInfo();
+        }
+
+    @Override
+    public TypeConstant getCanonicalType()
+        {
+        return pool().ensureEcstasyTypeConstant("mgmt.ModuleRepository");
         }
 
     @Override
@@ -100,6 +113,20 @@ public class xCoreRepository
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
         }
 
+    /**
+     * Injection support.
+     */
+    public ObjectHandle ensureModuleRepository(Frame frame, ObjectHandle hOpts)
+        {
+        ObjectHandle hRepository = m_hRepository;
+        if (hRepository == null)
+            {
+            m_hRepository = hRepository = makeHandle();
+            }
+
+        return hRepository;
+        }
+
 
     // ----- ObjectHandle --------------------------------------------------------------------------
 
@@ -118,4 +145,9 @@ public class xCoreRepository
         }
 
     private TypeComposition m_clzRepo;
+
+    /**
+     * Cached Repository handle.
+     */
+    private ObjectHandle m_hRepository;
     }

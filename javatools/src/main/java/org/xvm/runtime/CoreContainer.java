@@ -21,12 +21,8 @@ import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
-import org.xvm.runtime.ObjectHandle.JavaLong;
 
-import org.xvm.runtime.template._native.web.xRTServer;
 import org.xvm.runtime.template.collections.xArray;
-
-import org.xvm.runtime.template.numbers.xIntLiteral.IntNHandle;
 
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
@@ -45,6 +41,8 @@ import org.xvm.runtime.template._native.reflect.xRTFunction.NativeFunctionHandle
 
 import org.xvm.runtime.template._native.temporal.xLocalClock;
 import org.xvm.runtime.template._native.temporal.xNanosTimer;
+
+import org.xvm.runtime.template._native.web.xRTServer;
 
 
 /**
@@ -127,48 +125,31 @@ public class CoreContainer
     protected void initResources(ConstantPool pool)
         {
         // +++ LocalClock
-        TypeConstant typeClock = pool.ensureEcstasyTypeConstant("temporal.Clock");
-
-        addResourceSupplier(new InjectionKey("clock"     , typeClock), this::ensureDefaultClock);
-        addResourceSupplier(new InjectionKey("localClock", typeClock), this::ensureLocalClock);
-        addResourceSupplier(new InjectionKey("utcClock"  , typeClock), this::ensureUTCClock);
+        xLocalClock  templateClock = xLocalClock.INSTANCE;
+        TypeConstant typeClock     = templateClock.getCanonicalType();
+        addResourceSupplier(new InjectionKey("clock"     , typeClock), templateClock::ensureDefaultClock);
+        addResourceSupplier(new InjectionKey("localClock", typeClock), templateClock::ensureLocalClock);
+        addResourceSupplier(new InjectionKey("utcClock"  , typeClock), templateClock::ensureUTCClock);
 
         // +++ NanosTimer
-        xNanosTimer templateRTTimer = (xNanosTimer)
-                f_templates.getTemplate("_native.temporal.NanosTimer");
-        assert templateRTTimer != null;
-
-        TypeConstant typeTimer = pool.ensureEcstasyTypeConstant("temporal.Timer");
-        BiFunction<Frame, ObjectHandle, ObjectHandle> supplierTimer = (frame, hOpts) ->
-            templateRTTimer.createServiceHandle(
-                createServiceContext("Timer"),
-                templateRTTimer.getCanonicalClass(), typeTimer);
-        addResourceSupplier(new InjectionKey("timer", typeTimer), supplierTimer);
+        xNanosTimer  templateTimer = xNanosTimer.INSTANCE;
+        TypeConstant typeTimer     = templateTimer.getCanonicalType();
+        addResourceSupplier(new InjectionKey("timer", typeTimer), templateTimer::ensureTimer);
 
         // +++ Console
-        xTerminalConsole templateRTConsole = (xTerminalConsole)
-                f_templates.getTemplate("_native.TerminalConsole");
-        assert templateRTConsole != null;
-
-        TypeConstant typeConsole = pool.ensureEcstasyTypeConstant("io.Console");
-
-        BiFunction<Frame, ObjectHandle, ObjectHandle> supplierConsole = (frame, hOpts) ->
-            templateRTConsole.createServiceHandle(
-                createServiceContext("Console"),
-                templateRTConsole.getCanonicalClass(), typeConsole);
-
-        addResourceSupplier(new InjectionKey("console", typeConsole), supplierConsole);
+        xTerminalConsole templateConsole = xTerminalConsole.INSTANCE;
+        TypeConstant     typeConsole     = templateConsole.getCanonicalType();
+        addResourceSupplier(new InjectionKey("console", typeConsole), templateConsole::ensureConsole);
 
         // +++ Random
-        TypeConstant typeRandom = pool.ensureEcstasyTypeConstant("numbers.Random");
-
-        addResourceSupplier(new InjectionKey("rnd"   , typeRandom), this::ensureDefaultRandom);
-        addResourceSupplier(new InjectionKey("random", typeRandom), this::ensureDefaultRandom);
+        xRTRandom    templateRandom = xRTRandom.INSTANCE;
+        TypeConstant typeRandom     = templateRandom.getCanonicalType();
+        addResourceSupplier(new InjectionKey("rnd"   , typeRandom), templateRandom::ensureDefaultRandom);
+        addResourceSupplier(new InjectionKey("random", typeRandom), templateRandom::ensureDefaultRandom);
 
         // +++ OSFileStore etc.
         TypeConstant typeFileStore = pool.ensureEcstasyTypeConstant("fs.FileStore");
         TypeConstant typeDirectory = pool.ensureEcstasyTypeConstant("fs.Directory");
-
         addResourceSupplier(new InjectionKey("storage", typeFileStore), this::ensureFileStore);
         addResourceSupplier(new InjectionKey("rootDir", typeDirectory), this::ensureRootDir);
         addResourceSupplier(new InjectionKey("homeDir", typeDirectory), this::ensureHomeDir);
@@ -176,26 +157,28 @@ public class CoreContainer
         addResourceSupplier(new InjectionKey("tmpDir" , typeDirectory), this::ensureTmpDir);
 
         // +++ WebServer
-        xRTServer templateServer = xRTServer.INSTANCE;
-        addResourceSupplier(new InjectionKey("server", templateServer.getCanonicalType()),
-                templateServer::ensureServer);
+        xRTServer    templateServer = xRTServer.INSTANCE;
+        TypeConstant typeServer     = templateServer.getCanonicalType();
+        addResourceSupplier(new InjectionKey("server", typeServer), templateServer::ensureServer);
 
         // +++ Linker
-        TypeConstant typeLinker = pool.ensureEcstasyTypeConstant("mgmt.Container.Linker");
-        addResourceSupplier(new InjectionKey("linker" , typeLinker), this::ensureLinker);
+        xContainerLinker templateLinker = xContainerLinker.INSTANCE;
+        TypeConstant     typeLinker     = templateLinker.getCanonicalType();
+        addResourceSupplier(new InjectionKey("linker", typeLinker), templateLinker::ensureLinker);
 
         // +++ ModuleRepository
-        TypeConstant typeRepo = pool.ensureEcstasyTypeConstant("mgmt.ModuleRepository");
-        addResourceSupplier(new InjectionKey("repository" , typeRepo), this::ensureModuleRepository);
+        xCoreRepository templateRepo = xCoreRepository.INSTANCE;
+        TypeConstant    typeRepo     = templateRepo.getCanonicalType();
+        addResourceSupplier(new InjectionKey("repository", typeRepo), templateRepo::ensureModuleRepository);
 
         // +++ Compiler
-        TypeConstant typeCompiler = pool.ensureEcstasyTypeConstant("lang.src.Compiler");
-        addResourceSupplier(new InjectionKey("compiler" , typeCompiler), this::ensureCompiler);
+        xRTCompiler  templateCompiler = xRTCompiler.INSTANCE;
+        TypeConstant typeCompiler     = templateCompiler.getCanonicalType();
+        addResourceSupplier(new InjectionKey("compiler", typeCompiler), templateCompiler::ensureCompiler);
 
         // ++ xvmProperties
-        TypeConstant typeProps = pool.ensureParameterizedTypeConstant(pool.typeMap(),
-                                    pool.typeString(), pool.typeString());
-        addResourceSupplier(new InjectionKey("properties" , typeProps), this::ensureProperties);
+        TypeConstant typeProps = pool.ensureParameterizedTypeConstant(pool.typeMap(), pool.typeString(), pool.typeString());
+        addResourceSupplier(new InjectionKey("properties", typeProps), this::ensureProperties);
         }
 
     /**
@@ -210,38 +193,6 @@ public class CoreContainer
 
         f_mapResources.put(key, fn);
         f_mapResourceNames.put(key.f_sName, key);
-        }
-
-    protected ObjectHandle ensureDefaultClock(Frame frame, ObjectHandle hOpts)
-        {
-        // TODO
-        return ensureLocalClock(frame, hOpts);
-        }
-
-    protected ObjectHandle ensureLocalClock(Frame frame, ObjectHandle hOpts)
-        {
-        ObjectHandle hClock = m_hLocalClock;
-        if (hClock == null)
-            {
-            xLocalClock templateRTClock = (xLocalClock)
-                    f_templates.getTemplate("_native.temporal.LocalClock");
-            if (templateRTClock != null)
-                {
-                TypeConstant typeClock =
-                        frame.poolContext().ensureEcstasyTypeConstant("temporal.Clock");
-                m_hLocalClock = hClock = templateRTClock.createServiceHandle(
-                    createServiceContext("LocalClock"),
-                    templateRTClock.getCanonicalClass(), typeClock);
-                }
-            }
-
-        return hClock;
-        }
-
-    protected ObjectHandle ensureUTCClock(Frame frame, ObjectHandle hOpts)
-        {
-        // TODO
-        return ensureDefaultClock(frame, hOpts);
         }
 
     protected ObjectHandle ensureOSStorage(Frame frame, ObjectHandle hOpts)
@@ -281,42 +232,6 @@ public class CoreContainer
             }
 
         return hStorage;
-        }
-
-    protected ObjectHandle ensureDefaultRandom(Frame frame, ObjectHandle hOpts)
-        {
-        long lSeed = hOpts instanceof JavaLong   ? ((JavaLong) hOpts).getValue() :
-                     hOpts instanceof IntNHandle ? ((IntNHandle) hOpts).getValue().getLong() :
-                     0;
-        if (lSeed != 0)
-            {
-            xRTRandom templateRTRandom = (xRTRandom) f_templates.getTemplate("_native.numbers.RTRandom");
-            if (templateRTRandom != null)
-                {
-                TypeConstant typeRandom = frame.poolContext().ensureEcstasyTypeConstant("numbers.Random");
-
-                return templateRTRandom.createRandomHandle(
-                        createServiceContext("Random"),
-                        templateRTRandom.getCanonicalClass(), typeRandom, lSeed);
-                }
-            }
-
-        ObjectHandle hRnd = m_hRandom;
-        if (hRnd == null)
-            {
-            xRTRandom templateRTRandom = (xRTRandom)
-                    f_templates.getTemplate("_native.numbers.RTRandom");
-            if (templateRTRandom != null)
-                {
-                TypeConstant typeRandom =
-                        frame.poolContext().ensureEcstasyTypeConstant("numbers.Random");
-                m_hRandom = hRnd = templateRTRandom.createRandomHandle(
-                    createServiceContext("Random"),
-                    templateRTRandom.getCanonicalClass(), typeRandom, 0L);
-                }
-            }
-
-        return hRnd;
         }
 
     protected ObjectHandle ensureFileStore(Frame frame, ObjectHandle hOpts)
@@ -412,64 +327,6 @@ public class CoreContainer
             }
 
         return hDir;
-        }
-
-    protected ObjectHandle ensureModuleRepository(Frame frame, ObjectHandle hOpts)
-        {
-        ObjectHandle hRepository = m_hRepository;
-        if (hRepository == null)
-            {
-            xCoreRepository templateRTRepository =
-                    (xCoreRepository) f_templates.getTemplate("_native.mgmt.CoreRepository");
-            if (templateRTRepository != null)
-                {
-                m_hRepository = hRepository = templateRTRepository.makeHandle();
-                }
-            }
-
-        return hRepository;
-        }
-
-    protected ObjectHandle ensureLinker(Frame frame, ObjectHandle hOpts)
-        {
-        ObjectHandle hLinker = m_hLinker;
-        if (hLinker == null)
-            {
-            xContainerLinker templateRTLinker = (xContainerLinker)
-                    f_templates.getTemplate("_native.mgmt.ContainerLinker");
-            if (templateRTLinker != null)
-                {
-                ConstantPool pool       = frame.poolContext();
-                TypeConstant typeLinker = pool.ensureUnionTypeConstant(
-                        pool.ensureEcstasyTypeConstant("mgmt.Container.Linker"),
-                        pool.typeService());
-                m_hLinker = hLinker = templateRTLinker.createServiceHandle(
-                    createServiceContext("Linker"),
-                    templateRTLinker.getCanonicalClass(), typeLinker);
-                }
-            }
-
-        return hLinker;
-        }
-
-    protected ObjectHandle ensureCompiler(Frame frame, ObjectHandle hOpts)
-        {
-        ObjectHandle hCompiler = m_hCompiler;
-        if (hCompiler == null)
-            {
-            xRTCompiler templateRTCompiler =
-                    (xRTCompiler) f_templates.getTemplate("_native.lang.src.RTCompiler");
-            if (templateRTCompiler != null)
-                {
-                TypeConstant typeCompiler =
-                        frame.poolContext().ensureEcstasyTypeConstant("lang.src.Compiler");
-                m_hCompiler = hCompiler = templateRTCompiler.createServiceHandle(
-                    createServiceContext("Compiler"),
-                    templateRTCompiler.getCanonicalClass(), typeCompiler);
-                }
-            }
-
-        return hCompiler;
         }
 
     protected ObjectHandle ensureProperties(Frame frame, ObjectHandle hOpts)
@@ -613,17 +470,12 @@ public class CoreContainer
 
     // ----- data fields ---------------------------------------------------------------------------
 
-    private ObjectHandle m_hLocalClock;
-    private ObjectHandle m_hRandom;
     private ObjectHandle m_hOSStorage;
     private ObjectHandle m_hFileStore;
     private ObjectHandle m_hRootDir;
     private ObjectHandle m_hHomeDir;
     private ObjectHandle m_hCurDir;
     private ObjectHandle m_hTmpDir;
-    private ObjectHandle m_hLinker;
-    private ObjectHandle m_hRepository;
-    private ObjectHandle m_hCompiler;
     private ObjectHandle m_hProperties;
 
     /**
