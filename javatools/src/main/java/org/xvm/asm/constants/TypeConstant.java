@@ -5194,7 +5194,7 @@ public abstract class TypeConstant
 
             // find a shorthand constructor, which is emitted by the TypeCompositionStatement
             // e.g. 'mixin WebService(String path = "/")'
-            // or 'mixin Get(String path = "") extends HttpEndpoint(HttpMethod.GET, path)'
+            // or 'mixin Get(String path = "") extends Endpoint(HttpMethod.GET, path)'
             MethodStructure ctorShorthand = infoMixin.getClassStructure().
                     findMethod("construct", MethodStructure::isShorthandConstructor);
             if (ctorShorthand != null)
