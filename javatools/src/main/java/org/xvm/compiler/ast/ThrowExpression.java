@@ -401,24 +401,26 @@ public class ThrowExpression
         {
         StringBuilder sb = new StringBuilder();
 
-        sb.append(keyword);
-
-        if (expr != null)
+        if (isTodo() && message != null)
             {
-            sb.append(' ')
-              .append(expr);
+            // the message contains "T0D0"
+            sb.append(message);
             }
+        else
+            {
+            sb.append(keyword);
 
-        if (isTodo())
-            {
-            sb.append('(')
-              .append(message == null ? "\"\"" : message)
-              .append(')');
-            }
-        else if (message != null)
-            {
-            sb.append(" as ")
-              .append(message);
+            if (expr != null)
+                {
+                sb.append(' ')
+                  .append(expr);
+                }
+
+            if (message != null)
+                {
+                sb.append(" as ")
+                  .append(message);
+                }
             }
 
         sb.append(';');
