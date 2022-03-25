@@ -409,6 +409,23 @@ public abstract class AstNode
         }
 
     /**
+     * @return the closest StatementBlock parent
+     */
+    public StatementBlock getParentBlock()
+        {
+        AstNode parent = getParent();
+        while (parent != null)
+            {
+            if (parent instanceof StatementBlock block)
+                {
+                return block;
+                }
+            parent = parent.getParent();
+            }
+        return null;
+        }
+
+    /**
      * Given a type expression that is used as some part of this AstNode, determine if that type is
      * allowed to auto narrow.
      *

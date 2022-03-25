@@ -302,6 +302,19 @@ public class StatementBlock
     // ----- compilation ---------------------------------------------------------------------------
 
     /**
+     * @return true iff the compilation of this block terminated abnormally
+     */
+    public boolean isTerminatedAbnormally()
+        {
+        if (m_fTerminatedAbnormally)
+            {
+            return true;
+            }
+        StatementBlock parentBlock = getParentBlock();
+        return parentBlock != null && parentBlock.isTerminatedAbnormally();
+        }
+
+    /**
      * Generate assembly code for a method. This is the entry point for the compilation of a method.
      *
      * @param code  the code object to which the assembly is added
@@ -471,6 +484,7 @@ public class StatementBlock
                     if (stmt.isTodo())
                         {
                         // T0D0 expression is allowed to have stuff that follows it that is unreachable
+                        m_fTerminatedAbnormally = true;
                         break;
                         }
 
@@ -1741,6 +1755,7 @@ public class StatementBlock
     protected List<ImportStatement>        importsWild;
 
     private transient boolean m_fSuppressScope;
+    private transient boolean m_fTerminatedAbnormally;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(StatementBlock.class, "stmts");
     }

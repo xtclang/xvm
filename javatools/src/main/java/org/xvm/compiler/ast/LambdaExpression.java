@@ -284,6 +284,13 @@ public class LambdaExpression
             return;
             }
 
+        if (getParentBlock().isTerminatedAbnormally())
+            {
+            mgr.deferChildren();
+            mgr.markComplete();
+            return;
+            }
+
         // this is where the magic happens:
         // - by this point in time, the method body containing the lambda has already been validated
         // - the validation included validating (a temp copy of) this expression in order to

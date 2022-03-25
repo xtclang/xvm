@@ -135,12 +135,7 @@ public class NameResolver
                 m_stmtImport = m_node.resolveImportBySingleName(m_sName, errs);
                 if (m_stmtImport != null)
                     {
-                    AstNode parent = m_stmtImport.getParent();
-                    while (!(parent instanceof StatementBlock))
-                        {
-                        parent = parent.getParent();
-                        }
-                    m_blockImport = (StatementBlock) parent;
+                    m_blockImport = m_stmtImport.getParentBlock();
                     }
                 m_stage = Stage.RESOLVE_FIRST_NAME;
                 // fall through

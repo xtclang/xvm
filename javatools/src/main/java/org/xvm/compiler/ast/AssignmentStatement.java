@@ -766,6 +766,12 @@ public class AssignmentStatement
         }
 
     @Override
+    public boolean isTodo()
+        {
+        return rvalue.isTodo();
+        }
+
+    @Override
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
         boolean      fCompletes = fReachable;

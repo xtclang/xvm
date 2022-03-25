@@ -200,12 +200,7 @@ public class ImportStatement
             {
             // as global visibility is resolved, each import statement registers itself so that anything
             // following it can see the import, but anything preceding it does not
-            AstNode parent = getParent();
-            while (!(parent instanceof StatementBlock))
-                {
-                parent = parent.getParent();
-                }
-            ((StatementBlock) parent).registerImport(this, errs);
+            getParentBlock().registerImport(this, errs);
             m_fImportRegistered = true;
             }
 
