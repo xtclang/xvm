@@ -43,19 +43,19 @@ const UriMatchVariable(String name, Char modifier, Char operator)
     // ----- Hashable & Orderable ------------------------------------------------------------------
 
     @Override
-    static Int hashCode(UriMatchVariable value)
+    static <CompileType extends UriMatchVariable> Int hashCode(CompileType value)
         {
         return value.name.hashCode();
         }
 
     @Override
-    static Boolean equals(UriMatchVariable value1, UriMatchVariable value2)
+    static <CompileType extends UriMatchVariable> Boolean equals(CompileType value1, CompileType value2)
         {
         return value1.name == value2.name;
         }
 
     @Override
-    static Ordered compare(UriMatchVariable value1, UriMatchVariable value2)
+    static <CompileType extends UriMatchVariable> Ordered compare(CompileType value1, CompileType value2)
         {
         return value1.name <=> value2.name;
         }

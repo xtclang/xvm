@@ -343,26 +343,28 @@ public interface ErrorListener
                     .append(':')
                     .append(m_sCode);
 
-            if (m_xs != null)
-                {
-                sb.append(':')
-                  .append(m_xs.getDescription());
-                }
-
             if (m_aoParam != null)
                 {
                 sb.append('#')
                   .append(Arrays.hashCode(m_aoParam));
                 }
 
-            if (m_source != null)
+            if (!m_sCode.startsWith("VERIFY"))
                 {
-                sb.append(':')
-                  .append(m_source.getFileName())
-                  .append(':')
-                  .append(m_lPosStart)
-                  .append(':')
-                  .append(m_lPosStart);
+                if (m_source != null)
+                    {
+                    sb.append(':')
+                      .append(m_source.getFileName())
+                      .append(':')
+                      .append(m_lPosStart)
+                      .append(':')
+                      .append(m_lPosStart);
+                    }
+                if (m_xs != null)
+                    {
+                    sb.append(':')
+                      .append(m_xs.getDescription());
+                    }
                 }
 
             return sb.toString();

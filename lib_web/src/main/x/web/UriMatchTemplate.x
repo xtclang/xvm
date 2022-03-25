@@ -326,7 +326,7 @@ const UriMatchTemplate(String             template,
         // ----- Comparable ------------------------------------------------------------------------
 
         @Override
-        static <CompileType extends UriMatchInfo> Boolean equals(CompileType value1, CompileType value2)
+        static <CompileType extends DefaultUriMatchInfo> Boolean equals(CompileType value1, CompileType value2)
             {
             return value1.uri == value2.uri && value1.variables == value2.variables;
             }

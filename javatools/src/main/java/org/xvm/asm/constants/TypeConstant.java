@@ -3772,7 +3772,7 @@ public abstract class TypeConstant
                 else if (idContrib.isTopLevel())
                     {
                     List<MethodConstant> listMatches = collectCoveredMethods(sigContrib, mapMethods);
-                    if (listMatches != null)
+                    if (listMatches != null && !listMatches.isEmpty())
                         {
                         for (MethodConstant idMethod : listMatches)
                             {
@@ -3789,6 +3789,12 @@ public abstract class TypeConstant
                                         method.getIdentity().getValueString());
                                 }
                             }
+                        }
+                    else if (fSelf && methodContrib.getTail().isOverride())
+                        {
+                        log(errs, Severity.ERROR, VE_SUPER_MISSING,
+                                methodContrib.getIdentity().getPathString(), getValueString());
+
                         }
                     }
                 else
