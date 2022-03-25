@@ -8,6 +8,8 @@ import binders.RequestBinderRegistry;
 import codecs.MediaTypeCodec;
 import codecs.MediaTypeCodecRegistry;
 
+import routing.DefaultUriRouteMatch;
+
 /**
  * A router that can work out the routes for a given HTTP method and URI.
  */

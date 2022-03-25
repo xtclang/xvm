@@ -4,7 +4,7 @@ import ecstasy.reflect.Parameter;
  * An executable route that matches a URI.
  */
 interface RouteMatch
-//        extends ExecutableFunction
+        extends ExecutableFunction
     {
     /**
      * The specific media types produced by this route.
