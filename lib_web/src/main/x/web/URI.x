@@ -1,9 +1,9 @@
+import ecstasy.net.IPAddress;
+
 /**
  * A representation of a Uniform Resource Identifier (URI) reference.
  *
  * @see: https://www.ietf.org/rfc/rfc2396.txt
- *
- * TODO GG: move to "net" module?
  */
 const URI
     {
