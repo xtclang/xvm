@@ -182,7 +182,7 @@ public class ListExpression
         ConstantPool pool = pool();
 
         // an empty map looks like an empty list to the parser
-        if (typeRequired.isA(pool.typeMap()) && exprs.isEmpty())
+        if (typeRequired != null && typeRequired.isA(pool.typeMap()) && exprs.isEmpty())
             {
             MapExpression exprNew =  new MapExpression(new NamedTypeExpression(this, typeRequired),
                     Collections.EMPTY_LIST, Collections.EMPTY_LIST, getEndPosition());
