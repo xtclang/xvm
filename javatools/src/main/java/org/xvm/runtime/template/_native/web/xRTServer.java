@@ -89,7 +89,7 @@ public class xRTServer
             HttpServer httpServer = HttpServer.create(new InetSocketAddress((int) lPort), 0);
 
             ServiceContext context =
-                    frame.f_context.f_container.createServiceContext("WebServer-" + lPort);
+                    frame.f_context.f_container.createServiceContext("HttpServer-" + lPort);
             ServiceHandle  hService =
                     new HttpServerHandle(getCanonicalClass(), context, httpServer);
             context.setService(hService);
@@ -151,7 +151,7 @@ public class xRTServer
         MethodStructure method     = clzHandler.findMethod("handle", 6);
         FunctionHandle  hFunction  = xRTFunction.makeHandle(method).bindTarget(frame, hHandler);
 
-        RequestHandler handler = new RequestHandler(hServer.f_context, hFunction);
+        RequestHandler handler = new RequestHandler(hHandler.f_context, hFunction);
         httpServer.createContext("/", handler);
 
         hServer.m_httpHandler = handler;
