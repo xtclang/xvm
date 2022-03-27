@@ -4,10 +4,21 @@ module TestSimple
 
     void run()
         {
-        Int value = TODO("value");
-        function Int (Int) fn = (i) ->
+        Int i = value;
+        new Test().test();
+        }
+
+    @Lazy Int value.calc()
+        {
+        console.println("in calc");  // this used to be executed twice!!?
+        return 42;
+        }
+
+    service Test
+        {
+        void test()
             {
-            return value;
-            };
+            Int i = TestSimple.value;
+            }
         }
     }

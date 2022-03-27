@@ -18,6 +18,7 @@ import org.xvm.asm.Op;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
@@ -106,7 +107,8 @@ public class CoreContainer
 
             FunctionHandle hInstantiateModuleAndRun = new NativeFunctionHandle((frame, ah, iReturn) ->
                 {
-                ObjectHandle hModule = frame.getConstHandle(f_idModule);
+                SingletonConstant idModule = frame.poolContext().ensureSingletonConstConstant(f_idModule);
+                ObjectHandle      hModule  = frame.getConstHandle(idModule);
 
                 return Op.isDeferred(hModule)
                         ? hModule.proceed(frame, frameCaller ->
