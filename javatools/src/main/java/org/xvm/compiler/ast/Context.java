@@ -980,7 +980,15 @@ public class Context
      */
     public void requireThis(long lPos, ErrorListener errs)
         {
-        getOuterContext().requireThis(lPos, errs);
+        Context ctxOuter = getOuterContext();
+        if (ctxOuter == null)
+            {
+            errs.log(Severity.ERROR, Compiler.NO_THIS, new Object[0], getSource(), lPos, lPos);
+            }
+        else
+            {
+            ctxOuter.requireThis(lPos, errs);
+            }
         }
 
     /**
