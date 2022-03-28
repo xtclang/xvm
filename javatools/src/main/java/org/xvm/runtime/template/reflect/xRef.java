@@ -367,6 +367,16 @@ public class xRef
         }
 
     /**
+     * Get the Var's referent natively (without making a natural "get" call).
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
+     */
+    public int getNativeReferent(Frame frame, RefHandle hTarget, int iReturn)
+        {
+        return getReferentImpl(frame, hTarget, true, iReturn);
+        }
+
+    /**
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
     protected int getReferentImpl(Frame frame, RefHandle hRef, boolean fNative, int iReturn)

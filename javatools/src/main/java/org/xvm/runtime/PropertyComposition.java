@@ -24,6 +24,7 @@ import org.xvm.runtime.ObjectHandle.GenericHandle;
 
 import org.xvm.runtime.template.reflect.xRef;
 import org.xvm.runtime.template.reflect.xRef.RefHandle;
+import org.xvm.runtime.template.reflect.xVar;
 
 import org.xvm.runtime.template.text.xString.StringHandle;
 
@@ -209,10 +210,10 @@ public class PropertyComposition
                 {
                 PropertyConstant idBase   = f_infoProp.getIdentity();
                 MethodConstant   idNested = (MethodConstant)
-                    (nid instanceof NestedIdentity &&
-                        ((NestedIdentity) nid).getIdentityConstant().getNestedDepth() > idBase.getNestedDepth()
-                        ? ((NestedIdentity) nid).getIdentityConstant()
-                        : idBase.appendNestedIdentity(idBase.getConstantPool(), nid));
+                    (nid instanceof NestedIdentity nested &&
+                        nested.getIdentityConstant().getNestedDepth() > idBase.getNestedDepth()
+                            ? nested.getIdentityConstant()
+                            : idBase.appendNestedIdentity(idBase.getConstantPool(), nid));
 
                 TypeInfo   infoParent = getParentInfo();
                 MethodInfo info       = infoParent.getMethodByNestedId(idNested.getNestedIdentity());
@@ -270,7 +271,7 @@ public class PropertyComposition
             {
             xRef template = (xRef) getTemplate();
             return f_infoProp.containsBody(idProp)
-                    ? template.getReferent(frame, hRef, iReturn)
+                    ? template.getNativeReferent(frame, hRef, iReturn)
                     : template.getFieldValue(frame, hRef, idProp, iReturn);
             }
         return f_clzRef.getTemplate().getFieldValue(frame, hRef.getReferentHolder(), idProp, iReturn);
@@ -283,9 +284,9 @@ public class PropertyComposition
 
         if (idProp.isTopLevel())
             {
-            xRef template = (xRef) getTemplate();
+            xVar template = (xVar) getTemplate();
             return f_infoProp.containsBody(idProp)
-                    ? template.setReferent(frame, hRef, hValue)
+                    ? template.setNativeReferent(frame, hRef, hValue)
                     : template.setFieldValue(frame, hRef, idProp, hValue);
             }
         return f_clzRef.getTemplate().setFieldValue(frame, hRef.getReferentHolder(), idProp, hValue);

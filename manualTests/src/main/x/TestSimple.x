@@ -4,21 +4,29 @@ module TestSimple
 
     void run()
         {
-        Int i = value;
         new Test().test();
         }
 
-    @Lazy Int value.calc()
+    service Test()
         {
-        console.println("in calc");  // this used to be executed twice!!?
-        return 42;
-        }
+        @LogVar() Int value2 = 1;
 
-    service Test
-        {
         void test()
             {
-            Int i = TestSimple.value;
+            value2 = value2 + 1; // this used to blow up
+            value2 = 3;
+            }
+
+        }
+
+    mixin LogVar<Referent>()
+            into Var<Referent>
+        {
+        @Override
+        void set(Referent value)
+            {
+            super(value);
+            console.println($"log {value}");
             }
         }
     }

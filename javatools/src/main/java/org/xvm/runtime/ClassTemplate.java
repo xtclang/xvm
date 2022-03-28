@@ -59,6 +59,7 @@ import org.xvm.runtime.template.collections.xTuple;
 
 import org.xvm.runtime.template.reflect.xRef;
 import org.xvm.runtime.template.reflect.xRef.RefHandle;
+import org.xvm.runtime.template.reflect.xVar;
 
 import org.xvm.runtime.template.text.xString;
 
@@ -1109,7 +1110,15 @@ public abstract class ClassTemplate
             RefHandle hRef = (RefHandle) (field.isTransient()
                     ? hThis.getTransientField(frame, field)
                     : hThis.getField(field.getIndex()));
-            ((xRef) hRef.getTemplate()).setReferent(frame, hRef, hValue);
+            xVar template = (xVar) hRef.getTemplate();
+            if (hThis.isStruct())
+                {
+                template.setNativeReferent(frame, hRef, hValue);
+                }
+            else
+                {
+                template.setReferent(frame, hRef, hValue);
+                }
             }
         else
             {

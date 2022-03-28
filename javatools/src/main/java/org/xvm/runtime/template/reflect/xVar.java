@@ -114,6 +114,16 @@ public class xVar
         return setReferentImpl(frame, hTarget, false, hValue);
         }
 
+    /**
+     * Set the Var's referent natively (without making a natural "set" call).
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_EXCEPTION}
+     */
+    public int setNativeReferent(Frame frame, RefHandle hTarget, ObjectHandle hValue)
+        {
+        return setReferentImpl(frame, hTarget, true, hValue);
+        }
+
     protected int setReferentImpl(Frame frame, RefHandle hRef, boolean fNative, ObjectHandle hValue)
         {
         switch (hRef.m_iVar)
