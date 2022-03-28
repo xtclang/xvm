@@ -1061,7 +1061,7 @@ public abstract class ClassTemplate
         ObjectHandle[]  ahVar  = new ObjectHandle[method.getMaxVars()];
         ahVar[0] = hValue;
 
-        FieldInfo field = clzTarget.getFieldInfo(idProp);
+        FieldInfo field = clzTarget.getFieldInfo(idProp.getNestedIdentity());
         if (field != null && field.isInflated())
             {
             GenericHandle hThis = (GenericHandle) hTarget;
