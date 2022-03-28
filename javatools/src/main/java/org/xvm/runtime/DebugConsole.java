@@ -1417,7 +1417,7 @@ public class DebugConsole
         if (hVar != null)
             {
             TypeComposition composition = hVar.getComposition();
-            if (composition != null)
+            if (composition != null && !(composition instanceof ProxyComposition))
                 {
                 listFields = getFieldNames(composition);
                 if (!listFields.isEmpty())
