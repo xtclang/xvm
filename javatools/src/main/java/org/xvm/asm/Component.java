@@ -2241,7 +2241,6 @@ public abstract class Component
      */
     public void collectInjections(Set<InjectionKey> setInjections)
         {
-        visitChildren(component -> component.collectInjections(setInjections), false, true);
         }
 
 

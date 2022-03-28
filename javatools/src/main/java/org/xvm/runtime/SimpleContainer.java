@@ -36,7 +36,8 @@ public class SimpleContainer
         ModuleStructure module = (ModuleStructure) getModule().getComponent();
 
         Set<InjectionKey> setInjections = new HashSet<>();
-        module.getFileStructure().collectInjections(setInjections);
+        module.getFileStructure().visitChildren(
+            component -> component.collectInjections(setInjections), false, true);
         return setInjections;
         }
     }
