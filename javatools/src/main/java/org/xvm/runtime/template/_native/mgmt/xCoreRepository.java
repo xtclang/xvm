@@ -50,7 +50,7 @@ public class xCoreRepository
         {
         TypeConstant typeRepo = pool().ensureEcstasyTypeConstant("mgmt.ModuleRepository");
 
-        m_clzRepo = ensureClass(getCanonicalType(), typeRepo);
+        m_clzRepo = ensureClass(getInceptionClassConstant().getType(), typeRepo);
 
         markNativeProperty("moduleNames");
         markNativeMethod("getModule", STRING, null);

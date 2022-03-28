@@ -177,7 +177,7 @@ public class xAtomicVar
         }
 
     @Override
-    protected int invokeGetReferent(Frame frame, RefHandle hTarget, int iReturn)
+    protected int getReferentImpl(Frame frame, RefHandle hTarget, boolean fNative, int iReturn)
         {
         AtomicHandle hAtomic = (AtomicHandle) hTarget;
         ObjectHandle hValue = hAtomic.f_atomic.get();
@@ -187,7 +187,7 @@ public class xAtomicVar
         }
 
     @Override
-    protected int invokeSetReferent(Frame frame, RefHandle hTarget, ObjectHandle hValue)
+    protected int setReferentImpl(Frame frame, RefHandle hTarget, boolean fNative, ObjectHandle hValue)
         {
         AtomicHandle hAtomic = (AtomicHandle) hTarget;
         hAtomic.f_atomic.set(hValue);
