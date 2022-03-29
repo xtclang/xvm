@@ -146,7 +146,7 @@ public class FileStructure
                     {
                     in.close();
                     }
-                catch (IOException e) {}
+                catch (IOException ignore) {}
                 }
             }
         }
@@ -885,9 +885,9 @@ public class FileStructure
     @Override
     public Component getChild(Constant constId)
         {
-        if (constId instanceof ModuleConstant)
+        if (constId instanceof ModuleConstant idModule)
             {
-            Component firstSibling = getChildByNameMap().get(((ModuleConstant) constId).getName());
+            Component firstSibling = getChildByNameMap().get(idModule.getName());
 
             return findLinkedChild(constId, firstSibling);
             }
@@ -1071,10 +1071,9 @@ public class FileStructure
                     assert contrib.getTypeConstant().getConstantPool() == m_pool;
                     });
                 }
-            else if (component instanceof MethodStructure)
+            else if (component instanceof MethodStructure method)
                 {
-                MethodStructure method = (MethodStructure) component;
-                Constant[]      aconst = method.getLocalConstants();
+                Constant[] aconst = method.getLocalConstants();
                 if (aconst != null)
                     {
                     for (Constant constant : aconst)
@@ -1126,9 +1125,8 @@ public class FileStructure
             return true;
             }
 
-        if (obj instanceof FileStructure)
+        if (obj instanceof FileStructure that)
             {
-            FileStructure that = (FileStructure) obj;
             // ignore the constant pool, since its only purpose is to be
             // referenced from the nested XVM structures
             return this.m_nMajorVer == that.m_nMajorVer

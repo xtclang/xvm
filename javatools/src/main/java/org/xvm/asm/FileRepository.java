@@ -27,16 +27,16 @@ public class FileRepository
         {
         assert file != null && !file.isDirectory();
 
-        String fname = file.getName();
-        if (!fname.endsWith(".xtc"))
+        String sName = file.getName();
+        if (!sName.endsWith(".xtc"))
             {
-            if (fname.endsWith(".x"))
+            if (sName.endsWith(".x"))
                 {
-                file = new File(file.getParentFile(), fname.substring(0, fname.lastIndexOf('.')) + ".xtc");
+                file = new File(file.getParentFile(), sName.substring(0, sName.lastIndexOf('.')) + ".xtc");
                 }
             else
                 {
-                file = new File(file.getParentFile(), fname + ".xtc");
+                file = new File(file.getParentFile(), sName + ".xtc");
                 }
             }
 
@@ -139,14 +139,13 @@ public class FileRepository
     @Override
     public boolean equals(Object obj)
         {
-        if (obj == this || !(obj instanceof FileRepository))
+        if (obj == this || !(obj instanceof FileRepository that))
             {
             return obj == this;
             }
 
-        FileRepository that = (FileRepository) obj;
-        return this.file.equals(that.file)
-                && this.fRO == that.fRO;
+        return this.file.equals(that.file) &&
+               this.fRO      == that.fRO;
         }
 
     @Override

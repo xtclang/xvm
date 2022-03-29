@@ -118,14 +118,13 @@ public class DirRepository
     @Override
     public boolean equals(Object obj)
         {
-        if (obj == this || !(obj instanceof DirRepository))
+        if (obj == this || !(obj instanceof DirRepository that))
             {
             return obj == this;
             }
 
-        DirRepository that = (DirRepository) obj;
-        return this.m_dir.equals(that.m_dir)
-                && this.m_fRO == that.m_fRO;
+        return this.m_dir.equals(that.m_dir) &&
+               this.m_fRO     == that.m_fRO;
         }
 
     @Override
@@ -276,15 +275,9 @@ public class DirRepository
 
     // ----- constants -----------------------------------------------------------------------------
 
-    public static final FileFilter ModulesOnly = new FileFilter()
-        {
-        @Override
-        public boolean accept(File file)
-            {
-            return file.getName().length() > 4 && file.getName().endsWith(".xtc")
-                    && file.exists() && file.isFile() && file.canRead() && file.length() > 0;
-            }
-        };
+    public static final FileFilter ModulesOnly = file ->
+            file.getName().length() > 4 && file.getName().endsWith(".xtc") &&
+            file.exists() && file.isFile() && file.canRead() && file.length() > 0;
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -292,7 +285,7 @@ public class DirRepository
     private final File    m_dir;
     private final boolean m_fRO;
 
-    private Map<File  , ModuleInfo> modulesByFile = new HashMap<>();
-    private Map<String, ModuleInfo> modulesByName = new TreeMap<>();
-    private long lastScan;
+    private       Map<File  , ModuleInfo> modulesByFile = new HashMap<>();
+    private final Map<String, ModuleInfo> modulesByName = new TreeMap<>();
+    private       long lastScan;
     }

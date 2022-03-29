@@ -3,8 +3,6 @@ package org.xvm.asm;
 
 import java.io.IOException;
 
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
@@ -54,7 +52,7 @@ public class LinkedRepository
      */
     public List<ModuleRepository> asList()
         {
-        return Collections.unmodifiableList(Arrays.asList(repos));
+        return List.of(repos);
         }
 
 
@@ -127,7 +125,7 @@ public class LinkedRepository
                         }
                     catch (IOException e)
                         {
-                        System.err.println(e.toString());
+                        System.err.println(e.getMessage());
                         break;
                         }
                     }
@@ -155,7 +153,7 @@ public class LinkedRepository
                         }
                     catch (IOException e)
                         {
-                        System.err.println(e.toString());
+                        System.err.println(e.getMessage());
                         break;
                         }
                     }
