@@ -487,6 +487,12 @@ public class xService
             }
 
         @Override
+        public boolean makeImmutable()
+            {
+            return false;
+            }
+
+        @Override
         public boolean isService()
             {
             return true;

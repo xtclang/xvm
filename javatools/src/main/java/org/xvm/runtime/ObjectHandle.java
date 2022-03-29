@@ -647,7 +647,7 @@ public abstract class ObjectHandle
                 return false;
                 }
 
-            if (poolThat == m_pool)
+            if (poolThat == m_pool || isService())
                 {
                 return true;
                 }
