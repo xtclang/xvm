@@ -514,7 +514,14 @@ public abstract class OpCallable extends Op
 
         if (frame.isNextRegister(m_nRetValue))
             {
-            frame.introduceMethodReturnVar(m_nRetValue, method.getIdentityConstant().getPosition(), 0);
+            int nMethodId = m_nFunctionId;
+            if (nMethodId == Op.A_SUPER)
+                {
+                // the position should refer to the frame's context pool
+                nMethodId = frame.poolContext().getConstant(
+                                method.getIdentityConstant()).getPosition();
+                }
+            frame.introduceMethodReturnVar(m_nRetValue, nMethodId, 0);
             }
         }
 
@@ -525,7 +532,13 @@ public abstract class OpCallable extends Op
 
         if (frame.isNextRegister(m_nRetValue))
             {
-            frame.introduceMethodReturnVar(m_nRetValue, method.getIdentityConstant().getPosition(), 0);
+            int nMethodId = m_nFunctionId;
+            if (nMethodId == Op.A_SUPER)
+                {
+                nMethodId = frame.poolContext().getConstant(
+                                method.getIdentityConstant()).getPosition();
+                }
+            frame.introduceMethodReturnVar(m_nRetValue, nMethodId, 0);
             }
         }
 
@@ -534,12 +547,19 @@ public abstract class OpCallable extends Op
         {
         assert isMultiReturn();
 
+        int nMethodId = m_nFunctionId;
+        if (nMethodId == Op.A_SUPER)
+            {
+            nMethodId = frame.poolContext().getConstant(
+                            method.getIdentityConstant()).getPosition();
+            }
+
         int[] anRet = m_anRetValue;
         for (int i = 0, c = anRet.length; i < c; i++)
             {
             if (frame.isNextRegister(anRet[i]))
                 {
-                frame.introduceMethodReturnVar(anRet[i], method.getIdentityConstant().getPosition(), i);
+                frame.introduceMethodReturnVar(anRet[i], nMethodId, i);
                 }
             }
         }
@@ -553,5 +573,5 @@ public abstract class OpCallable extends Op
     protected Argument[] m_aArgReturn; // optional
 
     // categories for cached info
-    enum Category {Function, Template, TargetClass, TargetType, Constructor};
+    enum Category {Function, Template, TargetClass, TargetType, Constructor}
     }
