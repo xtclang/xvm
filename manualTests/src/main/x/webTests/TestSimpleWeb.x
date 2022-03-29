@@ -11,8 +11,7 @@
  *      curl -i -w '\n' -X POST http://localhost:8080/host/run/TestSimpleWeb
  *
  * 4. Use this Web app:
- *      curl -i -w '\n' -X POST http://localhost:8080/TestSimpleWeb/hello
- *
+ *      curl -i -w '\n' -X GET http://localhost:8080/simple/hello
  */
 @web.WebModule
 module TestSimpleWeb
@@ -25,7 +24,9 @@ module TestSimpleWeb
         @web.Get("/hello")
         String hello()
             {
-            return "Hello World".quoted();
+            return $"Hello World #{++count}".quoted();
             }
+
+        Int count;
         }
     }

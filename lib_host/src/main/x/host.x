@@ -131,7 +131,7 @@ module host.xtclang.org
             }
 
         Path?     buildPath = fileXtc.path.parent;
-        Directory workDir  = fileXtc.store.dirFor(buildPath?) : curDir; // temporary
+        Directory workDir   = fileXtc.store.dirFor(buildPath?) : curDir; // temporary
         Directory homeDir   = ensureHome(workDir, fileTemplate.mainModule.qualifiedName);
 
         return True, fileTemplate, homeDir;

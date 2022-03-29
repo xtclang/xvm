@@ -6,6 +6,11 @@ import ecstasy.io.ByteArrayOutputStream;
 class HttpResponse(HttpStatus status = HttpStatus.OK)
         extends HttpMessage(new HttpHeaders())
     {
+    construct(HttpStatus status, String[] names, String[][] values, Object? body)
+        {
+        construct HttpMessage(new HttpHeaders(names, values), body);
+        }
+
     /**
      * Process the `Tuple` returned from a request handler into a `HttpResponse`.
      *
@@ -83,5 +88,12 @@ class HttpResponse(HttpStatus status = HttpStatus.OK)
             out.writeBytes(body);
             }
         return out.bytes;
+        }
+
+    void send(HttpServer httpServer, Object context)
+        {
+        (String[] names, String[][] values) = headers.toArrays();
+
+        httpServer.send(context, status.code, names, values, createBody(body));
         }
     }

@@ -2,46 +2,58 @@
  * A web server.
  */
 @Concurrent
-service WebServer(Int port)
+service WebServer(HttpServer httpServer)
         implements Handler
     {
     /**
-     * The HTTP server.
+     * The map of handlers for root paths.
      */
-    @Unassigned
-    private HttpServer httpServer;
+    private Map<String, Handler> handlers = new HashMap();
 
     /**
-     * The Router that routes requests to endpoints.
+     * Add a handler.
      */
-    private Router router = new Router();
+    void addHandler(String path, Handler handler)
+        {
+        assert:arg !handlers.contains(path);
+        handlers.put(path, handler);
+        }
 
     /**
-     * Add all of the annotated endpoints in the specified web-service.
+     * Remove a handler.
+     */
+    void removeHandler(String path)
+        {
+        handlers.remove(path);
+        }
+
+    /**
+     * Add all annotated endpoints from the specified web-service.
      *
      * @param webService  the web-service with annotated endpoints
      * @param path        the root path prefix for all endpoints
      */
-    <T> WebServer addRoutes(T webService, String path = "")
+    void addWebService(WebService webService, String? path = Null, Router? router = Null)
         {
+        if (path == Null)
+            {
+            path = webService.path;
+            }
+        if (router == Null)
+            {
+            router = new Router();
+            }
         router.addRoutes(webService, path);
-        return this;
+        router.freeze(True);
+        addHandler(path, new RoutingHandler(httpServer, router));
         }
-
-    // ToDo: Methods to add handlers for HTTP response statuses and exceptions
 
     /**
      * Start this web server.
      */
     void start()
         {
-        this.router = router.freeze();
-
-        @Inject(opts=port) HttpServer server;
-
-        server.attachHandler(this);
-
-        this.httpServer = server;
+        httpServer.attachHandler(this);
         }
 
     /**
@@ -51,33 +63,40 @@ service WebServer(Int port)
     void handle(Object context, String uri, String method,
                 String[] headerNames, String[][] headerValues, Byte[] body)
         {
-        Handler handler = new RequestHandler(httpServer, router);
-        handler.handle^(context, uri, method, headerNames, headerValues, body);
+        for ((String path, Handler handler) : handlers)
+            {
+            if (uri.startsWith(path))
+                {
+                handler.handle^(context, uri, method, headerNames, headerValues, body);
+                return;
+                }
+            }
+        httpServer.send(context, HttpStatus.NotFound.code, [], [], []);
         }
 
     /**
      * A handler for HTTP requests.
      */
     @Concurrent
-    private static service RequestHandler(HttpServer httpServer, Router router)
+    static service RoutingHandler(HttpServer httpServer, Router router)
             implements Handler
         {
         @Override
         void handle(Object context, String uri, String methodName,
                     String[] headerNames, String[][] headerValues, Byte[] body)
             {
-            @Future Tuple<Int, String[], String[][], Byte[]> result =
+            @Future HttpResponse result =
                 router.handle(uri, methodName, headerNames, headerValues, body);
 
-            &result.whenComplete((t, e) ->
+            &result.whenComplete((response, e) ->
                 {
-                if (t == Null)
+                if (response == Null)
                     {
-                    httpServer.send^(context, 500, [], [], []);
+                    httpServer.send(context, HttpStatus.InternalServerError.code, [], [], []);
                     }
                 else
                     {
-                    httpServer.send^(context, t[0], t[1], t[2], t[3]);
+                    response.send(httpServer, context);
                     }
                 });
             }

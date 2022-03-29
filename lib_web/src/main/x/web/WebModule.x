@@ -1,17 +1,19 @@
 /**
  * This mixin is used to mark a module as being a web-application module.
  */
-mixin WebModule()
+mixin WebModule
         into Module
     {
+    import WebServer.Handler;
+
     /**
      * Collect all roots declared by this Module and instantiate corresponding WebServices.
      */
-    immutable Map<String, WebService> collectRoots_()
+    immutable Map<String, Handler> collectRoots_(HttpServer httpServer)
         {
         import ecstasy.reflect.Annotation;
 
-        Map<String, WebService> roots = new HashMap();
+        Map<String, Handler> roots = new HashMap();
 
         Module webModule = this;
         for (Class child : webModule.classes)
@@ -27,12 +29,27 @@ mixin WebModule()
                     }
                 else
                     {
-                    roots.put(path, &webService.maskAs(WebService));
+                    Bridge bridge = new Bridge(httpServer, webService);
+                    roots.put(path, &bridge.maskAs(Handler));
                     }
                 }
             }
 
         return roots.makeImmutable();
         }
-    }
 
+    static service Bridge
+            extends WebServer.RoutingHandler
+        {
+        construct(HttpServer httpServer, WebService webService)
+            {
+            Router router = new Router();
+            router.addRoutes(webService, webService.path);
+
+            this.webService = webService;
+            construct WebServer.RoutingHandler(httpServer, router);
+            }
+
+        WebService webService;
+        }
+    }

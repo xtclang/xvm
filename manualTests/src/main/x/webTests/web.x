@@ -57,6 +57,7 @@ module TestWebApp
     /**
      * A simple CRUD web service.
      */
+    @web.WebService("/users")
     service UsersApi
         {
         private Map<String, User> users = new HashMap();
@@ -131,8 +132,9 @@ module TestWebApp
         console.println("Testing Web App");
 
         // Create the web server, add the endpoints, and start.
-        WebServer server = new WebServer(8080);
-        server.addRoutes(new UsersApi(), "/users");
+        @Inject("server", opts=8080) web.HttpServer httpServer;
+        WebServer server = new WebServer(httpServer);
+        server.addWebService(new UsersApi());
         server.start();
 
         console.println("Started WebServer http://localhost:8080");

@@ -273,7 +273,7 @@ class Router
     /**
      * Handle an HTTP request.
      */
-    (Int, String[], String[][], Byte[]) handle(String uri, String methodName, String[] headerNames,
+    HttpResponse handle(String uri, String methodName, String[] headerNames,
             String[][] headerValues, Byte[] body)
         {
         @Inject Console console;
@@ -340,7 +340,7 @@ class Router
 
             // ToDo: Check the status and execute any status handler for the status
 
-            return response.asTuple();
+            return response;
             }
         catch (Exception error)
             {
@@ -348,11 +348,11 @@ class Router
             // ToDo: should be handled by a 500 status handler if one has been added
             if (error.is(HttpException))
                 {
-                return (error.status.code, [], [], error.toString().utf8());
+                return new HttpResponse(error.status, [], [], error.toString().utf8());
                 }
             else
                 {
-                return (HttpStatus.InternalServerError.code, [], [], error.toString().utf8());
+                return new HttpResponse(HttpStatus.InternalServerError, [], [], error.toString().utf8());
                 }
             }
         }

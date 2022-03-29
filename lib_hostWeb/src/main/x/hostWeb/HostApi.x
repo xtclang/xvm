@@ -1,3 +1,4 @@
+@web.WebService("/host")
 service HostApi
     {
     import ecstasy.mgmt.Container;
@@ -16,9 +17,11 @@ service HostApi
     import web.PathParam;
     import web.Post;
     import web.Produces;
-    import web.WebService;
+    import web.WebServer.Handler;
 
-    typedef Map<String, WebService> as Roots;
+    @Inject Console console; // TEMPORARY
+
+    typedef Map<String, Handler> as Roots;
 
     Map<String, AppHost>   loaded  = new HashMap();
     Map<String, FutureVar> running = new HashMap();
@@ -39,70 +42,81 @@ service HostApi
 
         Log    errors  = new String[];
         String xtcPath = $"build/{appName}.xtc"; // REVIEW: temporary hack
-        if ((fileTemplate, appHomeDir) := host.load(xtcPath, errors))
+        if (!((fileTemplate, appHomeDir) := host.load(xtcPath, errors)))
             {
-            if (String dbModuleName := host.detectDatabase(fileTemplate))
-                {
-                DbHost dbHost;
-                if (AppHost appHost := loaded.get(dbModuleName))
-                    {
-                    assert appHost.is(DbHost);
-                    dbHost = appHost;
-                    }
-                else
-                    {
-                    Directory workDir = appHomeDir.parent ?: assert;
-                    if (!(dbHost := host.createDbHost(workDir, dbModuleName, errors)))
-                        {
-                        // REVIEW: how to communicate the errors?
-                        return HttpStatus.NotFound;
-                        }
-                    loaded.put(dbModuleName, dbHost);
-                    }
+            console.println($"Cannot find application \"{appName}\"");
+            return HttpStatus.NotFound;
+            }
 
-                injector = host.createDbInjector(dbHost, appHomeDir);
+        if (String dbModuleName := host.detectDatabase(fileTemplate))
+            {
+            DbHost dbHost;
+            if (AppHost appHost := loaded.get(dbModuleName))
+                {
+                assert appHost.is(DbHost);
+                dbHost = appHost;
                 }
             else
                 {
-                injector = new Injector(appHomeDir);
-                }
-
-            @Inject ModuleRepository repository;
-
-            ModuleTemplate template  = fileTemplate.mainModule;
-            Container      container = new Container(template, Lightweight, repository, injector);
-
-            // TODO GG: hostWeb. should not be needed
-            Boolean        webModule = hostWeb.findClassAnnotation(template, "web.WebModule");
-            AppHost        appHost;
-
-            if (webModule)
-                {
-                Tuple result = container.invoke("collectRoots_", Tuple:());
-                Roots roots  = result.size == 0 ? [] : result[0].as(Roots);
-                if (roots.size == 0)
+                Directory workDir = appHomeDir.parent ?: assert;
+                if (!(dbHost := host.createDbHost(workDir, dbModuleName, errors)))
                     {
                     // REVIEW: how to communicate the errors?
-                    return HttpStatus.BadRequest;
+                    return HttpStatus.NotFound;
                     }
-
-                for ((String path, WebService webService) : roots)
-                    {
-                    server.addRoutes(webService, path);
-                    }
-                appHost = new WebHost(appName, appHomeDir, roots.keys);
-                }
-            else
-                {
-                appHost = new AppHost(appName, appHomeDir);
+                loaded.put(dbModuleName, dbHost);
                 }
 
-            appHost.container = container;
-
-            loaded.put(appName, appHost);
-            return HttpStatus.OK;
+            injector = host.createDbInjector(dbHost, appHomeDir);
             }
-        return HttpStatus.NotFound;
+        else
+            {
+            injector = new Injector(appHomeDir);
+            }
+
+        @Inject ModuleRepository repository;
+
+        ModuleTemplate template  = fileTemplate.mainModule;
+        Container      container;
+        try
+            {
+            container = new Container(template, Lightweight, repository, injector);
+            }
+        catch (Exception e)
+            {
+            console.println($"Failed to load \"{appName}\": {e.text}");
+            return HttpStatus.BadRequest;
+            }
+
+        Boolean webModule = findClassAnnotation(template, "web.WebModule");
+        AppHost appHost;
+
+        if (webModule)
+            {
+            Tuple result = container.invoke("collectRoots_", Tuple:(server.httpServer));
+            Roots roots  = result.size == 0 ? [] : result[0].as(Roots);
+            if (roots.size == 0)
+                {
+                // REVIEW: how to communicate the errors?
+                console.println($"Application \"{appName}\" doesn't have any endpoints");
+                return HttpStatus.BadRequest;
+                }
+
+            for ((String path, Handler handler) : roots)
+                {
+                server.addHandler(path, handler);
+                }
+            appHost = new WebHost(appName, appHomeDir, roots.keys);
+            }
+        else
+            {
+            appHost = new AppHost(appName, appHomeDir);
+            }
+
+        appHost.container = container;
+
+        loaded.put(appName, appHost);
+        return HttpStatus.OK;
         }
 
     @Post("/run/{appName}")
@@ -169,7 +183,13 @@ service HostApi
                 result.set(Tuple:());
                 }
             running.remove(appName);
-
+            if (appHost.is(WebHost))
+                {
+                for (String path : appHost.roots)
+                    {
+                    server.removeHandler(path);
+                    }
+                }
             return HttpStatus.OK;
             }
         return HttpStatus.NotFound;
@@ -181,5 +201,34 @@ service HostApi
         // temporary
         assert:debug;
         return HttpStatus.OK;
+        }
+
+
+    // ----- helpers -------------------------------------------------------------------------------
+
+    /**
+     * Check if the `ClassTemplate` has a specified annotation.
+     *
+     * @return True iff there is an annotation of the specified name
+     * @return the corresponding `AnnotationTemplate` (optional)
+     */
+    conditional AnnotationTemplate findClassAnnotation(ClassTemplate template, String annotationName)
+        {
+        import ecstasy.reflect.ClassTemplate.Composition;
+        import ecstasy.reflect.ClassTemplate.AnnotatingComposition;
+
+        for (val contrib : template.contribs)
+            {
+            if (contrib.action == AnnotatedBy)
+                {
+                assert AnnotatingComposition composition := contrib.ingredient.is(AnnotatingComposition);
+                if (composition.annotation.template.displayName == annotationName)
+                    {
+                    return True, composition.annotation;
+                    }
+                }
+            }
+
+        return False;
         }
     }
