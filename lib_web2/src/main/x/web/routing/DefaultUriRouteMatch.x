@@ -148,6 +148,10 @@ class DefaultUriRouteMatch
                 {
                 parameters = parameters.add(defaultValue);
                 }
+            else
+                {
+                throw new IllegalState($"Invalid parameter: \"{name}\"");
+                }
             }
 
         return fn.invoke(parameters);
