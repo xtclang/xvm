@@ -1025,6 +1025,8 @@ public class ServiceContext
     public boolean validatePassThrough(ServiceContext ctxDst,
                                        MethodStructure method, ObjectHandle[] ahArg)
         {
+        // no need to check the container sharing unless we're crossing the container boundaries
+        Container container = ctxDst.f_container == f_container ? null : ctxDst.f_container;
         for (int i = 0, c = ahArg.length; i < c; i++)
             {
             ObjectHandle hArg = ahArg[i];
@@ -1034,7 +1036,7 @@ public class ServiceContext
                 break;
                 }
 
-            if (!hArg.isPassThrough(ctxDst.f_container))
+            if (!hArg.isPassThrough(container))
                 {
                 hArg = hArg.getTemplate().createProxyHandle(this, hArg, method.getParamTypes()[i]);
                 if (hArg == null)
@@ -1377,8 +1379,11 @@ public class ServiceContext
             return frameCaller.raiseException(xException.serviceTerminated(frameCaller, f_sName));
             }
 
+        // no need to check the container sharing unless we're crossing the container boundaries
+        Container containerDst = frameCaller.f_context.f_container == f_container ? null : f_container;
+
         ObjectHandle hPassValue;
-        if (hValue.isPassThrough(f_container))
+        if (hValue.isPassThrough(containerDst))
             {
             hPassValue = hValue;
             }
@@ -1545,34 +1550,41 @@ public class ServiceContext
          */
         protected int sendResponse(Fiber fiberCaller, Frame frame, CompletableFuture future, int cReturns)
             {
+            ServiceContext ctxSrc = frame.f_context;
+            ServiceContext ctxDst = fiberCaller.f_context;
+
+            // no need to check the container sharing unless we're crossing the container boundaries
+            Container containerDst = ctxSrc.f_container == ctxDst.f_container
+                ? null
+                : ctxDst.f_container;
+
             switch (cReturns)
                 {
-                case 0 -> fiberCaller.f_context.respond(
+                case 0 -> ctxDst.respond(
                     new Response<ObjectHandle>(fiberCaller, xTuple.H_VOID, frame.m_hException, future));
 
                 case 1 ->
                     {
                     ObjectHandle    hReturn    = frame.f_ahVar[0];
                     ExceptionHandle hException = frame.m_hException;
-                    ServiceContext  ctxCaller  = fiberCaller.f_context;
 
-                    if (hException == null && !hReturn.isPassThrough(ctxCaller.f_container))
+                    if (hException == null && !hReturn.isPassThrough(containerDst))
                         {
-                        hReturn = hReturn.getTemplate().createProxyHandle(frame.f_context, hReturn, null);
+                        hReturn = hReturn.getTemplate().createProxyHandle(ctxSrc, hReturn, null);
                         if (hReturn == null)
                             {
                             hException = xException.illegalArgument(frame,
                                 "Mutable return value from \"" + this + '"');
                             }
                         }
-                    ctxCaller.respond(new Response<ObjectHandle>(fiberCaller, hReturn, hException, future));
+                    ctxDst.respond(
+                            new Response<ObjectHandle>(fiberCaller, hReturn, hException, future));
                     }
 
                 case -1 -> // tuple return
                     {
                     ObjectHandle[]  ahReturn   = frame.f_ahVar;
                     ExceptionHandle hException = frame.m_hException;
-                    ServiceContext  ctxCaller  = fiberCaller.f_context;
                     TupleHandle     hTuple     = null;
                     if (hException == null)
                         {
@@ -1588,9 +1600,9 @@ public class ServiceContext
                             for (int i = 0, c = ahReturn.length; i < c; i++)
                                 {
                                 ObjectHandle hReturn = ahReturn[i];
-                                if (!hReturn.isPassThrough(ctxCaller.f_container))
+                                if (!hReturn.isPassThrough(containerDst))
                                     {
-                                    hReturn = hReturn.getTemplate().createProxyHandle(frame.f_context, hReturn, null);
+                                    hReturn = hReturn.getTemplate().createProxyHandle(ctxSrc, hReturn, null);
                                     if (hReturn == null)
                                         {
                                         hException = xException.illegalArgument(frame,
@@ -1603,7 +1615,8 @@ public class ServiceContext
                                 }
                             }
                         }
-                    ctxCaller.respond(new Response<ObjectHandle>(fiberCaller, hTuple, hException, future));
+                    ctxDst.respond(
+                            new Response<ObjectHandle>(fiberCaller, hTuple, hException, future));
                     }
 
                 default ->
@@ -1611,7 +1624,6 @@ public class ServiceContext
                     assert cReturns > 1;
                     ObjectHandle[]  ahReturn   = frame.f_ahVar;
                     ExceptionHandle hException = frame.m_hException;
-                    ServiceContext  ctxCaller  = fiberCaller.f_context;
 
                     if (hException == null)
                         {
@@ -1627,10 +1639,10 @@ public class ServiceContext
                                 // the DEFAULT value (see Utils.GET_AND_RETURN)
                                 ahReturn[i] = ObjectHandle.DEFAULT;
                                 }
-                            else if (!hReturn.isPassThrough(ctxCaller.f_container))
+                            else if (!hReturn.isPassThrough(containerDst))
                                 {
                                 hReturn = hReturn.getTemplate().
-                                            createProxyHandle(frame.f_context, hReturn, null);
+                                            createProxyHandle(ctxSrc, hReturn, null);
                                 if (hReturn == null)
                                     {
                                     hException = xException.illegalArgument(frame,
@@ -1642,7 +1654,7 @@ public class ServiceContext
                                 }
                             }
                         }
-                    ctxCaller.respond(
+                    ctxDst.respond(
                             new Response<ObjectHandle[]>(fiberCaller, ahReturn, hException, future));
                     }
                 }
