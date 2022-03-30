@@ -8,6 +8,7 @@ class HttpResponse(HttpStatus status = HttpStatus.OK)
     {
     construct(HttpStatus status, String[] names, String[][] values, Object? body)
         {
+        this.status = status;
         construct HttpMessage(new HttpHeaders(names, values), body);
         }
 
