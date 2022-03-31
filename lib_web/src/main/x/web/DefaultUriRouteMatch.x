@@ -125,16 +125,7 @@ class DefaultUriRouteMatch
 
         for (Parameter param : fn.params)
             {
-            String name = "";
-            if (param.is(ParameterBinding))
-                {
-                name = param.templateParameter;
-                }
-
-            if (name == "")
-                {
-                assert name := param.hasName();
-                }
+            assert String name := param.hasName();
 
             if (Object paramValue := parameterValues.get(name))
                 {
@@ -150,7 +141,7 @@ class DefaultUriRouteMatch
                 }
             else
                 {
-                throw new IllegalState($"Invalid parameter: \"{name}\"");
+                throw new IllegalState($"Unresolved parameter: \"{name}\"");
                 }
             }
 

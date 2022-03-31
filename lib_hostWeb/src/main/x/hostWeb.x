@@ -6,16 +6,11 @@ module hostWeb.xtclang.org
     package host import host.xtclang.org;
     package web  import web.xtclang.org;
 
-    import ecstasy.reflect.AnnotationTemplate;
-    import ecstasy.reflect.ClassTemplate;
-    import ecstasy.reflect.ModuleTemplate;
-    import ecstasy.reflect.TypeTemplate;
-
     import web.WebServer;
 
     void run()
         {
-        server.addWebService(new HostApi());
+        server.addWebService(new HostApi(), "/host");
         server.start();
 
         @Inject Console console;

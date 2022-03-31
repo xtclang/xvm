@@ -21,9 +21,6 @@ const UriTemplate(String template, List<PathSegment> segments, Int variableCount
     private static String  STRING_PATTERN_PATH      = "([^#]*)";
     private static String  STRING_PATTERN_QUERY     = "([^#]*)";
     private static String  STRING_PATTERN_REMAINING = "(.*)";
-    private static Char    QUERY_OPERATOR           = '?';
-    private static Char    SLASH_OPERATOR           = '/';
-    private static Char    HASH_OPERATOR            = '#';
     private static Int     GROUP_SCHEME             = 2;
     private static Int     GROUP_USER_INFO          = 5;
     private static Int     GROUP_HOST               = 6;
@@ -31,13 +28,17 @@ const UriTemplate(String template, List<PathSegment> segments, Int variableCount
     private static Int     GROUP_PATH               = 9;
     private static Int     GROUP_QUERY              = 11;
     private static Int     GROUP_FRAGMENT           = 13;
-    private static Char    EXPAND_MODIFIER          = '*';
-    private static Char    OPERATOR_NONE            = '0';
-    private static Char    VAR_START                = '{';
-    private static Char    VAR_END                  = '}';
-    private static Char    AND_OPERATOR             = '&';
-    private static String  SLASH_STRING             = "/";
-    private static Char    DOT_OPERATOR             = '.';
+
+    static Char    QUERY_OPERATOR           = '?';
+    static Char    SLASH_OPERATOR           = '/';
+    static Char    HASH_OPERATOR            = '#';
+    static Char    EXPAND_MODIFIER          = '*';
+    static Char    OPERATOR_NONE            = '0';
+    static Char    VAR_START                = '{';
+    static Char    VAR_END                  = '}';
+    static Char    AND_OPERATOR             = '&';
+    static Char    DOT_OPERATOR             = '.';
+    static String  SLASH_STRING             = "/";
 
     // Regex patterns that match URIs. See RFC 3986, appendix B
     private static RegEx PATTERN_SCHEME = new RegEx($"^{STRING_PATTERN_SCHEME}//.*");

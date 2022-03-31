@@ -152,68 +152,32 @@ class UriQueryStringParser
     /**
      * Decode parameters from a String.
      *
-     * @param s     the String to decode
+     * @param query the query string to decode
      * @param from  the starting index in the String to start decoding from
      *
      * @return the decoded parameters
      */
-    private Map<String, List<String>> decodeParams(String s, Int from)
+    private Map<String, List<String>> decodeParams(String query, Int from)
         {
-        Int len = s.size;
-        if (from >= len)
+        if (from >= query.size)
             {
             return Map:[];
             }
-        if (s[from] == '?')
-            {
-            from++;
-            }
-        Map<String, List<String>> params     = new ListMap();
-        Int                       nameStart  = from;
-        Int                       valueStart = -1;
-        Int                       i;
 
-        loop:
-        for (i = from; i < len; i++)
+        Map<String, String>       rawParams   = query.splitMap();
+        Map<String, List<String>> dedupParams = new ListMap();
+        for ((String key, String value) : rawParams)
             {
-            switch (s[i])
+            dedupParams.process(key, e ->
                 {
-                case '=':
-                    if (nameStart == i)
-                        {
-                        nameStart = i + 1;
-                        }
-                    else if (valueStart < nameStart)
-                        {
-                        valueStart = i + 1;
-                        }
-                    break;
-
-                case ';':
-                    if (semicolonIsNormalChar)
-                        {
-                        break loop;
-                        }
-                    continue;
-
-                case '&':
-                    if (addParam(s, nameStart, valueStart, i, params))
-                        {
-                        maxParams--;
-                        if (maxParams == 0)
-                            {
-                            return params;
-                            }
-                        }
-                    nameStart = i + 1;
-                    break;
-
-                case '#':
-                    break loop;
-                }
+                if (!e.exists)
+                    {
+                    e.value = new String[];
+                    }
+                e.value += value;
+                });
             }
-        addParam(s, nameStart, valueStart, i, params);
-        return params;
+        return dedupParams;
     }
 
     /**

@@ -4,52 +4,35 @@
 mixin WebModule
         into Module
     {
-    import WebServer.Handler;
-
     /**
-     * Collect all roots declared by this Module and instantiate corresponding WebServices.
+     * Collect all roots declared by this Module.
+     *
+     * @return the Catalog handler for this WebModule
      */
-    immutable Map<String, Handler> collectRoots_(HttpServer httpServer)
+    WebServer.Handler createCatalog_(HttpServer httpServer)
         {
-        import ecstasy.reflect.Annotation;
+        Router router = new Router();
 
-        Map<String, Handler> roots = new HashMap();
-
-        Module webModule = this;
-        for (Class child : webModule.classes)
+        for (Class child : this.as(Module).classes)
             {
             if (child.implements(WebService), Struct structure := child.allocate())
                 {
                 WebService webService = child.instantiate(structure).as(WebService);
 
-                String path = webService.path;
-                if (roots.contains(path))
-                    {
-                    // TODO: how to report a duplicate path?
-                    }
-                else
-                    {
-                    Bridge bridge = new Bridge(httpServer, webService);
-                    roots.put(path, &bridge.maskAs(Handler));
-                    }
+                router.addRoutes(webService, webService.path);
                 }
             }
 
-        return roots.makeImmutable();
+        // TODO: this should be a handler factory instead
+        return new Catalog_(httpServer, router.freeze(True));
         }
 
-    static service Bridge
+    static service Catalog_
             extends WebServer.RoutingHandler
         {
-        construct(HttpServer httpServer, WebService webService)
+        construct(HttpServer httpServer, Router router)
             {
-            Router router = new Router();
-            router.addRoutes(webService, webService.path);
-
-            this.webService = webService;
             construct WebServer.RoutingHandler(httpServer, router);
             }
-
-        WebService webService;
         }
     }

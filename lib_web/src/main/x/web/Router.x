@@ -5,7 +5,6 @@ import binder.BindingResult;
 import binder.ParameterBinder;
 import binder.RequestBinderRegistry;
 
-import codec.MediaTypeCodec;
 import codec.MediaTypeCodecRegistry;
 
 /**
@@ -106,7 +105,7 @@ class Router
                 rootPath = "/" + rootPath;
                 }
 
-            if (rootPath.endsWith('/') && rootPath.size > 1)
+            while (rootPath.endsWith('/') && rootPath.size > 1)
                 {
                 rootPath = rootPath[0..rootPath.size-1);
                 }
@@ -146,14 +145,14 @@ class Router
             return rootPath;
             }
 
-        if (path.endsWith('/'))
+        while (path.endsWith('/'))
             {
             path = path[0..rootPath.size-1);
             }
 
         if (path.startsWith('/'))
             {
-            return rootPath + path;
+            return rootPath == "/" ? path : rootPath + path;
             }
 
         return rootPath + "/" + path;
@@ -312,17 +311,7 @@ class Router
                     MediaType   mediaType = bound.resolveDefaultResponseContentType(accepts);
                     Int         index     = bound.conditionalResult ? 1 : 0;
 
-                    response = HttpResponse.encodeResponse(result, index, method, mediaType);
-
-                    // If there is a body convert it to the required response media type
-                    if (response.body != Null && !response.body.is(Byte[]))
-                        {
-                        if (MediaTypeCodec codec := codecRegistry.findCodec(mediaType))
-                            {
-                            response.body = codec.encode(response.body);
-                            }
-                        // ToDo: the else should probably be an error/exception
-                        }
+                    response = HttpResponse.encodeResponse(result, index, method, mediaType, codecRegistry);
                     }
                 }
             else if (routes.size == 0)
@@ -344,18 +333,21 @@ class Router
             }
         catch (Exception error)
             {
-            console.println($"Caught exception handling request for {uri}. {error}");
             // ToDo: should be handled by a 500 status handler if one has been added
+            console.println($"Caught exception handling request for {uri}. {error}");
+
+            String message = error.text ?: "";
             if (error.is(HttpException))
                 {
-                return new HttpResponse(error.status, [], [], error.toString().utf8());
+                return new HttpResponse(error.status, [], [], message.utf8());
                 }
             else
                 {
-                return new HttpResponse(HttpStatus.InternalServerError, [], [], error.toString().utf8());
+                return new HttpResponse(HttpStatus.InternalServerError, [], [], message.utf8());
                 }
             }
         }
+
 
     // ----- inner class: DefaultUriRoute ----------------------------------------------------------
 

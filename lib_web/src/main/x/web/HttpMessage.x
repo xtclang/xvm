@@ -3,7 +3,7 @@
  */
 class HttpMessage
     {
-    construct(HttpHeaders headers, Object? body = Null)
+    construct(HttpHeaders headers, Byte[]? body = Null)
         {
         this.headers    = headers;
         this.body       = body;
@@ -18,7 +18,7 @@ class HttpMessage
     /**
      * The optional message body.
      */
-    public Object? body;
+    public Byte[]? body;
 
     /**
      * The message attributes.

@@ -1,10 +1,10 @@
 /**
  * A representation of an HTTP request.
  */
-class HttpRequest(URI uri, HttpHeaders headers, HttpMethod method, Object? body)
+class HttpRequest(URI uri, HttpHeaders headers, HttpMethod method, Byte[]? body)
         extends HttpMessage(headers, body)
     {
-    construct (URI uri, Map<String, String[]> headerMap, HttpMethod method, Object? body)
+    construct (URI uri, Map<String, String[]> headerMap, HttpMethod method, Byte[]? body)
         {
         HttpHeaders headers = new HttpHeaders();
         for ((String key, String[] values) : headerMap)
@@ -27,6 +27,10 @@ class HttpRequest(URI uri, HttpHeaders headers, HttpMethod method, Object? body)
      */
     @Lazy Map<String, List<String>> parameters.calc()
         {
-        return new UriQueryStringParser(uri.toString()).getParameters();
+        if (String query ?= uri.query)
+            {
+            return new UriQueryStringParser(query, hasPath=False).getParameters();
+            }
+        return [];
         }
     }

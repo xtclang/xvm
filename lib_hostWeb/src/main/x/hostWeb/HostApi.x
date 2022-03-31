@@ -1,11 +1,14 @@
-@web.WebService("/host")
+@web.WebService
 service HostApi
     {
     import ecstasy.mgmt.Container;
     import ecstasy.mgmt.ModuleRepository;
 
+    import ecstasy.reflect.AnnotationTemplate;
+    import ecstasy.reflect.ClassTemplate;
     import ecstasy.reflect.FileTemplate;
     import ecstasy.reflect.ModuleTemplate;
+    import ecstasy.reflect.TypeTemplate;
 
     import host.AppHost;
     import host.DbHost;
@@ -17,23 +20,22 @@ service HostApi
     import web.PathParam;
     import web.Post;
     import web.Produces;
+    import web.QueryParam;
     import web.WebServer.Handler;
 
-    @Inject Console console; // TEMPORARY
-
-    typedef Map<String, Handler> as Roots;
+    @Inject Console console; // TEMPORARY; for debugging only
 
     Map<String, AppHost>   loaded  = new HashMap();
     Map<String, FutureVar> running = new HashMap();
 
-    @Post("/load/{appName}")
-    HttpStatus load(@PathParam String appName)
+    @Post("/load")
+    (HttpStatus, String) load(@QueryParam("app") String appName, @QueryParam String realm)
         {
         // we assume that the hostWeb covers a single "domain", which means that
         // there is one and only one loaded app for a given name
         if (loaded.contains(appName))
             {
-            return HttpStatus.OK;
+            return HttpStatus.OK, "Already loaded";
             }
 
         FileTemplate fileTemplate;
@@ -44,8 +46,7 @@ service HostApi
         String xtcPath = $"build/{appName}.xtc"; // REVIEW: temporary hack
         if (!((fileTemplate, appHomeDir) := host.load(xtcPath, errors)))
             {
-            console.println($"Cannot find application \"{appName}\"");
-            return HttpStatus.NotFound;
+            return HttpStatus.NotFound, $"Cannot find application \"{appName}\"";
             }
 
         if (String dbModuleName := host.detectDatabase(fileTemplate))
@@ -61,8 +62,7 @@ service HostApi
                 Directory workDir = appHomeDir.parent ?: assert;
                 if (!(dbHost := host.createDbHost(workDir, dbModuleName, errors)))
                     {
-                    // REVIEW: how to communicate the errors?
-                    return HttpStatus.NotFound;
+                    return HttpStatus.NotFound, $"Cannot load the database \"{dbModuleName}\"";
                     }
                 loaded.put(dbModuleName, dbHost);
                 }
@@ -84,8 +84,7 @@ service HostApi
             }
         catch (Exception e)
             {
-            console.println($"Failed to load \"{appName}\": {e.text}");
-            return HttpStatus.BadRequest;
+            return HttpStatus.BadRequest, $"Failed to load \"{appName}\": {e.text}";
             }
 
         Boolean webModule = findClassAnnotation(template, "web.WebModule");
@@ -93,20 +92,16 @@ service HostApi
 
         if (webModule)
             {
-            Tuple result = container.invoke("collectRoots_", Tuple:(server.httpServer));
-            Roots roots  = result.size == 0 ? [] : result[0].as(Roots);
-            if (roots.size == 0)
+            Tuple result = container.invoke("createCatalog_", Tuple:(server.httpServer));
+
+            if (!realm.startsWith('/'))
                 {
-                // REVIEW: how to communicate the errors?
-                console.println($"Application \"{appName}\" doesn't have any endpoints");
-                return HttpStatus.BadRequest;
+                realm = '/' + realm;
                 }
 
-            for ((String path, Handler handler) : roots)
-                {
-                server.addHandler(path, handler);
-                }
-            appHost = new WebHost(appName, appHomeDir, roots.keys);
+            server.addHandler(realm, result[0].as(Handler));
+
+            appHost = new WebHost(appName, appHomeDir, realm);
             }
         else
             {
@@ -116,35 +111,7 @@ service HostApi
         appHost.container = container;
 
         loaded.put(appName, appHost);
-        return HttpStatus.OK;
-        }
-
-    @Post("/run/{appName}")
-    HttpStatus run(@PathParam String appName)
-        {
-        if (FutureVar result := running.get(appName), !result.assigned)
-            {
-            return HttpStatus.NoContent;
-            }
-
-        AppHost appHost;
-        if (!(appHost := loaded.get(appName)))
-            {
-            HttpStatus status = load(appName);
-            if (status != HttpStatus.OK)
-                {
-                return status;
-                }
-            assert appHost := loaded.get(appName);
-            }
-
-        // TODO GG: move to AppHost
-        if (!appHost.is(WebHost))
-            {
-            Tuple result = appHost.container.invoke^("run", Tuple:());
-            running.put(appName, &result);
-            }
-        return HttpStatus.OK;
+        return HttpStatus.OK, "";
         }
 
     @Get("/report/{appName}")
@@ -185,10 +152,7 @@ service HostApi
             running.remove(appName);
             if (appHost.is(WebHost))
                 {
-                for (String path : appHost.roots)
-                    {
-                    server.removeHandler(path);
-                    }
+                server.removeHandler(appHost.appRealm);
                 }
             return HttpStatus.OK;
             }

@@ -31,21 +31,17 @@ service WebServer(HttpServer httpServer)
      * Add all annotated endpoints from the specified web-service.
      *
      * @param webService  the web-service with annotated endpoints
-     * @param path        the root path prefix for all endpoints
+     * @param realm       the root path prefix for all endpoints
      */
-    void addWebService(WebService webService, String? path = Null, Router? router = Null)
+    void addWebService(WebService webService, String realm = "", Router? router = Null)
         {
-        if (path == Null)
-            {
-            path = webService.path;
-            }
         if (router == Null)
             {
             router = new Router();
             }
-        router.addRoutes(webService, path);
+        router.addRoutes(webService, webService.path);
         router.freeze(True);
-        addHandler(path, new RoutingHandler(httpServer, router));
+        addHandler(realm, new RoutingHandler(httpServer, router));
         }
 
     /**
@@ -63,11 +59,12 @@ service WebServer(HttpServer httpServer)
     void handle(Object context, String uri, String method,
                 String[] headerNames, String[][] headerValues, Byte[] body)
         {
-        for ((String path, Handler handler) : handlers)
+        for ((String realm, Handler handler) : handlers)
             {
-            if (uri.startsWith(path))
+            if (uri.startsWith(realm))
                 {
-                handler.handle^(context, uri, method, headerNames, headerValues, body);
+                handler.handle^(context, uri.substring(realm.size),
+                    method, headerNames, headerValues, body);
                 return;
                 }
             }

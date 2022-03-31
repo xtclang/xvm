@@ -46,8 +46,8 @@ const UriMatchTemplate(String             template,
             return True, new DefaultUriMatchInfo(uri, Map<String, Object>:[], this.variables);
             }
 
-        //Remove any url parameters before matching
-        if (Int parameterIndex := uri.indexOf('?'))
+        // remove any url parameters before matching
+        if (Int parameterIndex := uri.indexOf(UriTemplate.QUERY_OPERATOR))
             {
             uri = uri[0..parameterIndex);
             }

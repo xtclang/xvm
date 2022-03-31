@@ -1,12 +1,15 @@
 import ecstasy.io.ByteArrayOutputStream;
 
+import codec.MediaTypeCodec;
+import codec.MediaTypeCodecRegistry;
+
 /**
  * A representation of an HTTP response.
  */
 class HttpResponse(HttpStatus status = HttpStatus.OK)
         extends HttpMessage(new HttpHeaders())
     {
-    construct(HttpStatus status, String[] names, String[][] values, Object? body)
+    construct(HttpStatus status, String[] names, String[][] values, Byte[]? body)
         {
         this.status = status;
         construct HttpMessage(new HttpHeaders(names, values), body);
@@ -21,7 +24,8 @@ class HttpResponse(HttpStatus status = HttpStatus.OK)
      *
      * @return a HttpResponse
      */
-    static HttpResponse encodeResponse(Tuple tuple, Int index, HttpMethod method, MediaType mediaType)
+    static HttpResponse encodeResponse(Tuple tuple, Int index, HttpMethod method, MediaType mediaType,
+                                       MediaTypeCodecRegistry codecRegistry)
         {
         if (index > 0 && tuple[index].is(HttpResponse))
             {
@@ -43,7 +47,8 @@ class HttpResponse(HttpStatus status = HttpStatus.OK)
         else
             {
             // Iterate over the return values from the endpoint assigning them to the
-            // relevant parts of the request
+            // relevant parts of the request (REVIEW CP: report duplicates?)
+            Object body = Null;
             for (Int i : [index..tuple.size))
                 {
                 Object o = tuple[i];
@@ -57,7 +62,24 @@ class HttpResponse(HttpStatus status = HttpStatus.OK)
                     }
                 else if (o != Null)
                     {
-                    response.body = o;
+                    body = o;
+                    }
+                }
+
+            if (body != Null)
+                {
+                if (body.is(Byte[]))
+                    {
+                    response.body = body;
+                    }
+                else
+                    {
+                    // convert the body to the required response media type
+                    if (MediaTypeCodec codec := codecRegistry.findCodec(mediaType))
+                        {
+                        response.body = codec.encode(body);
+                        }
+                    // ToDo: the else should probably be an error/exception
                     }
                 }
             }
@@ -67,34 +89,10 @@ class HttpResponse(HttpStatus status = HttpStatus.OK)
         return response;
         }
 
-    Tuple<Int, String[], String[][], Byte[]> asTuple()
-        {
-        (String[] names, String[][] values) = headers.toArrays();
-
-        return (status.code, names, values, createBody(body));
-        }
-
-    Byte[] createBody(Object? body)
-        {
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        if (body.is(Iterable<Char>))
-            {
-            for (Char c : body)
-                {
-                out.writeBytes(c.utf8());
-                }
-            }
-        else if (body.is(Byte[]))
-            {
-            out.writeBytes(body);
-            }
-        return out.bytes;
-        }
-
     void send(HttpServer httpServer, Object context)
         {
         (String[] names, String[][] values) = headers.toArrays();
 
-        httpServer.send(context, status.code, names, values, createBody(body));
+        httpServer.send(context, status.code, names, values, body ?: []);
         }
     }

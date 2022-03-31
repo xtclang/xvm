@@ -8,9 +8,9 @@
  *      gradle compileOne -PtestName=webTests/TestSimpleWeb
  *
  * 3. Load this test:
- *      curl -i -w '\n' -X POST http://localhost:8080/host/run/TestSimpleWeb
+ *      curl -i -w '\n' -X POST http://localhost:8080/host/load -G -d 'app=TestSimpleWeb, realm=simple'
  *
- * 4. Use this Web app:
+ * 4. Use this web application:
  *      curl -i -w '\n' -X GET http://localhost:8080/simple/hello
  */
 @web.WebModule
@@ -18,10 +18,10 @@ module TestSimpleWeb
     {
     package web import web.xtclang.org;
 
-    @web.WebService("/simple")
+    @web.WebService("/hello")
     service SimpleApi
         {
-        @web.Get("/hello")
+        @web.Get
         String hello()
             {
             return $"Hello World #{++count}".quoted();
