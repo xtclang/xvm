@@ -46,6 +46,13 @@ module web.xtclang.org
             into service;
 
     /**
+     * `TrustLevel` is an enumeration that approximates a point-in-time level of trust associated
+     * with a user request or session, or denotes a required level of trust for a specific
+     * operation.
+     */
+    enum TrustLevel {None, Normal, High, Highest}
+
+    /**
      * This annotation, `@LoginRequired`, is used to mark a web service call -- or any containing
      * class thereof, up to the level of the web module itself -- as requiring authentication.
      *
@@ -68,8 +75,11 @@ module web.xtclang.org
      * for authentication, but only requiring those annotations within the class hierarchy at the
      * few points where a change occurs from "requiring authentication" to "not requiring
      * authentication", or vice versa.
+     *
+     * @param security  [TrustLevel] of security that is required by the annotated operation or
+     *                  web service
      */
-    mixin LoginRequired
+    mixin LoginRequired(TrustLevel security=Normal)
             into service | Method;
 
     /**
