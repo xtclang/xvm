@@ -28,6 +28,7 @@ import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.asm.Op.ConstantRegistry;
 import org.xvm.asm.Op.Prefix;
@@ -842,6 +843,13 @@ public class MethodStructure
         {
         if (typeResult != null)
             {
+            // downgrade enum value types to their base type (e.g. True -> Boolean)
+            TypeInfo info = typeResult.ensureTypeInfo(ErrorListener.BLACKHOLE);
+            if (info.getFormat() == Format.ENUMVALUE)
+                {
+                typeResult = info.getExtends();
+                }
+
             TypeConstant typePrev = mapTypeParams.get(sFormalName);
             if (typePrev != null)
                 {
