@@ -529,7 +529,7 @@ public class Parser
             Token keyword;
             if ((keyword = match(Id.EXTENDS)) != null)
                 {
-                TypeExpression   type = parseTypeExpression();
+                TypeExpression   type = parseExtendedTypeExpression();
                 List<Expression> args = parseArgumentList(false, false, false);
                 compositions.add(new CompositionNode.Extends(exprCondition, keyword, type, args,
                         prev().getEndPosition()));
