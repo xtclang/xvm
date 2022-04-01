@@ -22,14 +22,42 @@ class HttpRequest(URI uri, HttpHeaders headers, HttpMethod method, Byte[]? body)
         return headers.accepts;
         }
 
+    typedef (String | String[]) as QueryParameter;
+
     /**
-     * @return the HTTP parameters contained with the URI query string
+     * @return the HTTP parameters contained in the URI query string
      */
-    @Lazy Map<String, List<String>> parameters.calc()
+    @Lazy Map<String, QueryParameter> parameters.calc()
         {
-        if (String query ?= uri.query)
+        if (String query ?= uri.query, query.size != 0)
             {
-            return new UriQueryStringParser(query, hasPath=False).getParameters();
+            Map<String, String>         rawParams   = query.splitMap();
+            Map<String, QueryParameter> queryParams = new HashMap();
+
+            for ((String key, String value) : rawParams)
+                {
+                queryParams.process(key, e ->
+                    {
+                    if (e.exists)
+                        {
+                        QueryParameter prevValue = e.value;
+                        if (prevValue.is(String))
+                            {
+                            String[] values = [prevValue, value];
+                            e.value = values;
+                            }
+                        else
+                            {
+                            prevValue += value;
+                            }
+                        }
+                    else
+                        {
+                        e.value = value;
+                        }
+                    });
+                }
+            return queryParams;
             }
         return [];
         }

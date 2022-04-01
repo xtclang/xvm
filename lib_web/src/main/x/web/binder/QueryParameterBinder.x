@@ -23,11 +23,16 @@ const QueryParameterBinder
                 assert name := parameter.hasName();
                 }
 
-            Map<String, List<String>> queryParamMap = request.parameters;
+            import HttpRequest.QueryParameter;
+
+            Map<String, QueryParameter> queryParamMap = request.parameters;
+
             // ToDo: this process is actually a lot more complex, e.g. type conversion
-            if (List<String> list := queryParamMap.get(name), !list.empty)
+            if (QueryParameter param := queryParamMap.get(name))
                 {
-                return new BindingResult<ParamType>(list[0].as(ParamType), True);
+                String value = param.is(String) ? param : param[0];
+                assert value.is(ParamType);
+                return new BindingResult(value, True);
                 }
             }
         return new BindingResult();

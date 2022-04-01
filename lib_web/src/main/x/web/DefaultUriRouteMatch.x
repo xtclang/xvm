@@ -175,7 +175,7 @@ class DefaultUriRouteMatch
             }
 
         @Override
-        Tuple<Object> execute(function void () fn)
+        Tuple execute(function void () fn)
             {
             return execute(fn, variableValues);
             }

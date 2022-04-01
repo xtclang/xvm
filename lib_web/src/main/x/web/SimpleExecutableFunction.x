@@ -20,8 +20,8 @@ const SimpleExecutableFunction
     @Override
     function void () createFunction()
         {
-        Tuple         params = Tuple:();
-        Tuple<Object> target = constructor.invoke(params);
+        Tuple params = Tuple:();
+        Tuple target = constructor.invoke(params);
         assert target.size == 1;
         return method.bindTarget(target[0]);
         }

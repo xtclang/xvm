@@ -178,7 +178,7 @@ class UriQueryStringParser
                 });
             }
         return dedupParams;
-    }
+        }
 
     /**
      * Add a parsed parameter to the parameter map.
