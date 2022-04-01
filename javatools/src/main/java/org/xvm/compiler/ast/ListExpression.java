@@ -274,10 +274,13 @@ public class ListExpression
         Constant constVal = null;
         if (fConstant)
             {
-            TypeConstant typeImpl = pool.ensureImmutableTypeConstant(
-                    pool.ensureParameterizedTypeConstant(
-                        fSet ? pool.typeSet() : pool.typeArray(),
-                        typeElement == null ? pool.typeObject() : typeElement));
+            if (typeElement == null)
+                {
+                typeElement = pool.typeObject();
+                }
+            TypeConstant typeImpl = pool.ensureImmutableTypeConstant(fSet
+                    ? pool.ensureSetType(typeElement)
+                    : pool.ensureArrayType(typeElement));
             if (typeRequired == null || typeImpl.isA(typeRequired)) // [Array | List | Set]<Element>
                 {
                 if (fSet)

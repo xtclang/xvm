@@ -1582,6 +1582,18 @@ public class ConstantPool
         }
 
     /**
+     * Obtain a TypeConstant for a parameterized Set
+     *
+     * @param typeElement  the element type of the Set
+     *
+     * @return the Set type
+     */
+    public TypeConstant ensureSetType(TypeConstant typeElement)
+        {
+        return ensureParameterizedTypeConstant(typeSet(), typeElement);
+        }
+
+    /**
      * Obtain a TypeConstant for a Range.
      *
      * @param typeElement  the element type of the Range
