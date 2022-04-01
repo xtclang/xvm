@@ -2,11 +2,18 @@ module TestSimple
     {
     @Inject Console console;
 
-    enum TrustLevel {None, Normal, High, Highest}
-
-    void run()
+    void run( )
         {
-        TrustLevel t1 = High;
-        TrustLevel t2 = t1.minOf(Normal); // used to fail to compile
+        }
+
+    typedef (String | String[]) as QueryParameter;
+
+    QueryParameter test(QueryParameter prevValue, String value)
+        {
+        if (prevValue.is(String))
+            {
+            return [prevValue, value]; // this used to fail to compile
+            }
+        return prevValue + value;
         }
     }

@@ -146,7 +146,15 @@ public class ListExpression
         InferFromRequired:
         if (typeRequired != null)
             {
-            TypeConstant typeElement = typeRequired.resolveGenericType("Element");
+            TypeConstant typeElement = getImplicitElementType(ctx);
+            if (typeElement != null &&
+                    (pool.ensureArrayType(typeElement).isA(typeRequired) ||
+                     pool.ensureSetType(typeElement).isA(typeRequired)))
+                {
+                return TypeFit.Fit;
+                }
+
+            typeElement = resolveElementType(typeRequired);
             if (typeElement == null)
                 {
                 break InferFromRequired;
@@ -197,14 +205,18 @@ public class ListExpression
 
         if (typeRequired != null)
             {
-            typeElement = calculateElementType(typeRequired);
+            TypeConstant typeEl = getImplicitElementType(ctx);
+            if (typeEl != null &&
+                    (pool.ensureArrayType(typeEl).isA(typeRequired) ||
+                     pool.ensureSetType(typeEl).isA(typeRequired)))
+                {
+                typeElement = typeEl;
+                }
+            else
+                {
+                typeElement = resolveElementType(typeRequired);
+                }
             }
-
-        if (typeElement == null || typeElement.equals(pool.typeObject()))
-            {
-            typeElement = getImplicitElementType(ctx);
-            }
-
         if (typeElement == null)
             {
             typeElement = pool.typeObject();
@@ -232,7 +244,7 @@ public class ListExpression
 
                 typeActual = exprTypeNew.ensureTypeConstant(ctx, errs).resolveAutoNarrowingBase();
 
-                TypeConstant typeElementNew = typeActual.resolveGenericType("Element");
+                TypeConstant typeElementNew = resolveElementType(typeActual);
                 if (typeElementNew != null)
                     {
                     typeElement = typeElementNew;
@@ -381,7 +393,7 @@ public class ListExpression
     /**
      * Helper method to calculate the "Element" type for the specified required type.
      */
-    private TypeConstant calculateElementType(TypeConstant typeRequired)
+    private TypeConstant resolveElementType(TypeConstant typeRequired)
         {
         TypeConstant typeElement = typeRequired.resolveGenericType("Element");
         if (typeElement == null && typeRequired instanceof IntersectionTypeConstant typeIntersect)
