@@ -24,8 +24,8 @@ val jsonMain        = "${json.projectDir}/src/main";
 val oodbMain        = "${oodb.projectDir}/src/main";
 val imdbMain        = "${imdb.projectDir}/src/main";
 val jsondbMain      = "${jsondb.projectDir}/src/main";
-val hostMain        = "${host.projectDir}/src/main";
 val webMain         = "${web.projectDir}/src/main";
+val hostMain        = "${host.projectDir}/src/main";
 val hostWebMain     = "${hostWeb.projectDir}/src/main";
 
 val libDir        = "$buildDir/xdk/lib"
@@ -208,28 +208,6 @@ val compileJsonDB = tasks.register<JavaExec>("compileJsonDB") {
     mainClass.set("org.xvm.tool.Compiler")
 }
 
-val compileHost = tasks.register<JavaExec>("compileHost") {
-    group       = "Build"
-    description = "Build host.xtc module"
-
-    dependsOn(javatools.tasks["build"])
-
-    shouldRunAfter(compileIMDB)
-    shouldRunAfter(compileJsonDB)
-
-    jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
-
-    classpath(javatoolsJar)
-    args("-verbose",
-            "-o", "$libDir",
-            "-version", "$version",
-            "-L", "$coreLib",
-            "-L", "$bridgeLib",
-            "-L", "$libDir",
-            "$hostMain/x/host.x")
-    mainClass.set("org.xvm.tool.Compiler")
-}
-
 val compileWeb = tasks.register<JavaExec>("compileWeb") {
     group       = "Execution"
     description = "Build web.xtc module"
@@ -248,6 +226,29 @@ val compileWeb = tasks.register<JavaExec>("compileWeb") {
             "-L", "$bridgeLib",
             "-L", "$libDir",
             "$webMain/x/web.x")
+    mainClass.set("org.xvm.tool.Compiler")
+}
+
+val compileHost = tasks.register<JavaExec>("compileHost") {
+    group       = "Build"
+    description = "Build host.xtc module"
+
+    dependsOn(javatools.tasks["build"])
+
+    shouldRunAfter(compileIMDB)
+    shouldRunAfter(compileJsonDB)
+    shouldRunAfter(compileWeb)
+
+    jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
+
+    classpath(javatoolsJar)
+    args("-verbose",
+            "-o", "$libDir",
+            "-version", "$version",
+            "-L", "$coreLib",
+            "-L", "$bridgeLib",
+            "-L", "$libDir",
+            "$hostMain/x/host.x")
     mainClass.set("org.xvm.tool.Compiler")
 }
 
@@ -351,15 +352,6 @@ tasks.register("build") {
         dependsOn(compileJsonDB)
     }
 
-    // compile host.xtclang.org
-    val hostSrc = fileTree(hostMain).getFiles().stream().
-    mapToLong({f -> f.lastModified()}).max().orElse(0)
-    val hostDest = file("$libDir/host.xtc").lastModified()
-
-    if (hostSrc > hostDest) {
-        dependsOn(compileHost)
-    }
-
     // compile web.xtclang.org
     val webSrc = fileTree(webMain).getFiles().stream().
             mapToLong({f -> f.lastModified()}).max().orElse(0)
@@ -368,6 +360,15 @@ tasks.register("build") {
     if (webSrc > webDest) {
         dependsOn(compileWeb)
         }
+
+    // compile host.xtclang.org
+    val hostSrc = fileTree(hostMain).getFiles().stream().
+    mapToLong({f -> f.lastModified()}).max().orElse(0)
+    val hostDest = file("$libDir/host.xtc").lastModified()
+
+    if (hostSrc > hostDest) {
+        dependsOn(compileHost)
+    }
 
     // compile hostWeb.xtclang.org
     val hostWebSrc = fileTree(hostWebMain).getFiles().stream().
