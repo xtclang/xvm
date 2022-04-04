@@ -713,22 +713,27 @@ public class LambdaExpression
                     fValid      = false;
                     }
 
-                TypeConstant typeParam = atypeParams[i] = param.getType().ensureTypeConstant();
+                TypeConstant typeParam = param.getType().ensureTypeConstant();
                 if (typeParam.containsUnresolved())
                     {
+                    atypeParams[i] = pool().typeObject();
                     log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, typeParam.getValueString());
                     fValid = false;
                     }
-                else if (i < cReqParams)
+                else
                     {
-                    // the types don't have to match exactly, but the lambda must not attempt to
-                    // narrow the required type for a parameter
-                    TypeConstant typeReq = atypeReqParams[i];
-                    if (typeReq != null && !typeReq.isA(typeParam))
+                    atypeParams[i] = typeParam;
+                    if (i < cReqParams)
                         {
-                        param.log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
-                                typeReq.getValueString(), typeParam.getValueString());
-                        fValid = false;
+                        // the types don't have to match exactly, but the lambda must not attempt to
+                        // narrow the required type for a parameter
+                        TypeConstant typeReq = atypeReqParams[i];
+                        if (typeReq != null && !typeReq.isA(typeParam))
+                            {
+                            param.log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
+                                    typeReq.getValueString(), typeParam.getValueString());
+                            fValid = false;
+                            }
                         }
                     }
                 }
