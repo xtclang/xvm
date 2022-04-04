@@ -87,7 +87,7 @@ service HostApi
             return HttpStatus.BadRequest, $"Failed to load \"{appName}\": {e.text}";
             }
 
-        Boolean webModule = findClassAnnotation(template, "web.WebModule");
+        Boolean webModule = template.findAnnotation("web.WebModule");
         AppHost appHost;
 
         if (webModule)
@@ -165,34 +165,5 @@ service HostApi
         // temporary
         assert:debug;
         return HttpStatus.OK;
-        }
-
-
-    // ----- helpers -------------------------------------------------------------------------------
-
-    /**
-     * Check if the `ClassTemplate` has a specified annotation.
-     *
-     * @return True iff there is an annotation of the specified name
-     * @return the corresponding `AnnotationTemplate` (optional)
-     */
-    conditional AnnotationTemplate findClassAnnotation(ClassTemplate template, String annotationName)
-        {
-        import ecstasy.reflect.ClassTemplate.Composition;
-        import ecstasy.reflect.ClassTemplate.AnnotatingComposition;
-
-        for (val contrib : template.contribs)
-            {
-            if (contrib.action == AnnotatedBy)
-                {
-                assert AnnotatingComposition composition := contrib.ingredient.is(AnnotatingComposition);
-                if (composition.annotation.template.displayName == annotationName)
-                    {
-                    return True, composition.annotation;
-                    }
-                }
-            }
-
-        return False;
         }
     }

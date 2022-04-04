@@ -35,4 +35,23 @@ interface PropertyTemplate
     * would produce the `annotations` array holding `A1` at index zero.
     */
     @RO immutable AnnotationTemplate[] annotations;
+
+    /**
+     * Check if this template has a specified annotation.
+     *
+     * @return True iff there is an annotation of the specified name
+     * @return the corresponding `AnnotationTemplate` (optional)
+     */
+    conditional AnnotationTemplate findAnnotation(String annotationName)
+        {
+        for (AnnotationTemplate annotation : annotations)
+            {
+            if (annotation.template.displayName == annotationName)
+                {
+                return True, annotation;
+                }
+            }
+
+        return False;
+        }
     }

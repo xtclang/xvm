@@ -190,7 +190,7 @@ class DbHost(String moduleName, Directory homeDir)
                     propertyBaseType   = "DBCounterImpl";
                     propertyTypeParams = "";
 
-                    if (AnnotationTemplate annotation := findAnnotation(property, "oodb.NoTx"))
+                    if (AnnotationTemplate annotation := property.findAnnotation("oodb.NoTx"))
                         {
                         transactional = "False";
                         }
@@ -210,7 +210,7 @@ class DbHost(String moduleName, Directory homeDir)
                     propertyTypeParams = $"\"Value\"={valueTypeName}";
 
                     String initialValue = "Null";
-                    if (AnnotationTemplate annotation := findAnnotation(property, "oodb.Initial"))
+                    if (AnnotationTemplate annotation := property.findAnnotation("oodb.Initial"))
                         {
                         initialValue = displayValue(annotation.arguments[0].value);
                         }
@@ -243,17 +243,17 @@ class DbHost(String moduleName, Directory homeDir)
                     propertyBaseType   = $"DBLogImpl<{elementTypeName}>";
                     propertyTypeParams = $"\"Element\"={elementTypeName}";
 
-                    if (AnnotationTemplate annotation := findAnnotation(property, "oodb.NoTx"))
+                    if (AnnotationTemplate annotation := property.findAnnotation("oodb.NoTx"))
                         {
                         transactional = "False";
                         }
-                    if (AnnotationTemplate annotation := findAnnotation(property, "oodb.AutoExpire"))
+                    if (AnnotationTemplate annotation := property.findAnnotation("oodb.AutoExpire"))
                         {
                         Duration expiry = annotation.arguments[0].value.as(Duration);
                         options += $"\"expiry\"=Duration:{expiry.seconds}s";
                         }
 
-                    if (AnnotationTemplate annotation := findAnnotation(property, "oodb.AutoTruncate"))
+                    if (AnnotationTemplate annotation := property.findAnnotation("oodb.AutoTruncate"))
                         {
                         Int truncateSize = annotation.arguments[0].value.as(Int);
                         if (options.size > 0)
@@ -544,25 +544,6 @@ class DbHost(String moduleName, Directory homeDir)
             return composition.implicitName ?: (appName + "_." + composition.displayName);
             }
         TODO AnnotatingComposition
-        }
-
-    /**
-     * Check if the `PropertyTemplate` has a specified annotation.
-     *
-     * @return True iff there is an annotation of the specified name
-     * @return the corresponding `AnnotationTemplate` (optional)
-     */
-    conditional AnnotationTemplate findAnnotation(PropertyTemplate property, String annotationName)
-        {
-        for (AnnotationTemplate annotation : property.annotations)
-            {
-            if (annotation.template.displayName == annotationName)
-                {
-                return True, annotation;
-                }
-            }
-
-        return False;
         }
 
     /**

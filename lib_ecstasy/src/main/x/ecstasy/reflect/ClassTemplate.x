@@ -381,6 +381,29 @@ interface ClassTemplate
         conditional (AnnotationTemplate, Composition!) deannotate();
 
         /**
+         * Check if this template has a specified annotation.
+         *
+         * @return True iff there is an annotation of the specified name
+         * @return the corresponding `AnnotationTemplate` (optional)
+         */
+        conditional AnnotationTemplate findAnnotation(String annotationName)
+            {
+            for (val contrib : contribs)
+                {
+                if (contrib.action == AnnotatedBy)
+                    {
+                    assert AnnotatingComposition composition := contrib.ingredient.is(AnnotatingComposition);
+                    if (composition.annotation.template.displayName == annotationName)
+                        {
+                        return True, composition.annotation;
+                        }
+                    }
+                }
+
+            return False;
+            }
+
+        /**
          * Obtain the Class represented by the combination of this composition and the specified
          * formal types.
          *
