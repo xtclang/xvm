@@ -1,25 +1,27 @@
 /**
  * The module for basic web-based hosting functionality.
  */
-module hostWeb.xtclang.org
+@web.WebModule
+module hostWeb.xtclang.org // TODO: rename to hostController
     {
-    package host import host.xtclang.org;
-    package web  import web.xtclang.org;
+    package platform import platform.xtclang.org;
+    package web      import web.xtclang.org;
 
+    import platform.HostManager;
+
+    import web.HttpServer;
     import web.WebServer;
 
-    void run()
+    /**
+     * Configure the host controller.
+     */
+    void configure(HostManager mgr, HttpServer httpController, HttpServer httpPublic)
         {
-        server.addWebService(new HostApi(), "/host");
-        server.start();
+        WebServer controllerServer = new WebServer(httpController);
+        controllerServer.addWebService(new Controller(mgr, httpPublic), "/host"); // TODO: Controller factory?
+        controllerServer.start();
 
         @Inject Console console;
         console.println("Started Ecstasy hosting at http://localhost:8080");
-        }
-
-    @Lazy WebServer server.calc()
-        {
-        @Inject(opts=8080) web.HttpServer server;
-        return new WebServer(server);
         }
     }

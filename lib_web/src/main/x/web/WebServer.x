@@ -107,4 +107,10 @@ service WebServer(HttpServer httpServer)
         void handle(Object context, String uri, String method,
                     String[] headerNames, String[][] headerValues, Byte[] body);
         }
+
+    @Override
+    String toString()
+        {
+        return httpServer.toString();
+        }
     }

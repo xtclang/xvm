@@ -1,9 +1,16 @@
 /**
  * The Injector service.
  */
-service Injector(Directory appHomeDir)
+service Injector(Directory appHomeDir, Boolean platform)
         implements ResourceProvider
     {
+    @Lazy FileStore store.calc()
+        {
+        import ecstasy.fs.DirectoryFileStore;
+
+        return new DirectoryFileStore(appHomeDir);
+        }
+
     @Lazy ConsoleImpl consoleImpl.calc()
         {
         File consoleFile = appHomeDir.fileFor("console.log");
@@ -72,6 +79,11 @@ service Injector(Directory appHomeDir)
             case Console:
                 if (name == "console")
                     {
+                    if (platform)
+                        {
+                        @Inject Console console;
+                        return console;
+                        }
                     return &consoleImpl.maskAs(Console);
                     }
                 wrongName = True;
@@ -98,8 +110,13 @@ service Injector(Directory appHomeDir)
             case FileStore:
                 if (name == "storage")
                     {
-                    @Inject FileStore storage;
-                    return storage;
+                    if (platform)
+                        {
+                        @Inject FileStore storage;
+                        return storage;
+                        }
+
+                    return &store.maskAs(FileStore);
                     }
                 wrongName = True;
                 break;
@@ -108,20 +125,44 @@ service Injector(Directory appHomeDir)
                 switch (name)
                     {
                     case "rootDir":
-                        @Inject Directory rootDir;
-                        return rootDir;
+                        if (platform)
+                            {
+                            @Inject Directory rootDir;
+                            return rootDir;
+                            }
+
+                        Directory root = store.root;
+                        return &root.maskAs(Directory);
 
                     case "homeDir":
-                        @Inject Directory homeDir;
-                        return homeDir;
+                        if (platform)
+                            {
+                            @Inject Directory homeDir;
+                            return homeDir;
+                            }
+
+                        Directory root = store.root;
+                        return &root.maskAs(Directory);
 
                     case "curDir":
-                        @Inject Directory curDir;
-                        return curDir;
+                        if (platform)
+                            {
+                            @Inject Directory curDir;
+                            return curDir;
+                            }
+
+                        Directory root = store.root;
+                        return &root.maskAs(Directory);
 
                     case "tmpDir":
-                        @Inject Directory tmpDir;
-                        return tmpDir;
+                        if (platform)
+                            {
+                            @Inject Directory tmpDir;
+                            return tmpDir;
+                            }
+
+                        Directory temp = store.root.find("_temp").as(Directory);
+                        return &temp.maskAs(Directory);
 
                     default:
                         wrongName = True;
@@ -141,6 +182,8 @@ service Injector(Directory appHomeDir)
             case Random:
                 if (name == "random" || name == "rnd")
                     {
+                    import ecstasy.annotations.InjectedRef;
+
                     return (InjectedRef.Options opts) ->
                         {
                         @Inject(opts=opts) Random random;

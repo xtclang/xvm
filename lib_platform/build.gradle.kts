@@ -1,5 +1,5 @@
 /*
- * Build the "host controller" module.
+ * Build the "platform" module.
  */
 
 tasks.register("build") {

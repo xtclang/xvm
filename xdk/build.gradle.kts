@@ -11,8 +11,9 @@ val json          = project(":lib_json");
 val oodb          = project(":lib_oodb");
 val imdb          = project(":lib_imdb");
 val jsondb        = project(":lib_jsondb");
-val host          = project(":lib_host");
 val web           = project(":lib_web");
+val platform      = project(":lib_platform");
+val host          = project(":lib_host");
 val hostWeb       = project(":lib_hostWeb");
 
 val ecstasyMain     = "${ecstasy.projectDir}/src/main"
@@ -25,6 +26,7 @@ val oodbMain        = "${oodb.projectDir}/src/main";
 val imdbMain        = "${imdb.projectDir}/src/main";
 val jsondbMain      = "${jsondb.projectDir}/src/main";
 val webMain         = "${web.projectDir}/src/main";
+val platformMain    = "${platform.projectDir}/src/main";
 val hostMain        = "${host.projectDir}/src/main";
 val hostWebMain     = "${hostWeb.projectDir}/src/main";
 
@@ -229,6 +231,28 @@ val compileWeb = tasks.register<JavaExec>("compileWeb") {
     mainClass.set("org.xvm.tool.Compiler")
 }
 
+val compilePlatform = tasks.register<JavaExec>("compilePlatform") {
+    group       = "Execution"
+    description = "Build platform.xtc module"
+
+    dependsOn(javatools.tasks["build"])
+
+    shouldRunAfter(compileEcstasy)
+    shouldRunAfter(compileWeb)
+
+    jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
+
+    classpath(javatoolsJar)
+    args("-verbose",
+            "-o", "$libDir",
+            "-version", "$version",
+            "-L", "$coreLib",
+            "-L", "$bridgeLib",
+            "-L", "$libDir",
+            "$platformMain/x/platform.x")
+    mainClass.set("org.xvm.tool.Compiler")
+}
+
 val compileHost = tasks.register<JavaExec>("compileHost") {
     group       = "Build"
     description = "Build host.xtc module"
@@ -238,6 +262,7 @@ val compileHost = tasks.register<JavaExec>("compileHost") {
     shouldRunAfter(compileIMDB)
     shouldRunAfter(compileJsonDB)
     shouldRunAfter(compileWeb)
+    shouldRunAfter(compilePlatform)
 
     jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
 
@@ -259,7 +284,6 @@ val compileHostWeb = tasks.register<JavaExec>("compileHostWeb") {
     dependsOn(javatools.tasks["build"])
 
     shouldRunAfter(compileHost)
-    shouldRunAfter(compileWeb)
 
     jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
 
@@ -360,6 +384,15 @@ tasks.register("build") {
     if (webSrc > webDest) {
         dependsOn(compileWeb)
         }
+
+    // compile platform.xtclang.org
+    val platformSrc = fileTree(platformMain).getFiles().stream().
+    mapToLong({f -> f.lastModified()}).max().orElse(0)
+    val platformDest = file("$libDir/platform.xtc").lastModified()
+
+    if (platformSrc > platformDest) {
+        dependsOn(compilePlatform)
+    }
 
     // compile host.xtclang.org
     val hostSrc = fileTree(hostMain).getFiles().stream().

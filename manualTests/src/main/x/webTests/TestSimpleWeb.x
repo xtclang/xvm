@@ -11,7 +11,7 @@
  *      curl -i -w '\n' -X POST http://localhost:8080/host/load -G -d 'app=TestSimpleWeb, realm=simple'
  *
  * 4. Use this web application:
- *      curl -i -w '\n' -X GET http://localhost:8080/simple/hello
+ *      curl -i -w '\n' -X GET http://localhost/simple/hello
  */
 @web.WebModule
 module TestSimpleWeb

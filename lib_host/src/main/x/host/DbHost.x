@@ -22,8 +22,15 @@ import oodb.DBObject.DBCategory;
  */
 @Abstract
 class DbHost(String moduleName, Directory homeDir)
-        extends AppHost(moduleName, homeDir)
+        extends platform.AppHost(moduleName, homeDir)
     {
+    @Override
+    void close(Exception? e)
+        {
+        closeDatabase();
+        }
+
+
     // ---- run-time support -----------------------------------------------------------------------
 
     /**
@@ -93,7 +100,7 @@ class DbHost(String moduleName, Directory homeDir)
                 DateTime?      hostStamp  = hostModule.parent.created;
                 if (dbStamp != Null && hostStamp != Null && hostStamp > dbStamp)
                     {
-                    console.println($"Info: Host module '{hostedName}' for '{moduleName}' is up to date");
+                    errors.add($"Info: Host module '{hostedName}' for '{moduleName}' is up to date");
                     return True, hostModule;
                     }
                 }
@@ -114,7 +121,7 @@ class DbHost(String moduleName, Directory homeDir)
         if (createModule(sourceFile, appName, dbModule, appSchemaTemplate, errors) &&
             compileModule(sourceFile, buildDir, errors))
             {
-            console.println($"Info: Created a host module '{hostedName}' for '{moduleName}'");
+            errors.add($"Info: Created a host module '{hostedName}' for '{moduleName}'");
             return True, repository.getModule(hostedName);
             }
         return False;
