@@ -44,7 +44,7 @@ service Controller
     @Post("/load")
     (HttpStatus, String) load(@QueryParam("app") String appName, @QueryParam String realm)
         {
-        // we assume that the hostWeb covers a single "domain", which means that
+        // we assume that the hostControl covers a single "realm", which means that
         // there is one and only one loaded app for a given name
         if (mgr.getAppHost(appName))
             {

@@ -43,7 +43,7 @@ module host.xtclang.org
             @Inject ModuleRepository repository;
             @Inject Directory        curDir;
 
-            ModuleTemplate controllerModule = repository.getResolvedModule("hostWeb.xtclang.org");
+            ModuleTemplate controllerModule = repository.getResolvedModule("hostControl.xtclang.org");
 
             assert AppHost ctrlHost :=
                 mgr.createAppHost(controllerModule.parent, curDir, errors, realm="platform");

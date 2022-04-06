@@ -1,8 +1,8 @@
 /**
  * This is a test for web-based hosting. To run it:
  *
- * 1. Start the host module "hostWeb":
- *      gradle hostWeb
+ * 1. Start the hosting module:
+ *      gradle host
  *
  * 2. Compile this test:
  *      gradle compileOne -PtestName=webTests/TestSimpleWeb

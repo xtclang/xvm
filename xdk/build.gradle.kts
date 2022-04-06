@@ -14,7 +14,7 @@ val jsondb        = project(":lib_jsondb");
 val web           = project(":lib_web");
 val platform      = project(":lib_platform");
 val host          = project(":lib_host");
-val hostWeb       = project(":lib_hostWeb");
+val hostControl   = project(":lib_hostControl");
 
 val ecstasyMain     = "${ecstasy.projectDir}/src/main"
 val bridgeMain      = "${bridge.projectDir}/src/main"
@@ -28,7 +28,7 @@ val jsondbMain      = "${jsondb.projectDir}/src/main";
 val webMain         = "${web.projectDir}/src/main";
 val platformMain    = "${platform.projectDir}/src/main";
 val hostMain        = "${host.projectDir}/src/main";
-val hostWebMain     = "${hostWeb.projectDir}/src/main";
+val hostControlMain = "${hostControl.projectDir}/src/main";
 
 val libDir        = "$buildDir/xdk/lib"
 val coreLib       = "$libDir/ecstasy.xtc"
@@ -277,9 +277,9 @@ val compileHost = tasks.register<JavaExec>("compileHost") {
     mainClass.set("org.xvm.tool.Compiler")
 }
 
-val compileHostWeb = tasks.register<JavaExec>("compileHostWeb") {
+val compileHostControl = tasks.register<JavaExec>("compileHostControl") {
     group       = "Execution"
-    description = "Build hostWeb.xtc module"
+    description = "Build hostControl.xtc module"
 
     dependsOn(javatools.tasks["build"])
 
@@ -294,7 +294,7 @@ val compileHostWeb = tasks.register<JavaExec>("compileHostWeb") {
             "-L", "$coreLib",
             "-L", "$bridgeLib",
             "-L", "$libDir",
-            "$hostWebMain/x/hostWeb.x")
+            "$hostControlMain/x/hostControl.x")
     mainClass.set("org.xvm.tool.Compiler")
 }
 
@@ -403,13 +403,13 @@ tasks.register("build") {
         dependsOn(compileHost)
     }
 
-    // compile hostWeb.xtclang.org
-    val hostWebSrc = fileTree(hostWebMain).getFiles().stream().
+    // compile hostControl.xtclang.org
+    val hostControlSrc = fileTree(hostControlMain).getFiles().stream().
             mapToLong({f -> f.lastModified()}).max().orElse(0)
-    val hostWebDest = file("$libDir/hostWeb.xtc").lastModified()
+    val hostControlDest = file("$libDir/hostControl.xtc").lastModified()
 
-    if (hostWebSrc > hostWebDest) {
-        dependsOn(compileHostWeb)
+    if (hostControlSrc > hostControlDest) {
+        dependsOn(compileHostControl)
         }
 
     doLast {

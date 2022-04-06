@@ -15,7 +15,7 @@ include(":lib_jsondb")          // produces jsondb.xtc
 include(":lib_web")             // produces web.xtc
 include(":lib_platform")        // produces platform.xtc
 include(":lib_host")            // produces host.xtc
-include(":lib_hostWeb")         // produces hostWeb.xtc
+include(":lib_hostControl")     // produces hostControl.xtc
 // TODO(":wiki")
 include(":xdk")         // builds the above modules (ecstasy.xtc, javatools_bridge.xtc, json.xtc, etc.)
 // drags in Java libraries (javatools_utils, javatools), native launchers, wiki, etc.

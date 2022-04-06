@@ -1,8 +1,8 @@
 /**
- * The module for basic web-based hosting functionality.
+ * The web module for basic hosting functionality.
  */
 @web.WebModule
-module hostWeb.xtclang.org // TODO: rename to hostController
+module hostControl.xtclang.org // TODO: rename to hostController
     {
     package platform import platform.xtclang.org;
     package web      import web.xtclang.org;

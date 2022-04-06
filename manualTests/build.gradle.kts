@@ -119,7 +119,7 @@ tasks.register<JavaExec>("host") {
 
     dependsOn(xdk.tasks["build"])
 
-    val name = if (project.hasProperty("testName")) project.property("testName") else "TestSimple"
+    val name = if (project.hasProperty("testName")) project.property("testName") else ""
 
     systemProperties.put("xvm.db.impl", System.getProperty("xvm.db.impl"))
 
@@ -131,34 +131,21 @@ tasks.register<JavaExec>("host") {
         "-L", "$buildDir",
         "${xdk.buildDir}/xdk/lib/host.xtc")
 
-    args(opts + "build/$name.xtc")
     mainClass.set("org.xvm.tool.Runner")
 
-    doLast {
-        val console = "$buildDir/${name}/console.log"
-        if (file(console).exists()) {
-            exec() {
-                commandLine = listOf<String>("cat", console)
+    if (name == "") {
+        args(opts)
+    }
+    else {
+        args(opts + "build/$name.xtc")
+
+        doLast {
+            val console = "$buildDir/${name}/console.log"
+            if (file(console).exists()) {
+                exec() {
+                    commandLine = listOf<String>("cat", console)
+                }
             }
         }
     }
-}
-
-tasks.register<JavaExec>("hostWeb") {
-    group       = "Test"
-    description = "Start the web hosting module"
-
-    dependsOn(xdk.tasks["build"])
-
-    classpath(javatoolsJar)
-
-    val opts = listOf<String>(
-        "-L", "${xdk.buildDir}/xdk/lib/",
-        "-L", "${xdk.buildDir}/xdk/javatools/javatools_bridge.xtc",
-        "-L", "$buildDir",
-        "${xdk.buildDir}/xdk/lib/host.xtc"
-        )
-
-    args(opts)
-    mainClass.set("org.xvm.tool.Runner")
 }
