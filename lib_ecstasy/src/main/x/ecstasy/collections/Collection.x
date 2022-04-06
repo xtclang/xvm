@@ -873,8 +873,14 @@ interface Collection<Element>
             function String(Element)? render = Null)
         {
         Int elementCount = size;
-        Int displayCount = limit ?: elementCount;
         Int count        = (pre?.size : 0) + (post?.size : 0);
+
+        if (elementCount == 0)
+            {
+            return count;
+            }
+
+        Int displayCount = limit ?: elementCount;
 
         if (render == Null && Element.is(Type<Stringable>))
             {
