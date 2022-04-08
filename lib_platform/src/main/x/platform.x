@@ -3,6 +3,8 @@
  */
 module platform.xtclang.org
     {
+    package web import web.xtclang.org;
+
     /**
      * A Log as a service. REVIEW CP: where does it belong?
      */
@@ -17,6 +19,14 @@ module platform.xtclang.org
                 {
                 report(error);
                 }
+            }
+
+        @Override
+        String toString()
+            {
+            StringBuffer buf = new StringBuffer(
+                errors.estimateStringLength(sep="\n", pre="", post=""));
+            return errors.appendTo(buf, sep="\n", pre="", post="").toString();
             }
         }
     }

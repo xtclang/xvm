@@ -1,30 +1,37 @@
 /**
  * This is a test for web-based hosting. To run it:
  *
- * 1. Start the hosting module:
+ * 1. Make sure your "hosts" file contains the following entries:
+ *      127.0.0.10 admin.xqiz.it
+ *      127.0.0.20 shop.acme.user.xqiz.it
+ *
+ * 2. Allow the loopback addresses binding by running this script:
+ *        xvm/bin/allowLoopback.sh
+ *
+ * 3. Start the hosting module:
  *      gradle host
  *
- * 2. Compile this test:
+ * 4. Compile this test:
  *      gradle compileOne -PtestName=webTests/TestSimpleWeb
  *
- * 3. Load this test:
- *      curl -i -w '\n' -X POST http://localhost:8080/host/load -G -d 'app=TestSimpleWeb, realm=simple'
+ * 5. Load this test:
+ *      curl -i -w '\n' -X POST http://admin.xqiz.it:8080/host/load -G -d 'app=TestSimpleWeb, domain=shop.acme.user'
  *
- * 4. Use this web application:
- *      curl -i -w '\n' -X GET http://localhost/simple/hello
+ * 6. Use this web application:
+ *      curl -i -w '\n' -X GET http://shop.acme.user.xqiz.it:8080/welcome
  */
 @web.WebModule
 module TestSimpleWeb
     {
     package web import web.xtclang.org;
 
-    @web.WebService("/hello")
+    @web.WebService("/welcome")
     service SimpleApi
         {
         @web.Get
         String hello()
             {
-            return $"Hello World #{++count}".quoted();
+            return $"Welcome! You are a visitor #{++count}".quoted();
             }
 
         Int count;

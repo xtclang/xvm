@@ -9,9 +9,10 @@ mixin WebModule
      *
      * @return the Catalog handler for this WebModule
      */
-    WebServer.Handler createCatalog_(HttpServer httpServer)
+   void createCatalog_(HttpServer httpServer)
         {
-        Router router = new Router();
+        // TODO: this should be a handler factory instead
+        Catalog_ catalog = new Catalog_(httpServer);
 
         for (Class child : this.as(Module).classes)
             {
@@ -19,20 +20,15 @@ mixin WebModule
                 {
                 WebService webService = child.instantiate(structure).as(WebService);
 
-                router.addRoutes(webService, webService.path);
+                catalog.addWebService(webService);
                 }
             }
 
-        // TODO: this should be a handler factory instead
-        return new Catalog_(httpServer, router.freeze(True));
+        catalog.start();
         }
 
-    static service Catalog_
-            extends WebServer.RoutingHandler
+    static service Catalog_(HttpServer httpServer)
+            extends WebServer(httpServer)
         {
-        construct(HttpServer httpServer, Router router)
-            {
-            construct WebServer.RoutingHandler(httpServer, router);
-            }
         }
     }

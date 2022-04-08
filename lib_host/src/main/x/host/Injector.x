@@ -1,3 +1,5 @@
+import ecstasy.annotations.InjectedRef;
+
 /**
  * The Injector service.
  */
@@ -101,8 +103,11 @@ service Injector(Directory appHomeDir, Boolean platform)
             case Timer:
                 if (name == "timer")
                     {
-                    @Inject Timer timer;
-                    return timer;
+                    return (InjectedRef.Options opts) ->
+                        {
+                        @Inject(opts=opts) Timer timer;
+                        return timer;
+                        };
                     }
                 wrongName = True;
                 break;
@@ -182,8 +187,6 @@ service Injector(Directory appHomeDir, Boolean platform)
             case Random:
                 if (name == "random" || name == "rnd")
                     {
-                    import ecstasy.annotations.InjectedRef;
-
                     return (InjectedRef.Options opts) ->
                         {
                         @Inject(opts=opts) Random random;

@@ -3,6 +3,7 @@
  */
 @Concurrent
 service RTServer
+        implements Closeable
     {
     void attachHandler(Handler handler)
         {
@@ -13,6 +14,12 @@ service RTServer
      * Send a response.
      */
     void send(Object context, Int status, String[] headerNames, String[][] headerValues, Byte[] body)
+        {
+        TODO("Native");
+        }
+
+    @Override
+    void close(Exception? cause = Null)
         {
         TODO("Native");
         }

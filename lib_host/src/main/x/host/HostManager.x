@@ -10,6 +10,9 @@ import ecstasy.reflect.FileTemplate;
 import ecstasy.reflect.ModuleTemplate;
 import ecstasy.reflect.TypeTemplate;
 
+import platform.AppHost;
+import platform.WebHost;
+
 import Injector.ConsoleBuffer as Buffer;
 
 
@@ -24,17 +27,17 @@ service HostManager
     @Inject ModuleRepository repository;
 
     /**
-     * Loaded AppHost objects keyed by the module names.
+     * Loaded WebHost objects keyed by the application domain name.
      */
-    Map<String, AppHost> loaded = new HashMap();
+    Map<String, WebHost> loaded = new HashMap();
 
 
     // ----- platform.HostManager API --------------------------------------------------------------
 
     @Override
-    conditional AppHost getAppHost(String appName)
+    conditional WebHost getWebHost(String domain)
         {
-        return loaded.get(appName);
+        return loaded.get(domain);
         }
 
     @Override
@@ -79,67 +82,34 @@ service HostManager
         }
 
     @Override
-    conditional AppHost createAppHost(FileTemplate fileTemplate, Directory appHomeDir, Log errors,
-                                      String realm = "", String[] privateDbNames=[])
+    conditional WebHost createWebHost(FileTemplate fileTemplate, Directory appHomeDir,
+                                      String domain, Boolean platform, Log errors)
         {
-        Injector injector;
-
-        if (String dbModuleName := detectDatabase(fileTemplate))
+        ModuleTemplate template   = fileTemplate.mainModule;
+        String         moduleName = template.displayName;
+        if (!template.findAnnotation("web.WebModule"))
             {
-            DbHost dbHost;
-            if (!privateDbNames.contains(dbModuleName), AppHost ah := loaded.get(dbModuleName))
-                {
-                assert dbHost := ah.is(DbHost);
-                }
-            else
-                {
-                Directory workDir = appHomeDir.parent ?: assert;
-
-                if (!(dbHost := createDbHost(workDir, dbModuleName, errors)))
-                    {
-                    errors.add($"Cannot load the database \"{dbModuleName}\"");
-                    return False;
-                    }
-                }
-
-            injector = createDbInjector(dbHost, appHomeDir);
-            }
-        else
-            {
-            injector = new Injector(appHomeDir, realm == "platform");
-            }
-
-        ModuleTemplate template = fileTemplate.mainModule;
-        String         appName  = template.displayName;
-        Container      container;
-        try
-            {
-            container = new Container(template, Lightweight, repository, injector);
-            }
-        catch (Exception e)
-            {
-            errors.add($"Failed to load \"{appName}\": {e.text}");
+            errors.add($"Module \"{moduleName}\" is not a WebModule");
             return False;
             }
 
-        if (!realm.startsWith('/'))
+        if ((Container container, AppHost[] dependents) :=
+                createContainer(fileTemplate, appHomeDir, platform, errors))
             {
-            realm = '/' + realm;
+            WebHost webHost = new WebHost(container, moduleName, appHomeDir, domain,
+                                createHttpServer(domain), dependents);
+            if (!platform)
+                {
+                loaded.put(domain, webHost);
+                }
+            return True, webHost;
             }
 
-        AppHost appHost = template.findAnnotation("web.WebModule")
-            ? new WebHost(appName, appHomeDir, realm)
-            : new AppHost(appName, appHomeDir);
-
-        appHost.container = container;
-        appHost.makeImmutable();
-
-        loaded.put(appName, appHost);
-        return True, appHost;
+        return False;
         }
 
     @Override
-    void removeAppHost(AppHost appHost)
+    void removeWebHost(WebHost appHost)
         {
         loaded.remove(appHost.moduleName);
         }
@@ -148,15 +118,66 @@ service HostManager
     // ----- helper methods ------------------------------------------------------------------------
 
     /**
-     * @return True iff the primary module for the specified FileTemplate depends on a Database
-     *         module
-     * @return (optional) the Database module name
+     * Create a Container for the specified template..
      */
-    conditional String detectDatabase(FileTemplate fileTemplate)
+    conditional (Container, AppHost[])
+            createContainer(FileTemplate fileTemplate, Directory appHomeDir,
+                            Boolean platform, Log errors)
+        {
+        DbHost[] dependents;
+        Injector injector;
+
+        Map<String, String> dbNames = detectDatabases(fileTemplate);
+        if (dbNames.size > 0)
+            {
+            dependents = new DbHost[];
+
+            Map<String, DbHost> dbHosts = new HashMap();
+            for ((String dbPath, String dbModuleName) : dbNames)
+                {
+                Directory workDir = appHomeDir.parent ?: assert;
+                DbHost    dbHost;
+
+                if (!(dbHost := createDbHost(workDir, dbModuleName, errors)))
+                    {
+                    errors.add($"Cannot load the database \"{dbModuleName}\"");
+                    return False;
+                    }
+                dbHosts.put(dbPath, dbHost);
+                dependents += dbHost;
+                }
+            dependents.makeImmutable();
+            dbHosts   .makeImmutable();
+
+            injector = createDbInjector(dbHosts, appHomeDir);
+            }
+        else
+            {
+            dependents = [];
+            injector   = new Injector(appHomeDir, platform);
+            }
+
+        ModuleTemplate template = fileTemplate.mainModule;
+        try
+            {
+            return True, new Container(template, Lightweight, repository, injector), dependents;
+            }
+        catch (Exception e)
+            {
+            errors.add($"Failed to load \"{template.displayName}\": {e.text}");
+            return False;
+            }
+        }
+
+    /**
+     * @return an array of the Database module names that the specified template depends on
+     */
+    Map<String, String> detectDatabases(FileTemplate fileTemplate)
         {
         import ClassTemplate.Contribution;
 
-        TypeTemplate dbTypeTemplate = oodb.Database.as(Type).template;
+        TypeTemplate        dbTypeTemplate = oodb.Database.as(Type).template;
+        Map<String, String> dbNames        = new HashMap();
 
         for ((String name, String dependsOn) : fileTemplate.mainModule.moduleNamesByPath)
             {
@@ -169,12 +190,12 @@ service HostManager
                     if (contrib.action == Incorporates &&
                             contrib.ingredient.type == dbTypeTemplate)
                         {
-                        return True, dependsOn;
+                        dbNames.put(name, dependsOn);
                         }
                     }
                 }
             }
-        return False;
+        return dbNames;
         }
 
     /**
@@ -210,37 +231,42 @@ service HostManager
 
         dbHost.container = new Container(dbModuleTemplate, Lightweight, repository,
                                 new Injector(dbHomeDir, False));
+        dbHost.makeImmutable();
         return True, dbHost;
         }
 
     /**
      * @return an Injector for the specified DbHost
      */
-    Injector createDbInjector(DbHost dbHost, Directory appHomeDir)
+    Injector createDbInjector(Map<String, DbHost> dbHosts, Directory appHomeDir)
         {
         import oodb.Connection;
         import oodb.RootSchema;
         import oodb.DBUser;
-
-        function Connection(DBUser) createConnection = dbHost.ensureDatabase();
 
         return new Injector(appHomeDir, False)
             {
             @Override
             Supplier getResource(Type type, String name)
                 {
-                if (type.is(Type<Connection>) || type.is(Type<RootSchema>))
+                // TODO: how to match the type!!!
+                if (DbHost dbHost := dbHosts.values.iterator().next())
                     {
-                    return (InjectedRef.Options opts) ->
+                    function Connection(DBUser) createConnection = dbHost.ensureDatabase();
+
+                    if (type.is(Type<Connection>) || type.is(Type<RootSchema>))
                         {
-                        // consider the injector to be passed some info about the calling
-                        // container, so the host could figure out the user
-                        DBUser user = new oodb.model.User(1, "test");
-                        Connection conn = createConnection(user);
-                        return type.is(Type<Connection>)
-                                ? &conn.maskAs<Connection>(type)
-                                : &conn.maskAs<RootSchema>(type);
-                        };
+                        return (InjectedRef.Options opts) ->
+                            {
+                            // consider the injector to be passed some info about the calling
+                            // container, so the host could figure out the user
+                            DBUser user = new oodb.model.User(1, "test");
+                            Connection conn = createConnection(user);
+                            return type.is(Type<Connection>)
+                                    ? &conn.maskAs<Connection>(type)
+                                    : &conn.maskAs<RootSchema>(type);
+                            };
+                        }
                     }
                 return super(type, name);
                 }
@@ -253,5 +279,16 @@ service HostManager
     Directory ensureHome(Directory parentDir, String moduleName)
         {
         return parentDir.dirFor(moduleName).ensure();
+        }
+
+    /**
+     * TODO
+     */
+    HttpServer createHttpServer(String domain)
+        {
+        String address = $"{domain}.xqiz.it:8080";
+        // TODO: ensure a DNS entry
+        @Inject(opts=address) HttpServer server;
+        return server;
         }
     }

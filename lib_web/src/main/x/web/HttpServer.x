@@ -1,4 +1,5 @@
 interface HttpServer
+        extends Closeable
     {
     /**
      * Attach a handler.

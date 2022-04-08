@@ -17,59 +17,31 @@ module host.xtclang.org
     import ecstasy.reflect.FileTemplate;
     import ecstasy.reflect.ModuleTemplate;
 
-    import platform.AppHost;
     import platform.ErrorLog;
 
     import web.HttpServer;
 
     void run(String[] args=[])
         {
-        @Inject Console console;
-
         HostManager mgr    = new HostManager();
         ErrorLog    errors = new ErrorLog();
 
-        if (args.empty)
+        @Inject Console          console;
+        @Inject Directory        curDir;
+        @Inject ModuleRepository repository;
+
+        // create and configure the host controller
+        console.println($"Starting the host controller...");
+
+        ModuleTemplate controlModule = repository.getResolvedModule("hostControl.xtclang.org");
+        if (Container container :=
+                mgr.createContainer(controlModule.parent, curDir, True, errors))
             {
-            // start the host controller
-            Int portController  = 8080;
-            Int portApplication = 80;
-
-            @Inject("server", portController)  HttpServer httpServerC;
-            @Inject("server", portApplication) HttpServer httpServerA;
-
-            console.println($"Staring the host controller...");
-
-            @Inject ModuleRepository repository;
-            @Inject Directory        curDir;
-
-            ModuleTemplate controllerModule = repository.getResolvedModule("hostControl.xtclang.org");
-
-            assert AppHost ctrlHost :=
-                mgr.createAppHost(controllerModule.parent, curDir, errors, realm="platform");
-
-            ctrlHost.container.invoke("configure", Tuple:(&mgr.maskAs(platform.HostManager),
-                    httpServerC, httpServerA));
+            @Inject("server", "admin.xqiz.it:8080") HttpServer httpAdmin;
+            container.invoke("configure", Tuple:(&mgr.maskAs(platform.HostManager), httpAdmin));
             }
-        else
-            {
-            // host a single individual application
-            String path = args[0];
-            if ((FileTemplate fileTemplate, Directory appHomeDir) := mgr.loadTemplate(path, errors))
-                {
-                if (AppHost appHost := mgr.createAppHost(fileTemplate, appHomeDir, errors))
-                    {
-                    Tuple result = appHost.container.invoke^("run", Tuple:());
-                    &result.whenComplete((r, x) -> appHost.close(x));
 
-                    &result.handle(e ->
-                        {
-                        console.println($"Execution error: {e}");
-                        return Tuple:();
-                        });
-                    }
-                }
-            }
+        // TODO create and configure the account manager, etc.
 
         errors.reportAll(msg -> console.println(msg));
         }

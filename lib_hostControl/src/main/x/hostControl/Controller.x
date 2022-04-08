@@ -1,6 +1,8 @@
+import ecstasy.mgmt.Container;
+
 import ecstasy.reflect.FileTemplate;
 
-import platform.AppHost;
+import platform.WebHost;
 import platform.ErrorLog;
 import platform.HostManager;
 
@@ -15,38 +17,19 @@ import web.WebServer;
 import web.WebServer.Handler;
 import web.WebService;
 
-@WebService
-service Controller
+@WebService("/host")
+service Controller(HostManager mgr)
     {
-    construct(HostManager mgr, HttpServer httpServer)
-        {
-        this.mgr       = mgr;
-        this.webServer = new WebServer(httpServer);
-
-        webServer.start();
-        }
-
     /**
      * The host manager.
      */
-    HostManager mgr;
-
-    /**
-     * The WebServer serving loaded web applications.
-     */
-    WebServer webServer;
-
-    /**
-     * Currently running applications (once-and-done).
-     */
-    Map<String, FutureVar> running = new HashMap();
+    private HostManager mgr;
 
     @Post("/load")
-    (HttpStatus, String) load(@QueryParam("app") String appName, @QueryParam String realm)
+    (HttpStatus, String) load(@QueryParam("app") String appName, @QueryParam String domain)
         {
-        // we assume that the hostControl covers a single "realm", which means that
-        // there is one and only one loaded app for a given name
-        if (mgr.getAppHost(appName))
+        // there is one and only one application per [sub] domain
+        if (mgr.getWebHost(domain))
             {
             return HttpStatus.OK, "Already loaded";
             }
@@ -56,33 +39,32 @@ service Controller
 
         if ((FileTemplate fileTemplate, Directory appHomeDir) := mgr.loadTemplate(path, errors))
             {
-            if (AppHost appHost := mgr.createAppHost(fileTemplate, appHomeDir, errors, realm),
-                        appHost.isWeb)
+            if (WebHost webHost := mgr.createWebHost(fileTemplate, appHomeDir, domain, False, errors))
                 {
-                Tuple result = appHost.container.invoke("createCatalog_", Tuple:(webServer.httpServer));
+                try
+                    {
+                    webHost.container.invoke("createCatalog_", Tuple:(webHost.httpServer));
 
-                webServer.addHandler(appHost.appRealm, result[0].as(Handler));
-                return HttpStatus.OK, "";
+                    return HttpStatus.OK, $"Loaded \"{appName}\" hosting on \"http:{domain}.xqiz.it:8080\"";
+                    }
+                catch (Exception e)
+                    {
+                    webHost.close(e);
+                    }
                 }
             }
-        return HttpStatus.NotFound, errors.errors.toString();
+        return HttpStatus.NotFound, errors.toString();
         }
 
-    @Get("/report/{appName}")
+    @Get("/report/{domain}")
     @Produces("application/json")
-    String report(@PathParam String appName)
+    String report(@PathParam String domain)
         {
         String response;
-        if (AppHost appHost := mgr.getAppHost(appName))
+        if (WebHost webHost := mgr.getWebHost(domain))
             {
-            if (FutureVar result := running.get(appName))
-                {
-                response = result.completion.toString();
-                }
-            else
-                {
-                response = "Not running";
-                }
+            Container container = webHost.container;
+            response = $"{container.status} {container.statusIndicator}";
             }
         else
             {
@@ -91,26 +73,14 @@ service Controller
         return response.quoted();
         }
 
-    @Post("/unload/{appName}")
-    HttpStatus unload(@PathParam String appName)
+    @Post("/unload/{domain}")
+    HttpStatus unload(@PathParam String domain)
         {
-        if (AppHost appHost := mgr.getAppHost(appName))
+        if (WebHost webHost := mgr.getWebHost(domain))
             {
-            mgr.removeAppHost(appHost);
+            mgr.removeWebHost(webHost);
+            webHost.close();
 
-            if (appHost.isWeb)
-                {
-                webServer.removeHandler(appHost.appRealm);
-                }
-            else
-                {
-                if (FutureVar result := running.get(appName), !result.assigned)
-                    {
-                    // TODO GG: appHost.container.kill();
-                    result.set(Tuple:());
-                    }
-                running.remove(appName);
-                }
             return HttpStatus.OK;
             }
         return HttpStatus.NotFound;

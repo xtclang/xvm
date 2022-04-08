@@ -37,8 +37,6 @@ import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 import org.xvm.runtime.template.collections.xArray.Mutability;
 import org.xvm.runtime.template.collections.xByteArray;
 
-import org.xvm.runtime.template.numbers.xIntLiteral.IntNHandle;
-
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
@@ -72,6 +70,7 @@ public class xRTServer
         {
         markNativeMethod("attachHandler", null, VOID);
         markNativeMethod("send"         , null, VOID);
+        markNativeMethod("close"        , null, VOID);
 
         getCanonicalType().invalidateTypeInfo();
         }
@@ -81,15 +80,29 @@ public class xRTServer
      */
     public ObjectHandle ensureServer(Frame frame, ObjectHandle hOpts)
         {
-        long lPort = hOpts instanceof JavaLong   hInt ? hInt.getValue() :
-                     hOpts instanceof IntNHandle hLit ? hLit.getValue().getLong()
-                                                      : 80;
+        String sAddress = ((StringHandle) hOpts).getStringValue();
+        int    ofPort   = sAddress.indexOf(':');
+        String sHost    = sAddress;
+        int    nPort    = 8080;
         try
             {
-            HttpServer httpServer = HttpServer.create(new InetSocketAddress((int) lPort), 0);
+            if (ofPort >= 0)
+                {
+                sHost  = sAddress.substring(0, ofPort);
+                nPort  = Integer.valueOf(sAddress.substring(ofPort+1));
+                }
+            }
+        catch (Exception e)
+            {
+            return new DeferredCallHandle(xException.illegalArgument(frame, e.getMessage()));
+            }
+
+        try
+            {
+            HttpServer httpServer = HttpServer.create(new InetSocketAddress(sHost, nPort), 0);
 
             ServiceContext context =
-                    frame.f_context.f_container.createServiceContext("HttpServer-" + lPort);
+                    frame.f_context.f_container.createServiceContext("HttpServer@" + sAddress);
             ServiceHandle  hService =
                     new HttpServerHandle(getCanonicalClass(), context, httpServer);
             context.setService(hService);
@@ -107,8 +120,17 @@ public class xRTServer
         switch (method.getName())
             {
             case "attachHandler":
+                {
                 HttpServerHandle hServer = (HttpServerHandle) hTarget;
                 return invokeAttachHandler(frame, hServer, (ServiceHandle) hArg);
+                }
+
+            case "close":
+                {
+                HttpServerHandle hServer = (HttpServerHandle) hTarget;
+                hServer.f_httpServer.stop(0);
+                return Op.R_NEXT;
+                }
             }
 
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
@@ -148,7 +170,7 @@ public class xRTServer
             }
 
         ClassStructure  clzHandler = hHandler.getTemplate().getStructure();
-        MethodStructure method     = clzHandler.findMethod("handle", 6);
+        MethodStructure method     = clzHandler.findMethodDeep("handle", m -> m.getParamCount() == 6);
         FunctionHandle  hFunction  = xRTFunction.makeHandle(method).bindTarget(frame, hHandler);
 
         RequestHandler handler = new RequestHandler(hHandler.f_context, hFunction);
@@ -309,7 +331,7 @@ public class xRTServer
     // ----- ObjectHandles -------------------------------------------------------------------------
 
     /**
-     * A {@link ServiceHandle} for the http server service.
+     * A {@link ServiceHandle} for the HttpServer service.
      */
     protected static class HttpServerHandle
             extends ServiceHandle

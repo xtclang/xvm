@@ -6,42 +6,25 @@ service WebServer(HttpServer httpServer)
         implements Handler
     {
     /**
-     * The map of handlers for root paths.
+     * The "down stream" handler.
      */
-    private Map<String, Handler> handlers = new HashMap();
+    @Unassigned
+    private Handler handler;
 
     /**
-     * Add a handler.
+     * The router.
      */
-    void addHandler(String path, Handler handler)
-        {
-        assert:arg !handlers.contains(path);
-        handlers.put(path, handler);
-        }
-
-    /**
-     * Remove a handler.
-     */
-    void removeHandler(String path)
-        {
-        handlers.remove(path);
-        }
+    private Router router = new Router();
 
     /**
      * Add all annotated endpoints from the specified web-service.
      *
      * @param webService  the web-service with annotated endpoints
-     * @param realm       the root path prefix for all endpoints
+     * @param router      an optional router
      */
-    void addWebService(WebService webService, String realm = "", Router? router = Null)
+    void addWebService(WebService webService)
         {
-        if (router == Null)
-            {
-            router = new Router();
-            }
         router.addRoutes(webService, webService.path);
-        router.freeze(True);
-        addHandler(realm, new RoutingHandler(httpServer, router));
         }
 
     /**
@@ -49,6 +32,9 @@ service WebServer(HttpServer httpServer)
      */
     void start()
         {
+        assert !&handler.assigned;
+
+        this.handler = new RoutingHandler(httpServer, router.freeze(True));
         httpServer.attachHandler(this);
         }
 
@@ -59,16 +45,7 @@ service WebServer(HttpServer httpServer)
     void handle(Object context, String uri, String method,
                 String[] headerNames, String[][] headerValues, Byte[] body)
         {
-        for ((String realm, Handler handler) : handlers)
-            {
-            if (uri.startsWith(realm))
-                {
-                handler.handle^(context, uri.substring(realm.size),
-                    method, headerNames, headerValues, body);
-                return;
-                }
-            }
-        httpServer.send(context, HttpStatus.NotFound.code, [], [], []);
+        handler.handle^(context, uri, method, headerNames, headerValues, body);
         }
 
     /**

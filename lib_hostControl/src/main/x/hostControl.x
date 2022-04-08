@@ -15,13 +15,13 @@ module hostControl.xtclang.org // TODO: rename to hostController
     /**
      * Configure the host controller.
      */
-    void configure(HostManager mgr, HttpServer httpController, HttpServer httpPublic)
+    void configure(HostManager mgr, HttpServer httpController)
         {
         WebServer controllerServer = new WebServer(httpController);
-        controllerServer.addWebService(new Controller(mgr, httpPublic), "/host"); // TODO: Controller factory?
+        controllerServer.addWebService(new Controller(mgr)); // TODO: Controller factory?
         controllerServer.start();
 
         @Inject Console console;
-        console.println("Started Ecstasy hosting at http://localhost:8080");
+        console.println("Started the XtcPlatform at http://admin.xqiz.it:8080");
         }
     }
