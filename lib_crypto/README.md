@@ -8,8 +8,8 @@ Status: Prototype, in review stage
 * This is not part of the build yet, and is unlikely to compile without the various
   minor edits that one would expect to have to perform to get new code to compile.
 * This library is intended to serve the `net.xtclang.org` and `web.xtclang.org` modules,
-  but the former is not yet pushed to the public repo, and the latter is still undergoing
-  significant refactoring.
+  but the former is still a prototype, and the latter is still undergoing significant
+  refactoring.
 
 Example code:
 
