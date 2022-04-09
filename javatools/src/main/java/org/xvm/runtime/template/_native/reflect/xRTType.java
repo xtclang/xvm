@@ -41,6 +41,7 @@ import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.DeferredArrayHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
+import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
@@ -180,6 +181,18 @@ public class xRTType
             }
 
         return super.createConstHandle(frame, constant);
+        }
+
+    @Override
+    public ObjectHandle createProxyHandle(ServiceContext ctx, ObjectHandle hTarget,
+                                          TypeConstant typeProxy)
+        {
+        if (typeProxy == null)
+            {
+            // a proxy for a non-shareable TypeHandle is a "foreign" handle
+            return new TypeHandle(getCanonicalClass(), hTarget.getType());
+            }
+        return super.createProxyHandle(ctx, hTarget, typeProxy);
         }
 
     @Override
