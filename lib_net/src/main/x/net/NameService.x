@@ -18,10 +18,10 @@ interface NameService
      * Determine the name that the specified `IPAddress` corresponds to. This process is often
      * called a "reverse lookup".
      *
-     * @param the IPAddress to perform a reverse-lookup on
+     * @param address  the IPAddress to perform a reverse-lookup on
      *
      * @return True if the address had a record
      * @return (conditional) the name that the address is associated with
      */
-    conditional String reverseLookup(IPAddress);
+    conditional String reverseLookup(IPAddress address);
     }

@@ -3,6 +3,8 @@
  */
 module net.xtclang.org
     {
+    package crypto import crypto.xtclang.org;
+
     /**
      *
      */

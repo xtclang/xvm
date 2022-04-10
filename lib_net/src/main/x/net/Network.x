@@ -1,3 +1,5 @@
+import crypto.Algorithms;
+
 /**
  * Represents the network.
  *

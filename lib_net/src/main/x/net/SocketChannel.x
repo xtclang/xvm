@@ -1,4 +1,4 @@
-import io.Channel;
+import ecstasy.io.Channel;
 
 /**
  * SocketChannel provides the ability to read and write from a Socket.
