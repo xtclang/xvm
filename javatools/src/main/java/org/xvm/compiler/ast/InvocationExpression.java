@@ -642,7 +642,12 @@ public class InvocationExpression
                     {
                     return null;
                     }
-                atypeReturn[i] = typeParam.getParamType(0);
+                TypeConstant typeReturn = typeParam.getParamType(0);
+                if (typeReturn.containsUnresolved())
+                    {
+                    return null;
+                    }
+                atypeReturn[i] = typeReturn;
                 }
             }
 
