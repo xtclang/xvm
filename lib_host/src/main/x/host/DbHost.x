@@ -34,6 +34,11 @@ class DbHost(String moduleName, Directory homeDir)
     // ---- run-time support -----------------------------------------------------------------------
 
     /**
+     * The actual [RootSchema] type associated with the DB module represented by this DbHost.
+     */
+    @RO Type schemaType;
+
+    /**
      * Check an existence of the DB (e.g. on disk); create or recover if necessary.
      *
      * @return a connection factory

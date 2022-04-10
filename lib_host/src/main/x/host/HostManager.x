@@ -118,21 +118,25 @@ service HostManager
     // ----- helper methods ------------------------------------------------------------------------
 
     /**
-     * Create a Container for the specified template..
+     * Create a Container for the specified template.
+     *
+     * @return True iff the container has been loaded successfully
+     * @return (optional) the Container
+     * @return (optional) an array of AppHost objects for all dependent containers that have been
+     *         loaded along the "main" container
      */
     conditional (Container, AppHost[])
             createContainer(FileTemplate fileTemplate, Directory appHomeDir,
                             Boolean platform, Log errors)
         {
-        DbHost[] dependents;
+        DbHost[] dbHosts;
         Injector injector;
 
         Map<String, String> dbNames = detectDatabases(fileTemplate);
         if (dbNames.size > 0)
             {
-            dependents = new DbHost[];
+            dbHosts = new DbHost[];
 
-            Map<String, DbHost> dbHosts = new HashMap();
             for ((String dbPath, String dbModuleName) : dbNames)
                 {
                 Directory workDir = appHomeDir.parent ?: assert;
@@ -143,24 +147,22 @@ service HostManager
                     errors.add($"Cannot load the database \"{dbModuleName}\"");
                     return False;
                     }
-                dbHosts.put(dbPath, dbHost);
-                dependents += dbHost;
+                dbHosts += dbHost;
                 }
-            dependents.makeImmutable();
-            dbHosts   .makeImmutable();
+            dbHosts.makeImmutable();
 
             injector = createDbInjector(dbHosts, appHomeDir);
             }
         else
             {
-            dependents = [];
-            injector   = new Injector(appHomeDir, platform);
+            dbHosts  = [];
+            injector = new Injector(appHomeDir, platform);
             }
 
         ModuleTemplate template = fileTemplate.mainModule;
         try
             {
-            return True, new Container(template, Lightweight, repository, injector), dependents;
+            return True, new Container(template, Lightweight, repository, injector), dbHosts;
             }
         catch (Exception e)
             {
@@ -236,9 +238,9 @@ service HostManager
         }
 
     /**
-     * @return an Injector for the specified DbHost
+     * @return an Injector that injects db connections based on the arrays of the specified DbHosts
      */
-    Injector createDbInjector(Map<String, DbHost> dbHosts, Directory appHomeDir)
+    Injector createDbInjector(DbHost[] dbHosts, Directory appHomeDir)
         {
         import oodb.Connection;
         import oodb.RootSchema;
@@ -249,23 +251,29 @@ service HostManager
             @Override
             Supplier getResource(Type type, String name)
                 {
-                // TODO: how to match the type!!!
-                if (DbHost dbHost := dbHosts.values.iterator().next())
+                if (type.is(Type<Connection>))
                     {
-                    function Connection(DBUser) createConnection = dbHost.ensureDatabase();
-
-                    if (type.is(Type<Connection>) || type.is(Type<RootSchema>))
+                    TODO retrieve the Schema type
+                    }
+                if (type.is(Type<RootSchema>))
+                    {
+                    for (DbHost dbHost : dbHosts)
                         {
-                        return (InjectedRef.Options opts) ->
+                        if (dbHost.schemaType.isA(type))
                             {
-                            // consider the injector to be passed some info about the calling
-                            // container, so the host could figure out the user
-                            DBUser user = new oodb.model.User(1, "test");
-                            Connection conn = createConnection(user);
-                            return type.is(Type<Connection>)
-                                    ? &conn.maskAs<Connection>(type)
-                                    : &conn.maskAs<RootSchema>(type);
-                            };
+                            function Connection(DBUser) createConnection = dbHost.ensureDatabase();
+
+                            return (InjectedRef.Options opts) ->
+                                {
+                                // consider the injector to be passed some info about the calling
+                                // container, so the host could figure out the user
+                                DBUser     user = new oodb.model.User(1, "test");
+                                Connection conn = createConnection(user);
+                                return type.is(Type<Connection>)
+                                        ? &conn.maskAs<Connection>(type)
+                                        : &conn.maskAs<RootSchema>(type);
+                                };
+                           }
                         }
                     }
                 return super(type, name);
