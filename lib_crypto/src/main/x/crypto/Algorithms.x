@@ -6,14 +6,13 @@ const Algorithms
     construct(Algorithm[] algorithms)
         {
         Map<String, Algorithm> byName = new ListMap();
-        for (Algorithm : algorithms)
+        for (Algorithm algorithm : algorithms)
             {
-            assert putIfAbsent(algorithm.name, algorithm)
+            assert byName.putIfAbsent(algorithm.name, algorithm)
                     as $"Duplicate Algorithm: {algorithm.name.quoted()}";
             }
 
-        this.byName     = byName;
-        this.algorithms = algorithms;
+        this.byName = byName;
         }
 
     /**
@@ -28,7 +27,7 @@ const Algorithms
     typedef Algorithm|String as Specifier;
 
     /**
-     * Obtain the keyless hashing algorithm of the specified name.
+     * Obtain a [Signer] for the keyless hashing algorithm of the specified name.
      *
      * @param specifier  the algorithm name, or the [Algorithm] object itself
      *
@@ -37,7 +36,8 @@ const Algorithms
      */
     conditional Signer hasherFor(Specifier specifier)
         {
-        if (Algorithm algorithm := findAlgorithm(specifier, Signing, key=Null, False))
+        // TODO:GG: if (Algorithm algorithm := findAlgorithm(specifier, Signing, Key=Null, False))
+        if (Algorithm algorithm := findAlgorithm(specifier, Signing, Null, False))
             {
             return True, algorithm.allocate(key=Null).as(Signer);
             }
@@ -46,7 +46,7 @@ const Algorithms
         }
 
     /**
-     * Obtain the signature verification algorithm of the specified name.
+     * Obtain a [Verifier] for the signature verification algorithm of the specified name.
      *
      * @param specifier  the algorithm name, or the [Algorithm] object itself
      * @param key        the key used to verify the signature
@@ -66,7 +66,7 @@ const Algorithms
         }
 
     /**
-     * Obtain the signing algorithm of the specified name.
+     * Obtain a [Signer] for the signing algorithm of the specified name.
      *
      * @param specifier  the algorithm name, or the [Algorithm] object itself
      * @param key        the key used to sign
@@ -86,7 +86,7 @@ const Algorithms
         }
 
     /**
-     * Obtain the encryption algorithm of the specified name.
+     * Obtain an [Encryptor] for the encryption algorithm of the specified name.
      *
      * @param specifier  the algorithm name, or the [Algorithm] object itself
      * @param key        the key used to encrypt
@@ -106,11 +106,19 @@ const Algorithms
         }
 
     /**
+     * Obtain a [Decryptor] for the encryption algorithm of the specified name.
      *
+     * @param specifier  the algorithm name, or the [Algorithm] object itself
+     * @param key        the key needed to encrypt and decrypt, which is either a symmetric key or
+     *                   a public/private key pair
+     *
+     * @return True iff the `Algorithms` is configured with the specified algorithm, and the key
+     *         is acceptable
+     * @return (conditional) the [Verifier] and [Signer] for the specified algorithm
      */
-    conditional Decryptor decryptorFor(Specifier specifier, Key key);
+    conditional Decryptor decryptorFor(Specifier specifier, Key key)
         {
-        if (Algorithm algorithm := findAlgorithm(algorithm, Encryption, key, True))
+        if (Algorithm algorithm := findAlgorithm(specifier, Encryption, key, True))
             {
             return True, algorithm.allocate(key).as(Decryptor);
             }
@@ -142,7 +150,7 @@ const Algorithms
         String name = specifier.is(String) ? specifier : specifier.name;
         if (Algorithm algorithm := byName.get(name), algorithm.category == category)
             {
-            if ((KeyType keyType, Int size, Int publicSize) := algorithm.keyRequired())
+            if ((Algorithm.KeyType keyType, Int size, Int publicSize) := algorithm.keyRequired())
                 {
                 return key != Null && (key.size == size || !privateRequired && key.size == publicSize)
                         ? (True, algorithm)

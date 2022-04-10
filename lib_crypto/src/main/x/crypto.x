@@ -6,7 +6,9 @@ module crypto.xtclang.org
     /**
      * A cryptographic key is represented as a sequence of bytes.
      */
-    typedef Byte[] Key;
+    typedef Byte[] as Key;
+
+    import ecstasy.reflect.Annotation;
 
     /**
      * There are cases in which annotations are permitted to be added to a returned stream, by

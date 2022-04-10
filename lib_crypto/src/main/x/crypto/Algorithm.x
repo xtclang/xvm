@@ -23,7 +23,6 @@
  *   algorithm used by TLS 1.3 (and no, we did not just make that name up).
  */
 interface Algorithm
-        extends immutable | service
     {
     /**
      * The name of the algorithm. The algorithm names are expected to be both unique and obvious (at

@@ -6,10 +6,10 @@ const Signature
     /**
      * The algorithm used to produce the signature.
      */
-    @RO Algorithm algorithm;
+    Algorithm algorithm;
 
     /**
      * The raw bytes of the signature.
      */
-    @RO Byte[] bytes;
+    Byte[] bytes;
     }
