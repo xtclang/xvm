@@ -244,9 +244,6 @@ public class ImportStatement
                     {
                     return null;
                     }
-
-                // register the import into the context
-                ctx.ensureNameMap().put(sName, resolver.getConstant());
                 }
             }
 

@@ -2,18 +2,26 @@ module TestSimple
     {
     @Inject Console console;
 
-    void run( )
+    package oodb import oodb.xtclang.org;
+
+    void run()
         {
+        import oodb.Connection;
+
+        Test test = new Test()
+            {
+            @Override
+            void foo()
+                {
+                Type t1 = String;
+                Type t2 = Connection.parameterize([t1]); // this used to assert during compilation
+                console.println(t2);
+                }
+            };
         }
 
-    typedef (String | String[]) as QueryParameter;
-
-    QueryParameter test(QueryParameter prevValue, String value)
+    interface Test
         {
-        if (prevValue.is(String))
-            {
-            return [prevValue, value]; // this used to fail to compile
-            }
-        return prevValue + value;
+        void foo();
         }
     }
