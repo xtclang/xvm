@@ -7,6 +7,8 @@ val bridge        = project(":javatools_bridge")
 val ecstasy       = project(":lib_ecstasy")
 val aggregate     = project(":lib_aggregate");
 val collections   = project(":lib_collections");
+val crypto        = project(":lib_crypto");
+val net           = project(":lib_net");
 val json          = project(":lib_json");
 val oodb          = project(":lib_oodb");
 val imdb          = project(":lib_imdb");
@@ -21,6 +23,8 @@ val bridgeMain      = "${bridge.projectDir}/src/main"
 val javatoolsJar    = "${javatools.buildDir}/libs/javatools.jar"
 val aggregateMain   = "${aggregate.projectDir}/src/main";
 val collectionsMain = "${collections.projectDir}/src/main";
+val cryptoMain      = "${crypto.projectDir}/src/main";
+val netMain         = "${net.projectDir}/src/main";
 val jsonMain        = "${json.projectDir}/src/main";
 val oodbMain        = "${oodb.projectDir}/src/main";
 val imdbMain        = "${imdb.projectDir}/src/main";
@@ -127,6 +131,47 @@ val compileCollections = tasks.register<JavaExec>("compileCollections") {
     mainClass.set("org.xvm.tool.Compiler")
 }
 
+val compileCrypto = tasks.register<JavaExec>("compileCrypto") {
+    group       = "Build"
+    description = "Build crypto.xtc module"
+
+    dependsOn(javatools.tasks["build"])
+
+    shouldRunAfter(compileEcstasy)
+
+    jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
+
+    classpath(javatoolsJar)
+    args("-verbose",
+            "-o", "$libDir",
+            "-version", "$version",
+            "-L", "$coreLib",
+            "-L", "$bridgeLib",
+            "$cryptoMain/x/crypto.x")
+    mainClass.set("org.xvm.tool.Compiler")
+}
+
+val compileNet = tasks.register<JavaExec>("compileNet") {
+    group       = "Build"
+    description = "Build net.xtc module"
+
+    dependsOn(javatools.tasks["build"])
+
+    shouldRunAfter(compileCrypto)
+
+    jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
+
+    classpath(javatoolsJar)
+    args("-verbose",
+            "-o", "$libDir",
+            "-version", "$version",
+            "-L", "$coreLib",
+            "-L", "$bridgeLib",
+            "-L", "$libDir",
+            "$netMain/x/net.x")
+    mainClass.set("org.xvm.tool.Compiler")
+}
+
 val compileJson = tasks.register<JavaExec>("compileJson") {
     group       = "Build"
     description = "Build json.xtc module"
@@ -195,7 +240,6 @@ val compileJsonDB = tasks.register<JavaExec>("compileJsonDB") {
     dependsOn(javatools.tasks["build"])
 
     shouldRunAfter(compileJson)
-    shouldRunAfter(compileOODB)
 
     jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
 
@@ -216,7 +260,7 @@ val compileWeb = tasks.register<JavaExec>("compileWeb") {
 
     dependsOn(javatools.tasks["build"])
 
-    shouldRunAfter(compileEcstasy)
+    shouldRunAfter(compileNet)
 
     jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
 
@@ -237,7 +281,6 @@ val compilePlatform = tasks.register<JavaExec>("compilePlatform") {
 
     dependsOn(javatools.tasks["build"])
 
-    shouldRunAfter(compileEcstasy)
     shouldRunAfter(compileWeb)
 
     jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
@@ -261,7 +304,6 @@ val compileHost = tasks.register<JavaExec>("compileHost") {
 
     shouldRunAfter(compileIMDB)
     shouldRunAfter(compileJsonDB)
-    shouldRunAfter(compileWeb)
     shouldRunAfter(compilePlatform)
 
     jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
@@ -338,6 +380,24 @@ tasks.register("build") {
 
     if (collectionsSrc > collectionsDest) {
         dependsOn(compileCollections)
+        }
+
+    // compile crypto.xtclang.org
+    val cryptoSrc = fileTree(cryptoMain).getFiles().stream().
+            mapToLong({f -> f.lastModified()}).max().orElse(0)
+    val cryptoDest = file("$libDir/crypto.xtc").lastModified()
+
+    if (cryptoSrc > cryptoDest) {
+        dependsOn(compileCrypto)
+        }
+
+    // compile net.xtclang.org
+    val netSrc = fileTree(netMain).getFiles().stream().
+            mapToLong({f -> f.lastModified()}).max().orElse(0)
+    val netDest = file("$libDir/net.xtc").lastModified()
+
+    if (netSrc > netDest) {
+        dependsOn(compileNet)
         }
 
     // compile json.xtclang.org

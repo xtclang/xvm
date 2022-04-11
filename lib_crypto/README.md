@@ -5,7 +5,6 @@ Folder: `./lib_crypto/`
 Status: Prototype, in review stage
 
 * This directory contains the Ecstasy code for the standard `crypto.xtclang.org` module.
-* This is not part of the XDK build (yet).
 * This library is intended to serve the `net.xtclang.org` and `web.xtclang.org` modules,
   but the former is still a prototype, and the latter is still undergoing significant
   refactoring.

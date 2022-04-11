@@ -8,6 +8,8 @@ include(":javatools_launcher")  // produces native executables (Win, Mac, Linux)
 include(":lib_ecstasy")         // produces *only* a source zip file (no .xtc), and only on request
 include(":lib_aggregate")       // produces aggregate.xtc
 include(":lib_collections")     // produces collections.xtc
+include(":lib_crypto")          // produces crypto.xtc
+include(":lib_net")             // produces net.xtc
 include(":lib_json")            // produces json.xtc
 include(":lib_oodb")            // produces oodb.xtc
 include(":lib_imdb")            // produces imdb.xtc

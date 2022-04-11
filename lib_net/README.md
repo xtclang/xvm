@@ -5,7 +5,6 @@ Folder: `./lib_net/`
 Status: Prototype, in review stage
 
 * This directory contains the Ecstasy code for the standard `net.xtclang.org` module.
-* This is not part of the XDK build (yet).
 * This library is intended to serve the `web.xtclang.org` module (and anything else that
   needs network communication), but the web module is still undergoing significant
   refactoring.
