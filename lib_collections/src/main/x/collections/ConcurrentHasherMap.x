@@ -702,7 +702,7 @@ const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
             if (FutureVar pending := pendingByKey.get(key))
                 {
                 // there are pending operations, add our action to the end of the list
-                // TODO: GG it would be nice to have a callback when an @Concurrent frame yields
+                // TODO GG: it would be nice to have a callback when an @Concurrent frame yields;
                 // this would allow me to only do the extra bookkeeping when we actually yield
                 pendingByKey.put(key, rVar);
                 pending.whenComplete((_, _) ->

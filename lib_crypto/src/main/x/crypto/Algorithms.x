@@ -36,7 +36,6 @@ const Algorithms
      */
     conditional Signer hasherFor(Specifier specifier)
         {
-        // TODO:GG: if (Algorithm algorithm := findAlgorithm(specifier, Signing, Key=Null, False))
         if (Algorithm algorithm := findAlgorithm(specifier, Signing, Null, False))
             {
             return True, algorithm.allocate(key=Null).as(Signer);
