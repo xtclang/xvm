@@ -1480,18 +1480,60 @@ public class TypeCompositionStatement
                 }
             }
 
-        // check for cyclical contributions
+        // check for cyclical contributions and validate contribution types
         TypeConstant typeThis = component.getIdentityConstant().getType();
         for (Contribution contrib : component.getContributionsAsList())
             {
             // for now, we're just checking self-referencing; circular references should be caught
             // by TypeInfo computation logic, it would be best TODO it here
-            if (contrib.getTypeConstant().equals(typeThis))
+            TypeConstant typeContrib = contrib.getTypeConstant();
+            if (typeContrib.equals(typeThis))
                 {
                 log(errs, Severity.ERROR, Constants.VE_CYCLICAL_CONTRIBUTION,
                     component.getIdentityConstant().getValueString(),
                     contrib.toString());
                 return;
+                }
+
+            switch (contrib.getComposition())
+                {
+                case Extends, Implements, Incorporates:
+                    {
+                    if (!typeContrib.isExplicitClassIdentity(true))
+                        {
+                        Token.Id id;
+                        String   sCode;
+                        switch (contrib.getComposition())
+                            {
+                            case Implements:
+                                if (component.getFormat() != Format.INTERFACE)
+                                    {
+                                    id    = Id.IMPLEMENTS;
+                                    sCode = Constants.VE_IMPLEMENTS_NOT_CLASS;
+                                    break;
+                                    }
+                                // fall through for interfaces
+
+                            case Extends:
+                                id    = Id.EXTENDS;
+                                sCode = Constants.VE_EXTENDS_NOT_CLASS;
+                                break;
+
+                            case Incorporates:
+                                id    = Id.INCORPORATES;
+                                sCode = Constants.VE_INCORPORATES_NOT_CLASS;
+                                break;
+
+                            default:
+                                throw new IllegalStateException();
+                            }
+
+                        findComposition(id).log(errs, Severity.ERROR, sCode,
+                                component.getIdentityConstant().getPathString(),
+                                typeContrib.getValueString());
+                        return;
+                        }
+                    }
                 }
             }
 
@@ -2778,6 +2820,17 @@ public class TypeCompositionStatement
             }
         }
 
+    private AstNode findComposition(Token.Id id)
+        {
+        for (CompositionNode composition : compositions)
+            {
+            if (composition.getKeyword().getId() == id)
+                {
+                return composition;
+                }
+            }
+        return this;
+        }
     /**
      * Parse a documentation comment, extracting the "body" of the documentation inside it.
      *

@@ -23,7 +23,6 @@
  *   algorithm used by TLS 1.3 (and no, we did not just make that name up).
  */
 interface Algorithm
-        // TODO GG: extends immutable | service // (bad error message)
     {
     /**
      * The name of the algorithm. The algorithm names are expected to be both unique and obvious (at

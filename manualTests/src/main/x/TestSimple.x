@@ -6,22 +6,17 @@ module TestSimple
 
     void run()
         {
-        import oodb.Connection;
-
-        Test test = new Test()
-            {
-            @Override
-            void foo()
-                {
-                Type t1 = String;
-                Type t2 = Connection.parameterize([t1]); // this used to assert during compilation
-                console.println(t2);
-                }
-            };
         }
 
-    interface Test
+    class TestC
+            implements Stringable | Random  // this used to cause an assertion
         {
-        void foo();
+        String name;
+        }
+
+    interface TestI
+            extends Stringable | Random   // this used to cause an assertion
+        {
+        String name;
         }
     }

@@ -2295,6 +2295,7 @@ public abstract class TypeConstant
                     {
                     log(errs, Severity.ERROR, VE_EXTENDS_NOT_CLASS, constId.getPathString(),
                             typeExtends.getValueString());
+                    typeExtends = null;
                     break;
                     }
 
@@ -2303,6 +2304,7 @@ public abstract class TypeConstant
                     // some sort of circular loop
                     log(errs, Severity.ERROR, VE_CYCLICAL_CONTRIBUTION, constId.getPathString(),
                             "extends");
+                    typeExtends = null;
                     break;
                     }
 
@@ -2315,6 +2317,7 @@ public abstract class TypeConstant
                     log(errs, Severity.ERROR, VE_EXTENDS_INCOMPATIBLE,
                             constId.getPathString(), struct.getFormat(),
                             constExtends.getPathString(), structExtends.getFormat());
+                    typeExtends = null;
                     break;
                     }
 
@@ -2333,10 +2336,11 @@ public abstract class TypeConstant
                         log(errs, Severity.ERROR, VE_EXTENDS_INCOMPATIBLE,
                                 this.removeAccess().getValueString(), struct.getFormat(),
                                 typeExtends.getValueString(), structExtends.getFormat());
+                        typeExtends = null;
                         }
                     }
-                }
                 break;
+                }
 
             case MIXIN:
                 {
@@ -2368,6 +2372,7 @@ public abstract class TypeConstant
                         log(errs, Severity.ERROR, VE_EXTENDS_NOT_CLASS,
                                 constId.getPathString(),
                                 typeExtends.getValueString());
+                        typeExtends = null;
                         break;
                         }
 
@@ -2376,6 +2381,7 @@ public abstract class TypeConstant
                         {
                         log(errs, Severity.ERROR, VE_EXTENDS_NOT_MIXIN, typeExtends.getValueString(),
                                 constId.getPathString());
+                        typeExtends = null;
                         break;
                         }
 
@@ -2384,6 +2390,7 @@ public abstract class TypeConstant
                         // some sort of circular loop
                         log(errs, Severity.ERROR, VE_CYCLICAL_CONTRIBUTION, constId.getPathString(),
                                 "extends");
+                        typeExtends = null;
                         break;
                         }
 
@@ -2397,8 +2404,8 @@ public abstract class TypeConstant
                     // add fake "into Object"
                     typeInto = pool.typeObject();
                     }
-                }
                 break;
+                }
 
             case INTERFACE:
                 if (constId instanceof NativeRebaseConstant idNative)
@@ -2751,6 +2758,14 @@ public abstract class TypeConstant
     private void processImplements(IdentityConstant constId, TypeConstant typeContrib,
                                    List<Contribution> listProcess, ErrorListener errs)
         {
+        if (!typeContrib.isExplicitClassIdentity(true))
+            {
+            log(errs, Severity.ERROR, VE_IMPLEMENTS_NOT_CLASS,
+                    constId.getPathString(),
+                    typeContrib.getValueString());
+            return;
+            }
+
         // must be an "interface type" (not a class type)
         if (typeContrib.isSingleUnderlyingClass(false))
             {

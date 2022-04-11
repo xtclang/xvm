@@ -237,9 +237,9 @@ public interface Constants
      */
     String VE_CYCLICAL_CONTRIBUTION               = "VERIFY-11";
     /**
-     * {0} mixes into {1}, but is extended by {2} that mixes into the incompatible type {3}.
+     * {0} "implements" {1}, but it is not an explicit class identity.
      */
-    String VE_INTO_INCOMPATIBLE                   = "VERIFY-12";
+    String VE_IMPLEMENTS_NOT_CLASS                = "VERIFY-12";
     /**
      * Unexpected annotation {0} on {1}; annotations can only appear in the beginning of the
      * contribution list.
