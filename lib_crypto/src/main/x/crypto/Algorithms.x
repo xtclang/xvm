@@ -129,7 +129,7 @@ const Algorithms
     // ----- internal ------------------------------------------------------------------------------
 
     /**
-     * Find the specified algorith, and verify that the passed key can be used with the specified
+     * Find the specified algorithm, and verify that the passed key can be used with the specified
      * algorithm.
      *
      * @param specifier        the algorithm name, or the [Algorithm] object itself

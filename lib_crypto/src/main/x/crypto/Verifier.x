@@ -48,12 +48,12 @@ interface Verifier
 
     /**
      * Create an output stream that will verify a signature using all of the data written to (or
-     * thru) the stream. In theory, this allows a massive amount of signed data to be streamed and
+     * through) the stream. In theory, this allows a massive amount of signed data to be streamed and
      * its signature verified, without having to buffer all of the data in memory.
      *
      * @param signature    the previously generated [Signature] (or `Byte[]`) to verify
      * @param destination  (optional) an underlying stream that the [OutputSigner] will use to write
-     *                     thru all of the data that is written to the `OutputSigner`
+     *                     through all of the data that is written to the `OutputSigner`
      * @param annotations  (optional) one or more mixins to include in the [OutputSigner]
      */
     OutputVerifier createOutputVerifier(Digest        signature,
@@ -61,40 +61,40 @@ interface Verifier
                                         Annotations?  annotation=Null);
 
     /**
-     * A stateful output stream that collects information as it is written to (or thru) the stream,
-     * and then uses that information to verify a previously-provided Signature.
+     * A stateful output stream that collects information as it is written to (or through) the
+     * stream, and then uses that information to verify a previously-provided Signature.
      */
     static interface OutputVerifier
             extends BinaryOutput
         {
         /**
          * Determine if the signature being verified matches the data that has been written to (or
-         * thru) the `OutputVerifier`.
+         * through) the `OutputVerifier`.
          */
         Boolean signatureMatches();
         }
 
     /**
-     * Create an input stream that will verify a signature using all of the data read thru it. The
-     * reason that the signature is not passed to this method is that it may be located in the
+     * Create an input stream that will verify a signature using all of the data read through it.
+     * The reason that the signature is not passed to this method is that it may be located in the
      * stream _after_ the signed data.
      *
      * @param destination  (optional) an underlying stream that the [InputVerifier] will use to read
-     *                     thru all of the data that is read from the `InputVerifier`
+     *                     through all of the data that is read from the `InputVerifier`
      * @param annotations  (optional) one or more mixins to include in the [InputVerifier]
      */
     InputVerifier createInputVerifier(BinaryInput  source,
                                       Annotations? annotations=Null);
 
     /**
-     * A stateful input stream that collects information as data is read thru the stream,  and then
-     * uses that information to verify the passed Signature.
+     * A stateful input stream that collects information as data is read through the stream,  and
+     * then uses that information to verify the passed Signature.
      */
     static interface InputVerifier
             extends BinaryInput
         {
         /**
-         * Determine if the signature being verified matches the data that has been read thru the
+         * Determine if the signature being verified matches the data that has been read through the
          * InputVerifier.
          *
          * @param signature    the previously generated [Signature] (or `Byte[]`) to verify

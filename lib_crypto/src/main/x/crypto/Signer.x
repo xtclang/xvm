@@ -37,10 +37,10 @@ interface Signer
 
     /**
      * Create an output stream that will produce a signature from all of the data written to (or
-     * thru) it.
+     * through) it.
      *
      * @param destination  (optional) an underlying stream that the [OutputSigner] will use to write
-     *                     thru all of the data that is written to the `OutputSigner`
+     *                     through all of the data that is written to the `OutputSigner`
      * @param annotation   (optional) one or more mixins to include in the returned [OutputSigner]
      */
     OutputSigner createOutputSigner(BinaryOutput?                destination=Null,
