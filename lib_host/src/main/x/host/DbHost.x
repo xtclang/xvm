@@ -15,6 +15,7 @@ import ecstasy.reflect.TypeParameter;
 import ecstasy.reflect.TypeTemplate;
 
 import oodb.DBObject.DBCategory;
+import oodb.RootSchema;
 
 
 /**
@@ -36,7 +37,7 @@ class DbHost(String moduleName, Directory homeDir)
     /**
      * The actual [RootSchema] type associated with the DB module represented by this DbHost.
      */
-    @RO Type schemaType;
+    @RO Type<RootSchema> schemaType;
 
     /**
      * Check an existence of the DB (e.g. on disk); create or recover if necessary.

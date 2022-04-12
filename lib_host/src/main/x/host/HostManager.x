@@ -109,9 +109,9 @@ service HostManager
         }
 
     @Override
-    void removeWebHost(WebHost appHost)
+    void removeWebHost(WebHost webHost)
         {
-        loaded.remove(appHost.moduleName);
+        loaded.remove(webHost.domain);
         }
 
 
@@ -251,15 +251,28 @@ service HostManager
             @Override
             Supplier getResource(Type type, String name)
                 {
-                if (type.is(Type<Connection>))
+                if (type.is(Type<RootSchema>) || type.is(Type<Connection>))
                     {
-                    TODO retrieve the Schema type
-                    }
-                if (type.is(Type<RootSchema>))
-                    {
+                    Type schemaType;
+                    if (type.is(Type<RootSchema>))
+                        {
+                        schemaType = type;
+                        }
+                    else
+                        {
+                        assert schemaType := type.resolveFormalType("Schema");
+                        }
+
                     for (DbHost dbHost : dbHosts)
                         {
-                        if (dbHost.schemaType.isA(type))
+                        // the actual type that "createConnection" produces is:
+                        // RootSchema + Connection<RootSchema>;
+
+                        Type dbSchemaType   = dbHost.schemaType;
+                        Type typeConnection = Connection;
+
+                        typeConnection = dbSchemaType + typeConnection.parameterize([dbSchemaType]);
+                        if (typeConnection.isA(schemaType))
                             {
                             function Connection(DBUser) createConnection = dbHost.ensureDatabase();
 

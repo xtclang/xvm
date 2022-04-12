@@ -5,6 +5,7 @@ import jsondb.CatalogMetadata;
 
 import oodb.Connection;
 import oodb.DBUser;
+import oodb.RootSchema;
 
 /**
  * Host for jsondb-based DB module.
@@ -63,7 +64,7 @@ class JsondbHost(String dbModuleName, Directory homeDir)
         }
 
     @Override
-    Type schemaType.get()
+    Type<RootSchema> schemaType.get()
         {
         return meta.Schema;
         }
