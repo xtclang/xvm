@@ -1,50 +1,55 @@
+/**
+ * A test for DBProcessor functionality.
+ *
+ *  To prepare the test, follow steps 1-5 outlined in TestSimpleWeb.
+ *
+ *  To run the test:
+ *      curl -i -w '\n' -X GET http://[domain]:8080/run
+ *
+ *  To check the counters:
+ *      curl -i -w '\n' -X GET http://[domain]:8080/dump
+ *
+ * See [CounterDB] database module.
+ */
+@web.WebModule
 module CounterTest
     {
+    package web import web.xtclang.org;
+
     package CounterDB import CounterDB;
 
     import CounterDB.CounterSchema;
     import CounterDB.oodb.Connection;
     import CounterDB.oodb.DBMap;
 
-    @Inject Console console;
-    @Inject Random  rnd;
-    @Inject Timer   timer;
-
-    void run()
+    @web.WebService
+    service Test
         {
+        @Inject Random        rnd;
         @Inject CounterSchema schema;
 
-        // first, show the state
-        dump(schema.counters);
-
-        for (Int i : 1..3)
+        @web.Get("/run")
+        String run()
             {
-            // pick a letter to schedule
-            String name = ('A' + rnd.uint(26).toUInt32()).toString();
-            schema.logger.add($"cranking up schedule \"{name}\"...");
-            schema.cranker.schedule(name);
+            for (Int i : 1..3)
+                {
+                // pick a letter to schedule
+                String name = ('A' + rnd.uint(26).toUInt32()).toString();
+                schema.logger.add($"cranking up schedule \"{name}\"...");
+                schema.cranker.schedule(name);
+                }
+            return dump();
             }
-        wait(schema, Duration:5s);
-        }
 
-    void wait(CounterSchema schema, Duration duration)
-        {
-        @Inject Timer timer;
-
-        @Future Tuple<> result;
-        timer.schedule(duration, () ->
+        @web.Get("/dump")
+        String dump()
             {
-            dump(schema.counters);
-            result=Tuple:();
-            });
-        return result;
-        }
-
-    void dump(DBMap<String, Int> map)
-        {
-        for ((String name, Int count) : map)
-            {
-            console.println($"{name}={count}");
+            StringBuffer buf = new StringBuffer();
+            for ((String name, Int count) : schema.counters)
+                {
+                buf.append($"{name}={count}, ");
+                }
+            return buf.toString().quoted();
             }
         }
     }

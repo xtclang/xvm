@@ -1,18 +1,18 @@
 /**
  * This is a test app for the Bank demo.
  *
- * To compile this test:
+ *  To prepare the test, follow steps 1-5 outlined in TestSimpleWeb.
  *
- *     gradle compileOne -PtestName=BankStressTest
- *
- * To run this test using the "jsonDB" database implementation:
- *
- *     gradle -Dxvm.db.impl=json hostOne -PtestName=BankStressTest
+ *  To run the test:
+ *      curl -i -w '\n' -X GET http://[domain]:8080/run
  *
  * See [Bank] database module.
  */
+@web.WebModule
 module BankStressTest
     {
+    package web import web.xtclang.org;
+
     package Bank import Bank;
 
     import Bank.Account;
@@ -25,57 +25,38 @@ module BankStressTest
     static Int      BRANCHES      = 24;
     static Int      MAX_ACCOUNTS  = 100;
 
-    void run()
+    @web.WebService
+    service Test
         {
-        Duration openFor  = TEST_DURATION;
-        Branch[] branches = new Branch[BRANCHES](i -> new Branch(i.toUInt64()));
-        for (Branch branch : branches)
+        @web.Get("/run")
+        String run()
             {
-            branch.doBusiness^(openFor);
-            }
-        wait(branches, openFor + Duration.ofSeconds(3)); // give them extra time to close naturally
-        }
-
-    void wait(Branch[] branches, Duration duration)
-        {
-        @Inject Timer timer;
-
-        @Future Tuple<> result;
-
-        // schedule a "forced shutdown"
-        timer.schedule(duration, () ->
-            {
-            if (!&result.assigned)
-                {
-                @Inject Connection bank;
-                bank.log.add("Shutting down the test");
-                result=Tuple:();
-                }
-            });
-
-        private void checkOpen(Branch[] branches, Timer timer, FutureVar<Tuple> result)
-            {
+            Branch[] branches = new Branch[BRANCHES](i -> new Branch(i.toUInt64()));
             for (Branch branch : branches)
                 {
-                // wait until all branches are closed
-                if (branch.status == Open)
-                    {
-                    timer.schedule(Duration.ofSeconds(10), &checkOpen(branches, timer, result));
-                    return;
-                    }
+                branch.doBusiness^(TEST_DURATION);
+                }
 
-                if (!result.assigned)
+            private void checkOpen(Branch[] branches, Timer timer)
+                {
+                for (Branch branch : branches)
                     {
-                    @Inject Connection bank;
-                    bank.log.add("All branches have closed");
-                    result.set(Tuple:());
+                    // wait until all branches are closed
+                    if (branch.status == Open)
+                        {
+                        timer.schedule(Duration.ofSeconds(10), &checkOpen(branches, timer));
+                        return;
+                        }
                     }
-               }
+                @Inject Connection bank;
+                bank.log.add("All branches have closed");
+                }
+
+            // schedule a periodic check
+            @Inject Timer timer;
+            timer.schedule(Duration.ofSeconds(10), &checkOpen(branches, timer));
+            return "Bank is open";
             }
-
-        // schedule a periodic check
-        timer.schedule(Duration.ofSeconds(10), &checkOpen(branches, timer, &result));
-        return result;
         }
 
     service Branch(UInt branchId)
