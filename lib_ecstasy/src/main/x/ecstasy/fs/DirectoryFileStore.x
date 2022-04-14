@@ -152,10 +152,14 @@ const DirectoryFileStore(Directory origDir, Boolean readOnly = False)
      */
     protected <Node extends File|Directory> Node wrap(Node origNode)
         {
-        return (origNode.is(File)
-                    ? new FileWrapper(origNode)
-                    : new DirectoryWrapper(origNode))
-                .as(Node);
+        if (origNode.is(File))
+            {
+            File file = new FileWrapper(origNode);
+            return &file.maskAs(File).as(Node);
+            }
+
+        Directory dir = new DirectoryWrapper(origNode);
+        return &dir.maskAs(Directory).as(Node);
         }
 
 
