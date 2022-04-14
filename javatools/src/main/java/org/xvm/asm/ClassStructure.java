@@ -1268,6 +1268,11 @@ public class ClassStructure
         {
         assert typeMixin.isExplicitClassIdentity(true);
 
+        if (typeMixin.getExplicitClassFormat() != Format.MIXIN)
+            {
+            return false;
+            }
+
         TypeConstant typeInto = typeMixin.getExplicitClassInto();
 
         return typeInto.isIntoClassType() &&
