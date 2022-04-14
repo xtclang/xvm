@@ -708,7 +708,42 @@ public class xRTType
             }
 
         @Override
+        public int call1(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
+            {
+            // this can only a call from Call_01
+            return callImpl(frame, ahArg, iReturn);
+            }
+
+        @Override
         public int callT(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
+            {
+            TypeConstant    typeTuple = frame.poolContext().ensureTupleType(f_clzTarget.getType());
+            TypeComposition clzTuple  = xTuple.INSTANCE.ensureClass(typeTuple);
+
+            switch (callImpl(frame, ahArg, Op.A_STACK))
+                {
+                case Op.R_NEXT:
+                    return frame.assignValue(iReturn,
+                        xTuple.makeImmutableHandle(clzTuple, frame.popStack()));
+
+                case Op.R_CALL:
+                    frame.m_frameNext.addContinuation(frameCaller ->
+                        frameCaller.assignValue(iReturn,
+                            xTuple.makeImmutableHandle(clzTuple, frameCaller.popStack())));
+                    return Op.R_CALL;
+
+                case Op.R_EXCEPTION:
+                    return Op.R_EXCEPTION;
+
+                default:
+                    throw new IllegalStateException();
+                }
+            }
+
+        /**
+         * Call the constructor.
+         */
+        private int callImpl(Frame frame, ObjectHandle[] ahArg, int iReturn)
             {
             ObjectHandle hParent = null;
             if (f_fParent)
@@ -720,29 +755,12 @@ public class xRTType
             TypeComposition clzTarget   = f_clzTarget;
             ClassTemplate   template    = clzTarget.getTemplate();
             MethodStructure constructor = f_constructor;
-            ConstantPool    pool        = frame.poolContext();
-            TypeConstant    typeTuple   = pool.ensureTupleType(clzTarget.getType());
-            TypeComposition clzTuple    = xTuple.INSTANCE.ensureClass(typeTuple);
 
             // constructor could be null for a synthetic run-time structure-based constructor
             // created above by "getPropertyConstructors" method
-            int iResult = constructor == null
-                ? template.proceedConstruction(frame, null, false, ahArg[0], Utils.OBJECTS_NONE, Op.A_STACK)
-                : template.construct(frame, constructor, clzTarget, hParent, ahArg, Op.A_STACK);
-            switch (iResult)
-                {
-                case Op.R_NEXT:
-                    return frame.assignValue(iReturn,
-                        xTuple.makeImmutableHandle(clzTuple, frame.popStack()));
-
-                case Op.R_CALL:
-                    frame.m_frameNext.addContinuation(frameCaller ->
-                        frameCaller.assignValue(iReturn,
-                            xTuple.makeImmutableHandle(clzTuple, frameCaller.popStack())));
-                    // fall through
-                default:
-                    return iResult;
-                }
+            return constructor == null
+                ? template.proceedConstruction(frame, null, false, ahArg[0], Utils.OBJECTS_NONE, iReturn)
+                : template.construct(frame, constructor, clzTarget, hParent, ahArg, iReturn);
             }
 
         @Override

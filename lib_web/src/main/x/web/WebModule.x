@@ -6,8 +6,6 @@ mixin WebModule
     {
     /**
      * Collect all roots declared by this Module.
-     *
-     * @return the Catalog handler for this WebModule
      */
    void createCatalog_(HttpServer httpServer)
         {
@@ -16,10 +14,23 @@ mixin WebModule
 
         for (Class child : this.as(Module).classes)
             {
-            if (child.implements(WebService), Struct structure := child.allocate())
+            if (child.implements(WebService))
                 {
-                WebService webService = child.instantiate(structure).as(WebService);
+                WebService webService;
 
+                if (function Object() constructor := child.PublicType.defaultConstructor())
+                    {
+                    webService = constructor().as(WebService);
+                    }
+                else if (Struct structure := child.allocate())
+                    {
+                    webService = child.instantiate(structure).as(WebService);
+                    }
+                else
+                    {
+                    // how to report a non-instantiatable WebService
+                    continue;
+                    }
                 catalog.addWebService(webService);
                 }
             }
