@@ -1938,17 +1938,6 @@ public abstract class TypeConstant
                         }
                     break;
                     }
-
-                case Incorporates:
-                    {
-                    ClassConstant idMixin = (ClassConstant) contrib.getTypeConstant().
-                            getSingleUnderlyingClass(true);
-                    if (listAnnos == null)
-                        {
-                        listAnnos = new ArrayList<>();
-                        }
-                    listAnnos.add(idMixin.getConstantPool().ensureAnnotation(idMixin));
-                    }
                 }
             }
         return listAnnos == null
