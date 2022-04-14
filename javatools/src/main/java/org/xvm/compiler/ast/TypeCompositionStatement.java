@@ -1497,43 +1497,34 @@ public class TypeCompositionStatement
 
             switch (contrib.getComposition())
                 {
-                case Extends, Implements, Incorporates:
+                case Extends:
                     {
                     if (!typeContrib.isExplicitClassIdentity(true))
                         {
-                        Token.Id id;
-                        String   sCode;
-                        switch (contrib.getComposition())
-                            {
-                            case Implements:
-                                if (component.getFormat() != Format.INTERFACE)
-                                    {
-                                    id    = Id.IMPLEMENTS;
-                                    sCode = Constants.VE_IMPLEMENTS_NOT_CLASS;
-                                    break;
-                                    }
-                                // fall through for interfaces
-
-                            case Extends:
-                                id    = Id.EXTENDS;
-                                sCode = Constants.VE_EXTENDS_NOT_CLASS;
-                                break;
-
-                            case Incorporates:
-                                id    = Id.INCORPORATES;
-                                sCode = Constants.VE_INCORPORATES_NOT_CLASS;
-                                break;
-
-                            default:
-                                throw new IllegalStateException();
-                            }
-
-                        findComposition(id).log(errs, Severity.ERROR, sCode,
-                                component.getIdentityConstant().getPathString(),
-                                typeContrib.getValueString());
+                        requireClass(component, contrib, typeContrib, errs);
                         return;
                         }
+
+                    Format formatThis    = component.getFormat();
+                    Format formatContrib = typeContrib.getExplicitClassFormat();
+                    if (!formatThis.isExtendsLegal(formatContrib))
+                        {
+                        findComposition(Id.EXTENDS).log(errs,
+                                Severity.ERROR, Constants.VE_EXTENDS_INCOMPATIBLE,
+                                component.getIdentityConstant().getValueString(), formatThis,
+                                typeContrib.getValueString(), formatContrib);
+                        return;
+                        }
+                    break;
                     }
+
+                case Implements, Incorporates:
+                    if (!typeContrib.isExplicitClassIdentity(true))
+                        {
+                        requireClass(component, contrib, typeContrib, errs);
+                        return;
+                        }
+                    break;
                 }
             }
 
@@ -2072,6 +2063,44 @@ public class TypeCompositionStatement
             {
             component.synthesizeConstInterface(false);
             }
+        }
+
+    /**
+     * Error reporting helper.
+     */
+    private void requireClass(ClassStructure component, Contribution contrib,
+                              TypeConstant typeContrib, ErrorListener errs)
+        {
+        Id     id;
+        String sCode;
+        switch (contrib.getComposition())
+            {
+            case Implements:
+                if (component.getFormat() != Format.INTERFACE)
+                    {
+                    id    = Id.IMPLEMENTS;
+                    sCode = Constants.VE_IMPLEMENTS_NOT_CLASS;
+                    break;
+                    }
+                // fall through for interfaces
+
+            case Extends:
+                id    = Id.EXTENDS;
+                sCode = Constants.VE_EXTENDS_NOT_CLASS;
+                break;
+
+            case Incorporates:
+                id    = Id.INCORPORATES;
+                sCode = Constants.VE_INCORPORATES_NOT_CLASS;
+                break;
+
+            default:
+                throw new IllegalStateException();
+            }
+
+        findComposition(id).log(errs, Severity.ERROR, sCode,
+                component.getIdentityConstant().getPathString(),
+                typeContrib.getValueString());
         }
 
     /**
