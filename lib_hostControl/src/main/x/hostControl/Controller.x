@@ -50,6 +50,7 @@ service Controller(HostManager mgr)
                 catch (Exception e)
                     {
                     webHost.close(e);
+                    mgr.removeWebHost(webHost);
                     }
                 }
             }
