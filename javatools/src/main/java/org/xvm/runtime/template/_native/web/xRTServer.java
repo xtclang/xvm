@@ -120,17 +120,10 @@ public class xRTServer
         switch (method.getName())
             {
             case "attachHandler":
-                {
-                HttpServerHandle hServer = (HttpServerHandle) hTarget;
-                return invokeAttachHandler(frame, hServer, (ServiceHandle) hArg);
-                }
+                return invokeAttachHandler(frame, (HttpServerHandle) hTarget, (ServiceHandle) hArg);
 
             case "close":
-                {
-                HttpServerHandle hServer = (HttpServerHandle) hTarget;
-                hServer.f_httpServer.stop(0);
-                return Op.R_NEXT;
-                }
+                return invokeClose(frame, (HttpServerHandle) hTarget);
             }
 
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
@@ -177,6 +170,22 @@ public class xRTServer
         httpServer.createContext("/", handler);
 
         hServer.m_httpHandler = handler;
+        return Op.R_NEXT;
+        }
+
+    /**
+     * Implementation of "close()" method.
+     */
+    private int invokeClose(Frame frame, HttpServerHandle hServer)
+        {
+        HttpServer httpServer = hServer.f_httpServer;
+        if (httpServer.getExecutor() == null)
+            {
+            // we need to compensate for a bug in com.sun.net.httpserver.HttpServer that doesn't
+            // properly close the server socket that hasn't been established
+            httpServer.start();
+            }
+        httpServer.stop(0);
         return Op.R_NEXT;
         }
 
