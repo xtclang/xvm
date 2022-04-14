@@ -143,6 +143,6 @@ public class Call_01
         {
         checkReturnRegister(frame, hFunction.getMethod());
 
-        return hFunction.call1(frame, null, Utils.OBJECTS_NONE, m_nRetValue);
+        return hFunction.call1(frame, null, new ObjectHandle[hFunction.getVarCount()], m_nRetValue);
         }
     }

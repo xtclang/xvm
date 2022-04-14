@@ -90,7 +90,7 @@ public class Call_00
 
             return isDeferred(hFunction)
                     ? hFunction.proceed(frame, CALL)
-                    : ((FunctionHandle) hFunction).call1(frame, null, Utils.OBJECTS_NONE, A_IGNORE);
+                    : callFunction(frame, (FunctionHandle) hFunction);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -98,7 +98,11 @@ public class Call_00
             }
         }
 
+    private static int callFunction(Frame frame, FunctionHandle hFunction)
+        {
+        return hFunction.call1(frame, null, new ObjectHandle[hFunction.getVarCount()], A_IGNORE);
+        }
+
     private static final Frame.Continuation CALL =
-        frameCaller -> ((FunctionHandle) frameCaller.popStack()).
-            call1(frameCaller, null, Utils.OBJECTS_NONE, A_IGNORE);
+        frameCaller -> callFunction(frameCaller, (FunctionHandle) frameCaller.popStack());
     }

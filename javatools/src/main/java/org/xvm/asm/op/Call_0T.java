@@ -145,7 +145,7 @@ public class Call_0T
         {
         checkReturnTupleRegister(frame, hFunction.getMethod());
 
-        return hFunction.callT(frame, null, Utils.OBJECTS_NONE, m_nRetValue);
+        return hFunction.callT(frame, null, new ObjectHandle[hFunction.getVarCount()], m_nRetValue);
         }
 
     @Override
