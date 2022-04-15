@@ -1468,11 +1468,11 @@ public class DebugConsole
                     addVar(cIndent+1, sPath+sElement, sElement, hElement, listVars, mapExpand);
                     }
                 }
-            else
+            else if (hVar instanceof GenericHandle hGeneric)
                 {
                 for (String sField : listFields)
                     {
-                    ObjectHandle hField = ((GenericHandle) hVar).getField(m_frame, sField);
+                    ObjectHandle hField = hGeneric.getField(m_frame, sField);
                     addVar(cIndent+1, sPath+'.'+sField, sField, hField, listVars, mapExpand);
                     }
                 }
