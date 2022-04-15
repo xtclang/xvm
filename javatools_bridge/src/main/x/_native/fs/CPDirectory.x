@@ -97,29 +97,27 @@ const CPDirectory(Object cookie, CPFileStore? fileStore, Path path, DateTime cre
     @Override
     conditional Directory|File find(String name)
         {
-        if (!exists)
-            {
-            return False;
-            }
-
-        Object cookie = contents.get(name);
-        assert cookie != Null;
-
-        return True, new CPDirectory(cookie, fileStore, path + name, created, modified, 1);
+        return contents.get(name);
         }
 
     @Override
     Directory dirFor(String name)
         {
-        TODO
-        // TODO not this: return store.dirFor(path + name);
+        if (Directory|File node := find(name), node.is(Directory))
+            {
+            return node;
+            }
+        throw new AccessDenied();
         }
 
     @Override
     File fileFor(String name)
         {
-        TODO
-        // TODO not this: return store.fileFor(path + name);
+        if (Directory|File node := find(name), node.is(File))
+            {
+            return node;
+            }
+        throw new AccessDenied();
         }
 
     @Override
