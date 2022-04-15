@@ -1060,10 +1060,14 @@ PathName
 
 PathNameParts
     PathNamePart
-    PathNameParts NoWhitespace "." NoWhitespace PathNamePart
+    PathNameParts NoWhitespace PathNameSpecial NoWhitespace PathNamePart
 
 PathNamePart
     IdentifierTrails
+
+PathNameSpecial
+    "."
+    "-"
 
 IdentifierTrails
     IdentifierTrail
@@ -1152,4 +1156,3 @@ NoAutoNarrowModifier
 #       after the ParameterTypeList, and is not consumed by this construction
 FunctionTypeExpression
     "function" "conditional"-opt ReturnList Name-opt "(" TypeExpressionList-opt ")"
-

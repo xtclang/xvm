@@ -4132,7 +4132,6 @@ public class Parser
                 Token   tokData = null;
                 boolean fErr    = false;
                 if (file != null && file.exists()
-                        && (fDir == file.isDirectory())
                         && (fDir || file.canRead()))
                     {
                     if (fBin)
@@ -4244,11 +4243,13 @@ public class Parser
                             return new Token(lPos, tokName.getEndPosition(), Id.LIT_PATH, sb.toString());
                             }
 
-                        switch (peek().getId())
+                        Token.Id id;
+                        switch (id = peek().getId())
                             {
                             case DOT:
+                            case SUB:
                                 tokDot = current();
-                                sb.append('.');
+                                sb.append(id.TEXT);
                                 if (tokDot.hasTrailingWhitespace())
                                     {
                                     log(Severity.ERROR, INVALID_PATH, lPos, tokDot.getEndPosition(), sb.toString());
@@ -4640,22 +4641,23 @@ public class Parser
             case "Directory":
             case "FileStore":
                 {
-                Token   tokFile = parsePath();
-                String  sFile   = (String) tokFile.getValue();
-                boolean fDir    = sFile.endsWith("/");
-                long    lStart  = type.getStartPosition();
-                long    lEnd    = tokFile.getEndPosition();
-                File    file    = null;
+                Token   tokFile  = parsePath();
+                String  sFile    = (String) tokFile.getValue();
+                boolean fReqFile = sType.equals("File");
+                boolean fReqDir  = sFile.endsWith("/") || !fReqFile;
+                long    lStart   = type.getStartPosition();
+                long    lEnd     = tokFile.getEndPosition();
+                File    file     = null;
                 try
                     {
                     file = m_source.resolvePath(sFile);
                     }
                 catch (IOException ignore) {}
 
-                if (file == null || !file.exists()
-                        || (fDir != file.isDirectory())
-                        || (fDir != (sType.equals("Directory") || sType.equals("FileStore")))
-                        || !(fDir || file.canRead()))
+                if (file == null || !file.exists()              // path must exist
+                        || fReqFile && fReqDir                  // can't be both a file and a dir
+                        || fReqDir  && !file.isDirectory()      // dir is expected
+                        || fReqFile && !file.canRead())         // file is expected
                     {
                     log(Severity.ERROR, INVALID_PATH, lStart, lEnd, sFile);
                     if (file == null)

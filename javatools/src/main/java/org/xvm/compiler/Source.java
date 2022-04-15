@@ -191,8 +191,8 @@ public class Source
             return file.isDirectory() ? file : null;
             }
 
-        boolean fDir = sFile.endsWith("/");
-        if (fDir)
+        boolean fRequireDir = sFile.endsWith("/");
+        if (fRequireDir)
             {
             sFile = sFile.substring(0, sFile.length()-1);
             }
@@ -255,7 +255,7 @@ public class Source
                 }
             }
 
-        return fDir == file.isDirectory() ? file : null;
+        return fRequireDir && !file.isDirectory() ? null : file;
         }
     private transient int m_cUp;    // Java needs multiple return values. This is a hack.
 
