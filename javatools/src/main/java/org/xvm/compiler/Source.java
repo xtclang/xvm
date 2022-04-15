@@ -21,8 +21,8 @@ import static org.xvm.util.Handy.readFileChars;
 
 
 /**
- * A representation of a XTC source code file, handling the first two phases of
- * lexical analysis (line termination, location and unicode escapes).
+ * A representation of an XTC source code file, handling the first two phases of lexical analysis
+ * (line termination, location and unicode escapes).
  */
 public class Source
         implements Constants, Cloneable
@@ -566,10 +566,9 @@ public class Source
             {
             // go back until a line terminator is found
             iLineOffset = 0;
-            final char[] ach = m_ach;
             for (int of = m_of; of > 0; )
                 {
-                if (isLineTerminator(ach[--of]))
+                if (isLineTerminator(m_ach[--of]))
                     {
                     break;
                     }
@@ -772,12 +771,12 @@ public class Source
     /**
      * The source code.
      */
-    private char[] m_ach;
+    private final char[] m_ach;
 
     /**
      * The length of the source code.
      */
-    private int m_cch;
+    private final int m_cch;
 
     /**
      * The current offset within the source code.
