@@ -1050,7 +1050,7 @@ public class ServiceContext
         }
 
     /**
-     * Post and asynchronous "call later" message to this context. Any exception thrown by the
+     * Post an asynchronous "call later" message to this context. Any exception thrown by the
      * called function will be reported as an "UnhandledExceptionNotification" (see Service.x).
      *
      * Unlike any of the "send*" methods below, there is no "originating" fiber in this case and
@@ -1077,7 +1077,7 @@ public class ServiceContext
         }
 
     /**
-     * Post and asynchronous "call later" message to this context.
+     * Post an asynchronous "call later" message to this context.
      *
      * The caller is responsible for handling any potential exceptions thrown by the called
      * function, which would be provided via the returned CompletableFuture.
@@ -1103,7 +1103,7 @@ public class ServiceContext
         }
 
     /**
-     * Send and asynchronous Op-based message to this context with one return value. The caller
+     * Send an asynchronous Op-based message to this context with one return value. The caller
      * will be blocked until the asynchronous operation completes.
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
@@ -1122,7 +1122,7 @@ public class ServiceContext
         }
 
     /**
-     * Send and asynchronous "construct service" request to this context.
+     * Send an asynchronous "construct service" request to this context.
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
@@ -1150,7 +1150,7 @@ public class ServiceContext
         }
 
     /**
-     * Send and asynchronous "allocate structure" request to this context.
+     * Send an asynchronous "allocate structure" request to this context.
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
@@ -1180,7 +1180,7 @@ public class ServiceContext
         }
 
     /**
-     * Send and asynchronous "invoke" request with zero or one return value.
+     * Send an asynchronous "invoke" request with zero or one return value.
      *
      * @param fTuple   if true, the tuple is expected as a result of async execution
      * @param iReturn  a register id ({@link Op#A_IGNORE_ASYNC} for fire and forget)
@@ -1270,7 +1270,7 @@ public class ServiceContext
         }
 
     /**
-     * Send and asynchronous "invoke" request with multiple return values.
+     * Send an asynchronous "invoke" request with multiple return values.
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
@@ -1330,7 +1330,7 @@ public class ServiceContext
         }
 
     /**
-     * Send and asynchronous property "read" operation request. The caller will be blocked until the
+     * Send an asynchronous property "read" operation request. The caller will be blocked until the
      * result is returned.
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
@@ -1366,7 +1366,7 @@ public class ServiceContext
         }
 
     /**
-     * Send and asynchronous property "update" operation request. The caller will be blocked until
+     * Send an asynchronous property "update" operation request. The caller will be blocked until
      * the asynchronous operation completes.
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
@@ -1413,7 +1413,7 @@ public class ServiceContext
         }
 
     /**
-     * Send and asynchronous "constant initialization" message.
+     * Send an asynchronous "constant initialization" message.
      */
     public CompletableFuture<ObjectHandle> sendConstantRequest(Frame frameCaller,
                                                                List<SingletonConstant> listConstants)
