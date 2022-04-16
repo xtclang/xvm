@@ -17,6 +17,9 @@ const CPDirectory(Object cookie, CPFileStore? fileStore, Path path, DateTime cre
     construct (Object cookie)
         {
         super(cookie);
+
+        fileStore = new CPFileStore(path.name, cookie);
+        path      = ROOT;
         }
 
     @Override
@@ -97,7 +100,11 @@ const CPDirectory(Object cookie, CPFileStore? fileStore, Path path, DateTime cre
     @Override
     conditional Directory|File find(String name)
         {
-        return contents.get(name);
+        return name.size == 0
+                ? (True, this)
+                : name.indexOf('/')
+                    ? store.find(path + name)
+                    : contents.get(name);
         }
 
     @Override

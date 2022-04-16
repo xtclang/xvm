@@ -21,7 +21,6 @@ const CPFileNode(Object cookie, CPFileStore? fileStore, Path path, DateTime crea
     @Override
     FileStore store.get()
         {
-        // TODO GG: create a "single node" FileStore
         return fileStore ?: throw new IllegalState("standalone resource") ;
         }
 

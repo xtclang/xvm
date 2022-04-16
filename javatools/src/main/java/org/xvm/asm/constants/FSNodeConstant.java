@@ -177,7 +177,8 @@ public class FSNodeConstant
         LiteralConstant constPath = m_constPath;
         if (m_constPath == null)
             {
-            constPath = new LiteralConstant(getConstantPool(), Format.Path, getName(), getName());
+            constPath = m_constPath =
+                new LiteralConstant(getConstantPool(), Format.Path, getName(), getName());
             }
         return constPath;
         }
@@ -421,7 +422,7 @@ public class FSNodeConstant
     /**
      * The format of this constant.
      */
-    private Format m_fmt;
+    private final Format m_fmt;
 
     /**
      * Holds the index of the node name during deserialization.
@@ -486,4 +487,3 @@ public class FSNodeConstant
      */
     private transient ObjectHandle m_handle;
     }
-

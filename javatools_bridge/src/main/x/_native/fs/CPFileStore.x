@@ -14,8 +14,8 @@ const CPFileStore(String path, Object constRoot)
     @Override
     @Lazy Directory root.calc()
         {
-        (Boolean isdir, String name, DateTime created, DateTime modified, Int size) = loadNode(constRoot);
-        assert isdir;
+        (Boolean isDir, String name, DateTime created, DateTime modified, Int size) = loadNode(constRoot);
+        assert isDir;
         return new CPDirectory(constRoot, this, Path.ROOT, created, modified, size);
         }
 
@@ -30,7 +30,7 @@ const CPFileStore(String path, Object constRoot)
             }
 
         Directory dir = root;
-        Segments: for (Path segment : path.as(List<Path>)) // TODO CP - see Path.x
+        Segments: for (Path segment : path.toArray())
             {
             switch (segment.form)
                 {
@@ -180,7 +180,7 @@ const CPFileStore(String path, Object constRoot)
     /**
      * Load meta-data for a node.
      */
-    static (Boolean isdir, String name, DateTime created, DateTime modified, Int size) loadNode(Object constNode)
+    static (Boolean isDir, String name, DateTime created, DateTime modified, Int size) loadNode(Object constNode)
         {
         TODO("native");
         }
