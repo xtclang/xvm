@@ -1,25 +1,19 @@
-import ecstasy.fs.Directory;
-import ecstasy.fs.File;
 import ecstasy.fs.FileNode;
 
 /**
- * A web service that serves static content.
+ * A mixin that represents a static content.
+ *
  * The content can be a single file or a directory of files.
  */
-const StaticContent
+mixin StaticContent(FileNode fileNode, MediaType mediaType, String path = "/")
+        extends WebService(path)
     {
-    construct(FileNode fileNode, MediaType mediaType)
+    assert()
         {
         assert:arg fileNode.exists && fileNode.readable;
-        this.fileNode  = fileNode;
-        this.mediaType = mediaType;
         }
 
-    private FileNode fileNode;
-
-    private MediaType mediaType;
-
-    @Get()
+    @Get
     conditional HttpResponse get()
         {
         FileNode f = fileNode;
@@ -28,13 +22,14 @@ const StaticContent
             HttpResponse response = new HttpResponse();
             response.body = f.contents;
             response.headers.setContentType(mediaType);
+            response.makeImmutable();
             return True, response;
             }
         return False;
         }
 
-    @Get("/{name}")
-    conditional HttpResponse getResource(@PathParam("name") String name)
+    @Get("/{name: .+}")
+    conditional HttpResponse getResource(@PathParam String name)
         {
         FileNode dir = fileNode;
         if (dir.is(Directory))
@@ -44,6 +39,7 @@ const StaticContent
                 HttpResponse response = new HttpResponse();
                 response.body = file.contents;
                 response.headers.setContentType(mediaType);
+                response.makeImmutable();
                 return True, response;
                 }
             }
