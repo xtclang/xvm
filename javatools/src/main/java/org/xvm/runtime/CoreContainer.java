@@ -396,9 +396,9 @@ public class CoreContainer
                                      Consumer<ObjectHandle> consumer)
         {
         TypeConstant typeRevealed = idProp.getType();
-        if (hTarget instanceof DeferredCallHandle)
+        if (hTarget instanceof DeferredCallHandle hDeferred)
             {
-            ((DeferredCallHandle) hTarget).addContinuation(frameCaller ->
+            hDeferred.addContinuation(frameCaller ->
                 {
                 ObjectHandle hTargetReal = frameCaller.popStack();
                 int          iResult     = hTargetReal.getTemplate().getPropertyValue(

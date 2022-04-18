@@ -352,11 +352,10 @@ public abstract class Container
     public void addResourceSupplier(InjectionKey key, ServiceHandle hService, ObjectHandle hSupplier)
         {
         TypeConstant typeResource = key.f_type;
-        if (hSupplier instanceof FunctionHandle)
+        if (hSupplier instanceof FunctionHandle hFunction)
             {
             Container      container = hService.f_context.f_container;
-            FunctionHandle hProxy    = xRTFunction.makeAsyncDelegatingHandle(
-                                            hService, (FunctionHandle) hSupplier);
+            FunctionHandle hProxy    = xRTFunction.makeAsyncDelegatingHandle(hService, hFunction);
             f_mapResources.put(key, (frame, hOpts) ->
                 {
                 ObjectHandle[] ahArg = new ObjectHandle[hProxy.getParamCount()];
