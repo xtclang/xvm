@@ -16,7 +16,7 @@ import org.xvm.asm.ModuleStructure;
 
 import org.xvm.asm.constants.ModuleConstant;
 
-import org.xvm.runtime.CoreContainer;
+import org.xvm.runtime.MainContainer;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.CoreConstHeap;
 import org.xvm.runtime.Runtime;
@@ -111,7 +111,7 @@ public class Connector
         ModuleConstant idApp = (ModuleConstant) structApp.
                 getChild(moduleApp.getName()).getIdentityConstant();
 
-        m_container = new CoreContainer(f_runtime, f_templates, f_heapGlobal, idApp);
+        m_container = new MainContainer(f_runtime, f_templates, f_heapGlobal, idApp);
         }
 
     /**
@@ -125,7 +125,7 @@ public class Connector
     /**
      * Obtain the container associated with this Connector.
      */
-    public CoreContainer getContainer()
+    public MainContainer getContainer()
         {
         return m_container;
         }
@@ -207,7 +207,7 @@ public class Connector
     /**
      * The container associated with this Connector.
      */
-    private CoreContainer m_container;
+    private MainContainer m_container;
 
     /**
      * Status indicator.

@@ -17,6 +17,7 @@ import java.util.jar.JarFile;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
 import org.xvm.asm.FileStructure;
@@ -25,6 +26,7 @@ import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.TypedefStructure;
 
 import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyClassTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -310,13 +312,11 @@ public class TemplateRegistry
         }
 
     /**
-     * Ensure a ClassTemplate for the specified name.
-     *
-     * Note: this call can only come from the root module.
+     * @return a ClassTemplate for a type associated with the specified constant
      */
-    public ClassTemplate getTemplate(String sName)
+    public ClassTemplate getTemplate(Constant constValue)
         {
-        return getTemplate(getIdentityConstant(sName));
+        return getTemplate(getConstType(constValue)); // must exist
         }
 
     /**
@@ -339,6 +339,16 @@ public class TemplateRegistry
                 }
             }
         return template;
+        }
+
+    /**
+     * Ensure a ClassTemplate for the specified name.
+     *
+     * Note: this call can only come from the root module.
+     */
+    public ClassTemplate getTemplate(String sName)
+        {
+        return getTemplate(getIdentityConstant(sName));
         }
 
     /**
@@ -409,6 +419,134 @@ public class TemplateRegistry
             return clz.ensurePropertyComposition(typeProp.getPropertyInfo());
             }
         return getTemplate(typeActual).ensureClass(typeActual.normalizeParameters());
+        }
+
+    /**
+     * Obtain an object type for the specified constant.
+     */
+    private TypeConstant getConstType(Constant constValue)
+        {
+        String sComponent;
+
+        switch (constValue.getFormat())
+            {
+            case Char:
+            case String:
+            case IntLiteral:
+            case Bit:
+            case Nibble:
+            case CInt8:
+            case Int8:
+            case CInt16:
+            case Int16:
+            case CInt32:
+            case Int32:
+            case CInt64:
+            case Int64:
+            case CInt128:
+            case Int128:
+            case CIntN:
+            case IntN:
+            case CUInt8:
+            case UInt8:
+            case CUInt16:
+            case UInt16:
+            case CUInt32:
+            case UInt32:
+            case CUInt64:
+            case UInt64:
+            case CUInt128:
+            case UInt128:
+            case CUIntN:
+            case UIntN:
+            case FPLiteral:
+            case BFloat16:
+            case Float16:
+            case Float32:
+            case Float64:
+            case Float128:
+            case FloatN:
+            case Dec32:
+            case Dec64:
+            case Dec128:
+            case DecN:
+            case Array:
+            case UInt8Array:
+            case Tuple:
+            case Path:
+            case Date:
+            case Time:
+            case DateTime:
+            case Duration:
+            case Range:
+            case Version:
+            case Module:
+            case Package:
+            case RegEx:
+                return constValue.getType();
+
+            case FileStore:
+                sComponent = "_native.fs.CPFileStore";
+                break;
+
+            case FSDir:
+                sComponent = "_native.fs.CPDirectory";
+                break;
+
+            case FSFile:
+                sComponent = "_native.fs.CPFile";
+                break;
+
+            case Map:
+                sComponent = "collections.ListMap";
+                break;
+
+            case Set:
+                // see xArray.createConstHandle()
+                sComponent = "collections.Array";
+                break;
+
+            case MapEntry:
+                throw new UnsupportedOperationException("TODO: " + constValue);
+
+            case Class:
+            case DecoratedClass:
+            case NativeClass:
+                sComponent = "reflect.Class";
+                break;
+
+            case PropertyClassType:
+                sComponent = "_native.reflect.RTProperty";
+                break;
+
+            case Method:
+                sComponent = ((MethodConstant) constValue).isFunction()
+                        ? "_native.reflect.RTFunction" : "_native.reflect.RTMethod";
+                break;
+
+            case AnnotatedType:
+            case ParameterizedType:
+            case TerminalType:
+            case ImmutableType:
+            case AccessType:
+            case UnionType:
+            case IntersectionType:
+            case DifferenceType:
+                sComponent = "_native.reflect.RTType";
+                break;
+
+            case MultiMethod:   // REVIEW does the compiler ever generate this?
+            case Typedef:       // REVIEW does the compiler ever generate this?
+            case TypeParameter: // REVIEW does the compiler ever generate this?
+            case Signature:
+            case ThisClass:
+            case ParentClass:
+            case ChildClass:
+            default:
+                throw new IllegalStateException(constValue.toString());
+            }
+
+        return getComponent(sComponent).getIdentityConstant().getType();
         }
 
     public static final String NATIVE_MODULE = Constants.PROTOTYPE_MODULE;

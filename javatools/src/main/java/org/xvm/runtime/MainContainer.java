@@ -47,12 +47,12 @@ import org.xvm.runtime.template._native.web.xRTServer;
 
 
 /**
- * The core container (0).
+ * The main container (zero) associated with the main module.
  */
-public class CoreContainer
+public class MainContainer
         extends Container
     {
-    public CoreContainer(Runtime runtime, TemplateRegistry templates, CoreConstHeap heapCore,
+    public MainContainer(Runtime runtime, TemplateRegistry templates, CoreConstHeap heapCore,
                          ModuleConstant idModule)
         {
         super(runtime, null, templates, heapCore, idModule);
@@ -72,7 +72,7 @@ public class CoreContainer
         }
 
 
-    // ----- CoreContainer specific functionality --------------------------------------------------
+    // ----- MainContainer specific functionality --------------------------------------------------
 
     public void start()
         {
