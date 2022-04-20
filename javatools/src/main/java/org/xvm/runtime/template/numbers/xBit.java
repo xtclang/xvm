@@ -11,10 +11,10 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.ByteConstant;
 
 import org.xvm.runtime.ClassTemplate;
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
-import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xBoolean;
@@ -31,9 +31,9 @@ import org.xvm.runtime.template.text.xString;
 public class xBit
         extends xConst
     {
-    public xBit(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xBit(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, false);
+        super(container, structure, false);
         }
 
     @Override
@@ -131,7 +131,7 @@ public class xBit
             case "toUInt64":
                 {
                 TypeConstant  typeRet  = method.getReturn(0).getType();
-                ClassTemplate template = f_templates.getTemplate(typeRet);
+                ClassTemplate template = f_container.getTemplate(typeRet);
                 boolean       fValue   = ((JavaLong) hTarget).getValue() != 0;
 
                 if (template instanceof xConstrainedInteger templateTo)

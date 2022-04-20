@@ -75,9 +75,9 @@ public abstract class ClassTemplate
         implements OpSupport
     {
     // construct the template
-    public ClassTemplate(TemplateRegistry templates, ClassStructure structClass)
+    public ClassTemplate(Container container, ClassStructure structClass)
         {
-        f_templates = templates;
+        f_container = container;
         f_struct    = structClass;
         f_sName     = structClass.getIdentityConstant().getPathString();
 
@@ -134,7 +134,7 @@ public abstract class ClassTemplate
      */
     protected void registerNativeTemplate(ClassTemplate template)
         {
-        f_templates.registerNativeTemplate(template.getCanonicalType(), template);
+        ((NativeContainer) f_container).registerNativeTemplate(template.getCanonicalType(), template);
         }
 
     /**
@@ -201,7 +201,7 @@ public abstract class ClassTemplate
             else
                 {
                 templateSuper = m_templateSuper =
-                    f_templates.getTemplate(f_structSuper.getIdentityConstant());
+                    f_container.getTemplate(f_structSuper.getIdentityConstant());
                 }
             }
         return templateSuper;
@@ -1693,7 +1693,7 @@ public abstract class ClassTemplate
                     }
                 else
                     {
-                    return f_templates.getTemplate(typeBase);
+                    return f_container.getTemplate(typeBase);
                     }
                 }
             }
@@ -2002,7 +2002,7 @@ public abstract class ClassTemplate
         // hRef's type is "struct of annotated type" or PropertyClassTypeConstant
         AnnotatedTypeConstant typeAnno  = (AnnotatedTypeConstant) hRef.getComposition().getBaseType();
         TypeConstant          typeMixin = typeAnno.getAnnotationType();
-        ClassTemplate         mixin     = f_templates.getTemplate(typeMixin);
+        ClassTemplate         mixin     = frame.f_context.f_container.getTemplate(typeMixin);
 
         switch (mixin.proceedConstruction(frame, null, true, hRef, Utils.OBJECTS_NONE, Op.A_STACK))
             {
@@ -2062,14 +2062,15 @@ public abstract class ClassTemplate
     // ----- helpers -------------------------------------------------------------------------------
 
     /**
-     * @return the constant pool associated with the corresponding structure
+     * @return the constant pool associated with the current execution thread
      */
     public ConstantPool pool()
         {
         return ConstantPool.getCurrentPool();
         }
 
-    // =========== TEMPORARY ========
+
+    // =========== TEMPORARY =======================================================================
 
     /**
      * Mark the specified method as native.
@@ -2094,7 +2095,7 @@ public abstract class ClassTemplate
     /**
      * Get a class type for the specified name in the context of the specified template.
      */
-    protected TypeConstant[] getTypeConstants(ClassTemplate template, String[] asType)
+    private TypeConstant[] getTypeConstants(ClassTemplate template, String[] asType)
         {
         if (asType == null)
             {
@@ -2110,7 +2111,7 @@ public abstract class ClassTemplate
         return aType;
         }
 
-    protected TypeConstant getClassType(String sName, ClassTemplate template)
+    private TypeConstant getClassType(String sName, ClassTemplate template)
         {
         ConstantPool pool = template.pool();
 
@@ -2146,7 +2147,7 @@ public abstract class ClassTemplate
                 sSimpleName = sSimpleName.substring(0, sSimpleName.length() - 1);
                 }
 
-            IdentityConstant idClass = f_templates.getIdentityConstant(sSimpleName);
+            IdentityConstant idClass = pool.ensureEcstasyClassConstant(sSimpleName);
             if (idClass != null)
                 {
                 String[] asType = Handy.parseDelimitedString(sParam, ',');
@@ -2172,7 +2173,7 @@ public abstract class ClassTemplate
                 return pool.ensureTerminalTypeConstant(prop.getIdentityConstant());
                 }
 
-            Component component = f_templates.getComponent(sName);
+            Component component = f_container.getClassStructure(sName);
             if (component != null)
                 {
                 IdentityConstant constId = component.getIdentityConstant();
@@ -2482,9 +2483,9 @@ public abstract class ClassTemplate
     public static String[] BOOLEAN = new String[] {"Boolean"};
 
     /**
-     * The TemplateRegistry.
+     * The container.
      */
-    public final TemplateRegistry f_templates;
+    public final Container f_container;
 
     /**
      * Globally known ClassTemplate name (e.g. Boolean or annotations.LazyVar)

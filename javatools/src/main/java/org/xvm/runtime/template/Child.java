@@ -6,9 +6,9 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.constants.PropertyConstant;
 
 import org.xvm.runtime.CallChain;
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.TemplateRegistry;
 
 import org.xvm.runtime.template.xService.ServiceHandle;
 
@@ -22,9 +22,9 @@ import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 public class Child
         extends xObject
     {
-    public Child(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public Child(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, false);
+        super(container, structure, false);
 
         assert structure.isVirtualChild();
         }

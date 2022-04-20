@@ -8,10 +8,10 @@ import org.xvm.asm.Op;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassTemplate;
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
-import org.xvm.runtime.TemplateRegistry;
 
 import org.xvm.runtime.template.collections.xArray.Mutability;
 
@@ -28,9 +28,9 @@ public class xRTViewFromByteToInt64
     {
     public static xRTViewFromByteToInt64 INSTANCE;
 
-    public xRTViewFromByteToInt64(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xRTViewFromByteToInt64(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, false);
+        super(container, structure, false);
 
         if (fInstance)
             {

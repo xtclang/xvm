@@ -3,10 +3,10 @@ package org.xvm.runtime.template.numbers;
 
 import org.xvm.asm.ClassStructure;
 
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
-import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xOrdered;
@@ -18,11 +18,11 @@ import org.xvm.runtime.template.xOrdered;
 public abstract class xUnsignedConstrainedInt
         extends xConstrainedInteger
     {
-    protected xUnsignedConstrainedInt(TemplateRegistry templates, ClassStructure structure,
+    protected xUnsignedConstrainedInt(Container container, ClassStructure structure,
                                       long cMinValue, long cMaxValue,
                                       int cNumBits, boolean fChecked)
         {
-        super(templates, structure, cMinValue, cMaxValue, cNumBits, true, fChecked);
+        super(container, structure, cMinValue, cMaxValue, cNumBits, true, fChecked);
         }
 
     @Override

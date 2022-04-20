@@ -6,8 +6,8 @@ import org.xvm.asm.ConstantPool;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.Container;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.TemplateRegistry;
 
 import org.xvm.runtime.template.numbers.xUInt8;
 
@@ -21,9 +21,9 @@ public class xRTUInt8Delegate
     {
     public static xRTUInt8Delegate INSTANCE;
 
-    public xRTUInt8Delegate(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xRTUInt8Delegate(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure);
+        super(container, structure);
 
         if (fInstance)
             {

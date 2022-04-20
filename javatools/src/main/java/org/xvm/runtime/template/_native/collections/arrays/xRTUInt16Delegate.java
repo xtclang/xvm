@@ -6,8 +6,8 @@ import org.xvm.asm.ConstantPool;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.Container;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.TemplateRegistry;
 
 import org.xvm.runtime.template.numbers.xUInt16;
 
@@ -21,9 +21,9 @@ public class xRTUInt16Delegate
     {
     public static xRTUInt16Delegate INSTANCE;
 
-    public xRTUInt16Delegate(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xRTUInt16Delegate(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, 16, false);
+        super(container, structure, 16, false);
 
         if (fInstance)
             {

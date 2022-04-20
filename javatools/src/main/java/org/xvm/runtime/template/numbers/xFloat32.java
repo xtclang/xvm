@@ -6,8 +6,8 @@ import org.xvm.asm.Constant;
 
 import org.xvm.asm.constants.Float32Constant;
 
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
-import org.xvm.runtime.TemplateRegistry;
 
 
 /**
@@ -18,9 +18,9 @@ public class xFloat32
     {
     public static xFloat32 INSTANCE;
 
-    public xFloat32(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xFloat32(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, 32);
+        super(container, structure, 32);
 
         if (fInstance)
             {

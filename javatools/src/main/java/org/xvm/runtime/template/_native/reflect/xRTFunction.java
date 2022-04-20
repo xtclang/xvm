@@ -19,7 +19,6 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.ServiceContext;
-import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
@@ -47,9 +46,9 @@ public class xRTFunction
     {
     public static xRTFunction INSTANCE;
 
-    public xRTFunction(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xRTFunction(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, false);
+        super(container, structure, false);
 
         if (fInstance)
             {
@@ -1400,7 +1399,7 @@ public class xRTFunction
             {
             ConstantPool pool = INSTANCE.pool();
             TypeConstant typeFunctionArray = pool.ensureArrayType(pool.typeFunction());
-            ARRAY_CLZCOMP = clz = INSTANCE.f_templates.resolveClass(typeFunctionArray);
+            ARRAY_CLZCOMP = clz = INSTANCE.f_container.resolveClass(typeFunctionArray);
             assert clz != null;
             }
         return clz;
@@ -1431,7 +1430,7 @@ public class xRTFunction
             TypeConstant typeParameter = pool.typeParameter();
 
             typeListMap = pool.ensureParameterizedTypeConstant(typeListMap, typeParameter, pool.typeObject());
-            LISTMAP_CLZCOMP = clz = INSTANCE.f_templates.resolveClass(typeListMap);
+            LISTMAP_CLZCOMP = clz = INSTANCE.f_container.resolveClass(typeListMap);
             assert clz != null;
             }
         return clz;
@@ -1461,7 +1460,7 @@ public class xRTFunction
 
         ConstantPool pool      = INSTANCE.pool();
         TypeConstant typeArray = pool.ensureArrayType(ensureConstructorType(typeTarget, typeParent));
-        return INSTANCE.f_templates.resolveClass(typeArray);
+        return INSTANCE.f_container.resolveClass(typeArray);
         }
 
 

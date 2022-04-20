@@ -9,7 +9,7 @@ import org.xvm.asm.ConstantPool;
 
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.Container;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.collections.xArray.Mutability;
@@ -23,9 +23,9 @@ public class xRTViewToBit
     {
     public static xRTViewToBit INSTANCE;
 
-    public xRTViewToBit(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xRTViewToBit(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure);
+        super(container, structure);
 
         if (fInstance)
             {
@@ -38,17 +38,17 @@ public class xRTViewToBit
         {
         if (this == INSTANCE)
             {
-            registerNativeTemplate(new xRTViewToBitFromNibble(f_templates, f_struct, true));
+            registerNativeTemplate(new xRTViewToBitFromNibble(f_container, f_struct, true));
 
-            registerNativeTemplate(new xRTViewToBitFromInt8  (f_templates, f_struct, true));
-            registerNativeTemplate(new xRTViewToBitFromInt16 (f_templates, f_struct, true));
-            registerNativeTemplate(new xRTViewToBitFromInt32 (f_templates, f_struct, true));
-            registerNativeTemplate(new xRTViewToBitFromInt64 (f_templates, f_struct, true));
+            registerNativeTemplate(new xRTViewToBitFromInt8  (f_container, f_struct, true));
+            registerNativeTemplate(new xRTViewToBitFromInt16 (f_container, f_struct, true));
+            registerNativeTemplate(new xRTViewToBitFromInt32 (f_container, f_struct, true));
+            registerNativeTemplate(new xRTViewToBitFromInt64 (f_container, f_struct, true));
 
-            registerNativeTemplate(new xRTViewToBitFromUInt8 (f_templates, f_struct, true));
-            registerNativeTemplate(new xRTViewToBitFromUInt16(f_templates, f_struct, true));
-            registerNativeTemplate(new xRTViewToBitFromUInt32(f_templates, f_struct, true));
-            registerNativeTemplate(new xRTViewToBitFromUInt64(f_templates, f_struct, true));
+            registerNativeTemplate(new xRTViewToBitFromUInt8 (f_container, f_struct, true));
+            registerNativeTemplate(new xRTViewToBitFromUInt16(f_container, f_struct, true));
+            registerNativeTemplate(new xRTViewToBitFromUInt32(f_container, f_struct, true));
+            registerNativeTemplate(new xRTViewToBitFromUInt64(f_container, f_struct, true));
             }
         }
     @Override

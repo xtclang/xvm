@@ -20,9 +20,9 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 
 import org.xvm.runtime.ClassTemplate;
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.reflect.xRef;
@@ -627,17 +627,17 @@ public class AnnotatedTypeConstant
     // ----- run-time support ----------------------------------------------------------------------
 
     @Override
-    public ClassTemplate getTemplate(TemplateRegistry registry)
+    public ClassTemplate getTemplate(Container container)
         {
         TypeConstant     typeBase    = getUnderlyingType();
         IdentityConstant constIdAnno = (IdentityConstant) getAnnotation().getAnnotationClass();
-        ClassTemplate    templateAnno = registry.getTemplate(constIdAnno);
+        ClassTemplate    templateAnno = container.getTemplate(constIdAnno);
 
         // if the annotation itself is native, it overrides the base type template (support);
         // for now all native Ref implementations extend xRef
         return templateAnno instanceof xRef
                 ? templateAnno.getTemplate(typeBase)
-                : typeBase.getTemplate(registry);
+                : typeBase.getTemplate(container);
         }
 
     @Override

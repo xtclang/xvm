@@ -8,9 +8,9 @@ import org.xvm.asm.MethodStructure;
 
 import org.xvm.asm.constants.SignatureConstant;
 
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xConst;
@@ -27,9 +27,9 @@ import org.xvm.runtime.template.collections.xByteArray;
 abstract public class BaseFP
         extends xConst
     {
-    public BaseFP(TemplateRegistry templates, ClassStructure structure, int cBits)
+    public BaseFP(Container container, ClassStructure structure, int cBits)
         {
-        super(templates, structure, false);
+        super(container, structure, false);
 
         f_cBits = cBits;
         }

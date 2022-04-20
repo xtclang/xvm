@@ -15,10 +15,10 @@ import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassTemplate;
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
-import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
@@ -40,9 +40,9 @@ public class xRTComponentTemplate
     {
     public static xRTComponentTemplate INSTANCE;
 
-    public xRTComponentTemplate(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xRTComponentTemplate(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure);
+        super(container, structure);
 
         if (fInstance)
             {
@@ -55,9 +55,8 @@ public class xRTComponentTemplate
         {
         if (this == INSTANCE)
             {
-            ClassStructure struct = (ClassStructure) f_templates.getComponent(
-                "_native.reflect.RTMultiMethodTemplate");
-            registerNativeTemplate(new xRTComponentTemplate(f_templates, struct, false));
+            ClassStructure struct = f_container.getClassStructure("_native.reflect.RTMultiMethodTemplate");
+            registerNativeTemplate(new xRTComponentTemplate(f_container, struct, false));
             }
         }
 
@@ -268,7 +267,7 @@ public class xRTComponentTemplate
             ConstantPool pool = INSTANCE.pool();
             TypeConstant typeTypeArray = pool.ensureArrayType(
                                             pool.ensureEcstasyTypeConstant("reflect.ComponentTemplate"));
-            COMPONENT_ARRAY_COMP = clz = INSTANCE.f_templates.resolveClass(typeTypeArray);
+            COMPONENT_ARRAY_COMP = clz = INSTANCE.f_container.resolveClass(typeTypeArray);
             assert clz != null;
             }
         return clz;
@@ -283,7 +282,7 @@ public class xRTComponentTemplate
         if (clz == null)
             {
             ConstantPool pool = INSTANCE.pool();
-            ClassTemplate templateRT   = INSTANCE.f_templates.getTemplate("_native.reflect.RTMultiMethodTemplate");
+            ClassTemplate templateRT   = INSTANCE.f_container.getTemplate("_native.reflect.RTMultiMethodTemplate");
             TypeConstant  typeTemplate = pool.ensureEcstasyTypeConstant("reflect.MultiMethodTemplate");
             MULTI_METHOD_TEMPLATE_COMP = clz = templateRT.ensureClass(typeTemplate);
             assert clz != null;
@@ -304,7 +303,7 @@ public class xRTComponentTemplate
      */
     protected static EnumHandle makeFormatHandle(Frame frame, Component.Format format)
         {
-        xEnum enumForm = (xEnum) INSTANCE.f_templates.getTemplate("reflect.ComponentTemplate.Format");
+        xEnum enumForm = (xEnum) INSTANCE.f_container.getTemplate("reflect.ComponentTemplate.Format");
 
         switch (format)
             {

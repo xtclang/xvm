@@ -11,11 +11,11 @@ import org.xvm.asm.Op;
 import org.xvm.asm.constants.FSNodeConstant;
 import org.xvm.asm.constants.FileStoreConstant;
 
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ConstantHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
-import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
@@ -37,9 +37,9 @@ import org.xvm.runtime.template.text.xString.StringHandle;
 public class xCPFileStore
         extends xConst
     {
-    public xCPFileStore(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xCPFileStore(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, false);
+        super(container, structure, false);
         }
 
     @Override

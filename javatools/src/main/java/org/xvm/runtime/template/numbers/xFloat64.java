@@ -6,8 +6,8 @@ import org.xvm.asm.Constant;
 
 import org.xvm.asm.constants.Float64Constant;
 
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
-import org.xvm.runtime.TemplateRegistry;
 
 
 /**
@@ -18,9 +18,9 @@ public class xFloat64
     {
     public static xFloat64 INSTANCE;
 
-    public xFloat64(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xFloat64(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, 64);
+        super(container, structure, 64);
 
         if (fInstance)
             {

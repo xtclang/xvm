@@ -12,11 +12,11 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ProxyComposition;
 import org.xvm.runtime.ServiceContext;
-import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction.AsyncHandle;
@@ -31,9 +31,9 @@ public class Proxy
     {
     public static Proxy INSTANCE;
 
-    public Proxy(TemplateRegistry templates)
+    public Proxy(Container container)
         {
-        super(templates, xObject.INSTANCE.getStructure(), false);
+        super(container, xObject.INSTANCE.getStructure(), false);
 
         INSTANCE = this;
         }

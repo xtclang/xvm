@@ -4,10 +4,10 @@ package org.xvm.runtime.template;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component.Format;
 
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
-import org.xvm.runtime.TemplateRegistry;
 
 import org.xvm.runtime.template.text.xString;
 
@@ -20,9 +20,9 @@ public class xBoolean
     public static BooleanHandle TRUE;
     public static BooleanHandle FALSE;
 
-    public xBoolean(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xBoolean(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, false);
+        super(container, structure, false);
         }
 
     @Override

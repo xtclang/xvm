@@ -15,7 +15,7 @@ import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
-import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.Container;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xBoolean;
@@ -38,9 +38,9 @@ public class xRTSignature
     {
     public static xRTSignature INSTANCE;
 
-    public xRTSignature(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xRTSignature(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, false);
+        super(container, structure, false);
 
         if (fInstance)
             {
@@ -228,7 +228,7 @@ public class xRTSignature
         TypeConstant type = RTRETURN_TYPE;
         if (type == null)
             {
-            RTRETURN_TYPE = type = INSTANCE.f_templates.getComponent("_native.reflect.RTReturn").
+            RTRETURN_TYPE = type = INSTANCE.f_container.getClassStructure("_native.reflect.RTReturn").
                     getIdentityConstant().getType();
             assert type != null;
             }
@@ -257,7 +257,7 @@ public class xRTSignature
         TypeConstant type = RTPARAM_TYPE;
         if (type == null)
             {
-            RTPARAM_TYPE = type = INSTANCE.f_templates.getComponent("_native.reflect.RTParameter").
+            RTPARAM_TYPE = type = INSTANCE.f_container.getClassStructure("_native.reflect.RTParameter").
                     getIdentityConstant().getType();
             assert type != null;
             }
@@ -272,7 +272,7 @@ public class xRTSignature
         xConst template = RTRETURN_TEMPLATE;
         if (template == null)
             {
-            RTRETURN_TEMPLATE = template = (xConst) INSTANCE.f_templates.getTemplate(ensureRTReturnType());
+            RTRETURN_TEMPLATE = template = (xConst) INSTANCE.f_container.getTemplate(ensureRTReturnType());
             assert template != null;
             }
         return template;
@@ -286,7 +286,7 @@ public class xRTSignature
         xConst template = RTPARAM_TEMPLATE;
         if (template == null)
             {
-            RTPARAM_TEMPLATE = template = (xConst) INSTANCE.f_templates.getTemplate(ensureRTParamType());
+            RTPARAM_TEMPLATE = template = (xConst) INSTANCE.f_container.getTemplate(ensureRTParamType());
             assert template != null;
             }
         return template;
@@ -302,7 +302,7 @@ public class xRTSignature
         TypeConstant typeRTReturn =
                 pool.ensureParameterizedTypeConstant(ensureRTReturnType(), typeValue);
 
-        return INSTANCE.f_templates.resolveClass(typeRTReturn);
+        return INSTANCE.f_container.resolveClass(typeRTReturn);
         }
 
     /**
@@ -321,7 +321,7 @@ public class xRTSignature
             typeRTParam = pool.ensureAnnotatedTypeConstant(typeRTParam, aAnno);
             }
 
-        return INSTANCE.f_templates.resolveClass(typeRTParam);
+        return INSTANCE.f_container.resolveClass(typeRTParam);
         }
 
     /**
@@ -334,7 +334,7 @@ public class xRTSignature
             {
             ConstantPool pool = INSTANCE.pool();
             TypeConstant typeReturnArray = pool.ensureArrayType(ensureReturnType());
-            RETURN_ARRAY = clz = INSTANCE.f_templates.resolveClass(typeReturnArray);
+            RETURN_ARRAY = clz = INSTANCE.f_container.resolveClass(typeReturnArray);
             assert clz != null;
             }
         return clz;
@@ -350,7 +350,7 @@ public class xRTSignature
             {
             ConstantPool pool = INSTANCE.pool();
             TypeConstant typeParamArray = pool.ensureArrayType(ensureParamType());
-            PARAM_ARRAY = clz = INSTANCE.f_templates.resolveClass(typeParamArray);
+            PARAM_ARRAY = clz = INSTANCE.f_container.resolveClass(typeParamArray);
             assert clz != null;
             }
         return clz;

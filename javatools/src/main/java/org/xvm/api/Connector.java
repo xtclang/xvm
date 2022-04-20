@@ -17,10 +17,9 @@ import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.constants.ModuleConstant;
 
 import org.xvm.runtime.MainContainer;
+import org.xvm.runtime.NativeContainer;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.CoreConstHeap;
 import org.xvm.runtime.Runtime;
-import org.xvm.runtime.TemplateRegistry;
 
 
 /**
@@ -46,11 +45,9 @@ public class Connector
      */
     public Connector(ModuleRepository repository)
         {
-        m_repository = repository;
-        f_runtime    = new Runtime();
-        f_templates  = new TemplateRegistry(repository);
-        f_heapGlobal = new CoreConstHeap(f_templates);
-        f_templates.loadNativeTemplates();
+        m_repository      = repository;
+        f_runtime         = new Runtime();
+        f_containerNative = new NativeContainer(f_runtime, repository);
         }
 
     /**
@@ -59,7 +56,7 @@ public class Connector
     public void addModuleRepository(File fileRepo)
             throws IOException
         {
-        if (m_container != null)
+        if (m_containerMain != null)
             {
             throw new IllegalStateException("Connector is already activated");
             }
@@ -86,11 +83,11 @@ public class Connector
         }
 
     /**
-     * Create the container for the specified module.
+     * Create the main container for the specified module.
      */
     public void loadModule(String sAppName)
         {
-        if (m_container != null)
+        if (m_containerMain != null)
             {
             throw new IllegalStateException("Connector is already activated");
             }
@@ -101,7 +98,7 @@ public class Connector
             throw new IllegalStateException("Unable to load module \"" + sAppName + "\"");
             }
 
-        FileStructure structApp = f_templates.createFileStructure(moduleApp);
+        FileStructure structApp = f_containerNative.createFileStructure(moduleApp);
         String        sMissing  = structApp.linkModules(m_repository, true);
         if (sMissing != null)
             {
@@ -111,7 +108,7 @@ public class Connector
         ModuleConstant idApp = (ModuleConstant) structApp.
                 getChild(moduleApp.getName()).getIdentityConstant();
 
-        m_container = new MainContainer(f_runtime, f_templates, f_heapGlobal, idApp);
+        m_containerMain = new MainContainer(f_runtime, f_containerNative, idApp);
         }
 
     /**
@@ -119,7 +116,7 @@ public class Connector
      */
     public ConstantPool getConstantPool()
         {
-        return m_container.getModule().getConstantPool();
+        return m_containerMain.getModule().getConstantPool();
         }
 
     /**
@@ -127,7 +124,7 @@ public class Connector
      */
     public MainContainer getContainer()
         {
-        return m_container;
+        return m_containerMain;
         }
 
     /**
@@ -141,7 +138,7 @@ public class Connector
             m_fStarted = true;
             }
 
-        m_container.start();
+        m_containerMain.start();
         }
 
     /**
@@ -156,19 +153,12 @@ public class Connector
             {
             throw new IllegalStateException("The container has not been started");
             }
-        m_container.invoke0(sMethodName, ahArg);
+        m_containerMain.invoke0(sMethodName, ahArg);
         }
 
-    public ObjectHandle invoke1(String sMethodName, ObjectHandle... ahArg)
-        {
-        return null;
-        }
-
-    public ObjectHandle[] invokeN(String sMethodName, ObjectHandle... ahArg)
-        {
-        return null;
-        }
-
+    /**
+     * Wait for the container termination.
+     */
     public void join()
             throws InterruptedException
         {
@@ -176,9 +166,9 @@ public class Connector
         do  {
             Thread.sleep(500);
             }
-        while (!f_runtime.isIdle() || !m_container.isIdle());
+        while (!f_runtime.isIdle() || !m_containerMain.isIdle());
 
-        m_container = null;
+        m_containerMain = null;
         }
 
 
@@ -195,19 +185,14 @@ public class Connector
     private final Runtime f_runtime;
 
     /**
-     * The template registry.
+     * The native container associated with this Connector.
      */
-    private final TemplateRegistry f_templates;
+    protected NativeContainer f_containerNative;
 
     /**
-     * The template registry.
+     * The main container currently associated with this Connector.
      */
-    private final CoreConstHeap f_heapGlobal;
-
-    /**
-     * The container associated with this Connector.
-     */
-    private MainContainer m_container;
+    private MainContainer m_containerMain;
 
     /**
      * Status indicator.

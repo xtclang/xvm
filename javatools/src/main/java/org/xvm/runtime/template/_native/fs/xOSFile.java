@@ -22,10 +22,10 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.runtime.ClassTemplate;
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
-import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
@@ -48,9 +48,9 @@ public class xOSFile
     {
     public static xOSFile INSTANCE;
 
-    public xOSFile(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xOSFile(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure);
+        super(container, structure);
 
         if (fInstance)
             {
@@ -71,7 +71,7 @@ public class xOSFile
 
         getCanonicalType().invalidateTypeInfo();
 
-        ClassTemplate   templateFile = f_templates.getTemplate("fs.File");
+        ClassTemplate   templateFile = f_container.getTemplate("fs.File");
         TypeComposition clzOSFile    = ensureClass(templateFile.getCanonicalType());
 
         s_clzOSFileStruct = clzOSFile.ensureAccess(Constants.Access.STRUCT);

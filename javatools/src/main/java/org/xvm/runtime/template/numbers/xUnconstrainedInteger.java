@@ -8,10 +8,10 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.constants.IntConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
-import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xBoolean;
@@ -31,10 +31,10 @@ import org.xvm.util.PackedInteger;
 public abstract class xUnconstrainedInteger
         extends xConst
     {
-    protected xUnconstrainedInteger(TemplateRegistry templates, ClassStructure structure,
+    protected xUnconstrainedInteger(Container container, ClassStructure structure,
              boolean fUnsigned, boolean fChecked)
         {
-        super(templates, structure, false);
+        super(container, structure, false);
         f_fChecked = fChecked;
         f_fSigned  = !fUnsigned;
         }
@@ -251,7 +251,7 @@ public abstract class xUnconstrainedInteger
             case "toUInt128":
                 {
                 TypeConstant        typeRet  = method.getReturn(0).getType();
-                xConstrainedInteger template = (xConstrainedInteger) f_templates.getTemplate(typeRet);
+                xConstrainedInteger template = (xConstrainedInteger) f_container.getTemplate(typeRet);
                 PackedInteger       pi       = ((IntNHandle) hTarget).getValue();
 
                 // check for overflow
@@ -273,7 +273,7 @@ public abstract class xUnconstrainedInteger
                 if (!f_fSigned)
                     {
                     TypeConstant          typeRet  = method.getReturn(0).getType();
-                    xUnconstrainedInteger template = (xUnconstrainedInteger) f_templates.getTemplate(typeRet);
+                    xUnconstrainedInteger template = (xUnconstrainedInteger) f_container.getTemplate(typeRet);
                     PackedInteger         pi       = ((IntNHandle) hTarget).getValue();
                     hResult = template.makeInt(pi);
                     }
@@ -286,7 +286,7 @@ public abstract class xUnconstrainedInteger
                 if (f_fSigned)
                     {
                     TypeConstant          typeRet  = method.getReturn(0).getType();
-                    xUnconstrainedInteger template = (xUnconstrainedInteger) f_templates.getTemplate(typeRet);
+                    xUnconstrainedInteger template = (xUnconstrainedInteger) f_container.getTemplate(typeRet);
                     PackedInteger         pi       = ((IntNHandle) hTarget).getValue();
                     if (f_fChecked && pi.isNegative())
                         {

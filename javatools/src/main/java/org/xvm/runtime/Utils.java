@@ -65,20 +65,20 @@ public abstract class Utils
     /**
      * Collect necessary constants for future use.
      *
-     * @param templates the template registry
+     * @param container the template registry
      */
-    public static void initNative(TemplateRegistry templates)
+    public static void initNative(NativeContainer container)
         {
-        REGISTRY                      = templates;
-        ANNOTATION_TEMPLATE           = templates.getTemplate("reflect.Annotation");
-        ANNOTATION_TEMPLATE_TEMPLATE  = templates.getTemplate("reflect.AnnotationTemplate");
-        ARGUMENT_TEMPLATE             = templates.getTemplate("reflect.Argument");
-        RT_PARAMETER_TEMPLATE         = templates.getTemplate("_native.reflect.RTParameter");
+        CONTAINER                     = container;
+        ANNOTATION_TEMPLATE           = container.getTemplate("reflect.Annotation");
+        ANNOTATION_TEMPLATE_TEMPLATE  = container.getTemplate("reflect.AnnotationTemplate");
+        ARGUMENT_TEMPLATE             = container.getTemplate("reflect.Argument");
+        RT_PARAMETER_TEMPLATE         = container.getTemplate("_native.reflect.RTParameter");
         ANNOTATION_CONSTRUCT          = ANNOTATION_TEMPLATE.getStructure().findMethod("construct", 2);
         ANNOTATION_TEMPLATE_CONSTRUCT = ANNOTATION_TEMPLATE_TEMPLATE.getStructure().findMethod("construct", 2);
         ARGUMENT_CONSTRUCT            = ARGUMENT_TEMPLATE.getStructure().findMethod("construct", 2);
         RT_PARAMETER_CONSTRUCT        = RT_PARAMETER_TEMPLATE.getStructure().findMethod("construct", 5);
-        LIST_MAP_CONSTRUCT            = templates.getClassStructure("collections.ListMap").findMethod("construct", 2);
+        LIST_MAP_CONSTRUCT            = container.getClassStructure("collections.ListMap").findMethod("construct", 2);
         }
 
     /**
@@ -716,7 +716,7 @@ public abstract class Utils
 
                     assert clz.isSingleton();
 
-                    ClassTemplate template = ctxCurr.f_templates.getTemplate(idClz);
+                    ClassTemplate template = ctxCurr.f_container.getTemplate(idClz);
                     if (template.getStructure().getFormat() == Format.ENUMVALUE)
                         {
                         // this can happen if the constant's handle was not initialized or
@@ -1525,7 +1525,7 @@ public abstract class Utils
             {
             TypeConstant typeArray = pool.ensureArrayType(
                                         pool.ensureEcstasyTypeConstant("reflect.Annotation"));
-            ANNOTATION_ARRAY_CLZ = REGISTRY.resolveClass(typeArray);
+            ANNOTATION_ARRAY_CLZ = CONTAINER.resolveClass(typeArray);
             }
 
         return xArray.makeArrayHandle(ANNOTATION_ARRAY_CLZ, ahAnno.length, ahAnno, Mutability.Constant);
@@ -1540,7 +1540,7 @@ public abstract class Utils
             {
             TypeConstant typeArray = pool.ensureArrayType(
                                         pool.ensureEcstasyTypeConstant("reflect.Argument"));
-            ARGUMENT_ARRAY_CLZ = REGISTRY.resolveClass(typeArray);
+            ARGUMENT_ARRAY_CLZ = CONTAINER.resolveClass(typeArray);
             }
 
         return xArray.makeArrayHandle(ARGUMENT_ARRAY_CLZ, ahArg.length, ahArg, Mutability.Constant);
@@ -1787,7 +1787,7 @@ public abstract class Utils
 
     public final static Frame.Continuation NEXT = frame -> Op.R_NEXT;
 
-    private static TemplateRegistry REGISTRY;
+    private static NativeContainer CONTAINER;
 
     // assigned by initNative()
     private static ClassTemplate   ANNOTATION_TEMPLATE;

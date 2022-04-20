@@ -8,10 +8,10 @@ import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
-import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xBoolean;
@@ -31,9 +31,9 @@ public abstract class ByteBasedDelegate
     {
     public static ByteBasedDelegate INSTANCE;
 
-    public ByteBasedDelegate(TemplateRegistry templates, ClassStructure structure)
+    public ByteBasedDelegate(Container container, ClassStructure structure)
         {
-        super(templates, structure, false);
+        super(container, structure, false);
         }
 
     @Override

@@ -9,9 +9,9 @@ import org.xvm.asm.constants.NativeRebaseConstant;
 
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.numbers.xInt64;
@@ -26,9 +26,9 @@ public class Identity
     public static Identity INSTANCE;
     public static ClassConstant INCEPTION_CLASS;
 
-    public Identity(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public Identity(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure);
+        super(container, structure);
 
         if (fInstance)
             {

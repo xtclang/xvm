@@ -13,9 +13,9 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassTemplate;
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
@@ -32,9 +32,9 @@ public class xRTPropertyTemplate
     {
     public static xRTPropertyTemplate INSTANCE;
 
-    public xRTPropertyTemplate(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xRTPropertyTemplate(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, false);
+        super(container, structure, false);
 
         if (fInstance)
             {
@@ -222,7 +222,7 @@ public class xRTPropertyTemplate
             ConstantPool pool = INSTANCE.pool();
             TypeConstant typePropertyTemplate = pool.ensureEcstasyTypeConstant("reflect.PropertyTemplate");
             TypeConstant typePropertyArray = pool.ensureArrayType(typePropertyTemplate);
-            ARRAY_PROP_COMP = clz = INSTANCE.f_templates.resolveClass(typePropertyArray);
+            ARRAY_PROP_COMP = clz = INSTANCE.f_container.resolveClass(typePropertyArray);
             assert clz != null;
             }
         return clz;

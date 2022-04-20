@@ -7,10 +7,10 @@ import org.xvm.asm.Op;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassTemplate;
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
-import org.xvm.runtime.TemplateRegistry;
 
 import org.xvm.runtime.template.xException;
 
@@ -21,9 +21,9 @@ import org.xvm.runtime.template.xException;
 abstract public class xRTView
         extends xRTDelegate
     {
-    protected xRTView(TemplateRegistry templates, ClassStructure structure)
+    protected xRTView(Container container, ClassStructure structure)
         {
-        super(templates, structure, false);
+        super(container, structure, false);
         }
 
     @Override

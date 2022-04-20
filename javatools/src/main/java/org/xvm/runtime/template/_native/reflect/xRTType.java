@@ -35,6 +35,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.runtime.ClassTemplate;
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
@@ -42,7 +43,6 @@ import org.xvm.runtime.ObjectHandle.DeferredArrayHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.ServiceContext;
-import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
@@ -82,9 +82,9 @@ public class xRTType
     {
     public static xRTType INSTANCE;
 
-    public xRTType(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xRTType(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, false);
+        super(container, structure, false);
 
         if (fInstance)
             {
@@ -1398,7 +1398,7 @@ public class xRTType
      */
     public static EnumHandle makeAccessHandle(Frame frame, Access access)
         {
-        xEnum enumAccess = (xEnum) INSTANCE.f_templates.getTemplate("reflect.Access");
+        xEnum enumAccess = (xEnum) INSTANCE.f_container.getTemplate("reflect.Access");
         return switch (access)
             {
             case PUBLIC    -> enumAccess.getEnumByName("Public");
@@ -1418,7 +1418,7 @@ public class xRTType
      */
     protected static EnumHandle makeFormHandle(Frame frame, TypeConstant type)
         {
-        xEnum enumForm = (xEnum) INSTANCE.f_templates.getTemplate("reflect.Type.Form");
+        xEnum enumForm = (xEnum) INSTANCE.f_container.getTemplate("reflect.Type.Form");
 
         if (type == null)
             {
@@ -1601,7 +1601,7 @@ public class xRTType
             {
             ConstantPool pool          = INSTANCE.pool();
             TypeConstant typeTypeArray = pool.ensureArrayType(pool.typeType());
-            TYPE_ARRAY_CLZCOMP = clz = INSTANCE.f_templates.resolveClass(typeTypeArray);
+            TYPE_ARRAY_CLZCOMP = clz = INSTANCE.f_container.resolveClass(typeTypeArray);
             assert clz != null;
             }
         return clz;
@@ -1631,7 +1631,7 @@ public class xRTType
             ConstantPool pool = INSTANCE.pool();
             TypeConstant typeList = pool.ensureEcstasyTypeConstant("collections.ListMap");
             typeList = pool.ensureParameterizedTypeConstant(typeList, pool.typeString(), pool.typeType());
-            LISTMAP_CLZCOMP = clz = INSTANCE.f_templates.resolveClass(typeList);
+            LISTMAP_CLZCOMP = clz = INSTANCE.f_container.resolveClass(typeList);
             assert clz != null;
             }
         return clz;

@@ -1274,7 +1274,7 @@ public class Frame
 
     public ClassTemplate ensureTemplate(IdentityConstant constClz)
         {
-        return f_context.f_templates.getTemplate(constClz);
+        return f_context.f_container.getTemplate(constClz);
         }
 
     public TypeConstant resolveType(int iArg)

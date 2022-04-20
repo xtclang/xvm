@@ -20,7 +20,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.GenericTypeResolver;
 
 import org.xvm.runtime.ClassTemplate;
-import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.Container;
 
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.writePackedLong;
@@ -335,9 +335,9 @@ public class AnonymousClassTypeConstant
     // ----- run-time support ----------------------------------------------------------------------
 
     @Override
-    public ClassTemplate getTemplate(TemplateRegistry registry)
+    public ClassTemplate getTemplate(Container container)
         {
-        return registry.getTemplate((ClassConstant) getDefiningConstant());
+        return container.getTemplate((ClassConstant) getDefiningConstant());
         }
 
 

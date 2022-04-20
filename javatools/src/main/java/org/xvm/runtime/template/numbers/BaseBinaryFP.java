@@ -8,10 +8,10 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.runtime.ClassComposition;
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
-import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.collections.xArray;
@@ -30,9 +30,9 @@ import org.xvm.runtime.template.text.xString;
 abstract public class BaseBinaryFP
         extends BaseFP
     {
-    public BaseBinaryFP(TemplateRegistry templates, ClassStructure structure, int cBits)
+    public BaseBinaryFP(Container container, ClassStructure structure, int cBits)
         {
-        super(templates, structure, cBits);
+        super(container, structure, cBits);
         }
 
     @Override

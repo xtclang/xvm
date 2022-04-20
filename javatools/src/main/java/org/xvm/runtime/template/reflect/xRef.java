@@ -25,12 +25,12 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.PropertyComposition;
 import org.xvm.runtime.TypeComposition;
-import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 import org.xvm.runtime.VarSupport;
 
@@ -57,9 +57,9 @@ public class xRef
     public static xRef INSTANCE;
     public static ClassConstant INCEPTION_CLASS;
 
-    public xRef(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xRef(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure);
+        super(container, structure);
 
         if (fInstance)
             {
@@ -92,7 +92,7 @@ public class xRef
             // register the native "Identity" template
             ClassStructure structId = (ClassStructure) f_struct.getChild("Identity");
 
-            registerNativeTemplate(new Identity(f_templates, structId, true));
+            registerNativeTemplate(new Identity(f_container, structId, true));
             }
         }
 

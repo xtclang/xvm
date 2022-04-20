@@ -6,8 +6,8 @@ import java.util.Arrays;
 
 import org.xvm.asm.ClassStructure;
 
+import org.xvm.runtime.Container;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.TemplateRegistry;
 
 import org.xvm.type.Decimal;
 import org.xvm.type.Decimal64;
@@ -21,9 +21,9 @@ public class xDec64
     {
     public static xDec64 INSTANCE;
 
-    public xDec64(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xDec64(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, 64);
+        super(container, structure, 64);
 
         if (fInstance)
             {

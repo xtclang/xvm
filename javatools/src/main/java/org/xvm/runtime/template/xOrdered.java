@@ -4,7 +4,7 @@ package org.xvm.runtime.template;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component.Format;
 
-import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.Container;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.text.xString;
@@ -20,9 +20,9 @@ public class xOrdered
     public static EnumHandle EQUAL;
     public static EnumHandle GREATER;
 
-    public xOrdered(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xOrdered(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, false);
+        super(container, structure, false);
         }
 
     @Override

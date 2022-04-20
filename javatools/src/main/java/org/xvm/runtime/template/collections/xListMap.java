@@ -14,10 +14,10 @@ import org.xvm.asm.constants.MapConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassTemplate;
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.DeferredArrayHandle;
-import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
@@ -30,9 +30,9 @@ public class xListMap
     {
     public static xListMap INSTANCE;
 
-    public xListMap(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xListMap(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure);
+        super(container, structure);
 
         if (fInstance)
             {

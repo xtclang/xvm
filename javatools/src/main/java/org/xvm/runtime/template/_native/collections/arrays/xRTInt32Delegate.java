@@ -6,8 +6,8 @@ import org.xvm.asm.ConstantPool;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.Container;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.TemplateRegistry;
 
 import org.xvm.runtime.template.collections.xArray.Mutability;
 
@@ -23,9 +23,9 @@ public class xRTInt32Delegate
     {
     public static xRTInt32Delegate INSTANCE;
 
-    public xRTInt32Delegate(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xRTInt32Delegate(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, 32, true);
+        super(container, structure, 32, true);
 
         if (fInstance)
             {

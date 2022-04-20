@@ -8,10 +8,10 @@ import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
-import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xBoolean;
@@ -31,10 +31,10 @@ public abstract class LongBasedDelegate
         extends xRTDelegate
         implements BitView
     {
-    protected LongBasedDelegate(TemplateRegistry templates, ClassStructure structure,
+    protected LongBasedDelegate(Container container, ClassStructure structure,
                                 int nBitsPerValue, boolean fSigned)
         {
-        super(templates, structure, false);
+        super(container, structure, false);
 
         f_nBitsPerValue  = nBitsPerValue;
         f_nValuesPerLong = 64 / nBitsPerValue;

@@ -9,9 +9,9 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.UInt8ArrayConstant;
 
 import org.xvm.runtime.ClassTemplate;
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xException;
@@ -37,9 +37,9 @@ public class xByteArray
     {
     public static xByteArray INSTANCE;
 
-    public xByteArray(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xByteArray(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, false);
+        super(container, structure, false);
 
         if (fInstance)
             {
@@ -50,7 +50,7 @@ public class xByteArray
     @Override
     public void initNative()
         {
-        ClassTemplate mixin = f_templates.getTemplate("collections.arrays.ByteArray");
+        ClassTemplate mixin = f_container.getTemplate("collections.arrays.ByteArray");
 
         mixin.markNativeMethod("asInt8Array", VOID, null);
         mixin.markNativeMethod("asInt16Array", VOID, null);
@@ -204,7 +204,7 @@ public class xByteArray
             {
             TypeConstant typeInt8 = pool().typeCInt8();
 
-            INT8_ARRAY_CLZ = clz = f_templates.resolveClass(pool().ensureArrayType(typeInt8));
+            INT8_ARRAY_CLZ = clz = f_container.resolveClass(pool().ensureArrayType(typeInt8));
             }
         return clz;
         }
@@ -215,7 +215,7 @@ public class xByteArray
         if (clz == null)
             {
             TypeConstant typeInt16 = pool().typeCInt16();
-            INT16_ARRAY_CLZ = clz = f_templates.resolveClass(pool().ensureArrayType(typeInt16));
+            INT16_ARRAY_CLZ = clz = f_container.resolveClass(pool().ensureArrayType(typeInt16));
             }
         return clz;
         }
@@ -225,7 +225,7 @@ public class xByteArray
         TypeComposition clz = INT64_ARRAY_CLZ;
         if (clz == null)
             {
-            INT64_ARRAY_CLZ = clz = f_templates.resolveClass(pool().ensureArrayType(pool().typeCInt64()));
+            INT64_ARRAY_CLZ = clz = f_container.resolveClass(pool().ensureArrayType(pool().typeCInt64()));
             }
         return clz;
         }

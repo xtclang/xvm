@@ -11,12 +11,11 @@ import org.xvm.asm.constants.LiteralConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
-import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xBoolean;
@@ -38,9 +37,9 @@ public class xIntLiteral
     {
     public static xIntLiteral INSTANCE;
 
-    public xIntLiteral(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xIntLiteral(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, false);
+        super(container, structure, false);
 
         if (fInstance)
             {
@@ -355,7 +354,7 @@ public class xIntLiteral
             case "toFloatN":
             case "toDecN":
                 TypeConstant  typeRet  = method.getReturn(0).getType();
-                ClassTemplate template = f_templates.getTemplate(typeRet);
+                ClassTemplate template = f_container.getTemplate(typeRet);
                 PackedInteger piValue  = hLiteral.getValue();
 
                 // REVIEW GG for unchecked use case

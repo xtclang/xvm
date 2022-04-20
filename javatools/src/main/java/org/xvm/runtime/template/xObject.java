@@ -5,7 +5,7 @@ import org.xvm.asm.ClassStructure;
 
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
-import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.Container;
 
 
 /**
@@ -17,9 +17,9 @@ public class xObject
     public static xObject INSTANCE;
     public static ClassComposition CLASS;
 
-    public xObject(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xObject(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure);
+        super(container, structure);
 
         if (fInstance)
             {

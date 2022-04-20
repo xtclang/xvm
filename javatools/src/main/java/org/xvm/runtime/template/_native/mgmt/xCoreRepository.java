@@ -11,9 +11,9 @@ import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassTemplate;
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xException;
@@ -35,9 +35,9 @@ public class xCoreRepository
     {
     public static xCoreRepository INSTANCE;
 
-    public xCoreRepository(TemplateRegistry registry, ClassStructure structure, boolean fInstance)
+    public xCoreRepository(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(registry, structure);
+        super(container, structure);
 
         if (fInstance)
             {
@@ -71,7 +71,7 @@ public class xCoreRepository
             {
             case "moduleNames":
                 {
-                ModuleRepository repo     = f_templates.f_repository;
+                ModuleRepository repo     = f_container.getModuleRepository();
                 Set<String>      setNames = repo.getModuleNames();
                 StringHandle[]   ahName   = new StringHandle[setNames.size()];
 
@@ -97,7 +97,7 @@ public class xCoreRepository
             case "getModule":
                 {
                 StringHandle     hName  = (StringHandle) hArg;
-                ModuleRepository repo   = f_templates.f_repository;
+                ModuleRepository repo   = f_container.getModuleRepository();
                 ModuleStructure  module = repo.loadModule(hName.getStringValue());
 
                 if (module == null)

@@ -4,10 +4,10 @@ package org.xvm.runtime.template._native.collections.arrays;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Op;
 
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
-import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.collections.xArray.Mutability;
@@ -27,10 +27,10 @@ public abstract class LongBasedBitView
     {
     public static LongBasedBitView INSTANCE;
 
-    public LongBasedBitView(TemplateRegistry templates, ClassStructure structure,
+    public LongBasedBitView(Container container, ClassStructure structure,
                             int nBitsPerValue)
         {
-        super(templates, structure, false);
+        super(container, structure, false);
 
         f_nBitsPerValue = nBitsPerValue;
         }

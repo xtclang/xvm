@@ -9,10 +9,10 @@ import org.xvm.asm.constants.CharConstant;
 
 import org.xvm.runtime.ClassComposition;
 
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
-import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xBoolean;
@@ -30,9 +30,9 @@ public class xChar
     {
     public static xChar INSTANCE;
 
-    public xChar(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xChar(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, false);
+        super(container, structure, false);
 
         if (fInstance)
             {

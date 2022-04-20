@@ -3,14 +3,14 @@ package org.xvm.runtime.template._native.collections.arrays;
 
 import java.util.Arrays;
 
-import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Op;
+import org.xvm.asm.ClassStructure;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.collections.xArray.Mutability;
@@ -25,9 +25,9 @@ public abstract class BitBasedDelegate
         extends ByteBasedDelegate
         implements BitView
     {
-    protected BitBasedDelegate(TemplateRegistry templates, ClassStructure structure)
+    protected BitBasedDelegate(Container container, ClassStructure structure)
         {
-        super(templates, structure);
+        super(container, structure);
         }
 
     @Override

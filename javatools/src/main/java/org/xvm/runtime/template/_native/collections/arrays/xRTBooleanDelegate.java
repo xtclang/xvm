@@ -6,8 +6,8 @@ import org.xvm.asm.ConstantPool;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.Container;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.TemplateRegistry;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
@@ -21,9 +21,9 @@ public class xRTBooleanDelegate
     {
     public static xRTBooleanDelegate INSTANCE;
 
-    public xRTBooleanDelegate(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xRTBooleanDelegate(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure);
+        super(container, structure);
 
         if (fInstance)
             {

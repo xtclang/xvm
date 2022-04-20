@@ -3812,18 +3812,22 @@ public class ConstantPool
      */
     public ClassComposition ensureClassComposition(TypeConstant typeInception, ClassTemplate template)
         {
-        assert typeInception.getConstantPool() == this && typeInception.getPosition() >= 0;
+        assert typeInception.isShared(this);
         assert !typeInception.isAccessSpecified();
         assert typeInception.normalizeParameters().equals(typeInception);
 
-        ClassComposition clz = f_mapCompositions.computeIfAbsent(typeInception, (type) ->
+        ClassComposition clz = f_mapCompositions.get(typeInception);
+        if (clz == null)
             {
-            ClassTemplate templateReal = type.isAnnotated() && type.isIntoVariableType()
-                    ? type.getTemplate(template.f_templates)
-                    : template;
+            clz = f_mapCompositions.computeIfAbsent(typeInception, (type) ->
+                {
+                ClassTemplate templateReal = type.isAnnotated() && type.isIntoVariableType()
+                        ? type.getTemplate(template.f_container)
+                        : template;
 
-            return new ClassComposition(templateReal, type);
-            });
+                return new ClassComposition(templateReal, type);
+                });
+            }
 
         // we need to make this call outside of the constructor due to a possible recursion
         // (ConcurrentHashMap.computeIfAbsent doesn't allow that)

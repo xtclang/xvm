@@ -16,10 +16,10 @@ import org.xvm.asm.Op;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassTemplate;
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
-import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
@@ -43,9 +43,9 @@ public class xRTDelegate
     {
     public static xRTDelegate INSTANCE;
 
-    public xRTDelegate(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xRTDelegate(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure);
+        super(container, structure);
 
         if (fInstance)
             {
@@ -58,23 +58,23 @@ public class xRTDelegate
         {
         if (this == INSTANCE)
             {
-            registerNativeTemplate(new xRTNibbleDelegate  (f_templates, f_struct, true));
+            registerNativeTemplate(new xRTNibbleDelegate  (f_container, f_struct, true));
 
-            registerNativeTemplate(new xRTBooleanDelegate (f_templates, f_struct, true));
-            registerNativeTemplate(new xRTBitDelegate     (f_templates, f_struct, true));
-            registerNativeTemplate(new xRTCharDelegate    (f_templates, f_struct, true));
+            registerNativeTemplate(new xRTBooleanDelegate (f_container, f_struct, true));
+            registerNativeTemplate(new xRTBitDelegate     (f_container, f_struct, true));
+            registerNativeTemplate(new xRTCharDelegate    (f_container, f_struct, true));
 
-            registerNativeTemplate(new xRTInt8Delegate    (f_templates, f_struct, true));
-            registerNativeTemplate(new xRTInt16Delegate   (f_templates, f_struct, true));
-            registerNativeTemplate(new xRTInt32Delegate   (f_templates, f_struct, true));
-            registerNativeTemplate(new xRTInt64Delegate   (f_templates, f_struct, true));
+            registerNativeTemplate(new xRTInt8Delegate    (f_container, f_struct, true));
+            registerNativeTemplate(new xRTInt16Delegate   (f_container, f_struct, true));
+            registerNativeTemplate(new xRTInt32Delegate   (f_container, f_struct, true));
+            registerNativeTemplate(new xRTInt64Delegate   (f_container, f_struct, true));
 
-            registerNativeTemplate(new xRTUInt8Delegate   (f_templates, f_struct, true));
-            registerNativeTemplate(new xRTUInt16Delegate  (f_templates, f_struct, true));
-            registerNativeTemplate(new xRTUInt32Delegate  (f_templates, f_struct, true));
-            registerNativeTemplate(new xRTUInt64Delegate  (f_templates, f_struct, true));
+            registerNativeTemplate(new xRTUInt8Delegate   (f_container, f_struct, true));
+            registerNativeTemplate(new xRTUInt16Delegate  (f_container, f_struct, true));
+            registerNativeTemplate(new xRTUInt32Delegate  (f_container, f_struct, true));
+            registerNativeTemplate(new xRTUInt64Delegate  (f_container, f_struct, true));
 
-            registerNativeTemplate(new xRTStringDelegate  (f_templates, f_struct, true));
+            registerNativeTemplate(new xRTStringDelegate  (f_container, f_struct, true));
             }
         }
 

@@ -11,11 +11,11 @@ import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.FSNodeConstant;
 
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ConstantHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
-import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
@@ -28,9 +28,9 @@ import org.xvm.runtime.template.xConst;
 public class xCPDirectory
         extends xConst
     {
-    public xCPDirectory(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xCPDirectory(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, false);
+        super(container, structure, false);
         }
 
     @Override

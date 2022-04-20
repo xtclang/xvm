@@ -10,9 +10,9 @@ import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
@@ -30,9 +30,9 @@ public class xRTModuleTemplate
     {
     public static xRTModuleTemplate INSTANCE;
 
-    public xRTModuleTemplate(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xRTModuleTemplate(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, false);
+        super(container, structure, false);
 
         if (fInstance)
             {
@@ -122,7 +122,7 @@ public class xRTModuleTemplate
             ConstantPool pool     = INSTANCE.pool();
             TypeConstant typeList = pool.ensureEcstasyTypeConstant("collections.ListMap");
             typeList = pool.ensureParameterizedTypeConstant(typeList, pool.typeString(), pool.typeString());
-            LISTMAP_CLZ = clz = INSTANCE.f_templates.resolveClass(typeList);
+            LISTMAP_CLZ = clz = INSTANCE.f_container.resolveClass(typeList);
             assert clz != null;
             }
         return clz;

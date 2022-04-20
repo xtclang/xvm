@@ -3,10 +3,10 @@ package org.xvm.runtime.template.numbers;
 
 import org.xvm.asm.ClassStructure;
 
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
-import org.xvm.runtime.TemplateRegistry;
 
 
 /**
@@ -17,9 +17,9 @@ public class xUncheckedUInt64
     {
     public static xUncheckedUInt64 INSTANCE;
 
-    public xUncheckedUInt64(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xUncheckedUInt64(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, 0L, 0xFFFF_FFFF_FFFF_FFFFL, 64);
+        super(container, structure, 0L, 0xFFFF_FFFF_FFFF_FFFFL, 64);
 
         if (fInstance)
             {

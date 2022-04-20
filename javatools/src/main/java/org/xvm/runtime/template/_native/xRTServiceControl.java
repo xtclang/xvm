@@ -8,10 +8,10 @@ import org.xvm.asm.Op;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassTemplate;
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ServiceContext;
-import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
@@ -31,9 +31,9 @@ public class xRTServiceControl
     {
     public static xRTServiceControl INSTANCE;
 
-    public xRTServiceControl(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xRTServiceControl(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure);
+        super(container, structure);
 
         if (fInstance)
             {
@@ -54,7 +54,7 @@ public class xRTServiceControl
 
         m_clzControl = ensureClass(getCanonicalType(), typeControl);
 
-        SERVICE_STATUS = (xEnum) f_templates.getTemplate("Service.ServiceStatus");
+        SERVICE_STATUS = (xEnum) f_container.getTemplate("Service.ServiceStatus");
 
         markNativeProperty("statusIndicator");
         markNativeProperty("upTime");

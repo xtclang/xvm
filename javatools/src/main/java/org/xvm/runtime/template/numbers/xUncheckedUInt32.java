@@ -3,7 +3,7 @@ package org.xvm.runtime.template.numbers;
 
 import org.xvm.asm.ClassStructure;
 
-import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.Container;
 
 
 /**
@@ -14,9 +14,9 @@ public class xUncheckedUInt32
     {
     public static xUncheckedUInt32 INSTANCE;
 
-    public xUncheckedUInt32(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xUncheckedUInt32(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, 0L, 0xFFFF_FFFFL, 32);
+        super(container, structure, 0L, 0xFFFF_FFFFL, 32);
 
         if (fInstance)
             {

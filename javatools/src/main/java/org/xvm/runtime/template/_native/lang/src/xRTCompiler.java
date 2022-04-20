@@ -22,11 +22,11 @@ import org.xvm.compiler.BuildRepository;
 import org.xvm.compiler.CompilerException;
 
 import org.xvm.runtime.ClassComposition;
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ServiceContext;
-import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xBoolean;
@@ -55,9 +55,9 @@ public class xRTCompiler
     {
     public static xRTCompiler INSTANCE;
 
-    public xRTCompiler(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xRTCompiler(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, false);
+        super(container, structure, false);
 
         if (fInstance)
             {
@@ -128,7 +128,7 @@ public class xRTCompiler
         if (hLibRepo == null || hLibRepo instanceof CoreRepoHandle)
             {
             // TODO: this is a temporary solution
-            LinkedRepository repoCore = (LinkedRepository) f_templates.f_repository;
+            LinkedRepository repoCore = (LinkedRepository) f_container.getModuleRepository();
 
             List<ModuleRepository> listNew = new ArrayList<>();
             listNew.add(new BuildRepository());

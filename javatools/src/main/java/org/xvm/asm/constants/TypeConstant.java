@@ -53,9 +53,9 @@ import org.xvm.asm.constants.TypeInfo.Progress;
 import org.xvm.compiler.Compiler;
 
 import org.xvm.runtime.ClassTemplate;
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xBoolean;
@@ -6566,11 +6566,11 @@ public abstract class TypeConstant
     // ----- run-time support ----------------------------------------------------------------------
 
     /**
-     * @return an {@link ClassTemplate} instance for this type in the context of the specified registry
+     * @return a {@link ClassTemplate} instance for this type in the context of the specified container
      */
-    public ClassTemplate getTemplate(TemplateRegistry registry)
+    public ClassTemplate getTemplate(Container container)
         {
-        return getUnderlyingType().getTemplate(registry);
+        return getUnderlyingType().getTemplate(container);
         }
 
     /**
@@ -6578,12 +6578,7 @@ public abstract class TypeConstant
      */
     public TypeComposition ensureClass(Frame frame)
         {
-        TypeComposition clz = m_clz;
-        if (clz == null)
-            {
-            m_clz = clz = frame.f_context.f_templates.resolveClass(this);
-            }
-        return clz;
+        return frame.f_context.f_container.ensureClass(this);
         }
 
     /**
@@ -7086,11 +7081,6 @@ public abstract class TypeConstant
      * A cache of "produces" responses.
      */
     private transient Map<String, Usage> m_mapProduces;
-
-    /**
-     * Cached TypeComposition.
-     */
-    private transient TypeComposition m_clz;
 
     /**
      * Cached TypeHandle.

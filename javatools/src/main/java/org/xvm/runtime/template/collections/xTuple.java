@@ -19,13 +19,13 @@ import org.xvm.asm.constants.NativeRebaseConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassTemplate;
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.TypeComposition;
-import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.IndexSupport;
@@ -52,9 +52,9 @@ public class xTuple
     public static TupleHandle H_VOID;
     public static xEnum MUTABILITY;
 
-    public xTuple(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xTuple(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure);
+        super(container, structure);
 
         if (fInstance)
             {
@@ -70,7 +70,7 @@ public class xTuple
         H_VOID = new TupleHandle(getCanonicalClass(), Utils.OBJECTS_NONE, Mutability.Constant);
 
         // cache Mutability template
-        MUTABILITY = (xEnum) f_templates.getTemplate("collections.Tuple.Mutability");
+        MUTABILITY = (xEnum) f_container.getTemplate("collections.Tuple.Mutability");
 
         // Note: all interface properties are implicitly native due to "NativeRebase"
 

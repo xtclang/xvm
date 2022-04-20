@@ -7,10 +7,10 @@ import org.xvm.asm.Constant;
 
 import org.xvm.asm.constants.IntConstant;
 
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
-import org.xvm.runtime.TemplateRegistry;
 
 import org.xvm.util.PackedInteger;
 
@@ -23,9 +23,9 @@ public class xUInt64
     {
     public static xUInt64 INSTANCE;
 
-    public xUInt64(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xUInt64(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, 0, -1, 64,  true);
+        super(container, structure, 0, -1, 64,  true);
 
         if (fInstance)
             {
@@ -37,7 +37,7 @@ public class xUInt64
     public void registerNativeTemplates()
         {
         // create unchecked template
-        registerNativeTemplate(new xUncheckedUInt64(f_templates, f_struct, true));
+        registerNativeTemplate(new xUncheckedUInt64(f_container, f_struct, true));
         }
 
     @Override

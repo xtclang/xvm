@@ -15,10 +15,10 @@ import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.CallChain;
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.SimpleContainer;
-import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.NestedContainer;
 
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xService;
@@ -42,9 +42,9 @@ public class xContainerLinker
     {
     public static xContainerLinker INSTANCE;
 
-    public xContainerLinker(TemplateRegistry registry, ClassStructure structure, boolean fInstance)
+    public xContainerLinker(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(registry, structure, false);
+        super(container, structure, false);
 
         if (fInstance)
             {
@@ -133,10 +133,10 @@ public class xContainerLinker
                 ModuleStructure moduleApp = (ModuleStructure) hTemplate.getComponent();
                 if (!moduleApp.getFileStructure().isLinked())
                     {
-                    FileStructure fileApp = f_templates.createFileStructure(moduleApp);
+                    FileStructure fileApp = f_container.createFileStructure(moduleApp);
 
                     // TODO GG: this needs to be replaced with linking to the passed in repo
-                    String sMissing = fileApp.linkModules(f_templates.f_repository, true);
+                    String sMissing = fileApp.linkModules(f_container.getModuleRepository(), true);
                     if (sMissing != null)
                         {
                         return frame.raiseException("Unable to load module \"" + sMissing + "\"");
@@ -149,7 +149,7 @@ public class xContainerLinker
                     return frame.raiseException("ResourceProvider must be a service");
                     }
 
-                SimpleContainer container = new SimpleContainer(
+                NestedContainer container = new NestedContainer(
                     frame.f_context.f_container, frame.f_context, moduleApp.getIdentityConstant());
 
                 return new CollectResources(container, hProvider, aiReturn).doNext(frame);
@@ -178,7 +178,7 @@ public class xContainerLinker
     public static class CollectResources
                 implements Frame.Continuation
         {
-        public CollectResources(SimpleContainer container, ObjectHandle hProvider, int[] aiReturn)
+        public CollectResources(NestedContainer container, ObjectHandle hProvider, int[] aiReturn)
             {
             this.container = container;
             this.aKeys     = container.collectInjections().toArray(InjectionKey.NO_INJECTIONS);
@@ -269,7 +269,7 @@ public class xContainerLinker
                 }
             }
 
-        private final SimpleContainer container;
+        private final NestedContainer container;
         private final InjectionKey[]  aKeys;
         private final ObjectHandle    hProvider;
         private final int[] aiReturn;

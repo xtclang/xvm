@@ -7,9 +7,9 @@ import org.xvm.asm.Op;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xEnum;
@@ -23,9 +23,9 @@ public class xEnumValue
     {
     public static xEnumValue INSTANCE;
 
-    public xEnumValue(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xEnumValue(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, false);
+        super(container, structure, false);
 
         if (fInstance)
             {
@@ -84,7 +84,7 @@ public class xEnumValue
         ClassConstant  idEnumValue    = (ClassConstant) typeEnumValue.getDefiningConstant();
         ClassStructure clzEnumValue   = (ClassStructure) idEnumValue.getComponent();
         ClassStructure clzEnumeration = clzEnumValue.getSuper();
-        xEnum          template       = (xEnum) f_templates.getTemplate(clzEnumeration.getIdentityConstant());
+        xEnum          template       = (xEnum) f_container.getTemplate(clzEnumeration.getIdentityConstant());
 
         ObjectHandle hValue = Utils.ensureInitializedEnum(frame,
                 template.getEnumByName(idEnumValue.getName()));

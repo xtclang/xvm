@@ -6,8 +6,8 @@ import org.xvm.asm.Constant;
 
 import org.xvm.asm.constants.Float16Constant;
 
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
-import org.xvm.runtime.TemplateRegistry;
 
 
 /**
@@ -18,9 +18,9 @@ public class xFloat16
     {
     public static xFloat16 INSTANCE;
 
-    public xFloat16(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xFloat16(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, 16);
+        super(container, structure, 16);
 
         if (fInstance)
             {

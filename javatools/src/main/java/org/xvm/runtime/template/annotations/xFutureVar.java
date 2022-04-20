@@ -16,12 +16,12 @@ import org.xvm.asm.Op;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle.WrapperException;
 import org.xvm.runtime.TypeComposition;
-import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean;
@@ -47,9 +47,9 @@ public class xFutureVar
     public static TypeConstant TYPE;
     public static xEnum COMPLETION;
 
-    public xFutureVar(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xFutureVar(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, false);
+        super(container, structure, false);
 
         if (fInstance)
             {
@@ -66,7 +66,7 @@ public class xFutureVar
         TypeConstant  typeVar  = xVar.INSTANCE.getCanonicalType();
 
         TYPE       = pool.ensureAnnotatedTypeConstant(typeVar, anno);
-        COMPLETION = (xEnum) f_templates.getTemplate("annotations.FutureVar.Completion");
+        COMPLETION = (xEnum) f_container.getTemplate("annotations.FutureVar.Completion");
 
         markNativeMethod("thenDo", null, null);
         markNativeMethod("passTo", null, null);

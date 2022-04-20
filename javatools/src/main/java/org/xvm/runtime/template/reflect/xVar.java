@@ -10,9 +10,9 @@ import org.xvm.asm.constants.NativeRebaseConstant;
 import org.xvm.asm.constants.SignatureConstant;
 
 import org.xvm.runtime.CallChain;
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils.BinaryAction;
 import org.xvm.runtime.Utils.InPlaceVarBinary;
 import org.xvm.runtime.Utils.InPlaceVarUnary;
@@ -32,9 +32,9 @@ public class xVar
     public static xVar INSTANCE;
     public static ClassConstant INCEPTION_CLASS;
 
-    public xVar(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xVar(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, false);
+        super(container, structure, false);
 
         if (fInstance)
             {

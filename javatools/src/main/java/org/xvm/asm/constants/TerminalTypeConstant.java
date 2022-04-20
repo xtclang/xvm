@@ -26,8 +26,8 @@ import org.xvm.asm.Parameter;
 import org.xvm.asm.Register;
 
 import org.xvm.runtime.ClassTemplate;
-import org.xvm.runtime.TemplateRegistry;
 
+import org.xvm.runtime.Container;
 import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.readIndex;
@@ -2120,26 +2120,26 @@ public class TerminalTypeConstant
     // ----- run-time support ----------------------------------------------------------------------
 
     @Override
-    public ClassTemplate getTemplate(TemplateRegistry registry)
+    public ClassTemplate getTemplate(Container container)
         {
         if (!isSingleDefiningConstant())
             {
             // this can only happen if this type is a Typedef referring to a relational type
             TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
-            return constId.getReferredToType().getTemplate(registry);
+            return constId.getReferredToType().getTemplate(container);
             }
 
         Constant constIdThis = getDefiningConstant();
         return switch (constIdThis.getFormat())
             {
             case Module, Package, Class ->
-                registry.getTemplate((IdentityConstant) constIdThis);
+                container.getTemplate((IdentityConstant) constIdThis);
 
             case NativeClass ->
-                registry.getTemplate(((NativeRebaseConstant) constIdThis).getClassConstant());
+                container.getTemplate(((NativeRebaseConstant) constIdThis).getClassConstant());
 
             case ThisClass, ParentClass, ChildClass ->
-                registry.getTemplate(((PseudoConstant) constIdThis).getDeclarationLevelClass());
+                container.getTemplate(((PseudoConstant) constIdThis).getDeclarationLevelClass());
 
             default ->
                 throw new IllegalStateException("unexpected defining constant: " + constIdThis);

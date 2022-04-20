@@ -11,21 +11,20 @@ import org.xvm.asm.constants.ModuleConstant;
 
 
 /**
- * A non-core container ( > 0).
+ * A nested container ( > 0).
  */
-public class SimpleContainer
+public class NestedContainer
         extends Container
     {
     /**
-     * Instantiate a simple container.
+     * Instantiate a nested container.
      *
      * @param context   the parent container's context
      * @param idModule  the module id
      */
-    public SimpleContainer(Container containerParent, ServiceContext context, ModuleConstant idModule)
+    public NestedContainer(Container containerParent, ServiceContext context, ModuleConstant idModule)
         {
-        super(containerParent.f_runtime, containerParent, context.f_templates,
-              new ContainerHeap(context.f_container.f_heap), idModule);
+        super(containerParent.f_runtime, containerParent, idModule);
         }
 
     /**

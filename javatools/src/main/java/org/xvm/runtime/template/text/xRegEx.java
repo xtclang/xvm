@@ -17,11 +17,11 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
-import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
@@ -44,9 +44,9 @@ public class xRegEx
     {
     public static xRegEx INSTANCE;
 
-    public xRegEx(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xRegEx(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, false);
+        super(container, structure, false);
 
         if (fInstance)
             {
@@ -66,14 +66,14 @@ public class xRegEx
 
         getCanonicalType().invalidateTypeInfo();
 
-        ClassTemplate    clzTempMatch      = f_templates.getTemplate("text.Match");
+        ClassTemplate    clzTempMatch      = f_container.getTemplate("text.Match");
         TypeComposition  typeMatch         = clzTempMatch.getCanonicalClass();
-        ClassStructure   clzStructMatch    = f_templates.getClassStructure("text.Match");
+        ClassStructure   clzStructMatch    = f_container.getClassStructure("text.Match");
         ConstantPool     pool              = pool();
         TypeConstant     typeRangeInt      = pool.ensureParameterizedTypeConstant(pool.typeRange(), pool.typeCInt64());
         TypeConstant     typeNullableRange = pool.ensureIntersectionTypeConstant(pool.typeNullable(), typeRangeInt);
         TypeConstant     typeArray         = pool.ensureParameterizedTypeConstant(pool.typeArray(), typeNullableRange);
-        ClassComposition clzRange          = f_templates.getTemplate("Range").getCanonicalClass();
+        ClassComposition clzRange          = f_container.getTemplate("Range").getCanonicalClass();
 
         m_clzMatchStruct   = typeMatch.ensureAccess(Constants.Access.STRUCT);
         m_constructorMatch = clzStructMatch.findConstructor(pool.typeRegEx(), pool.typeString(), typeArray);

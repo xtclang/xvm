@@ -21,8 +21,16 @@ import org.xvm.runtime.ObjectHandle.InitializingHandle;
 /**
  * The heap of Constant handles.
  */
-public abstract class ConstHeap
+public class ConstHeap
     {
+    /**
+     * Create a constant heap for the specified Container.
+     */
+    public ConstHeap(Container container)
+        {
+        f_container = container;
+        }
+
     /**
      * Return a handle for the specified constant (could be DeferredCallHandle).
      *
@@ -61,7 +69,7 @@ public abstract class ConstHeap
             return saveConstHandle(constValue, new DeferredPropertyHandle(idProp));
             }
 
-        switch (getTemplate(constValue).createConstHandle(frame, constValue))
+        switch (f_container.getTemplate(constValue).createConstHandle(frame, constValue))
             {
             case Op.R_NEXT:
                 {
@@ -96,7 +104,20 @@ public abstract class ConstHeap
      */
     protected ObjectHandle getConstHandle(Constant constValue)
         {
-        return f_mapConstants.get(constValue);
+        ObjectHandle hValue = f_mapConstants.get(constValue);
+        if (hValue == null)
+            {
+            Container containerParent = f_container.f_parent;
+            if (containerParent != null)
+                {
+                hValue = containerParent.f_heap.getConstHandle(constValue);
+                if (hValue != null)
+                    {
+                    saveConstHandle(constValue, hValue);
+                    }
+                }
+            }
+        return hValue;
         }
 
     /**
@@ -123,13 +144,16 @@ public abstract class ConstHeap
         return hValue0 == null ? hValue : hValue0;
         }
 
-    /**
-     * @return a ClassTemplate for a type associated with the specified constant
-     */
-    protected abstract ClassTemplate getTemplate(Constant constValue);
+
+    // ----- data fields ---------------------------------------------------------------------------
 
     /**
-     * The constants.
+     * The container this heap belongs to.
+     */
+    protected final Container f_container;
+
+    /**
+     * The cached constants.
      */
     private final Map<Constant, ObjectHandle> f_mapConstants = new ConcurrentHashMap<>();
     }

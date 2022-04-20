@@ -3,7 +3,7 @@ package org.xvm.runtime.template.collections;
 
 import org.xvm.asm.ClassStructure;
 
-import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.Container;
 
 
 /**
@@ -14,9 +14,9 @@ public abstract class BitBasedArray
     {
     public static BitBasedArray INSTANCE;
 
-    protected BitBasedArray(TemplateRegistry templates, ClassStructure structure)
+    protected BitBasedArray(Container container, ClassStructure structure)
         {
-        super(templates, structure, false);
+        super(container, structure, false);
         }
 
     @Override

@@ -19,10 +19,10 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.runtime.CallChain;
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
-import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
@@ -45,9 +45,9 @@ public class xRTMethod
     {
     public static xRTMethod INSTANCE;
 
-    public xRTMethod(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xRTMethod(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, false);
+        super(container, structure, false);
 
         if (fInstance)
             {
@@ -462,7 +462,7 @@ public class xRTMethod
             {
             ConstantPool pool = INSTANCE.pool();
             TypeConstant typeMethodArray = pool.ensureArrayType(pool.typeMethod());
-            ARRAY_CLZCOMP = clz = INSTANCE.f_templates.resolveClass(typeMethodArray);
+            ARRAY_CLZCOMP = clz = INSTANCE.f_container.resolveClass(typeMethodArray);
             assert clz != null;
             }
         return clz;
@@ -491,7 +491,7 @@ public class xRTMethod
         ConstantPool pool            = INSTANCE.pool();
         TypeConstant typeMethodArray = pool.ensureArrayType(
             pool.ensureParameterizedTypeConstant(pool.typeMethod(), typeTarget));
-        return INSTANCE.f_templates.resolveClass(typeMethodArray);
+        return INSTANCE.f_container.resolveClass(typeMethodArray);
         }
 
 

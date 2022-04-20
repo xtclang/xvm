@@ -7,9 +7,9 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassTemplate;
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.TemplateRegistry;
 
 import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xException;
@@ -31,9 +31,9 @@ public class xBitArray
     {
     public static xBitArray INSTANCE;
 
-    public xBitArray(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xBitArray(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure);
+        super(container, structure);
 
         if (fInstance)
             {
@@ -44,7 +44,7 @@ public class xBitArray
     @Override
     public void initNative()
         {
-        ClassTemplate mixin = f_templates.getTemplate("collections.arrays.BitArray");
+        ClassTemplate mixin = f_container.getTemplate("collections.arrays.BitArray");
 
         mixin.markNativeMethod("asByteArray", VOID, null);
         mixin.markNativeMethod("asNibbleArray", VOID, null);

@@ -6,9 +6,9 @@ import org.xvm.asm.ConstantPool;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.Container;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
-import org.xvm.runtime.TemplateRegistry;
 
 import org.xvm.runtime.template.collections.xArray.Mutability;
 
@@ -23,9 +23,9 @@ public class xRTBitDelegate
     {
     public static xRTBitDelegate INSTANCE;
 
-    public xRTBitDelegate(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xRTBitDelegate(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure);
+        super(container, structure);
 
         if (fInstance)
             {

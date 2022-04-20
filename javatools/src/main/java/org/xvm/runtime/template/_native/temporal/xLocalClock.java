@@ -11,11 +11,11 @@ import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.ServiceContext;
-import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
@@ -42,9 +42,9 @@ public class xLocalClock
     {
     public static xLocalClock INSTANCE;
 
-    public xLocalClock(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xLocalClock(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, false);
+        super(container, structure, false);
 
         if (fInstance)
             {
@@ -155,7 +155,7 @@ public class xLocalClock
         if (hTimeZone == null)
             {
             ConstantPool    pool           = pool();
-            ClassStructure  structTimeZone = f_templates.getClassStructure("temporal.TimeZone");
+            ClassStructure  structTimeZone = f_container.getClassStructure("temporal.TimeZone");
             TypeConstant    typeTimeZone   = structTimeZone.getCanonicalType();
             TypeComposition clzTimeZone    = typeTimeZone.ensureClass(frame);
 
@@ -182,7 +182,7 @@ public class xLocalClock
         if (clz == null)
             {
             clz = m_clzDateTime =
-                f_templates.getTemplate("temporal.DateTime").getCanonicalClass();
+                f_container.getTemplate("temporal.DateTime").getCanonicalClass();
             }
         return clz;
         }

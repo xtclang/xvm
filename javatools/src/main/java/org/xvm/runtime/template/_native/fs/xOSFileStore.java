@@ -17,9 +17,9 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.runtime.ClassTemplate;
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.TemplateRegistry;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
@@ -35,9 +35,9 @@ import org.xvm.runtime.template.text.xString.StringHandle;
 public class xOSFileStore
         extends ClassTemplate
     {
-    public xOSFileStore(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xOSFileStore(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure);
+        super(container, structure);
         }
 
     @Override

@@ -3,7 +3,7 @@ package org.xvm.runtime.template.numbers;
 
 import org.xvm.asm.ClassStructure;
 
-import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.Container;
 
 
 /**
@@ -14,9 +14,9 @@ public class xUInt16
     {
     public static xUInt16 INSTANCE;
 
-    public xUInt16(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xUInt16(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, 0, 2L * (long)Short.MAX_VALUE + 1, 16, true);
+        super(container, structure, 0, 2L * (long) Short.MAX_VALUE + 1, 16, true);
 
         if (fInstance)
             {
@@ -28,7 +28,7 @@ public class xUInt16
     public void registerNativeTemplates()
         {
         // create unchecked template
-        registerNativeTemplate(new xUncheckedUInt16(f_templates, f_struct, true));
+        registerNativeTemplate(new xUncheckedUInt16(f_container, f_struct, true));
         }
 
     @Override

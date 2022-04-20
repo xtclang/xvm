@@ -7,9 +7,9 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassTemplate;
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.TemplateRegistry;
 
 import org.xvm.runtime.template.xException;
 
@@ -26,9 +26,9 @@ public class xNibbleArray
     {
     public static xNibbleArray INSTANCE;
 
-    public xNibbleArray(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xNibbleArray(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure);
+        super(container, structure);
 
         if (fInstance)
             {
@@ -39,7 +39,7 @@ public class xNibbleArray
     @Override
     public void initNative()
         {
-        ClassTemplate mixin = f_templates.getTemplate("collections.arrays.NibbleArray");
+        ClassTemplate mixin = f_container.getTemplate("collections.arrays.NibbleArray");
 
         mixin.markNativeMethod("asBitArray", VOID, null);
         mixin.markNativeMethod("asByteArray", VOID, null);

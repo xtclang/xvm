@@ -22,13 +22,13 @@ import org.xvm.asm.constants.ByteConstant;
 
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TypeComposition;
-import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
@@ -55,9 +55,9 @@ public class xConst
     {
     public static xConst INSTANCE;
 
-    public xConst(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xConst(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure);
+        super(container, structure);
 
         if (fInstance)
             {
@@ -91,37 +91,37 @@ public class xConst
             getStructure().findMethod("hashCode", 2).markNative();
 
             // Stringable support
-            ClassStructure clzHelper = f_templates.getClassStructure("_native.ConstHelper");
+            ClassStructure clzHelper = f_container.getClassStructure("_native.ConstHelper");
 
             FN_ESTIMATE_LENGTH = clzHelper.findMethod("estimateStringLength", 2);
             FN_APPEND_TO       = clzHelper.findMethod("appendTo", 3);
             FN_FREEZE          = clzHelper.findMethod("freeze", 1);
 
             // Range support
-            RANGE_CONSTRUCT = f_templates.getClassStructure("Range").
+            RANGE_CONSTRUCT = f_container.getClassStructure("Range").
                 findMethod("construct", 4);
 
             // Nibble support
             TypeConstant typeBitArray = pool.ensureArrayType(pool.typeBit());
-            NIBBLE_CONSTRUCT = f_templates.getClassStructure("numbers.Nibble").
+            NIBBLE_CONSTRUCT = f_container.getClassStructure("numbers.Nibble").
                 findMethod("construct", 1, typeBitArray);
 
             // DateTime support
-            DATETIME_CONSTRUCT = f_templates.getClassStructure("temporal.DateTime").
+            DATETIME_CONSTRUCT = f_container.getClassStructure("temporal.DateTime").
                 findMethod("construct", 1, pool.typeString());
-            DATE_CONSTRUCT     = f_templates.getClassStructure("temporal.Date").
+            DATE_CONSTRUCT     = f_container.getClassStructure("temporal.Date").
                 findMethod("construct", 1, pool.typeString());
-            TIME_CONSTRUCT     = f_templates.getClassStructure("temporal.Time").
+            TIME_CONSTRUCT     = f_container.getClassStructure("temporal.Time").
                 findMethod("construct", 1, pool.typeString());
-            DURATION_CONSTRUCT = f_templates.getClassStructure("temporal.Duration").
+            DURATION_CONSTRUCT = f_container.getClassStructure("temporal.Duration").
                 findMethod("construct", 1, pool.typeString());
-            VERSION_CONSTRUCT = f_templates.getClassStructure("reflect.Version").
-                findMethod("construct", 1, pool.typeString());
-
-            PATH_CONSTRUCT = f_templates.getClassStructure("fs.Path").
+            VERSION_CONSTRUCT = f_container.getClassStructure("reflect.Version").
                 findMethod("construct", 1, pool.typeString());
 
-            HASH_SIG = f_templates.getClassStructure("collections.Hashable").
+            PATH_CONSTRUCT = f_container.getClassStructure("fs.Path").
+                findMethod("construct", 1, pool.typeString());
+
+            HASH_SIG = f_container.getClassStructure("collections.Hashable").
                 findMethod("hashCode", 2).getIdentityConstant().getSignature();
             }
         }
@@ -351,7 +351,7 @@ public class xConst
                 if (template == INSTANCE)
                     {
                     TypeHandle hType = (TypeHandle) ahArg[0];
-                    template = (xConst) f_templates.getTemplate(hType.getDataType());
+                    template = (xConst) frame.f_context.f_container.getTemplate(hType.getDataType());
                     }
                 return template.callCompare(frame, getCanonicalClass(), ahArg[1], ahArg[2], iReturn);
                 }
@@ -365,7 +365,7 @@ public class xConst
                 if (template == INSTANCE)
                     {
                     TypeHandle hType = (TypeHandle) ahArg[0];
-                    template = (xConst) f_templates.getTemplate(hType.getDataType());
+                    template = (xConst) frame.f_context.f_container.getTemplate(hType.getDataType());
                     }
                 return template.callEquals(frame, getCanonicalClass(), ahArg[1], ahArg[2], iReturn);
                 }
@@ -376,7 +376,7 @@ public class xConst
                 if (template == INSTANCE)
                     {
                     TypeHandle hType = (TypeHandle) ahArg[0];
-                    template = (xConst) f_templates.getTemplate(hType.getDataType());
+                    template = (xConst) frame.f_context.f_container.getTemplate(hType.getDataType());
                     }
                 return template.buildHashCode(frame, getCanonicalClass(), ahArg[1], iReturn);
                 }

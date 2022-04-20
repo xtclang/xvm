@@ -12,10 +12,10 @@ import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassTemplate;
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
-import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xBoolean;
@@ -41,11 +41,11 @@ import org.xvm.util.PackedInteger;
 public abstract class xConstrainedInteger
         extends xConst
     {
-    protected xConstrainedInteger(TemplateRegistry templates, ClassStructure structure,
+    protected xConstrainedInteger(Container container, ClassStructure structure,
                                   long cMinValue, long cMaxValue,
                                   int cNumBits, boolean fUnsigned, boolean fChecked)
         {
-        super(templates, structure, false);
+        super(container, structure, false);
 
         f_cMinValue = cMinValue;
         f_cMaxValue = cMaxValue;
@@ -379,7 +379,7 @@ public abstract class xConstrainedInteger
             case "toChar":
                 {
                 TypeConstant  typeRet  = method.getReturn(0).getType();
-                ClassTemplate template = f_templates.getTemplate(typeRet);
+                ClassTemplate template = f_container.getTemplate(typeRet);
 
                 if (template == this)
                     {

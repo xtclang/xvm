@@ -16,10 +16,10 @@ import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
-import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
@@ -45,9 +45,9 @@ public class xRTTypeTemplate
     {
     public static xRTTypeTemplate INSTANCE;
 
-    public xRTTypeTemplate(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xRTTypeTemplate(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, false);
+        super(container, structure, false);
 
         if (fInstance)
             {
@@ -595,7 +595,7 @@ public class xRTTypeTemplate
             {
             ConstantPool pool = INSTANCE.pool();
             TypeConstant type = pool.ensureEcstasyTypeConstant("reflect.TypeTemplate");
-            TYPE_TEMPLATE = clz = INSTANCE.f_templates.resolveClass(type);
+            TYPE_TEMPLATE = clz = INSTANCE.f_container.resolveClass(type);
             assert clz != null;
             }
         return clz;
@@ -612,7 +612,7 @@ public class xRTTypeTemplate
             ConstantPool pool = INSTANCE.pool();
             TypeConstant type = pool.ensureArrayType(
                     pool.ensureEcstasyTypeConstant("reflect.TypeTemplate"));
-            TYPE_TEMPLATE_ARRAY = clz = INSTANCE.f_templates.resolveClass(type);
+            TYPE_TEMPLATE_ARRAY = clz = INSTANCE.f_container.resolveClass(type);
             assert clz != null;
             }
         return clz;
@@ -634,7 +634,7 @@ public class xRTTypeTemplate
      */
     public EnumHandle makeAccessHandle(Frame frame, Constants.Access access)
         {
-        xEnum enumAccess = (xEnum) f_templates.getTemplate("reflect.Access");
+        xEnum enumAccess = (xEnum) f_container.getTemplate("reflect.Access");
         switch (access)
             {
             case PUBLIC:
@@ -664,7 +664,7 @@ public class xRTTypeTemplate
      */
     protected EnumHandle makeFormHandle(Frame frame, TypeConstant type)
         {
-        xEnum enumForm = (xEnum) f_templates.getTemplate("reflect.TypeTemplate.Form");
+        xEnum enumForm = (xEnum) f_container.getTemplate("reflect.TypeTemplate.Form");
 
         switch (type.getFormat())
             {

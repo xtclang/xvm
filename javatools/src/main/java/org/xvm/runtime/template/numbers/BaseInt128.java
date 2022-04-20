@@ -10,9 +10,9 @@ import org.xvm.asm.constants.IntConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassTemplate;
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xBoolean;
@@ -32,9 +32,9 @@ public abstract class BaseInt128
     {
     public final boolean f_fSigned;
 
-    public BaseInt128(TemplateRegistry templates, ClassStructure structure, boolean fSigned)
+    public BaseInt128(Container container, ClassStructure structure, boolean fSigned)
         {
-        super(templates, structure, false);
+        super(container, structure, false);
 
         f_fSigned = fSigned;
         }
@@ -168,7 +168,7 @@ public abstract class BaseInt128
             case "toUInt128":
                 {
                 TypeConstant  typeRet  = method.getReturn(0).getType();
-                ClassTemplate template = f_templates.getTemplate(typeRet);
+                ClassTemplate template = f_container.getTemplate(typeRet);
 
                 if (template == this)
                     {

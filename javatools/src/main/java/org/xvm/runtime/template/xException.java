@@ -10,10 +10,10 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassComposition;
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
-import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.collections.xArray;
@@ -28,9 +28,9 @@ public class xException
     {
     public static xException INSTANCE;
 
-    public xException(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xException(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, false);
+        super(container, structure, false);
 
         if (fInstance)
             {
@@ -45,22 +45,22 @@ public class xException
             {
             // cache all the well-known exception classes
             s_clzException                  = INSTANCE.getCanonicalClass();
-            s_clzDeadlock                   = f_templates.getTemplate("Deadlock"                     ).getCanonicalClass();
-            s_clzIllegalArgument            = f_templates.getTemplate("IllegalArgument"              ).getCanonicalClass();
-            s_clzIllegalState               = f_templates.getTemplate("IllegalState"                 ).getCanonicalClass();
-            s_clzInvalidType                = f_templates.getTemplate("reflect.InvalidType"          ).getCanonicalClass();
-            s_clzOutOfBounds                = f_templates.getTemplate("OutOfBounds"                  ).getCanonicalClass();
-            s_clzReadOnly                   = f_templates.getTemplate("ReadOnly"                     ).getCanonicalClass();
-            s_clzSizeLimited                = f_templates.getTemplate("collections.SizeLimited"      ).getCanonicalClass();
-            s_clzTimedOut                   = f_templates.getTemplate("TimedOut"                     ).getCanonicalClass();
-            s_clzTypeMismatch               = f_templates.getTemplate("TypeMismatch"                 ).getCanonicalClass();
-            s_clzUnsupportedOperation       = f_templates.getTemplate("UnsupportedOperation"         ).getCanonicalClass();
-            s_clzDivisionByZero             = f_templates.getTemplate("numbers.Number.DivisionByZero").getCanonicalClass();
-            s_clzPathException              = f_templates.getTemplate("fs.PathException"             ).getCanonicalClass();
-            s_clzFileNotFoundException      = f_templates.getTemplate("fs.FileNotFound"              ).getCanonicalClass();
-            s_clzAccessDeniedException      = f_templates.getTemplate("fs.AccessDenied"              ).getCanonicalClass();
-            s_clzFileAlreadyExistsException = f_templates.getTemplate("fs.FileAlreadyExists"         ).getCanonicalClass();
-            s_clzIOException                = f_templates.getTemplate("io.IOException"               ).getCanonicalClass();
+            s_clzDeadlock                   = f_container.getTemplate("Deadlock"                     ).getCanonicalClass();
+            s_clzIllegalArgument            = f_container.getTemplate("IllegalArgument"              ).getCanonicalClass();
+            s_clzIllegalState               = f_container.getTemplate("IllegalState"                 ).getCanonicalClass();
+            s_clzInvalidType                = f_container.getTemplate("reflect.InvalidType"          ).getCanonicalClass();
+            s_clzOutOfBounds                = f_container.getTemplate("OutOfBounds"                  ).getCanonicalClass();
+            s_clzReadOnly                   = f_container.getTemplate("ReadOnly"                     ).getCanonicalClass();
+            s_clzSizeLimited                = f_container.getTemplate("collections.SizeLimited"      ).getCanonicalClass();
+            s_clzTimedOut                   = f_container.getTemplate("TimedOut"                     ).getCanonicalClass();
+            s_clzTypeMismatch               = f_container.getTemplate("TypeMismatch"                 ).getCanonicalClass();
+            s_clzUnsupportedOperation       = f_container.getTemplate("UnsupportedOperation"         ).getCanonicalClass();
+            s_clzDivisionByZero             = f_container.getTemplate("numbers.Number.DivisionByZero").getCanonicalClass();
+            s_clzPathException              = f_container.getTemplate("fs.PathException"             ).getCanonicalClass();
+            s_clzFileNotFoundException      = f_container.getTemplate("fs.FileNotFound"              ).getCanonicalClass();
+            s_clzAccessDeniedException      = f_container.getTemplate("fs.AccessDenied"              ).getCanonicalClass();
+            s_clzFileAlreadyExistsException = f_container.getTemplate("fs.FileAlreadyExists"         ).getCanonicalClass();
+            s_clzIOException                = f_container.getTemplate("io.IOException"               ).getCanonicalClass();
 
             METHOD_FORMAT_EXCEPTION = getStructure().findMethod("formatExceptionString", 2);
 

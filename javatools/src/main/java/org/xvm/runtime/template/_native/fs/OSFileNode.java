@@ -10,10 +10,10 @@ import java.nio.file.attribute.BasicFileAttributes;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Op;
 
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
-import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xBoolean;
@@ -32,9 +32,9 @@ import org.xvm.runtime.template.text.xString;
 public abstract class OSFileNode
         extends xConst
     {
-    protected OSFileNode(TemplateRegistry templates, ClassStructure structure)
+    protected OSFileNode(Container container, ClassStructure structure)
         {
-        super(templates, structure, false);
+        super(container, structure, false);
         }
 
     @Override

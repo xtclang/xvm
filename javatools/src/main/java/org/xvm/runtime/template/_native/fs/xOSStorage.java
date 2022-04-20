@@ -22,9 +22,9 @@ import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.PropertyConstant;
 
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.collections.xArray;
@@ -48,9 +48,9 @@ import org.xvm.runtime.template.text.xString.StringHandle;
 public class xOSStorage
         extends xService
     {
-    public xOSStorage(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xOSStorage(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, false);
+        super(container, structure, false);
         }
 
     @Override

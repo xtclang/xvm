@@ -12,9 +12,10 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean;
@@ -35,9 +36,9 @@ public class xTerminalConsole
     {
     public static xTerminalConsole INSTANCE;
 
-    public xTerminalConsole(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xTerminalConsole(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, false);
+        super(container, structure, false);
 
         if (fInstance)
             {

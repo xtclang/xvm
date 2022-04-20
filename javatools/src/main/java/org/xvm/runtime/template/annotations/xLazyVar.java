@@ -11,11 +11,11 @@ import org.xvm.asm.Op;
 import org.xvm.asm.constants.SignatureConstant;
 
 import org.xvm.runtime.CallChain;
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Fiber;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
-import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.reflect.xVar;
@@ -29,9 +29,9 @@ import org.xvm.runtime.template.xException;
 public class xLazyVar
         extends xVar
     {
-    public xLazyVar(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xLazyVar(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, false);
+        super(container, structure, false);
         }
 
     @Override

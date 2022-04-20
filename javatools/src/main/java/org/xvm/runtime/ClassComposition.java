@@ -519,11 +519,11 @@ public class ClassComposition
     // ----- helpers -------------------------------------------------------------------------------
 
     /**
-     * @return the template registry
+     * @return the container for this class composition template
      */
-    protected TemplateRegistry getRegistry()
+    protected Container getContainer()
         {
-        return f_template.f_templates;
+        return f_template.f_container;
         }
 
     /**
@@ -636,7 +636,7 @@ public class ClassComposition
                     }
                 else if (!infoProp.isSimpleUnassigned())
                     {
-                    clzRef = f_template.f_templates.resolveClass(infoProp.getBaseRefType());
+                    clzRef = f_template.f_container.resolveClass(infoProp.getBaseRefType());
                     }
 
                 if (clzRef != null && !infoProp.isNative())

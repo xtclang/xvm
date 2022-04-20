@@ -8,9 +8,9 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.constants.ByteConstant;
 
 import org.xvm.runtime.ClassComposition;
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle.JavaLong;
-import org.xvm.runtime.TemplateRegistry;
 
 
 /**
@@ -21,9 +21,9 @@ public class xUInt8
     {
     public static xUInt8 INSTANCE;
 
-    public xUInt8(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xUInt8(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, 0, 255, 8, true);
+        super(container, structure, 0, 255, 8, true);
 
         if (fInstance)
             {
@@ -35,7 +35,7 @@ public class xUInt8
     public void registerNativeTemplates()
         {
         // create unchecked template
-        registerNativeTemplate(new xUncheckedUInt8(f_templates, f_struct, true));
+        registerNativeTemplate(new xUncheckedUInt8(f_container, f_struct, true));
         }
 
     @Override

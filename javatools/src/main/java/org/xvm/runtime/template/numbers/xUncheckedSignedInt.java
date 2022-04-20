@@ -5,10 +5,10 @@ import org.xvm.asm.ClassStructure;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
-import org.xvm.runtime.TemplateRegistry;
 
 /**
  * Abstract super class for all unchecked constrained integers (Int8, UInt16, @Unchecked Int32, ...)
@@ -16,10 +16,10 @@ import org.xvm.runtime.TemplateRegistry;
 public abstract class xUncheckedSignedInt
         extends xConstrainedInteger
     {
-    public xUncheckedSignedInt(TemplateRegistry templates, ClassStructure structure,
+    public xUncheckedSignedInt(Container container, ClassStructure structure,
                                long cMinValue, long cMaxValue, int cNumBits)
         {
-        super(templates, structure, cMinValue, cMaxValue, cNumBits, false, false);
+        super(container, structure, cMinValue, cMaxValue, cNumBits, false, false);
 
         f_nSign = cMaxValue + 1; // used only for signed
         }

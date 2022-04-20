@@ -3,7 +3,7 @@ package org.xvm.runtime.template.numbers;
 
 import org.xvm.asm.ClassStructure;
 
-import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.Container;
 
 
 /**
@@ -14,9 +14,9 @@ public class xUIntN
     {
     public static xUIntN INSTANCE;
 
-    public xUIntN(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xUIntN(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, true, true);
+        super(container, structure, true, true);
 
         if (fInstance)
             {

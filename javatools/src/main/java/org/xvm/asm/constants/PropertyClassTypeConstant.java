@@ -23,8 +23,8 @@ import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.PropertyStructure;
 
 import org.xvm.runtime.ClassTemplate;
-import org.xvm.runtime.TemplateRegistry;
 
+import org.xvm.runtime.Container;
 import org.xvm.util.ListMap;
 
 import static org.xvm.util.Handy.readIndex;
@@ -420,9 +420,9 @@ public class PropertyClassTypeConstant
     // ----- run-time support ----------------------------------------------------------------------
 
     @Override
-    public ClassTemplate getTemplate(TemplateRegistry registry)
+    public ClassTemplate getTemplate(Container container)
         {
-        return getRefType().getTemplate(registry);
+        return getRefType().getTemplate(container);
         }
 
 

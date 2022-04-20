@@ -4,7 +4,7 @@ package org.xvm.runtime.template._native.collections.arrays;
 import org.xvm.asm.ClassStructure;
 
 import org.xvm.runtime.ClassTemplate;
-import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.Container;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.collections.xArray.Mutability;
@@ -19,9 +19,9 @@ public class xRTViewFromBit
     {
     public static xRTViewFromBit INSTANCE;
 
-    public xRTViewFromBit(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xRTViewFromBit(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure);
+        super(container, structure);
 
         if (fInstance)
             {
@@ -34,8 +34,8 @@ public class xRTViewFromBit
         {
         if (this == INSTANCE)
             {
-            registerNativeTemplate(new xRTViewFromBitToByte  (f_templates, f_struct, true));
-            registerNativeTemplate(new xRTViewFromBitToNibble(f_templates, f_struct, true));
+            registerNativeTemplate(new xRTViewFromBitToByte  (f_container, f_struct, true));
+            registerNativeTemplate(new xRTViewFromBitToNibble(f_container, f_struct, true));
             }
         }
 

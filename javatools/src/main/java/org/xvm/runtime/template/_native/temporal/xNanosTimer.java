@@ -11,11 +11,11 @@ import org.xvm.asm.Op;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassComposition;
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.ServiceContext;
-import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
@@ -41,9 +41,9 @@ public class xNanosTimer
     {
     public static xNanosTimer INSTANCE;
 
-    public xNanosTimer(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xNanosTimer(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, false);
+        super(container, structure, false);
 
         if (fInstance)
             {
@@ -54,7 +54,7 @@ public class xNanosTimer
     @Override
     public void initNative()
         {
-        s_clzDuration = f_templates.getTemplate("temporal.Duration").getCanonicalClass();
+        s_clzDuration = f_container.getTemplate("temporal.Duration").getCanonicalClass();
 
         markNativeProperty("elapsed");
 

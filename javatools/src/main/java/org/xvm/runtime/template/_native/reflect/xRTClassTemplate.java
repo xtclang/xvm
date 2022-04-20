@@ -21,9 +21,9 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
@@ -50,9 +50,9 @@ public class xRTClassTemplate
     {
     public static xRTClassTemplate INSTANCE;
 
-    public xRTClassTemplate(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xRTClassTemplate(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, false);
+        super(container, structure, false);
 
         if (fInstance)
             {
@@ -65,17 +65,17 @@ public class xRTClassTemplate
         {
         if (this == INSTANCE)
             {
-            ConstantPool     pool     = pool();
-            TemplateRegistry registry = f_templates;
-            ClassStructure   struct   = f_struct;
+            ConstantPool   pool      = pool();
+            Container      container = f_container;
+            ClassStructure struct    = f_struct;
 
             TypeConstant typeClassTemplate = pool.ensureEcstasyTypeConstant("reflect.ClassTemplate");
 
             CLASS_TEMPLATE_COMP = ensureClass(getCanonicalType(), typeClassTemplate);
-            CONTRIBUTION_COMP   = registry.resolveClass(
+            CONTRIBUTION_COMP   = container.resolveClass(
                 pool.ensureEcstasyTypeConstant("reflect.ClassTemplate.Composition.Contribution"));
 
-            ACTION = (xEnum) registry.getTemplate("reflect.ClassTemplate.Composition.Action");
+            ACTION = (xEnum) container.getTemplate("reflect.ClassTemplate.Composition.Action");
 
             CREATE_CONTRIB_METHOD         = struct.findMethod("createContribution", 6);
             CREATE_TYPE_PARAMETERS_METHOD = struct.findMethod("createTypeParameters", 2);
@@ -524,7 +524,7 @@ public class xRTClassTemplate
             {
             ConstantPool pool = INSTANCE.pool();
             TypeConstant typeContribArray = pool.ensureArrayType(CONTRIBUTION_COMP.getType());
-            CONTRIBUTION_ARRAY_COMP = clz = INSTANCE.f_templates.resolveClass(typeContribArray);
+            CONTRIBUTION_ARRAY_COMP = clz = INSTANCE.f_container.resolveClass(typeContribArray);
             assert clz != null;
             }
         return clz;
@@ -540,7 +540,7 @@ public class xRTClassTemplate
             {
             ConstantPool pool = INSTANCE.pool();
             TypeConstant typeTemplateArray = pool.ensureArrayType(CLASS_TEMPLATE_COMP.getType());
-            CLASS_TEMPLATE_ARRAY_COMP = clz = INSTANCE.f_templates.resolveClass(typeTemplateArray);
+            CLASS_TEMPLATE_ARRAY_COMP = clz = INSTANCE.f_container.resolveClass(typeTemplateArray);
             assert clz != null;
             }
         return clz;
@@ -557,7 +557,7 @@ public class xRTClassTemplate
             ConstantPool pool = INSTANCE.pool();
             TypeConstant typeTemplate = pool.ensureEcstasyTypeConstant("reflect.MultiMethodTemplate");
             TypeConstant typeTemplateArray = pool.ensureArrayType(typeTemplate);
-            MULTI_METHOD_TEMPLATE_ARRAY_COMP = clz = INSTANCE.f_templates.resolveClass(typeTemplateArray);
+            MULTI_METHOD_TEMPLATE_ARRAY_COMP = clz = INSTANCE.f_container.resolveClass(typeTemplateArray);
             assert clz != null;
             }
         return clz;
@@ -574,7 +574,7 @@ public class xRTClassTemplate
             ConstantPool pool = INSTANCE.pool();
             TypeConstant typeTemplate = pool.ensureEcstasyTypeConstant("reflect.MethodTemplate");
             TypeConstant typeTemplateArray = pool.ensureArrayType(typeTemplate);
-            METHOD_TEMPLATE_ARRAY_COMP = clz = INSTANCE.f_templates.resolveClass(typeTemplateArray);
+            METHOD_TEMPLATE_ARRAY_COMP = clz = INSTANCE.f_container.resolveClass(typeTemplateArray);
             assert clz != null;
             }
         return clz;
@@ -591,7 +591,7 @@ public class xRTClassTemplate
             ConstantPool pool = INSTANCE.pool();
             TypeConstant typeTemplate = pool.ensureEcstasyTypeConstant("reflect.AnnotationTemplate");
             TypeConstant typeTemplateArray = pool.ensureArrayType(typeTemplate);
-            ANNOTATION_TEMPLATE_ARRAY_COMP = clz = INSTANCE.f_templates.resolveClass(typeTemplateArray);
+            ANNOTATION_TEMPLATE_ARRAY_COMP = clz = INSTANCE.f_container.resolveClass(typeTemplateArray);
             assert clz != null;
             }
         return clz;
@@ -607,7 +607,7 @@ public class xRTClassTemplate
             ConstantPool pool = INSTANCE.pool();
             TypeConstant typeTypeParamArray = pool.ensureArrayType(
                                                 pool.ensureEcstasyTypeConstant("reflect.TypeParameter"));
-            TypeComposition clz = INSTANCE.f_templates.resolveClass(typeTypeParamArray);
+            TypeComposition clz = INSTANCE.f_container.resolveClass(typeTypeParamArray);
 
             TYPE_PARAMETER_ARRAY_EMPTY = xArray.createImmutableArray(clz, Utils.OBJECTS_NONE);
             }

@@ -47,7 +47,7 @@ public class PropertyComposition
 
         f_clzParent  = clzParent;
         f_infoProp   = infoProp;
-        f_clzRef     = clzParent.getRegistry().resolveClass(infoProp.getBaseRefType());
+        f_clzRef     = clzParent.getContainer().resolveClass(infoProp.getBaseRefType());
         f_mapMethods = new ConcurrentHashMap<>();
         f_mapGetters = new ConcurrentHashMap<>();
         f_mapSetters = new ConcurrentHashMap<>();

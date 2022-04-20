@@ -17,12 +17,12 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TypeComposition;
-import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xEnum.EnumHandle;
@@ -46,9 +46,9 @@ public class xService
     public static xService INSTANCE;
     public static ClassConstant INCEPTION_CLASS;
 
-    public xService(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xService(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure);
+        super(container, structure);
 
         if (fInstance)
             {
@@ -61,13 +61,13 @@ public class xService
     @Override
     public void registerNativeTemplates()
         {
-        new Proxy(f_templates); // this initializes the Proxy.INSTANCE reference
+        new Proxy(f_container); // this initializes the Proxy.INSTANCE reference
         }
 
     @Override
     public void initNative()
         {
-        SYNCHRONICITY = (xEnum) f_templates.getTemplate("Service.Synchronicity");
+        SYNCHRONICITY = (xEnum) f_container.getTemplate("Service.Synchronicity");
 
         // since Service is an interface, we cannot annotate the properties naturally and need to do
         // an ad-hoc check (the list is to be updated)

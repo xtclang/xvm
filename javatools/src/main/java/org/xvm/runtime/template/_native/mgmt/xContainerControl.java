@@ -13,7 +13,6 @@ import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ServiceContext;
-import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction;
@@ -36,9 +35,9 @@ public class xContainerControl
     {
     public static xContainerControl INSTANCE;
 
-    public xContainerControl(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xContainerControl(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, false);
+        super(container, structure, false);
 
         if (fInstance)
             {

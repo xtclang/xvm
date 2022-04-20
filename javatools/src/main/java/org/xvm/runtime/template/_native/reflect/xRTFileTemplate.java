@@ -12,9 +12,9 @@ import org.xvm.asm.FileStructure;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleStructure;
 
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xBoolean;
@@ -36,9 +36,9 @@ public class xRTFileTemplate
     {
     public static xRTFileTemplate INSTANCE;
 
-    public xRTFileTemplate(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xRTFileTemplate(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, false);
+        super(container, structure, false);
 
         if (fInstance)
             {
@@ -122,9 +122,9 @@ public class xRTFileTemplate
                     {
                     if (hArg.getTemplate() instanceof xCoreRepository)
                         {
-                        file = f_templates.createFileStructure(file.getModule());
+                        file = f_container.createFileStructure(file.getModule());
 
-                        String sMissing = file.linkModules(f_templates.f_repository, true);
+                        String sMissing = file.linkModules(f_container.getModuleRepository(), true);
                         if (sMissing != null)
                             {
                             return frame.raiseException("Missing dependent module: " + sMissing);

@@ -14,10 +14,10 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.runtime.ClassTemplate;
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ServiceContext;
-import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xBoolean;
@@ -32,9 +32,9 @@ import org.xvm.runtime.template.numbers.xInt64;
 public class xOSFileChannel
         extends xService
     {
-    public xOSFileChannel(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xOSFileChannel(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, false);
+        super(container, structure, false);
         }
 
     @Override
@@ -54,7 +54,7 @@ public class xOSFileChannel
 
         getCanonicalType().invalidateTypeInfo();
 
-        ClassTemplate templateChannel = f_templates.getTemplate("fs.FileChannel");
+        ClassTemplate templateChannel = f_container.getTemplate("fs.FileChannel");
 
         s_clzOSFileChannel = ensureClass(templateChannel.getCanonicalType());
         }

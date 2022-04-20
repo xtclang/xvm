@@ -12,17 +12,21 @@ import java.util.function.BiFunction;
 
 import java.util.stream.Collectors;
 
+import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.FileStructure;
 import org.xvm.asm.InjectionKey;
 import org.xvm.asm.LinkerContext;
 import org.xvm.asm.MethodStructure;
+import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ModuleConstant;
+import org.xvm.asm.constants.PropertyClassTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.VersionConstant;
@@ -50,13 +54,11 @@ import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 public abstract class Container
         implements LinkerContext
     {
-    protected Container(Runtime runtime, Container containerParent,
-                        TemplateRegistry templates, ConstHeap heap, ModuleConstant idModule)
+    protected Container(Runtime runtime, Container containerParent, ModuleConstant idModule)
         {
         f_runtime   = runtime;
         f_parent    = containerParent;
-        f_templates = templates;
-        f_heap      = heap;
+        f_heap      = new ConstHeap(this);
         f_idModule = idModule;
 
         if (runtime != null)
@@ -83,6 +85,14 @@ public abstract class Container
         return f_idModule;
         }
 
+    /**
+     * @return the ConstantPool for this container
+     */
+    public ConstantPool getConstantPool()
+        {
+        return f_idModule.getConstantPool();
+        }
+
 
     // ----- Container API -------------------------------------------------------------------------
 
@@ -94,9 +104,7 @@ public abstract class Container
         ServiceContext ctx = m_contextMain;
         if (ctx == null)
             {
-            ConstantPool pool = f_idModule.getConstantPool();
-
-            try (var ignore = ConstantPool.withPool(pool))
+            try (var ignore = ConstantPool.withPool(getConstantPool()))
                 {
                 m_contextMain = ctx = createServiceContext(f_idModule.getName());
                 xService.INSTANCE.createServiceHandle(ctx,
@@ -116,8 +124,8 @@ public abstract class Container
      */
     public ServiceContext createServiceContext(String sName)
         {
-        ServiceContext service = new ServiceContext(this, f_idModule.getConstantPool(),
-                sName, f_runtime.f_idProducer.getAndIncrement());
+        ServiceContext service = new ServiceContext(this, sName,
+                                    f_runtime.f_idProducer.getAndIncrement());
         f_setServices.put(service, null);
         return service;
         }
@@ -239,6 +247,94 @@ public abstract class Container
         return f_heap.ensureConstHandle(frame, constValue);
         }
 
+    /**
+     * @return a ClassTemplate for the specified type
+     */
+    public ClassTemplate getTemplate(TypeConstant type)
+        {
+        return f_parent.getTemplate(type);
+        }
+
+    /**
+     * @return a ClassTemplate for the specified class identity
+     */
+    public ClassTemplate getTemplate(IdentityConstant idClz)
+        {
+        return f_parent.getTemplate(idClz);
+        }
+
+    /**
+     * @return a ClassTemplate for a type associated with the specified constant
+     */
+    public ClassTemplate getTemplate(Constant constValue)
+        {
+        return f_parent.getTemplate(constValue);
+        }
+
+    /**
+     * @return a TypeComposition for the specified type
+     */
+    public TypeComposition ensureClass(TypeConstant type)
+        {
+        if (type instanceof PropertyClassTypeConstant typeProp)
+            {
+            ClassComposition clz = (ClassComposition) ensureClass(
+                                        typeProp.getParentType().removeAccess());
+            return clz.ensurePropertyComposition(typeProp.getPropertyInfo());
+            }
+        return getTemplate(type).ensureClass(type.normalizeParameters());
+        }
+
+    /**
+     * Produce a TypeComposition based on the specified TypeConstant.
+     */
+    public TypeComposition resolveClass(TypeConstant typeActual)
+        {
+        if (typeActual instanceof PropertyClassTypeConstant typeProp)
+            {
+            ClassComposition clz = (ClassComposition) resolveClass(
+                                        typeProp.getParentType().removeAccess());
+            return clz.ensurePropertyComposition(typeProp.getPropertyInfo());
+            }
+        return getTemplate(typeActual).ensureClass(typeActual.normalizeParameters());
+        }
+
+    /**
+     * @return a ClassTemplate for a type associated with the specified name (core classes only)
+     */
+    public ClassTemplate getTemplate(String sName)
+        {
+        return f_parent.getTemplate(sName);
+        }
+
+    /**
+     * @return a ClassStructure for the specified name (core classes only)
+     */
+    public ClassStructure getClassStructure(String sName)
+        {
+        return f_parent.getClassStructure(sName);
+        }
+
+    /**
+     * TODO
+     */
+    public ModuleRepository getModuleRepository()
+        {
+        return f_parent.getModuleRepository();
+        }
+
+    /**
+     * Create a new FileStructure for the specified module built on top of the system modules.
+     *
+     * @param moduleApp  the module to build a FileStructure for
+     *
+     * @return a new FileStructure
+     */
+    public FileStructure createFileStructure(ModuleStructure moduleApp)
+        {
+        return f_parent.createFileStructure(moduleApp);
+        }
+
 
     // ----- x:Container API helpers ---------------------------------------------------------------
 
@@ -284,7 +380,8 @@ public abstract class Container
                 ++index;
                 }
 
-            ClassTemplate    templateTS  = f_templates.getTemplate("reflect.TypeSystem");
+            TypeConstant     typeTS      = frame.poolContext().ensureEcstasyTypeConstant("reflect.TypeSystem");
+            ClassTemplate    templateTS  = getTemplate(typeTS);
             ClassComposition clzTS       = templateTS.getCanonicalClass();
             MethodStructure  constructor = templateTS.getStructure().findMethod("construct", 2);
             ObjectHandle[]   ahArg       = new ObjectHandle[constructor.getMaxVars()];
@@ -399,28 +496,19 @@ public abstract class Container
     @Override
     public boolean isSpecified(String sName)
         {
-        switch (sName)
+        // TODO: environment based?
+        return switch (sName)
             {
-            case "debug":
-            case "test":
-                return true;
-            }
-
-        // TODO
-        return false;
+            case "debug", "test" -> true;
+            default              -> false;
+            };
         }
 
     @Override
     public boolean isPresent(IdentityConstant constId)
         {
-        if (constId.getModuleConstant().equals(f_idModule))
-            {
-            // part of the Ecstasy module
-            // TODO
-            return true;
-            }
-
-        return false;
+        // TODO: is this sufficient - part of the Ecstasy module?
+        return constId.getModuleConstant().equals(f_idModule);
         }
 
     @Override
@@ -449,9 +537,15 @@ public abstract class Container
 
     // ----- data fields ---------------------------------------------------------------------------
 
-    public final Runtime          f_runtime;
-    public final TemplateRegistry f_templates;
-    public final ConstHeap        f_heap;
+    /**
+     * The runtime.
+     */
+    public final Runtime f_runtime;
+
+    /**
+     * The constant heap.
+     */
+    public final ConstHeap f_heap;
 
     /**
      * The parent container.

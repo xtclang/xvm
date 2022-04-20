@@ -11,10 +11,10 @@ import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassTemplate;
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
-import org.xvm.runtime.TemplateRegistry;
 
 import org.xvm.runtime.template.xNullable;
 
@@ -31,9 +31,9 @@ public class xInjectedRef
     {
     public static xInjectedRef INSTANCE;
 
-    public xInjectedRef(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xInjectedRef(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, false);
+        super(container, structure, false);
 
         if (fInstance)
             {

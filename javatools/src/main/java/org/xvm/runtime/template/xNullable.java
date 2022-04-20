@@ -4,7 +4,7 @@ package org.xvm.runtime.template;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component.Format;
 
-import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.Container;
 import org.xvm.runtime.TypeComposition;
 
 
@@ -16,9 +16,9 @@ public class xNullable
     {
     public static EnumHandle NULL;
 
-    public xNullable(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xNullable(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, false);
+        super(container, structure, false);
         }
 
     @Override

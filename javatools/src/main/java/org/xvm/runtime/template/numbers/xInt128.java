@@ -4,9 +4,9 @@ package org.xvm.runtime.template.numbers;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Op;
 
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.TemplateRegistry;
 
 
 public class xInt128
@@ -14,9 +14,9 @@ public class xInt128
     {
     public static xInt128 INSTANCE;
 
-    public xInt128(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xInt128(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, true);
+        super(container, structure, true);
 
         if (fInstance)
             {

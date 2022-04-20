@@ -11,7 +11,7 @@ import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
-import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.Container;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xBoolean;
@@ -32,9 +32,9 @@ import org.xvm.type.Decimal;
 abstract public class BaseDecFP
         extends BaseFP
     {
-    public BaseDecFP(TemplateRegistry templates, ClassStructure structure, int cBits)
+    public BaseDecFP(Container container, ClassStructure structure, int cBits)
         {
-        super(templates, structure, cBits);
+        super(container, structure, cBits);
         }
 
     @Override

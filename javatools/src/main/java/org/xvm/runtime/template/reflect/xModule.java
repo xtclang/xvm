@@ -26,9 +26,9 @@ import org.xvm.compiler.ast.StageMgr;
 import org.xvm.compiler.ast.TypeCompositionStatement;
 import org.xvm.compiler.ast.TypeExpression;
 
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
@@ -49,9 +49,9 @@ public class xModule
     {
     public static xModule INSTANCE;
 
-    public xModule(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xModule(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, false);
+        super(container, structure, false);
 
         if (fInstance)
             {
@@ -350,7 +350,7 @@ public class xModule
             {
             ConstantPool pool = INSTANCE.pool();
             TypeConstant typeModuleArray = pool.ensureArrayType(pool.typeModule());
-            ARRAY_CLZ = clz = INSTANCE.f_templates.resolveClass(typeModuleArray);
+            ARRAY_CLZ = clz = INSTANCE.f_container.resolveClass(typeModuleArray);
             assert clz != null;
             }
         return clz;
@@ -379,7 +379,7 @@ public class xModule
             ConstantPool pool = INSTANCE.pool();
             TypeConstant typeList = pool.ensureEcstasyTypeConstant("collections.ListMap");
             typeList = pool.ensureParameterizedTypeConstant(typeList, pool.typeString(), pool.typeModule());
-            LISTMAP_CLZ = clz = INSTANCE.f_templates.resolveClass(typeList);
+            LISTMAP_CLZ = clz = INSTANCE.f_container.resolveClass(typeList);
             assert clz != null;
             }
         return clz;

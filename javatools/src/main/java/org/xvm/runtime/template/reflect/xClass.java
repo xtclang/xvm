@@ -19,11 +19,11 @@ import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassTemplate;
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.ServiceContext;
-import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
@@ -53,9 +53,9 @@ public class xClass
     {
     public static xClass INSTANCE;
 
-    public xClass(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xClass(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, false);
+        super(container, structure, false);
 
         if (fInstance)
             {
@@ -256,7 +256,7 @@ public class xClass
 
         typePublic = typePublic.removeImmutable().removeAccess();
 
-        ClassTemplate   template  = f_templates.getTemplate(typePublic);
+        ClassTemplate   template  = f_container.getTemplate(typePublic);
         TypeComposition clzPublic = typePublic.ensureClass(frame);
 
         if (hParent == ObjectHandle.DEFAULT || hParent == xNullable.NULL)
@@ -574,7 +574,7 @@ public class xClass
             {
             ConstantPool pool = INSTANCE.pool();
             TypeConstant typeClassArray = pool.ensureArrayType(pool.typeClass());
-            ARRAY_CLZCOMP = clz = INSTANCE.f_templates.resolveClass(typeClassArray);
+            ARRAY_CLZCOMP = clz = INSTANCE.f_container.resolveClass(typeClassArray);
             assert clz != null;
             }
         return clz;

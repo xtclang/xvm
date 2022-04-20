@@ -63,13 +63,12 @@ import org.xvm.runtime.template._native.temporal.xLocalClock;
  */
 public class ServiceContext
     {
-    ServiceContext(Container container, ConstantPool pool, String sName, int nId)
+    ServiceContext(Container container, String sName, int nId)
         {
         f_container = container;
-        f_pool      = pool;
+        f_pool      = container.getConstantPool();
         f_sName     = sName;
         f_nId       = nId;
-        f_templates = container.f_templates;
         }
 
 
@@ -1853,8 +1852,10 @@ public class ServiceContext
 
     // ----- constants and fields ------------------------------------------------------------------
 
-    public final Container        f_container;
-    public final TemplateRegistry f_templates;
+    /**
+     * The container this service belongs to.
+     */
+    public final Container f_container;
 
     /**
      * The queue size threshold at which the caller should be pushed back.

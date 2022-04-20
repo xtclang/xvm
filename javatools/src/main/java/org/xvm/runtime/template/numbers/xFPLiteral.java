@@ -11,9 +11,9 @@ import org.xvm.asm.constants.LiteralConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xConst;
@@ -31,9 +31,9 @@ public class xFPLiteral
     {
     public static xFPLiteral INSTANCE;
 
-    public xFPLiteral(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xFPLiteral(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, false);
+        super(container, structure, false);
 
         if (fInstance)
             {
@@ -153,7 +153,7 @@ public class xFPLiteral
             case "toFloat64":
                 {
                 TypeConstant typeRet  = method.getReturn(0).getType();
-                BaseBinaryFP template = (BaseBinaryFP) f_templates.getTemplate(typeRet);
+                BaseBinaryFP template = (BaseBinaryFP) f_container.getTemplate(typeRet);
                 return frame.assignValue(iReturn,
                         template.makeHandle(hLiteral.getValue().doubleValue()));
                 }

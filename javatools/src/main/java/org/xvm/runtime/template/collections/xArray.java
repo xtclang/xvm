@@ -19,6 +19,7 @@ import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassComposition;
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
@@ -26,7 +27,6 @@ import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.ClassTemplate;
-import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.IndexSupport;
@@ -62,9 +62,9 @@ public class xArray
     public static xArray INSTANCE;
     public static xEnum  MUTABILITY;
 
-    public xArray(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xArray(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure);
+        super(container, structure);
 
         if (fInstance)
             {
@@ -77,9 +77,9 @@ public class xArray
         {
         if (this == INSTANCE)
             {
-            registerNativeTemplate(new xBitArray   (f_templates, f_struct, true));
-            registerNativeTemplate(new xByteArray  (f_templates, f_struct, true));
-            registerNativeTemplate(new xNibbleArray(f_templates, f_struct, true));
+            registerNativeTemplate(new xBitArray   (f_container, f_struct, true));
+            registerNativeTemplate(new xByteArray  (f_container, f_struct, true));
+            registerNativeTemplate(new xNibbleArray(f_container, f_struct, true));
             }
         }
 
@@ -129,21 +129,21 @@ public class xArray
             }
 
         // cache "Iterable.toArray()" method
-        ITERABLE_TO_ARRAY = f_templates.getClassStructure("Iterable").findMethod("toArray", 1);
+        ITERABLE_TO_ARRAY = f_container.getClassStructure("Iterable").findMethod("toArray", 1);
 
         // cache Mutability template
-        MUTABILITY = (xEnum) f_templates.getTemplate("collections.Array.Mutability");
+        MUTABILITY = (xEnum) f_container.getTemplate("collections.Array.Mutability");
 
         // cache "ConstHelper.createListSet" method
-        ClassStructure clzHelper = f_templates.getClassStructure("_native.ConstHelper");
+        ClassStructure clzHelper = f_container.getClassStructure("_native.ConstHelper");
         CREATE_LIST_SET = clzHelper.findMethod("createListSet", 2);
 
-        OBJECT_ARRAY_CLZ  = f_templates.resolveClass(pool.ensureArrayType(pool.typeObject()));
-        STRING_ARRAY_CLZ  = f_templates.resolveClass(pool.ensureArrayType(pool.typeString()));
-        BOOLEAN_ARRAY_CLZ = f_templates.resolveClass(pool.ensureArrayType(pool.typeBoolean()));
-        CHAR_ARRAY_CLZ    = f_templates.resolveClass(pool.ensureArrayType(pool.typeChar()));
-        BIT_ARRAY_CLZ     = f_templates.resolveClass(pool.typeBitArray());
-        BYTE_ARRAY_CLZ    = f_templates.resolveClass(pool.typeByteArray());
+        OBJECT_ARRAY_CLZ  = f_container.resolveClass(pool.ensureArrayType(pool.typeObject()));
+        STRING_ARRAY_CLZ  = f_container.resolveClass(pool.ensureArrayType(pool.typeString()));
+        BOOLEAN_ARRAY_CLZ = f_container.resolveClass(pool.ensureArrayType(pool.typeBoolean()));
+        CHAR_ARRAY_CLZ    = f_container.resolveClass(pool.ensureArrayType(pool.typeChar()));
+        BIT_ARRAY_CLZ     = f_container.resolveClass(pool.typeBitArray());
+        BYTE_ARRAY_CLZ    = f_container.resolveClass(pool.typeByteArray());
 
         // mark native properties and methods
         markNativeProperty("delegate");
@@ -156,7 +156,7 @@ public class xArray
         markNativeMethod("slice", null, THIS);
         markNativeMethod("deleteAll", null, THIS);
 
-        ClassTemplate mixinNumber = f_templates.getTemplate("collections.arrays.NumberArray");
+        ClassTemplate mixinNumber = f_container.getTemplate("collections.arrays.NumberArray");
         mixinNumber.markNativeMethod("asBitArray" , VOID, null);
 
         getCanonicalType().invalidateTypeInfo();
@@ -238,7 +238,7 @@ public class xArray
             }
         else
             {
-            TypeComposition clzArray = f_templates.resolveClass(typeArray);
+            TypeComposition clzArray = f_container.resolveClass(typeArray);
             if (fDeferred)
                 {
                 Frame.Continuation stepNext = frameCaller ->
@@ -629,7 +629,7 @@ public class xArray
     private int createListSet(Frame frame, TypeConstant typeEl, ObjectHandle[] ahValue)
         {
         TypeConstant    typeArray = frame.poolContext().ensureArrayType(typeEl);
-        TypeComposition clzArray  = f_templates.resolveClass(typeArray);
+        TypeComposition clzArray  = f_container.resolveClass(typeArray);
 
         return createListSet(frame, createImmutableArray(clzArray, ahValue), Op.A_STACK);
         }

@@ -6,8 +6,8 @@ import org.xvm.asm.ConstantPool;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.Container;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.template.numbers.xInt64;
 
 
@@ -19,9 +19,9 @@ public class xRTInt64Delegate
     {
     public static xRTInt64Delegate INSTANCE;
 
-    public xRTInt64Delegate(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xRTInt64Delegate(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure, true);
+        super(container, structure, true);
 
         if (fInstance)
             {

@@ -17,9 +17,9 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.runtime.ClassTemplate;
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
@@ -34,9 +34,9 @@ public class xOSDirectory
     {
     public static xOSDirectory INSTANCE;
 
-    public xOSDirectory(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xOSDirectory(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure);
+        super(container, structure);
 
         if (fInstance)
             {
@@ -55,7 +55,7 @@ public class xOSDirectory
 
         getCanonicalType().invalidateTypeInfo();
 
-        ClassTemplate   templateDir = f_templates.getTemplate("fs.Directory");
+        ClassTemplate   templateDir = f_container.getTemplate("fs.Directory");
         TypeComposition clzOSDir    = ensureClass(templateDir.getCanonicalType());
 
         s_clzOSDirStruct = clzOSDir.ensureAccess(Constants.Access.STRUCT);

@@ -6,7 +6,7 @@ import org.xvm.asm.ConstantPool;
 
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.runtime.TemplateRegistry;
+import org.xvm.runtime.Container;
 
 
 /**
@@ -17,9 +17,9 @@ public class xRTViewToBitFromUInt8
     {
     public static xRTViewToBitFromUInt8 INSTANCE;
 
-    public xRTViewToBitFromUInt8(TemplateRegistry templates, ClassStructure structure, boolean fInstance)
+    public xRTViewToBitFromUInt8(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(templates, structure);
+        super(container, structure);
 
         if (fInstance)
             {
