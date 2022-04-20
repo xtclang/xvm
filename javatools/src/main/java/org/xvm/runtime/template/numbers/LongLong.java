@@ -560,13 +560,12 @@ public class LongLong
     @Override
     public boolean equals(Object obj)
         {
-        if (!(obj instanceof LongLong))
+        if (!(obj instanceof LongLong that))
             {
             return false;
             }
 
-        LongLong ll = (LongLong)obj;
-        return m_lLow == ll.m_lLow && m_lHigh == ll.m_lHigh;
+        return this.m_lLow == that.m_lLow && this.m_lHigh == that.m_lHigh;
         }
 
     public int compare(LongLong ll)
