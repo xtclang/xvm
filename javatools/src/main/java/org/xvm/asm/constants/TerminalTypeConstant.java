@@ -25,7 +25,7 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Parameter;
 import org.xvm.asm.Register;
 
-import org.xvm.runtime.OpSupport;
+import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.TemplateRegistry;
 
 import org.xvm.util.Severity;
@@ -2120,13 +2120,13 @@ public class TerminalTypeConstant
     // ----- run-time support ----------------------------------------------------------------------
 
     @Override
-    public OpSupport getOpSupport(TemplateRegistry registry)
+    public ClassTemplate getTemplate(TemplateRegistry registry)
         {
         if (!isSingleDefiningConstant())
             {
             // this can only happen if this type is a Typedef referring to a relational type
             TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
-            return constId.getReferredToType().getOpSupport(registry);
+            return constId.getReferredToType().getTemplate(registry);
             }
 
         Constant constIdThis = getDefiningConstant();

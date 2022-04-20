@@ -52,9 +52,9 @@ import org.xvm.asm.constants.TypeInfo.Progress;
 
 import org.xvm.compiler.Compiler;
 
+import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.OpSupport;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.TypeComposition;
 
@@ -6566,11 +6566,11 @@ public abstract class TypeConstant
     // ----- run-time support ----------------------------------------------------------------------
 
     /**
-     * @return an {@link OpSupport} instance for this type in the context of the specified registry
+     * @return an {@link ClassTemplate} instance for this type in the context of the specified registry
      */
-    public OpSupport getOpSupport(TemplateRegistry registry)
+    public ClassTemplate getTemplate(TemplateRegistry registry)
         {
-        return getUnderlyingType().getOpSupport(registry);
+        return getUnderlyingType().getTemplate(registry);
         }
 
     /**

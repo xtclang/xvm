@@ -19,9 +19,9 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 
+import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.OpSupport;
 import org.xvm.runtime.TemplateRegistry;
 import org.xvm.runtime.Utils;
 
@@ -627,22 +627,17 @@ public class AnnotatedTypeConstant
     // ----- run-time support ----------------------------------------------------------------------
 
     @Override
-    public OpSupport getOpSupport(TemplateRegistry registry)
+    public ClassTemplate getTemplate(TemplateRegistry registry)
         {
-        OpSupport support = m_support;
-        if (support == null)
-            {
-            TypeConstant     typeBase    = getUnderlyingType();
-            IdentityConstant constIdAnno = (IdentityConstant) getAnnotation().getAnnotationClass();
-            OpSupport        supportAnno = registry.getTemplate(constIdAnno);
+        TypeConstant     typeBase    = getUnderlyingType();
+        IdentityConstant constIdAnno = (IdentityConstant) getAnnotation().getAnnotationClass();
+        ClassTemplate    templateAnno = registry.getTemplate(constIdAnno);
 
-            // if the annotation itself is native, it overrides the base type template (support);
-            // for now all native Ref implementations extend xRef
-            m_support = support = supportAnno instanceof xRef
-                    ? supportAnno.getTemplate(typeBase)
-                    : typeBase.getOpSupport(registry);
-            }
-        return support;
+        // if the annotation itself is native, it overrides the base type template (support);
+        // for now all native Ref implementations extend xRef
+        return templateAnno instanceof xRef
+                ? templateAnno.getTemplate(typeBase)
+                : typeBase.getTemplate(registry);
         }
 
     @Override
@@ -836,11 +831,6 @@ public class AnnotatedTypeConstant
      * The type being annotated.
      */
     private TypeConstant m_constType;
-
-    /**
-     * Cached OpSupport reference.
-     */
-    private transient OpSupport m_support;
 
     /**
      * Cached annotation type.

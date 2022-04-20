@@ -38,7 +38,6 @@ import org.xvm.compiler.Parser;
 import org.xvm.compiler.Source;
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
-import org.xvm.runtime.OpSupport;
 
 import org.xvm.type.Decimal;
 
@@ -3816,11 +3815,11 @@ public class ConstantPool
 
         ClassComposition clz = f_mapCompositions.computeIfAbsent(typeInception, (type) ->
             {
-            OpSupport support = type.isAnnotated() && type.isIntoVariableType()
-                    ? type.getOpSupport(template.f_templates)
+            ClassTemplate templateReal = type.isAnnotated() && type.isIntoVariableType()
+                    ? type.getTemplate(template.f_templates)
                     : template;
 
-            return new ClassComposition(support, type);
+            return new ClassComposition(templateReal, type);
             });
 
         // we need to make this call outside of the constructor due to a possible recursion

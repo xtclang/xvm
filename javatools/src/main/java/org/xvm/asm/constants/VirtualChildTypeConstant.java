@@ -21,7 +21,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.GenericTypeResolver;
 
-import org.xvm.runtime.OpSupport;
+import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.TemplateRegistry;
 
 import static org.xvm.util.Handy.readIndex;
@@ -560,7 +560,7 @@ public class VirtualChildTypeConstant
     // ----- run-time support ----------------------------------------------------------------------
 
     @Override
-    public OpSupport getOpSupport(TemplateRegistry registry)
+    public ClassTemplate getTemplate(TemplateRegistry registry)
         {
         return registry.getTemplate((ClassConstant) getDefiningConstant());
         }

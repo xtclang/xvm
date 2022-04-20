@@ -55,24 +55,15 @@ public class ClassComposition
      *  - it cannot be abstract
      *  - the only modifying types that are allowed are AnnotatedTypeConstant(s) and
      *    ParameterizedTypeConstant(s)
-     *
-     * @param support the OpSupport implementation for the inception type
      */
-    public ClassComposition(OpSupport support, TypeConstant typeInception)
+    public ClassComposition(ClassTemplate template, TypeConstant typeInception)
         {
         assert typeInception.isSingleDefiningConstant();
         assert typeInception.getAccess() == Access.PUBLIC;
 
-        ConstantPool  pool     = typeInception.getConstantPool();
-        ClassTemplate template = support.getTemplate(typeInception);
-
-        if (support instanceof ClassTemplate)
-            {
-            support = template;
-            }
+        ConstantPool  pool = typeInception.getConstantPool();
 
         f_clzInception    = this;
-        f_support         = support;
         f_template        = template;
         f_typeInception   = pool.ensureAccessTypeConstant(typeInception, Access.PRIVATE);
         f_typeStructure   = pool.ensureAccessTypeConstant(typeInception, Access.STRUCT);
@@ -92,7 +83,6 @@ public class ClassComposition
     private ClassComposition(ClassComposition clzInception, TypeConstant typeRevealed)
         {
         f_clzInception    = clzInception;
-        f_support         = clzInception.f_support;
         f_template        = clzInception.f_template;
         f_typeInception   = clzInception.f_typeInception;
         f_typeStructure   = clzInception.f_typeStructure;
@@ -143,7 +133,7 @@ public class ClassComposition
     @Override
     public OpSupport getSupport()
         {
-        return f_support;
+        return f_template;
         }
 
     @Override
@@ -892,11 +882,6 @@ public class ClassComposition
 
 
     // ----- data fields ---------------------------------------------------------------------------
-
-    /**
-     * The underlying {@link OpSupport} for the inception type.
-     */
-    private final OpSupport f_support;
 
     /**
      * The {@link ClassTemplate} for the defining class of the inception type. Note, that the

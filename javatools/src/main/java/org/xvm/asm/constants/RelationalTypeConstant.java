@@ -20,9 +20,9 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.Register;
 
+import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.OpSupport;
 import org.xvm.runtime.TemplateRegistry;
 
 import org.xvm.util.ListMap;
@@ -676,7 +676,7 @@ public abstract class RelationalTypeConstant
     // ----- run-time support ----------------------------------------------------------------------
 
     @Override
-    public OpSupport getOpSupport(TemplateRegistry registry)
+    public ClassTemplate getTemplate(TemplateRegistry registry)
         {
         throw new UnsupportedOperationException();
         }

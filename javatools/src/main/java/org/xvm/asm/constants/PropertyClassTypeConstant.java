@@ -22,7 +22,7 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.PropertyStructure;
 
-import org.xvm.runtime.OpSupport;
+import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.TemplateRegistry;
 
 import org.xvm.util.ListMap;
@@ -420,9 +420,9 @@ public class PropertyClassTypeConstant
     // ----- run-time support ----------------------------------------------------------------------
 
     @Override
-    public OpSupport getOpSupport(TemplateRegistry registry)
+    public ClassTemplate getTemplate(TemplateRegistry registry)
         {
-        return getRefType().getOpSupport(registry);
+        return getRefType().getTemplate(registry);
         }
 
 
