@@ -190,8 +190,8 @@ public class xRegEx
                 Pattern       pattern = hRegEx.getPattern();
                 Matcher       matcher = pattern.matcher(hText.getStringValue());
                 ObjectHandle  hStart  = ahArg[1];
-                long          nStart  = hStart instanceof JavaLong
-                                                    ? ((JavaLong) hStart).getValue()
+                long          nStart  = hStart instanceof JavaLong hInt
+                                                    ? hInt.getValue()
                                                     : 0L;
                 if (matcher.find((int) nStart))
                     {
@@ -218,22 +218,6 @@ public class xRegEx
 
         return super.createConstHandle(frame, constant);
         }
-
-    /**
-     * Create an object handle for a RegEx using the specified String pattern and push it on the
-     * frame's local stack.
-     *
-     * @param frame   the current frame
-     * @param regex   the regular expression pattern
-     * @param nFlags  the flags to pass to the compiler
-     *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
-     */
-    public int createConstHandle(Frame frame, String regex, int nFlags)
-        {
-        return createConstHandle(frame, new RegExConstant(frame.poolContext(), regex, nFlags));
-        }
-
 
     /**
      * Construct a new text.Match handle representing the specified {@link MatchResult}.
@@ -336,11 +320,8 @@ public class xRegEx
         @Override
         public boolean equals(Object obj)
             {
-            if (obj instanceof RegExHandle)
-                {
-                return m_regex.equals(((RegExHandle) obj).m_regex);
-                }
-            return false;
+            return obj instanceof RegExHandle that &&
+                   m_regex.equals(that.m_regex);
             }
 
         @Override

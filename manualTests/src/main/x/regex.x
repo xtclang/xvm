@@ -7,7 +7,6 @@ module TestRegularExpressions
 
     void run()
         {
-        console.println("*** Regular Expression tests ***\n");
         testConstruct();
         testNotExactMatch();
         testExactMatch();

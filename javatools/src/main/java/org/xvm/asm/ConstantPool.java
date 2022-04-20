@@ -287,16 +287,19 @@ public class ConstantPool
      * that represents it.
      *
      * @param expression  the regular expression value
+     * @param nFlags      optional flags (see {@link java.util.regex.Pattern})
      *
      * @return a {@link RegExConstant} for the passed regular expression value
      */
-    public RegExConstant ensureRegExConstant(String expression)
+    public RegExConstant ensureRegExConstant(String expression, int nFlags)
         {
-        // check the pre-existing constants first
-        RegExConstant constant = (RegExConstant) ensureLocatorLookup(Format.RegEx).get(expression);
+        // check the pre-existing constants first (only for default flags)
+        RegExConstant constant = nFlags == 0
+                ? (RegExConstant) ensureLocatorLookup(Format.RegEx).get(expression)
+                : null;
         if (constant == null)
             {
-            constant = (RegExConstant) register(new RegExConstant(this, expression, 0));
+            constant = (RegExConstant) register(new RegExConstant(this, expression, nFlags));
             }
         return constant;
         }

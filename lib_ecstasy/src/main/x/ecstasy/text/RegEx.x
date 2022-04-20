@@ -5,6 +5,9 @@
  *
  * A RegEx is a constant, the state of the result of a match is in the Match, meaning that a
  * single RegEx may be safely used multiple times to match different input values.
+ *
+ * The (optional) flags value is a combination of the [CASE_INCENSE], [COMMENTS], [MULTILINE],
+ * [LITERAL] or [DOT_ALL] values.
  */
 const RegEx(String pattern, Int flags = 0)
     {
@@ -132,14 +135,34 @@ const RegEx(String pattern, Int flags = 0)
             }
         }
 
+
     // ---- Flags -----------------------------------------------------------
 
     /**
-     * Enables dotall mode.
-     *
-     * In dotall mode, the expression `.` matches any character,
-     * including a line terminator. By default this expression
-     * does not match line terminators.
+     * Case-insensitive mode.
      */
-    static Int DOTALL = 0x20;
+    static Int CASE_INCENSE = 0x02;
+
+    /**
+     * In this mode, whitespace is ignored, and embedded comments starting with `#` are ignored
+     * until the end of a line.
+     */
+    static Int COMMENTS     = 0x04;
+
+    /**
+     * In this mode the expressions `^` and `$` match just after or just before, respectively,
+     *a line terminator or the end of the input sequence.
+     */
+    static Int MULTILINE    = 0x08;
+
+    /**
+     * In this mode the input string that specifies the pattern is treated as a sequence of literal
+     * characters, disregarding any escape sequences.
+     */
+    static Int LITERAL      = 0x10;
+
+    /**
+     * In this mode, the expression `.` matches any character including a line terminator.
+     */
+    static Int DOT_ALL      = 0x20;
     }

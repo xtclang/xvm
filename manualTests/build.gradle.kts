@@ -27,6 +27,7 @@ val tests = listOf<String>(
     "src/main/x/queues.x",
     "src/main/x/services.x",
     "src/main/x/reflect.x",
+    "src/main/x/regex.x",
     "src/main/x/tuple.x")
 
 tasks.register("clean") {
