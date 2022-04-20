@@ -164,7 +164,7 @@ abstract public class BaseFP
             return f_mode;
             }
 
-        private RoundingMode f_mode;
+        private final RoundingMode f_mode;
         }
 
     /**

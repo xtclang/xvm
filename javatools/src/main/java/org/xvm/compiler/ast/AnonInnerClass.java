@@ -43,7 +43,7 @@ public class AnonInnerClass
         assert errs != null;
 
         m_exprType = expr;
-        m_errs     = errs;
+        f_errs     = errs;
         }
 
 
@@ -135,7 +135,7 @@ public class AnonInnerClass
             markInvalid();
             }
 
-        return m_errs;
+        return f_errs;
         }
 
     /**
@@ -581,5 +581,5 @@ public class AnonInnerClass
     /**
      * The error listener to use to log any errors.
      */
-    private ErrorListener m_errs;
+    private final ErrorListener f_errs;
     }

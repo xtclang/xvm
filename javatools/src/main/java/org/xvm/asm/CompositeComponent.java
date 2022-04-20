@@ -34,7 +34,7 @@ public class CompositeComponent
     protected CompositeComponent(Component parent, List<Component> siblings)
         {
         super(parent);
-        m_siblings = siblings;
+        f_siblings = siblings;
         }
 
 
@@ -45,7 +45,7 @@ public class CompositeComponent
      */
     public List<Component> components()
         {
-        List<Component> list = m_siblings;
+        List<Component> list = f_siblings;
         assert (list = Collections.unmodifiableList(list)) != null;
         return list;
         }
@@ -57,7 +57,7 @@ public class CompositeComponent
         {
         // this is a legal request iff all of the siblings have the same identity constant
         IdentityConstant constId = null;
-        for (Component sibling : m_siblings)
+        for (Component sibling : f_siblings)
             {
             if (constId == null)
                 {
@@ -79,7 +79,7 @@ public class CompositeComponent
     public boolean isAmbiguous()
         {
         IdentityConstant constId = null;
-        for (Component sibling : m_siblings)
+        for (Component sibling : f_siblings)
             {
             if (constId == null)
                 {
@@ -98,7 +98,7 @@ public class CompositeComponent
         {
         // this is a legal request iff all of the siblings have the same format
         Format format = null;
-        for (Component sibling : m_siblings)
+        for (Component sibling : f_siblings)
             {
             if (format == null)
                 {
@@ -119,7 +119,7 @@ public class CompositeComponent
         {
         // this is a legal request iff all of the siblings have the same access
         Access access = null;
-        for (Component sibling : m_siblings)
+        for (Component sibling : f_siblings)
             {
             if (access == null)
                 {
@@ -128,7 +128,7 @@ public class CompositeComponent
             else if (access != sibling.getAccess())
                 {
                 throw new UnsupportedOperationException(
-                        "can't ask access of a composite with diff accesss: "
+                        "can't ask access of a composite with diff access: "
                                 + access + ", " + sibling.getAccess());
                 }
             }
@@ -138,7 +138,7 @@ public class CompositeComponent
     @Override
     public void setAccess(Access access)
         {
-        for (Component sibling : m_siblings)
+        for (Component sibling : f_siblings)
             {
             sibling.setAccess(access);
             }
@@ -150,7 +150,7 @@ public class CompositeComponent
         // this is a legal request iff all of the siblings have the same abstract
         boolean fAbstract = false;
         boolean fFirst    = true;
-        for (Component sibling : m_siblings)
+        for (Component sibling : f_siblings)
             {
             if (fFirst)
                 {
@@ -169,7 +169,7 @@ public class CompositeComponent
     @Override
     public void setAbstract(boolean fAbstract)
         {
-        for (Component sibling : m_siblings)
+        for (Component sibling : f_siblings)
             {
             sibling.setAbstract(fAbstract);
             }
@@ -181,7 +181,7 @@ public class CompositeComponent
         // this is a legal request iff all of the siblings have the same static
         boolean fStatic = false;
         boolean fFirst    = true;
-        for (Component sibling : m_siblings)
+        for (Component sibling : f_siblings)
             {
             if (fFirst)
                 {
@@ -200,7 +200,7 @@ public class CompositeComponent
     @Override
     public void setStatic(boolean fStatic)
         {
-        for (Component sibling : m_siblings)
+        for (Component sibling : f_siblings)
             {
             sibling.setStatic(fStatic);
             }
@@ -212,7 +212,7 @@ public class CompositeComponent
         // this is a legal request iff all of the siblings have the same synthetic
         boolean fSynthetic = false;
         boolean fFirst    = true;
-        for (Component sibling : m_siblings)
+        for (Component sibling : f_siblings)
             {
             if (fFirst)
                 {
@@ -231,7 +231,7 @@ public class CompositeComponent
     @Override
     public void setSynthetic(boolean fSynthetic)
         {
-        for (Component sibling : m_siblings)
+        for (Component sibling : f_siblings)
             {
             sibling.setSynthetic(fSynthetic);
             }
@@ -242,13 +242,13 @@ public class CompositeComponent
         {
         // this is a legal request iff all of the siblings have the same name
         String sName = null;
-        for (Component sibling : m_siblings)
+        for (Component sibling : f_siblings)
             {
             if (sName == null)
                 {
                 sName = sibling.getName();
                 }
-            else if (sName != sibling.getName())
+            else if (!sName.equals(sibling.getName()))
                 {
                 throw new UnsupportedOperationException(
                         "can't ask name of a composite with diff names: "
@@ -262,7 +262,7 @@ public class CompositeComponent
     public boolean isGloballyVisible()
         {
         boolean fVisible = true;
-        for (Component sibling : m_siblings)
+        for (Component sibling : f_siblings)
             {
             if (!sibling.isGloballyVisible())
                 {
@@ -277,7 +277,7 @@ public class CompositeComponent
     protected boolean isChildLessVisible()
         {
         boolean fAsVisible = true;
-        for (Component sibling : m_siblings)
+        for (Component sibling : f_siblings)
             {
             if (!sibling.isChildLessVisible())
                 {
@@ -291,13 +291,13 @@ public class CompositeComponent
     @Override
     protected Component getEldestSibling()
         {
-        return m_siblings.get(0).getEldestSibling();
+        return f_siblings.get(0).getEldestSibling();
         }
 
     @Override
     public boolean isPackageContainer()
         {
-        for (Component sibling : m_siblings)
+        for (Component sibling : f_siblings)
             {
             if (!sibling.isPackageContainer())
                 {
@@ -310,7 +310,7 @@ public class CompositeComponent
     @Override
     public boolean isClassContainer()
         {
-        for (Component sibling : m_siblings)
+        for (Component sibling : f_siblings)
             {
             if (!sibling.isClassContainer())
                 {
@@ -323,7 +323,7 @@ public class CompositeComponent
     @Override
     public boolean isMethodContainer()
         {
-        for (Component sibling : m_siblings)
+        for (Component sibling : f_siblings)
             {
             if (!sibling.isMethodContainer())
                 {
@@ -336,13 +336,13 @@ public class CompositeComponent
     @Override
     public Map<String, Component> getChildByNameMap()
         {
-        return m_siblings.get(0).getChildByNameMap();
+        return f_siblings.get(0).getChildByNameMap();
         }
 
     @Override
     public Map<String, Component> ensureChildByNameMap()
         {
-        return m_siblings.get(0).ensureChildByNameMap();
+        return f_siblings.get(0).ensureChildByNameMap();
         }
 
     @Override
@@ -355,7 +355,7 @@ public class CompositeComponent
     @Override
     protected void addAndCondition(ConditionalConstant cond)
         {
-        for (Component sibling : m_siblings)
+        for (Component sibling : f_siblings)
             {
             sibling.addAndCondition(cond);
             }
@@ -364,19 +364,19 @@ public class CompositeComponent
     @Override
     protected void addOrCondition(ConditionalConstant cond)
         {
-        for (Component sibling : m_siblings)
+        for (Component sibling : f_siblings)
             {
             sibling.addOrCondition(cond);
             }
         }
 
     @Override
-    protected boolean isBodyIdentical(Component that)
+    protected boolean isBodyIdentical(Component component)
         {
-        if (that instanceof CompositeComponent)
+        if (component instanceof CompositeComponent that)
             {
-            List<Component> listThis = this.m_siblings;
-            List<Component> listThat = ((CompositeComponent) that).m_siblings;
+            List<Component> listThis = this.f_siblings;
+            List<Component> listThat = that.f_siblings;
             if (listThis.size() == listThat.size())
                 {
                 for (int i = 0, c = listThis.size(); i < c; ++i)
@@ -397,14 +397,14 @@ public class CompositeComponent
     public Component getChild(Constant constId)
         {
         IdentityArrayList<Component> listChild = new IdentityArrayList<>();
-        for (Component sibling : m_siblings)
+        for (Component sibling : f_siblings)
             {
             Component child = sibling.getChild(constId);
             if (child != null)
                 {
-                if (child instanceof CompositeComponent)
+                if (child instanceof CompositeComponent composite)
                     {
-                    for (Component eachChild : ((CompositeComponent) child).m_siblings)
+                    for (Component eachChild : composite.f_siblings)
                         {
                         listChild.addIfAbsent(eachChild);
                         }
@@ -433,14 +433,14 @@ public class CompositeComponent
     public Component getChild(String sName)
         {
         IdentityArrayList<Component> listChild = new IdentityArrayList<>();
-        for (Component sibling : m_siblings)
+        for (Component sibling : f_siblings)
             {
             Component child = sibling.getChild(sName);
             if (child != null)
                 {
-                if (child instanceof CompositeComponent)
+                if (child instanceof CompositeComponent composite)
                     {
-                    for (Component eachChild : ((CompositeComponent) child).m_siblings)
+                    for (Component eachChild : composite.f_siblings)
                         {
                         listChild.addIfAbsent(eachChild);
                         }
@@ -467,7 +467,6 @@ public class CompositeComponent
 
     @Override
     protected void disassembleChildren(DataInput in, boolean fLazy)
-            throws IOException
         {
         throw new UnsupportedOperationException();
         }
@@ -480,7 +479,6 @@ public class CompositeComponent
 
     @Override
     protected void assembleChildren(DataOutput out)
-            throws IOException
         {
         throw new UnsupportedOperationException();
         }
@@ -500,13 +498,13 @@ public class CompositeComponent
     public Iterator<? extends XvmStructure> getContained()
         {
         // TODO this is not correct, if some of the structures have additional "contained" structures, i.e. need Component.getBodyContained()
-        return m_siblings.get(0).getContained();
+        return f_siblings.get(0).getContained();
         }
 
     @Override
     public boolean isModified()
         {
-        for (Component sibling : m_siblings)
+        for (Component sibling : f_siblings)
             {
             if (sibling.isModified())
                 {
@@ -519,7 +517,7 @@ public class CompositeComponent
     @Override
     protected boolean isBodyModified()
         {
-        for (Component sibling : m_siblings)
+        for (Component sibling : f_siblings)
             {
             if (sibling.isBodyModified())
                 {
@@ -532,7 +530,7 @@ public class CompositeComponent
     @Override
     protected void markModified()
         {
-        for (Component sibling : m_siblings)
+        for (Component sibling : f_siblings)
             {
             sibling.markModified();
             }
@@ -541,7 +539,7 @@ public class CompositeComponent
     @Override
     protected void resetModified()
         {
-        for (Component sibling : m_siblings)
+        for (Component sibling : f_siblings)
             {
             sibling.resetModified();
             }
@@ -571,9 +569,9 @@ public class CompositeComponent
     protected void dump(PrintWriter out, String sIndent)
         {
         out.print(sIndent);
-        out.println(toString());
+        out.println(this);
 
-        for (Component sibling : m_siblings)
+        for (Component sibling : f_siblings)
             {
             sibling.dump(out, nextIndent(sIndent));
             }
@@ -586,7 +584,7 @@ public class CompositeComponent
     public int hashCode()
         {
         int n = 0;
-        for (Component sibling : m_siblings)
+        for (Component sibling : f_siblings)
             {
             n ^= sibling.hashCode();
             }
@@ -596,10 +594,9 @@ public class CompositeComponent
     @Override
     public boolean equals(Object obj)
         {
-        if (obj instanceof CompositeComponent)
+        if (obj instanceof CompositeComponent that)
             {
-            CompositeComponent that = (CompositeComponent) obj;
-            return this.m_siblings.equals(that.m_siblings);
+            return this.f_siblings.equals(that.f_siblings);
             }
         return false;
         }
@@ -610,7 +607,7 @@ public class CompositeComponent
         StringBuilder sb = new StringBuilder();
         sb.append("CompositeComponent{");
 
-        List<Component> list = m_siblings;
+        List<Component> list = f_siblings;
         for (int i = 0, c = list.size(); i < c; ++i)
             {
             if (i > 0)
@@ -634,5 +631,5 @@ public class CompositeComponent
     /**
      * The siblings represented by this component.
      */
-    private List<Component> m_siblings;
+    private final List<Component> f_siblings;
     }

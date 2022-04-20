@@ -51,7 +51,7 @@ public class MapConstant
      */
     public MapConstant(ConstantPool pool, TypeConstant constType, Map<? extends Constant, ? extends Constant> map)
         {
-        this(pool, Format.Map, constType, map.keySet().toArray(new Constant[map.size()]), map.values().toArray(new Constant[map.size()]));
+        this(pool, Format.Map, constType, map.keySet().toArray(NO_CONSTS), map.values().toArray(NO_CONSTS));
         }
 
     /**
@@ -593,7 +593,7 @@ public class MapConstant
     /**
      * The constant format.
      */
-    private Format m_fmt;
+    private final Format m_fmt;
 
     /**
      * The type of the key(s) represented by this constant.
@@ -615,4 +615,3 @@ public class MapConstant
      */
     private transient int m_nHash;
     }
-

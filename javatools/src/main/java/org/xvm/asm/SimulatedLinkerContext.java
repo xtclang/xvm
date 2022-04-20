@@ -165,7 +165,7 @@ public class SimulatedLinkerContext
                     // walk up the namespace hierarchy, to see if the IdentityConstant being
                     // evaluated is part of this constant's namespace hierarchy
                     IdentityConstant constIdParent = constIdPresent.getNamespace();
-                    while (constIdPresent != null)
+                    while (constIdParent != null)
                         {
                         if (constId.equals(constIdParent)) // TODO fix eventually - what if the parent is a composite?
                             {
@@ -231,7 +231,7 @@ public class SimulatedLinkerContext
 
     public static final SimulatedLinkerContext EMPTY = new SimulatedLinkerContext((ConditionalConstant) null);
 
-    private ConditionalConstant                 cond;
+    private final ConditionalConstant           cond;
     private Map<ConditionalConstant, Influence> influences  = Collections.EMPTY_MAP;
     private Set<String>                         names       = Collections.EMPTY_SET;
     private Map<IdentityConstant, Boolean>      present     = Collections.EMPTY_MAP;

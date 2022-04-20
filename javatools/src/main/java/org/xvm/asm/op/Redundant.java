@@ -48,7 +48,7 @@ public class Redundant
         Op op = getNextOp();
         if (op != null)
             {
-            sb.append(op.toString());
+            sb.append(op);
             }
 
         return sb.toString();
@@ -57,5 +57,5 @@ public class Redundant
     /**
      * The redundant op.
      */
-    private Op m_opDiscarded;
+    private final Op m_opDiscarded;
     }

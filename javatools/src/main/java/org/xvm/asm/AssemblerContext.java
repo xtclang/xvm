@@ -214,7 +214,7 @@ public class AssemblerContext
             return list.get(0);
             }
 
-        return m_pool.ensureAllCondition(list.toArray(new ConditionalConstant[list.size()]));
+        return m_pool.ensureAllCondition(list.toArray(new ConditionalConstant[0]));
         }
 
     /**

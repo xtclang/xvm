@@ -110,7 +110,7 @@ public class ComponentBifurcator
         return componentTrue;
         }
 
-    private Component           unsplit;
+    private final Component     unsplit;
     private ConditionalConstant splitter;
     private ComponentBifurcator iftrue;
     private ComponentBifurcator iffalse;

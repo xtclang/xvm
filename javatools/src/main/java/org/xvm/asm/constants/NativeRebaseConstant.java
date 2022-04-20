@@ -54,7 +54,7 @@ public class NativeRebaseConstant
         }
 
     @Override
-    public boolean validate(ErrorListener errlist)
+    public boolean validate(ErrorListener errs)
         {
         return true;
         }
@@ -106,5 +106,5 @@ public class NativeRebaseConstant
     /**
      * The underlying type.
      */
-    private ClassConstant m_constIface;
+    private final ClassConstant m_constIface;
     }

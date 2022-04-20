@@ -301,7 +301,7 @@ abstract public class BaseDecFP
             {
             return dec2.getSignum() == 0
                 ? overflow(frame)
-                : frame.raiseException("Modulus is negative: " + dec2.toString());
+                : frame.raiseException("Modulus is negative: " + dec2);
             }
 
         return frame.assignValue(iReturn, makeHandle(dec1.mod(dec2)));

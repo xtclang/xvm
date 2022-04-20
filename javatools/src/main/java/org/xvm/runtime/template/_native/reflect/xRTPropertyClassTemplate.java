@@ -211,7 +211,7 @@ public class xRTPropertyClassTemplate
             ahVar[1] = typeContrib.ensureTypeHandle(pool);
             ahVar[2] = hDelegatee;
             ahVar[3] = haNames;
-            ahVar[3] = haTypes;
+            ahVar[4] = haTypes;
 
             return frameCaller.call1(methodCreateContrib, null, ahVar, Op.A_STACK);
             };

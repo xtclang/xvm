@@ -55,7 +55,7 @@ public class BuildUnicodeTables
      */
     public BuildUnicodeTables(String[] asArgs)
         {
-        m_asArgs = asArgs;
+        f_asArgs = asArgs;
         }
 
     /**
@@ -595,5 +595,5 @@ public class BuildUnicodeTables
     /**
      * The command-line arguments.
      */
-    private String[] m_asArgs;
+    private final String[] f_asArgs;
     }

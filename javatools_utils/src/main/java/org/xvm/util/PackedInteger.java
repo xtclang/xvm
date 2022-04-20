@@ -996,14 +996,14 @@ public class PackedInteger
                 {
                 // Small format: bits 3..7 of the first byte are bits 8..12 of the result, and the
                 // next byte provides bits 0..7 of the result (note: and then also sign-extend)
-                return (b & 0xFFFFFFF8) << 5 | in.readUnsignedByte();
+                return (long) (b & 0xFFFFFFF8) << 5 | in.readUnsignedByte();
                 }
             else
                 {
                 // Medium format: bits 3..7 of the first byte are bits 16..20 of the result, and the
                 // next byte provides bits 8..15 of the result, and the next byte provides bits 0..7
                 // of the result (note: and then also sign-extend)
-                return (b & 0xFFFFFFF8) << 13 | in.readUnsignedShort();
+                return (long) (b & 0xFFFFFFF8) << 13 | in.readUnsignedShort();
                 }
             }
 

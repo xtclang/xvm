@@ -147,8 +147,8 @@ public class Float128Constant
     @Override
     public int hashCode()
         {
-        int nHash = 0;
-        byte[] ab = m_abVal;
+        int    nHash = 0;
+        byte[] ab    = m_abVal;
         for (int of = 0; of < 16; ++of)
             {
             nHash *= 19 + ab[of];

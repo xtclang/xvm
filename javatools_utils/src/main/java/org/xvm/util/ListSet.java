@@ -1077,7 +1077,7 @@ public class ListSet<E>
         /**
          * The hard-stop for the Iterator.
          */
-        private Stop   m_stop;
+        private final Stop m_stop;
 
         /**
          * The organizational id (counter) expected on the ListSet; any difference indicates that
@@ -1236,7 +1236,7 @@ public class ListSet<E>
         @Override
         public boolean equals(Object obj)
             {
-            return obj == this || obj instanceof Null;
+            return obj instanceof Null;
             }
 
         @Override
@@ -1249,18 +1249,18 @@ public class ListSet<E>
     /**
      * The singleton used to represent a "null" value that is stored in the set.
      */
-    private static Object NULL = new Null();
+    private final static Object NULL = new Null();
 
     /**
      * Do not index small sets.
      */
-    private static int   INDEX_MIN  = 12;
+    private final static int   INDEX_MIN  = 12;
 
     /**
      * The amount of storage for an index, based on the size of the underlying storage for the
      * ListSet, which is always of a power-of-two size.
      */
-    private static int[] INDEX_SIZE = new int[]
+    private final static int[] INDEX_SIZE = new int[]
         {
                0,        0,         0,         0,        23,    // 1, 2, 4, 8, 16,
               47,       97,       191,       373,       757,    // 32, ...

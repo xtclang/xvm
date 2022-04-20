@@ -91,7 +91,7 @@ public class Label
         Op op = getNextOp();
         if (op != null)
             {
-            sb.append(op.toString());
+            sb.append(op);
             }
 
         return sb.toString();

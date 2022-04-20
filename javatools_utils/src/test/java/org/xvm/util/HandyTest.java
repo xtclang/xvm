@@ -509,17 +509,16 @@ public class HandyTest
                 }
 
             @Override
-            public void write(byte b[])
+            public void write(byte[] b)
                 {
                 appendByteArrayAsHex(sb, b);
                 }
 
             @Override
-            public void write(byte b[], int off, int len)
+            public void write(byte[] b, int off, int len)
                 {
                 appendByteArrayAsHex(sb, b, off, len);
                 }
             });
         }
     }
-

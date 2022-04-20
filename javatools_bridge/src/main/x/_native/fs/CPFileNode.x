@@ -13,7 +13,7 @@ const CPFileNode(Object cookie, CPFileStore? fileStore, Path path, DateTime crea
     {
     construct (Object cookie)
         {
-        (Boolean isdir, String name, DateTime created, DateTime modified, Int size) =
+        (Boolean isDir, String name, DateTime created, DateTime modified, Int size) =
                 CPFileStore.loadNode(cookie);
         construct CPFileNode(cookie, fileStore, new Path(name), created, modified, size);
         }

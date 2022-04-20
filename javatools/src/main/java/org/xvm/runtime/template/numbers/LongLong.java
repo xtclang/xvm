@@ -482,7 +482,7 @@ public class LongLong
         if (n <= 64)
             {
             final long nComp = 64 - n;
-            final long bitDifference = ((-1 >>> nComp) << nComp) & m_lLow;
+            final long bitDifference = ((long) (-1 >>> nComp) << nComp) & m_lLow;
 
             return new LongLong(m_lLow << n, (m_lHigh << n) | (bitDifference >> nComp));
             }

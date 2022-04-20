@@ -91,10 +91,8 @@ public class CharConstant
             case "+String":
                 {
                 assert Character.isValidCodePoint(this.m_chVal);
-                StringBuilder sb = new StringBuilder()
-                        .append((char) this.m_chVal)
-                        .append(((StringConstant) that).getValue());
-                return getConstantPool().ensureStringConstant(sb.toString());
+                String s = (char) this.m_chVal + ((StringConstant) that).getValue();
+                return getConstantPool().ensureStringConstant(s);
                 }
 
             case "+Char":
@@ -206,22 +204,21 @@ public class CharConstant
         }
 
     @Override
-    protected int compareDetails(Constant that)
+    protected int compareDetails(Constant constant)
         {
-        if (!(that instanceof CharConstant))
+        if (!(constant instanceof CharConstant that))
             {
             return -1;
             }
-        int nThis = this.m_chVal;
-        int nThat = ((CharConstant) that).m_chVal;
-        return nThis - nThat;
+
+        return this.m_chVal - that.m_chVal;
         }
 
     @Override
     public String getValueString()
         {
         return m_chVal > 0xFFFF
-                ? appendIntAsHex(new StringBuilder("\'\\U"), m_chVal).append('\'').toString()
+                ? appendIntAsHex(new StringBuilder("'\\U"), m_chVal).append('\'').toString()
                 : quotedChar((char) m_chVal);
         }
 

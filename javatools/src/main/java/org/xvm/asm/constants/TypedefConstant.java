@@ -96,7 +96,7 @@ public class TypedefConstant
                         {
                         constant.forEachUnderlying(this);
                         }
-                    };
+                    }
                 };
 
             typeReferred.forEachUnderlying(visitor);

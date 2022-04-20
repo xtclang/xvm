@@ -89,5 +89,5 @@ public class ConstBitSetTest
         return nPct < 0 ? nPct + "%" : "+" + nPct + "%";
         }
 
-    private static Random s_rnd = new Random();
+    private static final Random s_rnd = new Random();
     }

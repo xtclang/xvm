@@ -28,7 +28,7 @@ import org.xvm.util.LongList;
  * library-specific interface and only consuming library functionality if that particular library is
  * present. Additionally, multiple versions of VM structures can be combined into a single VM
  * structure (for example, multiple versions of a module can be combined into a single module), by
- * using version conditions to delineate gthe differences among versions.
+ * using version conditions to delineate the differences among versions.
  * <p/>
  * Structural inclusion/exclusion occurs when a conditional constant is referenced by another VM
  * structure, indicating that the presence at runtime of the VM structure depends on the result of
@@ -229,9 +229,9 @@ public abstract class ConditionalConstant
             {
             // collect a unique set of conditions
             ListMap<ConditionalConstant, ConditionalConstant> conds = new ListMap<>();
-            if (this instanceof AllCondition)
+            if (this instanceof AllCondition thisAll)
                 {
-                for (ConditionalConstant cond : ((AllCondition) this).m_aconstCond)
+                for (ConditionalConstant cond : thisAll.m_aconstCond)
                     {
                     conds.putIfAbsent(cond, cond);
                     }
@@ -241,9 +241,9 @@ public abstract class ConditionalConstant
                 conds.put(this, this);
                 }
 
-            if (that instanceof AllCondition)
+            if (that instanceof AllCondition thatAll)
                 {
-                for (ConditionalConstant cond : ((AllCondition) that).m_aconstCond)
+                for (ConditionalConstant cond : thatAll.m_aconstCond)
                     {
                     conds.putIfAbsent(cond, cond);
                     }
@@ -258,7 +258,7 @@ public abstract class ConditionalConstant
                 return conds.keySet().iterator().next();
                 }
 
-            return new AllCondition(getConstantPool(), conds.keySet().toArray(new ConditionalConstant[conds.size()]));
+            return new AllCondition(getConstantPool(), conds.keySet().toArray(new ConditionalConstant[0]));
             }
 
         return new AllCondition(getConstantPool(), this, that);
@@ -283,9 +283,9 @@ public abstract class ConditionalConstant
             {
             // collect a unique set of conditions
             ListMap<ConditionalConstant, ConditionalConstant> conds = new ListMap<>();
-            if (this instanceof AnyCondition)
+            if (this instanceof AnyCondition thisAny)
                 {
-                for (ConditionalConstant cond : ((AnyCondition) this).m_aconstCond)
+                for (ConditionalConstant cond : thisAny.m_aconstCond)
                     {
                     conds.putIfAbsent(cond, cond);
                     }
@@ -295,9 +295,9 @@ public abstract class ConditionalConstant
                 conds.put(this, this);
                 }
 
-            if (that instanceof AnyCondition)
+            if (that instanceof AnyCondition thatAny)
                 {
-                for (ConditionalConstant cond : ((AnyCondition) that).m_aconstCond)
+                for (ConditionalConstant cond : thatAny.m_aconstCond)
                     {
                     conds.putIfAbsent(cond, cond);
                     }
@@ -312,7 +312,7 @@ public abstract class ConditionalConstant
                 return conds.keySet().iterator().next();
                 }
 
-            return new AnyCondition(getConstantPool(), conds.keySet().toArray(new ConditionalConstant[conds.size()]));
+            return new AnyCondition(getConstantPool(), conds.keySet().toArray(new ConditionalConstant[0]));
             }
 
         return new AnyCondition(getConstantPool(), this, that);
@@ -512,7 +512,7 @@ public abstract class ConditionalConstant
      *
      * @return the number of tests run
      */
-    private final void bruteForce(int cConds, long[] amaskSkip, long[] aptrnSkip,
+    private void bruteForce(int cConds, long[] amaskSkip, long[] aptrnSkip,
             long[] aResultFF,  long[] aResultFT, long[] aResultTF, long[] aResultTT)
         {
         assert cConds > 0;
@@ -610,16 +610,16 @@ public abstract class ConditionalConstant
         // unwrap a single negation of either this or that
         boolean fNegate = false;
         ConditionalConstant condThis = this;
-        if (condThis instanceof NotCondition)
+        if (condThis instanceof NotCondition condNot)
             {
             fNegate  = !fNegate;
-            condThis = ((NotCondition) condThis).getUnderlyingCondition();
+            condThis = condNot.getUnderlyingCondition();
             }
         ConditionalConstant condThat = that;
-        if (condThat instanceof NotCondition)
+        if (condThat instanceof NotCondition condNot)
             {
             fNegate  = !fNegate;
-            condThat = ((NotCondition) condThat).getUnderlyingCondition();
+            condThat = condNot.getUnderlyingCondition();
             }
 
         // easiest case is when both are terminals
@@ -640,30 +640,30 @@ public abstract class ConditionalConstant
 
         // a common case generated by the compiler is when that contains this (or often !this)
         ConditionalConstant thisNeg = this.negate();
-        if (that instanceof AllCondition && that.terminals().containsAll(this.terminals()))
+        if (that instanceof AllCondition thatAll && that.terminals().containsAll(this.terminals()))
             {
             // first look for "this" and "!this" in the AllCondition
-            ConditionalConstant[] acondThat = ((AllCondition) that).m_aconstCond;
+            ConditionalConstant[] acondThat = thatAll.m_aconstCond;
             for (int i = 0, c = acondThat.length; i < c; ++i)
                 {
                 ConditionalConstant cond = acondThat[i];
                 if (cond.equals(this))
                     {
-                    return new Bifurcation(true, ((AllCondition) that).remove(i), false, null);
+                    return new Bifurcation(true, thatAll.remove(i), false, null);
                     }
 
                 if (cond.equals(thisNeg))
                     {
-                    return new Bifurcation(false, null, true, ((AllCondition) that).remove(i));
+                    return new Bifurcation(false, null, true, thatAll.remove(i));
                     }
                 }
 
             // it's possible that this condition shows up in that condition by way of merging two
             // all conditions
-            MatchPieces: if (this instanceof AllCondition)
+            MatchPieces: if (this instanceof AllCondition thisAll)
                 {
                 ConditionalConstant   condReduced = that;
-                ConditionalConstant[] acondThis   = ((AllCondition) this).m_aconstCond;
+                ConditionalConstant[] acondThis   = thisAll.m_aconstCond;
                 if (acondThis.length < acondThat.length)
                     {
                     for (int i = 0, c = acondThis.length; i < c; ++i)
@@ -1012,10 +1012,10 @@ public abstract class ConditionalConstant
             return condFalse;
             }
 
-        private boolean             fTruePossible;
-        private ConditionalConstant condTrue;
-        private boolean             fFalsePossible;
-        private ConditionalConstant condFalse;
+        private final boolean             fTruePossible;
+        private final ConditionalConstant condTrue;
+        private final boolean             fFalsePossible;
+        private final ConditionalConstant condFalse;
         }
 
 

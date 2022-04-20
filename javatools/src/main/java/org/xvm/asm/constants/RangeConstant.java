@@ -410,7 +410,7 @@ public class RangeConstant
     /**
      * True iff the first value of the range is excluded.
      */
-    private boolean m_fExclude1;
+    private final boolean m_fExclude1;
 
     /**
      * The second value of the range.
@@ -420,6 +420,5 @@ public class RangeConstant
     /**
      * True iff the second value of the range is excluded.
      */
-    private boolean m_fExclude2;
+    private final boolean m_fExclude2;
     }
-

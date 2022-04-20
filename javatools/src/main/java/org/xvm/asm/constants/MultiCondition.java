@@ -143,7 +143,7 @@ public abstract class MultiCondition
         {
         return new Iterator<ConditionalConstant>()
             {
-            ConditionalConstant[]         acond   = m_aconstCond;
+            final ConditionalConstant[]   acond   = m_aconstCond;
             int                           iNext   = 0;
             Iterator<ConditionalConstant> iterSub = null;
 

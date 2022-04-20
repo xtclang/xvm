@@ -222,8 +222,8 @@ public class FBind
         return sb.toString();
         }
 
-    private int[] m_anParamIx;
-    private int[] m_anParamValue;
+    private final int[] m_anParamIx;
+    private       int[] m_anParamValue;
 
     private Argument[] m_aArgParam;
     }

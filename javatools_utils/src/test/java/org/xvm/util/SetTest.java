@@ -36,7 +36,7 @@ public class SetTest
                     {
                     cIters = Math.max(1, Integer.parseInt(args[1]));
                     }
-                catch (Exception e) {}
+                catch (Exception ignore) {}
                 }
             catch (Exception e)
                 {
@@ -111,6 +111,7 @@ public class SetTest
             if (c % 1000000 == 0)
                 {
                 out(""+(c/1000000)+"m in " + (System.currentTimeMillis()-start) + "ms");
+                break;
                 }
             }
         }

@@ -482,7 +482,7 @@ public class Decimal64
     /**
      * The bits of the decimal value.
      */
-    private long m_nBits;
+    private final long m_nBits;
 
     /**
      * A cached BigDecimal value.

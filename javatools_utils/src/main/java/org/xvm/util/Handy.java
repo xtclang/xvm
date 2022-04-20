@@ -640,8 +640,8 @@ public class Handy
             of     = s.indexOf(chDelim, ofPrev);
             }
         while (of >= 0);
-        list.add(s.substring(ofPrev, s.length()));
-        return list.toArray(new String[list.size()]);
+        list.add(s.substring(ofPrev));
+        return list.toArray(NO_ARGS);
         }
 
     /**

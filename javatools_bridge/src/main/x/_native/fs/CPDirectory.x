@@ -154,8 +154,8 @@ const CPDirectory(Object cookie, CPFileStore? fileStore, Path path, DateTime cre
         for (Int i = 0; i < count; ++i)
             {
             Object cookie = cookies[i];
-            (Boolean isdir, String name, DateTime created, DateTime modified, Int size) = CPFileStore.loadNode(cookie);
-            nodes[i] = isdir
+            (Boolean isDir, String name, DateTime created, DateTime modified, Int size) = CPFileStore.loadNode(cookie);
+            nodes[i] = isDir
                     ? new CPDirectory(cookie, fileStore, path + name, created, modified, size)
                     : new CPFile(cookie, fileStore, path + name, created, modified, size);
             }

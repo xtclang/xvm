@@ -447,6 +447,6 @@ public class MultiMethodStructure
     /**
      * The flag used by the serialization logic.
      */
-    private static ThreadLocal<Boolean> m_tloIgnoreNative =
+    private static final ThreadLocal<Boolean> m_tloIgnoreNative =
             ThreadLocal.withInitial(() -> Boolean.FALSE);
     }

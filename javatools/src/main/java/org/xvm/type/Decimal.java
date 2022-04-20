@@ -283,7 +283,7 @@ public abstract class Decimal
         if (isFinite())
             {
             BigDecimal big = toBigDecimal();
-            return fromBigDecimal(new BigDecimal(Math.exp(big.doubleValue())));
+            return fromBigDecimal(BigDecimal.valueOf(Math.exp(big.doubleValue())));
             }
         return isSigned() ? zero(false) : this;
         }
@@ -293,7 +293,7 @@ public abstract class Decimal
         if (isFinite())
             {
             BigDecimal big = toBigDecimal();
-            return fromBigDecimal(new BigDecimal(Math.log(big.doubleValue())));
+            return fromBigDecimal(BigDecimal.valueOf(Math.log(big.doubleValue())));
             }
         return isSigned() ? nan() : this;
         }
@@ -313,7 +313,7 @@ public abstract class Decimal
         if (isFinite())
             {
             BigDecimal big = toBigDecimal();
-            return fromBigDecimal(new BigDecimal(Math.log10(big.doubleValue())));
+            return fromBigDecimal(BigDecimal.valueOf(Math.log10(big.doubleValue())));
             }
         return isSigned() ? nan() : this;
         }
@@ -323,7 +323,7 @@ public abstract class Decimal
         if (isFinite())
             {
             BigDecimal big = toBigDecimal();
-            return fromBigDecimal(new BigDecimal(Math.sqrt(big.doubleValue())));
+            return fromBigDecimal(BigDecimal.valueOf(Math.sqrt(big.doubleValue())));
             }
         return isSigned() ? nan() : this;
         }
@@ -333,7 +333,7 @@ public abstract class Decimal
         if (isFinite())
             {
             BigDecimal big = toBigDecimal();
-            return fromBigDecimal(new BigDecimal(Math.cbrt(big.doubleValue())));
+            return fromBigDecimal(BigDecimal.valueOf(Math.cbrt(big.doubleValue())));
             }
         return this;
         }
@@ -343,7 +343,7 @@ public abstract class Decimal
         if (isFinite())
             {
             BigDecimal big = toBigDecimal();
-            return fromBigDecimal(new BigDecimal(Math.sin(big.doubleValue())));
+            return fromBigDecimal(BigDecimal.valueOf(Math.sin(big.doubleValue())));
             }
         return nan();
         }
@@ -353,7 +353,7 @@ public abstract class Decimal
         if (isFinite())
             {
             BigDecimal big = toBigDecimal();
-            return fromBigDecimal(new BigDecimal(Math.tan(big.doubleValue())));
+            return fromBigDecimal(BigDecimal.valueOf(Math.tan(big.doubleValue())));
             }
         return nan();
         }
@@ -363,7 +363,7 @@ public abstract class Decimal
         if (isFinite())
             {
             BigDecimal big = toBigDecimal();
-            return fromBigDecimal(new BigDecimal(Math.asin(big.doubleValue())));
+            return fromBigDecimal(BigDecimal.valueOf(Math.asin(big.doubleValue())));
             }
         return nan();
         }
@@ -373,7 +373,7 @@ public abstract class Decimal
         if (isFinite())
             {
             BigDecimal big = toBigDecimal();
-            return fromBigDecimal(new BigDecimal(Math.acos(big.doubleValue())));
+            return fromBigDecimal(BigDecimal.valueOf(Math.acos(big.doubleValue())));
             }
         return nan();
         }
@@ -383,7 +383,7 @@ public abstract class Decimal
         if (isFinite())
             {
             BigDecimal big = toBigDecimal();
-            return fromBigDecimal(new BigDecimal(Math.atan(big.doubleValue())));
+            return fromBigDecimal(BigDecimal.valueOf(Math.atan(big.doubleValue())));
             }
         return nan();
         }
@@ -393,7 +393,7 @@ public abstract class Decimal
         if (isFinite())
             {
             BigDecimal big = toBigDecimal();
-            return fromBigDecimal(new BigDecimal(Math.sinh(big.doubleValue())));
+            return fromBigDecimal(BigDecimal.valueOf(Math.sinh(big.doubleValue())));
             }
         return nan();
         }
@@ -403,7 +403,7 @@ public abstract class Decimal
         if (isFinite())
             {
             BigDecimal big = toBigDecimal();
-            return fromBigDecimal(new BigDecimal(Math.cosh(big.doubleValue())));
+            return fromBigDecimal(BigDecimal.valueOf(Math.cosh(big.doubleValue())));
             }
         return nan();
         }
@@ -413,7 +413,7 @@ public abstract class Decimal
         if (isFinite())
             {
             BigDecimal big = toBigDecimal();
-            return fromBigDecimal(new BigDecimal(Math.tanh(big.doubleValue())));
+            return fromBigDecimal(BigDecimal.valueOf(Math.tanh(big.doubleValue())));
             }
         return nan();
         }
@@ -423,7 +423,7 @@ public abstract class Decimal
         if (isFinite())
             {
             double d = toBigDecimal().doubleValue();
-            return fromBigDecimal(new BigDecimal(Math.log(d+Math.sqrt(d*d+1.0))));
+            return fromBigDecimal(BigDecimal.valueOf(Math.log(d + Math.sqrt(d * d + 1.0))));
             }
         return nan();
         }
@@ -433,7 +433,7 @@ public abstract class Decimal
         if (isFinite())
             {
             double d = toBigDecimal().doubleValue();
-            return fromBigDecimal(new BigDecimal(Math.log(d+Math.sqrt(d*d-1.0))));
+            return fromBigDecimal(BigDecimal.valueOf(Math.log(d + Math.sqrt(d * d - 1.0))));
             }
         return nan();
         }
@@ -443,7 +443,7 @@ public abstract class Decimal
         if (isFinite())
             {
             double d = toBigDecimal().doubleValue();
-            return fromBigDecimal(new BigDecimal(0.5*Math.log((d+1.0)/(d-1.0))));
+            return fromBigDecimal(BigDecimal.valueOf(0.5 * Math.log((d + 1.0) / (d - 1.0))));
             }
         return nan();
         }
@@ -453,7 +453,7 @@ public abstract class Decimal
         if (isFinite())
             {
             BigDecimal big = toBigDecimal();
-            return fromBigDecimal(new BigDecimal(Math.toRadians(big.doubleValue())));
+            return fromBigDecimal(BigDecimal.valueOf(Math.toRadians(big.doubleValue())));
             }
         return this;
         }
@@ -463,7 +463,7 @@ public abstract class Decimal
         if (isFinite())
             {
             BigDecimal big = toBigDecimal();
-            return fromBigDecimal(new BigDecimal(Math.toDegrees(big.doubleValue())));
+            return fromBigDecimal(BigDecimal.valueOf(Math.toDegrees(big.doubleValue())));
             }
         return this;
         }
@@ -473,7 +473,7 @@ public abstract class Decimal
         if (isFinite())
             {
             BigDecimal big = toBigDecimal();
-            return fromBigDecimal(new BigDecimal(Math.nextUp(big.doubleValue())));
+            return fromBigDecimal(BigDecimal.valueOf(Math.nextUp(big.doubleValue())));
             }
         return this;
         }
@@ -483,7 +483,7 @@ public abstract class Decimal
         if (isFinite())
             {
             BigDecimal big = toBigDecimal();
-            return fromBigDecimal(new BigDecimal(Math.nextDown(big.doubleValue())));
+            return fromBigDecimal(BigDecimal.valueOf(Math.nextDown(big.doubleValue())));
             }
         return this;
         }
@@ -600,7 +600,7 @@ public abstract class Decimal
                 BigDecimal big1 = this.toBigDecimal();
                 BigDecimal big2 = that.toBigDecimal();
                 return fromBigDecimal(
-                    new BigDecimal(Math.atan2(big1.doubleValue(), big2.doubleValue())));
+                    BigDecimal.valueOf(Math.atan2(big1.doubleValue(), big2.doubleValue())));
                 }
             return that;
             }
@@ -896,6 +896,3 @@ public abstract class Decimal
      */
     public static final double LOG2_10 = 1.0/Math.log10(2);
     }
-
-
-

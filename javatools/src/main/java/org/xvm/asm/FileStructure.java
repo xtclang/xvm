@@ -1177,7 +1177,7 @@ public class FileStructure
      * module.</li>
      * </ul>
      */
-    private VersionTree<Boolean> m_vtree = new VersionTree<>();
+    private final VersionTree<Boolean> m_vtree = new VersionTree<>();
 
     /**
      * The ConstantPool for the FileStructure.

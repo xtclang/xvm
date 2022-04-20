@@ -16,7 +16,7 @@ public interface LabelAble
      *
      * @return true iff the statement exposes the specified variable via its label
      */
-    public boolean hasLabelVar(String sName);
+    boolean hasLabelVar(String sName);
 
     /**
      * Obtain the register for the variable of the specified name which is exposed via a label.
@@ -25,5 +25,5 @@ public interface LabelAble
      *
      * @return the corresponding register
      */
-    public Register getLabelVar(String sName);
+    Register getLabelVar(String sName);
     }

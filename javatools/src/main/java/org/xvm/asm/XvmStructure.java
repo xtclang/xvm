@@ -437,16 +437,16 @@ public abstract class XvmStructure
      * Validate the XvmStructure and its contents, checking for any errors or violations of the XVM
      * specification, and reporting any such errors to the specified {@link ErrorListener}.
      *
-     * @param errlist  the ErrorListener to log errors to
+     * @param errs  the ErrorListener to log errors to
      *
      * @return true if the validation process was halted before it completed, for example if the
      *         error list reached its size limit
      */
-    public boolean validate(ErrorListener errlist)
+    public boolean validate(ErrorListener errs)
         {
         for (Iterator<? extends XvmStructure> iter = getContained(); iter.hasNext(); )
             {
-            if (iter.next().validate(errlist))
+            if (iter.next().validate(errs))
                 {
                 return true;
                 }
@@ -583,12 +583,12 @@ public abstract class XvmStructure
                     {
                     sb.append('=')
                       .append(xs);
-                    out.println(sb.toString());
+                    out.println(sb);
                     }
                 else
                     {
                     sb.append(':');
-                    out.println(sb.toString());
+                    out.println(sb);
                     xs.dump(out, sIndentMore);
                     }
                 }
@@ -605,7 +605,7 @@ public abstract class XvmStructure
      * @param mapStructs   the map from identity to XVM Structure
      */
     protected void dumpStructureMap(PrintWriter out, String sIndent, String sTitle,
-            Map<? extends Object, ? extends XvmStructure> mapStructs)
+            Map<?, ? extends XvmStructure> mapStructs)
         {
         if (mapStructs != null && !mapStructs.isEmpty())
             {
@@ -614,15 +614,13 @@ public abstract class XvmStructure
 
             int i = 0;
             String sIndentMore = nextIndent(sIndent);
-            for (Map.Entry<? extends Object, ? extends XvmStructure> entry : mapStructs.entrySet())
+            for (Map.Entry<?, ? extends XvmStructure> entry : mapStructs.entrySet())
                 {
-                StringBuilder sb = new StringBuilder();
-                sb.append(sIndent)
-                  .append('[')
-                  .append(i++)
-                  .append("]=")
-                  .append(entry.getKey());
-                out.println(sb.toString());
+                out.println(sIndent +
+                    '[' +
+                    i++ +
+                    "]=" +
+                    entry.getKey());
 
                 XvmStructure xs = entry.getValue();
                 if (xs == null)

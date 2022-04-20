@@ -2931,12 +2931,7 @@ public class Lexer
             }
 
         // check if it is a reserved word
-        if (Token.Id.valueByText(sName) != null)
-            {
-            return false;
-            }
-
-        return true;
+        return Id.valueByText(sName) == null;
         }
 
     /**
@@ -3172,12 +3167,12 @@ public class Lexer
     /**
      * The Source to parse.
      */
-    private Source m_source;
+    private final Source m_source;
 
     /**
      * The ErrorListener to report errors to.
      */
-    private ErrorListener m_errorListener;
+    private final ErrorListener m_errorListener;
 
     /**
      * Keeps track of whether whitespace was encountered.

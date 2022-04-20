@@ -448,7 +448,7 @@ public class Decimal32
     /**
      * The bits of the decimal value.
      */
-    private int m_nBits;
+    private final int m_nBits;
 
     /**
      * A cached BigDecimal value.

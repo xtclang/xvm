@@ -2,7 +2,6 @@ package org.xvm.asm;
 
 
 import junit.framework.Assert;
-import org.junit.Test;
 
 import java.io.IOException;
 

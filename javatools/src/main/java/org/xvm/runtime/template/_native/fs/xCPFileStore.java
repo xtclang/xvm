@@ -45,8 +45,8 @@ public class xCPFileStore
     @Override
     public void initNative()
         {
-        s_clz         = ensureClass(getCanonicalType(), pool().typeFileStore());
-        s_clzStruct   = s_clz.ensureAccess(Access.STRUCT);
+        TypeComposition clz = ensureClass(getCanonicalType(), pool().typeFileStore());
+        s_clzStruct   = clz.ensureAccess(Access.STRUCT);
         s_constructor = getStructure().findConstructor(pool().typeString(), pool().typeObject());
 
         markNativeMethod("loadNode"     , null, null);
@@ -168,7 +168,6 @@ public class xCPFileStore
 
     // ----- constants -----------------------------------------------------------------------------
 
-    private static TypeComposition s_clz;
     private static TypeComposition s_clzStruct;
     private static MethodStructure s_constructor;
     }

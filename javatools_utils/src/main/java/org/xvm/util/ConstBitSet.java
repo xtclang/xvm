@@ -283,7 +283,7 @@ public class ConstBitSet
             if (iByte < idCur + cBytes)
                 {
                 assert iByte >= idCur;
-                return fInverse != ((m_ab[ofCur + iByte] & (1 << (iBit & 0x7))) != 0);
+                return fInverse == ((m_ab[ofCur + iByte] & (1 << (iBit & 0x7))) == 0);
                 }
 
             return fInverse && iBit < cInverseLen;
@@ -665,5 +665,5 @@ public class ConstBitSet
     /**
      * The compressed form.
      */
-    private byte[] m_ab;
+    private final byte[] m_ab;
     }

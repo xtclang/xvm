@@ -61,7 +61,7 @@ public interface Argument
                     }
                 }
             }
-        catch (Throwable e) {}
+        catch (Throwable ignore) {}
 
         return Register.getIdString(nArg);
         }

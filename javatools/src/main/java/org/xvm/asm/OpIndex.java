@@ -212,5 +212,5 @@ public abstract class OpIndex
     private Argument m_argReturn;
 
     // categories for cached info
-    enum Category {Chain, Type};
+    enum Category {Chain, Type}
     }

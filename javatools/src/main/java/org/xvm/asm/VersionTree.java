@@ -896,7 +896,7 @@ public class VersionTree<V>
                 if (isPresent())
                     {
                     sb.append(":  ")
-                      .append(toString());
+                      .append(this);
                     }
                 }
 

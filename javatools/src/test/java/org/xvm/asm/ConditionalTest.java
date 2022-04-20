@@ -8,8 +8,6 @@ import java.util.Set;
 
 import junit.framework.Assert;
 
-import org.junit.Test;
-
 import org.xvm.asm.constants.AllCondition;
 import org.xvm.asm.constants.AnyCondition;
 import org.xvm.asm.constants.ConditionalConstant;

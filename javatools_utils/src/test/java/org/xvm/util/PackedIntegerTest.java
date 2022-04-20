@@ -22,7 +22,6 @@ import org.junit.Test;
 import static org.xvm.util.Handy.appendByteArrayAsHex;
 import static org.xvm.util.Handy.appendByteAsHex;
 import static org.xvm.util.Handy.hexStringToByteArray;
-import static org.xvm.util.Handy.intToHexString;
 import static org.xvm.util.PackedInteger.readLong;
 import static org.xvm.util.PackedInteger.writeLong;
 
@@ -89,7 +88,7 @@ public class PackedIntegerTest
             in.readByte();
             throw new IllegalStateException("oops .. bytes left over");
             }
-        catch (IOException e) {}
+        catch (IOException ignore) {}
         }
 
     @Test
@@ -122,7 +121,7 @@ public class PackedIntegerTest
                 in.readByte();
                 throw new IllegalStateException("oops .. bytes left over");
                 }
-            catch (IOException e) {}
+            catch (IOException ignore) {}
             }
         while (System.currentTimeMillis() < lStop);
         }
@@ -255,13 +254,13 @@ public class PackedIntegerTest
                 }
 
             @Override
-            public void write(byte b[])
+            public void write(byte[] b)
                 {
                 appendByteArrayAsHex(sb, b);
                 }
 
             @Override
-            public void write(byte b[], int off, int len)
+            public void write(byte[] b, int off, int len)
                 {
                 appendByteArrayAsHex(sb, b, off, len);
                 }
