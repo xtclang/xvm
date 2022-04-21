@@ -5,7 +5,8 @@ import ecstasy.fs.FileNode;
  *
  * The content can be a single file or a directory of files.
  */
-mixin StaticContent(FileNode fileNode, MediaType mediaType, String path = "/")
+mixin StaticContent(FileNode fileNode, MediaType mediaType, String path = "/",
+                    String defaultPage="index.html")
         extends WebService(path)
     {
     assert()
@@ -25,7 +26,7 @@ mixin StaticContent(FileNode fileNode, MediaType mediaType, String path = "/")
             response.makeImmutable();
             return True, response;
             }
-        return getResource("index.html");
+        return getResource(defaultPage);
         }
 
     @Get("/{name: .+}")
