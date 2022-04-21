@@ -26,9 +26,9 @@ module welcome
         @Inject db.WelcomeSchema schema;
 
         @web.Get
-        String hello()
+        Int count()
             {
-            return $"Welcome! You are visitor #{schema.count.postIncrement()}".quoted();
+            return schema.count.next();
             }
         }
 

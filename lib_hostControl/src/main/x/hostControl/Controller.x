@@ -45,7 +45,7 @@ service Controller(HostManager mgr)
                     {
                     webHost.container.invoke("createCatalog_", Tuple:(webHost.httpServer));
 
-                    return HttpStatus.OK, $"Loaded \"{appName}\" hosting on \"http:{domain}.xqiz.it:8080\"";
+                    return HttpStatus.OK, $"Loaded \"{appName}\" hosting on \"http://{domain}.xqiz.it:8080\"";
                     }
                 catch (Exception e)
                     {

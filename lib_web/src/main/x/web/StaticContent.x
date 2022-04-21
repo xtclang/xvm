@@ -25,7 +25,7 @@ mixin StaticContent(FileNode fileNode, MediaType mediaType, String path = "/")
             response.makeImmutable();
             return True, response;
             }
-        return False;
+        return getResource("index.html");
         }
 
     @Get("/{name: .+}")
