@@ -77,7 +77,8 @@ class HttpResponse(HttpStatus status = HttpStatus.OK)
                     // convert the body to the required response media type
                     if (MediaTypeCodec codec := codecRegistry.findCodec(mediaType))
                         {
-                        response.body = codec.encode(body);
+                        Type bodyType = &body.actualType;
+                        response.body = codec.encode(body.as(bodyType.DataType));
                         }
                     // ToDo: the else should probably be an error/exception
                     }
