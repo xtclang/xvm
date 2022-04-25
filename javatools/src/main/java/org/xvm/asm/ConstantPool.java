@@ -3812,13 +3812,13 @@ public class ConstantPool
      */
     public ClassComposition ensureClassComposition(TypeConstant typeInception, ClassTemplate template)
         {
-        assert typeInception.isShared(this);
-        assert !typeInception.isAccessSpecified();
-        assert typeInception.normalizeParameters().equals(typeInception);
-
         ClassComposition clz = f_mapCompositions.get(typeInception);
         if (clz == null)
             {
+            assert typeInception.isShared(this);
+            assert !typeInception.isAccessSpecified();
+            assert typeInception.normalizeParameters().equals(typeInception);
+
             clz = f_mapCompositions.computeIfAbsent(typeInception, (type) ->
                 {
                 ClassTemplate templateReal = type.isAnnotated() && type.isIntoVariableType()
