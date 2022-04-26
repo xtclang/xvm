@@ -13,7 +13,6 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.RegExConstant;
-import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
@@ -58,26 +57,22 @@ public class xRegEx
     public void initNative()
         {
         markNativeProperty("pattern");
-        markNativeMethod("construct", new String[] {"text.String", "numbers.Int64"}, VOID);
-        markNativeMethod("find", new String[] {"text.String", "numbers.Int64"}, null);
-        markNativeMethod("match", STRING, null);
+
+        markNativeMethod("construct",   new String[] {"text.String", "numbers.Int64"}, VOID);
+        markNativeMethod("find",        new String[] {"text.String", "numbers.Int64"}, null);
+        markNativeMethod("match",       STRING, null);
         markNativeMethod("matchPrefix", STRING, null);
-        markNativeMethod("replaceAll", new String[] {"text.String", "text.String"}, STRING);
+        markNativeMethod("replaceAll",  new String[] {"text.String", "text.String"}, STRING);
 
         getCanonicalType().invalidateTypeInfo();
 
-        ClassTemplate    clzTempMatch      = f_container.getTemplate("text.Match");
-        TypeComposition  typeMatch         = clzTempMatch.getCanonicalClass();
-        ClassStructure   clzStructMatch    = f_container.getClassStructure("text.Match");
-        ConstantPool     pool              = pool();
-        TypeConstant     typeRangeInt      = pool.ensureParameterizedTypeConstant(pool.typeRange(), pool.typeCInt64());
-        TypeConstant     typeNullableRange = pool.ensureIntersectionTypeConstant(pool.typeNullable(), typeRangeInt);
-        TypeConstant     typeArray         = pool.ensureParameterizedTypeConstant(pool.typeArray(), typeNullableRange);
-        ClassComposition clzRange          = f_container.getTemplate("Range").getCanonicalClass();
+        ConstantPool     pool          = pool();
+        ClassTemplate    templateMatch = f_container.getTemplate("text.Match");
+        ClassComposition clzMatch      = templateMatch.getCanonicalClass();
 
-        m_clzMatchStruct   = typeMatch.ensureAccess(Constants.Access.STRUCT);
-        m_constructorMatch = clzStructMatch.findConstructor(pool.typeRegEx(), pool.typeString(), typeArray);
-        m_clzRangeOfInt    = clzRange.ensureCanonicalizedComposition(typeRangeInt);
+        m_clzMatchStruct   = clzMatch.ensureAccess(Constants.Access.STRUCT);
+        m_constructorMatch = templateMatch.getStructure().findMethod("construct", 3);
+        m_clzRangeOfInt    = f_container.ensureClass(pool.ensureRangeType(pool.typeCInt64()));
         }
 
     @Override
@@ -89,7 +84,7 @@ public class xRegEx
 
         String regex  = hPattern.getStringValue();
         long   nFlags = hFlags == ObjectHandle.DEFAULT ? 0 : ((JavaLong) hFlags).getValue();
-        return frame.assignValue(iReturn, new RegExHandle(INSTANCE.getCanonicalClass(), regex, nFlags));
+        return frame.assignValue(iReturn, new RegExHandle(getCanonicalClass(), regex, nFlags));
         }
 
     @Override
@@ -115,7 +110,7 @@ public class xRegEx
                 RegExHandle hRegEx = (RegExHandle) hTarget;
                 String      regex  = hRegEx.getRegex() + ((RegExHandle) hArg).getRegex();
                 long        nFlags = hRegEx.getFlags();
-                return frame.assignValue(iReturn, new RegExHandle(INSTANCE.getCanonicalClass(), regex, nFlags));
+                return frame.assignValue(iReturn, new RegExHandle(getCanonicalClass(), regex, nFlags));
                 }
             case "appendTo":
                 {
@@ -244,9 +239,9 @@ public class xRegEx
             if (nStart >= 0)
                 {
                 GenericHandle hRange = new GenericHandle(clzRange);
-                hRange.setField(frame, "lowerBound", xInt64.INSTANCE.makeJavaLong(nStart));
+                hRange.setField(frame, "lowerBound", xInt64.makeHandle(nStart));
                 hRange.setField(frame, "lowerExclusive", xBoolean.FALSE);
-                hRange.setField(frame, "upperBound", xInt64.INSTANCE.makeJavaLong(match.end(i)));
+                hRange.setField(frame, "upperBound", xInt64.makeHandle(match.end(i)));
                 hRange.setField(frame, "upperExclusive", xBoolean.TRUE);
                 hRange.setField(frame, "descending", xBoolean.FALSE);
                 hRange.makeImmutable();
