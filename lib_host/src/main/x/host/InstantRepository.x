@@ -1,6 +1,6 @@
-import collections.HashSet;
+import ecstasy.collections.HashSet;
 
-import reflect.ModuleTemplate;
+import ecstasy.reflect.ModuleTemplate;
 
 const InstantRepository
         implements ModuleRepository
