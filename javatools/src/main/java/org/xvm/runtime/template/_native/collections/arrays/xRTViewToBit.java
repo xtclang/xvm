@@ -81,7 +81,7 @@ public class xRTViewToBit
         TypeConstant typeInception = pool.ensureParameterizedTypeConstant(
             getInceptionClassConstant().getType(), atypeParams);
 
-        return ensureClass(typeInception, typeInception);
+        return ensureClass(pool, typeInception, typeInception);
         }
 
     /**

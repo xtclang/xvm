@@ -1,14 +1,13 @@
 package org.xvm.runtime;
 
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.WeakHashMap;
 
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
-import java.util.function.BiFunction;
 
 import java.util.stream.Collectors;
 
@@ -16,7 +15,6 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.FileStructure;
-import org.xvm.asm.InjectionKey;
 import org.xvm.asm.LinkerContext;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleRepository;
@@ -31,21 +29,20 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.VersionConstant;
 
-import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
-
+import org.xvm.runtime.template.Child;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
+import org.xvm.runtime.template.xConst;
+import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xException;
+import org.xvm.runtime.template.xObject;
 import org.xvm.runtime.template.xService;
-import org.xvm.runtime.template.xService.ServiceHandle;
 
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.Mutability;
 
 import org.xvm.runtime.template.reflect.xModule;
-
-import org.xvm.runtime.template._native.reflect.xRTFunction;
-import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
+import org.xvm.runtime.template.reflect.xPackage;
 
 
 /**
@@ -61,9 +58,10 @@ public abstract class Container
         f_heap      = new ConstHeap(this);
         f_idModule = idModule;
 
-        if (runtime != null)
+        // don't register the native container
+        if (containerParent != null)
             {
-            runtime.f_containers.add(this);
+            f_runtime.registerContainer(this);
             }
         }
 
@@ -180,11 +178,6 @@ public abstract class Container
         {
         f_setServices.remove(service);
 
-        if (f_setServices.isEmpty())
-            {
-            f_runtime.f_containers.remove(this);
-            }
-
         // TODO: should we do something else if nothing left?
         }
 
@@ -229,13 +222,7 @@ public abstract class Container
      *
      * @return the injectable handle (can be a DeferredCallHandle) or null, if the name not resolvable
      */
-    public ObjectHandle getInjectable(Frame frame, String sName, TypeConstant type, ObjectHandle hOpts)
-        {
-        BiFunction<Frame, ObjectHandle, ObjectHandle> fnResource =
-            f_mapResources.get(new InjectionKey(sName, type));
-
-        return fnResource == null ? null : fnResource.apply(frame, hOpts);
-        }
+    abstract public ObjectHandle getInjectable(Frame frame, String sName, TypeConstant type, ObjectHandle hOpts);
 
     /**
      * A delegation method into the ConstHeap API.
@@ -252,15 +239,93 @@ public abstract class Container
      */
     public ClassTemplate getTemplate(TypeConstant type)
         {
-        return f_parent.getTemplate(type);
+        if (f_parent != null && type.isShared(f_parent.getConstantPool()))
+            {
+            return f_parent.getTemplate(type);
+            }
+
+        ClassTemplate template = f_mapTemplatesByType.get(type);
+        if (template == null)
+            {
+            if (type.isSingleDefiningConstant())
+                {
+                IdentityConstant idClass = type.getSingleUnderlyingClass(true);
+                template = getTemplate(idClass).getTemplate(type);
+                f_mapTemplatesByType.put(type, template);
+                }
+            else
+                {
+                throw new UnsupportedOperationException();
+                }
+            }
+        return template;
         }
 
     /**
      * @return a ClassTemplate for the specified class identity
      */
-    public ClassTemplate getTemplate(IdentityConstant idClz)
+    public ClassTemplate getTemplate(IdentityConstant idClass)
         {
-        return f_parent.getTemplate(idClz);
+        if (f_parent != null && idClass.isShared(f_parent.getConstantPool()))
+            {
+            return f_parent.getTemplate(idClass);
+            }
+
+        TypeConstant  typeBase = idClass.getType();
+        ClassTemplate template = f_mapTemplatesByType.get(typeBase);
+        if (template == null)
+            {
+            template = f_mapTemplatesByType.computeIfAbsent(typeBase, type ->
+                {
+                ClassStructure structClass = (ClassStructure) idClass.getComponent();
+                if (structClass == null)
+                    {
+                    throw new RuntimeException("Missing class structure: " + idClass);
+                    }
+
+                ClassTemplate temp;
+                switch (structClass.getFormat())
+                    {
+                    case ENUMVALUE:
+                    case ENUM:
+                        temp = new xEnum(this, structClass, false);
+                        temp.initNative();
+                        break;
+
+                    case MIXIN:
+                    case CLASS:
+                    case INTERFACE:
+                        temp = structClass.isVirtualChild()
+                            ? new Child(this, structClass, false)
+                            : new xObject(this, structClass, false);
+                        break;
+
+                    case SERVICE:
+                        temp = new xService(this, structClass, false);
+                        break;
+
+                    case CONST:
+                        temp = structClass.isException()
+                                ? new xException(this, structClass, false)
+                                : new xConst(this, structClass, false);
+                        break;
+
+                    case MODULE:
+                        temp = new xModule(this, structClass, false);
+                        break;
+
+                    case PACKAGE:
+                        temp = new xPackage(this, structClass, false);
+                        break;
+
+                    default:
+                        throw new UnsupportedOperationException(
+                            "Format is not supported: " + structClass);
+                    }
+                return temp;
+                });
+            }
+        return template;
         }
 
     /**
@@ -268,35 +333,29 @@ public abstract class Container
      */
     public ClassTemplate getTemplate(Constant constValue)
         {
-        return f_parent.getTemplate(constValue);
-        }
-
-    /**
-     * @return a TypeComposition for the specified type
-     */
-    public TypeComposition ensureClass(TypeConstant type)
-        {
-        if (type instanceof PropertyClassTypeConstant typeProp)
-            {
-            ClassComposition clz = (ClassComposition) ensureClass(
-                                        typeProp.getParentType().removeAccess());
-            return clz.ensurePropertyComposition(typeProp.getPropertyInfo());
-            }
-        return getTemplate(type).ensureClass(type.normalizeParameters());
+        // at the moment, compiler only generates constants for native types
+        return getTemplate(getNativeContainer().getConstType(constValue)); // the type must exist
         }
 
     /**
      * Produce a TypeComposition based on the specified TypeConstant.
      */
-    public TypeComposition resolveClass(TypeConstant typeActual)
+    public TypeComposition resolveClass(TypeConstant type)
         {
-        if (typeActual instanceof PropertyClassTypeConstant typeProp)
+        if (type instanceof PropertyClassTypeConstant typeProp)
             {
             ClassComposition clz = (ClassComposition) resolveClass(
                                         typeProp.getParentType().removeAccess());
             return clz.ensurePropertyComposition(typeProp.getPropertyInfo());
             }
-        return getTemplate(typeActual).ensureClass(typeActual.normalizeParameters());
+
+        ConstantPool pool = getConstantPool();
+        if (type.getConstantPool() != pool)
+            {
+            assert type.isShared(pool);
+            type = (TypeConstant) pool.register(type);
+            }
+        return getTemplate(type).ensureClass(type.normalizeParameters());
         }
 
     /**
@@ -304,7 +363,7 @@ public abstract class Container
      */
     public ClassTemplate getTemplate(String sName)
         {
-        return f_parent.getTemplate(sName);
+        return getNativeContainer().getTemplate(sName);
         }
 
     /**
@@ -312,7 +371,7 @@ public abstract class Container
      */
     public ClassStructure getClassStructure(String sName)
         {
-        return f_parent.getClassStructure(sName);
+        return getNativeContainer().getClassStructure(sName);
         }
 
     /**
@@ -320,7 +379,7 @@ public abstract class Container
      */
     public ModuleRepository getModuleRepository()
         {
-        return f_parent.getModuleRepository();
+        return getNativeContainer().getModuleRepository();
         }
 
     /**
@@ -332,7 +391,7 @@ public abstract class Container
      */
     public FileStructure createFileStructure(ModuleStructure moduleApp)
         {
-        return f_parent.createFileStructure(moduleApp);
+        return getNativeContainer().createFileStructure(moduleApp);
         }
 
 
@@ -380,8 +439,7 @@ public abstract class Container
                 ++index;
                 }
 
-            TypeConstant     typeTS      = frame.poolContext().ensureEcstasyTypeConstant("reflect.TypeSystem");
-            ClassTemplate    templateTS  = getTemplate(typeTS);
+            ClassTemplate    templateTS  = getTemplate("reflect.TypeSystem");
             ClassComposition clzTS       = templateTS.getCanonicalClass();
             MethodStructure  constructor = templateTS.getStructure().findMethod("construct", 2);
             ObjectHandle[]   ahArg       = new ObjectHandle[constructor.getMaxVars()];
@@ -439,57 +497,6 @@ public abstract class Container
         return idModule.getName().equals(ModuleStructure.ECSTASY_MODULE);
         }
 
-    /**
-     * Add a natural resource supplier for an injection.
-     *
-     * @param key        the injection key
-     * @param hService   the resource provider's service
-     * @param hSupplier  the resource supplier handle (the resource itself or a function)
-     */
-    public void addResourceSupplier(InjectionKey key, ServiceHandle hService, ObjectHandle hSupplier)
-        {
-        TypeConstant typeResource = key.f_type;
-        if (hSupplier instanceof FunctionHandle hFunction)
-            {
-            Container      container = hService.f_context.f_container;
-            FunctionHandle hProxy    = xRTFunction.makeAsyncDelegatingHandle(hService, hFunction);
-            f_mapResources.put(key, (frame, hOpts) ->
-                {
-                ObjectHandle[] ahArg = new ObjectHandle[hProxy.getParamCount()];
-                ahArg[0] = hOpts;
-
-                switch (hProxy.call1(frame, null, ahArg, Op.A_STACK))
-                    {
-                    case Op.R_NEXT:
-                        // mask the injection type (and ensure the ownership)
-                        return frame.popStack().maskAs(container, typeResource);
-
-                    case Op.R_CALL:
-                        {
-                        DeferredCallHandle hDeferred = new DeferredCallHandle(frame.m_frameNext);
-                        hDeferred.addContinuation(frameCaller ->
-                            {
-                            frameCaller.pushStack(frameCaller.popStack().maskAs(container, typeResource));
-                            return Op.R_NEXT;
-                            });
-                        return hDeferred;
-                        }
-
-                    case Op.R_EXCEPTION:
-                        return new DeferredCallHandle(xException.makeHandle(frame,
-                            "Invalid resource: " + key, frame.m_hException));
-
-                    default:
-                        throw new IllegalStateException();
-                    }
-                });
-            }
-        else if (hSupplier.isPassThrough(this))
-            {
-            f_mapResources.put(key, (frame, hOpts) -> hSupplier);
-            }
-        }
-
 
     // ----- LinkerContext interface ---------------------------------------------------------------
 
@@ -525,6 +532,21 @@ public abstract class Container
         return true;
         }
 
+
+    // ----- helper methods ------------------------------------------------------------------------
+
+    private NativeContainer getNativeContainer()
+        {
+        Container parent = f_parent;
+        while (true)
+            {
+            if (parent instanceof NativeContainer nativeContainer)
+                {
+                return nativeContainer;
+                }
+            parent = parent.f_parent;
+            }
+        }
 
     // ----- Object methods ------------------------------------------------------------------------
 
@@ -572,18 +594,15 @@ public abstract class Container
      * and the number of registered Alarms. While this count is above zero the container is
      * considered to still have work to do and won't auto-shutdown.
      */
-    protected final AtomicLong f_pendingWorkCount = new AtomicLong();
-
-    /**
-     * Map of resources that are injectable to this container, keyed by their InjectionKey.
-     * The values are bi-functions that take a current frame and "opts" object as arguments.
-     *
-     * (See annotations.InjectRef and mgmt.ResourceProvider.DynamicResource natural sources.)
-     */
-    protected final Map<InjectionKey, BiFunction<Frame, ObjectHandle, ObjectHandle>> f_mapResources = new HashMap<>();
+    private final AtomicLong f_pendingWorkCount = new AtomicLong();
 
     /**
      * Set of services that were started by this container (stored as a Map with no values).
      */
-    protected final Map<ServiceContext, Object> f_setServices = new WeakHashMap<>();
+    private final Map<ServiceContext, Object> f_setServices = new WeakHashMap<>();
+
+    /**
+     * A cache of ClassTemplates loaded by this Container keyed by type.
+     */
+    protected final Map<TypeConstant, ClassTemplate> f_mapTemplatesByType = new ConcurrentHashMap<>();
     }

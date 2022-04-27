@@ -45,9 +45,12 @@ public class PropertyComposition
         {
         assert !clzParent.isStruct();
 
+        TypeConstant  typeRef     = infoProp.getBaseRefType();
+        ClassTemplate templateRef = clzParent.getContainer().getTemplate(typeRef);
+
         f_clzParent  = clzParent;
         f_infoProp   = infoProp;
-        f_clzRef     = clzParent.getContainer().resolveClass(infoProp.getBaseRefType());
+        f_clzRef     = templateRef.ensureClass(typeRef);
         f_mapMethods = new ConcurrentHashMap<>();
         f_mapGetters = new ConcurrentHashMap<>();
         f_mapSetters = new ConcurrentHashMap<>();

@@ -52,9 +52,9 @@ public class xRTPropertyClassTemplate
         {
         if (this == INSTANCE)
             {
-            TypeConstant typeClassTemplate = pool().ensureEcstasyTypeConstant("reflect.ClassTemplate");
+            TypeConstant typeMask = pool().ensureEcstasyTypeConstant("reflect.ClassTemplate");
 
-            PROPERTY_CLASS_TEMPLATE_COMP = ensureClass(getCanonicalType(), typeClassTemplate);
+            PROPERTY_CLASS_TEMPLATE_COMP = ensureClass(pool(), getCanonicalType(), typeMask);
 
             markNativeProperty("classes");
             markNativeProperty("contribs");

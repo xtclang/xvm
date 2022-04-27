@@ -77,7 +77,7 @@ public class xModule
         if (constant instanceof ModuleConstant idModule)
             {
             TypeConstant    typeModule = idModule.getType();
-            TypeComposition clazz      = ensureClass(typeModule, typeModule);
+            TypeComposition clazz      = ensureClass(frame.poolContext(), typeModule, typeModule);
 
             return createPackageHandle(frame, clazz);
             }

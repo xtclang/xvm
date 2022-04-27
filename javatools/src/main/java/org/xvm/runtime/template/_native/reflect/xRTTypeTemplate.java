@@ -193,8 +193,9 @@ public class xRTTypeTemplate
      */
     public static TypeTemplateHandle makeHandle(TypeConstant type)
         {
-        TypeComposition clz = INSTANCE.ensureClass(INSTANCE.getCanonicalType(),
-                INSTANCE.pool().ensureEcstasyTypeConstant("reflect.TypeTemplate"));
+        ConstantPool    pool = INSTANCE.pool();
+        TypeComposition clz  = INSTANCE.ensureClass(pool, INSTANCE.getCanonicalType(),
+                pool.ensureEcstasyTypeConstant("reflect.TypeTemplate"));
         return new TypeTemplateHandle(clz, type);
         }
 
@@ -593,10 +594,8 @@ public class xRTTypeTemplate
         TypeComposition clz = TYPE_TEMPLATE;
         if (clz == null)
             {
-            ConstantPool pool = INSTANCE.pool();
-            TypeConstant type = pool.ensureEcstasyTypeConstant("reflect.TypeTemplate");
+            TypeConstant type = INSTANCE.pool().ensureEcstasyTypeConstant("reflect.TypeTemplate");
             TYPE_TEMPLATE = clz = INSTANCE.f_container.resolveClass(type);
-            assert clz != null;
             }
         return clz;
         }
@@ -613,7 +612,6 @@ public class xRTTypeTemplate
             TypeConstant type = pool.ensureArrayType(
                     pool.ensureEcstasyTypeConstant("reflect.TypeTemplate"));
             TYPE_TEMPLATE_ARRAY = clz = INSTANCE.f_container.resolveClass(type);
-            assert clz != null;
             }
         return clz;
         }

@@ -66,17 +66,17 @@ public class xEnum
         else if (getStructure().getFormat() == Format.ENUM)
             {
             Collection<? extends Component> listAll = getStructure().children();
-            List<String>     listNames = new ArrayList<>(listAll.size());
+            List<String>     listNames   = new ArrayList<>(listAll.size());
             List<EnumHandle> listHandles = new ArrayList<>(listAll.size());
 
-            ConstantPool pool     = pool();
+            ConstantPool pool     = f_container.getConstantPool();
             int          iOrdinal = 0;
             for (Component child : listAll)
                 {
                 if (child.getFormat() == Format.ENUMVALUE)
                     {
                     TypeConstant type   = ((ClassStructure) child).getCanonicalType();
-                    EnumHandle   hValue = makeEnumHandle(ensureClass(type, type), iOrdinal++);
+                    EnumHandle   hValue = makeEnumHandle(ensureClass(pool, type, type), iOrdinal++);
 
                     listNames.add(child.getName());
                     listHandles.add(hValue);

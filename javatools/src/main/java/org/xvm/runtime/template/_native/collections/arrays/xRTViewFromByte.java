@@ -3,6 +3,7 @@ package org.xvm.runtime.template._native.collections.arrays;
 
 import org.xvm.asm.ClassStructure;
 
+import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.TypeComposition;
 
@@ -55,15 +56,16 @@ public class xRTViewFromByte
     public DelegateHandle createByteView(DelegateHandle hSource, Mutability mutability,
                                          int nBytes)
         {
+        ClassComposition clzView = getCanonicalClass();
         if (hSource instanceof SliceHandle hSlice)
             {
             // e.g.: bytes.slice().asInt64Array() -> bytes.asInt64Array().slice()
-            ViewHandle hView = new ViewHandle(getCanonicalClass(), hSlice.f_hSource,
+            ViewHandle hView = new ViewHandle(clzView, hSlice.f_hSource,
                                     hSlice.f_hSource.m_cSize/nBytes, mutability);
 
             return slice(hView, hSlice.f_ofStart/nBytes, hSlice.m_cSize/nBytes, hSlice.f_fReverse);
             }
-        return new ViewHandle(getCanonicalClass(), hSource, hSource.m_cSize/nBytes, mutability);
+        return new ViewHandle(clzView, hSource, hSource.m_cSize/nBytes, mutability);
         }
 
 

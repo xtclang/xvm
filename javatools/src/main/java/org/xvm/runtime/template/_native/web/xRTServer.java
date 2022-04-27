@@ -103,7 +103,7 @@ public class xRTServer
 
             ServiceContext context =
                     frame.f_context.f_container.createServiceContext("HttpServer@" + sAddress);
-            ServiceHandle  hService =
+            ServiceHandle hService =
                     new HttpServerHandle(getCanonicalClass(), context, httpServer);
             context.setService(hService);
             return hService;
@@ -185,7 +185,9 @@ public class xRTServer
             // properly close the server socket that hasn't been established
             httpServer.start();
             }
+        httpServer.removeContext("/");
         httpServer.stop(0);
+        hServer.m_httpHandler = null;
         return Op.R_NEXT;
         }
 

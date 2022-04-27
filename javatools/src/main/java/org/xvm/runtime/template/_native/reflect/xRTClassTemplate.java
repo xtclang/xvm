@@ -67,18 +67,16 @@ public class xRTClassTemplate
             {
             ConstantPool   pool      = pool();
             Container      container = f_container;
-            ClassStructure struct    = f_struct;
+            TypeConstant   typeMask  = pool.ensureEcstasyTypeConstant("reflect.ClassTemplate");
 
-            TypeConstant typeClassTemplate = pool.ensureEcstasyTypeConstant("reflect.ClassTemplate");
-
-            CLASS_TEMPLATE_COMP = ensureClass(getCanonicalType(), typeClassTemplate);
+            CLASS_TEMPLATE_COMP = ensureClass(pool, getCanonicalType(), typeMask);
             CONTRIBUTION_COMP   = container.resolveClass(
                 pool.ensureEcstasyTypeConstant("reflect.ClassTemplate.Composition.Contribution"));
 
             ACTION = (xEnum) container.getTemplate("reflect.ClassTemplate.Composition.Action");
 
-            CREATE_CONTRIB_METHOD         = struct.findMethod("createContribution", 6);
-            CREATE_TYPE_PARAMETERS_METHOD = struct.findMethod("createTypeParameters", 2);
+            CREATE_CONTRIB_METHOD         = f_struct.findMethod("createContribution", 6);
+            CREATE_TYPE_PARAMETERS_METHOD = f_struct.findMethod("createTypeParameters", 2);
 
             markNativeProperty("implicitName");
             markNativeProperty("classes");

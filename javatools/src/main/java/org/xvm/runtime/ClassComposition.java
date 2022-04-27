@@ -114,6 +114,7 @@ public class ClassComposition
      */
     public CanonicalizedTypeComposition ensureCanonicalizedComposition(TypeConstant typeActual)
         {
+        assert typeActual.isShared(getInceptionType().getConstantPool());
         return (CanonicalizedTypeComposition) f_mapCompositions.computeIfAbsent(typeActual,
                 (type) -> new CanonicalizedTypeComposition(this, type));
         }

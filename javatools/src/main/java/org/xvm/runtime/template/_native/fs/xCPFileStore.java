@@ -4,6 +4,7 @@ package org.xvm.runtime.template._native.fs;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Constant.Format;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
@@ -45,9 +46,11 @@ public class xCPFileStore
     @Override
     public void initNative()
         {
-        TypeComposition clz = ensureClass(getCanonicalType(), pool().typeFileStore());
+        ConstantPool    pool = pool();
+        TypeComposition clz  = ensureClass(pool, getCanonicalType(), pool.typeFileStore());
+
         s_clzStruct   = clz.ensureAccess(Access.STRUCT);
-        s_constructor = getStructure().findConstructor(pool().typeString(), pool().typeObject());
+        s_constructor = getStructure().findConstructor(pool.typeString(), pool.typeObject());
 
         markNativeMethod("loadNode"     , null, null);
         markNativeMethod("loadDirectory", null, null);

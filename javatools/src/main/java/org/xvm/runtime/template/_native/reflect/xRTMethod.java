@@ -475,8 +475,7 @@ public class xRTMethod
         {
         if (ARRAY_EMPTY == null)
             {
-            ARRAY_EMPTY = xArray.createImmutableArray(
-                    ensureArrayComposition(), Utils.OBJECTS_NONE);
+            ARRAY_EMPTY = xArray.createImmutableArray(ensureArrayComposition(), Utils.OBJECTS_NONE);
             }
         return ARRAY_EMPTY;
         }
@@ -484,14 +483,14 @@ public class xRTMethod
     /**
      * @return the TypeComposition for an Array of Method
      */
-    public static TypeComposition ensureArrayComposition(TypeConstant typeTarget)
+    public static TypeComposition ensureArrayComposition(Frame frame, TypeConstant typeTarget)
         {
         assert typeTarget != null;
 
-        ConstantPool pool            = INSTANCE.pool();
+        ConstantPool pool            = frame.poolContext();
         TypeConstant typeMethodArray = pool.ensureArrayType(
             pool.ensureParameterizedTypeConstant(pool.typeMethod(), typeTarget));
-        return INSTANCE.f_container.resolveClass(typeMethodArray);
+        return frame.f_context.f_container.resolveClass(typeMethodArray);
         }
 
 

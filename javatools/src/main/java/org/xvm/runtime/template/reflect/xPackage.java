@@ -67,7 +67,7 @@ public class xPackage
         if (constant instanceof PackageConstant idPackage)
             {
             TypeConstant    typePackage = idPackage.getType();
-            TypeComposition clazz       = ensureClass(typePackage, typePackage);
+            TypeComposition clazz       = ensureClass(frame.poolContext(), typePackage, typePackage);
 
             return createPackageHandle(frame, clazz);
             }
@@ -209,11 +209,10 @@ public class xPackage
         TypeComposition clz = LISTMAP_CLZ;
         if (clz == null)
             {
-            ConstantPool pool = INSTANCE.pool();
+            ConstantPool pool     = INSTANCE.pool();
             TypeConstant typeList = pool.ensureEcstasyTypeConstant("collections.ListMap");
             typeList = pool.ensureParameterizedTypeConstant(typeList, pool.typeString(), pool.typeClass());
             LISTMAP_CLZ = clz = INSTANCE.f_container.resolveClass(typeList);
-            assert clz != null;
             }
         return clz;
         }

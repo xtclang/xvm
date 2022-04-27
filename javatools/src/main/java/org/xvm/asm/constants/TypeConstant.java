@@ -6578,7 +6578,7 @@ public abstract class TypeConstant
      */
     public TypeComposition ensureClass(Frame frame)
         {
-        return frame.f_context.f_container.ensureClass(this);
+        return frame.f_context.f_container.resolveClass(this);
         }
 
     /**

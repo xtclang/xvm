@@ -1,13 +1,16 @@
 package org.xvm.runtime;
 
 
-import java.util.Queue;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.WeakHashMap;
 
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+
 import java.util.concurrent.atomic.AtomicInteger;
 
 
@@ -41,6 +44,28 @@ public class Runtime
 
     public void start()
         {
+        }
+
+    /**
+     * Register the specified container (used only for debugging)
+     */
+    public void registerContainer(Container container)
+        {
+        synchronized (f_containers)
+            {
+            f_containers.putIfAbsent(container, null);
+            }
+        }
+
+    /**
+     * @return a set of Container objects (used only for debugging)
+     */
+    public Set<Container> containers()
+        {
+        synchronized (f_containers)
+            {
+            return new HashSet<>(f_containers.keySet());
+            }
         }
 
     /**
@@ -85,9 +110,9 @@ public class Runtime
     public final ThreadPoolExecutor f_daemons;
 
     /**
-     * The set of containers.
+     * The set of containers (stored as a Map with no values); used only for debugging.
      */
-    public final Queue<Container> f_containers = new ConcurrentLinkedQueue();
+    private final Map<Container, Object> f_containers = new WeakHashMap<>();
 
     /**
      * A service id producer.

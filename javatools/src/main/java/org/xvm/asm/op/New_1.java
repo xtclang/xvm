@@ -109,7 +109,7 @@ public class New_1
         {
         IdentityConstant constClz  = constructor.getParent().getParent().getIdentityConstant();
         ClassTemplate    template  = frame.ensureTemplate(constClz);
-        ClassComposition clzTarget = template.getCanonicalClass();
+        ClassComposition clzTarget = template.getCanonicalClass(frame.poolContext());
         ObjectHandle     hParent   = clzTarget.isInstanceChild() ? frame.getThis() : null;
 
         if (frame.isNextRegister(m_nRetValue))

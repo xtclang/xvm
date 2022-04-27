@@ -608,11 +608,6 @@ public abstract class ObjectHandle
             TypeComposition clzAs = getComposition().maskAs(typeAs);
             if (clzAs != null)
                 {
-                if (owner == m_owner)
-                    {
-                    return this;
-                    }
-
                 GenericHandle hClone = (GenericHandle) cloneAs(clzAs);
                 hClone.setOwner(owner);
                 return hClone;

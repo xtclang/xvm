@@ -4,6 +4,7 @@ package org.xvm.runtime.template._native.mgmt;
 import java.util.Set;
 
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
@@ -48,14 +49,16 @@ public class xCoreRepository
     @Override
     public void initNative()
         {
-        TypeConstant typeRepo = pool().ensureEcstasyTypeConstant("mgmt.ModuleRepository");
+        ConstantPool pool          = pool();
+        TypeConstant typeInception = getInceptionClassConstant().getType();
+        TypeConstant typeMask      = getCanonicalType();
 
-        m_clzRepo = ensureClass(getInceptionClassConstant().getType(), typeRepo);
+        m_clzRepo = ensureClass(pool, typeInception, typeMask);
 
         markNativeProperty("moduleNames");
         markNativeMethod("getModule", STRING, null);
 
-        getCanonicalType().invalidateTypeInfo();
+        typeInception.invalidateTypeInfo();
         }
 
     @Override
@@ -71,7 +74,7 @@ public class xCoreRepository
             {
             case "moduleNames":
                 {
-                ModuleRepository repo     = f_container.getModuleRepository();
+                ModuleRepository repo     = frame.f_context.f_container.getModuleRepository();
                 Set<String>      setNames = repo.getModuleNames();
                 StringHandle[]   ahName   = new StringHandle[setNames.size()];
 
@@ -96,14 +99,14 @@ public class xCoreRepository
             {
             case "getModule":
                 {
-                StringHandle     hName  = (StringHandle) hArg;
-                ModuleRepository repo   = f_container.getModuleRepository();
-                ModuleStructure  module = repo.loadModule(hName.getStringValue());
+                String           sName  = ((StringHandle) hArg).getStringValue();
+                ModuleRepository repo   = frame.f_context.f_container.getModuleRepository();
+                ModuleStructure  module = repo.loadModule(sName);
 
                 if (module == null)
                     {
                     return frame.raiseException(xException.illegalArgument(frame,
-                        "Invalid module name " + hName.getStringValue()));
+                        "Invalid module name " + sName));
                     }
 
                 return frame.assignValue(iReturn, xRTModuleTemplate.makeHandle(module));

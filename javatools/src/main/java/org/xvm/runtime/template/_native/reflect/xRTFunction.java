@@ -1437,30 +1437,24 @@ public class xRTFunction
         }
 
     /**
-     * @return the TypeConstant for a default Constructor on the specified target
+     * @return the TypeComposition for an Array of Constructor (funtion type)
      */
-    public static TypeConstant ensureConstructorType(TypeConstant typeTarget, TypeConstant typeParent)
+    public static TypeComposition ensureConstructorArray(
+            Frame frame, TypeConstant typeTarget, TypeConstant typeParent)
         {
         assert typeTarget != null;
 
-        ConstantPool pool        = INSTANCE.pool();
-        TypeConstant typeParams  = typeParent == null
+        ConstantPool pool = frame.poolContext();
+
+        TypeConstant typeParams = typeParent == null
                 ? pool.typeTuple0()
                 : pool.ensureTupleType(typeParent);
         TypeConstant typeReturns = pool.ensureTupleType(typeTarget);
-        return pool.ensureParameterizedTypeConstant(pool.typeFunction(), typeParams, typeReturns);
-        }
+        TypeConstant typeCtor    = pool.ensureParameterizedTypeConstant(
+                                        pool.typeFunction(), typeParams, typeReturns);
 
-    /**
-     * @return the TypeComposition for an Array of Constructor
-     */
-    public static TypeComposition ensureConstructorArray(TypeConstant typeTarget, TypeConstant typeParent)
-        {
-        assert typeTarget != null;
-
-        ConstantPool pool      = INSTANCE.pool();
-        TypeConstant typeArray = pool.ensureArrayType(ensureConstructorType(typeTarget, typeParent));
-        return INSTANCE.f_container.resolveClass(typeArray);
+        TypeConstant typeArray = pool.ensureArrayType(typeCtor);
+        return frame.f_context.f_container.resolveClass(typeArray);
         }
 
 

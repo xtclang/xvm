@@ -215,7 +215,6 @@ public class xRTSignature
             {
             ConstantPool pool = INSTANCE.pool();
             RETURN_TYPE = type = pool.ensureEcstasyTypeConstant("reflect.Return");
-            assert type != null;
             }
         return type;
         }
@@ -230,7 +229,6 @@ public class xRTSignature
             {
             RTRETURN_TYPE = type = INSTANCE.f_container.getClassStructure("_native.reflect.RTReturn").
                     getIdentityConstant().getType();
-            assert type != null;
             }
         return type;
         }
@@ -244,7 +242,6 @@ public class xRTSignature
         if (type == null)
             {
             PARAM_TYPE = type = INSTANCE.pool().typeParameter();
-            assert type != null;
             }
         return type;
         }
@@ -259,7 +256,6 @@ public class xRTSignature
             {
             RTPARAM_TYPE = type = INSTANCE.f_container.getClassStructure("_native.reflect.RTParameter").
                     getIdentityConstant().getType();
-            assert type != null;
             }
         return type;
         }
@@ -273,7 +269,6 @@ public class xRTSignature
         if (template == null)
             {
             RTRETURN_TEMPLATE = template = (xConst) INSTANCE.f_container.getTemplate(ensureRTReturnType());
-            assert template != null;
             }
         return template;
         }
@@ -287,7 +282,6 @@ public class xRTSignature
         if (template == null)
             {
             RTPARAM_TEMPLATE = template = (xConst) INSTANCE.f_container.getTemplate(ensureRTParamType());
-            assert template != null;
             }
         return template;
         }
@@ -295,33 +289,33 @@ public class xRTSignature
     /**
      * @return the TypeComposition for an RTReturn of the specified type
      */
-    public static TypeComposition ensureRTReturn(ConstantPool pool, TypeConstant typeValue)
+    public static TypeComposition ensureRTReturn(Frame frame, TypeConstant typeValue)
         {
         assert typeValue != null;
 
-        TypeConstant typeRTReturn =
-                pool.ensureParameterizedTypeConstant(ensureRTReturnType(), typeValue);
+        TypeConstant typeRTReturn = frame.poolContext().
+            ensureParameterizedTypeConstant(ensureRTReturnType(), typeValue);
 
-        return INSTANCE.f_container.resolveClass(typeRTReturn);
+        return frame.f_context.f_container.resolveClass(typeRTReturn);
         }
 
     /**
      * @return the TypeComposition for a RTParameter of the specified type and annotations
      */
-    public static TypeComposition ensureRTParameter(ConstantPool pool, TypeConstant typeValue,
+    public static TypeComposition ensureRTParameter(Frame frame, TypeConstant typeValue,
                                                     Annotation[] aAnno)
         {
         assert typeValue != null;
 
-        TypeConstant typeRTParam =
-                pool.ensureParameterizedTypeConstant(ensureRTParamType(), typeValue);
+        ConstantPool pool = frame.poolContext();
+        TypeConstant typeRTParam = pool.ensureParameterizedTypeConstant(ensureRTParamType(), typeValue);
 
         if (aAnno.length > 0)
             {
             typeRTParam = pool.ensureAnnotatedTypeConstant(typeRTParam, aAnno);
             }
 
-        return INSTANCE.f_container.resolveClass(typeRTParam);
+        return frame.f_context.f_container.resolveClass(typeRTParam);
         }
 
     /**
@@ -332,10 +326,8 @@ public class xRTSignature
         TypeComposition clz = RETURN_ARRAY;
         if (clz == null)
             {
-            ConstantPool pool = INSTANCE.pool();
-            TypeConstant typeReturnArray = pool.ensureArrayType(ensureReturnType());
+            TypeConstant typeReturnArray = INSTANCE.pool().ensureArrayType(ensureReturnType());
             RETURN_ARRAY = clz = INSTANCE.f_container.resolveClass(typeReturnArray);
-            assert clz != null;
             }
         return clz;
         }
@@ -348,10 +340,8 @@ public class xRTSignature
         TypeComposition clz = PARAM_ARRAY;
         if (clz == null)
             {
-            ConstantPool pool = INSTANCE.pool();
-            TypeConstant typeParamArray = pool.ensureArrayType(ensureParamType());
+            TypeConstant typeParamArray = INSTANCE.pool().ensureArrayType(ensureParamType());
             PARAM_ARRAY = clz = INSTANCE.f_container.resolveClass(typeParamArray);
-            assert clz != null;
             }
         return clz;
         }
@@ -559,13 +549,12 @@ public class xRTSignature
             {
             while (++index < cElements)
                 {
-                ConstantPool     pool  = frameCaller.poolContext();
                 Parameter        param = fRetVals ? hMethod.getReturn(index)     : hMethod.getParam(index);
                 TypeConstant     type  = fRetVals ? hMethod.getReturnType(index) : hMethod.getParamType(index);
                 String           sName = param.getName();
                 TypeComposition clz    = fRetVals
-                        ? ensureRTReturn(pool, type)
-                        : ensureRTParameter(pool, type, param.getAnnotations());
+                        ? ensureRTReturn(frameCaller, type)
+                        : ensureRTParameter(frameCaller, type, param.getAnnotations());
 
                 ahParams[0] = xInt64.makeHandle(index);
                 ahParams[1] = sName == null ? xNullable.NULL : xString.makeHandle(sName);

@@ -2,6 +2,7 @@ package org.xvm.runtime.template._native.mgmt;
 
 
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 
 import org.xvm.asm.constants.MethodConstant;
@@ -54,9 +55,10 @@ public class xContainerControl
     @Override
     public void initNative()
         {
-        TypeConstant typeControl = pool().ensureEcstasyTypeConstant("mgmt.Container.Control");
+        ConstantPool pool     = pool();
+        TypeConstant typeMask = pool().ensureEcstasyTypeConstant("mgmt.Container.Control");
 
-        m_clzControl = ensureClass(getCanonicalType(), typeControl);
+        m_clzControl = ensureClass(pool, getCanonicalType(), typeMask);
 
         markNativeMethod("invoke", null, null);
         markNativeProperty("mainService");
@@ -100,32 +102,35 @@ public class xContainerControl
     public int invokeInvoke(Frame frame, ControlHandle hCtrl,
                             StringHandle hName, TupleHandle hTupleArg, int iReturn)
         {
-        Container      container    = hCtrl.f_container;
-        ServiceContext ctxContainer = container.ensureServiceContext();
+        Container container = hCtrl.f_container;
 
-        ObjectHandle[] ahArg    = hTupleArg.m_ahValue;
-        String         sMethod  = hName.getStringValue();
-        ModuleConstant idModule = container.getModule();
-        MethodConstant idMethod = container.findModuleMethod(sMethod, ahArg);
-
-        if (idMethod == null)
+        try (var ignore = ConstantPool.withPool(container.getConstantPool()))
             {
-            return frame.raiseException("Missing " + sMethod +
-                " method for " + idModule.getValueString());
-            }
+            ServiceContext ctxContainer = container.ensureServiceContext();
 
-        TypeComposition clzModule = idModule.getType().ensureClass(frame);
-        CallChain       chain     = clzModule.getMethodCallChain(idMethod.getSignature());
-        FunctionHandle  hFunction = new xRTFunction.AsyncHandle(chain)
-            {
-            @Override
-            protected ObjectHandle getContextTarget(Frame frame, ObjectHandle hService)
+            ObjectHandle[] ahArg    = hTupleArg.m_ahValue;
+            String         sMethod  = hName.getStringValue();
+            ModuleConstant idModule = container.getModule();
+            MethodConstant idMethod = container.findModuleMethod(sMethod, ahArg);
+
+            if (idMethod == null)
                 {
-                return frame.getConstHandle(idModule);
+                return frame.raiseException("Missing " + sMethod +
+                    " method for " + idModule.getValueString());
                 }
-            };
 
-        return hFunction.callT(frame, ctxContainer.getService(), ahArg, iReturn);
+            TypeComposition clzModule = container.resolveClass(idModule.getType());
+            CallChain       chain     = clzModule.getMethodCallChain(idMethod.getSignature());
+            FunctionHandle  hFunction = new xRTFunction.AsyncHandle(chain)
+                {
+                @Override
+                protected ObjectHandle getContextTarget(Frame frame, ObjectHandle hService)
+                    {
+                    return frame.getConstHandle(idModule);
+                    }
+                };
+            return hFunction.callT(frame, ctxContainer.getService(), ahArg, iReturn);
+            }
         }
 
 

@@ -45,7 +45,7 @@ public class xRTModuleTemplate
         {
         if (this == INSTANCE)
             {
-            MODULE_TEMPLATE_COMPOSITION = ensureClass(getCanonicalType(),
+            MODULE_TEMPLATE_COMPOSITION = ensureClass(pool(), getCanonicalType(),
                 pool().ensureEcstasyTypeConstant("reflect.ModuleTemplate"));
 
             markNativeProperty("qualifiedName");

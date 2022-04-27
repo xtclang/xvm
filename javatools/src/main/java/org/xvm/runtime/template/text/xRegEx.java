@@ -72,7 +72,7 @@ public class xRegEx
 
         m_clzMatchStruct   = clzMatch.ensureAccess(Constants.Access.STRUCT);
         m_constructorMatch = templateMatch.getStructure().findMethod("construct", 3);
-        m_clzRangeOfInt    = f_container.ensureClass(pool.ensureRangeType(pool.typeCInt64()));
+        m_clzRangeOfInt    = f_container.resolveClass(pool.ensureRangeType(pool.typeCInt64()));
         }
 
     @Override
@@ -84,7 +84,7 @@ public class xRegEx
 
         String regex  = hPattern.getStringValue();
         long   nFlags = hFlags == ObjectHandle.DEFAULT ? 0 : ((JavaLong) hFlags).getValue();
-        return frame.assignValue(iReturn, new RegExHandle(getCanonicalClass(), regex, nFlags));
+        return frame.assignValue(iReturn, makeHandle(regex, nFlags));
         }
 
     @Override
@@ -110,7 +110,7 @@ public class xRegEx
                 RegExHandle hRegEx = (RegExHandle) hTarget;
                 String      regex  = hRegEx.getRegex() + ((RegExHandle) hArg).getRegex();
                 long        nFlags = hRegEx.getFlags();
-                return frame.assignValue(iReturn, new RegExHandle(getCanonicalClass(), regex, nFlags));
+                return frame.assignValue(iReturn, makeHandle(regex, nFlags));
                 }
             case "appendTo":
                 {
@@ -207,8 +207,7 @@ public class xRegEx
         {
         if (constant instanceof RegExConstant regex)
             {
-            return frame.pushStack(new RegExHandle(getCanonicalClass(),
-                regex.getValue(), regex.getFlags()));
+            return frame.pushStack(makeHandle(regex.getValue(), regex.getFlags()));
             }
 
         return super.createConstHandle(frame, constant);
@@ -239,11 +238,11 @@ public class xRegEx
             if (nStart >= 0)
                 {
                 GenericHandle hRange = new GenericHandle(clzRange);
-                hRange.setField(frame, "lowerBound", xInt64.makeHandle(nStart));
+                hRange.setField(frame, "lowerBound",     xInt64.makeHandle(nStart));
                 hRange.setField(frame, "lowerExclusive", xBoolean.FALSE);
-                hRange.setField(frame, "upperBound", xInt64.makeHandle(match.end(i)));
+                hRange.setField(frame, "upperBound",     xInt64.makeHandle(match.end(i)));
                 hRange.setField(frame, "upperExclusive", xBoolean.TRUE);
-                hRange.setField(frame, "descending", xBoolean.FALSE);
+                hRange.setField(frame, "descending",     xBoolean.FALSE);
                 hRange.makeImmutable();
                 ah[i] = hRange;
                 }
@@ -259,6 +258,14 @@ public class xRegEx
         GenericHandle  hMatch  = new GenericHandle(clzStruct);
 
         return proceedConstruction(frame, constructor, true, hMatch, ahVar, iReturn);
+        }
+
+    /**
+     * @return a new RegExHandle
+     */
+    private RegExHandle makeHandle(String regex, long nFlags)
+        {
+        return new RegExHandle(getCanonicalClass(), regex, nFlags);
         }
 
     /**

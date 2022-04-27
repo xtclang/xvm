@@ -85,9 +85,11 @@ public class xClass
     @Override
     public TypeComposition ensureClass(TypeConstant typeActual)
         {
-        return typeActual.equals(getCanonicalType()) || !isCanonicalStructure(typeActual)
-            ? super.ensureClass(typeActual)
-            : getCanonicalClass().ensureCanonicalizedComposition(typeActual);
+        return typeActual.equals(getCanonicalType())
+            ? getCanonicalClass()
+            : isCanonicalStructure(typeActual)
+                ? getCanonicalClass(pool()).ensureCanonicalizedComposition(typeActual)
+                : super.ensureClass(typeActual);
         }
 
     @Override
@@ -256,7 +258,7 @@ public class xClass
 
         typePublic = typePublic.removeImmutable().removeAccess();
 
-        ClassTemplate   template  = f_container.getTemplate(typePublic);
+        ClassTemplate   template  = frame.f_context.f_container.getTemplate(typePublic);
         TypeComposition clzPublic = typePublic.ensureClass(frame);
 
         if (hParent == ObjectHandle.DEFAULT || hParent == xNullable.NULL)
@@ -575,7 +577,6 @@ public class xClass
             ConstantPool pool = INSTANCE.pool();
             TypeConstant typeClassArray = pool.ensureArrayType(pool.typeClass());
             ARRAY_CLZCOMP = clz = INSTANCE.f_container.resolveClass(typeClassArray);
-            assert clz != null;
             }
         return clz;
         }

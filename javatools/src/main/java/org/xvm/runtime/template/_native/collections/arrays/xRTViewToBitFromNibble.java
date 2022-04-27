@@ -7,6 +7,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Op;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -55,11 +56,12 @@ public class xRTViewToBitFromNibble
     @Override
     public DelegateHandle createBitViewDelegate(DelegateHandle hSource, Mutability mutability)
         {
+        ClassComposition clzView = getCanonicalClass();
         if (hSource instanceof SliceHandle hSlice)
             {
             // nibbles.slice().asBitArray() -> nibbles.asBitArray().slice()
             NibbleArrayHandle hNibbles = (NibbleArrayHandle) hSlice.f_hSource;
-            ViewHandle        hView    = new ViewHandle(getCanonicalClass(),
+            ViewHandle        hView    = new ViewHandle(clzView,
                         hNibbles, hNibbles.m_cSize*4, mutability);
             return slice(hView, hSlice.f_ofStart*4, hSlice.m_cSize*4, false);
             }
@@ -69,8 +71,7 @@ public class xRTViewToBitFromNibble
             return hView.f_hSource;
             }
 
-        return new ViewHandle(getCanonicalClass(),
-                (NibbleArrayHandle) hSource, hSource.m_cSize*4, mutability);
+        return new ViewHandle(clzView, (NibbleArrayHandle) hSource, hSource.m_cSize*4, mutability);
         }
 
 

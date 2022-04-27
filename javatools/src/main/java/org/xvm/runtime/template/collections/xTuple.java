@@ -92,8 +92,8 @@ public class xTuple
     public TypeComposition ensureClass(TypeConstant typeActual)
         {
         return typeActual.getParamsCount() == 0
-            ? super.ensureClass(typeActual)
-            : getCanonicalClass().ensureCanonicalizedComposition(typeActual);
+            ? getCanonicalClass()
+            : getCanonicalClass(pool()).ensureCanonicalizedComposition(typeActual);
         }
 
     @Override

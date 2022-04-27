@@ -3819,6 +3819,8 @@ public class ConstantPool
             assert !typeInception.isAccessSpecified();
             assert typeInception.normalizeParameters().equals(typeInception);
 
+            typeInception = (TypeConstant) register(typeInception);
+
             clz = f_mapCompositions.computeIfAbsent(typeInception, (type) ->
                 {
                 ClassTemplate templateReal = type.isAnnotated() && type.isIntoVariableType()

@@ -89,7 +89,7 @@ public class xEnumeration
                     throw new IllegalStateException();
                 }
 
-            xEnum templateEnumeration = (xEnum) f_container.getTemplate(idEnumeration);
+            xEnum templateEnumeration = (xEnum) frame.f_context.f_container.getTemplate(idEnumeration);
 
             List<String>     listNames  = templateEnumeration.getNames();
             List<EnumHandle> listValues = templateEnumeration.getValues();

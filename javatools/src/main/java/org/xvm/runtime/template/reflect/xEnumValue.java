@@ -84,7 +84,8 @@ public class xEnumValue
         ClassConstant  idEnumValue    = (ClassConstant) typeEnumValue.getDefiningConstant();
         ClassStructure clzEnumValue   = (ClassStructure) idEnumValue.getComponent();
         ClassStructure clzEnumeration = clzEnumValue.getSuper();
-        xEnum          template       = (xEnum) f_container.getTemplate(clzEnumeration.getIdentityConstant());
+        xEnum          template       = (xEnum) frame.f_context.f_container.
+                                            getTemplate(clzEnumeration.getIdentityConstant());
 
         ObjectHandle hValue = Utils.ensureInitializedEnum(frame,
                 template.getEnumByName(idEnumValue.getName()));

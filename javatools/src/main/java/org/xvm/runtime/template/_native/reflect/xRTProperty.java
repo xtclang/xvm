@@ -425,7 +425,6 @@ public class xRTProperty
             ConstantPool pool = INSTANCE.pool();
             TypeConstant typePropertyArray = pool.ensureArrayType(pool.typeProperty());
             ARRAY_CLZCOMP = clz = INSTANCE.f_container.resolveClass(typePropertyArray);
-            assert clz != null;
             }
         return clz;
         }
@@ -445,14 +444,14 @@ public class xRTProperty
     /**
      * @return the TypeComposition for an Array of Property for a given target type
      */
-    public static TypeComposition ensureArrayComposition(TypeConstant typeTarget)
+    public static TypeComposition ensureArrayComposition(Frame frame, TypeConstant typeTarget)
         {
         assert typeTarget != null;
 
-        ConstantPool pool              = INSTANCE.pool();
+        ConstantPool pool              = frame.poolContext();
         TypeConstant typePropertyArray = pool.ensureArrayType(
                 pool.ensureParameterizedTypeConstant(pool.typeProperty(), typeTarget));
-        return INSTANCE.f_container.resolveClass(typePropertyArray);
+        return frame.f_context.f_container.resolveClass(typePropertyArray);
         }
 
 

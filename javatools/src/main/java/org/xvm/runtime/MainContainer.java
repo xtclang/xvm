@@ -24,7 +24,6 @@ public class MainContainer
         super(runtime, containerNative, idModule);
         }
 
-
     @Override
     public ObjectHandle getInjectable(Frame frame, String sName, TypeConstant type, ObjectHandle hOpts)
         {

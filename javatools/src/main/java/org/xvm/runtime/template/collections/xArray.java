@@ -238,7 +238,7 @@ public class xArray
             }
         else
             {
-            TypeComposition clzArray = f_container.resolveClass(typeArray);
+            TypeComposition clzArray = frame.f_context.f_container.resolveClass(typeArray);
             if (fDeferred)
                 {
                 Frame.Continuation stepNext = frameCaller ->
@@ -629,7 +629,7 @@ public class xArray
     private int createListSet(Frame frame, TypeConstant typeEl, ObjectHandle[] ahValue)
         {
         TypeConstant    typeArray = frame.poolContext().ensureArrayType(typeEl);
-        TypeComposition clzArray  = f_container.resolveClass(typeArray);
+        TypeComposition clzArray  = frame.f_context.f_container.resolveClass(typeArray);
 
         return createListSet(frame, createImmutableArray(clzArray, ahValue), Op.A_STACK);
         }

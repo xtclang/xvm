@@ -7,6 +7,7 @@ import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
@@ -55,10 +56,11 @@ public class xRTViewFromBitToByte
     public DelegateHandle createBitViewDelegate(DelegateHandle hSource,
                                                 Mutability mutability)
         {
+        ClassComposition clzView = getCanonicalClass();
         if (hSource instanceof SliceHandle hSlice)
             {
             // bits.slice().asByteArray() -> bits.asByteArray().slice()
-            ViewHandle hView = new ViewHandle(getCanonicalClass(),
+            ViewHandle hView = new ViewHandle(clzView,
                     hSlice.f_hSource, hSlice.f_hSource.m_cSize/8, mutability);
 
             return slice(hView, hSlice.f_ofStart/8, hSlice.m_cSize/8, hSlice.f_fReverse);
@@ -66,11 +68,10 @@ public class xRTViewFromBitToByte
 
         if (hSource instanceof xRTViewFromBit.ViewHandle hView)
             {
-            return new ViewHandle(getCanonicalClass(),
-                    hView.f_hSource, hSource.m_cSize/8, mutability);
+            return new ViewHandle(clzView, hView.f_hSource, hSource.m_cSize/8, mutability);
             }
 
-        return new ViewHandle(getCanonicalClass(), hSource, hSource.m_cSize/8, mutability);
+        return new ViewHandle(clzView, hSource, hSource.m_cSize/8, mutability);
         }
 
 

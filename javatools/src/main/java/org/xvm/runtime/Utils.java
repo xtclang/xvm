@@ -728,7 +728,8 @@ public abstract class Utils
                         // the class must have a no-params constructor to call
                         MethodStructure constructor = clz.findConstructor(TypeConstant.NO_TYPES);
                         iResult = template.construct(frame, constructor,
-                                template.getCanonicalClass(), null, OBJECTS_NONE, Op.A_STACK);
+                                template.getCanonicalClass(frame.poolContext()),
+                                    null, OBJECTS_NONE, Op.A_STACK);
                         }
                     break;
                     }

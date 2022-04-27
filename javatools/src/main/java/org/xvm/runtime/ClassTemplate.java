@@ -208,24 +208,30 @@ public abstract class ClassTemplate
         }
 
     /**
-     * Obtain the canonical ClassComposition for this template.
+     * Obtain the canonical ClassComposition for this template at template's pool.
+     *
+     * This method should be used with care since it may be placing the ClassComposition *not*
+     * in the current ConstantPool (used mostly by the native container injections).
      */
     public ClassComposition getCanonicalClass()
         {
         ClassComposition clz = m_clazzCanonical;
         if (clz == null)
             {
-            m_clazzCanonical = clz = ensureCanonicalClass();
+            m_clazzCanonical = clz = getCanonicalClass(f_container.getConstantPool());
             }
         return clz;
         }
 
     /**
-     * Ensure the canonical ClassComposition for this template.
+     * Obtain the canonical ClassComposition for this template at the specified pool.
+     *
+     * @param pool  the pool to place the ClassComposition at
      */
-    protected ClassComposition ensureCanonicalClass()
+    public ClassComposition getCanonicalClass(ConstantPool pool)
         {
-        return (ClassComposition) ensureClass(getCanonicalType());
+        TypeConstant typeCanonical = getCanonicalType();
+        return (ClassComposition) ensureClass(pool, computeInceptionType(typeCanonical), typeCanonical);
         }
 
     /**
@@ -241,7 +247,7 @@ public abstract class ClassTemplate
 
         TypeConstant typeMask = getCanonicalType().adoptParameters(pool, typeParams);
 
-        return ensureClass(typeInception, typeMask);
+        return ensureClass(pool, typeInception, typeMask);
         }
 
     /**
@@ -252,14 +258,20 @@ public abstract class ClassTemplate
      */
     public TypeComposition ensureClass(TypeConstant typeActual)
         {
-        IdentityConstant constInception = getInceptionClassConstant();
+        return ensureClass(typeActual.getConstantPool(), computeInceptionType(typeActual), typeActual);
+        }
 
+    /**
+     * Compute the inception type based on the actual type.
+     */
+    private TypeConstant computeInceptionType(TypeConstant typeActual)
+        {
+        IdentityConstant constInception = getInceptionClassConstant();
         if (typeActual.getDefiningConstant().equals(constInception))
             {
-            TypeConstant typeInception = typeActual.isAccessSpecified()
+            return typeActual.isAccessSpecified()
                     ? typeActual.getUnderlyingType()
                     : typeActual;
-            return ensureClass(typeInception, typeActual);
             }
 
         // replace the TerminalType of the typeActual with the inception type
@@ -273,7 +285,7 @@ public abstract class ClassTemplate
                 }
             };
 
-        return ensureClass(transformer.apply(typeActual), typeActual);
+        return transformer.apply(typeActual);
         }
 
     /**
@@ -284,10 +296,10 @@ public abstract class ClassTemplate
      *       (all formal parameters resolved)
      * Note2: the following should always hold true: typeInception.getOpSupport() == this;
      */
-    protected TypeComposition ensureClass(TypeConstant typeInception, TypeConstant typeMask)
+    protected TypeComposition ensureClass(ConstantPool pool,
+                                          TypeConstant typeInception, TypeConstant typeMask)
         {
-        ClassComposition clz = typeInception.getConstantPool().
-                ensureClassComposition(typeInception, this);
+        ClassComposition clz = pool.ensureClassComposition(typeInception, this);
 
         assert typeMask.normalizeParameters().equals(typeMask);
 

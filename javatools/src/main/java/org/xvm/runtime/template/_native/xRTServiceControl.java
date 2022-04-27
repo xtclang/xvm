@@ -2,6 +2,7 @@ package org.xvm.runtime.template._native;
 
 
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
@@ -50,9 +51,11 @@ public class xRTServiceControl
     @Override
     public void initNative()
         {
-        TypeConstant typeControl = pool().ensureEcstasyTypeConstant("Service.ServiceControl");
+        ConstantPool pool          = pool();
+        TypeConstant typeInception = getCanonicalType();
+        TypeConstant typeMask      = pool.ensureEcstasyTypeConstant("Service.ServiceControl");
 
-        m_clzControl = ensureClass(getCanonicalType(), typeControl);
+        m_clzControl = ensureClass(pool, typeInception, typeMask);
 
         SERVICE_STATUS = (xEnum) f_container.getTemplate("Service.ServiceStatus");
 
@@ -65,7 +68,7 @@ public class xRTServiceControl
         markNativeMethod("shutdown", VOID, VOID);
         markNativeMethod("kill", VOID, VOID);
 
-        getCanonicalType().invalidateTypeInfo();
+        typeInception.invalidateTypeInfo();
         }
 
     @Override

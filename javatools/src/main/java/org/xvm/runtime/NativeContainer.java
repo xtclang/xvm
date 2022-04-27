@@ -3,7 +3,9 @@ package org.xvm.runtime;
 
 import java.io.File;
 import java.io.IOException;
+
 import java.net.URL;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -12,10 +14,12 @@ import java.util.Map;
 import java.util.Set;
 
 import java.util.concurrent.ConcurrentHashMap;
+
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
 import java.util.jar.JarFile;
+
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
@@ -27,8 +31,8 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Op;
-
 import org.xvm.asm.TypedefStructure;
+
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
@@ -36,13 +40,13 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 
-import org.xvm.runtime.template.Child;
-import org.xvm.runtime.template._native.reflect.xRTFunction;
-import org.xvm.runtime.template._native.reflect.xRTType;
+import org.xvm.runtime.template.xConst;
+import org.xvm.runtime.template.xEnum;
+import org.xvm.runtime.template.xObject;
+import org.xvm.runtime.template.xService;
+
 import org.xvm.runtime.template.collections.xArray;
 
-import org.xvm.runtime.template.reflect.xModule;
-import org.xvm.runtime.template.reflect.xPackage;
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
@@ -55,15 +59,14 @@ import org.xvm.runtime.template._native.mgmt.xCoreRepository;
 
 import org.xvm.runtime.template._native.numbers.xRTRandom;
 
+import org.xvm.runtime.template._native.reflect.xRTFunction;
+import org.xvm.runtime.template._native.reflect.xRTType;
+
 import org.xvm.runtime.template._native.temporal.xLocalClock;
 import org.xvm.runtime.template._native.temporal.xNanosTimer;
 
 import org.xvm.runtime.template._native.web.xRTServer;
-import org.xvm.runtime.template.xConst;
-import org.xvm.runtime.template.xEnum;
-import org.xvm.runtime.template.xException;
-import org.xvm.runtime.template.xObject;
-import org.xvm.runtime.template.xService;
+
 import org.xvm.util.Handy;
 
 
@@ -350,7 +353,7 @@ public class NativeContainer
      * @param key  the injection key
      * @param fn   the resource supplier bi-function
      */
-    protected void addResourceSupplier(InjectionKey key, BiFunction<Frame, ObjectHandle, ObjectHandle> fn)
+    private void addResourceSupplier(InjectionKey key, BiFunction<Frame, ObjectHandle, ObjectHandle> fn)
         {
         assert !f_mapResources.containsKey(key);
 
@@ -635,85 +638,6 @@ public class NativeContainer
                 : null;
         }
 
-    @Override
-    public ClassTemplate getTemplate(Constant constValue)
-        {
-        return getTemplate(getConstType(constValue)); // must exist
-        }
-
-    @Override
-    public ClassTemplate getTemplate(TypeConstant typeActual)
-        {
-        ClassTemplate template = f_mapTemplatesByType.get(typeActual);
-        if (template == null)
-            {
-            if (typeActual.isSingleDefiningConstant())
-                {
-                IdentityConstant idClass = typeActual.getSingleUnderlyingClass(true);
-                template = getTemplate(idClass).getTemplate(typeActual);
-                f_mapTemplatesByType.put(typeActual, template);
-                }
-            else
-                {
-                throw new UnsupportedOperationException();
-                }
-            }
-        return template;
-        }
-
-    @Override
-    public ClassTemplate getTemplate(IdentityConstant constClass)
-        {
-        return f_mapTemplatesByType.computeIfAbsent(constClass.getType(), type ->
-            {
-            Component struct = constClass.getComponent();
-            ClassStructure structClass = (ClassStructure) struct;
-            if (structClass == null)
-                {
-                throw new RuntimeException("Missing class structure: " + constClass);
-                }
-
-            ClassTemplate template;
-            switch (structClass.getFormat())
-                {
-                case ENUMVALUE:
-                case ENUM:
-                    template = new xEnum(this, structClass, false);
-                    template.initNative();
-                    break;
-
-                case MIXIN:
-                case CLASS:
-                case INTERFACE:
-                    template = structClass.isVirtualChild()
-                        ? new Child(this, structClass, false)
-                        : new xObject(this, structClass, false);
-                    break;
-
-                case SERVICE:
-                    template = new xService(this, structClass, false);
-                    break;
-
-                case CONST:
-                    template = structClass.isException()
-                            ? new xException(this, structClass, false)
-                            : new xConst(this, structClass, false);
-                    break;
-
-                case MODULE:
-                    template = new xModule(this, structClass, false);
-                    break;
-
-                case PACKAGE:
-                    template = new xPackage(this, structClass, false);
-                    break;
-
-                default:
-                    throw new UnsupportedOperationException("Format is not supported: " + structClass);
-                }
-            return template;
-            });
-        }
 
     @Override
     public ClassTemplate getTemplate(String sName)
@@ -774,65 +698,32 @@ public class NativeContainer
     /**
      * Obtain an object type for the specified constant.
      */
-    private TypeConstant getConstType(Constant constValue)
+    protected TypeConstant getConstType(Constant constValue)
         {
         String sComponent;
 
         switch (constValue.getFormat())
             {
-            case Char:
-            case String:
-            case IntLiteral:
-            case Bit:
-            case Nibble:
-            case CInt8:
-            case Int8:
-            case CInt16:
-            case Int16:
-            case CInt32:
-            case Int32:
-            case CInt64:
-            case Int64:
-            case CInt128:
-            case Int128:
-            case CIntN:
-            case IntN:
-            case CUInt8:
-            case UInt8:
-            case CUInt16:
-            case UInt16:
-            case CUInt32:
-            case UInt32:
-            case CUInt64:
-            case UInt64:
-            case CUInt128:
-            case UInt128:
-            case CUIntN:
-            case UIntN:
-            case FPLiteral:
+            case Char, String:
+            case Bit,  Nibble:
+
+            case IntLiteral, FPLiteral:
+
+            case CInt8,    Int8,   CUInt8,   UInt8:
+            case CInt16,   Int16,  CUInt16,  UInt16:
+            case CInt32,   Int32,  CUInt32,  UInt32:
+            case CInt64,   Int64,  CUInt64,  UInt64:
+            case CInt128,  Int128, CUInt128, UInt128:
+            case CIntN,    IntN,   CUIntN,   UIntN:
             case BFloat16:
-            case Float16:
-            case Float32:
-            case Float64:
-            case Float128:
-            case FloatN:
-            case Dec32:
-            case Dec64:
-            case Dec128:
-            case DecN:
-            case Array:
-            case UInt8Array:
+            case Float16, Float32, Float64, Float128, FloatN:
+            case          Dec32,   Dec64,   Dec128,   DecN:
+
+            case Array, UInt8Array:
+            case Date, Time, DateTime, Duration:
+            case Range, Path, Version, RegEx:
+            case Module, Package:
             case Tuple:
-            case Path:
-            case Date:
-            case Time:
-            case DateTime:
-            case Duration:
-            case Range:
-            case Version:
-            case Module:
-            case Package:
-            case RegEx:
                 return constValue.getType();
 
             case FileStore:
@@ -869,34 +760,22 @@ public class NativeContainer
                 sComponent = "_native.reflect.RTProperty";
                 break;
 
+            case AnnotatedType, ParameterizedType:
+            case ImmutableType, AccessType, TerminalType:
+            case UnionType, IntersectionType, DifferenceType:
+                sComponent = "_native.reflect.RTType";
+                break;
+
             case Method:
                 sComponent = ((MethodConstant) constValue).isFunction()
                         ? "_native.reflect.RTFunction" : "_native.reflect.RTMethod";
                 break;
 
-            case AnnotatedType:
-            case ParameterizedType:
-            case TerminalType:
-            case ImmutableType:
-            case AccessType:
-            case UnionType:
-            case IntersectionType:
-            case DifferenceType:
-                sComponent = "_native.reflect.RTType";
-                break;
-
-            case MultiMethod:   // REVIEW does the compiler ever generate this?
-            case Typedef:       // REVIEW does the compiler ever generate this?
-            case TypeParameter: // REVIEW does the compiler ever generate this?
-            case Signature:
-            case ThisClass:
-            case ParentClass:
-            case ChildClass:
             default:
                 throw new IllegalStateException(constValue.toString());
             }
 
-        return this.getClassStructure(sComponent).getIdentityConstant().getType();
+        return getClassStructure(sComponent).getIdentityConstant().getType();
         }
 
     private IdentityConstant getIdentityConstant(String sName)
@@ -921,9 +800,9 @@ public class NativeContainer
 
     // ----- constants and data fields -------------------------------------------------------------
 
-    public static final String NATIVE_MODULE = Constants.PROTOTYPE_MODULE;
-    public static final String PREF_NATIVE   = "_native.";
-    public static final int    PREF_LENGTH   = PREF_NATIVE.length();
+    private static final String NATIVE_MODULE = Constants.PROTOTYPE_MODULE;
+    private static final String PREF_NATIVE   = "_native.";
+    private static final int    PREF_LENGTH   = PREF_NATIVE.length();
 
     private ObjectHandle m_hOSStorage;
     private ObjectHandle m_hFileStore;
@@ -934,17 +813,22 @@ public class NativeContainer
     private ObjectHandle m_hProperties;
 
     private final ModuleRepository f_repository;
-    private      ModuleStructure   m_moduleSystem;
-    private      ModuleStructure   m_moduleNative;
+    private       ModuleStructure  m_moduleSystem;
+    private       ModuleStructure  m_moduleNative;
 
-    // cache - IdentityConstant by name (only for core classes)
+    /**
+     * Map of IdentityConstants by name.
+     */
     private final Map<String, IdentityConstant> f_mapIdByName = new ConcurrentHashMap<>();
-
-    // cache - ClassTemplates by type
-    private final Map<TypeConstant, ClassTemplate> f_mapTemplatesByType = new ConcurrentHashMap<>();
 
     /**
      * Map of resource names for a name based lookup.
      */
-    protected final Map<String, InjectionKey> f_mapResourceNames = new HashMap<>();
+    private final Map<String, InjectionKey> f_mapResourceNames = new HashMap<>();
+
+    /**
+     * Map of resources that are injectable from this container, keyed by their InjectionKey.
+     */
+    private final Map<InjectionKey, BiFunction<Frame, ObjectHandle, ObjectHandle>>
+            f_mapResources = new HashMap<>();
     }

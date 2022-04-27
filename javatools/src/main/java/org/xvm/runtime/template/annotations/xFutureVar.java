@@ -850,7 +850,6 @@ public class xFutureVar
      */
     private TypeComposition ensureComposition(TypeConstant typeReferent)
         {
-        // TODO consider caching the results, similarly to xArray
         return ensureClass(typeReferent.getConstantPool().ensureFutureVar(typeReferent));
         }
 

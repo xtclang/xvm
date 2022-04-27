@@ -130,13 +130,14 @@ public class xContainerLinker
                 ObjectHandle            hAdditional = ahArg[5];
                 ObjectHandle            hConditions = ahArg[6];
 
+                Container       container = frame.f_context.f_container;
                 ModuleStructure moduleApp = (ModuleStructure) hTemplate.getComponent();
                 if (!moduleApp.getFileStructure().isLinked())
                     {
-                    FileStructure fileApp = f_container.createFileStructure(moduleApp);
+                    FileStructure fileApp = container.createFileStructure(moduleApp);
 
                     // TODO GG: this needs to be replaced with linking to the passed in repo
-                    String sMissing = fileApp.linkModules(f_container.getModuleRepository(), true);
+                    String sMissing = fileApp.linkModules(container.getModuleRepository(), true);
                     if (sMissing != null)
                         {
                         return frame.raiseException("Unable to load module \"" + sMissing + "\"");
@@ -149,10 +150,10 @@ public class xContainerLinker
                     return frame.raiseException("ResourceProvider must be a service");
                     }
 
-                NestedContainer container = new NestedContainer(
-                    frame.f_context.f_container, frame.f_context, moduleApp.getIdentityConstant());
+                NestedContainer containerNested = new NestedContainer(
+                        container, frame.f_context, moduleApp.getIdentityConstant());
 
-                return new CollectResources(container, hProvider, aiReturn).doNext(frame);
+                return new CollectResources(containerNested, hProvider, aiReturn).doNext(frame);
                 }
             }
 

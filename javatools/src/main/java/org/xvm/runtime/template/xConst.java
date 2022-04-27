@@ -353,7 +353,8 @@ public class xConst
                     TypeHandle hType = (TypeHandle) ahArg[0];
                     template = (xConst) frame.f_context.f_container.getTemplate(hType.getDataType());
                     }
-                return template.callCompare(frame, getCanonicalClass(), ahArg[1], ahArg[2], iReturn);
+                return template.callCompare(frame,
+                        getCanonicalClass(frame.poolContext()), ahArg[1], ahArg[2], iReturn);
                 }
 
             case "estimateStringLength":
@@ -367,7 +368,8 @@ public class xConst
                     TypeHandle hType = (TypeHandle) ahArg[0];
                     template = (xConst) frame.f_context.f_container.getTemplate(hType.getDataType());
                     }
-                return template.callEquals(frame, getCanonicalClass(), ahArg[1], ahArg[2], iReturn);
+                return template.callEquals(frame,
+                        getCanonicalClass(frame.poolContext()), ahArg[1], ahArg[2], iReturn);
                 }
 
             case "hashCode":
@@ -378,7 +380,8 @@ public class xConst
                     TypeHandle hType = (TypeHandle) ahArg[0];
                     template = (xConst) frame.f_context.f_container.getTemplate(hType.getDataType());
                     }
-                return template.buildHashCode(frame, getCanonicalClass(), ahArg[1], iReturn);
+                return template.buildHashCode(frame,
+                        getCanonicalClass(frame.poolContext()), ahArg[1], iReturn);
                 }
             }
 

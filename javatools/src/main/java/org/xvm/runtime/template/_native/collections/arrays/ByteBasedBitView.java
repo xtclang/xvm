@@ -4,6 +4,7 @@ package org.xvm.runtime.template._native.collections.arrays;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Op;
 
+import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -33,23 +34,22 @@ public abstract class ByteBasedBitView
     @Override
     public DelegateHandle createBitViewDelegate(DelegateHandle hSource, Mutability mutability)
         {
+        ClassComposition clzView = getCanonicalClass();
         if (hSource instanceof SliceHandle hSlice)
             {
             // bytes.slice().asBitArray() -> bytes.asBitArray().slice()
             ByteArrayHandle hBytes = (ByteArrayHandle) hSlice.f_hSource;
-            ViewHandle      hView  = new ViewHandle(getCanonicalClass(),
+            ViewHandle      hView  = new ViewHandle(clzView,
                                         hBytes, hBytes.m_cSize*8, mutability);
             return slice(hView, hSlice.f_ofStart*8, hSlice.m_cSize*8, false);
             }
 
         if (hSource instanceof xRTViewFromBit.ViewHandle hView)
             {
-            return new ViewHandle(getCanonicalClass(),
-                    (ByteArrayHandle) hView.f_hSource, hSource.m_cSize*8, mutability);
+            return new ViewHandle(clzView, (ByteArrayHandle) hView.f_hSource, hSource.m_cSize*8, mutability);
             }
 
-        return new ViewHandle(getCanonicalClass(),
-                (ByteArrayHandle) hSource, hSource.m_cSize*8, mutability);
+        return new ViewHandle(clzView, (ByteArrayHandle) hSource, hSource.m_cSize*8, mutability);
         }
 
 

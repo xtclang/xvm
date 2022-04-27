@@ -128,7 +128,7 @@ public class xRTCompiler
         if (hLibRepo == null || hLibRepo instanceof CoreRepoHandle)
             {
             // TODO: this is a temporary solution
-            LinkedRepository repoCore = (LinkedRepository) f_container.getModuleRepository();
+            LinkedRepository repoCore = (LinkedRepository) frame.f_context.f_container.getModuleRepository();
 
             List<ModuleRepository> listNew = new ArrayList<>();
             listNew.add(new BuildRepository());

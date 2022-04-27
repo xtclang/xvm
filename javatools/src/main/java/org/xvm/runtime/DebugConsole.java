@@ -1606,7 +1606,7 @@ public class DebugConsole
         int                    ixFrame    = 0;
 
         StringBuilder sb = new StringBuilder();
-        for (Container container : m_frame.f_context.getRuntime().f_containers)
+        for (Container container : m_frame.f_context.getRuntime().containers())
             {
             // for now, let's show all the containers, rather than the current one
             if (sb.length() > 0)

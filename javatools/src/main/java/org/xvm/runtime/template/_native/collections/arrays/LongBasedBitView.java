@@ -4,6 +4,7 @@ package org.xvm.runtime.template._native.collections.arrays;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Op;
 
+import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -38,23 +39,22 @@ public abstract class LongBasedBitView
     @Override
     public DelegateHandle createBitViewDelegate(DelegateHandle hSource, Mutability mutability)
         {
+        ClassComposition clzView = getCanonicalClass();
         if (hSource instanceof SliceHandle hSlice)
             {
             // ints.slice().asBitArray() -> ints.asBitArray().slice()
             LongArrayHandle hLong  = (LongArrayHandle) hSlice.f_hSource;
-            ViewHandle      hView  = new ViewHandle(getCanonicalClass(),
+            ViewHandle      hView  = new ViewHandle(clzView,
                                             hLong, hLong.m_cSize*f_nBitsPerValue, mutability);
             return slice(hView, hSlice.f_ofStart*f_nBitsPerValue, hSlice.m_cSize*f_nBitsPerValue, false);
             }
 
         if (hSource instanceof xRTViewFromBit.ViewHandle hView)
             {
-            return new ViewHandle(getCanonicalClass(),
-                    (LongArrayHandle) hView.f_hSource, hSource.m_cSize, mutability);
+            return new ViewHandle(clzView, (LongArrayHandle) hView.f_hSource, hSource.m_cSize, mutability);
             }
 
-        return new ViewHandle(getCanonicalClass(),
-                (LongArrayHandle) hSource, hSource.m_cSize*f_nBitsPerValue, mutability);
+        return new ViewHandle(clzView, (LongArrayHandle) hSource, hSource.m_cSize*f_nBitsPerValue, mutability);
         }
 
 

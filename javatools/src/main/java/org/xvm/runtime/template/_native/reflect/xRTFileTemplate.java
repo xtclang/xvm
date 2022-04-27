@@ -49,7 +49,7 @@ public class xRTFileTemplate
     @Override
     public void initNative()
         {
-        FILE_TEMPLATE_COMPOSITION = ensureClass(getCanonicalType(),
+        FILE_TEMPLATE_COMPOSITION = ensureClass(pool(), getCanonicalType(),
             pool().ensureEcstasyTypeConstant("reflect.FileTemplate"));
 
         markNativeProperty("mainModule");
@@ -122,9 +122,10 @@ public class xRTFileTemplate
                     {
                     if (hArg.getTemplate() instanceof xCoreRepository)
                         {
-                        file = f_container.createFileStructure(file.getModule());
+                        Container container = frame.f_context.f_container;
+                        file = container.createFileStructure(file.getModule());
 
-                        String sMissing = file.linkModules(f_container.getModuleRepository(), true);
+                        String sMissing = file.linkModules(container.getModuleRepository(), true);
                         if (sMissing != null)
                             {
                             return frame.raiseException("Missing dependent module: " + sMissing);

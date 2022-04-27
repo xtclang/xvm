@@ -160,8 +160,8 @@ public class xRTType
     public TypeComposition ensureClass(TypeConstant typeActual)
         {
         return typeActual.equals(getCanonicalType())
-            ? super.ensureClass(typeActual)
-            : getCanonicalClass().ensureCanonicalizedComposition(typeActual);
+            ? getCanonicalClass()
+            : getCanonicalClass(pool()).ensureCanonicalizedComposition(typeActual);
         }
 
     @Override
@@ -685,7 +685,7 @@ public class xRTType
             }
 
         ObjectHandle hArray = xArray.createImmutableArray(
-                xRTFunction.ensureConstructorArray(typeTarget, typeParent), ahFunctions);
+                xRTFunction.ensureConstructorArray(frame, typeTarget, typeParent), ahFunctions);
         return frame.assignValue(iReturn, hArray);
         }
 
@@ -893,7 +893,7 @@ public class xRTType
                 }
             }
 
-        TypeComposition clzArray  = xRTMethod.ensureArrayComposition(typeTarget);
+        TypeComposition clzArray  = xRTMethod.ensureArrayComposition(frame, typeTarget);
         ObjectHandle[]  ahMethods = listHandles.toArray(Utils.OBJECTS_NONE);
         if (Op.anyDeferred(ahMethods))
             {
@@ -1506,10 +1506,10 @@ public class xRTType
         }
 
     private static int makePropertyArray(Frame frame, TypeConstant typeTarget,
-                                  List<ObjectHandle> listProps, int iReturn)
+                                         List<ObjectHandle> listProps, int iReturn)
         {
         ObjectHandle[]  ahProps  = listProps.toArray(Utils.OBJECTS_NONE);
-        TypeComposition clzArray = xRTProperty.ensureArrayComposition(typeTarget);
+        TypeComposition clzArray = xRTProperty.ensureArrayComposition(frame, typeTarget);
 
         if (Op.anyDeferred(ahProps))
             {
@@ -1628,11 +1628,10 @@ public class xRTType
         TypeComposition clz = LISTMAP_CLZCOMP;
         if (clz == null)
             {
-            ConstantPool pool = INSTANCE.pool();
+            ConstantPool pool     = INSTANCE.pool();
             TypeConstant typeList = pool.ensureEcstasyTypeConstant("collections.ListMap");
             typeList = pool.ensureParameterizedTypeConstant(typeList, pool.typeString(), pool.typeType());
             LISTMAP_CLZCOMP = clz = INSTANCE.f_container.resolveClass(typeList);
-            assert clz != null;
             }
         return clz;
         }
