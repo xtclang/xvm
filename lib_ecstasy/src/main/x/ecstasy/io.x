@@ -19,6 +19,13 @@ package io
             extends IOException(text, cause);
 
     /**
+     * Indicates that an operation failed because a file or stream closed before the operation
+     * completed.
+     */
+    const IOClosed(String? text = Null, Exception? cause = Null)
+            extends IOException(text, cause);
+
+    /**
      * A DataInputStream combines an InputStream with a DataInput.
      */
     interface DataInputStream
