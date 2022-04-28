@@ -43,7 +43,7 @@ interface BinaryInput
      */
     void readBytes(Byte[] bytes, Int offset, Int count)
         {
-        assert offset >= 0 && count >= 0;
+        assert:arg offset >= 0 && count >= 0;
 
         Int last = offset + count;
         assert last <= bytes.size;
@@ -65,6 +65,8 @@ interface BinaryInput
      */
     Byte[] readBytes(Int count)
         {
+        assert:arg count >= 0;
+
         Byte[] bytes = new Byte[count];
         readBytes(bytes);
         return bytes;
@@ -81,14 +83,23 @@ interface BinaryInput
      */
     void pipeTo(BinaryOutput out, Int count)
         {
-        Int    bufSize  = count.minOf(8192);
-        Byte[] buf      = new Byte[bufSize];
-        while (count > 0)
+        if (count > 0)
             {
-            Int copySize = bufSize.minOf(count);
-            readBytes(buf, 0, copySize);
-            out.writeBytes(buf, 0, copySize);
-            count -= copySize;
+            Int    bufSize  = count.minOf(8192);
+            Byte[] buf      = new Byte[bufSize];
+            while (count > 0)
+                {
+                Int copySize = bufSize.minOf(count);
+                readBytes(buf, 0, copySize);
+                out.writeBytes(buf, 0, copySize);
+                count -= copySize;
+                }
+            }
+        else
+            {
+            // the only legal value for count is zero at this point, but the assertion is likely
+            // to print a detailed message of the assertion condition, so it needs to be obvious
+            assert:arg count >= 0;
             }
         }
 
