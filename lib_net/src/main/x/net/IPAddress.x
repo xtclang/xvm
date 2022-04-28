@@ -101,6 +101,16 @@ const IPAddress(Byte[] bytes)
                 : bytes[0] == 0xFE && bytes[1] & 0xC0 == 0x80;
         }
 
+    /**
+     * True iff the address is the "any" address.
+     */
+    Boolean any.get()
+        {
+        return v4
+                ? this == IPv4Any
+                : this == IPv6Any;
+        }
+
     @Override
     String toString()
         {
