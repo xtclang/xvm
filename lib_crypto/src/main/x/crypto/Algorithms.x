@@ -133,8 +133,8 @@ const Algorithms
      * algorithm.
      *
      * @param specifier        the algorithm name, or the [Algorithm] object itself
-     * @param category
-     * @param key              the key
+     * @param category         the category of the algorithm to find
+     * @param key              the key (if required) that will be provided to the algorithm
      * @param privateRequired  `True` iff a private or symmetric key is required
      *
      * @return `True` iff the passed key is valid for the combination of the `algorithm` and the
