@@ -30,7 +30,7 @@ interface ReadBuffer
      */
     ReadBuffer skip(Int count)
         {
-        assert:bounds count >= 0 && count <= size - offset;
+        assert:bounds 0 <= count <= size - offset;
         offset += count;
         return this;
         }
@@ -49,14 +49,14 @@ interface ReadBuffer
     /**
      * Move the current position to the specified offset.
      *
-     * @param newOffset  a value in the range `(0 <= newOffset < size)` that specifies the new
+     * @param newOffset  a value in the range `(0 <= newOffset <= size)` that specifies the new
      *                   offset for this ReadBuffer
      *
      * @return this buffer
      */
     ReadBuffer moveTo(Int newOffset)
         {
-        assert:bounds newOffset >= 0 && newOffset <= size;
+        assert:bounds 0 <= newOffset <= size;
         offset = newOffset;
         return this;
         }
