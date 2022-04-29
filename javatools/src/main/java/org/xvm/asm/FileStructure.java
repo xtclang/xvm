@@ -416,8 +416,9 @@ public class FileStructure
                 }
 
             ModuleStructure structFingerprint = getModule(sModule);
-            if (structFingerprint != null && (!structFingerprint.isFingerprint()
-                    || structFingerprint.getFingerprintOrigin() != null))
+            assert structFingerprint != null;
+            if (!structFingerprint.isFingerprint() ||
+                 structFingerprint.getFingerprintOrigin() != null)
                 {
                 // this module is already in our FileStructure as a real, fully loaded and
                 // linked module
@@ -437,14 +438,7 @@ public class FileStructure
                     structLinked.registerConstants(pool);
                     structLinked.registerChildrenConstants(pool);
 
-                    if (structFingerprint == null)
-                        {
-                        this.addChild(structLinked);
-                        }
-                    else
-                        {
-                        this.replaceChild(structFingerprint, structLinked);
-                        }
+                    replaceChild(structFingerprint, structLinked);
 
                     structLinked.synthesizeChildren();
 
@@ -453,7 +447,6 @@ public class FileStructure
                     }
                 else // compile-time
                     {
-                    assert structFingerprint != null;
                     structFingerprint.setFingerprintOrigin(structUnlinked);
 
                     if (structTop.getChild(sModule) == null)
