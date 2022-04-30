@@ -645,8 +645,8 @@ public class xRef
                         typeContainer, Access.PRIVATE).ensureTypeInfo().findProperty(sName);
                 if (infoProp == null)
                     {
-                    return frame.raiseException("Unknown property \"" + sName + "\" at" +
-                            typeContainer.getValueString());
+                    return frame.raiseException(
+                            xException.unknownProperty(frame, sName, typeContainer));
                     }
 
                 ObjectHandle hProp = xRTProperty.makeHandle(frame, typeContainer, infoProp);

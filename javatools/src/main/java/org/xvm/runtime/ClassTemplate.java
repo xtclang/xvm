@@ -811,7 +811,7 @@ public abstract class ClassTemplate
         if (chain == null)
             {
             return frame.raiseException(
-                xException.unknownProperty(frame, idProp.getValueString(), hTarget.getType()));
+                xException.unknownProperty(frame, idProp.getName(), hTarget.getType()));
             }
 
         if (chain.isNative())
@@ -1057,7 +1057,7 @@ public abstract class ClassTemplate
         if (chain == null)
             {
             return frame.raiseException(
-                xException.unknownProperty(frame, idProp.getValueString(), hTarget.getType()));
+                xException.unknownProperty(frame, idProp.getName(), hTarget.getType()));
             }
 
         if (chain.isNative())
@@ -1549,7 +1549,7 @@ public abstract class ClassTemplate
                 clzThis.getPropertyGetterChain(idProp) == null)
             {
             return frame.raiseException(
-                xException.unknownProperty(frame, idProp.getValueString(), hThis.getType()));
+                xException.unknownProperty(frame, idProp.getName(), hThis.getType()));
             }
 
         if (hThis.isInflated(idProp))
@@ -1568,7 +1568,7 @@ public abstract class ClassTemplate
         if (infoProp == null)
             {
             return frame.raiseException(
-                xException.unknownProperty(frame, idProp.getValueString(), hThis.getType()));
+                xException.unknownProperty(frame, idProp.getName(), hThis.getType()));
             }
 
         TypeComposition clzRef = clzThis.ensurePropertyComposition(infoProp);
