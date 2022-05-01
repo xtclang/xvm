@@ -519,7 +519,7 @@ public abstract class ClassTemplate
                 {
                 MethodConstant idMethod   = entry.getKey();
                 MethodInfo     infoMethod = entry.getValue();
-                if (idMethod.isTopLevel() && infoMethod.isVirtual())
+                if (idMethod.isTopLevel() && infoMethod.isVirtual() && !infoMethod.isCapped())
                     {
                     MethodBody      body   = infoMethod.getHead();
                     MethodStructure method = body.getMethodStructure();
