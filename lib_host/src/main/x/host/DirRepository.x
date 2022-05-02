@@ -8,7 +8,7 @@ import ecstasy.reflect.ModuleTemplate;
 /**
  * Directory-based [ModuleRepository] implementation.
  */
-class DirRepository
+service DirRepository
         implements ModuleRepository
     {
     /**

@@ -7,7 +7,7 @@ import ecstasy.reflect.ModuleTemplate;
  * A repository that delegates to a chain of repositories. Reads occur from the repositories in the
  * order that they were provided to the constructor. Writes occur to the first repository only.
  */
-class LinkedRepository(List<ModuleRepository> repos)
+service LinkedRepository(List<ModuleRepository> repos)
         implements ModuleRepository
     {
     // ----- properties ----------------------------------------------------------------------------
