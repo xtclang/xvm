@@ -158,4 +158,12 @@ public interface ModuleRepository
      */
     void storeModule(ModuleStructure module)
             throws IOException;
+
+
+    // ----- constants -----------------------------------------------------------------------------
+
+    /**
+     * A constant empty array of <tt>ModuleRepository</tt>.
+     */
+    ModuleRepository[] NO_REPOS = new ModuleRepository[0];
     }

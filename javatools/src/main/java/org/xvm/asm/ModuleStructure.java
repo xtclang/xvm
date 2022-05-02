@@ -114,6 +114,14 @@ public class ModuleStructure
         }
 
     /**
+     * @return true iff this module is already fully loaded and linked
+     */
+    public boolean isLinked()
+        {
+        return !isFingerprint() || getFingerprintOrigin() != null;
+        }
+
+    /**
      * Determine the directory path that contains the module. The path is in the format of the
      * machine that compiled the module; in other words, it might look like "c:\dev\prj\", or it
      * might look like "/development/prj/", or any other valid format.

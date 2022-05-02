@@ -384,12 +384,17 @@ public class FileStructure
                 {
                 return null;
                 }
-            m_fLinked = true;
             }
-        return linkModules(repository, this, new HashSet<>(), fRuntime);
+
+        String sMissing = linkModules(repository, this, new HashSet<>(), fRuntime);
+        if (sMissing == null)
+            {
+            markLinked();
+            }
+        return sMissing;
         }
 
-    private String linkModules(ModuleRepository repository, FileStructure structTop,
+    private String linkModules(ModuleRepository repository, FileStructure fileTop,
                                Set<String> setFilesDone, boolean fRuntime)
         {
         if (!setFilesDone.add(getModuleName()))
@@ -415,10 +420,9 @@ public class FileStructure
                 continue;
                 }
 
-            ModuleStructure structFingerprint = getModule(sModule);
-            assert structFingerprint != null;
-            if (!structFingerprint.isFingerprint() ||
-                 structFingerprint.getFingerprintOrigin() != null)
+            ModuleStructure moduleFingerprint = getModule(sModule);
+            assert moduleFingerprint != null;
+            if (moduleFingerprint.isLinked())
                 {
                 // this module is already in our FileStructure as a real, fully loaded and
                 // linked module
@@ -428,33 +432,26 @@ public class FileStructure
             // load the module against which the compilation will occur
             if (repository.getModuleNames().contains(sModule))
                 {
-                ModuleStructure structUnlinked = repository.loadModule(sModule); // TODO versions etc.
+                ModuleStructure moduleUnlinked = repository.loadModule(sModule); // TODO versions etc.
+                assert moduleUnlinked != null;
+
                 if (fRuntime)
                     {
-                    ConstantPool    pool         = m_pool;
-                    ModuleStructure structLinked = structUnlinked.cloneBody();
-                    structLinked.setContaining(this);
-                    structLinked.cloneChildren(structUnlinked.children());
-                    structLinked.registerConstants(pool);
-                    structLinked.registerChildrenConstants(pool);
-
-                    replaceChild(structFingerprint, structLinked);
-
-                    structLinked.synthesizeChildren();
+                    replace(moduleFingerprint, moduleUnlinked);
 
                     // TODO eventually we need to handle the case that these are actual modules and not just pointers to the modules
-                    listModulesTodo.addAll(structUnlinked.getFileStructure().moduleNames());
+                    listModulesTodo.addAll(moduleUnlinked.getFileStructure().moduleNames());
                     }
                 else // compile-time
                     {
-                    structFingerprint.setFingerprintOrigin(structUnlinked);
+                    moduleFingerprint.setFingerprintOrigin(moduleUnlinked);
 
-                    if (structTop.getChild(sModule) == null)
+                    if (fileTop.getChild(sModule) == null)
                         {
-                        structTop.addChild(structFingerprint);
+                        fileTop.addChild(moduleFingerprint);
                         }
 
-                    FileStructure fileDownstream = structUnlinked.getFileStructure();
+                    FileStructure fileDownstream = moduleUnlinked.getFileStructure();
                     if (!setFilesDone.contains(sModule))
                         {
                         listFilesTodo.add(fileDownstream);
@@ -473,15 +470,37 @@ public class FileStructure
         for (FileStructure fileDownstream : listFilesTodo)
             {
             assert !fRuntime;
-            String sMissingDownstream = fileDownstream.linkModules(repository, structTop,
+            String sMissingDownstream = fileDownstream.linkModules(repository, fileTop,
                                                 setFilesDone, false);
             if (sMissingDownstream != null && sMissing == null)
                 {
                 sMissing = sMissingDownstream;
+                break;
                 }
             }
 
         return sMissing;
+        }
+
+    /**
+     * Replace the specified "fingerprint" module with an actual one.
+     *
+     * @param moduleFingerprint  the fingerprint module to replace
+     * @param moduleUnlinked     the "raw" module to replace the fingerprint with
+     */
+    public void replace(ModuleStructure moduleFingerprint, ModuleStructure moduleUnlinked)
+        {
+        ConstantPool    pool         = m_pool;
+        ModuleStructure moduleLinked = moduleUnlinked.cloneBody();
+
+        moduleLinked.setContaining(this);
+        moduleLinked.cloneChildren(moduleUnlinked.children());
+        moduleLinked.registerConstants(pool);
+        moduleLinked.registerChildrenConstants(pool);
+
+        replaceChild(moduleFingerprint, moduleLinked);
+
+        moduleLinked.synthesizeChildren();
         }
 
     /**
@@ -490,6 +509,14 @@ public class FileStructure
     public boolean isLinked()
         {
         return m_fLinked;
+        }
+
+    /**
+     * Mark this FileStructure as linked.
+     */
+    public void markLinked()
+        {
+        m_fLinked = true;
         }
 
     /**

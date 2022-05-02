@@ -2,7 +2,6 @@ package org.xvm.api;
 
 
 import java.io.File;
-import java.io.IOException;
 
 import java.util.List;
 
@@ -54,7 +53,6 @@ public class Connector
      * Add a module repository.
      */
     public void addModuleRepository(File fileRepo)
-            throws IOException
         {
         if (m_containerMain != null)
             {
@@ -74,7 +72,7 @@ public class Connector
             List<ModuleRepository> listRepo = ((LinkedRepository) m_repository).asList();
             listRepo.add(repo);
 
-            m_repository = new LinkedRepository(listRepo.toArray(new ModuleRepository[0]));
+            m_repository = new LinkedRepository(listRepo.toArray(ModuleRepository.NO_REPOS));
             }
         else
             {
