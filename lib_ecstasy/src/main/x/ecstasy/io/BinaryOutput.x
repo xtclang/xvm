@@ -24,10 +24,7 @@ interface BinaryOutput
      */
     void writeBytes(Byte[] bytes)
         {
-        for (Byte byte : bytes)
-            {
-            writeByte(byte);
-            }
+        writeBytes(bytes, 0, bytes.size);
         }
 
     /**

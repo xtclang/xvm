@@ -40,17 +40,17 @@ public class xOSFileChannel
     @Override
     public void initNative()
         {
-        markNativeProperty("size");
-        markNativeProperty("position");
-        markNativeProperty("readable");
-        markNativeProperty("writable");
-
-        markNativeMethod("flush", VOID, VOID);
-        markNativeMethod("read", null, new String[] {"Boolean", "numbers.Int64"});
-        markNativeMethod("read", null, new String[] {"Boolean", "numbers.Int64", "numbers.Int64"});
-        markNativeMethod("write", null, INT);
-        markNativeMethod("write", null, new String[] {"numbers.Int64", "numbers.Int64"});
-        markNativeMethod("close", null, VOID);
+// TODO GG/MF
+//        markNativeProperty("size");
+//        markNativeProperty("position");
+//        markNativeProperty("readable");
+//        markNativeProperty("writable");
+//        markNativeMethod("flush", VOID, VOID);
+//        markNativeMethod("read", null, new String[] {"Boolean", "numbers.Int64"});
+//        markNativeMethod("read", null, new String[] {"Boolean", "numbers.Int64", "numbers.Int64"});
+//        markNativeMethod("write", null, INT);
+//        markNativeMethod("write", null, new String[] {"numbers.Int64", "numbers.Int64"});
+//        markNativeMethod("close", null, VOID);
 
         getCanonicalType().invalidateTypeInfo();
 

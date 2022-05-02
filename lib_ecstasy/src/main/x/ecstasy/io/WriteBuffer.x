@@ -44,9 +44,6 @@ interface WriteBuffer
      *
      * @param index  the index of the element
      * @param value  the element value to store
-     *
-     * @throws BufferException if the specified position is beyond the buffer's limit or this buffer
-     *                         is read-only
      */
     @Op("[]=") void setByte(Int index, Byte value);
 

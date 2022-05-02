@@ -155,40 +155,64 @@
 interface BufferProvider
     {
     /**
-     * Obtain the next buffer from the `BufferProvider`.
+     * Obtain the next buffer from the `BufferProvider`, if there is one available or if the
+     * BufferProvider can allocate one.
      *
-     * @return `True` iff the provider has a buffer available
+     * @return `True` iff the provider can provide a buffer
      * @return (conditional) a [WriteBuffer] that the caller can use
      */
     conditional WriteBuffer next();
 
     /**
-     * Obtain the next buffer from the `BufferProvider`.
+     * Obtain one or more buffers from the `BufferProvider`. The number of bytes allocated may be
+     * less or greater than the number of bytes requested; it is possible that the number of bytes
+     * allocated is `0`, if the `BufferProvider` has been exhausted.
      *
      * @param bytesRequested  the number of bytes that the caller desires to place into one or more
      *                        [WriteBuffer] objects
      *
-     * @return `True` iff the provider has any buffers available
-     * @return (conditional) an array of [WriteBuffer] objects
-     * @return (conditional) the number of bytes that can be held by the returned [WriteBuffer]
-     *         objects
+     * @return an array of one or more [WriteBuffer] objects
+     * @return the number of bytes that can be held by the returned [WriteBuffer] objects
      */
-    conditional (WriteBuffer[] buffers, Int bytesAllocated) alloc(Int bytesRequested);
+    (WriteBuffer[] buffers, Int bytesAllocated) alloc(Int bytesRequested)
+        {
+        // this is a default implementation for a BufferProvider that does not
+        WriteBuffer[] buffers        = new WriteBuffer[];
+        Int           bytesAllocated = 0;
+
+        do
+            {
+            if (WriteBuffer buffer := next())
+                {
+                assert buffer.offset == 0;
+                buffers        += buffer;
+                bytesAllocated += buffer.capacity;
+                }
+            }
+        while (bytesAllocated < bytesRequested);
+
+        return buffers, bytesAllocated;
+        }
 
     /**
-     * The maximum total number of buffers that the `BufferProvider` is limited to having allocated
-     * at any given time.
+     * Determine if the `BufferProvider` has a known capacity limit.
+     *
+     * @return `True` iff the `BufferProvider` has a known capacity limit
+     * @return (conditional) the maximum total number of buffer bytes that the `BufferProvider` is
+     *         limited to having allocated at any given time
      */
-    @RO Int maxBuffers;
+    conditional Int capacityLimit();
 
     /**
-     * The maximum total number of buffer bytes that the `BufferProvider` is limited to having
-     * allocated at any given time.
+     * Determine if the `BufferProvider` uses a single buffer size for all of its buffers.
+     *
+     * @return `True` iff the `BufferProvider` has a fixed buffer size
+     * @return (conditional) the fixed buffer size
      */
-    @RO Int maxBytes;
+    conditional Int fixedBufferSize();
 
     /**
-     * The total number of buffers that the `BufferProvider` has allocated.
+     * The total number of buffers that the `BufferProvider` has allocated (and still exist).
      */
     @RO Int totalBuffers;
 
@@ -198,17 +222,20 @@ interface BufferProvider
     @RO Int totalBytes;
 
     /**
-     * The number of buffers that the `BufferProvider` has provided that have not been closed.
+     * The number of buffers that the `BufferProvider` has provided that have not been returned to
+     * the `BufferProvider`.
      */
     @RO Int consumedBuffers;
 
     /**
-     * The number of buffer bytes that the `BufferProvider` has provided that have not been closed.
+     * The number of buffer bytes that the `BufferProvider` has provided that have not been
+     * returned to the `BufferProvider`.
      */
     @RO Int consumedBytes;
 
     /**
-     * The number of buffers that the `BufferProvider` can still provide without actually allocating any new buffers.
+     * The number of buffers that the `BufferProvider` can provide at this point without actually
+     * allocating any new buffers.
      */
     @RO Int availableBuffers.get()
         {
@@ -216,7 +243,8 @@ interface BufferProvider
         }
 
     /**
-     * The number of buffer bytes that the `BufferProvider` can still provide without actually allocating any new buffers.
+     * The number of buffer bytes that the `BufferProvider` can still provide without actually
+     * allocating any new buffers.
      */
     @RO Int availableBytes.get()
         {
