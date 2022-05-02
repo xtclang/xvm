@@ -3,10 +3,14 @@ import crypto.Algorithms;
 /**
  * Represents the network.
  *
- * TODO document injection names
+ * There are two common injections supported in Ecstasy for accessing a `Network`. One is a "plain
+ * text" (unencrypted and insecure) network, while the second provides Transport Layer Security
+ * (TLS):
  *
- *     @Inject Network network;
- *     @Inject Network secure;
+ *     @Inject Network insecureNetwork;
+ *     @Inject Network secureNetwork;
+ *
+ * The names are intended to clearly specify the risk.
  */
 interface Network
     {
@@ -21,13 +25,22 @@ interface Network
      */
     @RO NetworkInterface[] interfaces;
 
-    /**
-     * REVIEW
-     */
-    Network secure(Algorithms secureAlgorithms);
+//    /**
+//     * Create a Transport Layer Security (TLS) secured network from this network, by providing the
+//     * necessary secure algorithms and keys.
+//     *
+//     * @param secureAlgorithms  the [Algorithms] available negotiate secure connections
+//     * @param secureKeys        the source for keys required by the secure algorithms
+//     */
+//    Network secure(Algorithms secureAlgorithms, KeyStore? secureKeys);
 
     /**
-     * REVIEW
+     * Determine whether the network provides Transport Layer Security (TLS), also referred to by
+     * the older term "Secure Sockets Layer" (SSL).
+     *
+     * @return True iff the network is secured by Transport Layer Security (TLS)
+     * @return (conditional) the [Algorithms] that are available to the TLS network in order to
+     *         negotiate a secure connection
      */
     conditional Algorithms isSecure();
 
@@ -88,15 +101,48 @@ interface Network
      * what [NetworkInterface] to use is automatic, and in the case when more than one network
      * interface could be used, the selection criteria used to choose one is undefined.
      *
-     * @param to    the [SocketAddress] to connect to
-     * @param from  (optional) the local [SocketAddress] to connect from; `Null` implies "any"
+     *     // a conditional tuple is returned
+     *     network.connect^(addr).passTo(tuple ->
+     *         {
+     *         if (Socket socket := tuple)
+     *             {
+     *             ...
+     *             }
+     *         });
+     *
+     *     @Future @Conditional Tuple<Boolean, Socket> result = network.connect(addr);
+     *     &result.passTo(t ->
+     *         {
+     *         if (Socket socket := t)
+     *             {
+     *             ...
+     *             }
+     *         });
+     *
+     * @param remoteAddress  the [SocketAddress] to connect to
+     * @param localAddress   (optional) the local [SocketAddress] to connect from; `Null` implies "any"
+     *
+     * @return `True` iff the specified address(es) could be connected
+     * @return (conditional) the Socket connecting the specified address(es)
      */
-    conditional Socket connect(SocketAddress to, SocketAddress? from=Null);
+    conditional Socket connect(SocketAddress remoteAddress, SocketAddress? localAddress=Null);
 
     /**
      * Create a [ServerSocket] that can accept incoming socket connections.
      *
-     * @param address  the [SocketAddress] to listen for connections on
+     *     @Future @Conditional Tuple<Boolean, ServerSocket> result = network.listen(addr);
+     *     &result.passTo(t ->
+     *         {
+     *         if (Socket socket := t)
+     *             {
+     *             ...
+     *             }
+     *         });
+     *
+     * @param localAddress  the [SocketAddress] to listen for connections on
+     *
+     * @return `True` iff the specified address could be listened on
+     * @return (conditional) the ServerSocket listening on the specified address
      */
-    conditional ServerSocket listen(SocketAddress address);
+    conditional ServerSocket listen(SocketAddress localAddress);
     }

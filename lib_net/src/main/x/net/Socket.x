@@ -5,28 +5,41 @@ interface Socket
         extends Closeable
     {
     /**
-     * This is the [SocketAddress] that the socket originates from.
+     * This is the remote [SocketAddress] to which the underlying socket is connected; it is an
+     * address and port somewhere on the network (even including this machine).
      */
-    @RO SocketAddress fromAddress;
+    @RO SocketAddress remoteAddress;
 
     /**
-     * This is the [SocketAddress] that the socket connects to.
+     * This is the local [SocketAddress] at which the underlying socket is connected; it is an
+     * address and port on this machine.
      */
-    @RO SocketAddress toAddress;
+    @RO SocketAddress localAddress;
 
     /**
-     * Obtain the [SocketChannel] for the `Socket`, which provides an advanced non-blocking read and
-     * write API.
+     * A `Socket Channel` represents an operating system socket, with the ability to read and write
+     * in the manner of a [Channel](ecstasy.io.Channel). The `Socket Channel` provides a
+     * non-blocking I/O capability.
      */
-    @RO SocketChannel channel;
+    interface Channel
+            extends ecstasy.io.Channel
+        {
+        }
 
     /**
-     * Obtain the stream-like [BinaryInput] to read from the socket.
+     * Obtain the `Channel` for the `Socket`, which provides an advanced non-blocking read and
+     * write API. The caller to the socket may use **either** the `channel`, or the [in] and [out]
+     * streams, but not both; an attempt to use both for I/O will result in an exception.
+     */
+    @RO Channel channel;
+
+    /**
+     * Obtain the blocking, stream-like [BinaryInput] to read from the socket.
      */
     @RO BinaryInput in;
 
     /**
-     * Obtain the stream-like [BinaryOutput] to write to the socket.
+     * Obtain the blocking, stream-like [BinaryOutput] to write to the socket.
      */
     @RO BinaryOutput out;
 

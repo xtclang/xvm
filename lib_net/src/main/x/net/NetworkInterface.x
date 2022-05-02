@@ -54,15 +54,39 @@ interface NetworkInterface
     /**
      * Create a stream-based socket that connects to the specified address.
      *
-     * @param to    the [SocketAddress] to connect to
-     * @param from  (optional) the local [SocketAddress] to connect from; `Null` implies "any"
+     *     @Future @Conditional Tuple<Boolean, Socket> result = iface.connect(addr);
+     *     &result.passTo(t ->
+     *         {
+     *         if (Socket socket := t)
+     *             {
+     *             ...
+     *             }
+     *         });
+     *
+     * @param remoteAddress  the [SocketAddress] to connect to
+     * @param localAddress   (optional) the local [SocketAddress] to connect from; `Null` implies "any"
+     *
+     * @return `True` iff the specified address(es) could be connected
+     * @return (conditional) the Socket connecting the specified address(es)
      */
-    conditional Socket connect(SocketAddress to, SocketAddress? from=Null);
+    conditional Socket connect(SocketAddress remoteAddress, SocketAddress? localAddress=Null);
 
     /**
      * Create a [ServerSocket] that can accept incoming socket connections.
      *
-     * @param address  the [SocketAddress] to listen for connections on
+     *     @Future @Conditional Tuple<Boolean, ServerSocket> result = iface.listen(addr);
+     *     &result.passTo(t ->
+     *         {
+     *         if (Socket socket := t)
+     *             {
+     *             ...
+     *             }
+     *         });
+     *
+     * @param localAddress  the [SocketAddress] to listen for connections on
+     *
+     * @return `True` iff the specified address could be listened on
+     * @return (conditional) the ServerSocket listening on the specified address
      */
-    conditional ServerSocket listen(SocketAddress address);
+    conditional ServerSocket listen(SocketAddress localAddress);
     }
