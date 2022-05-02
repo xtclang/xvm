@@ -27,7 +27,13 @@ interface Freezable
      */
     static <AnyType> conditional AnyType+Freezable requiresFreeze(AnyType object)
         {
-        if (object.is(immutable | service))
+        // TODO GG: check for (immutable Clz) fails
+//        if (object.is(immutable | service))
+//            {
+//            return False;
+//            }
+
+        if (object.is(immutable) || object.is(service))
             {
             return False;
             }
