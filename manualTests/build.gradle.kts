@@ -50,6 +50,7 @@ val compileAll = tasks.register<JavaExec>("compileAll") {
         "-verbose",
         "-o", "$buildDir",
         "-L", "${xdk.buildDir}/xdk/lib",
+        "-L", "${xdk.buildDir}/xdk/javatools/javatools_turtle.xtc",
         "-L", "${xdk.buildDir}/xdk/javatools/javatools_bridge.xtc")
 
     args(opts + tests)
@@ -87,6 +88,7 @@ val compileOne = tasks.register<JavaExec>("compileOne") {
     args("-verbose",
          "-o", "$buildDir",
          "-L", "${xdk.buildDir}/xdk/lib",
+         "-L", "${xdk.buildDir}/xdk/javatools/javatools_turtle.xtc",
          "-L", "${xdk.buildDir}/xdk/javatools/javatools_bridge.xtc",
          "-L", "$buildDir",
          "src/main/x/$name.x")
@@ -128,6 +130,7 @@ tasks.register<JavaExec>("host") {
 
     val opts = listOf<String>(
         "-L", "${xdk.buildDir}/xdk/lib/",
+        "-L", "${xdk.buildDir}/xdk/javatools/javatools_turtle.xtc",
         "-L", "${xdk.buildDir}/xdk/javatools/javatools_bridge.xtc",
         "-L", "$buildDir",
         "${xdk.buildDir}/xdk/lib/host.xtc")

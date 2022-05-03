@@ -94,15 +94,18 @@ public class NativeContainer
 
     private ConstantPool loadNativeTemplates()
         {
-        ModuleStructure moduleRoot   = f_repository.loadModule(Constants.ECSTASY_MODULE);
+        ModuleStructure moduleRoot   = f_repository.loadModule(ECSTASY_MODULE);
+        ModuleStructure moduleTurtle = f_repository.loadModule(TURTLE_MODULE);
         ModuleStructure moduleNative = f_repository.loadModule(NATIVE_MODULE);
 
         // "root" is a merge of "native" module into the "system"
         FileStructure containerRoot = new FileStructure(moduleRoot);
-        containerRoot.merge(moduleNative, true);
+        containerRoot.merge(moduleTurtle, false);
+        containerRoot.merge(moduleNative, false);
 
         // obtain the cloned modules that belong to the merged container
-        m_moduleSystem = (ModuleStructure) containerRoot.getChild(Constants.ECSTASY_MODULE);
+        m_moduleSystem = (ModuleStructure) containerRoot.getChild(ECSTASY_MODULE);
+        m_moduleTurtle = (ModuleStructure) containerRoot.getChild(TURTLE_MODULE);
         m_moduleNative = (ModuleStructure) containerRoot.getChild(NATIVE_MODULE);
 
         ConstantPool pool = containerRoot.getConstantPool();
@@ -110,7 +113,7 @@ public class NativeContainer
 
         if (pool.getNakedRefType() == null)
             {
-            ClassStructure clzNakedRef = (ClassStructure) m_moduleNative.getChild("NakedRef");
+            ClassStructure clzNakedRef = (ClassStructure) m_moduleTurtle.getChild("NakedRef");
             pool.setNakedRefType(clzNakedRef.getFormalType());
             }
 
@@ -648,9 +651,11 @@ public class NativeContainer
     @Override
     public ClassStructure getClassStructure(String sName)
         {
-        Component component = sName.startsWith(PREF_NATIVE)
-                ? m_moduleNative.getChildByPath(sName.substring(PREF_LENGTH))
-                : m_moduleSystem.getChildByPath(sName);
+        Component component = sName.startsWith(NATIVE_PREFIX)
+                ? m_moduleNative.getChildByPath(sName.substring(NATIVE_LENGTH))
+                : sName.startsWith(TURTLE_PREFIX)
+                    ? m_moduleTurtle.getChildByPath(sName.substring(TURTLE_LENGTH))
+                    : m_moduleSystem.getChildByPath(sName);
 
         while (component instanceof TypedefStructure typedef)
             {
@@ -687,6 +692,7 @@ public class NativeContainer
     public FileStructure createFileStructure(ModuleStructure moduleApp)
         {
         FileStructure structApp = new FileStructure(m_moduleSystem);
+        structApp.merge(m_moduleTurtle, false);
         structApp.merge(m_moduleNative, false);
         structApp.merge(moduleApp, true);
 
@@ -800,9 +806,13 @@ public class NativeContainer
 
     // ----- constants and data fields -------------------------------------------------------------
 
-    private static final String NATIVE_MODULE = Constants.PROTOTYPE_MODULE;
-    private static final String PREF_NATIVE   = "_native.";
-    private static final int    PREF_LENGTH   = PREF_NATIVE.length();
+    private static final String ECSTASY_MODULE = Constants.ECSTASY_MODULE;
+    private static final String TURTLE_MODULE  = Constants.TURTLE_MODULE;
+    private static final String NATIVE_MODULE  = Constants.NATIVE_MODULE;
+    private static final String TURTLE_PREFIX  = "mack.";
+    private static final int    TURTLE_LENGTH  = TURTLE_PREFIX.length();
+    private static final String NATIVE_PREFIX  = "_native.";
+    private static final int    NATIVE_LENGTH  = NATIVE_PREFIX.length();
 
     private ObjectHandle m_hOSStorage;
     private ObjectHandle m_hFileStore;
@@ -814,6 +824,7 @@ public class NativeContainer
 
     private final ModuleRepository f_repository;
     private       ModuleStructure  m_moduleSystem;
+    private       ModuleStructure  m_moduleTurtle;
     private       ModuleStructure  m_moduleNative;
 
     /**

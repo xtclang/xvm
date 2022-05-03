@@ -54,6 +54,8 @@ public class TestConnector
         listCompileArgs.add("-L");
         listCompileArgs.add("../xdk/build/xdk/lib");
         listCompileArgs.add("-L");
+        listCompileArgs.add("../xdk/build/xdk/javatools/javatools_turtle.xtc");
+        listCompileArgs.add("-L");
         listCompileArgs.add("../xdk/build/xdk/javatools/javatools_bridge.xtc");
         listCompileArgs.add("-L");
         listCompileArgs.add("./build");

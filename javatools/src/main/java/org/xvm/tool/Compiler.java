@@ -153,7 +153,7 @@ public class Compiler
         if (cSystemModules == 0)
             {
             log(Severity.INFO, "Pre-loading and linking system libraries");
-            prelinkSystemLibraries(repoLib);
+            prelinkSystemLibraries(repoLib, false);
             }
         checkErrors();
 
@@ -197,12 +197,12 @@ public class Compiler
     protected void injectNativeTurtle(ModuleRepository repoLib)
         {
         ModuleRepository repoBuild    = extractBuildRepo(repoLib);
-        ModuleStructure  moduleNative = repoBuild.loadModule(Constants.PROTOTYPE_MODULE);
-        if (moduleNative != null)
+        ModuleStructure  moduleTurtle = repoBuild.loadModule(Constants.TURTLE_MODULE);
+        if (moduleTurtle != null)
             {
-            try (var ignore = ConstantPool.withPool(moduleNative.getConstantPool()))
+            try (var ignore = ConstantPool.withPool(moduleTurtle.getConstantPool()))
                 {
-                ClassStructure clzNakedRef  = (ClassStructure) moduleNative.getChild("NakedRef");
+                ClassStructure clzNakedRef  = (ClassStructure) moduleTurtle.getChild("NakedRef");
                 TypeConstant   typeNakedRef = clzNakedRef.getFormalType();
 
                 for (String sModule : repoBuild.getModuleNames())

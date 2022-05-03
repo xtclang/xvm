@@ -66,7 +66,7 @@ public class Runner
         checkErrors();
 
         log(Severity.INFO, "Pre-loading and linking system libraries");
-        prelinkSystemLibraries(repo);
+        prelinkSystemLibraries(repo, true);
         checkErrors();
 
         File            fileModule = options().getTarget();

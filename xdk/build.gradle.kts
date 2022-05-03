@@ -3,6 +3,7 @@
  */
 
 val javatools     = project(":javatools")
+val turtle        = project(":javatools_turtle")
 val bridge        = project(":javatools_bridge")
 val ecstasy       = project(":lib_ecstasy")
 val aggregate     = project(":lib_aggregate");
@@ -19,6 +20,7 @@ val host          = project(":lib_host");
 val hostControl   = project(":lib_hostControl");
 
 val ecstasyMain     = "${ecstasy.projectDir}/src/main"
+val turtleMain      = "${turtle.projectDir}/src/main"
 val bridgeMain      = "${bridge.projectDir}/src/main"
 val javatoolsJar    = "${javatools.buildDir}/libs/javatools.jar"
 val aggregateMain   = "${aggregate.projectDir}/src/main";
@@ -34,11 +36,14 @@ val platformMain    = "${platform.projectDir}/src/main";
 val hostMain        = "${host.projectDir}/src/main";
 val hostControlMain = "${hostControl.projectDir}/src/main";
 
-val libDir        = "$buildDir/xdk/lib"
-val coreLib       = "$libDir/ecstasy.xtc"
-val bridgeLib     = "$buildDir/xdk/javatools/javatools_bridge.xtc"
+val libDir          = "$buildDir/xdk/lib"
+val javaDir         = "$buildDir/xdk/javatools"
 
-val version      = "0.3-alpha"
+val coreLib         = "$libDir/ecstasy.xtc"
+val turtleLib       = "$javaDir/javatools_turtle.xtc"
+val bridgeLib       = "$javaDir/javatools_bridge.xtc"
+
+val version         = "0.3-alpha"
 
 tasks.register("clean") {
     group       = "Build"
@@ -69,7 +74,7 @@ val copyJavatools = tasks.register<Copy>("copyJavatools") {
 
 val compileEcstasy = tasks.register<JavaExec>("compileEcstasy") {
     group       = "Build"
-    description = "Build ecstasy.xtc and _native.xtc modules"
+    description = "Build ecstasy.xtc and javatools_turtle.xtc modules"
 
     dependsOn(javatools.tasks["build"])
     dependsOn(copyJavatools)
@@ -81,12 +86,12 @@ val compileEcstasy = tasks.register<JavaExec>("compileEcstasy") {
             "-o", "$libDir",
             "-version", "$version",
             "$ecstasyMain/x/ecstasy.x",
-            "$bridgeMain/x/_native.x")
+            "$turtleMain/x/mack.x")
     mainClass.set("org.xvm.tool.Compiler")
 
     doLast {
-        file("$libDir/_native.xtc").
-           renameTo(file("$bridgeLib"))
+        file("$libDir/mack.xtc").
+           renameTo(file("$turtleLib"))
         println("Finished task: compileEcstasy")
     }
 }
@@ -97,7 +102,7 @@ val compileAggregate = tasks.register<JavaExec>("compileAggregate") {
 
     dependsOn(javatools.tasks["build"])
 
-    shouldRunAfter(compileEcstasy)
+    shouldRunAfter(compileCollections)
 
     jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
 
@@ -106,7 +111,7 @@ val compileAggregate = tasks.register<JavaExec>("compileAggregate") {
             "-o", "$libDir",
             "-version", "$version",
             "-L", "$coreLib",
-            "-L", "$bridgeLib",
+            "-L", "$turtleLib",
             "$aggregateMain/x/aggregate.x")
     mainClass.set("org.xvm.tool.Compiler")
 }
@@ -126,7 +131,7 @@ val compileCollections = tasks.register<JavaExec>("compileCollections") {
             "-o", "$libDir",
             "-version", "$version",
             "-L", "$coreLib",
-            "-L", "$bridgeLib",
+            "-L", "$turtleLib",
             "$collectionsMain/x/collections.x")
     mainClass.set("org.xvm.tool.Compiler")
 }
@@ -146,7 +151,7 @@ val compileCrypto = tasks.register<JavaExec>("compileCrypto") {
             "-o", "$libDir",
             "-version", "$version",
             "-L", "$coreLib",
-            "-L", "$bridgeLib",
+            "-L", "$turtleLib",
             "$cryptoMain/x/crypto.x")
     mainClass.set("org.xvm.tool.Compiler")
 }
@@ -166,7 +171,7 @@ val compileNet = tasks.register<JavaExec>("compileNet") {
             "-o", "$libDir",
             "-version", "$version",
             "-L", "$coreLib",
-            "-L", "$bridgeLib",
+            "-L", "$turtleLib",
             "-L", "$libDir",
             "$netMain/x/net.x")
     mainClass.set("org.xvm.tool.Compiler")
@@ -187,7 +192,7 @@ val compileJson = tasks.register<JavaExec>("compileJson") {
             "-o", "$libDir",
             "-version", "$version",
             "-L", "$coreLib",
-            "-L", "$bridgeLib",
+            "-L", "$turtleLib",
             "$jsonMain/x/json.x")
     mainClass.set("org.xvm.tool.Compiler")
 }
@@ -207,7 +212,7 @@ val compileOODB = tasks.register<JavaExec>("compileOODB") {
             "-o", "$libDir",
             "-version", "$version",
             "-L", "$coreLib",
-            "-L", "$bridgeLib",
+            "-L", "$turtleLib",
             "$oodbMain/x/oodb.x")
    mainClass.set("org.xvm.tool.Compiler")
 }
@@ -227,7 +232,7 @@ val compileIMDB = tasks.register<JavaExec>("compileIMDB") {
             "-o", "$libDir",
             "-version", "$version",
             "-L", "$coreLib",
-            "-L", "$bridgeLib",
+            "-L", "$turtleLib",
             "-L", "$libDir",
             "$imdbMain/x/imdb.x")
     mainClass.set("org.xvm.tool.Compiler")
@@ -248,7 +253,7 @@ val compileJsonDB = tasks.register<JavaExec>("compileJsonDB") {
             "-o", "$libDir",
             "-version", "$version",
             "-L", "$coreLib",
-            "-L", "$bridgeLib",
+            "-L", "$turtleLib",
             "-L", "$libDir",
             "$jsondbMain/x/jsondb.x")
     mainClass.set("org.xvm.tool.Compiler")
@@ -260,7 +265,7 @@ val compileWeb = tasks.register<JavaExec>("compileWeb") {
 
     dependsOn(javatools.tasks["build"])
 
-    shouldRunAfter(compileNet)
+    shouldRunAfter(compileNet, compileJson)
 
     jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
 
@@ -269,10 +274,37 @@ val compileWeb = tasks.register<JavaExec>("compileWeb") {
             "-o", "$libDir",
             "-version", "$version",
             "-L", "$coreLib",
-            "-L", "$bridgeLib",
+            "-L", "$turtleLib",
             "-L", "$libDir",
             "$webMain/x/web.x")
     mainClass.set("org.xvm.tool.Compiler")
+}
+
+val compileBridge = tasks.register<JavaExec>("compileBridge") {
+    group         = "Execution"
+    description   = "Build javatools_bridge.xtc module"
+
+    dependsOn(javatools.tasks["build"])
+
+    shouldRunAfter(compileCollections, compileOODB, compileNet, compileWeb)
+
+    jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
+
+    classpath(javatoolsJar)
+    args("-verbose",
+            "-o", "$libDir",
+            "-version", "$version",
+            "-L", "$coreLib",
+            "-L", "$turtleLib",
+            "-L", "$libDir",
+            "$bridgeMain/x/_native.x")
+    mainClass.set("org.xvm.tool.Compiler")
+
+    doLast {
+        file("$libDir/_native.xtc").
+        renameTo(file("$bridgeLib"))
+        println("Finished task: compileBridge")
+    }
 }
 
 val compilePlatform = tasks.register<JavaExec>("compilePlatform") {
@@ -290,7 +322,7 @@ val compilePlatform = tasks.register<JavaExec>("compilePlatform") {
             "-o", "$libDir",
             "-version", "$version",
             "-L", "$coreLib",
-            "-L", "$bridgeLib",
+            "-L", "$turtleLib",
             "-L", "$libDir",
             "$platformMain/x/platform.x")
     mainClass.set("org.xvm.tool.Compiler")
@@ -313,7 +345,7 @@ val compileHost = tasks.register<JavaExec>("compileHost") {
             "-o", "$libDir",
             "-version", "$version",
             "-L", "$coreLib",
-            "-L", "$bridgeLib",
+            "-L", "$turtleLib",
             "-L", "$libDir",
             "$hostMain/x/host.x")
     mainClass.set("org.xvm.tool.Compiler")
@@ -334,7 +366,7 @@ val compileHostControl = tasks.register<JavaExec>("compileHostControl") {
             "-o", "$libDir",
             "-version", "$version",
             "-L", "$coreLib",
-            "-L", "$bridgeLib",
+            "-L", "$turtleLib",
             "-L", "$libDir",
             "$hostControlMain/x/hostControl.x")
     mainClass.set("org.xvm.tool.Compiler")
@@ -354,11 +386,11 @@ tasks.register("build") {
             mapToLong({f -> f.lastModified()}).max().orElse(0)
     val coreDest = file("$coreLib").lastModified()
 
-    val bridgeSrc = fileTree(bridgeMain).getFiles().stream().
+    val turtleSrc = fileTree(turtleMain).getFiles().stream().
             mapToLong({f -> f.lastModified()}).max().orElse(0)
-    val bridgeDest = file("$bridgeLib").lastModified()
+    val turtleDest = file("$turtleLib").lastModified()
 
-    if (coreSrc > coreDest || bridgeSrc > bridgeDest) {
+    if (coreSrc > coreDest || turtleSrc > turtleDest) {
         dependsOn(compileEcstasy)
     } else {
         dependsOn(copyJavatools)
@@ -443,6 +475,15 @@ tasks.register("build") {
 
     if (webSrc > webDest) {
         dependsOn(compileWeb)
+        }
+
+    // compile _native.xtclang.org
+    val bridgeSrc = fileTree(bridgeMain).getFiles().stream().
+            mapToLong({f -> f.lastModified()}).max().orElse(0)
+    val bridgeDest = file(bridgeLib).lastModified()
+
+    if (bridgeSrc > bridgeDest) {
+        dependsOn(compileBridge)
         }
 
     // compile platform.xtclang.org

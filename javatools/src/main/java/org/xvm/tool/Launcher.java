@@ -1251,44 +1251,67 @@ public abstract class Launcher
     /**
      * Force load and link whatever modules are required by the compiler and/or runtime system.
      *
+     * Note: This implementation assumes that the read-through option on LinkedRepository is being
+     * used.
+     *
      * @param reposLib  the repository to use, as it would be returned from
      *                  {@link #configureLibraryRepo}
+     * @param fRun      true indicates that this is linking and loading the runtime; false indicates
+     *                  a compile-time tool that does not need the "_native" library
      */
-    protected void prelinkSystemLibraries(ModuleRepository reposLib)
+    protected void prelinkSystemLibraries(ModuleRepository reposLib, boolean fRun)
         {
-        // note: this all assumes that the read-through option on LinkedRepository is being used
         ModuleStructure moduleEcstasy = reposLib.loadModule(Constants.ECSTASY_MODULE);
         if (moduleEcstasy == null)
             {
             log(Severity.FATAL, "Unable to load module: " + Constants.ECSTASY_MODULE);
             }
-        ModuleStructure moduleNative  = reposLib.loadModule(Constants.PROTOTYPE_MODULE);
-        if (moduleNative == null)
-            {
-            log(Severity.FATAL, "Unable to load module: " + Constants.PROTOTYPE_MODULE);
-            }
 
         FileStructure structEcstasy = moduleEcstasy.getFileStructure();
-        FileStructure structNative  = moduleNative .getFileStructure();
-
-        // link the modules
         if (structEcstasy != null)
             {
             String sMissing = structEcstasy.linkModules(reposLib, false);
             if (sMissing != null)
                 {
                 log(Severity.FATAL, "Unable to link module " + Constants.ECSTASY_MODULE
-                        + " due to missing module:" + sMissing);
+                    + " due to missing module:" + sMissing);
                 }
             }
 
-        if (structNative != null)
+        ModuleStructure moduleTurtle  = reposLib.loadModule(Constants.TURTLE_MODULE);
+        if (moduleTurtle == null)
             {
-            String sMissing = structNative.linkModules(reposLib, false);
+            log(Severity.FATAL, "Unable to load module: " + Constants.TURTLE_MODULE);
+            }
+
+        FileStructure structTurtle  = moduleTurtle .getFileStructure();
+        if (structTurtle != null)
+            {
+            String sMissing = structTurtle.linkModules(reposLib, false);
             if (sMissing != null)
                 {
-                log(Severity.FATAL, "Unable to link module " + Constants.PROTOTYPE_MODULE
-                        + " due to missing module:" + sMissing);
+                log(Severity.FATAL, "Unable to link module " + Constants.TURTLE_MODULE
+                    + " due to missing module:" + sMissing);
+                }
+            }
+
+        if (fRun)
+            {
+            ModuleStructure moduleNative  = reposLib.loadModule(Constants.NATIVE_MODULE);
+            if (moduleNative == null)
+                {
+                log(Severity.FATAL, "Unable to load module: " + Constants.NATIVE_MODULE);
+                }
+
+            FileStructure structNative  = moduleNative .getFileStructure();
+            if (structNative != null)
+                {
+                String sMissing = structNative.linkModules(reposLib, false);
+                if (sMissing != null)
+                    {
+                    log(Severity.FATAL, "Unable to link module " + Constants.NATIVE_MODULE
+                            + " due to missing module:" + sMissing);
+                    }
                 }
             }
         }
@@ -1902,7 +1925,8 @@ public abstract class Launcher
         assert nodeModule.stage().compareTo(Stage.Named) >= 0;
 
         String sModule = nodeModule.name();
-        return sModule.equals(Constants.ECSTASY_MODULE) || sModule.equals(Constants.PROTOTYPE_MODULE);
+        return sModule.equals(Constants.ECSTASY_MODULE)
+            || sModule.equals(Constants.TURTLE_MODULE);
         }
 
     /**

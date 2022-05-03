@@ -44,7 +44,12 @@ public interface Constants
     /**
      * The qualified name of the Java-based prototype runtime module.
      */
-    String PROTOTYPE_MODULE = "_native.xtclang.org";
+    String TURTLE_MODULE = "mack.xtclang.org";
+
+    /**
+     * The qualified name of the Java-based prototype runtime module.
+     */
+    String NATIVE_MODULE = "_native.xtclang.org";
 
 
     // ----- accessibility levels ------------------------------------------------------------------

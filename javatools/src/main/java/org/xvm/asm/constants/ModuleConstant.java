@@ -112,7 +112,9 @@ public class ModuleConstant
     public boolean isCoreModule()
         {
         String sName = getName();
-        return sName.equals(ECSTASY_MODULE) || sName.equals(PROTOTYPE_MODULE);
+        return sName.equals(ECSTASY_MODULE)
+            || sName.equals(TURTLE_MODULE)
+            || sName.equals(NATIVE_MODULE);
         }
 
 

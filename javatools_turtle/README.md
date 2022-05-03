@@ -1,6 +1,6 @@
-# Directory: ./javatools_mack/ #
+# Directory: ./javatools_turtle/ #
 
-This directory contains the "javatools_mack" aka "bottom turtle"
+This directory contains the "javatools_turtle" aka "bottom turtle"
 project, which is a tiny bit of Ecstasy code that is needed as
 bedrock for the Java proof-of-concept. Specifically, both the 
 compiler and the runtime need this tiny bit of code as a hidden
