@@ -153,7 +153,7 @@ public class Compiler
         if (cSystemModules == 0)
             {
             log(Severity.INFO, "Pre-loading and linking system libraries");
-            prelinkSystemLibraries(repoLib, false);
+            prelinkSystemLibraries(repoLib);
             }
         checkErrors();
 

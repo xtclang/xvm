@@ -98,6 +98,11 @@ public class NativeContainer
         ModuleStructure moduleTurtle = f_repository.loadModule(TURTLE_MODULE);
         ModuleStructure moduleNative = f_repository.loadModule(NATIVE_MODULE);
 
+        if (moduleRoot == null || moduleTurtle == null || moduleNative == null)
+            {
+            throw new IllegalStateException("Native libraries are missing");
+            }
+
         // "root" is a merge of "native" module into the "system"
         FileStructure containerRoot = new FileStructure(moduleRoot);
         containerRoot.merge(moduleTurtle, false);

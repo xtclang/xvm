@@ -61,12 +61,7 @@ public class Runner
     protected void process()
         {
         // repository setup
-        log(Severity.INFO, "Creating and pre-populating library and build repositories");
         ModuleRepository repo = configureLibraryRepo(options().getModulePath());
-        checkErrors();
-
-        log(Severity.INFO, "Pre-loading and linking system libraries");
-        prelinkSystemLibraries(repo, true);
         checkErrors();
 
         File            fileModule = options().getTarget();
@@ -144,6 +139,10 @@ public class Runner
             }
         catch (InterruptedException ignore)
             {
+            }
+        catch (Throwable e)
+            {
+            log(Severity.FATAL, e.getMessage());
             }
         }
 
@@ -268,4 +267,3 @@ public class Runner
             }
         }
     }
-

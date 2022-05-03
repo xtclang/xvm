@@ -328,13 +328,13 @@ public abstract class Launcher
 
         for (String sName : asName)
             {
-            String sDisp = sName.equals(Trailing) ? sName : '-' + sName;
+            String sMsg = sName.equals(Trailing) ? sName : '-' + sName;
 
             StringBuilder sb = new StringBuilder();
             sb.append("  ")
-              .append(sDisp);
+              .append(sMsg);
 
-            for (int i = 0, c = Math.max(2, 12 - sDisp.length()); i < c; ++i)
+            for (int i = 0, c = Math.max(2, 12 - sMsg.length()); i < c; ++i)
                 {
                 sb.append(' ');
                 }
@@ -803,10 +803,7 @@ public abstract class Launcher
                                 {
                                 // take EVERYTHING, and take it AS IS
                                 List<String> listArgs = new ArrayList<>(c - i);
-                                for (int iCopy = i; iCopy < c; ++iCopy)
-                                    {
-                                    listArgs.add(asArgs[iCopy]);
-                                    }
+                                listArgs.addAll(Arrays.asList(asArgs).subList(i, c));
                                 store(ArgV, true, listArgs);
                                 break;
                                 }
@@ -1249,17 +1246,15 @@ public abstract class Launcher
         }
 
     /**
-     * Force load and link whatever modules are required by the compiler and/or runtime system.
+     * Force load and link whatever modules are required by the compiler.
      *
      * Note: This implementation assumes that the read-through option on LinkedRepository is being
      * used.
      *
      * @param reposLib  the repository to use, as it would be returned from
      *                  {@link #configureLibraryRepo}
-     * @param fRun      true indicates that this is linking and loading the runtime; false indicates
-     *                  a compile-time tool that does not need the "_native" library
      */
-    protected void prelinkSystemLibraries(ModuleRepository reposLib, boolean fRun)
+    protected void prelinkSystemLibraries(ModuleRepository reposLib)
         {
         ModuleStructure moduleEcstasy = reposLib.loadModule(Constants.ECSTASY_MODULE);
         if (moduleEcstasy == null)
@@ -1294,26 +1289,6 @@ public abstract class Launcher
                     + " due to missing module:" + sMissing);
                 }
             }
-
-        if (fRun)
-            {
-            ModuleStructure moduleNative  = reposLib.loadModule(Constants.NATIVE_MODULE);
-            if (moduleNative == null)
-                {
-                log(Severity.FATAL, "Unable to load module: " + Constants.NATIVE_MODULE);
-                }
-
-            FileStructure structNative  = moduleNative .getFileStructure();
-            if (structNative != null)
-                {
-                String sMissing = structNative.linkModules(reposLib, false);
-                if (sMissing != null)
-                    {
-                    log(Severity.FATAL, "Unable to link module " + Constants.NATIVE_MODULE
-                            + " due to missing module:" + sMissing);
-                    }
-                }
-            }
         }
 
 
@@ -1328,14 +1303,14 @@ public abstract class Launcher
         {
         for (File file : listPath)
             {
-            String sDisp = "File or directory";
+            String sMsg = "File or directory";
             if (file.isDirectory())
                 {
-                sDisp = "Directory";
+                sMsg = "Directory";
                 }
             else if (file.isFile())
                 {
-                sDisp = "File";
+                sMsg = "File";
                 }
 
             if (!file.exists())
@@ -1344,7 +1319,7 @@ public abstract class Launcher
                 }
             else if (!file.canRead())
                 {
-                log(Severity.ERROR, sDisp + " \"" + file + "\" does not exist");
+                log(Severity.ERROR, sMsg + " \"" + file + "\" does not exist");
                 }
             else if (file.isFile() && !file.getName().endsWith(".xtc"))
                 {
