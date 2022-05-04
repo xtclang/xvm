@@ -699,7 +699,7 @@ public class ServiceContext
                         {
                         // all done
                         terminateFiber(fiber);
-                        return null;
+                        return m_frameCurrent = null;
                         }
 
                     aOp = frame.f_aOp;
