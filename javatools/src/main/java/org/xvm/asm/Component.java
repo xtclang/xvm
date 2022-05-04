@@ -1807,10 +1807,18 @@ public abstract class Component
                     }
                 }
 
+            boolean fModified = isBodyModified();
+
             // register the eldest sibling in the namespace of this component; this has to be done
             // before recursing to the children for disassembly so that the parent/child refs are
             // already in place, just in case a child asks e.g. for its eldest sibling
             addChild(kid);
+
+            // disassembly should not change the "modified" status
+            if (!fModified)
+                {
+                resetBodyModified();
+                }
 
             int cb = readMagnitude(in);
             if (cb > 0)
@@ -2284,6 +2292,11 @@ public abstract class Component
     protected boolean isBodyModified()
         {
         return m_fModified;
+        }
+
+    protected void resetBodyModified()
+        {
+        m_fModified = false;
         }
 
     @Override
