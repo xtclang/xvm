@@ -901,7 +901,7 @@ public class ServiceContext
                 }
 
             Set<Fiber> setFibers = f_setFibers;
-            Fiber      fiberThis = frame.f_fiber;
+            Fiber      fiberThis = frame == null ? null : frame.f_fiber;
 
             while (!qFiber.isEmpty())
                 {
@@ -919,7 +919,10 @@ public class ServiceContext
                     }
                 }
 
-            assert setFibers.size() == 1 && setFibers.contains(fiberThis); // just this fiber left
+            assert setFibers.size() == 0 ||
+                   setFibers.size() == 1 && setFibers.contains(fiberThis); // just this fiber left
+
+            f_container.terminate(this);
             }
 
         return Op.R_NEXT;
@@ -1567,13 +1570,21 @@ public class ServiceContext
                     ObjectHandle    hReturn    = frame.f_ahVar[0];
                     ExceptionHandle hException = frame.m_hException;
 
-                    if (hException == null && !hReturn.isPassThrough(containerDst))
+                    if (hException == null)
                         {
-                        hReturn = hReturn.getTemplate().createProxyHandle(ctxSrc, hReturn, null);
                         if (hReturn == null)
                             {
-                            hException = xException.illegalArgument(frame,
-                                "Mutable return value from \"" + this + '"');
+                            // this must be an async void call
+                            hReturn = xTuple.H_VOID;
+                            }
+                        else if (!hReturn.isPassThrough(containerDst))
+                            {
+                            hReturn = hReturn.getTemplate().createProxyHandle(ctxSrc, hReturn, null);
+                            if (hReturn == null)
+                                {
+                                hException = xException.illegalArgument(frame,
+                                    "Mutable return value from \"" + this + '"');
+                                }
                             }
                         }
                     ctxDst.respond(
