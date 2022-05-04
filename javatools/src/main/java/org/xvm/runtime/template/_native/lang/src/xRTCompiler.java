@@ -2,7 +2,6 @@ package org.xvm.runtime.template._native.lang.src;
 
 
 import java.io.File;
-import java.io.IOException;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -144,7 +143,7 @@ public class xRTCompiler
                 }
 
             compiler.setLibraryRepo(
-                new LinkedRepository(true, listNew.toArray(new ModuleRepository[0])));
+                new LinkedRepository(true, listNew.toArray(ModuleRepository.NO_REPOS)));
             }
         else
             {
@@ -186,7 +185,7 @@ public class xRTCompiler
                 listErrors.add(e.toString());
                 }
             }
-        catch (IOException e)
+        catch (Exception e)
             {
             fSuccess   = false;
             listErrors = new ArrayList<>();
@@ -204,7 +203,7 @@ public class xRTCompiler
                 }
             hErrors = xArray.makeStringArrayHandle(ahErrors);
             }
-
+        compiler.reset();
         return frame.assignValues(aiReturn, xBoolean.makeHandle(fSuccess), hErrors);
         }
 
@@ -221,15 +220,9 @@ public class xRTCompiler
      */
     public ObjectHandle ensureCompiler(Frame frame, ObjectHandle hOpts)
         {
-        ObjectHandle hCompiler = m_hCompiler;
-        if (hCompiler == null)
-            {
-            m_hCompiler = hCompiler = createServiceHandle(
+        return createServiceHandle(
                 frame.f_context.f_container.createServiceContext("Compiler"),
                     getCanonicalClass(), getCanonicalType());
-            }
-
-        return hCompiler;
         }
 
 
@@ -309,6 +302,17 @@ public class xRTCompiler
         public ModuleRepository getBuildRepository()
             {
             return m_repoResults;
+            }
+
+        @Override
+        protected void reset()
+            {
+            super.reset();
+
+            m_listSources = null;
+            m_repoLib     = null;
+            m_repoResults = null;
+            m_log.clear();
             }
 
         // ----- Compiler API ----------------------------------------------------------------------
@@ -404,9 +408,4 @@ public class xRTCompiler
         private Version          m_version = new Version("CI");
         private List<String>     m_log = new ArrayList<>();
         }
-
-    /**
-     * Cached Compiler handle.
-     */
-    private ObjectHandle m_hCompiler;
     }

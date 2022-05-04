@@ -166,7 +166,10 @@ public class Compiler
         flushAndCheckErrors(allNodes);
 
         log(Severity.INFO, "Resolving names and dependencies");
-        org.xvm.compiler.Compiler[] compilers = mapCompilers.values().toArray(new org.xvm.compiler.Compiler[0]);
+        org.xvm.compiler.Compiler[] compilers = mapCompilers.values().toArray(NO_COMPILERS);
+        linkModules(compilers, repoLib);
+        flushAndCheckErrors(allNodes);
+
         resolveNames(compilers);
         flushAndCheckErrors(allNodes);
 
@@ -238,7 +241,7 @@ public class Compiler
                 }
 
             // create a module/package/class structure for each dir/file node in the "module tree"
-            var           compiler = new org.xvm.compiler.Compiler(repo, node.type(), node.errs());
+            var           compiler = new org.xvm.compiler.Compiler(node.type(), node.errs());
             FileStructure struct   = compiler.generateInitialFileStructure();
             assert struct != null;
 
@@ -262,6 +265,25 @@ public class Compiler
         }
 
     /**
+     * Link the modules together based on their declared dependencies.
+     *
+     * @param compilers  a module compiler for each module
+     */
+    protected void linkModules(org.xvm.compiler.Compiler[] compilers, ModuleRepository repo)
+        {
+        for (var compiler : compilers)
+            {
+            String sMissing = compiler.linkModules(repo);
+            if (sMissing != null)
+                {
+                compiler.getErrorListener().log(Severity.FATAL,
+                        org.xvm.compiler.Compiler.MODULE_MISSING, new String[]{sMissing}, null);
+                return;
+                }
+            }
+        }
+
+    /**
      * Resolve dependencies, including among multiple modules that are being compiled at the same
      * time.
      *
@@ -269,11 +291,6 @@ public class Compiler
      */
     protected void resolveNames(org.xvm.compiler.Compiler[] compilers)
         {
-        for (var compiler : compilers)
-            {
-            compiler.linkModules();
-            }
-
         int cTries = 0;
         do
             {
@@ -651,7 +668,9 @@ public class Compiler
 
     // ----- constants -----------------------------------------------------------------------------
 
-    enum Strictness {None, Suppressed, Normal, Stickler}
+    protected enum Strictness {None, Suppressed, Normal, Stickler}
+
+    protected static org.xvm.compiler.Compiler[] NO_COMPILERS = new org.xvm.compiler.Compiler[0];
 
 
     // ----- fields --------------------------------------------------------------------------------

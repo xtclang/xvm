@@ -1273,13 +1273,13 @@ public abstract class Launcher
                 }
             }
 
-        ModuleStructure moduleTurtle  = reposLib.loadModule(Constants.TURTLE_MODULE);
+        ModuleStructure moduleTurtle = reposLib.loadModule(Constants.TURTLE_MODULE);
         if (moduleTurtle == null)
             {
             log(Severity.FATAL, "Unable to load module: " + Constants.TURTLE_MODULE);
             }
 
-        FileStructure structTurtle  = moduleTurtle .getFileStructure();
+        FileStructure structTurtle = moduleTurtle .getFileStructure();
         if (structTurtle != null)
             {
             String sMissing = structTurtle.linkModules(reposLib, false);
@@ -1885,6 +1885,16 @@ public abstract class Launcher
             node.logErrors();
             }
         checkErrors();
+        }
+
+    /**
+     * Clean up any transient state
+     */
+    protected void reset()
+        {
+        m_sevWorst       = Severity.NONE;
+        m_cSuspended     = 0;
+        m_mapModuleNames = null;
         }
 
     /**
@@ -2737,7 +2747,7 @@ public abstract class Launcher
         private final String  m_sDesc;
         }
 
-    enum Stage {Init, Parsed, Named, Linked}
+    protected enum Stage {Init, Parsed, Named, Linked}
 
 
     // ----- fields --------------------------------------------------------------------------------

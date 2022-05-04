@@ -27,16 +27,11 @@ public class Compiler
     /**
      * Construct a module compiler.
      *
-     * @param repos   the module repository
      * @param stmtModule  the statement representing all of the code in the module
      * @param errs    the error list to log any errors to during the various phases of compilation
      */
-    public Compiler(ModuleRepository repos, TypeCompositionStatement stmtModule, ErrorList errs)
+    public Compiler(TypeCompositionStatement stmtModule, ErrorList errs)
         {
-        if (repos == null)
-            {
-            throw new IllegalArgumentException("Repository required");
-            }
         if (stmtModule == null)
             {
             throw new IllegalArgumentException("AST node for module required");
@@ -50,22 +45,12 @@ public class Compiler
             throw new IllegalArgumentException("ErrorList required");
             }
 
-        m_repos      = repos;
         m_stmtModule = stmtModule;
         m_errs       = errs;
         }
 
 
     // ----- accessors -----------------------------------------------------------------------------
-
-    /**
-     * @return the ModuleRepository that was supplied to the compiler
-     */
-    public ModuleRepository getRepository()
-        {
-        validateCompiler();
-        return m_repos;
-        }
 
     /**
      * @return the TypeCompositionStatement for the module
@@ -162,12 +147,12 @@ public class Compiler
 
     /**
      * Second pass: Link the modules together based on their declared dependencies.
-     * <p/>
-     * This method uses the ModuleRepository.
-     * <p/>
-     * Any error results are logged to the ErrorListener.
+     *
+     * @param repo   the module repository to use
+     *
+     * @return a name of a first missing module, if any
      */
-    public void linkModules()
+    public String linkModules(ModuleRepository repo)
         {
         validateCompiler();
         ensureReached(Stage.Registered);
@@ -175,17 +160,22 @@ public class Compiler
         // idempotent: allow this to be called more than necessary without any errors/side effects
         if (alreadyReached(Stage.Loaded))
             {
-            return;
+            return null;
             }
 
         try (var ignore = ConstantPool.withPool(m_structFile.getConstantPool()))
             {
             // first time through, load any module dependencies
             setStage(Stage.Loading);
-            m_structFile.linkModules(m_repos, false);
-            }
+            String sMissing = m_structFile.linkModules(repo, false);
 
-        setStage(Stage.Loaded);
+            if (sMissing == null)
+                {
+                setStage(Stage.Loaded);
+                }
+
+            return sMissing;
+            }
         }
 
     /**
@@ -408,11 +398,6 @@ public class Compiler
      * Current compilation stage.
      */
     private Stage m_stage = Stage.Initial;
-
-    /**
-     * The module repository to use.
-     */
-    private final ModuleRepository m_repos;
 
     /**
      * The TypeCompositionStatement for the module being compiled. This is an object returned from

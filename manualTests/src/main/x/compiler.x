@@ -1,5 +1,6 @@
 module TestCompiler
     {
+    @Inject ecstasy.lang.src.Compiler compiler;
     @Inject Console console;
 
     void run()
@@ -12,17 +13,20 @@ module TestCompiler
         assert File|Directory buildDir := curDir.find("build");
         assert buildDir.is(Directory);
 
-        console.println($|compile module : {sourceFile.path}
-                         |build directory: {buildDir}
-                         |
-                       );
+        compile(sourceFile, buildDir);
+
+        assert sourceFile := curDir.find("src/main/x/TestSimple.x");
+        assert sourceFile.is(File);
 
         compile(sourceFile, buildDir);
         }
 
     void compile(File sourceModule, Directory buildDir)
         {
-        @Inject ecstasy.lang.src.Compiler compiler;
+        console.println($|
+                         |compile module : {sourceModule.path}
+                         |build directory: {buildDir}
+                       );
 
         compiler.setResultLocation(buildDir);
 

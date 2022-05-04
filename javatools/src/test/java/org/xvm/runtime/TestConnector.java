@@ -57,8 +57,6 @@ public class TestConnector
         listCompileArgs.add("../xdk/build/xdk/javatools/javatools_turtle.xtc");
         listCompileArgs.add("-L");
         listCompileArgs.add("../xdk/build/xdk/javatools/javatools_bridge.xtc");
-        listCompileArgs.add("-L");
-        listCompileArgs.add("./build");
         listCompileArgs.addAll(Arrays.asList(asArg));
 
         Compiler compiler = new Compiler(listCompileArgs.toArray(Handy.NO_ARGS));
@@ -147,4 +145,3 @@ public class TestConnector
             }
         }
     }
-

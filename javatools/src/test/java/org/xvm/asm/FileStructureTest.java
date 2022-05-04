@@ -15,7 +15,6 @@ import org.xvm.asm.ErrorListener.ErrorInfo;
 
 import org.xvm.asm.constants.ClassConstant;
 
-import org.xvm.compiler.BuildRepository;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.CompilerException;
 import org.xvm.compiler.Parser;
@@ -130,7 +129,7 @@ public class FileStructureTest
         Parser                   parser   = new Parser(source, errlist);
         List<Statement>          stmts    = parser.parseSource().getStatements();
         TypeCompositionStatement module   = (TypeCompositionStatement) stmts.get(stmts.size() - 1);
-        Compiler                 compiler = new Compiler(new BuildRepository(), module, errlist);
+        Compiler                 compiler = new Compiler(module, errlist);
         Assert.assertTrue(errlist.getSeriousErrorCount() == 0);
         return compiler.generateInitialFileStructure();
         }
@@ -147,7 +146,7 @@ public class FileStructureTest
             List<Statement> stmts = parser.parseSource().getStatements();
             TypeCompositionStatement module =
                     (TypeCompositionStatement) stmts.get(stmts.size() - 1);
-            Compiler compiler = new Compiler(new BuildRepository(), module, errlist);
+            Compiler compiler = new Compiler(module, errlist);
 
             struct = compiler.generateInitialFileStructure();
             }
