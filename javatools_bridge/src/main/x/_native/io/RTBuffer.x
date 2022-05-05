@@ -235,7 +235,7 @@ class RTBuffer(RawChannel rawChannel, Byte[] rawBytes, Int rawSize, Boolean read
                 }
             }
 
-        return transferee;
+        return transferee;  // TODO mask
         }
 
 

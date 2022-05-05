@@ -134,7 +134,7 @@ service RTChannel(RawChannel rawChannel)
         try
             {
             Int copied = 0;
-            if (ReadBuffer in ?= read())
+            if (ReadBuffer in ?= read(Delegated))
                 {
                 Int space = buffer.capacity - buffer.offset;
                 do
@@ -191,7 +191,7 @@ service RTChannel(RawChannel rawChannel)
                 if (space > 0)
                     {
                     Int request = minBytes.minOf(space);
-                    Int actual  = read(buffer, request);
+                    Int actual  = read(buffer, request, Delegated);
                     if (actual >= space)
                         {
                         // filled this buffer completely
@@ -245,7 +245,6 @@ service RTChannel(RawChannel rawChannel)
             // from the same underlying native provider)
             if (Byte[] bytes := extractBytes(buffer))
                 {
-                assert bytes.capacity > 0 as "Buffer closed";
                 try
                     {
                     // check if the buffer contains anything left to write
@@ -329,7 +328,7 @@ service RTChannel(RawChannel rawChannel)
                                 total += copy;
                                 if (last)
                                     {
-                                    assert total == size;
+                                    assert total == size; // REVIEW completeExceptionally???
                                     &pendingResult.complete(total);
                                     }
                                 break;
@@ -476,11 +475,7 @@ service RTChannel(RawChannel rawChannel)
         {
         if (val rtBuffer := &buffer.revealAs(RTBuffer:private))
             {
-            if (rtBuffer.capacity == 0)
-                {
-                throw new IllegalState("Buffer closed");
-                }
-
+            assert rtBuffer.capacity > 0 as "Buffer closed";
             return True, rtBuffer.rawBytes;
             }
 
@@ -696,6 +691,7 @@ service RTChannel(RawChannel rawChannel)
         @Override
         protected void process()
             {
+            // REVIEW mf: completeLambda(() -> read(origin=Deferred));
             try
                 {
                 pendingResult.complete(read(origin=Deferred));
