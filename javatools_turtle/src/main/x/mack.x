@@ -6,4 +6,14 @@
  */
 module mack.xtclang.org
     {
+    /**
+     * This is the Ref implementation that allows us to terminate infinite recursion in the compiler
+     * and runtime.
+     *
+     * "I'm still giggling that your bottom turtle uses duck typing." - Mark Falco
+     */
+    class NakedRef<Referent>
+        {
+        Referent get();
+        }
     }
