@@ -28,6 +28,7 @@ import ecstasy.Ordered.Greater;
 import ecstasy.Object;
 import ecstasy.Orderable;
 import ecstasy.OutOfBounds;
+import ecstasy.OutOfMemory;
 import ecstasy.Shareable;
 import ecstasy.Range;
 import ecstasy.Replicable;

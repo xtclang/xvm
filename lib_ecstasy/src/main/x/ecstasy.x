@@ -49,6 +49,12 @@ module ecstasy.xtclang.org
             extends Exception(text, cause);
 
     /**
+     * An `OutOfMemory` exception indicates that a memory allocation failed.
+     */
+    const OutOfMemory(String? text = Null, Exception? cause = Null)
+            extends Exception(text, cause);
+
+    /**
      * A `ReadOnly` exception is raised when an attempt is made to modify a read-only value.
      */
     const ReadOnly(String? text = Null, Exception? cause = Null)

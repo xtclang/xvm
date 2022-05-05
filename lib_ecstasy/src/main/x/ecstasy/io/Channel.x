@@ -136,7 +136,7 @@ interface Channel
      * @throws TimedOut      it is expected that a time-out could occur while a read is being
      *                       awaited, if a [Timeout] exists
      */
-    (Int, Int) read(WriteBuffer[] buffers, Int minBytes = Int.maxvalue);
+    (Int bytesRead, Int nextBuffer) read(WriteBuffer[] buffers, Int minBytes = Int.maxvalue);
 
     /**
      * `True` iff the channel can be used to attempt to write data; `False` indicates that the
