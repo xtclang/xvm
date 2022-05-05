@@ -9,7 +9,7 @@
  * buffers pending being written out, with an I/O service thread being the sole taker from the
  * queue, and this object being the sole appender to the queue (via the `submit()` method).
  */
-const RawChannel
+service RawChannel
     {
     // ----- generic config ------------------------------------------------------------------------
 
@@ -84,12 +84,14 @@ const RawChannel
      * does not wait for the write to occur, or for any other reason.
      *
      * @param buffer  a buffer containing bytes to write
+     * @param start   the index into the buffer of the first byte (inclusive) to write
+     * @param end     the index into the buffer of the last byte (exclusive) to write
      *
      * @return a status of `0` for ok, `-1` indicating the channel is closed, `-2` indicating that
      *         the channel parent (e.g. file or socket) is closed, and positive values indicating
      *         error codes defined by the specific native implementation
      */
-    Int submit(Byte[] buffers)
+    Int submit(Byte[] buffer, Int start, Int end)
         {TODO("Native");}
 
 
@@ -101,13 +103,12 @@ const RawChannel
      * The returned buffer, if any, must be passed to the [release] method if it is abandoned
      * without being submitted to the write queue via [submit].
      *
-     * @param nonBlocking  pass `True` to return immediately (do not wait!) if the buffer pool is
-     *                     empty
+     * @param internal  pass `True` to indicate that the buffer is not being exposed to user code
      *
      * @return  a buffer that the caller can write to; otherwise an integer value indicating a
      *          status code, `-1` for capacity limit, `-2` for `closed`
      */
-    Byte[]|Int allocate()
+    Byte[]|Int allocate(Boolean internal)
         {TODO("Native");}
 
     /**
@@ -158,6 +159,7 @@ const RawChannel
 
     /**
      * True iff the `RawChannel` is closed.
+     * REVIEW is this necessary?
      */
     @RO Boolean closed.get()
         {TODO("Native");}
