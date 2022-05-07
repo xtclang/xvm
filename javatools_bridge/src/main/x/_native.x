@@ -7,4 +7,5 @@
  */
 module _native.xtclang.org
     {
+    package libnet import net.xtclang.org;
     }

@@ -9,9 +9,14 @@
 interface Transferable
     {
     /**
-     * Request a new object to transfer to a different service.
+     * Request a new object to transfer to a different service. Note that the result type is
+     * expected to be masked, as this interface is not (and must not be) visible to user code, i.e.
+     * this method **must not** return a type that includes this interface.
      *
      * This method is called within the context of the originating service.
+     *
+     * @return the appropriately [masked](Ref.maskAs) object reference that will emerge at the
+     *         fiber initial call in the service to which this object is being transferred
      */
-    Transferable transfer();
+    Object transfer();
     }
