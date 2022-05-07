@@ -2320,8 +2320,7 @@ public abstract class ClassTemplate
 
                     case 1: // call auto-generated default initializer
                         {
-                        MethodStructure methodAI = hStruct.getComposition().
-                                ensureAutoInitializer(frameCaller.poolContext());
+                        MethodStructure methodAI = hStruct.getComposition().ensureAutoInitializer();
                         if (methodAI != null)
                             {
                             iResult = frameCaller.call1(methodAI, hStruct, Utils.OBJECTS_NONE, Op.A_IGNORE);

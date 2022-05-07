@@ -269,7 +269,7 @@ public class ClassComposition
         }
 
     @Override
-    public MethodStructure ensureAutoInitializer(ConstantPool pool)
+    public MethodStructure ensureAutoInitializer()
         {
         if (m_mapFields.isEmpty())
             {
@@ -279,6 +279,7 @@ public class ClassComposition
         MethodStructure method = m_methodInit;
         if (method == null)
             {
+            ConstantPool pool = getContainer().getConstantPool();
             m_methodInit = method =
                 f_template.getStructure().createInitializer(pool, f_typeStructure, m_mapFields);
             }

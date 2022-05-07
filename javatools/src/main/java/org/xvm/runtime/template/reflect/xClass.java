@@ -323,7 +323,7 @@ public class xClass
                                                ObjectHandle hParent, int[] aiReturn)
         {
         TypeComposition clzPublic = hStruct.getComposition().ensureAccess(Constants.Access.PUBLIC);
-        MethodStructure methodAI  = clzPublic.ensureAutoInitializer(frame.poolContext());
+        MethodStructure methodAI  = clzPublic.ensureAutoInitializer();
         if (methodAI != null)
             {
             switch (frame.call1(methodAI, hStruct, Utils.OBJECTS_NONE, Op.A_IGNORE))
