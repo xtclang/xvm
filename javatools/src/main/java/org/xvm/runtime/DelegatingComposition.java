@@ -33,6 +33,12 @@ abstract public class DelegatingComposition
     // ----- TypeComposition interface -------------------------------------------------------------
 
     @Override
+    public Container getContainer()
+        {
+        return f_clzOrigin.getContainer();
+        }
+
+    @Override
     public boolean isInstanceChild()
         {
         return f_clzOrigin.isInstanceChild();

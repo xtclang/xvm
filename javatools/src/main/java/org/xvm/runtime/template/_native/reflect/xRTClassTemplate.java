@@ -69,7 +69,7 @@ public class xRTClassTemplate
             Container      container = f_container;
             TypeConstant   typeMask  = pool.ensureEcstasyTypeConstant("reflect.ClassTemplate");
 
-            CLASS_TEMPLATE_COMP = ensureClass(pool, getCanonicalType(), typeMask);
+            CLASS_TEMPLATE_COMP = ensureClass(container, getCanonicalType(), typeMask);
             CONTRIBUTION_COMP   = container.resolveClass(
                 pool.ensureEcstasyTypeConstant("reflect.ClassTemplate.Composition.Contribution"));
 
@@ -306,7 +306,7 @@ public class xRTClassTemplate
                             TypeConstant type  = entry.getValue();
 
                             ahNames[i] = xString.makeHandle(sName);
-                            ahTypes[i] = type.ensureTypeHandle(pool);
+                            ahTypes[i] = type.ensureTypeHandle(frameCaller.f_context.f_container);
                             i++;
                             }
                         haNames = xArray.makeStringArrayHandle(ahNames);
@@ -322,7 +322,7 @@ public class xRTClassTemplate
 
             ObjectHandle[] ahVar = new ObjectHandle[CREATE_CONTRIB_METHOD.getMaxVars()];
             ahVar[0] = Utils.ensureInitializedEnum(frameCaller, ACTION.getEnumByName(sAction));
-            ahVar[1] = typeContrib.ensureTypeHandle(pool);
+            ahVar[1] = typeContrib.ensureTypeHandle(frameCaller.f_context.f_container);
             ahVar[2] = haParams;
             ahVar[3] = hDelegatee;
             ahVar[4] = haNames;
@@ -430,8 +430,9 @@ public class xRTClassTemplate
             {
             return frame.raiseException(xException.illegalState(frame, "FileTemplate is not resolved"));
             }
-        TypeConstant type = clz.getIdentityConstant().getType();
-        return frame.assignValue(iReturn, xRTTypeTemplate.makeHandle(type));
+
+        return frame.assignValue(iReturn,
+            xRTTypeTemplate.makeHandle(frame.f_context.f_container, clz.getIdentityConstant().getType()));
         }
 
     /**
@@ -455,7 +456,7 @@ public class xRTClassTemplate
         for (Map.Entry<StringConstant, TypeConstant> entry : listParams)
             {
             ahName[i]   = xString.makeHandle(entry.getKey().getValue());
-            ahType[i++] = xRTTypeTemplate.makeHandle(entry.getValue());
+            ahType[i++] = xRTTypeTemplate.makeHandle(frame.f_context.f_container, entry.getValue());
             }
 
         ObjectHandle[] ahVar = new ObjectHandle[CREATE_TYPE_PARAMETERS_METHOD.getMaxVars()];

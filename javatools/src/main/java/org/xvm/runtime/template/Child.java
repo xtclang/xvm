@@ -107,7 +107,7 @@ public class Child
 
     private FunctionHandle makeAsyncHandle(ObjectHandle hChild, CallChain chain)
         {
-        return new xRTFunction.AsyncHandle(chain)
+        return new xRTFunction.AsyncHandle(hChild.getComposition().getContainer(), chain)
             {
             @Override
             protected ObjectHandle getContextTarget(Frame frame, ObjectHandle hService)

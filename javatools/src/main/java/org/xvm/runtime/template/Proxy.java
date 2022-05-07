@@ -44,7 +44,7 @@ public class Proxy
         }
 
     @Override
-    public ClassComposition ensureClass(TypeConstant typeActual)
+    public ClassComposition ensureClass(Container container, TypeConstant typeActual)
         {
         throw new UnsupportedOperationException();
         }
@@ -218,7 +218,7 @@ public class Proxy
 
     private FunctionHandle makeAsyncNativeHandle(ObjectHandle hTarget, MethodStructure method)
         {
-        return new AsyncHandle(method)
+        return new AsyncHandle(INSTANCE.f_container, method)
             {
             @Override
             protected ObjectHandle getContextTarget(Frame frame, ObjectHandle hService)
@@ -230,7 +230,7 @@ public class Proxy
 
     private FunctionHandle makeAsyncHandle(ObjectHandle hTarget, CallChain chain)
         {
-        return new AsyncHandle(chain)
+        return new AsyncHandle(hTarget.getComposition().getContainer(), chain)
             {
             @Override
             protected ObjectHandle getContextTarget(Frame frame, ObjectHandle hService)
@@ -270,7 +270,7 @@ public class Proxy
         @Override
         public TypeConstant getType()
             {
-            // don't augment the tyoe
+            // don't augment the type
             return super.getComposition().getType();
             }
 

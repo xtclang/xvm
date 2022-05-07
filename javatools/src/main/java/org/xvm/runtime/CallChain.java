@@ -233,8 +233,8 @@ public class CallChain
     public int bindTarget(Frame frame, ObjectHandle hTarget, int iReturn)
         {
         return frame.assignValue(iReturn, hTarget.isService() ?
-                xRTFunction.makeAsyncHandle(this).bindTarget(frame, hTarget) :
-                xRTFunction.makeHandle(this, 0).bindTarget(frame, hTarget));
+                xRTFunction.makeAsyncHandle(frame, this).bindTarget(frame, hTarget) :
+                xRTFunction.makeHandle(frame, this, 0).bindTarget(frame, hTarget));
         }
 
     /**

@@ -66,7 +66,7 @@ public class Construct_0
         ObjectHandle    hStruct = frame.getThis();
         ObjectHandle[]  ahVar   = new ObjectHandle[constructor.getMaxVars()];
 
-        frame.chainFinalizer(Utils.makeFinalizer(constructor, ahVar));
+        frame.chainFinalizer(Utils.makeFinalizer(frame, constructor, ahVar));
 
         return frame.call1(constructor, hStruct, ahVar, A_IGNORE);
         }

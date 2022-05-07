@@ -56,7 +56,7 @@ public class xOSFileChannel
 
         ClassTemplate templateChannel = f_container.getTemplate("fs.FileChannel");
 
-        s_clzOSFileChannel = ensureClass(templateChannel.getCanonicalType());
+        s_clzOSFileChannel = ensureClass(f_container, templateChannel.getCanonicalType());
         }
 
     @Override

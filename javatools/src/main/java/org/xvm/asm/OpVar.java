@@ -156,7 +156,7 @@ public abstract class OpVar
             {
             TypeConstant typeEl = typeList.resolveGenericType("Element");
 
-            clzArray = xArray.INSTANCE.ensureParameterizedClass(frame.poolContext(), typeEl);
+            clzArray = xArray.INSTANCE.ensureParameterizedClass(context.f_container, typeEl);
 
             context.setOpInfo(this, Category.Composition, clzArray);
             context.setOpInfo(this, Category.Type, typeList);

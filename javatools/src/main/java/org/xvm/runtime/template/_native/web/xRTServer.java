@@ -164,7 +164,7 @@ public class xRTServer
 
         ClassStructure  clzHandler = hHandler.getTemplate().getStructure();
         MethodStructure method     = clzHandler.findMethodDeep("handle", m -> m.getParamCount() == 6);
-        FunctionHandle  hFunction  = xRTFunction.makeHandle(method).bindTarget(frame, hHandler);
+        FunctionHandle  hFunction  = xRTFunction.makeHandle(frame, method).bindTarget(frame, hHandler);
 
         RequestHandler handler = new RequestHandler(hHandler.f_context, hFunction);
         httpServer.createContext("/", handler);

@@ -71,12 +71,12 @@ public class xRTFunction
         }
 
     @Override
-    public TypeComposition ensureClass(TypeConstant typeActual)
+    public TypeComposition ensureClass(Container container, TypeConstant typeActual)
         {
         // from the run-time perspective, a function type is equivalent to its "full bound" type
         // (where there are no parameters) and the responsibility to check the parameter types
         // lies on the "invoke" implementation
-        ConstantPool pool = typeActual.getConstantPool();
+        ConstantPool pool = container.getConstantPool();
 
         assert typeActual.isA(pool.typeFunction());
 
@@ -84,7 +84,7 @@ public class xRTFunction
         TypeConstant typeR   = typeActual.getParamType(1);
         TypeConstant typeClz = pool.ensureParameterizedTypeConstant(pool.typeFunction(), typeP, typeR);
 
-        return super.ensureClass(typeClz);
+        return super.ensureClass(container, typeClz);
         }
 
     @Override
@@ -96,7 +96,7 @@ public class xRTFunction
 
             assert structFunc.isFunction();
 
-            return frame.pushStack(new FunctionHandle(structFunc));
+            return frame.pushStack(new FunctionHandle(frame.f_context.f_container, structFunc));
             }
 
         return super.createConstHandle(frame, constant);
@@ -319,7 +319,7 @@ public class xRTFunction
             // TODO: what if any of the assigns below return R_CALL?
             frame.assignValue(aiReturn[0], xBoolean.TRUE);
             frame.assignValue(aiReturn[1], xRTMethodTemplate.makeHandle(method));
-            frame.assignValue(aiReturn[2], makeHandle(method));
+            frame.assignValue(aiReturn[2], makeHandle(frame, method));
 
             Frame.Continuation stepNext = frameCaller ->
                 constructListMap(frameCaller, ahParam, ahValue, aiReturn[3]);
@@ -397,9 +397,9 @@ public class xRTFunction
         /**
          * Instantiate an immutable FunctionHandle for a function.
          */
-        protected FunctionHandle(MethodStructure function)
+        protected FunctionHandle(Container container, MethodStructure function)
             {
-            this(function.getIdentityConstant().getSignature().asFunctionType(), function);
+            this(container, function.getIdentityConstant().getSignature().asFunctionType(), function);
 
             m_fMutable = false;
             }
@@ -407,9 +407,9 @@ public class xRTFunction
         /**
          * Instantiate an immutable FunctionHandle for a method.
          */
-        protected FunctionHandle(CallChain chain, int nDepth)
+        protected FunctionHandle(Container container, CallChain chain, int nDepth)
             {
-            super(INSTANCE.ensureClass(chain.getMethod(nDepth).getIdentityConstant().
+            super(INSTANCE.ensureClass(container, chain.getMethod(nDepth).getIdentityConstant().
                     getSignature().asFunctionType()), chain, nDepth);
 
             m_fMutable = false;
@@ -418,9 +418,9 @@ public class xRTFunction
         /**
          * Instantiate a mutable FunctionHandle for a method or function.
          */
-        protected FunctionHandle(TypeConstant type, MethodStructure function)
+        protected FunctionHandle(Container container, TypeConstant type, MethodStructure function)
             {
-            super(INSTANCE.ensureClass(type),
+            super(INSTANCE.ensureClass(container, type),
                     function == null ? null : function.getIdentityConstant(), function, type);
             }
 
@@ -497,7 +497,7 @@ public class xRTFunction
             TypeConstant type = frame == null
                     ? f_type
                     : f_type.resolveGenerics(frame.poolContext(), hTarget.getType());
-            return new SingleBoundHandle(type, this, -1, hTarget);
+            return new SingleBoundHandle(hTarget.getComposition().getContainer(), type, this, -1, hTarget);
             }
 
         /**
@@ -529,7 +529,7 @@ public class xRTFunction
                     }
                 }
 
-            return new SingleBoundHandle(
+            return new SingleBoundHandle(frame.f_context.f_container,
                 pool.bindFunctionParam(f_type, iArg, resolver), this, iArg, hArg);
             }
 
@@ -558,7 +558,7 @@ public class xRTFunction
          */
         public FullyBoundHandle bindArguments(ObjectHandle... ahArg)
             {
-            return new FullyBoundHandle(this, ahArg);
+            return new FullyBoundHandle(this.getComposition().getContainer(), this, ahArg);
             }
 
         // ----- internal implementation -----------------------------------------------------------
@@ -658,9 +658,9 @@ public class xRTFunction
         {
         protected FunctionHandle m_hDelegate;
 
-        protected DelegatingHandle(TypeConstant type, FunctionHandle hDelegate)
+        protected DelegatingHandle(Container container, TypeConstant type, FunctionHandle hDelegate)
             {
-            super(type, hDelegate == null ? null : hDelegate.getMethod());
+            super(container, type, hDelegate == null ? null : hDelegate.getMethod());
 
             m_hDelegate = hDelegate;
             m_fMutable  = hDelegate != null && hDelegate.isMutable();
@@ -771,7 +771,7 @@ public class xRTFunction
         {
         public NativeFunctionHandle(xService.NativeOperation op)
             {
-            super(INSTANCE.getCanonicalType(), null);
+            super(INSTANCE.f_container, INSTANCE.getCanonicalType(), null);
 
             f_op       = op;
             m_fMutable = false;
@@ -796,10 +796,10 @@ public class xRTFunction
     public static class SingleBoundHandle
             extends DelegatingHandle
         {
-        protected SingleBoundHandle(TypeConstant type, FunctionHandle hDelegate,
+        protected SingleBoundHandle(Container container, TypeConstant type, FunctionHandle hDelegate,
                                     int iArg, ObjectHandle hArg)
             {
-            super(type, hDelegate);
+            super(container, type, hDelegate);
 
             m_iArg     = iArg;
             m_hArg     = hArg;
@@ -930,9 +930,9 @@ public class xRTFunction
         protected final ObjectHandle[] f_ahArg;
         protected FullyBoundHandle m_next;
 
-        protected FullyBoundHandle(FunctionHandle hDelegate, ObjectHandle[] ahArg)
+        protected FullyBoundHandle(Container container, FunctionHandle hDelegate, ObjectHandle[] ahArg)
             {
-            super(hDelegate == null ? INSTANCE.getCanonicalType() : hDelegate.getType(), hDelegate);
+            super(container, hDelegate == null ? INSTANCE.getCanonicalType() : hDelegate.getType(), hDelegate);
 
             f_ahArg = ahArg;
             }
@@ -1014,7 +1014,7 @@ public class xRTFunction
             return frameThis;
             }
 
-        public static FullyBoundHandle NO_OP = new FullyBoundHandle(null, null)
+        public static FullyBoundHandle NO_OP = new FullyBoundHandle(INSTANCE.f_container, null, null)
             {
             @Override
             public int callChain(Frame frame, ObjectHandle hTarget, Frame.Continuation continuation)
@@ -1047,9 +1047,9 @@ public class xRTFunction
          *
          * @param chain   the call chain
          */
-        protected AsyncHandle(CallChain chain)
+        protected AsyncHandle(Container container, CallChain chain)
             {
-            super(chain, 0);
+            super(container, chain, 0);
             }
 
         /**
@@ -1057,9 +1057,9 @@ public class xRTFunction
          *
          * @param method  the native method
          */
-        protected AsyncHandle(MethodStructure method)
+        protected AsyncHandle(Container container, MethodStructure method)
             {
-            super(method);
+            super(container, method);
 
             assert method.isNative();
             }
@@ -1178,7 +1178,7 @@ public class xRTFunction
          */
         protected AsyncDelegatingHandle(ServiceHandle hService, FunctionHandle hDelegate)
             {
-            super(hDelegate.getType(), hDelegate);
+            super(hService.f_context.f_container, hDelegate.getType(), hDelegate);
 
             f_hService = hService;
             }
@@ -1257,7 +1257,7 @@ public class xRTFunction
 
         protected FunctionProxyHandle(FunctionHandle fn, ServiceContext ctx)
             {
-            super(fn.getType(), fn);
+            super(fn.getComposition().getContainer(), fn.getType(), fn);
 
             f_ctx = ctx;
             }
@@ -1333,13 +1333,15 @@ public class xRTFunction
     /**
      * Create a function handle representing an asynchronous (service) call.
      *
+     *
+     * @param frame
      * @param chain the method chain
      *
      * @return the corresponding function handle
      */
-    public static AsyncHandle makeAsyncHandle(CallChain chain)
+    public static AsyncHandle makeAsyncHandle(Frame frame, CallChain chain)
         {
-        return new AsyncHandle(chain);
+        return new AsyncHandle(frame.f_context.f_container, chain);
         }
 
     /**
@@ -1367,23 +1369,24 @@ public class xRTFunction
         {
         assert method.isNative();
 
-        return new AsyncHandle(method);
+        return new AsyncHandle(INSTANCE.f_container, method);
         }
 
     /**
      * Create an immutable FunctionHandle for a given method chain.
      */
-    public static FunctionHandle makeHandle(CallChain chain, int nDepth)
+    public static FunctionHandle makeHandle(Frame frame, CallChain chain, int nDepth)
         {
-        return new FunctionHandle(chain, nDepth);
+        return new FunctionHandle(frame.f_context.f_container, chain, nDepth);
         }
 
     /**
      * Create an immutable FunctionHandle for a given function.
      */
-    public static FunctionHandle makeHandle(MethodStructure function)
+    public static FunctionHandle makeHandle(Frame frame, MethodStructure function)
         {
-        return new FunctionHandle(function);
+        Container container = frame == null ? INSTANCE.f_container : frame.f_context.f_container;
+        return new FunctionHandle(container, function);
         }
 
 
@@ -1437,7 +1440,7 @@ public class xRTFunction
         }
 
     /**
-     * @return the TypeComposition for an Array of Constructor (funtion type)
+     * @return the TypeComposition for an Array of Constructor (function type)
      */
     public static TypeComposition ensureConstructorArray(
             Frame frame, TypeConstant typeTarget, TypeConstant typeParent)

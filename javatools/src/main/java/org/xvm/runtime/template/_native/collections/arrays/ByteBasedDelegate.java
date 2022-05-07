@@ -37,7 +37,7 @@ public abstract class ByteBasedDelegate
         }
 
     @Override
-    public DelegateHandle createDelegate(TypeConstant typeElement, int cSize,
+    public DelegateHandle createDelegate(Container container, TypeConstant typeElement, int cSize,
                                          ObjectHandle[] ahContent, Mutability mutability)
         {
         byte[] ab = new byte[cSize];

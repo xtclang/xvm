@@ -97,7 +97,7 @@ public class MoveVar
 
     protected int complete(Frame frame, TypeConstant typeSrc)
         {
-        TypeComposition clzRef = xVar.INSTANCE.ensureParameterizedClass(frame.poolContext(), typeSrc);
+        TypeComposition clzRef = xVar.INSTANCE.ensureParameterizedClass(frame.f_context.f_container, typeSrc);
 
         int       nTo  = m_nToValue;
         RefHandle hRef = new RefHandle(clzRef, frame, m_nFromValue);

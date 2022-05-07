@@ -154,7 +154,7 @@ public class xRTSlicingDelegate
         TypeConstant typeElement = hSource.getType().getParamType(0);
         TypeConstant typeSlice   = typeElement.getConstantPool().
                 ensureParameterizedTypeConstant(getClassConstant().getType(), typeElement);
-        return new SliceHandle(ensureClass(typeSlice),
+        return new SliceHandle(ensureClass(hSource.getComposition().getContainer(), typeSlice),
                 hSource, Mutability.Fixed, (int) ofStart, (int) cSize, fReverse);
         }
 

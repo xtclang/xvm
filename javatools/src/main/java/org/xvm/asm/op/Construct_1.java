@@ -114,7 +114,7 @@ public class Construct_1
 
         ObjectHandle hStruct = frame.getThis();
 
-        frame.chainFinalizer(Utils.makeFinalizer(constructor, ahVar));
+        frame.chainFinalizer(Utils.makeFinalizer(frame, constructor, ahVar));
 
         return frame.call1(constructor, hStruct, ahVar, A_IGNORE);
         }

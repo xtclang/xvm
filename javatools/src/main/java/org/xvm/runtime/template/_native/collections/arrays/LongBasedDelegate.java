@@ -46,7 +46,7 @@ public abstract class LongBasedDelegate
         }
 
     @Override
-    public DelegateHandle createDelegate(TypeConstant typeElement, int cSize,
+    public DelegateHandle createDelegate(Container container, TypeConstant typeElement, int cSize,
                                          ObjectHandle[] ahContent, Mutability mutability)
         {
         long[] alValue = new long[storage(cSize)];

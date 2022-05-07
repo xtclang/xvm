@@ -38,7 +38,7 @@ public class xCPFile
         {
         ConstantPool pool = pool();
 
-        TypeComposition clz = ensureClass(pool, getCanonicalType(), pool.typeFile());
+        TypeComposition clz = ensureClass(f_container, getCanonicalType(), pool.typeFile());
         s_clzStruct   = clz.ensureAccess(Access.STRUCT);
         s_constructor = getStructure().findConstructor(pool.typeObject());
         }

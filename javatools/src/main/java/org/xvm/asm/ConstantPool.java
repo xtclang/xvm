@@ -36,8 +36,6 @@ import org.xvm.asm.constants.TypeInfo.Progress;
 
 import org.xvm.compiler.Parser;
 import org.xvm.compiler.Source;
-import org.xvm.runtime.ClassComposition;
-import org.xvm.runtime.ClassTemplate;
 
 import org.xvm.type.Decimal;
 
@@ -3803,41 +3801,6 @@ public class ConstantPool
         }
 
 
-    // ----- run-time helpers  ---------------------------------------------------------------------
-
-    /**
-     * Produce a ClassComposition for the specified inception type.
-     *
-     * Note: the passed inception type should be normalized (all formal parameters resolved).
-     */
-    public ClassComposition ensureClassComposition(TypeConstant typeInception, ClassTemplate template)
-        {
-        ClassComposition clz = f_mapCompositions.get(typeInception);
-        if (clz == null)
-            {
-            assert typeInception.isShared(this);
-            assert !typeInception.isAccessSpecified();
-            assert typeInception.normalizeParameters().equals(typeInception);
-
-            typeInception = (TypeConstant) register(typeInception);
-
-            clz = f_mapCompositions.computeIfAbsent(typeInception, (type) ->
-                {
-                ClassTemplate templateReal = type.isAnnotated() && type.isIntoVariableType()
-                        ? type.getTemplate(template.f_container)
-                        : template;
-
-                return new ClassComposition(templateReal, type);
-                });
-            }
-
-        // we need to make this call outside of the constructor due to a possible recursion
-        // (ConcurrentHashMap.computeIfAbsent doesn't allow that)
-        clz.ensureFieldLayout();
-        return clz;
-        }
-
-
     // ----- out-of-context helpers  ---------------------------------------------------------------
 
     public TypeConstant getNakedRefType()
@@ -4205,14 +4168,6 @@ public class ConstantPool
      * A list of classes that cause any derived TypeInfos to be invalidated.
      */
     private final List<IdentityConstant> f_listInvalidated = new Vector<>();
-
-    /**
-     * A cache of "instantiate-able" ClassCompositions keyed by the "inception type".
-     *
-     * Any ClassComposition in this map is defined by a {@link ClassConstant} referring to a
-     * concrete natural class. It also keeps the secondary map of compositions for revealed types.
-     */
-    private final Map<TypeConstant, ClassComposition> f_mapCompositions = new ConcurrentHashMap<>();
 
     /**
      * NakedRef is a fundamental formal type that comes from the "_native" module,

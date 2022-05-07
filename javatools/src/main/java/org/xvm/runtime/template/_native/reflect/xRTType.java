@@ -157,11 +157,11 @@ public class xRTType
         }
 
     @Override
-    public TypeComposition ensureClass(TypeConstant typeActual)
+    public TypeComposition ensureClass(Container container, TypeConstant typeActual)
         {
         return typeActual.equals(getCanonicalType())
             ? getCanonicalClass()
-            : getCanonicalClass(pool()).ensureCanonicalizedComposition(typeActual);
+            : getCanonicalClass(container).ensureCanonicalizedComposition(typeActual);
         }
 
     @Override
@@ -177,7 +177,7 @@ public class xRTType
 
             typeData = typeData.resolveGenerics(pool,
                     frame.getGenericsResolver(typeData.containsDynamicType(null)));
-            return frame.pushStack(typeData.normalizeParameters().ensureTypeHandle(pool));
+            return frame.pushStack(typeData.normalizeParameters().ensureTypeHandle(frame.f_context.f_container));
             }
 
         return super.createConstHandle(frame, constant);
@@ -190,7 +190,7 @@ public class xRTType
         if (typeProxy == null)
             {
             // a proxy for a non-shareable TypeHandle is a "foreign" handle
-            return makeHandle(((TypeHandle) hTarget).getUnsafeDataType(), false);
+            return makeHandle(ctx.f_container, ((TypeHandle) hTarget).getUnsafeDataType(), false);
             }
         return super.createProxyHandle(ctx, hTarget, typeProxy);
         }
@@ -211,13 +211,13 @@ public class xRTType
             return typeValue == null
                 ? frame.raiseException(xException.invalidType(frame,
                     "Unknown formal type: " + idProp.getName()))
-                : frame.assignValue(iReturn, typeValue.ensureTypeHandle(frame.poolContext()));
+                : frame.assignValue(iReturn, typeValue.ensureTypeHandle(frame.f_context.f_container));
             }
 
         if (idProp.getName().equals("DataType"))
             {
             TypeConstant typeResult = hThis.getUnsafeDataType();
-            return frame.assignValue(iReturn, makeHandle(typeResult, !hThis.isForeign()));
+            return frame.assignValue(iReturn, makeHandle(frame.f_context.f_container, typeResult, !hThis.isForeign()));
             }
         return super.getPropertyValue(frame, hTarget, idProp, iReturn);
         }
@@ -463,7 +463,7 @@ public class xRTType
         int          nIndex = (int) lIndex;
 
         return nIndex >= 0 && nIndex < type.getParamsCount()
-            ? frame.assignValue(iReturn, type.getParamType(nIndex).ensureTypeHandle(frame.poolContext()))
+            ? frame.assignValue(iReturn, type.getParamType(nIndex).ensureTypeHandle(frame.f_context.f_container))
             : frame.raiseException(xException.outOfBounds(frame, lIndex, type.getParamsCount()));
         }
 
@@ -698,7 +698,7 @@ public class xRTType
         public ConstructorHandle(TypeComposition clzTarget, TypeConstant typeConstruct,
                                  MethodStructure constructor, Parameter[] aParams, boolean fParent)
             {
-            super(typeConstruct, constructor);
+            super(clzTarget.getContainer(), typeConstruct, constructor);
 
             f_clzTarget   = clzTarget;
             f_constructor = constructor;
@@ -718,7 +718,7 @@ public class xRTType
         public int callT(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
             {
             TypeConstant    typeTuple = frame.poolContext().ensureTupleType(f_clzTarget.getType());
-            TypeComposition clzTuple  = xTuple.INSTANCE.ensureClass(typeTuple);
+            TypeComposition clzTuple  = xTuple.INSTANCE.ensureClass(frame.f_context.f_container, typeTuple);
 
             switch (callImpl(frame, ahArg, Op.A_STACK))
                 {
@@ -859,7 +859,7 @@ public class xRTType
             MethodInfo     info = entry.getValue();
             if (info.isFunction() && id.isTopLevel())
                 {
-                listHandles.add(xRTFunction.makeHandle(info.getHead().getMethodStructure()));
+                listHandles.add(xRTFunction.makeHandle(frame, info.getHead().getMethodStructure()));
                 }
             }
         FunctionHandle[] ahFunctions = listHandles.toArray(new FunctionHandle[0]);
@@ -952,7 +952,8 @@ public class xRTType
      */
     public int getPropertyTemplate(Frame frame, TypeHandle hType, int iReturn)
         {
-        return frame.assignValue(iReturn, xRTTypeTemplate.makeHandle(hType.getDataType()));
+        return frame.assignValue(iReturn,
+                xRTTypeTemplate.makeHandle(frame.f_context.f_container, hType.getDataType()));
         }
 
     /**
@@ -1003,7 +1004,7 @@ public class xRTType
         TypeHandle[] ahTypes = new TypeHandle[aUnderlying.length];
         for (int i = 0, c = ahTypes.length; i < c; ++i)
             {
-            ahTypes[i] = aUnderlying[i].ensureTypeHandle(frame.poolContext());
+            ahTypes[i] = aUnderlying[i].ensureTypeHandle(frame.f_context.f_container);
             }
 
         ObjectHandle hArray = xArray.createImmutableArray(ensureTypeArrayComposition(), ahTypes);
@@ -1053,7 +1054,7 @@ public class xRTType
             Annotation    anno    = pool.ensureAnnotation(clzAnno);
 
             TypeConstant typeResult = pool.ensureAnnotatedTypeConstant(typeThis, anno);
-            return frame.assignValue(iReturn, typeResult.ensureTypeHandle(pool));
+            return frame.assignValue(iReturn, typeResult.ensureTypeHandle(frame.f_context.f_container));
             }
         return frame.raiseException(xException.invalidType(frame,
                 "No common TypeSystem for (" + typeThis + " and " + typeAnno + ")"));
@@ -1134,7 +1135,7 @@ public class xRTType
         // REVIEW CP: include PropertyClassTypeConstant?
         if (typeTarget.isVirtualChild() || typeTarget.isAnonymousClass())
             {
-            TypeHandle hParent = typeTarget.getParentType().ensureTypeHandle(frame.poolContext());
+            TypeHandle hParent = typeTarget.getParentType().ensureTypeHandle(frame.f_context.f_container);
             return frame.assignValues(aiReturn, xBoolean.TRUE, hParent);
             }
         else
@@ -1203,7 +1204,7 @@ public class xRTType
         TypeConstant type = hType.getDataType();
         return type.isModifyingType()
                 ? frame.assignValues(aiReturn, xBoolean.TRUE,
-                        type.getUnderlyingType().ensureTypeHandle(frame.poolContext()))
+                        type.getUnderlyingType().ensureTypeHandle(frame.f_context.f_container))
                 : frame.assignValue(aiReturn[0], xBoolean.FALSE);
         }
 
@@ -1264,7 +1265,7 @@ public class xRTType
         TypeHandle[]   ahTypes = new TypeHandle[cTypes];
         for (int i = 0; i < cTypes; ++i)
             {
-            ahTypes[i] = atypes[i].normalizeParameters().ensureTypeHandle(frame.poolContext());
+            ahTypes[i] = atypes[i].normalizeParameters().ensureTypeHandle(frame.f_context.f_container);
             }
 
         ObjectHandle hArray = xArray.createImmutableArray(ensureTypeArrayComposition(), ahTypes);
@@ -1330,7 +1331,7 @@ public class xRTType
         try
             {
             TypeConstant typeResult = typeThis.adoptParameters(pool, atypeParams);
-            return frame.assignValue(iReturn, makeHandle(typeResult, fShared));
+            return frame.assignValue(iReturn, makeHandle(frame.f_context.f_container, typeResult, fShared));
             }
         catch (RuntimeException e)
             {
@@ -1353,12 +1354,12 @@ public class xRTType
      */
     protected int invokeRelational(Frame frame, TypeHandle hType, int[] aiReturn)
         {
-        ConstantPool pool = frame.poolContext();
-        TypeConstant type = hType.getDataType();
+        Container    container = frame.f_context.f_container;
+        TypeConstant type      = hType.getDataType();
         return type.isRelationalType()
                 ? frame.assignValues(aiReturn, xBoolean.TRUE,
-                        type.getUnderlyingType().ensureTypeHandle(pool),
-                        type.getUnderlyingType2().ensureTypeHandle(pool))
+                        type.getUnderlyingType().ensureTypeHandle(container),
+                        type.getUnderlyingType2().ensureTypeHandle(container))
                 : frame.assignValue(aiReturn[0], xBoolean.FALSE);
         }
 
@@ -1382,7 +1383,7 @@ public class xRTType
 
         return typeR == null
             ? frame.assignValue(aiReturn[0], xBoolean.FALSE)
-            : frame.assignValues(aiReturn, xBoolean.TRUE, typeR.ensureTypeHandle(frame.poolContext()));
+            : frame.assignValues(aiReturn, xBoolean.TRUE, typeR.ensureTypeHandle(frame.f_context.f_container));
         }
 
 
@@ -1647,12 +1648,12 @@ public class xRTType
      *
      * @return the resulting {@link TypeHandle}
      */
-    public static TypeHandle makeHandle(TypeConstant type, boolean fShared)
+    public static TypeHandle makeHandle(Container container, TypeConstant type, boolean fShared)
         {
         // unfortunately, "makeHandle" is called from places where we cannot easily invoke the
         // default initializer, so we need to do it by hand
         TypeHandle hType = fShared
-            ? new TypeHandle(INSTANCE.ensureClass(type.getType()), null)
+            ? new TypeHandle(INSTANCE.ensureClass(container, type.getType()), null)
             : new TypeHandle(INSTANCE.getCanonicalClass(), type.getType());
 
         GenericHandle hMulti = (GenericHandle) hType.getField(null, "multimethods");
@@ -1704,7 +1705,7 @@ public class xRTType
         try
             {
             TypeConstant typeResult = op.makeRelational(pool, typeThis, typeThat);
-            return frame.assignValue(iReturn, makeHandle(typeResult, fShared));
+            return frame.assignValue(iReturn, makeHandle(frame.f_context.f_container, typeResult, fShared));
             }
         catch (RuntimeException e)
             {

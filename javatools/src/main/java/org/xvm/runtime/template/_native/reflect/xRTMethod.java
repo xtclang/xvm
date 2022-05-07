@@ -69,7 +69,7 @@ public class xRTMethod
         }
 
     @Override
-    public TypeComposition ensureClass(TypeConstant typeActual)
+    public TypeComposition ensureClass(Container container, TypeConstant typeActual)
         {
         // see explanation at xRTFunction.ensureClass()
         ConstantPool pool = typeActual.getConstantPool();
@@ -96,7 +96,7 @@ public class xRTMethod
             typeMethod = transformer.apply(typeActual);
             }
 
-        return super.ensureClass(typeMethod);
+        return super.ensureClass(container, typeMethod);
         }
 
     @Override
@@ -261,8 +261,8 @@ public class xRTMethod
 
         return frame.assignValue(iReturn,
                 (hTarget.isService()
-                    ? xRTFunction.makeAsyncHandle(chain)
-                    : xRTFunction.makeHandle(chain, 0))
+                    ? xRTFunction.makeAsyncHandle(frame, chain)
+                    : xRTFunction.makeHandle(frame, chain, 0))
                 .bindTarget(frame, hTarget));
         }
 
@@ -311,9 +311,10 @@ public class xRTMethod
      */
     public static ObjectHandle makeHandle(Frame frame, TypeConstant typeTarget, MethodConstant idMethod)
         {
-        ConstantPool    pool   = frame.poolContext();
-        TypeConstant    type   = idMethod.getSignature().asMethodType(pool, typeTarget);
-        MethodStructure method = (MethodStructure) idMethod.getComponent();
+        ConstantPool    pool      = frame.poolContext();
+        Container       container = frame.f_context.f_container;
+        TypeConstant    type      = idMethod.getSignature().asMethodType(pool, typeTarget);
+        MethodStructure method    = (MethodStructure) idMethod.getComponent();
 
         if (method == null)
             {
@@ -336,7 +337,7 @@ public class xRTMethod
             {
             type = pool.ensureAnnotatedTypeConstant(type, aAnno);
 
-            TypeComposition clzMethod = INSTANCE.ensureClass(type);
+            TypeComposition clzMethod = INSTANCE.ensureClass(container, type);
             MethodHandle    hStruct   = new MethodHandle(clzMethod.ensureAccess(Access.STRUCT), type, method);
 
             switch (hStruct.getTemplate().
@@ -363,7 +364,7 @@ public class xRTMethod
                 }
             }
 
-        return new MethodHandle(INSTANCE.ensureClass(type), type, method);
+        return new MethodHandle(INSTANCE.ensureClass(container, type), type, method);
         }
 
     /**

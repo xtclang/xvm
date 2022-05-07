@@ -47,7 +47,7 @@ public class xCPFileStore
     public void initNative()
         {
         ConstantPool    pool = pool();
-        TypeComposition clz  = ensureClass(pool, getCanonicalType(), pool.typeFileStore());
+        TypeComposition clz  = ensureClass(f_container, getCanonicalType(), pool.typeFileStore());
 
         s_clzStruct   = clz.ensureAccess(Access.STRUCT);
         s_constructor = getStructure().findConstructor(pool.typeString(), pool.typeObject());

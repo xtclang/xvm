@@ -89,11 +89,11 @@ public class xTuple
         }
 
     @Override
-    public TypeComposition ensureClass(TypeConstant typeActual)
+    public TypeComposition ensureClass(Container container, TypeConstant typeActual)
         {
         return typeActual.getParamsCount() == 0
             ? getCanonicalClass()
-            : getCanonicalClass(pool()).ensureCanonicalizedComposition(typeActual);
+            : getCanonicalClass(container).ensureCanonicalizedComposition(typeActual);
         }
 
     @Override
@@ -141,7 +141,7 @@ public class xTuple
             ahValue[i] = hValue;
             }
 
-        TypeComposition clzTuple = ensureClass(typeTuple);
+        TypeComposition clzTuple = ensureClass(frame.f_context.f_container, typeTuple);
         if (fDeferred)
             {
             Frame.Continuation stepNext = frameCaller ->
@@ -358,7 +358,7 @@ public class xTuple
             }
 
         TypeConstant    typeTupleNew = pool().ensureTupleType(atypeNew);
-        TypeComposition clzTupleNew  = ensureClass(typeTupleNew);
+        TypeComposition clzTupleNew  = ensureClass(frame.f_context.f_container, typeTupleNew);
         TupleHandle     hTupleNew    = new TupleHandle(clzTupleNew, ahNew, hThis.m_mutability);
 
         return frame.assignValue(iReturn, hTupleNew);
@@ -409,7 +409,7 @@ public class xTuple
             }
 
         TypeConstant    typeTupleNew = pool().ensureTupleType(atypeNew);
-        TypeComposition clzTupleNew  = ensureClass(typeTupleNew);
+        TypeComposition clzTupleNew  = ensureClass(frame.f_context.f_container, typeTupleNew);
         TupleHandle     hTupleNew    = new TupleHandle(clzTupleNew, ahNew, hThis.m_mutability);
 
         return frame.assignValue(iReturn, hTupleNew);
@@ -576,7 +576,7 @@ public class xTuple
                 }
 
             TypeConstant    typeTupleNew = pool().ensureTupleType(atypeNew);
-            TypeComposition clzTupleNew  = ensureClass(typeTupleNew);
+            TypeComposition clzTupleNew  = ensureClass(frame.f_context.f_container, typeTupleNew);
             TupleHandle     hTupleNew    = new TupleHandle(clzTupleNew, ahNew, hTuple.m_mutability);
 
             return frame.assignValue(iReturn, hTupleNew);
@@ -773,19 +773,6 @@ public class xTuple
 
 
     // ----- ObjectHandle helpers ------------------------------------------------------------------
-
-    /**
-     * Make an immutable Tuple handle.
-     *
-     * @param typeTuple  the tuple type
-     * @param ahValue    the values
-     *
-     * @return the handle
-     */
-    public static TupleHandle makeImmutableHandle(TypeConstant typeTuple, ObjectHandle... ahValue)
-        {
-        return makeImmutableHandle(INSTANCE.ensureClass(typeTuple), ahValue);
-        }
 
     /**
      * Make an immutable Tuple handle.

@@ -40,6 +40,7 @@ public class CanonicalizedTypeComposition
         return (ClassComposition) f_clzOrigin;
         }
 
+
     // ----- TypeComposition interface -------------------------------------------------------------
 
     @Override
@@ -106,11 +107,10 @@ public class CanonicalizedTypeComposition
     public CallChain getMethodCallChain(Object nidMethod)
         {
         CallChain chain = super.getMethodCallChain(nidMethod);
-        if (chain.getDepth() == 0 && nidMethod instanceof SignatureConstant)
+        if (chain.getDepth() == 0 && nidMethod instanceof SignatureConstant sig)
             {
             // we assume that the information on the canonical TypeInfo is sufficient
             ClassComposition    clzCanonical  = getCanonicalComposition();
-            SignatureConstant   sig           = (SignatureConstant) nidMethod;
             TypeInfo            infoCanonical = clzCanonical.getType().ensureTypeInfo();
             Set<MethodConstant> setMethods    = infoCanonical.findMethods(
                     sig.getName(), sig.getParamCount(), TypeInfo.MethodKind.Any);

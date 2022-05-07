@@ -105,18 +105,19 @@ public abstract class Utils
     /**
      * Create a FullyBoundHandle representing a finalizer of the specified constructor.
      *
+     * @param frame        the current frame
      * @param constructor  the constructor
      * @param ahArg        the arguments to bind
      *
      * @return a FullyBoundHandle representing the finalizer or null if there is no finalizer
      */
-    public static FullyBoundHandle makeFinalizer(MethodStructure constructor, ObjectHandle[] ahArg)
+    public static FullyBoundHandle makeFinalizer(Frame frame, MethodStructure constructor, ObjectHandle[] ahArg)
         {
         MethodStructure methodFinally = constructor.getConstructFinally();
 
         return methodFinally == null
             ? null
-            : xRTFunction.makeHandle(methodFinally).bindArguments(ahArg);
+            : xRTFunction.makeHandle(frame, methodFinally).bindArguments(ahArg);
         }
 
     /**
@@ -728,7 +729,7 @@ public abstract class Utils
                         // the class must have a no-params constructor to call
                         MethodStructure constructor = clz.findConstructor(TypeConstant.NO_TYPES);
                         iResult = template.construct(frame, constructor,
-                                template.getCanonicalClass(frame.poolContext()),
+                                template.getCanonicalClass(frame.f_context.f_container),
                                     null, OBJECTS_NONE, Op.A_STACK);
                         }
                     break;
@@ -1589,7 +1590,7 @@ public abstract class Utils
                 ConstantPool    pool      = frameCaller.poolContext();
                 ClassTemplate   template  = RT_PARAMETER_TEMPLATE;
                 TypeConstant    typeParam = pool.ensureParameterizedTypeConstant(typeRTParameter, type);
-                TypeComposition clzParam  = pool.ensureClassComposition(typeParam, template);
+                TypeComposition clzParam  = frameCaller.f_context.f_container.ensureClassComposition(typeParam, template);
 
                 MethodStructure  construct = RT_PARAMETER_CONSTRUCT;
                 ObjectHandle[]   ahArg     = new ObjectHandle[construct.getMaxVars()];
@@ -1667,7 +1668,7 @@ public abstract class Utils
         ahArg[1] = sName == null ? xNullable.NULL : xString.makeHandle(sName);
 
         TypeComposition clzArg = ARGUMENT_TEMPLATE.
-                ensureParameterizedClass(frame.poolContext(), typeReferent);
+                ensureParameterizedClass(frame.f_context.f_container, typeReferent);
         return ARGUMENT_TEMPLATE.construct(frame, constructor, clzArg, null, ahArg, Op.A_STACK);
         }
 

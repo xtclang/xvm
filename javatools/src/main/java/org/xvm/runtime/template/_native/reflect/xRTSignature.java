@@ -170,7 +170,7 @@ public class xRTSignature
         TypeComposition clzArray = xRTType.ensureTypeArrayComposition();
         for (int i = 0; i < cParams; i++)
             {
-            ahType[i] = hFunc.getParamType(i).ensureTypeHandle(frame.poolContext());
+            ahType[i] = hFunc.getParamType(i).ensureTypeHandle(frame.f_context.f_container);
             }
         return frame.assignValue(iReturn, xArray.createImmutableArray(clzArray, ahType));
         }
@@ -185,7 +185,7 @@ public class xRTSignature
         TypeComposition clzArray = xRTType.ensureTypeArrayComposition();
         for (int i = 0; i < cReturns; i++)
             {
-            ahType[i] = hFunc.getReturnType(i).ensureTypeHandle(frame.poolContext());
+            ahType[i] = hFunc.getReturnType(i).ensureTypeHandle(frame.f_context.f_container);
             }
         return frame.assignValue(iReturn, xArray.createImmutableArray(clzArray, ahType));
         }

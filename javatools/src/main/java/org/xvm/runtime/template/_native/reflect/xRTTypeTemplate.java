@@ -187,14 +187,16 @@ public class xRTTypeTemplate
     /**
      * Obtain a {@link TypeTemplateHandle} for the specified type.
      *
+     *
+     * @param container
      * @param type  the {@link TypeConstant} to obtain a {@link TypeTemplateHandle} for
      *
      * @return the resulting {@link TypeTemplateHandle}
      */
-    public static TypeTemplateHandle makeHandle(TypeConstant type)
+    public static TypeTemplateHandle makeHandle(Container container, TypeConstant type)
         {
         ConstantPool    pool = INSTANCE.pool();
-        TypeComposition clz  = INSTANCE.ensureClass(pool, INSTANCE.getCanonicalType(),
+        TypeComposition clz  = INSTANCE.ensureClass(container, INSTANCE.getCanonicalType(),
                 pool.ensureEcstasyTypeConstant("reflect.TypeTemplate"));
         return new TypeTemplateHandle(clz, type);
         }
@@ -245,9 +247,8 @@ public class xRTTypeTemplate
      */
     public int getPropertyExplicitlyImmutable(Frame frame, TypeTemplateHandle hType, int iReturn)
         {
-        TypeConstant type   = hType.getDataType();
-        boolean      fImmut = type.isImmutabilitySpecified();
-        return frame.assignValue(iReturn, xBoolean.makeHandle(fImmut));
+        TypeConstant type = hType.getDataType();
+        return frame.assignValue(iReturn, xBoolean.makeHandle(type.isImmutabilitySpecified()));
         }
 
     /**
@@ -312,7 +313,7 @@ public class xRTTypeTemplate
         TypeTemplateHandle[] ahTypes = new TypeTemplateHandle[aUnderlying.length];
         for (int i = 0, c = ahTypes.length; i < c; ++i)
             {
-            ahTypes[i] = makeHandle(aUnderlying[i]);
+            ahTypes[i] = makeHandle(frame.f_context.f_container, aUnderlying[i]);
             }
 
         ObjectHandle hArray = xArray.createImmutableArray(ensureArrayClassComposition(), ahTypes);
@@ -396,7 +397,7 @@ public class xRTTypeTemplate
         // REVIEW GG + CP: include PropertyClassTypeConstant?
         if (typeTarget.isVirtualChild() || typeTarget.isAnonymousClass())
             {
-            TypeTemplateHandle hParent = makeHandle(typeTarget.getParentType());
+            TypeTemplateHandle hParent = makeHandle(frame.f_context.f_container, typeTarget.getParentType());
             return frame.assignValues(aiReturn, xBoolean.TRUE, hParent);
             }
         else
@@ -433,18 +434,17 @@ public class xRTTypeTemplate
         if (type.isSingleDefiningConstant())
             {
             Constant constDef = type.getDefiningConstant();
-            if (constDef instanceof PropertyConstant)
+            if (constDef instanceof PropertyConstant idProp)
                 {
-                PropertyConstant idProp        = (PropertyConstant) constDef;
-                ConstantPool      pool         = idProp.getConstantPool();  // note: purposeful
-                TypeConstant      typeTarget   = idProp.getClassIdentity().getType();
-                TypeInfo          infoTarget   = typeTarget.ensureTypeInfo();
-                PropertyInfo      infoProp     = infoTarget.findProperty(idProp);
-                TypeConstant      typeReferent = infoProp.getType();
-                TypeConstant      typeImpl     = pool.ensurePropertyClassTypeConstant(typeTarget, idProp);
-                TypeConstant      typeProperty = pool.ensureParameterizedTypeConstant(pool.typeProperty(),
+                ConstantPool  pool         = idProp.getConstantPool();  // note: purposeful
+                TypeConstant  typeTarget   = idProp.getClassIdentity().getType();
+                TypeInfo      infoTarget   = typeTarget.ensureTypeInfo();
+                PropertyInfo  infoProp     = infoTarget.findProperty(idProp);
+                TypeConstant  typeReferent = infoProp.getType();
+                TypeConstant  typeImpl     = pool.ensurePropertyClassTypeConstant(typeTarget, idProp);
+                TypeConstant  typeProperty = pool.ensureParameterizedTypeConstant(pool.typeProperty(),
                                                     typeTarget, typeReferent, typeImpl);
-                GenericHandle     hProperty    = null; // TODO PropertyTemplate from typeProperty
+                GenericHandle hProperty    = null; // TODO PropertyTemplate from typeProperty
 
                 return frame.assignValues(aiReturn, xBoolean.TRUE, hProperty);
                 }
@@ -470,7 +470,8 @@ public class xRTTypeTemplate
         {
         TypeConstant type = hType.getDataType();
         return type.isModifyingType()
-                ? frame.assignValues(aiReturn, xBoolean.TRUE, makeHandle(type.getUnderlyingType()))
+                ? frame.assignValues(aiReturn, xBoolean.TRUE,
+                        makeHandle(frame.f_context.f_container, type.getUnderlyingType()))
                 : frame.assignValue(aiReturn[0], xBoolean.FALSE);
         }
 
@@ -482,8 +483,8 @@ public class xRTTypeTemplate
         TypeConstant type = hType.getDataType();
         return type.isRelationalType()
             ? frame.assignValues(aiReturn, xBoolean.TRUE,
-            makeHandle(type.getUnderlyingType()),
-            makeHandle(type.getUnderlyingType2()))
+            makeHandle(frame.f_context.f_container, type.getUnderlyingType()),
+            makeHandle(frame.f_context.f_container, type.getUnderlyingType2()))
             : frame.assignValue(aiReturn[0], xBoolean.FALSE);
         }
 
@@ -503,7 +504,7 @@ public class xRTTypeTemplate
         TypeTemplateHandle[] ahTypes = new TypeTemplateHandle[cTypes];
         for (int i = 0; i < cTypes; ++i)
             {
-            ahTypes[i] = makeHandle(atypes[i]);
+            ahTypes[i] = makeHandle(frame.f_context.f_container, atypes[i]);
             }
 
         ObjectHandle hArray = xArray.createImmutableArray(ensureArrayClassComposition(), ahTypes);
@@ -545,7 +546,8 @@ public class xRTTypeTemplate
             // TODO: validate constraints
             }
         return frame.assignValue(iReturn,
-                makeHandle(frame.poolContext().ensureParameterizedTypeConstant(typeThis, aTypes)));
+                makeHandle(frame.f_context.f_container,
+                frame.poolContext().ensureParameterizedTypeConstant(typeThis, aTypes)));
         }
 
     /**
@@ -565,7 +567,8 @@ public class xRTTypeTemplate
             // TODO: validate mixin
 
             return frame.assignValue(iReturn,
-                    makeHandle(pool.ensureAnnotatedTypeConstant(typeThis, anno)));
+                    makeHandle(frame.f_context.f_container,
+                    pool.ensureAnnotatedTypeConstant(typeThis, anno)));
             }
         return frame.raiseException("Invalid annotation: " + typeThat.getValueString());
         }
@@ -580,7 +583,7 @@ public class xRTTypeTemplate
 
         return typeR == null
             ? frame.assignValue(aiReturn[0], xBoolean.FALSE)
-            : frame.assignValues(aiReturn, xBoolean.TRUE, makeHandle(typeR));
+            : frame.assignValues(aiReturn, xBoolean.TRUE, makeHandle(frame.f_context.f_container, typeR));
         }
 
 

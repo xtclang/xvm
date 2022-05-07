@@ -66,9 +66,10 @@ public class xPackage
         {
         if (constant instanceof PackageConstant idPackage)
             {
+            Container       container   = frame.f_context.f_container;
             TypeConstant    typePackage = idPackage.getType();
-            TypeComposition clazz       = ensureClass(frame.poolContext(), typePackage, typePackage);
-
+            TypeComposition clazz       = container.getTemplate(typePackage).
+                                            ensureClass(container, typePackage, typePackage);
             return createPackageHandle(frame, clazz);
             }
 

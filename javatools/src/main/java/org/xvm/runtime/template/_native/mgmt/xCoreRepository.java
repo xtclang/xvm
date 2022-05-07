@@ -53,7 +53,7 @@ public class xCoreRepository
         TypeConstant typeInception = getInceptionClassConstant().getType();
         TypeConstant typeMask      = getCanonicalType();
 
-        m_clzRepo = ensureClass(pool, typeInception, typeMask);
+        m_clzRepo = ensureClass(f_container, typeInception, typeMask);
 
         markNativeProperty("moduleNames");
         markNativeMethod("getModule", STRING, null);

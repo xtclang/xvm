@@ -38,7 +38,7 @@ public class xCPDirectory
         {
         ConstantPool pool = pool();
 
-        TypeComposition clz = ensureClass(pool, getCanonicalType(), pool.typeDirectory());
+        TypeComposition clz = ensureClass(f_container, getCanonicalType(), pool.typeDirectory());
         s_clzStruct   = clz.ensureAccess(Access.STRUCT);
         s_constructor = getStructure().findConstructor(pool.typeObject());
         }

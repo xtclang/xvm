@@ -56,9 +56,9 @@ public class xContainerControl
     public void initNative()
         {
         ConstantPool pool     = pool();
-        TypeConstant typeMask = pool().ensureEcstasyTypeConstant("mgmt.Container.Control");
+        TypeConstant typeMask = pool.ensureEcstasyTypeConstant("mgmt.Container.Control");
 
-        m_clzControl = ensureClass(pool, getCanonicalType(), typeMask);
+        m_clzControl = ensureClass(f_container, getCanonicalType(), typeMask);
 
         markNativeMethod("invoke", null, null);
         markNativeProperty("mainService");
@@ -121,7 +121,7 @@ public class xContainerControl
 
             TypeComposition clzModule = container.resolveClass(idModule.getType());
             CallChain       chain     = clzModule.getMethodCallChain(idMethod.getSignature());
-            FunctionHandle  hFunction = new xRTFunction.AsyncHandle(chain)
+            FunctionHandle  hFunction = new xRTFunction.AsyncHandle(container, chain)
                 {
                 @Override
                 protected ObjectHandle getContextTarget(Frame frame, ObjectHandle hService)

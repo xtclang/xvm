@@ -51,11 +51,10 @@ public class xRTServiceControl
     @Override
     public void initNative()
         {
-        ConstantPool pool          = pool();
         TypeConstant typeInception = getCanonicalType();
-        TypeConstant typeMask      = pool.ensureEcstasyTypeConstant("Service.ServiceControl");
+        TypeConstant typeMask      = pool().ensureEcstasyTypeConstant("Service.ServiceControl");
 
-        m_clzControl = ensureClass(pool, typeInception, typeMask);
+        m_clzControl = ensureClass(f_container, typeInception, typeMask);
 
         SERVICE_STATUS = (xEnum) f_container.getTemplate("Service.ServiceStatus");
 

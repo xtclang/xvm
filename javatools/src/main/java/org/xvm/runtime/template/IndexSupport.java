@@ -73,8 +73,8 @@ public interface IndexSupport
             TypeConstant typeEl = getElementType(frame, hTarget, lIndex);
 
             TypeComposition clzRef = fReadOnly
-                ? xRef.INSTANCE.ensureParameterizedClass(frame.poolContext(), typeEl)
-                : xVar.INSTANCE.ensureParameterizedClass(frame.poolContext(), typeEl);
+                ? xRef.INSTANCE.ensureParameterizedClass(frame.f_context.f_container, typeEl)
+                : xVar.INSTANCE.ensureParameterizedClass(frame.f_context.f_container, typeEl);
 
             IndexedRefHandle hRef = new IndexedRefHandle(clzRef, hTarget, lIndex);
 

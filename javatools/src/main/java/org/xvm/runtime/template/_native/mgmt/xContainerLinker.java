@@ -209,7 +209,7 @@ public class xContainerLinker
             while (++index < aKeys.length)
                 {
                 InjectionKey key   = aKeys[index];
-                TypeHandle   hType = key.f_type.ensureTypeHandle(frameCaller.poolContext());
+                TypeHandle   hType = key.f_type.ensureTypeHandle(frameCaller.f_context.f_container);
                 StringHandle hName = xString.makeHandle(key.f_sName);
                 CallChain    chain = hProvider.getComposition().getMethodCallChain(GET_RESOURCE);
 

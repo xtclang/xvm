@@ -25,6 +25,11 @@ import org.xvm.runtime.template.text.xString.StringHandle;
 public interface TypeComposition
     {
     /**
+     * @return the container this TypeComposition belongs to
+     */
+    Container getContainer();
+
+    /**
      * @return the OpSupport for the inception type of this TypeComposition
      */
     OpSupport getSupport();

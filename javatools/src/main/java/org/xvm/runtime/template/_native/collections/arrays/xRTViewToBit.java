@@ -74,14 +74,14 @@ public class xRTViewToBit
         }
 
     @Override
-    public TypeComposition ensureParameterizedClass(ConstantPool pool, TypeConstant... atypeParams)
+    public TypeComposition ensureParameterizedClass(Container container, TypeConstant... atypeParams)
         {
         assert atypeParams.length == 1;
 
-        TypeConstant typeInception = pool.ensureParameterizedTypeConstant(
+        TypeConstant typeInception = container.getConstantPool().ensureParameterizedTypeConstant(
             getInceptionClassConstant().getType(), atypeParams);
 
-        return ensureClass(pool, typeInception, typeInception);
+        return ensureClass(container, typeInception, typeInception);
         }
 
     /**

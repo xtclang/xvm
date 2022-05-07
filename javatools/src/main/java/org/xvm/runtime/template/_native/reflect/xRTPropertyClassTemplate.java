@@ -54,7 +54,7 @@ public class xRTPropertyClassTemplate
             {
             TypeConstant typeMask = pool().ensureEcstasyTypeConstant("reflect.ClassTemplate");
 
-            PROPERTY_CLASS_TEMPLATE_COMP = ensureClass(pool(), getCanonicalType(), typeMask);
+            PROPERTY_CLASS_TEMPLATE_COMP = ensureClass(f_container, getCanonicalType(), typeMask);
 
             markNativeProperty("classes");
             markNativeProperty("contribs");
@@ -208,7 +208,7 @@ public class xRTPropertyClassTemplate
 
             ObjectHandle[] ahVar = new ObjectHandle[methodCreateContrib.getMaxVars()];
             ahVar[0] = Utils.ensureInitializedEnum(frameCaller, enumAction.getEnumByName(sAction));
-            ahVar[1] = typeContrib.ensureTypeHandle(pool);
+            ahVar[1] = typeContrib.ensureTypeHandle(frameCaller.f_context.f_container);
             ahVar[2] = hDelegatee;
             ahVar[3] = haNames;
             ahVar[4] = haTypes;
@@ -286,8 +286,9 @@ public class xRTPropertyClassTemplate
             {
             return frame.raiseException(xException.illegalState(frame, "FileTemplate is not resolved"));
             }
-        TypeConstant type = prop.getType();
-        return frame.assignValue(iReturn, xRTTypeTemplate.makeHandle(type));
+
+        return frame.assignValue(iReturn,
+            xRTTypeTemplate.makeHandle(frame.f_context.f_container, prop.getType()));
         }
 
 

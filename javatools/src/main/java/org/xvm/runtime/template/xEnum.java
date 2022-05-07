@@ -69,14 +69,13 @@ public class xEnum
             List<String>     listNames   = new ArrayList<>(listAll.size());
             List<EnumHandle> listHandles = new ArrayList<>(listAll.size());
 
-            ConstantPool pool     = f_container.getConstantPool();
-            int          iOrdinal = 0;
+            int iOrdinal = 0;
             for (Component child : listAll)
                 {
                 if (child.getFormat() == Format.ENUMVALUE)
                     {
                     TypeConstant type   = ((ClassStructure) child).getCanonicalType();
-                    EnumHandle   hValue = makeEnumHandle(ensureClass(pool, type, type), iOrdinal++);
+                    EnumHandle   hValue = makeEnumHandle(ensureClass(f_container, type, type), iOrdinal++);
 
                     listNames.add(child.getName());
                     listHandles.add(hValue);
@@ -84,8 +83,7 @@ public class xEnum
                     // native enums don't require any initialization
                     if (!hValue.isStruct())
                         {
-                        pool.ensureSingletonConstConstant(child.getIdentityConstant()).
-                                setHandle(hValue);
+                        pool().ensureSingletonConstConstant(child.getIdentityConstant()).setHandle(hValue);
                         }
                     }
                 }

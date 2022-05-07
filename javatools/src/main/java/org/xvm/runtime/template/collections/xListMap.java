@@ -108,7 +108,7 @@ public class xListMap
 
         TypeComposition clzKeyArray = typeKeyArray.ensureClass(frame);
         TypeComposition clzValArray = typeValArray.ensureClass(frame);
-        TypeComposition clzMap      = ensureClass(
+        TypeComposition clzMap      = ensureClass(frame.f_context.f_container,
             pool.ensureParameterizedTypeConstant(getClassConstant().getType(), typeKey, typeVal));
 
         ObjectHandle haKeys = fDeferredKey

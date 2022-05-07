@@ -45,12 +45,13 @@ public class PropertyComposition
         {
         assert !clzParent.isStruct();
 
+        Container     container   = clzParent.getContainer();
         TypeConstant  typeRef     = infoProp.getBaseRefType();
-        ClassTemplate templateRef = clzParent.getContainer().getTemplate(typeRef);
+        ClassTemplate templateRef = container.getTemplate(typeRef);
 
         f_clzParent  = clzParent;
         f_infoProp   = infoProp;
-        f_clzRef     = templateRef.ensureClass(typeRef);
+        f_clzRef     = templateRef.ensureClass(container, typeRef);
         f_mapMethods = new ConcurrentHashMap<>();
         f_mapGetters = new ConcurrentHashMap<>();
         f_mapSetters = new ConcurrentHashMap<>();
@@ -73,6 +74,12 @@ public class PropertyComposition
 
 
     // ----- TypeComposition interface -------------------------------------------------------------
+
+    @Override
+    public Container getContainer()
+        {
+        return f_clzParent.getContainer();
+        }
 
     @Override
     public OpSupport getSupport()

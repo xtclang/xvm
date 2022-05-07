@@ -169,14 +169,14 @@ public class xArray
         }
 
     @Override
-    public TypeComposition ensureParameterizedClass(ConstantPool pool, TypeConstant... atypeParams)
+    public TypeComposition ensureParameterizedClass(Container container, TypeConstant... atypeParams)
         {
         assert atypeParams.length == 1;
 
         xArray template = ARRAY_TEMPLATES.get(atypeParams[0]);
 
         return template == null
-                ? super.ensureParameterizedClass(pool, atypeParams)
+                ? super.ensureParameterizedClass(container, atypeParams)
                 : template.getCanonicalClass();
         }
 
@@ -524,15 +524,15 @@ public class xArray
         {
         if (idProp.getName().equals("delegate"))
             {
-            ArrayHandle    hArray     = (ArrayHandle) hTarget;
-            DelegateHandle hDelegate  = hArray.m_hDelegate;
+            ArrayHandle    hArray    = (ArrayHandle) hTarget;
+            DelegateHandle hDelegate = hArray.m_hDelegate;
 
-            ConstantPool   pool       = frame.poolContext();
-            TypeConstant   typeRef    = pool.ensureParameterizedTypeConstant(
-                                        pool.typeVar(), hDelegate.getType());
+            ConstantPool   pool      = frame.poolContext();
+            TypeConstant   typeRef   = pool.ensureParameterizedTypeConstant(
+                                           pool.typeVar(), hDelegate.getType());
 
-            ClassComposition clzRef   = pool.ensureClassComposition(typeRef, xRef.INSTANCE);
-            RefHandle        hRef     = new RefHandle(clzRef, "delegate", hDelegate);
+            ClassComposition clzRef  = frame.f_context.f_container.ensureClassComposition(typeRef, xRef.INSTANCE);
+            RefHandle        hRef    = new RefHandle(clzRef, "delegate", hDelegate);
 
             return frame.assignValue(iReturn, hRef);
             }
@@ -645,7 +645,7 @@ public class xArray
     public static int createListSet(Frame frame, ArrayHandle hArray, int iResult)
         {
         ObjectHandle[] ahVar = new ObjectHandle[CREATE_LIST_SET.getMaxVars()];
-        ahVar[0] = hArray.getType().getParamType(0).ensureTypeHandle(frame.poolContext());
+        ahVar[0] = hArray.getType().getParamType(0).ensureTypeHandle(frame.f_context.f_container);
         ahVar[1] = hArray;
 
         return frame.call1(CREATE_LIST_SET, null, ahVar, iResult);
@@ -915,7 +915,8 @@ public class xArray
             {
             cCapacity = ahValue.length;
             }
-        return templateDelegate.createDelegate(typeElement, cCapacity, ahValue, mutability);
+        return templateDelegate.createDelegate(
+                clzArray.getContainer(), typeElement, cCapacity, ahValue, mutability);
         }
 
     public static class ArrayHandle

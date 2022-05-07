@@ -72,7 +72,7 @@ public class xOSFile
         getCanonicalType().invalidateTypeInfo();
 
         ClassTemplate   templateFile = f_container.getTemplate("fs.File");
-        TypeComposition clzOSFile    = ensureClass(templateFile.getCanonicalType());
+        TypeComposition clzOSFile    = ensureClass(f_container, templateFile.getCanonicalType());
 
         s_clzOSFileStruct = clzOSFile.ensureAccess(Constants.Access.STRUCT);
         s_constructorFile = getStructure().findConstructor();

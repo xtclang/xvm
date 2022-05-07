@@ -281,10 +281,11 @@ public class xRTComponentTemplate
         TypeComposition clz = MULTI_METHOD_TEMPLATE_COMP;
         if (clz == null)
             {
-            ConstantPool pool = INSTANCE.pool();
+            Container    container = INSTANCE.f_container;
+            ConstantPool pool      = container.getConstantPool();
             ClassTemplate templateRT   = INSTANCE.f_container.getTemplate("_native.reflect.RTMultiMethodTemplate");
             TypeConstant  typeTemplate = pool.ensureEcstasyTypeConstant("reflect.MultiMethodTemplate");
-            MULTI_METHOD_TEMPLATE_COMP = clz = templateRT.ensureClass(typeTemplate);
+            MULTI_METHOD_TEMPLATE_COMP = clz = templateRT.ensureClass(container, typeTemplate);
             assert clz != null;
             }
         return clz;

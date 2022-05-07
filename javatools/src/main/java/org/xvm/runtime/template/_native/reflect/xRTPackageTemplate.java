@@ -33,7 +33,7 @@ public class xRTPackageTemplate
         {
         if (this == INSTANCE)
             {
-            PACKAGE_TEMPLATE_COMPOSITION = ensureClass(pool(), getCanonicalType(),
+            PACKAGE_TEMPLATE_COMPOSITION = ensureClass(f_container, getCanonicalType(),
                 pool().ensureEcstasyTypeConstant("reflect.PackageTemplate"));
             }
         }

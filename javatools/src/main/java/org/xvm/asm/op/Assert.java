@@ -126,7 +126,7 @@ public class Assert
         MethodStructure  construct   = (MethodStructure) idConstruct.getComponent();
         ClassConstant    constClz    = (ClassConstant) idConstruct.getNamespace();
         ClassTemplate    template    = frame.ensureTemplate(constClz);
-        ClassComposition clzTarget   = template.getCanonicalClass(frame.poolContext());
+        ClassComposition clzTarget   = template.getCanonicalClass(frame.f_context.f_container);
         StringHandle     hMsg        = xString.makeHandle(sMsg);
         ObjectHandle[]   ahArg       = new ObjectHandle[construct.getMaxVars()];
 

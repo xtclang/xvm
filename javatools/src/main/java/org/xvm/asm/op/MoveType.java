@@ -80,6 +80,6 @@ public class MoveType
             frame.introduceResolvedVar(nTo,
                 pool.ensureParameterizedTypeConstant(pool.typeType(), type));
             }
-        return frame.assignValue(nTo, type.ensureTypeHandle(pool));
+        return frame.assignValue(nTo, type.ensureTypeHandle(frame.f_context.f_container));
         }
     }

@@ -160,37 +160,39 @@ public class xConst
         Literal:
         if (constant instanceof LiteralConstant)
             {
+            ConstantPool    pool      = frame.poolContext();
+            Container       container = frame.f_context.f_container;
             TypeComposition clz;
-            MethodStructure  constructor;
+            MethodStructure constructor;
             switch (constant.getFormat())
                 {
                 case DateTime:
-                    clz         = ensureClass(pool().typeDateTime());
+                    clz         = ensureClass(container, pool.typeDateTime());
                     constructor = DATETIME_CONSTRUCT;
                     break;
 
                 case Date:
-                    clz         = ensureClass(pool().typeDate());
+                    clz         = ensureClass(container, pool.typeDate());
                     constructor = DATE_CONSTRUCT;
                     break;
 
                 case Time:
-                    clz         = ensureClass(pool().typeTime());
+                    clz         = ensureClass(container, pool.typeTime());
                     constructor = TIME_CONSTRUCT;
                     break;
 
                 case Duration:
-                    clz         = ensureClass(pool().typeDuration());
+                    clz         = ensureClass(container, pool.typeDuration());
                     constructor = DURATION_CONSTRUCT;
                     break;
 
                 case Version:
-                    clz         = ensureClass(pool().typeVersion());
+                    clz         = ensureClass(container, pool.typeVersion());
                     constructor = VERSION_CONSTRUCT;
                     break;
 
                 case Path:
-                    clz         = ensureClass(pool().typePath());
+                    clz         = ensureClass(container, pool.typePath());
                     constructor = PATH_CONSTRUCT;
                     break;
 
@@ -211,7 +213,8 @@ public class xConst
             ObjectHandle[] ahArg = new ObjectHandle[NIBBLE_CONSTRUCT.getMaxVars()];
             ahArg[0] = xArray.makeBitArrayHandle(abValue, 4, Mutability.Constant);
 
-            return construct(frame, NIBBLE_CONSTRUCT, ensureClass(constant.getType()),
+            return construct(frame, NIBBLE_CONSTRUCT,
+                    ensureClass(frame.f_context.f_container, constant.getType()),
                     null, ahArg, Op.A_STACK);
             }
 
@@ -248,7 +251,7 @@ public class xConst
                             }
 
                         String sField = listFieldNames.get(i);
-                        if (hField.getType().isA(pool().typeFreezable()))
+                        if (hField.getType().isA(frame.poolContext().typeFreezable()))
                             {
                             if (listFreezable == null)
                                 {
@@ -347,14 +350,15 @@ public class xConst
             {
             case "compare":
                 {
-                xConst template = this;
+                Container container = frame.f_context.f_container;
+                xConst    template  = this;
                 if (template == INSTANCE)
                     {
                     TypeHandle hType = (TypeHandle) ahArg[0];
-                    template = (xConst) frame.f_context.f_container.getTemplate(hType.getDataType());
+                    template = (xConst) container.getTemplate(hType.getDataType());
                     }
                 return template.callCompare(frame,
-                        getCanonicalClass(frame.poolContext()), ahArg[1], ahArg[2], iReturn);
+                        getCanonicalClass(container), ahArg[1], ahArg[2], iReturn);
                 }
 
             case "estimateStringLength":
@@ -362,26 +366,27 @@ public class xConst
 
             case "equals":
                 {
-                xConst template = this;
+                Container container = frame.f_context.f_container;
+                xConst    template  = this;
                 if (template == INSTANCE)
                     {
                     TypeHandle hType = (TypeHandle) ahArg[0];
-                    template = (xConst) frame.f_context.f_container.getTemplate(hType.getDataType());
+                    template = (xConst) container.getTemplate(hType.getDataType());
                     }
                 return template.callEquals(frame,
-                        getCanonicalClass(frame.poolContext()), ahArg[1], ahArg[2], iReturn);
+                        getCanonicalClass(container), ahArg[1], ahArg[2], iReturn);
                 }
 
             case "hashCode":
                 {
-                xConst template = this;
+                Container container = frame.f_context.f_container;
+                xConst    template  = this;
                 if (template == INSTANCE)
                     {
                     TypeHandle hType = (TypeHandle) ahArg[0];
-                    template = (xConst) frame.f_context.f_container.getTemplate(hType.getDataType());
+                    template = (xConst) container.getTemplate(hType.getDataType());
                     }
-                return template.buildHashCode(frame,
-                        getCanonicalClass(frame.poolContext()), ahArg[1], iReturn);
+                return template.buildHashCode(frame, getCanonicalClass(container), ahArg[1], iReturn);
                 }
             }
 
@@ -698,7 +703,8 @@ public class xConst
 
         protected int doNext(Frame frameCaller)
             {
-            ConstantPool     pool = frameCaller.poolContext();
+            Container        container = frameCaller.f_context.f_container;
+            ConstantPool     pool      = frameCaller.poolContext();
             ClassComposition clz  = (ClassComposition) hConst.getComposition();
             while (iterFields.hasNext())
                 {
@@ -731,12 +737,12 @@ public class xConst
                 if (methodHash.isNative())
                     {
                     iResult = hProp.getTemplate().invokeNativeN(frameCaller, methodHash, null,
-                        new ObjectHandle[] {typeProp.ensureTypeHandle(pool), hProp}, Op.A_STACK);
+                        new ObjectHandle[] {typeProp.ensureTypeHandle(container), hProp}, Op.A_STACK);
                     }
                 else
                     {
                     ObjectHandle[] ahVar = new ObjectHandle[methodHash.getMaxVars()];
-                    ahVar[0] = typeProp.ensureTypeHandle(pool);
+                    ahVar[0] = typeProp.ensureTypeHandle(container);
                     ahVar[1] = hProp;
                     iResult = frameCaller.call1(methodHash, null, ahVar, Op.A_STACK);
                     }

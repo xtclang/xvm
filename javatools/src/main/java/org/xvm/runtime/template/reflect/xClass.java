@@ -83,13 +83,13 @@ public class xClass
         }
 
     @Override
-    public TypeComposition ensureClass(TypeConstant typeActual)
+    public TypeComposition ensureClass(Container container, TypeConstant typeActual)
         {
         return typeActual.equals(getCanonicalType())
             ? getCanonicalClass()
             : isCanonicalStructure(typeActual)
-                ? getCanonicalClass(pool()).ensureCanonicalizedComposition(typeActual)
-                : super.ensureClass(typeActual);
+                ? getCanonicalClass(container).ensureCanonicalizedComposition(typeActual)
+                : super.ensureClass(container, typeActual);
         }
 
     @Override
@@ -110,7 +110,7 @@ public class xClass
                 default        -> this;
                 };
 
-            TypeComposition clz = template.ensureClass(typeClz);
+            TypeComposition clz = template.ensureClass(frame.f_context.f_container, typeClz);
 
             // skip the natural constructor; it's a "make believe" code anyway
             return template.construct(frame, null, clz, null, Utils.OBJECTS_NONE, Op.A_STACK);
@@ -389,7 +389,7 @@ public class xClass
                     for (int i = 0; i < cParams; ++i)
                         {
                         ahNames[i] = xString.makeHandle("ElementTypes[" + i + "]");
-                        ahTypes[i] = atypeParam[i].ensureTypeHandle(frame.poolContext());
+                        ahTypes[i] = atypeParam[i].ensureTypeHandle(frame.f_context.f_container);
                         }
                     }
                 else
@@ -399,7 +399,7 @@ public class xClass
                     for (int i = 0; i < cParams; ++i)
                         {
                         ahNames[i] = xString.makeHandle(iterNames.next().getValue());
-                        ahTypes[i] = atypeParam[i].ensureTypeHandle(frame.poolContext());
+                        ahTypes[i] = atypeParam[i].ensureTypeHandle(frame.f_context.f_container);
                         }
                     }
 

@@ -127,14 +127,14 @@ public class xRTDelegate
         }
 
     @Override
-    public TypeComposition ensureParameterizedClass(ConstantPool pool, TypeConstant... atypeParams)
+    public TypeComposition ensureParameterizedClass(Container container, TypeConstant... atypeParams)
         {
         assert atypeParams.length == 1;
 
         xRTDelegate template = DELEGATES.get(atypeParams[0]);
 
         return template == null
-                ? super.ensureParameterizedClass(pool, atypeParams)
+                ? super.ensureParameterizedClass(container, atypeParams)
                 : template.getCanonicalClass();
         }
 
@@ -154,11 +154,10 @@ public class xRTDelegate
      *
      * @return the delegate handle
      */
-    public DelegateHandle createDelegate(TypeConstant typeElement, int cSize,
+    public DelegateHandle createDelegate(Container container, TypeConstant typeElement, int cSize,
                                          ObjectHandle[] ahContent, Mutability mutability)
         {
-        TypeComposition clzDelegate =
-                ensureParameterizedClass(typeElement.getConstantPool(), typeElement);
+        TypeComposition clzDelegate = ensureParameterizedClass(container, typeElement);
 
         int            cContent = ahContent.length;
         ObjectHandle[] ahValue;

@@ -101,7 +101,8 @@ public class xRTPropertyTemplate
         {
         PropertyStructure prop = (PropertyStructure) hProp.getComponent();
 
-        return frame.assignValue(iReturn, xRTTypeTemplate.makeHandle(prop.getType()));
+        return frame.assignValue(iReturn,
+                xRTTypeTemplate.makeHandle(frame.f_context.f_container, prop.getType()));
         }
 
     /**
@@ -205,7 +206,7 @@ public class xRTPropertyTemplate
             ClassTemplate templateRT   = INSTANCE;
             ConstantPool  pool         = templateRT.pool();
             TypeConstant  typeTemplate = pool.ensureEcstasyTypeConstant("reflect.PropertyTemplate");
-            PROPERTY_TEMPLATE_COMP = clz = templateRT.ensureClass(typeTemplate);
+            PROPERTY_TEMPLATE_COMP = clz = templateRT.ensureClass(templateRT.f_container, typeTemplate);
             assert clz != null;
             }
         return clz;

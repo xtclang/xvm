@@ -97,7 +97,7 @@ public class xFutureVar
         }
 
     @Override
-    public TypeComposition ensureClass(TypeConstant typeActual)
+    public TypeComposition ensureClass(Container container, TypeConstant typeActual)
         {
         if (!typeActual.isAnnotated())
             {
@@ -109,7 +109,7 @@ public class xFutureVar
             typeActual = pool.ensureFutureVar(typeActual.getParamType(0));
             }
 
-        return super.ensureClass(typeActual);
+        return super.ensureClass(container, typeActual);
         }
 
     @Override
@@ -340,8 +340,8 @@ public class xFutureVar
     protected int invokeTransform(Frame frame, FutureHandle hThis, TypeHandle hNewType,
                                   FunctionHandle hConvert, int iReturn)
         {
-        CompletableFuture<ObjectHandle> cfThis   = hThis.getFuture();
-        TypeComposition                 clzTrans = ensureComposition(hNewType.getDataType());
+        var             cfThis   = hThis.getFuture();
+        TypeComposition clzTrans = ensureComposition(frame.f_context.f_container, hNewType.getDataType());
 
         if (cfThis.isDone())
             {
@@ -467,8 +467,8 @@ public class xFutureVar
     protected int invokeTransformOrHandle(Frame frame, FutureHandle hThis, TypeHandle hNewType,
                                           FunctionHandle hConvert, int iReturn)
         {
-        CompletableFuture<ObjectHandle> cfThis   = hThis.getFuture();
-        TypeComposition                 clzTrans = ensureComposition(hNewType.getDataType());
+        var             cfThis   = hThis.getFuture();
+        TypeComposition clzTrans = ensureComposition(frame.f_context.f_container, hNewType.getDataType());
 
         if (cfThis.isDone())
             {
@@ -519,7 +519,7 @@ public class xFutureVar
         {
         CompletableFuture<ObjectHandle> cfThis = hThis.getFuture();
         CompletableFuture<ObjectHandle> cfThat = hThat.getFuture();
-        TypeComposition                 clzAnd = ensureComposition(hNewType.getDataType());
+        TypeComposition                 clzAnd = ensureComposition(frame.f_context.f_container, hNewType.getDataType());
 
         if (cfThis.isDone() && cfThat.isDone())
             {
@@ -848,9 +848,9 @@ public class xFutureVar
     /**
      * @return a TypeComposition for a FutureVar of a given referent type
      */
-    private TypeComposition ensureComposition(TypeConstant typeReferent)
+    private TypeComposition ensureComposition(Container container, TypeConstant typeReferent)
         {
-        return ensureClass(typeReferent.getConstantPool().ensureFutureVar(typeReferent));
+        return ensureClass(container, typeReferent.getConstantPool().ensureFutureVar(typeReferent));
         }
 
     /**

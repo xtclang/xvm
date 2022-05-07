@@ -134,7 +134,7 @@ public class xRef
             {
             case "actualType":
                 return actOnReferent(frame, hRef,
-                    h -> frame.assignValue(iReturn, h.getType().ensureTypeHandle(frame.poolContext())));
+                    h -> frame.assignValue(iReturn, h.getType().ensureTypeHandle(frame.f_context.f_container)));
 
             case "actualClass":
                 return actOnReferent(frame, hRef, h ->

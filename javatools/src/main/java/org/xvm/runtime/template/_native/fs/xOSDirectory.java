@@ -56,7 +56,7 @@ public class xOSDirectory
         getCanonicalType().invalidateTypeInfo();
 
         ClassTemplate   templateDir = f_container.getTemplate("fs.Directory");
-        TypeComposition clzOSDir    = ensureClass(templateDir.getCanonicalType());
+        TypeComposition clzOSDir    = ensureClass(f_container, templateDir.getCanonicalType());
 
         s_clzOSDirStruct = clzOSDir.ensureAccess(Constants.Access.STRUCT);
         s_constructorDir = getStructure().findConstructor();

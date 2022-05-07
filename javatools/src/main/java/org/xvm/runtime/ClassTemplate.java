@@ -218,7 +218,7 @@ public abstract class ClassTemplate
         ClassComposition clz = m_clazzCanonical;
         if (clz == null)
             {
-            m_clazzCanonical = clz = getCanonicalClass(f_container.getConstantPool());
+            m_clazzCanonical = clz = getCanonicalClass(f_container);
             }
         return clz;
         }
@@ -226,28 +226,28 @@ public abstract class ClassTemplate
     /**
      * Obtain the canonical ClassComposition for this template at the specified pool.
      *
-     * @param pool  the pool to place the ClassComposition at
+     * @param container  the pool to place the ClassComposition at
      */
-    public ClassComposition getCanonicalClass(ConstantPool pool)
+    public ClassComposition getCanonicalClass(Container container)
         {
         TypeConstant typeCanonical = getCanonicalType();
-        return (ClassComposition) ensureClass(pool, computeInceptionType(typeCanonical), typeCanonical);
+        return (ClassComposition) ensureClass(container, computeInceptionType(typeCanonical), typeCanonical);
         }
 
     /**
      * Produce a ClassComposition for this template using the actual types for formal parameters.
-     *
-     * @param pool        the ConstantPool to place a potentially created new type into
+     *  @param container        the ConstantPool to place a potentially created new type into
      * @param typeParams  the type parameters
      */
-    public TypeComposition ensureParameterizedClass(ConstantPool pool, TypeConstant... typeParams)
+    public TypeComposition ensureParameterizedClass(Container container, TypeConstant... typeParams)
         {
+        ConstantPool pool          = container.getConstantPool();
         TypeConstant typeInception = pool.ensureParameterizedTypeConstant(
             getInceptionClassConstant().getType(), typeParams).normalizeParameters();
 
         TypeConstant typeMask = getCanonicalType().adoptParameters(pool, typeParams);
 
-        return ensureClass(pool, typeInception, typeMask);
+        return ensureClass(container, typeInception, typeMask);
         }
 
     /**
@@ -256,9 +256,9 @@ public abstract class ClassTemplate
      * Note: the passed type should be fully resolved and normalized
      *       (all formal parameters resolved)
      */
-    public TypeComposition ensureClass(TypeConstant typeActual)
+    public TypeComposition ensureClass(Container container, TypeConstant typeActual)
         {
-        return ensureClass(typeActual.getConstantPool(), computeInceptionType(typeActual), typeActual);
+        return ensureClass(container, computeInceptionType(typeActual), typeActual);
         }
 
     /**
@@ -296,10 +296,10 @@ public abstract class ClassTemplate
      *       (all formal parameters resolved)
      * Note2: the following should always hold true: typeInception.getOpSupport() == this;
      */
-    protected TypeComposition ensureClass(ConstantPool pool,
+    public TypeComposition ensureClass(Container container,
                                           TypeConstant typeInception, TypeConstant typeMask)
         {
-        ClassComposition clz = pool.ensureClassComposition(typeInception, this);
+        ClassComposition clz = container.ensureClassComposition(typeInception, this);
 
         assert typeMask.normalizeParameters().equals(typeMask);
 
@@ -1163,7 +1163,7 @@ public abstract class ClassTemplate
             {
             TypeConstant type = typeTarget.resolveGenericType(sPropName);
 
-            return frame.assignValue(iReturn, type.ensureTypeHandle(frame.poolContext()));
+            return frame.assignValue(iReturn, type.ensureTypeHandle(frame.f_context.f_container));
             }
 
         return frame.raiseException("Unknown native property: \"" + sPropName + "\" on " + this);
@@ -1605,7 +1605,7 @@ public abstract class ClassTemplate
         if (chain != null && !chain.isNative())
             {
             ObjectHandle[] ahVars = new ObjectHandle[chain.getMaxVars()];
-            ahVars[0] = clazz.getType().ensureTypeHandle(frame.poolContext());
+            ahVars[0] = clazz.getType().ensureTypeHandle(frame.f_context.f_container);
             ahVars[1] = hValue1;
             ahVars[2] = hValue2;
             return frame.call1(chain.getTop(), null, ahVars, iReturn);
@@ -1647,7 +1647,7 @@ public abstract class ClassTemplate
         if (chain != null && !chain.isNative())
             {
             ObjectHandle[] ahVars = new ObjectHandle[chain.getMaxVars()];
-            ahVars[0] = clazz.getType().ensureTypeHandle(frame.poolContext());
+            ahVars[0] = clazz.getType().ensureTypeHandle(frame.f_context.f_container);
             ahVars[1] = hValue1;
             ahVars[2] = hValue2;
             return frame.call1(chain.getTop(), null, ahVars, iReturn);
@@ -2471,7 +2471,7 @@ public abstract class ClassTemplate
                 listFinalizable = new ArrayList<>();
                 }
 
-            FullyBoundHandle hfn = Utils.makeFinalizer(ctor, ahVar);
+            FullyBoundHandle hfn = Utils.makeFinalizer(frame, ctor, ahVar);
             if (hfn == null)
                 {
                 // in case super constructors have their own finalizers, we need a non-null anchor

@@ -432,7 +432,7 @@ public class Frame
             case Op.A_SUPER:
                 return f_hThis == null
                     ? makeDeferredException("Run-time error: no target")
-                    : xRTFunction.makeHandle(m_chain, m_nChainDepth).bindTarget(this, f_hThis);
+                    : xRTFunction.makeHandle(this, m_chain, m_nChainDepth).bindTarget(this, f_hThis);
 
             case Op.A_THIS:
                 return f_hThis == null
@@ -987,6 +987,7 @@ public class Frame
                 TypeConstant typeTuple = iReturn < 0
                         ? poolContext().typeTuple0()
                         : framePrev.getVarInfo(iReturn).getType();
+                TypeComposition clzTuple = f_context.f_container.resolveClass(typeTuple);
                 if (fDynamic)
                     {
                     if (framePrev.isDynamicVar(iReturn))
@@ -1011,7 +1012,7 @@ public class Frame
                             case Op.R_CALL:
                                 framePrev.m_frameNext.addContinuation(frameCaller ->
                                     frameCaller.assignValue(iReturn,
-                                        xTuple.makeImmutableHandle(typeTuple, frameCaller.popStack())));
+                                        xTuple.makeImmutableHandle(clzTuple, frameCaller.popStack())));
                                 if (m_continuation != null)
                                     {
                                     // transfer the continuation
@@ -1027,7 +1028,7 @@ public class Frame
                             }
                         }
                     }
-                return returnValue(iReturn, xTuple.makeImmutableHandle(typeTuple, hValue), false);
+                return returnValue(iReturn, xTuple.makeImmutableHandle(clzTuple, hValue), false);
 
             default:
                 return returnValue(f_iReturn, hValue, fDynamic);

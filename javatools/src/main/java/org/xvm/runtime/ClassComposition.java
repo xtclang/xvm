@@ -56,7 +56,7 @@ public class ClassComposition
      *  - the only modifying types that are allowed are AnnotatedTypeConstant(s) and
      *    ParameterizedTypeConstant(s)
      */
-    public ClassComposition(ClassTemplate template, TypeConstant typeInception)
+    public ClassComposition(Container container, ClassTemplate template, TypeConstant typeInception)
         {
         assert typeInception.isSingleDefiningConstant();
         assert typeInception.getAccess() == Access.PUBLIC;
@@ -64,6 +64,7 @@ public class ClassComposition
         ConstantPool  pool = typeInception.getConstantPool();
 
         f_clzInception    = this;
+        f_container       = container;
         f_template        = template;
         f_typeInception   = pool.ensureAccessTypeConstant(typeInception, Access.PRIVATE);
         f_typeStructure   = pool.ensureAccessTypeConstant(typeInception, Access.STRUCT);
@@ -83,6 +84,7 @@ public class ClassComposition
     private ClassComposition(ClassComposition clzInception, TypeConstant typeRevealed)
         {
         f_clzInception    = clzInception;
+        f_container       = clzInception.f_container;
         f_template        = clzInception.f_template;
         f_typeInception   = clzInception.f_typeInception;
         f_typeStructure   = clzInception.f_typeStructure;
@@ -130,6 +132,13 @@ public class ClassComposition
 
 
     // ----- TypeComposition interface -------------------------------------------------------------
+
+
+    @Override
+    public Container getContainer()
+        {
+        return f_container;
+        }
 
     @Override
     public OpSupport getSupport()
@@ -520,14 +529,6 @@ public class ClassComposition
     // ----- helpers -------------------------------------------------------------------------------
 
     /**
-     * @return the container for this class composition template
-     */
-    protected Container getContainer()
-        {
-        return f_template.f_container;
-        }
-
-    /**
      * @return the inception type (private access)
      */
     protected TypeConstant getInceptionType()
@@ -712,6 +713,7 @@ public class ClassComposition
         return getInceptionType().ensureTypeInfo().findProperty(idProp);
         }
 
+
     @Override
     public int hashCode()
         {
@@ -883,6 +885,8 @@ public class ClassComposition
 
 
     // ----- data fields ---------------------------------------------------------------------------
+
+    private final Container f_container;
 
     /**
      * The {@link ClassTemplate} for the defining class of the inception type. Note, that the

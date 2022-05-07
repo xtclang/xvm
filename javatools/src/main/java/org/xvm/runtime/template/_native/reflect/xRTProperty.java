@@ -192,7 +192,7 @@ public class xRTProperty
             {
             typeProp = frame.poolContext().ensureAnnotatedTypeConstant(typeProp, aAnno);
 
-            TypeComposition clzProp = INSTANCE.ensureClass(typeProp);
+            TypeComposition clzProp = INSTANCE.ensureClass(frame.f_context.f_container, typeProp);
             PropertyHandle  hStruct = new PropertyHandle(clzProp.ensureAccess(Access.STRUCT));
 
             switch (INSTANCE.proceedConstruction(
@@ -219,7 +219,7 @@ public class xRTProperty
                 }
             }
 
-        return new PropertyHandle(INSTANCE.ensureClass(typeProp));
+        return new PropertyHandle(INSTANCE.ensureClass(frame.f_context.f_container, typeProp));
         }
 
     /**

@@ -21,6 +21,7 @@ import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ModuleConstant;
@@ -249,8 +250,18 @@ public abstract class Container
             {
             if (type.isSingleDefiningConstant())
                 {
+                // make sure we don't hold on other pool's constants
+                type = (TypeConstant) getConstantPool().register(type);
+
                 IdentityConstant idClass = type.getSingleUnderlyingClass(true);
-                template = getTemplate(idClass).getTemplate(type);
+                template = getTemplate(idClass);
+
+                // native templates for parameterized classes may "promote" themselves based on the
+                // parameter type, but we can only do it within the same container
+                if (type.isShared(template.f_container.getConstantPool()))
+                    {
+                    template = template.getTemplate(type);
+                    }
                 f_mapTemplatesByType.put(type, template);
                 }
             else
@@ -349,14 +360,46 @@ public abstract class Container
             return clz.ensurePropertyComposition(typeProp.getPropertyInfo());
             }
 
-        ConstantPool pool = getConstantPool();
-        if (type.getConstantPool() != pool)
-            {
-            assert type.isShared(pool);
-            type = (TypeConstant) pool.register(type);
-            }
-        return getTemplate(type).ensureClass(type.normalizeParameters());
+        // make sure we don't hold on other pool's constants
+        type = (TypeConstant) getConstantPool().register(type);
+
+        return getTemplate(type).ensureClass(this, type.normalizeParameters());
         }
+
+    /**
+     * Produce a ClassComposition for the specified inception type.
+     *
+     * Note: the passed inception type should be normalized (all formal parameters resolved).
+     */
+    public ClassComposition ensureClassComposition(TypeConstant typeInception, ClassTemplate template)
+        {
+        ClassComposition clz = f_mapCompositions.get(typeInception);
+        if (clz == null)
+            {
+            ConstantPool pool = getConstantPool();
+
+            assert typeInception.isShared(pool);
+            assert !typeInception.isAccessSpecified();
+            assert typeInception.normalizeParameters().equals(typeInception);
+
+            typeInception = (TypeConstant) pool.register(typeInception);
+
+            clz = f_mapCompositions.computeIfAbsent(typeInception, (type) ->
+                {
+                ClassTemplate templateReal = type.isAnnotated() && type.isIntoVariableType()
+                        ? type.getTemplate(template.f_container)
+                        : template;
+
+                return new ClassComposition(this, templateReal, type);
+                });
+            }
+
+        // we need to make this call outside of the constructor due to a possible recursion
+        // (ConcurrentHashMap.computeIfAbsent doesn't allow that)
+        clz.ensureFieldLayout();
+        return clz;
+        }
+
 
     /**
      * @return a ClassTemplate for a type associated with the specified name (core classes only)
@@ -600,6 +643,14 @@ public abstract class Container
      * Set of services that were started by this container (stored as a Map with no values).
      */
     private final Map<ServiceContext, Object> f_setServices = new WeakHashMap<>();
+
+    /**
+     * A cache of "instantiate-able" ClassCompositions keyed by the "inception type".
+     *
+     * Any ClassComposition in this map is defined by a {@link ClassConstant} referring to a
+     * concrete natural class. It also keeps the secondary map of compositions for revealed types.
+     */
+    private final Map<TypeConstant, ClassComposition> f_mapCompositions = new ConcurrentHashMap<>();
 
     /**
      * A cache of ClassTemplates loaded by this Container keyed by type.

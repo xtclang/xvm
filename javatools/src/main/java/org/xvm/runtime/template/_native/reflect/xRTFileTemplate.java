@@ -49,7 +49,7 @@ public class xRTFileTemplate
     @Override
     public void initNative()
         {
-        FILE_TEMPLATE_COMPOSITION = ensureClass(pool(), getCanonicalType(),
+        FILE_TEMPLATE_COMPOSITION = ensureClass(f_container, getCanonicalType(),
             pool().ensureEcstasyTypeConstant("reflect.FileTemplate"));
 
         markNativeProperty("mainModule");

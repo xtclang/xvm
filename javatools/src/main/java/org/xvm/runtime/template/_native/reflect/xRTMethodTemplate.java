@@ -144,7 +144,7 @@ public class xRTMethodTemplate
         ObjectHandle[] ahReturn = new ObjectHandle[5];
 
         ahReturn[0] = sName == null ? xNullable.NULL : xString.makeHandle(sName);
-        ahReturn[1] = xRTTypeTemplate.makeHandle(parameter.getType());
+        ahReturn[1] = xRTTypeTemplate.makeHandle(frame.f_context.f_container, parameter.getType());
         ahReturn[2] = xBoolean.makeHandle(parameter.isTypeParameter());
         ahReturn[3] = xBoolean.makeHandle(fDefault);
         ahReturn[4] = fDefault ? frame.getConstHandle(parameter.getDefaultValue()) : xNullable.NULL;
@@ -168,7 +168,7 @@ public class xRTMethodTemplate
         ObjectHandle[] ahReturn = new ObjectHandle[3];
 
         ahReturn[0] = sName == null ? xNullable.NULL : xString.makeHandle(sName);
-        ahReturn[1] = xRTTypeTemplate.makeHandle(parameter.getType());
+        ahReturn[1] = xRTTypeTemplate.makeHandle(frame.f_context.f_container, parameter.getType());
         ahReturn[2] = xBoolean.makeHandle(parameter.isConditionalReturn());
 
         return frame.assignValues(aiReturn, ahReturn);
@@ -188,7 +188,7 @@ public class xRTMethodTemplate
             ClassTemplate templateRT   = INSTANCE;
             ConstantPool  pool         = templateRT.pool();
             TypeConstant  typeTemplate = pool.ensureEcstasyTypeConstant("reflect.MethodTemplate");
-            METHOD_TEMPLATE_COMP = clz = templateRT.ensureClass(typeTemplate);
+            METHOD_TEMPLATE_COMP = clz = templateRT.ensureClass(templateRT.f_container, typeTemplate);
             assert clz != null;
             }
         return clz;

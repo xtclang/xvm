@@ -3141,9 +3141,12 @@ public class ClassStructure
 
         // create a transient MethodStructure (without an intermediate MultiMethodStructure)
         MethodConstant idMethod = pool.ensureMethodConstant(
-                getIdentityConstant(), "default", TypeConstant.NO_TYPES, TypeConstant.NO_TYPES);
+                (IdentityConstant) pool.register(getIdentityConstant()),
+                "default", TypeConstant.NO_TYPES, TypeConstant.NO_TYPES);
 
-        MethodStructure method = new MethodStructure(this, nFlags, idMethod, null,
+        // use the module as a parent component without adding the method as a child
+        ModuleStructure module = pool.getFileStructure().getModule();
+        MethodStructure method = new MethodStructure(module, nFlags, idMethod, null,
                 Annotation.NO_ANNOTATIONS, Parameter.NO_PARAMS, Parameter.NO_PARAMS, true, false);
 
         Code code = method.createCode();
