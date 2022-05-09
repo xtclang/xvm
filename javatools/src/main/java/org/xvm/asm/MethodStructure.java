@@ -2203,8 +2203,7 @@ public class MethodStructure
          */
         public Op[] getAssembledOps()
             {
-            ensureAssembled(ConstantPool.getCurrentPool());
-            return m_aop;
+            return ensureOps();
             }
 
         /**
@@ -2221,7 +2220,7 @@ public class MethodStructure
          */
         public boolean isNoOp()
             {
-            Op[] aOp = getAssembledOps();
+            Op[] aOp = ensureOps();
             switch (aOp.length)
                 {
                 case 0:
@@ -2515,7 +2514,7 @@ public class MethodStructure
 
                 try
                     {
-                    ensureConstantRegistry(pool);
+                    ensureAssembled(pool);
                     }
                 catch (RuntimeException e)
                     {
