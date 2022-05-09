@@ -646,6 +646,12 @@ public class NativeContainer
                 : null;
         }
 
+    @Override
+    public ObjectHandle ensureConstHandle(Frame frame, Constant constValue)
+        {
+        // nothing should be running in the native container
+        throw new IllegalStateException();
+        }
 
     @Override
     public ClassTemplate getTemplate(String sName)
