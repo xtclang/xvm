@@ -102,6 +102,8 @@ public class Frame
     public static final int TYPE_FIXED      = 0x0;
     public static final int TYPE_DYNAMIC    = 0x2;
 
+    public static final int RESOLVED_TYPE   = 0x4;
+
     /**
      * Construct a frame.
      *
@@ -713,7 +715,9 @@ public class Frame
         TypeConstant typeFrom = hValueFrom.getUnsafeType();
         if (typeFrom.getPosition() != infoTo.m_nTypeId) // quick check
             {
-            // TODO: how to minimize the probability of getting here?
+            // TODO GG: how to minimize the probability of getting here with "IS_A" result?
+            //          as of 5/9/22 the stats for the test suite are:
+            //          total=2460000 hits=121233 misses=2318960 weak=5329
             TypeConstant typeTo = infoTo.getType();
 
             switch (typeFrom.calculateRelation(typeTo))
@@ -753,22 +757,15 @@ public class Frame
                             break;
 
                         default:
-                            // why did the compiler/verifier allow this?
-                            if (typeFrom.containsAutoNarrowing(true))
-                                {
-                                // TODO: how to get the narrowing context?
-                                }
-                            else
-                                {
-                                System.err.println("WARNING: suspicious assignment from: " +
-                                    typeFrom.getValueString() + " to: " + typeTo.getValueString());
-                                }
+                            System.err.println("WARNING: suspicious assignment from: " +
+                                typeFrom.getValueString() + " to: " + typeTo.getValueString());
                             break;
                         }
                     break;
                 }
             }
         }
+
 
     /**
      * Specialization of assignValue() that takes any number of return values.
@@ -1438,7 +1435,7 @@ public class Frame
         {
         f_anNextVar[m_iScope] = Math.max(f_anNextVar[m_iScope], nVar + 1);
 
-        VarInfo info = new VarInfo(type, nStyle);
+        VarInfo info = new VarInfo(type, nStyle | RESOLVED_TYPE);
         info.setName(sName);
 
         f_aInfo[nVar] = info;
@@ -1453,12 +1450,12 @@ public class Frame
      *
      * Note: this method increments up the "nextVar" index
      *
-     * @param nVar       the variable to introduce
-     * @param constType  the type constant
+     * @param nVar  the variable index
+     * @param type  the variable type
      */
-    public void introduceResolvedVar(int nVar, TypeConstant constType)
+    public void introduceResolvedVar(int nVar, TypeConstant type)
         {
-        introduceResolvedVar(nVar, constType, null, VAR_STANDARD, null);
+        introduceResolvedVar(nVar, type, null, VAR_STANDARD, null);
         }
 
     /**
@@ -1466,14 +1463,17 @@ public class Frame
      *
      * Note: this method increments the "nextVar" index.
      *
-     * @param nVar     the variable to introduce
+     * @param nVar     the variable index
      * @param nTypeId  an "absolute" (positive, local constants based) number (see Op.convertId())
+     *                 representing the type
+     * @param nNameId  a "relative" (negative) number representing the StringConstant for the name
+     *                 or zero for unnamed vars
      */
     public void introduceVar(int nVar, int nTypeId, int nNameId, int nStyle, ObjectHandle hValue)
         {
         f_anNextVar[m_iScope] = Math.max(f_anNextVar[m_iScope], nVar + 1);
 
-        f_aInfo[nVar] = new VarInfo(nTypeId, nNameId, nStyle);
+        f_aInfo[nVar] = new VarInfo((TypeConstant) localConstants()[nTypeId], nNameId, nStyle);
 
         if (hValue != null)
             {
@@ -1482,45 +1482,21 @@ public class Frame
         }
 
     /**
-     * Introduce a new standard variable for the specified type id.
-     *
-     * Note: this method increments up the "nextVar" index
-     *
-     * @param nVar     the variable to introduce
-     * @param nTypeId  an "absolute" (positive, local constants based) number (see Op.convertId())
-     */
-    public void introduceVar(int nVar, int nTypeId)
-        {
-        introduceVar(nVar, nTypeId, 0, VAR_STANDARD, null);
-        }
-
-    /**
-     * Introduce a new standard variable by copying the type from the specified argument.
+     * Introduce a new standard unnamed variable by copying the type from the specified argument.
      *
      * Note: this method increments the "nextVar" index.
      *
-     * @param nVar      the variable to introduce
+     * @param nVar      the variable index
      * @param nVarFrom  if positive, the register number; otherwise a constant id
      */
     public void introduceVarCopy(int nVar, int nVarFrom)
         {
         f_anNextVar[m_iScope] = Math.max(f_anNextVar[m_iScope], nVar + 1);
 
-        if (nVarFrom >= 0)
-            {
-            VarInfo infoFrom = getVarInfo(nVarFrom);
-
-            f_aInfo[nVar] = infoFrom.m_type == null
-                ? new VarInfo(infoFrom.m_nTypeId, 0, VAR_STANDARD)
-                : new VarInfo(infoFrom.m_type, VAR_STANDARD);
-            }
-        else
-            {
-            // "local property" or a literal constant
-            TypeConstant type = getConstant(nVarFrom).getType();
-
-            f_aInfo[nVar] = new VarInfo(type, VAR_STANDARD);
-            }
+        TypeConstant type = nVarFrom >= 0
+                ? getVarInfo(nVarFrom).getType()
+                : getConstant(nVarFrom).getType(); // "local property" or a literal constant
+        f_aInfo[nVar] = new VarInfo(type, VAR_STANDARD | RESOLVED_TYPE);
         }
 
     /**
@@ -1529,7 +1505,7 @@ public class Frame
      *
      * Note: this method increments the "nextVar" index.
      *
-     * @param nVar       the variable to introduce
+     * @param nVar       the variable index
      * @param nTargetId  if positive, the register number holding a target (handle);
      *                     otherwise a constant id pointing to local property holding the target
      * @param nPropId    the property constant id (whose type needs to be resolved in the context)
@@ -1546,7 +1522,7 @@ public class Frame
      *
      * Note: this method increments the "nextVar" index.
      *
-     * @param nVar       the variable to introduce
+     * @param nVar       the variable index
      * @param nMethodId  the method id (if negative - frame specific; otherwise - absolute)
      * @param index      the return value index (-1 for a Tuple)
      */
@@ -2299,42 +2275,42 @@ public class Frame
      */
     public class VarInfo
         {
-        private int             m_nTypeId;
         private TypeConstant    m_type;
-        private int             m_nNameId;
+        private int             m_nTypeId;
+        private int             m_nStyle;    // a combination of VAR_*, TYPE_* or RESOLVED_TYPE values
+        private final int       f_nNameId;
         private String          m_sVarName;
-        private int             m_nStyle; // one of the VAR_* values
-        private RefHandle       m_ref; // an "active" reference to this register TODO: should be a WeakRef
         private VarTypeResolver m_resolver;
         private int             m_nTargetId; // an id of the target used to resolve this VarInfo's type
+        private RefHandle       m_ref;       // an "active" reference to this register TODO GG: should be a WeakRef
 
         /**
-         * Construct an unnamed VarInfo based on the resolved type.
+         * Construct an unnamed VarInfo based on the specified type.
          */
         public VarInfo(TypeConstant type, int nStyle)
             {
+            this(type, 0, nStyle);
+            }
+
+        /**
+         * Construct a named VarInfo based on the specified type and name.
+         */
+        public VarInfo(TypeConstant type, int nNameId, int nStyle)
+            {
             m_type    = type;
             m_nTypeId = type.getPosition();
+            f_nNameId = nNameId;
             m_nStyle  = nStyle;
             }
 
         /**
-         * Construct a named VarInfo with an unresolved type.
-         */
-        public VarInfo(int nTypeId, int nNameId, int nStyle)
-            {
-            m_nTypeId = nTypeId;
-            m_nNameId = nNameId;
-            m_nStyle  = nStyle;
-            }
-
-        /**
-         * Construct an unresolved VarInfo based on a custom resolver.
+         * Construct an unresolved unnamed VarInfo based on a custom resolver.
          */
         public VarInfo(int nTargetId, int nAuxId, VarTypeResolver resolver)
             {
             m_nTargetId = nTargetId;
             m_nTypeId   = nAuxId;
+            f_nNameId   = 0;
             m_nStyle    = VAR_STANDARD;
             m_resolver  = resolver;
             }
@@ -2347,7 +2323,7 @@ public class Frame
             String sName = m_sVarName;
             if (sName == null)
                 {
-                sName = m_sVarName = m_nNameId < 0 ? getString(m_nNameId) : "";
+                sName = m_sVarName = f_nNameId < 0 ? getString(f_nNameId) : "";
                 }
             return sName;
             }
@@ -2379,14 +2355,11 @@ public class Frame
         public TypeConstant getType()
             {
             TypeConstant type = m_type;
-            if (type == null)
+            if ((m_nStyle & RESOLVED_TYPE) == 0)
                 {
-                if (m_resolver == null)
+                if (type == null)
                     {
-                    type = (TypeConstant) localConstants()[m_nTypeId];
-                    }
-                else
-                    {
+                    assert m_resolver != null;
                     type = m_resolver.resolve(Frame.this, m_nTargetId, m_nTypeId);
                     }
 
@@ -2403,8 +2376,10 @@ public class Frame
                     {
                     m_type    = type;
                     m_nTypeId = type.getPosition();
+                    m_nStyle |= RESOLVED_TYPE;
                     }
                 }
+
             return type;
             }
 
