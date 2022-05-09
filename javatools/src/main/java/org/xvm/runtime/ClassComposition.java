@@ -61,7 +61,7 @@ public class ClassComposition
         assert typeInception.isSingleDefiningConstant();
         assert typeInception.getAccess() == Access.PUBLIC;
 
-        ConstantPool  pool = typeInception.getConstantPool();
+        ConstantPool pool = container.getConstantPool();
 
         f_clzInception    = this;
         f_container       = container;
@@ -116,7 +116,7 @@ public class ClassComposition
      */
     public CanonicalizedTypeComposition ensureCanonicalizedComposition(TypeConstant typeActual)
         {
-        assert typeActual.isShared(getInceptionType().getConstantPool());
+        assert typeActual.isShared(getContainer().getConstantPool());
         return (CanonicalizedTypeComposition) f_mapCompositions.computeIfAbsent(typeActual,
                 (type) -> new CanonicalizedTypeComposition(this, type));
         }
@@ -223,7 +223,7 @@ public class ClassComposition
             typeCurrent = typeCurrent.getUnderlyingType();
             }
 
-        ConstantPool pool = typeCurrent.getConstantPool();
+        ConstantPool pool = getContainer().getConstantPool();
         TypeConstant typeTarget;
         switch (access)
             {
@@ -576,7 +576,7 @@ public class ClassComposition
             return;
             }
 
-        ConstantPool pool       = typePublic.getConstantPool();
+        ConstantPool pool       = getContainer().getConstantPool();
         TypeConstant typeStruct = pool.ensureAccessTypeConstant(typePublic, Access.STRUCT);
         TypeInfo     infoStruct = typeStruct.ensureTypeInfo();
 

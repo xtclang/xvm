@@ -618,7 +618,7 @@ public class SignatureConstant
                 }
             }
 
-        if (!containsUnresolved())
+        if (!containsUnresolved() && this.getConstantPool() == that.getConstantPool())
             {
             // while completely non-obvious at first look, caching this result has a tremendous impact
             // on the big-O, by short-circuiting a recursive comparison caused by signatures containing

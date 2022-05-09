@@ -276,18 +276,23 @@ public class ParameterizedTypeConstant
     @Override
     public TypeConstant resolveGenerics(ConstantPool pool, GenericTypeResolver resolver)
         {
-        // don't cache results from non-constant (e.g. Frame) resolvers
-        boolean fCache = resolver instanceof TypeConstant;
-        if (fCache)
+        // don't cache results for non-constant (e.g. Frame) resolvers
+        boolean fCache;
+        if (resolver instanceof TypeConstant typeResolver && pool == getConstantPool())
             {
+            fCache       = true;
+            typeResolver = typeResolver.removeAccess();
             synchronized (this)
                 {
-                resolver = ((TypeConstant) resolver).removeAccess();
-                if (resolver.equals(m_resolverPrev))
+                if (typeResolver.equals(m_typeResolverPrev))
                     {
                     return m_typeResolved;
                     }
                 }
+            }
+        else
+            {
+            fCache = false;
             }
 
         TypeConstant constOriginal = m_constType;
@@ -330,8 +335,8 @@ public class ParameterizedTypeConstant
             {
             synchronized (this)
                 {
-                m_typeResolved = typeResolved;
-                m_resolverPrev = resolver;
+                m_typeResolved     = typeResolved;
+                m_typeResolverPrev = (TypeConstant) resolver;
                 }
             }
         return typeResolved;
@@ -1085,7 +1090,7 @@ public class ParameterizedTypeConstant
     /**
      * Cached conversion target.
      */
-    private transient GenericTypeResolver m_resolverPrev;
+    private transient TypeConstant m_typeResolverPrev;
 
     /**
      * Cached conversion result.
