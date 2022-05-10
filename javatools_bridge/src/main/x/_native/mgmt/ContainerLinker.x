@@ -16,7 +16,7 @@ service ContainerLinker
     @Override FileTemplate loadFileTemplate(Byte[] bytes) {TODO("Native");}
 
     @Override
-    (TypeSystem typeSystem, Control control) loadAndLink(
+    Control loadAndLink(
             ModuleSpec        primarySpec,
             Model             model           = Secure,
             ModuleRepository? repository      = Null,
@@ -54,7 +54,7 @@ service ContainerLinker
     /**
      * Native implementation.
      */
-    (TypeSystem, Control) resolveAndLink(
+    Control resolveAndLink(
             ModuleTemplate    primaryModule,
             Model             model,
             ModuleRepository? repository,

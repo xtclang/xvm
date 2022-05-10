@@ -103,13 +103,12 @@ service Container
         {
         // load and link the modules to form a type system
         @Inject Linker linker;
-        (TypeSystem innerTypeSystem, Control control) = linker.loadAndLink(
+        Control control = linker.loadAndLink(
                 primaryModule, model, repository, injector, sharedModules, additionalModules, namedConditions);
 
         // store off the results
-        this.model           = model;
-        this.innerTypeSystem = innerTypeSystem;
-        this.control         = control;
+        this.model   = model;
+        this.control = control;
         }
 
 
@@ -119,15 +118,6 @@ service Container
      * The model that was specified to create this Container.
      */
     public/private Model model;
-
-    /**
-     * The `TypeSystem` for services running inside this `Container`.
-     *
-     * A `Container` is a service, and thus also has a [typeSystem](Service.typeSystem) property,
-     * which is the TypeSystem of the `Container` that contains this `Container`, and **not** the
-     * TypeSystem which this `Container` defines for services running inside this `Container`.
-     */
-    public/private TypeSystem innerTypeSystem;
 
     /**
      * The `Control` for services running inside this `Container`.
@@ -218,7 +208,7 @@ service Container
          *
          * @throws an Exception if an error occurs attempting to link the provided modules together
          */
-        (TypeSystem typeSystem, Control control) loadAndLink(
+        Control loadAndLink(
                 ModuleSpec        primaryModule,
                 Model             model             = Secure,
                 ModuleRepository? repository        = Null,
@@ -444,6 +434,15 @@ service Container
         Tuple invoke(String methodName, Tuple args = Tuple:(), Service? runWithin = Null);
 
         /**
+         * Get the `TypeSystem` for services running inside this container.
+         *
+         * A `Container` is a service, and thus also has a [typeSystem](Service.typeSystem) property,
+         * which is the TypeSystem of the `Container` that contains this `Container`, and **not** the
+         * TypeSystem which this `Container` defines for services running inside this `Container`.
+         */
+        TypeSystem innerTypeSystem;
+
+        /**
          * Get the main service of the container. Every container has a main service that is used
          * (among other things) to guarantee the serialization of certain operations, particularly
          * the lazy initialization of constants.
@@ -587,4 +586,3 @@ service Container
         void gc();
         }
     }
-

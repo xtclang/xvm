@@ -4,6 +4,7 @@ package org.xvm.runtime.template._native.mgmt;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
+import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ModuleConstant;
@@ -16,16 +17,16 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TypeComposition;
 
-import org.xvm.runtime.template._native.reflect.xRTFunction;
-import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
-
-import org.xvm.runtime.template._native.xRTServiceControl;
+import org.xvm.runtime.template.xNullable;
 
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
 
-import org.xvm.runtime.template.xNullable;
-
 import org.xvm.runtime.template.text.xString.StringHandle;
+
+import org.xvm.runtime.template._native.xRTServiceControl;
+
+import org.xvm.runtime.template._native.reflect.xRTFunction;
+import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 
 
 /**
@@ -60,10 +61,31 @@ public class xContainerControl
 
         m_clzControl = ensureClass(f_container, getCanonicalType(), typeMask);
 
-        markNativeMethod("invoke", null, null);
         markNativeProperty("mainService");
+        markNativeProperty("innerTypeSystem");
+
+        markNativeMethod("invoke", null, null);
 
         getCanonicalType().invalidateTypeInfo();
+        }
+
+    @Override
+    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
+        {
+        Container container = ((ControlHandle) hTarget).f_container;
+        switch (sPropName)
+            {
+            case "mainService":
+                {
+                ServiceContext ctx = container.getServiceContext();
+                return frame.assignValue(iReturn, ctx == null ? xNullable.NULL : ctx.getService());
+                }
+
+            case "innerTypeSystem":
+                return getPropertyTypeSystem(frame, container, iReturn);
+            }
+
+        return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
         }
 
     @Override
@@ -80,26 +102,10 @@ public class xContainerControl
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
         }
 
-    @Override
-    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
-        {
-        switch (sPropName)
-            {
-            case "mainService":
-                {
-                ControlHandle  hCtrl = (ControlHandle) hTarget;
-                ServiceContext ctx   = hCtrl.f_container.getServiceContext();
-                return frame.assignValue(iReturn, ctx == null ? xNullable.NULL : ctx.getService());
-                }
-            }
-
-        return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
-        }
-
     /**
-     * Method implementation: `@Op("()") ReturnTypes invoke(ParamTypes args)`
+     * Native implementation: `@Op("()") ReturnTypes invoke(ParamTypes args)`
      */
-    public int invokeInvoke(Frame frame, ControlHandle hCtrl,
+    protected int invokeInvoke(Frame frame, ControlHandle hCtrl,
                             StringHandle hName, TupleHandle hTupleArg, int iReturn)
         {
         Container container = hCtrl.f_container;
@@ -131,6 +137,28 @@ public class xContainerControl
                 };
             return hFunction.callT(frame, ctxContainer.getService(), ahArg, iReturn);
             }
+        }
+
+    /**
+     * Native implementation of "innerTypeSystem.get()"
+     */
+    protected int getPropertyTypeSystem(Frame frame, Container container, int iReturn)
+        {
+        // the "ensureTypeSystemHandle" call should be made on the new container's context
+        Op opCall = new Op()
+            {
+            public int process(Frame frame, int iPC)
+                {
+                return container.ensureTypeSystemHandle(frame, 0);
+                }
+
+            public String toString()
+                {
+                return "CreateTypeSystem";
+                }
+            };
+
+        return container.ensureServiceContext().sendOp1Request(frame, opCall, iReturn);
         }
 
 

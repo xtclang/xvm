@@ -115,8 +115,8 @@ public class xContainerLinker
         }
 
     @Override
-    public int invokeNativeNN(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                              ObjectHandle[] ahArg, int[] aiReturn)
+    public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                             ObjectHandle[] ahArg, int iReturn)
         {
         switch (method.getName())
             {
@@ -153,11 +153,11 @@ public class xContainerLinker
                 NestedContainer containerNested = new NestedContainer(
                         container, frame.f_context, moduleApp.getIdentityConstant());
 
-                return new CollectResources(containerNested, hProvider, aiReturn).doNext(frame);
+                return new CollectResources(containerNested, hProvider, iReturn).doNext(frame);
                 }
             }
 
-        return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
+        return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
         }
 
     /**
@@ -179,12 +179,12 @@ public class xContainerLinker
     public static class CollectResources
                 implements Frame.Continuation
         {
-        public CollectResources(NestedContainer container, ObjectHandle hProvider, int[] aiReturn)
+        public CollectResources(NestedContainer container, ObjectHandle hProvider, int iReturn)
             {
             this.container = container;
             this.aKeys     = container.collectInjections().toArray(InjectionKey.NO_INJECTIONS);
             this.hProvider = hProvider;
-            this.aiReturn  = aiReturn;
+            this.iReturn   = iReturn;
             }
 
         @Override
@@ -236,44 +236,14 @@ public class xContainerLinker
                     }
                 }
 
-            // the "ensureTypeSystemHandle" call should be made on the new container's context
-            Op opCall = new Op()
-                {
-                public int process(Frame frame, int iPC)
-                    {
-                    return container.ensureTypeSystemHandle(frame, 0);
-                    }
-
-                public String toString()
-                    {
-                    return "CreateTypeSystem";
-                    }
-                };
-
-            switch (container.ensureServiceContext().sendOp1Request(frameCaller, opCall, Op.A_STACK))
-                {
-                case Op.R_NEXT:
-                    return frameCaller.assignValues(aiReturn,
-                        frameCaller.popStack(), xContainerControl.INSTANCE.makeHandle(container));
-
-                case Op.R_CALL:
-                    frameCaller.m_frameNext.addContinuation(frameCaller1 ->
-                        frameCaller1.assignValues(aiReturn,
-                            frameCaller1.popStack(), xContainerControl.INSTANCE.makeHandle(container)));
-                    return Op.R_CALL;
-
-                case Op.R_EXCEPTION:
-                    return Op.R_EXCEPTION;
-
-                default:
-                    throw new IllegalStateException();
-                }
+            return frameCaller.assignValue(iReturn,
+                xContainerControl.INSTANCE.makeHandle(container));
             }
 
         private final NestedContainer container;
         private final InjectionKey[]  aKeys;
         private final ObjectHandle    hProvider;
-        private final int[] aiReturn;
+        private final int             iReturn;
 
         private int index = -1;
         }
