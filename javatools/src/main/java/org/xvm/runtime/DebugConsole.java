@@ -1614,12 +1614,12 @@ public class DebugConsole
                 sb.append("\n\n");
                 }
             sb.append("+container ")
-              .append(container.f_idModule);
+              .append(container.getModule());
 
             if (container.f_parent != null)
                 {
                 sb.append(" parent=")
-                  .append(container.f_parent.f_idModule);
+                  .append(container.f_parent.getModule());
                 }
 
             for (ServiceContext ctx : container.getServices())
