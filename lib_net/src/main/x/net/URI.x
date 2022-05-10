@@ -1,5 +1,3 @@
-import ecstasy.net.IPAddress;
-
 /**
  * A representation of a Uniform Resource Identifier (URI) reference.
  *

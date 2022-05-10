@@ -5,8 +5,11 @@ module web.xtclang.org
     {
     package collections import collections.xtclang.org;
     package json import json.xtclang.org;
+    package net  import net.xtclang.org;
 
     import ecstasy.reflect.Parameter;
+
+    import net.URI;
 
     /**
      * The `@HttpModule` annotation is used to mark a module as containing discoverable HTTP
