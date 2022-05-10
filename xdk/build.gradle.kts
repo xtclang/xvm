@@ -483,7 +483,7 @@ tasks.register("build") {
     val bridgeDest = file(bridgeLib).lastModified()
 
     if (bridgeSrc > bridgeDest) {
-        dependsOn(compileBridge)
+        dependsOn(compileBridge, compileNet, compileCrypto)
         }
 
     // compile platform.xtclang.org
