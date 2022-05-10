@@ -4,8 +4,6 @@ package org.xvm.runtime;
 import java.io.File;
 import java.io.IOException;
 
-import java.net.URL;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -104,16 +102,18 @@ public class NativeContainer
             }
 
         // "root" is a merge of "native" module into the "system"
-        FileStructure containerRoot = new FileStructure(moduleRoot);
-        containerRoot.merge(moduleTurtle, false);
-        containerRoot.merge(moduleNative, false);
+        FileStructure fileRoot = new FileStructure(moduleRoot);
+        fileRoot.merge(moduleTurtle, false);
+        fileRoot.merge(moduleNative, false);
+
+        fileRoot.linkModules(f_repository, true);
 
         // obtain the cloned modules that belong to the merged container
-        m_moduleSystem = (ModuleStructure) containerRoot.getChild(ECSTASY_MODULE);
-        m_moduleTurtle = (ModuleStructure) containerRoot.getChild(TURTLE_MODULE);
-        m_moduleNative = (ModuleStructure) containerRoot.getChild(NATIVE_MODULE);
+        m_moduleSystem = (ModuleStructure) fileRoot.getChild(ECSTASY_MODULE);
+        m_moduleTurtle = (ModuleStructure) fileRoot.getChild(TURTLE_MODULE);
+        m_moduleNative = (ModuleStructure) fileRoot.getChild(NATIVE_MODULE);
 
-        ConstantPool pool = containerRoot.getConstantPool();
+        ConstantPool pool = fileRoot.getConstantPool();
         ConstantPool.setCurrentPool(pool);
 
         if (pool.getNakedRefType() == null)
@@ -122,9 +122,7 @@ public class NativeContainer
             pool.setNakedRefType(clzNakedRef.getFormalType());
             }
 
-        Class clzObject = xObject.class;
-        URL url      = clzObject.getProtectionDomain().getCodeSource().getLocation();
-        String sRoot    = url.getFile();
+        String sRoot = xObject.class.getProtectionDomain().getCodeSource().getLocation().getFile();
         Map<String, Class> mapTemplateClasses = new HashMap<>();
         if (sRoot.endsWith(".jar"))
             {
@@ -702,14 +700,14 @@ public class NativeContainer
      */
     public FileStructure createFileStructure(ModuleStructure moduleApp)
         {
-        FileStructure structApp = new FileStructure(m_moduleSystem);
-        structApp.merge(m_moduleTurtle, false);
-        structApp.merge(m_moduleNative, false);
-        structApp.merge(moduleApp, true);
+        FileStructure fileApp = new FileStructure(m_moduleSystem);
+        fileApp.merge(m_moduleTurtle, false);
+        fileApp.merge(m_moduleNative, false);
+        fileApp.merge(moduleApp, true);
 
-        assert structApp.validateConstants();
+        assert fileApp.validateConstants();
 
-        return structApp;
+        return fileApp;
         }
 
     /**
