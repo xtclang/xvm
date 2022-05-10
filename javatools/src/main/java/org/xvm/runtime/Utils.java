@@ -693,50 +693,46 @@ public abstract class Utils
                 return continuation.proceed(frame);
                 }
 
-            IdentityConstant constValue = constSingleton.getClassConstant();
-            int              iResult;
+            Container containerThis = ctxCurr.f_container;
+            Container containerBase = containerThis.getContainer(constSingleton);
 
-            switch (constValue.getFormat())
+            int iResult;
+            if (containerBase == containerThis || !containerThis.isShared(containerBase.getModule()))
                 {
-                case Module:
-                    iResult = xModule.INSTANCE.createConstHandle(frame, constValue);
-                    break;
-
-                case Package:
-                    iResult = xPackage.INSTANCE.createConstHandle(frame, constValue);
-                    break;
-
-                case Property:
-                    iResult = callPropertyInitializer(frame, (PropertyConstant) constValue);
-                    break;
-
-                case Class:
+                iResult = constructSingletonHandle(frame, constSingleton);
+                }
+            else
+                {
+                Op opConstruct = new Op()
                     {
-                    ClassConstant idClz = (ClassConstant) constValue;
-                    ClassStructure clz  = (ClassStructure) idClz.getComponent();
-
-                    assert clz.isSingleton();
-
-                    ClassTemplate template = ctxCurr.f_container.getTemplate(idClz);
-                    if (template.getStructure().getFormat() == Format.ENUMVALUE)
+                    public int process(Frame frame, int iPC)
                         {
-                        // this can happen if the constant's handle was not initialized or
-                        // assigned on a different constant pool
-                        iResult = template.createConstHandle(frame, constSingleton);
-                        }
-                    else
-                        {
-                        // the class must have a no-params constructor to call
-                        MethodStructure constructor = clz.findConstructor(TypeConstant.NO_TYPES);
-                        iResult = template.construct(frame, constructor,
-                                template.getCanonicalClass(frame.f_context.f_container),
-                                    null, OBJECTS_NONE, Op.A_STACK);
-                        }
-                    break;
-                    }
+                        switch (constructSingletonHandle(frame, constSingleton))
+                            {
+                            case Op.R_NEXT:
+                                return frame.assignValue(0, frame.popStack());
 
-                default:
-                    throw new IllegalStateException("unexpected defining constant: " + constValue);
+                            case Op.R_CALL:
+                                Frame.Continuation stepNext = frameCaller ->
+                                    frameCaller.assignValue(0, frameCaller.popStack());
+                                frame.m_frameNext.addContinuation(stepNext);
+                                return Op.R_CALL;
+
+                            case Op.R_EXCEPTION:
+                                return Op.R_EXCEPTION;
+
+                            default:
+                                throw new IllegalStateException();
+                            }
+                        }
+
+                    public String toString()
+                        {
+                        return "ConstructSingleton: " + constSingleton.getClassConstant();
+                        }
+                    };
+
+                iResult = containerBase.getServiceContext().sendOp1Request(frame, opConstruct, Op.A_STACK);
                 }
 
             switch (iResult)
@@ -744,9 +740,6 @@ public abstract class Utils
                 case Op.R_NEXT:
                     constSingleton.setHandle(frame.popStack());
                     break; // next constant
-
-                case Op.R_EXCEPTION:
-                    return Op.R_EXCEPTION;
 
                 case Op.R_CALL:
                     frame.m_frameNext.addContinuation(frameCaller ->
@@ -756,12 +749,56 @@ public abstract class Utils
                         });
                     return Op.R_CALL;
 
+                case Op.R_EXCEPTION:
+                    return Op.R_EXCEPTION;
+
                 default:
                     throw new IllegalStateException();
                 }
             }
-
         return continuation.proceed(frame);
+        }
+
+    private static int constructSingletonHandle(Frame frame, SingletonConstant constSingleton)
+        {
+        IdentityConstant constValue = constSingleton.getClassConstant();
+
+        switch (constValue.getFormat())
+            {
+            case Module:
+                return xModule.INSTANCE.createConstHandle(frame, constValue);
+
+            case Package:
+                return xPackage.INSTANCE.createConstHandle(frame, constValue);
+
+            case Property:
+                return callPropertyInitializer(frame, (PropertyConstant) constValue);
+
+            case Class:
+                {
+                ClassConstant idClz = (ClassConstant) constValue;
+                ClassStructure clz  = (ClassStructure) idClz.getComponent();
+
+                assert clz.isSingleton();
+
+                Container     container = frame.f_context.f_container;
+                ClassTemplate template  = container.getTemplate(idClz);
+                if (template.getStructure().getFormat() == Format.ENUMVALUE)
+                    {
+                    // this can happen if the constant's handle was not initialized or
+                    // assigned on a different constant pool
+                    return template.createConstHandle(frame, constSingleton);
+                    }
+
+                // the class must have a no-params constructor to call
+                MethodStructure constructor = clz.findConstructor(TypeConstant.NO_TYPES);
+                return template.construct(frame, constructor,
+                        template.getCanonicalClass(container), null, OBJECTS_NONE, Op.A_STACK);
+                }
+
+            default:
+                throw new IllegalStateException("unexpected defining constant: " + constValue);
+            }
         }
 
     /**

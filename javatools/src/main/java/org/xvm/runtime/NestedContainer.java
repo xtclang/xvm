@@ -3,6 +3,7 @@ package org.xvm.runtime;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -36,9 +37,12 @@ public class NestedContainer
      * @param context   the parent container's context
      * @param idModule  the module id
      */
-    public NestedContainer(Container containerParent, ServiceContext context, ModuleConstant idModule)
+    public NestedContainer(Container containerParent, ServiceContext context, ModuleConstant idModule,
+                           List<ModuleConstant> listShared)
         {
         super(containerParent.f_runtime, containerParent, idModule);
+
+        f_listShared = listShared;
         }
 
 
@@ -120,8 +124,19 @@ public class NestedContainer
         return fnResource == null ? null : fnResource.apply(frame, hOpts);
         }
 
+    @Override
+    public boolean isShared(ModuleConstant idModule)
+        {
+        return super.isShared(idModule) || f_listShared.contains(idModule);
+        }
+
 
     // ----- data fields ---------------------------------------------------------------------------
+
+    /**
+     * List of shared modules.
+     */
+    private final List<ModuleConstant> f_listShared;
 
     /**
      * Map of resources that are injectable to this container, keyed by their InjectionKey.

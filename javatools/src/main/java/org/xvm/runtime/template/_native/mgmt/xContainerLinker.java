@@ -4,6 +4,8 @@ package org.xvm.runtime.template._native.mgmt;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 
+import java.util.Collections;
+
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.InjectionKey;
@@ -151,7 +153,8 @@ public class xContainerLinker
                     }
 
                 NestedContainer containerNested = new NestedContainer(
-                        container, frame.f_context, moduleApp.getIdentityConstant());
+                        container, frame.f_context, moduleApp.getIdentityConstant(),
+                        Collections.EMPTY_LIST);
 
                 return new CollectResources(containerNested, hProvider, iReturn).doNext(frame);
                 }

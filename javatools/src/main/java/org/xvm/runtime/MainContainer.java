@@ -30,6 +30,13 @@ public class MainContainer
         return f_parent.getInjectable(frame, sName, type, hOpts);
         }
 
+    @Override
+    public Container getContainer(SingletonConstant constSingle)
+        {
+        // at the moment we don't store constant handles at the native container
+        return this;
+        }
+
 
     // ----- MainContainer specific functionality --------------------------------------------------
 

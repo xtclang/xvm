@@ -26,6 +26,7 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.PropertyClassTypeConstant;
+import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.VersionConstant;
@@ -400,6 +401,16 @@ public abstract class Container
         return clz;
         }
 
+    /**
+     * @return a Container that is responsible for holding a singleton handle for the specified
+     *         constant
+     */
+    public Container getContainer(SingletonConstant constSingle)
+        {
+        return constSingle.getType().isShared(f_parent.getConstantPool())
+                ? f_parent.getContainer(constSingle)
+                : this;
+        }
 
     /**
      * @return a ClassTemplate for a type associated with the specified name (core classes only)
@@ -435,6 +446,14 @@ public abstract class Container
     public FileStructure createFileStructure(ModuleStructure moduleApp)
         {
         return getNativeContainer().createFileStructure(moduleApp);
+        }
+
+    /**
+     * @return true iff the type system of the specified module is shared with this container
+     */
+    public boolean isShared(ModuleConstant idModule)
+        {
+        return idModule.isEcstasyModule();
         }
 
 

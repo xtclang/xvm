@@ -680,24 +680,7 @@ public class NativeContainer
         return f_repository;
         }
 
-
-    // ----- helpers -------------------------------------------------------------------------------
-
-    /**
-     * Register the specified native template.
-     */
-    public void registerNativeTemplate(TypeConstant type, ClassTemplate template)
-        {
-        f_mapTemplatesByType.putIfAbsent(type, template);
-        }
-
-    /**
-     * Create a new FileStructure for the specified module built on top of the system modules.
-     *
-     * @param moduleApp  the module to build a FileStructure for
-     *
-     * @return a new FileStructure
-     */
+    @Override
     public FileStructure createFileStructure(ModuleStructure moduleApp)
         {
         FileStructure fileApp = new FileStructure(m_moduleSystem);
@@ -708,6 +691,17 @@ public class NativeContainer
         assert fileApp.validateConstants();
 
         return fileApp;
+        }
+
+
+    // ----- helpers -------------------------------------------------------------------------------
+
+    /**
+     * Register the specified native template.
+     */
+    protected void registerNativeTemplate(TypeConstant type, ClassTemplate template)
+        {
+        f_mapTemplatesByType.putIfAbsent(type, template);
         }
 
     /**
