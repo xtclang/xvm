@@ -68,7 +68,7 @@ public class xPackage
             {
             Container       container   = frame.f_context.f_container;
             TypeConstant    typePackage = idPackage.getType();
-            TypeComposition clazz       = container.getTemplate(typePackage).
+            TypeComposition clazz       = container.getTemplate(idPackage).
                                             ensureClass(container, typePackage, typePackage);
             return createPackageHandle(frame, clazz);
             }

@@ -216,7 +216,7 @@ public abstract class ObjectHandle
             return true;
             }
 
-        return isShared(container.getModule().getConstantPool(), null);
+        return isShared(container.getConstantPool(), null);
         }
 
     /**

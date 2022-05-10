@@ -78,7 +78,7 @@ public class xModule
             {
             Container       container  = frame.f_context.f_container;
             TypeConstant    typeModule = idModule.getType();
-            TypeComposition clazz      = container.getTemplate(typeModule).
+            TypeComposition clazz      = container.getTemplate(idModule).
                                             ensureClass(container, typeModule, typeModule);
             return createPackageHandle(frame, clazz);
             }
