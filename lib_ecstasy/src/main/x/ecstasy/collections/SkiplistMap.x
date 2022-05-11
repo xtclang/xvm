@@ -2029,7 +2029,7 @@ class SkiplistMap<Key extends Orderable, Value>
         void setWork(Int i, Int n)
             {
             }
-        };
+        }.makeImmutable(); // REVIEW CP: whose responsibility is to freeze static properties?
 
     /**
      * @return a read/write Work object that can be used for mutating operations on the SkiplistMap
