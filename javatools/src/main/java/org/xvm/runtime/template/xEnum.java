@@ -411,5 +411,4 @@ public class xEnum
 
     protected List<String>     m_listNames;
     protected List<EnumHandle> m_listHandles;
-    protected ClassHandle      m_hEnumeration;
     }
