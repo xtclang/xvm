@@ -6590,21 +6590,33 @@ public abstract class TypeConstant
      */
     public TypeHandle ensureTypeHandle(Container container)
         {
-        ConstantPool pool = container.getConstantPool();
-        if (isShared(pool))
+        if (isShared(container.getConstantPool()))
             {
             TypeHandle hType = m_handle;
             if (hType == null)
                 {
-                hType = m_handle = xRTType.makeHandle(container, (TypeConstant) pool.register(this), true);
+                // find the closest to the root container that shares this type and create the
+                // handle that "belongs" to it
+                while (true)
+                    {
+                    Container containerParent = container.f_parent;
+                    if (containerParent != null && isShared(containerParent.getConstantPool()))
+                        {
+                        container = containerParent;
+                        }
+                    else
+                        {
+                        break;
+                        }
+                    }
+                hType = m_handle = xRTType.makeHandle(container,
+                        (TypeConstant) container.getConstantPool().register(this), true);
                 }
             return hType;
             }
-        else
-            {
-            // don't cache a "foreign" handle
-            return xRTType.makeHandle(container, this, false);
-            }
+
+        // don't cache a "foreign" handle
+        return xRTType.makeHandle(container, this, false);
         }
 
     /**

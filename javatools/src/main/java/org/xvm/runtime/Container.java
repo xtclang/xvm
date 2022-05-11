@@ -402,13 +402,14 @@ public abstract class Container
         }
 
     /**
-     * @return a Container that is responsible for holding a singleton handle for the specified
-     *         constant
+     * @return the closest to the root container that is responsible for holding a singleton
+     *         ObjectHandle for the specified constant
      */
-    public Container getContainer(SingletonConstant constSingle)
+    public Container getOriginContainer(SingletonConstant constSingle)
         {
-        return constSingle.getType().isShared(f_parent.getConstantPool())
-                ? f_parent.getContainer(constSingle)
+        IdentityConstant idClz = constSingle.getClassConstant();
+        return isShared(idClz.getModuleConstant())
+                ? f_parent.getOriginContainer(constSingle)
                 : this;
         }
 

@@ -694,10 +694,10 @@ public abstract class Utils
                 }
 
             Container containerThis = ctxCurr.f_container;
-            Container containerBase = containerThis.getContainer(constSingleton);
+            Container containerOrig = containerThis.getOriginContainer(constSingleton);
 
             int iResult;
-            if (containerBase == containerThis || !containerThis.isShared(containerBase.getModule()))
+            if (containerOrig == containerThis)
                 {
                 iResult = constructSingletonHandle(frame, constSingleton);
                 }
@@ -732,7 +732,7 @@ public abstract class Utils
                         }
                     };
 
-                iResult = containerBase.getServiceContext().sendOp1Request(frame, opConstruct, Op.A_STACK);
+                iResult = containerOrig.getServiceContext().sendOp1Request(frame, opConstruct, Op.A_STACK);
                 }
 
             switch (iResult)

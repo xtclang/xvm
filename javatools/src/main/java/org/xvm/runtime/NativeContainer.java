@@ -34,6 +34,7 @@ import org.xvm.asm.TypedefStructure;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
@@ -649,6 +650,12 @@ public class NativeContainer
         {
         // nothing should be running in the native container
         throw new IllegalStateException();
+        }
+
+    @Override
+    public Container getOriginContainer(SingletonConstant constSingle)
+        {
+        return this;
         }
 
     @Override

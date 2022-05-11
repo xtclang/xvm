@@ -31,7 +31,7 @@ public class MainContainer
         }
 
     @Override
-    public Container getContainer(SingletonConstant constSingle)
+    public Container getOriginContainer(SingletonConstant constSingle)
         {
         // at the moment we don't store constant handles at the native container
         return this;

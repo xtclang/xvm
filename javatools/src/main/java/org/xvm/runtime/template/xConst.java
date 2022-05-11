@@ -158,10 +158,10 @@ public class xConst
             }
 
         Literal:
-        if (constant instanceof LiteralConstant)
+        if (constant instanceof LiteralConstant constLiteral)
             {
             ConstantPool    pool      = frame.poolContext();
-            Container       container = frame.f_context.f_container;
+            Container       container = f_container;
             TypeComposition clz;
             MethodStructure constructor;
             switch (constant.getFormat())
@@ -201,7 +201,7 @@ public class xConst
                 }
 
             ObjectHandle[] ahArg = new ObjectHandle[constructor.getMaxVars()];
-            ahArg[0] = xString.makeHandle(((LiteralConstant) constant).getValue());
+            ahArg[0] = xString.makeHandle(constLiteral.getValue());
 
             return construct(frame, constructor, clz, null, ahArg, Op.A_STACK);
             }
