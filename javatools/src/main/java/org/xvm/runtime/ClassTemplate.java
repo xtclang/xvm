@@ -2095,8 +2095,8 @@ public abstract class ClassTemplate
         MethodStructure method = getStructure().findMethodDeep(sName, atypeArg, atypeRet);
         if (method == null)
             {
-            System.err.println("Missing method " + f_sName + "." + sName +
-                    Arrays.toString(asParamType) + "->" + Arrays.toString(asRetType));
+            System.err.println("Missing method " + f_sName + '.' + sName + ' '
+                    + Arrays.toString(asParamType) + "->" + Arrays.toString(asRetType));
             }
         else
             {
