@@ -47,6 +47,8 @@ interface Network
     /**
      * Obtain the default [NetworkInterface].
      *
+     * REVIEW (not available in native land)
+     *
      * @return `True` iff there is a default `NetworkInterface`
      * @return (conditional) the default `NetworkInterface`
      */

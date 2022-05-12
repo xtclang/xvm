@@ -12,7 +12,7 @@ interface NetworkInterface
 
     /**
      * True if the NetworkInterface is running. In Linux/UNIX, this indicates that the interface is
-     * both `UP` and `RUNNING`. This i
+     * both `UP` and `RUNNING`.
      */
     @RO Boolean running;
 
@@ -64,7 +64,8 @@ interface NetworkInterface
      *         });
      *
      * @param remoteAddress  the [SocketAddress] to connect to
-     * @param localAddress   (optional) the local [SocketAddress] to connect from; `Null` implies "any"
+     * @param localAddress   (optional) the local [SocketAddress] to connect from; `Null` implies
+     *                       "any"
      *
      * @return `True` iff the specified address(es) could be connected
      * @return (conditional) the Socket connecting the specified address(es)
