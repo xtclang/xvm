@@ -186,14 +186,9 @@ service HostManager
             if (dependsOn != TypeSystem.MackKernel)
                 {
                 ModuleTemplate depModule = fileTemplate.getModule(dependsOn);
-
-                for (Contribution contrib : depModule.contribs)
+                if (depModule.type.isA(dbTypeTemplate))
                     {
-                    if (contrib.action == Incorporates &&
-                            contrib.ingredient.type == dbTypeTemplate)
-                        {
-                        dbNames.put(name, dependsOn);
-                        }
+                    dbNames.put(name, dependsOn);
                     }
                 }
             }
