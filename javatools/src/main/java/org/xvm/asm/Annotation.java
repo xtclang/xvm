@@ -288,16 +288,7 @@ public class Annotation
 
         assert m_constClass instanceof ClassConstant;
 
-        Constant[] aParams = m_aParams;
-        for (int i = 0, c = aParams.length; i < c; ++i)
-            {
-            Constant constOld = aParams[i];
-            Constant constNew = pool.register(constOld);
-            if (constNew != constOld)
-                {
-                aParams[i] = constNew;
-                }
-            }
+        m_aParams = registerConstants(pool, m_aParams);
         }
 
     @Override
@@ -324,8 +315,6 @@ public class Annotation
             fHalt |= log(errs, Severity.ERROR, VE_ANNOTATION_NOT_MIXIN,
                     getAnnotationClass().getValueString());
             }
-
-        // TODO validate the parameters against the mixin definition (_after_ we fix the 'TODO' problem with collecting annotation parameters)
 
         return fHalt;
         }
