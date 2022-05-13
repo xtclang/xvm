@@ -7,8 +7,8 @@
  *
  * See `BankStressTest` app.
  */
+@Database
 module Bank
-        incorporates Database
     {
     package oodb import oodb.xtclang.org;
 
