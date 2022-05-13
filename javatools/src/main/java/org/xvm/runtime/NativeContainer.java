@@ -690,13 +690,18 @@ public class NativeContainer
     @Override
     public FileStructure createFileStructure(ModuleStructure moduleApp)
         {
-        FileStructure fileApp = new FileStructure(m_moduleSystem);
+        // TODO CP/GG: that needs to be reworked (for now the order is critical)
+        ModuleRepository repo    = f_repository;
+        FileStructure    fileApp = new FileStructure(m_moduleSystem);
+
         fileApp.merge(m_moduleTurtle, false);
+        fileApp.merge(repo.loadModule("crypto.xtclang.org"), false);
+        fileApp.merge(repo.loadModule("net.xtclang.org"), false);
         fileApp.merge(m_moduleNative, false);
+
         fileApp.merge(moduleApp, true);
 
         assert fileApp.validateConstants();
-
         return fileApp;
         }
 
