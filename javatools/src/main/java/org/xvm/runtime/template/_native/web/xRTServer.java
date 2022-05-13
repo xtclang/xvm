@@ -101,10 +101,9 @@ public class xRTServer
             {
             HttpServer httpServer = HttpServer.create(new InetSocketAddress(sHost, nPort), 0);
 
-            ServiceContext context =
-                    frame.f_context.f_container.createServiceContext("HttpServer@" + sAddress);
-            ServiceHandle hService =
-                    new HttpServerHandle(getCanonicalClass(), context, httpServer);
+            Container      container = frame.f_context.f_container;
+            ServiceContext context   = container.createServiceContext("HttpServer@" + sAddress);
+            ServiceHandle  hService  = new HttpServerHandle(getCanonicalClass(container), context, httpServer);
             context.setService(hService);
             return hService;
             }
