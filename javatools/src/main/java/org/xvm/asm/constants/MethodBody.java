@@ -145,9 +145,9 @@ public class MethodBody
                 default:
                     {
                     Component component = m_id.getComponent();
-                    if (component instanceof MethodStructure)
+                    if (component instanceof MethodStructure method)
                         {
-                        return m_structMethod = (MethodStructure) component;
+                        return m_structMethod = method;
                         }
                     }
                 }
@@ -460,8 +460,8 @@ public class MethodBody
         // (it's the first of the @Op annotation parameters)
         Constant[] aconstParams = annotation.getParams();
         return aconstParams.length >= 1
-                && aconstParams[0] instanceof StringConstant
-                && ((StringConstant) aconstParams[0]).getValue().equals(sOp);
+                && aconstParams[0] instanceof StringConstant s
+                && s.getValue().equals(sOp);
         }
 
     /**
@@ -489,12 +489,11 @@ public class MethodBody
             return true;
             }
 
-        if (!(obj instanceof MethodBody))
+        if (!(obj instanceof MethodBody that))
             {
             return false;
             }
 
-        MethodBody that = (MethodBody) obj;
         return this.m_impl == that.m_impl
             && Handy.equals(this.m_id, that.m_id)
             && Handy.equals(this.m_sig, that.m_sig)
@@ -514,7 +513,7 @@ public class MethodBody
         if (m_target != null)
             {
             sb.append(", target=")
-              .append(m_target instanceof Constant ? ((Constant) m_target).getValueString() : m_target);
+              .append(m_target instanceof Constant constant ? constant.getValueString() : m_target);
             }
 
         return sb.append('}').toString();

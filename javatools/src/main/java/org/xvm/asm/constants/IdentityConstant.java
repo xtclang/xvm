@@ -311,15 +311,15 @@ public abstract class IdentityConstant
     /**
      * Determine the nesting depth of a particular nested identity.
      *
-     * @param nid  a nested identity
+     * @param oid  a nested identity
      *
      * @return the depth of the nested identity, in the same measure as {@link #getNestedDepth()}
      */
-    public int getNestedDepth(Object nid)
+    public int getNestedDepth(Object oid)
         {
-        return nid instanceof NestedIdentity
-                ? ((NestedIdentity) nid).getIdentityConstant().getNestedDepth()
-                : nid == null ? 0 : 1;
+        return oid instanceof NestedIdentity nid
+                ? nid.getIdentityConstant().getNestedDepth()
+                : oid == null ? 0 : 1;
         }
 
     /**
@@ -329,24 +329,24 @@ public abstract class IdentityConstant
      * Note: Makes some big assumptions, e.g. like that the two nids both refer to methods (since
      * depths for methods are +1 compared to properties).
      *
-     * @param nid1  the first nested identity
-     * @param nid2  the second nested identity
+     * @param oid1  the first nested identity
+     * @param oid2  the second nested identity
      *
      * @return true if the two nested identities refer to members within the same container
      */
-    public static boolean isNestedSibling(Object nid1, Object nid2)
+    public static boolean isNestedSibling(Object oid1, Object oid2)
         {
-        if (nid1 == null || nid2 == null)
+        if (oid1 == null || oid2 == null)
             {
-            return nid1 == nid2;
+            return oid1 == oid2;
             }
 
-        if (nid1 instanceof NestedIdentity)
+        if (oid1 instanceof NestedIdentity nid1)
             {
-            if (nid2 instanceof NestedIdentity)
+            if (oid2 instanceof NestedIdentity nid2)
                 {
-                IdentityConstant id1 = ((NestedIdentity) nid1).getIdentityConstant();
-                IdentityConstant id2 = ((NestedIdentity) nid2).getIdentityConstant();
+                IdentityConstant id1 = nid1.getIdentityConstant();
+                IdentityConstant id2 = nid2.getIdentityConstant();
                 return id1.getNestedDepth() == id2.getNestedDepth()
                         && Handy.equals(id1.getParentConstant().getNestedIdentity(),
                                         id2.getParentConstant().getNestedIdentity());
@@ -354,15 +354,15 @@ public abstract class IdentityConstant
             else
                 {
                 // nid1 must be at depth 1 (since nid1 is at depth 1)
-                return ((NestedIdentity) nid1).getIdentityConstant().getNestedDepth() == 1;
+                return nid1.getIdentityConstant().getNestedDepth() == 1;
                 }
             }
         else
             {
-            if (nid2 instanceof NestedIdentity)
+            if (oid2 instanceof NestedIdentity nid2)
                 {
                 // nid2 must be at depth 1 (since nid1 is at depth 1)
-                return ((NestedIdentity) nid2).getIdentityConstant().getNestedDepth() == 1;
+                return nid2.getIdentityConstant().getNestedDepth() == 1;
                 }
             else
                 {
@@ -392,30 +392,30 @@ public abstract class IdentityConstant
      * identity.
      *
      * @param pool  the ConstantPool to place a potentially created new constant into
-     * @param nid   the id
+     * @param oid   the id
      *
      * @return a resulting nested identity
      */
-    public IdentityConstant appendNestedIdentity(ConstantPool pool, Object nid)
+    public IdentityConstant appendNestedIdentity(ConstantPool pool, Object oid)
         {
-        if (nid instanceof String)
+        if (oid instanceof String s)
             {
-            return pool.ensurePropertyConstant(this, (String) nid);
+            return pool.ensurePropertyConstant(this, s);
             }
-        else if (nid instanceof SignatureConstant)
+        else if (oid instanceof SignatureConstant sig)
             {
-            return pool.ensureMethodConstant(this, (SignatureConstant) nid);
+            return pool.ensureMethodConstant(this, sig);
             }
-        else if (nid instanceof NestedIdentity)
+        else if (oid instanceof NestedIdentity nid)
             {
-            return ((NestedIdentity) nid).getIdentityConstant().ensureNestedIdentity(pool, this);
+            return nid.getIdentityConstant().ensureNestedIdentity(pool, this);
             }
-        else if (nid == null)
+        else if (oid == null)
             {
             return this;
             }
 
-        throw new IllegalArgumentException("illegal nid: " + nid);
+        throw new IllegalArgumentException("illegal nid: " + oid);
         }
 
     protected IdentityConstant ensureNestedIdentity(ConstantPool pool, IdentityConstant that)
@@ -518,8 +518,8 @@ public abstract class IdentityConstant
         private Object resolve(Object element)
             {
             ConstantPool pool = ConstantPool.getCurrentPool();
-            return m_resolver != null && element instanceof SignatureConstant
-                    ? ((SignatureConstant) element).resolveGenericTypes(pool, m_resolver)
+            return m_resolver != null && element instanceof SignatureConstant sig
+                    ? sig.resolveGenericTypes(pool, m_resolver)
                     : element;
             }
 
@@ -725,9 +725,9 @@ public abstract class IdentityConstant
     public TypeConstant getFormalType()
         {
         Component component = getComponent();
-        if (component instanceof ClassStructure)
+        if (component instanceof ClassStructure struct)
             {
-            return ((ClassStructure) component).getFormalType();
+            return struct.getFormalType();
             }
         throw new IllegalStateException("not a class type: " + this);
         }
