@@ -1601,7 +1601,7 @@ public abstract class ClassTemplate
 
         // if there is an "equals" function that is not native (on the Object itself),
         // we need to call it
-        CallChain chain = clazz.getMethodCallChain(frame.poolContext().sigEquals());
+        CallChain chain = clazz.getMethodCallChain(clazz.getConstantPool().sigEquals());
         if (chain != null && !chain.isNative())
             {
             ObjectHandle[] ahVars = new ObjectHandle[chain.getMaxVars()];
@@ -1643,7 +1643,7 @@ public abstract class ClassTemplate
             }
 
         // if there is a "compare" function, we need to call it
-        CallChain chain = clazz.getMethodCallChain(frame.poolContext().sigCompare());
+        CallChain chain = clazz.getMethodCallChain(clazz.getConstantPool().sigCompare());
         if (chain != null && !chain.isNative())
             {
             ObjectHandle[] ahVars = new ObjectHandle[chain.getMaxVars()];
@@ -1964,7 +1964,8 @@ public abstract class ClassTemplate
      */
     protected int callValidator(Frame frame, ObjectHandle hStruct)
         {
-        CallChain chain = hStruct.getComposition().getMethodCallChain(pool().sigValidator());
+        TypeComposition clz   = hStruct.getComposition();
+        CallChain       chain = clz.getMethodCallChain(clz.getConstantPool().sigValidator());
         if (chain.isNative())
             {
             return Op.R_NEXT;

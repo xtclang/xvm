@@ -705,7 +705,7 @@ public class xConst
             {
             Container        container = frameCaller.f_context.f_container;
             ConstantPool     pool      = frameCaller.poolContext();
-            ClassComposition clz  = (ClassComposition) hConst.getComposition();
+            ClassComposition clz       = (ClassComposition) hConst.getComposition();
             while (iterFields.hasNext())
                 {
                 String sProp = iterFields.next();

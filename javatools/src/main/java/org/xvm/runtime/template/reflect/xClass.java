@@ -66,6 +66,10 @@ public class xClass
     @Override
     public void initNative()
         {
+        ConstantPool pool = f_container.getConstantPool();
+
+        CLASS_ARRAY_TYPE = pool.ensureArrayType(pool.typeClass());
+
         markNativeProperty("abstract");
         markNativeProperty("canonicalParams");
         markNativeProperty("composition");
@@ -225,7 +229,8 @@ public class xClass
         if  (constTarget instanceof IdentityConstant id)
             {
             Component component = id.getComponent();
-            return frame.assignValue(iReturn, xRTComponentTemplate.makeComponentHandle(component));
+            return frame.assignValue(iReturn,
+                    xRTComponentTemplate.makeComponentHandle(frame.f_context.f_container, component));
             }
 
         throw new IllegalStateException();
@@ -258,7 +263,8 @@ public class xClass
 
         typePublic = typePublic.removeImmutable().removeAccess();
 
-        ClassTemplate   template  = frame.f_context.f_container.getTemplate(typePublic);
+        Container       container = frame.f_context.f_container;
+        ClassTemplate   template  = container.getTemplate(typePublic);
         TypeComposition clzPublic = typePublic.ensureClass(frame);
 
         if (hParent == ObjectHandle.DEFAULT || hParent == xNullable.NULL)
@@ -275,7 +281,7 @@ public class xClass
         switch (template.getStructure().getFormat())
             {
             case SERVICE:
-                contextAlloc = frame.f_context.f_container.createServiceContext(template.f_sName);
+                contextAlloc = container.createServiceContext(template.f_sName);
                 break;
 
             case CLASS:
@@ -373,23 +379,25 @@ public class xClass
                         : clz.getTypeParamCount();
                 }
 
+            Container container = frame.f_context.f_container;
             int iResult;
             if (cParams == 0)
                 {
                 iResult = Utils.constructListMap(frame, xRTType.ensureListMapComposition(),
-                        xString.ensureEmptyArray(), xRTType.ensureEmptyTypeArray(), Op.A_STACK);
+                        xString.ensureEmptyArray(),
+                        xRTType.ensureEmptyTypeArray(container), Op.A_STACK);
                 }
             else
                 {
-                StringHandle[] ahNames = new StringHandle[cParams];
-                TypeHandle  [] ahTypes = new TypeHandle  [cParams];
+                StringHandle[] ahNames   = new StringHandle[cParams];
+                TypeHandle  [] ahTypes   = new TypeHandle  [cParams];
                 if (fTuple)
                     {
                     TypeConstant[] atypeParam = typeClz.getParamTypesArray();
                     for (int i = 0; i < cParams; ++i)
                         {
                         ahNames[i] = xString.makeHandle("ElementTypes[" + i + "]");
-                        ahTypes[i] = atypeParam[i].ensureTypeHandle(frame.f_context.f_container);
+                        ahTypes[i] = atypeParam[i].ensureTypeHandle(container);
                         }
                     }
                 else
@@ -399,13 +407,14 @@ public class xClass
                     for (int i = 0; i < cParams; ++i)
                         {
                         ahNames[i] = xString.makeHandle(iterNames.next().getValue());
-                        ahTypes[i] = atypeParam[i].ensureTypeHandle(frame.f_context.f_container);
+                        ahTypes[i] = atypeParam[i].ensureTypeHandle(container);
                         }
                     }
 
                 iResult = Utils.constructListMap(frame, xRTType.ensureListMapComposition(),
                         xArray.makeStringArrayHandle(ahNames),
-                        xArray.createImmutableArray(xRTType.ensureTypeArrayComposition(), ahTypes),
+                        xArray.createImmutableArray(
+                            xRTType.ensureTypeArrayComposition(container), ahTypes),
                         Op.A_STACK);
                 }
             switch (iResult)
@@ -569,20 +578,13 @@ public class xClass
     /**
      * @return the TypeComposition for an Array of Class
      */
-    public static TypeComposition ensureArrayComposition()
+    public static TypeComposition ensureArrayComposition(Container container)
         {
-        TypeComposition clz = ARRAY_CLZCOMP;
-        if (clz == null)
-            {
-            ConstantPool pool = INSTANCE.pool();
-            TypeConstant typeClassArray = pool.ensureArrayType(pool.typeClass());
-            ARRAY_CLZCOMP = clz = INSTANCE.f_container.resolveClass(typeClassArray);
-            }
-        return clz;
+        return container.ensureClassComposition(CLASS_ARRAY_TYPE, xArray.INSTANCE);
         }
 
 
     // ----- constants -----------------------------------------------------------------------------
 
-    private static TypeComposition ARRAY_CLZCOMP;
+    private static TypeConstant CLASS_ARRAY_TYPE;
     }

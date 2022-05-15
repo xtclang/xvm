@@ -27,8 +27,6 @@ import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.numbers.xInt64;
 
-import org.xvm.runtime.template.reflect.xClass.ClassHandle;
-
 import org.xvm.runtime.template.text.xString;
 
 

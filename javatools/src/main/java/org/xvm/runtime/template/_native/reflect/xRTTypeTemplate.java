@@ -58,6 +58,11 @@ public class xRTTypeTemplate
     @Override
     public void initNative()
         {
+        ConstantPool pool = f_container.getConstantPool();
+
+        TEMPLATE_ARRAY_TYPE = pool.ensureArrayType(
+                                pool.ensureEcstasyTypeConstant("reflect.TypeTemplate"));
+
         markNativeProperty("desc");
         markNativeProperty("explicitlyImmutable");
         markNativeProperty("form");
@@ -316,7 +321,8 @@ public class xRTTypeTemplate
             ahTypes[i] = makeHandle(frame.f_context.f_container, aUnderlying[i]);
             }
 
-        ObjectHandle hArray = xArray.createImmutableArray(ensureArrayClassComposition(), ahTypes);
+        ObjectHandle hArray = xArray.createImmutableArray(
+                                ensureArrayClassComposition(frame.f_context.f_container), ahTypes);
         return frame.assignValue(iReturn, hArray);
         }
 
@@ -353,8 +359,8 @@ public class xRTTypeTemplate
             Constant[]       aconstArg  = annotation.getParams();
             int              cArgs      = aconstArg.length;
 
-            ComponentTemplateHandle hClass =
-                    xRTComponentTemplate.makeComponentHandle(idClass.getComponent());
+            ComponentTemplateHandle hClass = xRTComponentTemplate.makeComponentHandle(
+                    frame.f_context.f_container, idClass.getComponent());
 
             ObjectHandle[] ahArg;
             if (cArgs == 0)
@@ -419,7 +425,7 @@ public class xRTTypeTemplate
 
         IdentityConstant idClz  = type.getSingleUnderlyingClass(true);
         ClassStructure   clz    = (ClassStructure) idClz.getComponent();
-        GenericHandle    hClass = xRTComponentTemplate.makeComponentHandle(clz);
+        GenericHandle    hClass = xRTComponentTemplate.makeComponentHandle(frame.f_context.f_container, clz);
         // TODO (temporarily defer) - type could be explicitly annotated (recursively) so we would
         //      have to wrap the handle that many times in an AnnotatingComposition
         return frame.assignValues(aiReturn, xBoolean.TRUE, hClass);
@@ -507,7 +513,8 @@ public class xRTTypeTemplate
             ahTypes[i] = makeHandle(frame.f_context.f_container, atypes[i]);
             }
 
-        ObjectHandle hArray = xArray.createImmutableArray(ensureArrayClassComposition(), ahTypes);
+        ObjectHandle hArray = xArray.createImmutableArray(
+                ensureArrayClassComposition(frame.f_context.f_container), ahTypes);
         return frame.assignValues(aiReturn, xBoolean.TRUE, hArray);
         }
 
@@ -590,37 +597,14 @@ public class xRTTypeTemplate
     // ----- TypeComposition caching ---------------------------------------------------------------
 
     /**
-     * @return the TypeComposition for the TypeTemplate
-     */
-    public static TypeComposition ensureClassComposition()
-        {
-        TypeComposition clz = TYPE_TEMPLATE;
-        if (clz == null)
-            {
-            TypeConstant type = INSTANCE.pool().ensureEcstasyTypeConstant("reflect.TypeTemplate");
-            TYPE_TEMPLATE = clz = INSTANCE.f_container.resolveClass(type);
-            }
-        return clz;
-        }
-
-    /**
      * @return the TypeComposition for an Array of TypeTemplate
      */
-    public static TypeComposition ensureArrayClassComposition()
+    public static TypeComposition ensureArrayClassComposition(Container container)
         {
-        TypeComposition clz = TYPE_TEMPLATE_ARRAY;
-        if (clz == null)
-            {
-            ConstantPool pool = INSTANCE.pool();
-            TypeConstant type = pool.ensureArrayType(
-                    pool.ensureEcstasyTypeConstant("reflect.TypeTemplate"));
-            TYPE_TEMPLATE_ARRAY = clz = INSTANCE.f_container.resolveClass(type);
-            }
-        return clz;
+        return container.ensureClassComposition(TEMPLATE_ARRAY_TYPE, xArray.INSTANCE);
         }
 
-    private static TypeComposition TYPE_TEMPLATE;
-    private static TypeComposition TYPE_TEMPLATE_ARRAY;
+    private static TypeConstant TEMPLATE_ARRAY_TYPE;
 
 
     // ----- helpers -------------------------------------------------------------------------------

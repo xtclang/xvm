@@ -456,7 +456,7 @@ public class xRTMethod
     /**
      * @return the TypeComposition for an Array of Method
      */
-    public static TypeComposition ensureArrayComposition()
+    public static TypeComposition ensureArrayComposition() // TODO: use the container
         {
         TypeComposition clz = ARRAY_CLZCOMP;
         if (clz == null)
@@ -484,7 +484,7 @@ public class xRTMethod
     /**
      * @return the TypeComposition for an Array of Method
      */
-    public static TypeComposition ensureArrayComposition(Frame frame, TypeConstant typeTarget)
+    public static TypeComposition ensureArrayComposition(Frame frame, TypeConstant typeTarget) // TODO: use the container
         {
         assert typeTarget != null;
 

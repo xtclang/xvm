@@ -9,6 +9,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.PropertyClassTypeConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
@@ -284,7 +285,7 @@ public class xRTProperty
         return aAnno.length > 0
                 ? new Utils.CreateAnnos(aAnno, iReturn).doNext(frame)
                 : frame.assignValue(iReturn,
-                    Utils.makeAnnoArrayHandle(frame.poolContext(), Utils.OBJECTS_NONE));
+                    Utils.makeAnnoArrayHandle(frame.f_context.f_container, Utils.OBJECTS_NONE));
         }
 
     /**
@@ -415,30 +416,20 @@ public class xRTProperty
     // ----- Composition and handle caching --------------------------------------------------------
 
     /**
-     * @return the TypeComposition for an Array of Property
-     */
-    public static TypeComposition ensureArrayComposition()
-        {
-        TypeComposition clz = ARRAY_CLZCOMP;
-        if (clz == null)
-            {
-            ConstantPool pool = INSTANCE.pool();
-            TypeConstant typePropertyArray = pool.ensureArrayType(pool.typeProperty());
-            ARRAY_CLZCOMP = clz = INSTANCE.f_container.resolveClass(typePropertyArray);
-            }
-        return clz;
-        }
-
-    /**
      * @return the handle for an empty Array of Property
      */
-    public static ArrayHandle ensureEmptyArray()
+    public static ArrayHandle ensureEmptyArray(Container container)
         {
-        if (ARRAY_EMPTY == null)
+        ArrayHandle haEmpty = (ArrayHandle) container.f_heap.getConstHandle(EMPTY_ARRAY);
+        if (haEmpty == null)
             {
-            ARRAY_EMPTY = xArray.createImmutableArray(ensureArrayComposition(), Utils.OBJECTS_NONE);
+            ConstantPool    pool = container.getConstantPool();
+            TypeComposition clz  = container.resolveClass(pool.ensureArrayType(pool.typeProperty()));
+
+            haEmpty = xArray.createImmutableArray(clz, Utils.OBJECTS_NONE);
+            container.f_heap.saveConstHandle(EMPTY_ARRAY, haEmpty);
             }
-        return ARRAY_EMPTY;
+        return haEmpty;
         }
 
     /**
@@ -457,6 +448,5 @@ public class xRTProperty
 
     // ----- constants -----------------------------------------------------------------------------
 
-    private static TypeComposition ARRAY_CLZCOMP;
-    private static ArrayHandle     ARRAY_EMPTY;
+    private static ArrayConstant EMPTY_ARRAY;
     }

@@ -4,7 +4,6 @@ package org.xvm.runtime.template._native.fs;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Constant.Format;
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
@@ -36,11 +35,7 @@ public class xCPFile
     @Override
     public void initNative()
         {
-        ConstantPool pool = pool();
-
-        TypeComposition clz = ensureClass(f_container, getCanonicalType(), pool.typeFile());
-        s_clzStruct   = clz.ensureAccess(Access.STRUCT);
-        s_constructor = getStructure().findConstructor(pool.typeObject());
+        s_constructor = getStructure().findConstructor(f_container.getConstantPool().typeObject());
         }
 
     @Override
@@ -48,7 +43,9 @@ public class xCPFile
         {
         if (constant instanceof FSNodeConstant constFile && constant.getFormat() == Format.FSFile)
             {
-            GenericHandle  hStruct = new GenericHandle(s_clzStruct);
+            TypeComposition clz    = ensureClass(frame.f_context.f_container,
+                                        getCanonicalType(), frame.poolContext().typeFile());
+            GenericHandle  hStruct = new GenericHandle(clz.ensureAccess(Access.STRUCT));
             ObjectHandle[] ahVar   = Utils.ensureSize(Utils.OBJECTS_NONE, s_constructor.getMaxVars());
             ahVar[0] = new ConstantHandle(constFile);
 
@@ -61,9 +58,5 @@ public class xCPFile
 
     // ----- constants -----------------------------------------------------------------------------
 
-    private static TypeComposition s_clzStruct;
     private static MethodStructure s_constructor;
-
-
-    // ----- data members --------------------------------------------------------------------------
     }

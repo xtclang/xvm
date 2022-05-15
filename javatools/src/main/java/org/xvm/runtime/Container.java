@@ -283,61 +283,64 @@ public abstract class Container
             return f_parent.getTemplate(idClass);
             }
 
-        TypeConstant  typeBase = idClass.getType();
-        ClassTemplate template = f_mapTemplatesByType.get(typeBase);
-        if (template == null)
+        ClassTemplate template = f_mapTemplatesByType.get(idClass.getType());
+        if (template != null)
             {
-            template = f_mapTemplatesByType.computeIfAbsent(typeBase, type ->
-                {
-                ClassStructure structClass = (ClassStructure) idClass.getComponent();
-                if (structClass == null)
-                    {
-                    throw new RuntimeException("Missing class structure: " + idClass);
-                    }
-
-                ClassTemplate temp;
-                switch (structClass.getFormat())
-                    {
-                    case ENUMVALUE:
-                    case ENUM:
-                        temp = new xEnum(this, structClass, false);
-                        temp.initNative();
-                        break;
-
-                    case MIXIN:
-                    case CLASS:
-                    case INTERFACE:
-                        temp = structClass.isVirtualChild()
-                            ? new Child(this, structClass, false)
-                            : new xObject(this, structClass, false);
-                        break;
-
-                    case SERVICE:
-                        temp = new xService(this, structClass, false);
-                        break;
-
-                    case CONST:
-                        temp = structClass.isException()
-                                ? new xException(this, structClass, false)
-                                : new xConst(this, structClass, false);
-                        break;
-
-                    case MODULE:
-                        temp = new xModule(this, structClass, false);
-                        break;
-
-                    case PACKAGE:
-                        temp = new xPackage(this, structClass, false);
-                        break;
-
-                    default:
-                        throw new UnsupportedOperationException(
-                            "Format is not supported: " + structClass);
-                    }
-                return temp;
-                });
+            return template;
             }
-        return template;
+
+        // make sure we don't hold on other pool's constants or structures
+        idClass = (IdentityConstant) getConstantPool().register(idClass);
+
+        ClassStructure structClass = (ClassStructure) idClass.getComponent();
+        if (structClass == null)
+            {
+            throw new RuntimeException("Missing class structure: " + idClass);
+            }
+
+        return f_mapTemplatesByType.computeIfAbsent(idClass.getType(), type ->
+            {
+            ClassTemplate temp;
+            switch (structClass.getFormat())
+                {
+                case ENUMVALUE:
+                case ENUM:
+                    temp = new xEnum(this, structClass, false);
+                    temp.initNative();
+                    break;
+
+                case MIXIN:
+                case CLASS:
+                case INTERFACE:
+                    temp = structClass.isVirtualChild()
+                        ? new Child(this,   structClass, false)
+                        : new xObject(this, structClass, false);
+                    break;
+
+                case SERVICE:
+                    temp = new xService(this, structClass, false);
+                    break;
+
+                case CONST:
+                    temp = structClass.isException()
+                            ? new xException(this, structClass, false)
+                            : new xConst(this,     structClass, false);
+                    break;
+
+                case MODULE:
+                    temp = new xModule(this, structClass, false);
+                    break;
+
+                case PACKAGE:
+                    temp = new xPackage(this, structClass, false);
+                    break;
+
+                default:
+                    throw new UnsupportedOperationException(
+                        "Format is not supported: " + structClass);
+                }
+            return temp;
+            });
         }
 
     /**
@@ -510,7 +513,7 @@ public abstract class Container
             ahArg[1] = xArray.makeArrayHandle(xArray.getBooleanArrayComposition(),
                         ahShared.length, ahShared, Mutability.Constant);
 
-            TypeComposition clzArray = xModule.ensureArrayComposition();
+            TypeComposition clzArray = xModule.ensureArrayComposition(frame.f_context.f_container);
             if (fDeferred)
                 {
                 Frame.Continuation stepNext = frameCaller ->

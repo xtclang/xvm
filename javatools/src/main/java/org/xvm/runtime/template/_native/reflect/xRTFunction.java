@@ -9,6 +9,7 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.Parameter;
 
+import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -59,7 +60,12 @@ public class xRTFunction
     @Override
     public void initNative()
         {
+        ConstantPool pool = f_container.getConstantPool();
+
         TO_ARRAY = getStructure().findMethod("toArray", 1);
+
+        FUNCTION_ARRAY_TYPE  = pool.ensureArrayType(pool.typeFunction());
+        EMPTY_FUNCTION_ARRAY = pool.ensureArrayConstant(FUNCTION_ARRAY_TYPE, Constant.NO_CONSTS);
 
         markNativeMethod("bind", new String[] {"reflect.Type<Object>", "reflect.Parameter", "Object"}, null);
         markNativeMethod("bind", new String[] {"collections.Map<reflect.Parameter, Object>"}, null);
@@ -1395,35 +1401,29 @@ public class xRTFunction
     /**
      * @return the TypeComposition for an Array of Function
      */
-    public static TypeComposition ensureArrayComposition()
+    public static TypeComposition ensureArrayComposition(Container container)
         {
-        TypeComposition clz = ARRAY_CLZCOMP;
-        if (clz == null)
-            {
-            ConstantPool pool = INSTANCE.pool();
-            TypeConstant typeFunctionArray = pool.ensureArrayType(pool.typeFunction());
-            ARRAY_CLZCOMP = clz = INSTANCE.f_container.resolveClass(typeFunctionArray);
-            assert clz != null;
-            }
-        return clz;
+        return container.ensureClassComposition(FUNCTION_ARRAY_TYPE, xArray.INSTANCE);
         }
 
     /**
      * @return the handle for an empty Array of Function
      */
-    public static ArrayHandle ensureEmptyArray()
+    public static ArrayHandle ensureEmptyArray(Container container)
         {
-        if (ARRAY_EMPTY == null)
+        ArrayHandle haEmpty = (ArrayHandle) container.f_heap.getConstHandle(EMPTY_FUNCTION_ARRAY);
+        if (haEmpty == null)
             {
-            ARRAY_EMPTY = xArray.createImmutableArray(ensureArrayComposition(), Utils.OBJECTS_NONE);
+            haEmpty = xArray.createImmutableArray(ensureArrayComposition(container), Utils.OBJECTS_NONE);
+            container.f_heap.saveConstHandle(EMPTY_FUNCTION_ARRAY, haEmpty);
             }
-        return ARRAY_EMPTY;
+        return haEmpty;
         }
 
     /**
      * @return the TypeComposition for a ListMap<Parameter, Object>
      */
-    public static TypeComposition ensureListMap()
+    public static TypeComposition ensureListMap() // TODO: use the container
         {
         TypeComposition clz = LISTMAP_CLZCOMP;
         if (clz == null)
@@ -1463,9 +1463,10 @@ public class xRTFunction
 
     // ----- data members --------------------------------------------------------------------------
 
-    private static TypeComposition ARRAY_CLZCOMP;
+    private static TypeConstant  FUNCTION_ARRAY_TYPE;
+    private static ArrayConstant EMPTY_FUNCTION_ARRAY;
+
     private static TypeComposition LISTMAP_CLZCOMP;
-    private static ArrayHandle     ARRAY_EMPTY;
 
     /**
      * RTFunction:

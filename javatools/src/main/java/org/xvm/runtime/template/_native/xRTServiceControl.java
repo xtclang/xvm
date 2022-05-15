@@ -2,7 +2,6 @@ package org.xvm.runtime.template._native;
 
 
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 

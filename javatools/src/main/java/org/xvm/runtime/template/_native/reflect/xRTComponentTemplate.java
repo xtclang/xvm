@@ -205,7 +205,9 @@ public class xRTComponentTemplate
     protected int getPropertyParent(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
         {
         Component    parent  = hComponent.getComponent().getParent();
-        ObjectHandle hParent = parent == null ? xNullable.NULL : makeComponentHandle(parent);
+        ObjectHandle hParent = parent == null
+                ? xNullable.NULL
+                : makeComponentHandle(frame.f_context.f_container, parent);
         return frame.assignValue(iReturn, hParent);
         }
 
@@ -226,6 +228,7 @@ public class xRTComponentTemplate
      */
     protected int invokeChildren(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
         {
+        Container      container  = frame.f_context.f_container;
         Component      component  = hComponent.getComponent();
         int            cChildren  = component.getChildrenCount();
         ObjectHandle[] ahChildren = new ObjectHandle[cChildren];
@@ -233,13 +236,13 @@ public class xRTComponentTemplate
         int i = 0;
         for (Component child : component.children())
             {
-            ahChildren[i++] = makeComponentHandle(child);
+            ahChildren[i++] = makeComponentHandle(container, child);
             }
         assert i == cChildren;
 
         // the only possible child type of MultiMethodTemplate is the MethodTemplate
         TypeComposition clzArray = component instanceof MultiMethodStructure
-            ? xRTClassTemplate.ensureMethodTemplateArrayComposition()
+            ? xRTClassTemplate.ensureMethodTemplateArrayComposition(container)
             : ensureComponentArrayType();
 
         return frame.assignValue(iReturn, xArray.createImmutableArray(clzArray, ahChildren));
@@ -259,7 +262,7 @@ public class xRTComponentTemplate
     /**
      * @return the TypeComposition for an Array of ComponentTemplate
      */
-    public static TypeComposition ensureComponentArrayType()
+    public static TypeComposition ensureComponentArrayType() // TODO: use the container
         {
         TypeComposition clz = COMPONENT_ARRAY_COMP;
         if (clz == null)
@@ -276,7 +279,7 @@ public class xRTComponentTemplate
     /**
      * @return the TypeComposition for an RTMultiMethodTemplate
      */
-    public static TypeComposition ensureMultiMethodTemplateComposition()
+    public static TypeComposition ensureMultiMethodTemplateComposition() // TODO: use the container
         {
         TypeComposition clz = MULTI_METHOD_TEMPLATE_COMP;
         if (clz == null)
@@ -351,7 +354,7 @@ public class xRTComponentTemplate
     /**
      * Given a Component structure, create ComponentTemplateHandle for it.
      */
-    public static ComponentTemplateHandle makeComponentHandle(Component component)
+    public static ComponentTemplateHandle makeComponentHandle(Container container, Component component)
         {
         switch (component.getFormat())
             {
@@ -359,10 +362,10 @@ public class xRTComponentTemplate
                 return xRTFileTemplate.makeHandle((FileStructure) component);
 
             case MODULE:
-                return xRTModuleTemplate.makeHandle((ModuleStructure) component);
+                return xRTModuleTemplate.makeHandle(container, (ModuleStructure) component);
 
             case PACKAGE:
-                return xRTPackageTemplate.makeHandle((PackageStructure) component);
+                return xRTPackageTemplate.makeHandle(container, (PackageStructure) component);
 
             case CLASS:
             case CONST:
@@ -371,7 +374,7 @@ public class xRTComponentTemplate
             case ENUMVALUE:
             case MIXIN:
             case SERVICE:
-                return xRTClassTemplate.makeHandle((ClassStructure) component);
+                return xRTClassTemplate.makeHandle(container, (ClassStructure) component);
 
             case MULTIMETHOD:
                 return new ComponentTemplateHandle(ensureMultiMethodTemplateComposition(), component);

@@ -16,7 +16,6 @@ import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
-import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -55,11 +54,7 @@ public class xOSDirectory
 
         getCanonicalType().invalidateTypeInfo();
 
-        ClassTemplate   templateDir = f_container.getTemplate("fs.Directory");
-        TypeComposition clzOSDir    = ensureClass(f_container, templateDir.getCanonicalType());
-
-        s_clzOSDirStruct = clzOSDir.ensureAccess(Constants.Access.STRUCT);
-        s_constructorDir = getStructure().findConstructor();
+        s_constructor = getStructure().findConstructor();
         }
 
     @Override
@@ -151,18 +146,18 @@ public class xOSDirectory
      */
     public int createHandle(Frame frame, ObjectHandle hOSStore, Path path, int iReturn)
         {
-        TypeComposition clzStruct   = s_clzOSDirStruct;
-        MethodStructure constructor = s_constructorDir;
+        TypeComposition clz = ensureClass(frame.f_context.f_container,
+                                    getCanonicalType(), frame.poolContext().typeDirectory());
 
-        NodeHandle     hStruct = new NodeHandle(clzStruct, path.toAbsolutePath(), hOSStore);
-        ObjectHandle[] ahVar   = Utils.ensureSize(Utils.OBJECTS_NONE, constructor.getMaxVars());
+        NodeHandle     hStruct = new NodeHandle(clz.ensureAccess(Constants.Access.STRUCT),
+                                        path.toAbsolutePath(), hOSStore);
+        ObjectHandle[] ahVar   = Utils.ensureSize(Utils.OBJECTS_NONE, s_constructor.getMaxVars());
 
-        return proceedConstruction(frame, constructor, true, hStruct, ahVar, iReturn);
+        return proceedConstruction(frame, s_constructor, true, hStruct, ahVar, iReturn);
         }
 
 
     // ----- constants -----------------------------------------------------------------------------
 
-    private static TypeComposition s_clzOSDirStruct;
-    private static MethodStructure s_constructorDir;
+    private static MethodStructure s_constructor;
     }

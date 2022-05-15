@@ -57,13 +57,13 @@ public class xRTRandom
     @Override
     public void initNative()
         {
-        final String[] BIT       = new String[] {"numbers.Bit"};
-        final String[] BITARRAY  = new String[] {"collections.Array<numbers.Bit>"};
-        final String[] BYTE      = new String[] {"numbers.UInt8"};
-        final String[] BYTEARRAY = new String[] {"collections.Array<numbers.UInt8>"};
-        final String[] UINT      = new String[] {"numbers.UInt64"};
-        final String[] DEC       = new String[] {"numbers.Dec64"};
-        final String[] FLOAT     = new String[] {"numbers.Float64"};
+        String[] BIT       = new String[] {"numbers.Bit"};
+        String[] BITARRAY  = new String[] {"collections.Array<numbers.Bit>"};
+        String[] BYTE      = new String[] {"numbers.UInt8"};
+        String[] BYTEARRAY = new String[] {"collections.Array<numbers.UInt8>"};
+        String[] UINT      = new String[] {"numbers.UInt64"};
+        String[] DEC       = new String[] {"numbers.Dec64"};
+        String[] FLOAT     = new String[] {"numbers.Float64"};
 
         markNativeMethod("bit"  , VOID     , BIT  );
         markNativeMethod("fill" , BITARRAY , VOID );

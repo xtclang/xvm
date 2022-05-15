@@ -2,7 +2,10 @@ package org.xvm.runtime.template._native.reflect;
 
 
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.PackageStructure;
+
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
@@ -31,11 +34,9 @@ public class xRTPackageTemplate
     @Override
     public void initNative()
         {
-        if (this == INSTANCE)
-            {
-            PACKAGE_TEMPLATE_COMPOSITION = ensureClass(f_container, getCanonicalType(),
-                pool().ensureEcstasyTypeConstant("reflect.PackageTemplate"));
-            }
+        ConstantPool pool = f_container.getConstantPool();
+
+        PACKAGE_TEMPLATE_TYPE = pool.ensureEcstasyTypeConstant("reflect.PackageTemplate");
         }
 
     @Override
@@ -54,14 +55,16 @@ public class xRTPackageTemplate
      *
      * @return the resulting {@link ComponentTemplateHandle}
      */
-    public static ComponentTemplateHandle makeHandle(PackageStructure pkg)
+    public static ComponentTemplateHandle makeHandle(Container container, PackageStructure pkg)
         {
         // note: no need to initialize the struct because there are no natural fields
-        return new ComponentTemplateHandle(PACKAGE_TEMPLATE_COMPOSITION, pkg);
+        TypeComposition clz = INSTANCE.ensureClass(container,
+                                INSTANCE.getCanonicalType(), PACKAGE_TEMPLATE_TYPE);
+        return new ComponentTemplateHandle(clz, pkg);
         }
 
 
     // ----- constants -----------------------------------------------------------------------------
 
-    private static TypeComposition PACKAGE_TEMPLATE_COMPOSITION;
+    private static TypeConstant PACKAGE_TEMPLATE_TYPE;
     }

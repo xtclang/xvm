@@ -68,7 +68,7 @@ public class xRTFileTemplate
             {
             case "mainModule":
                 {
-                return frame.assignValue(iReturn, xRTModuleTemplate.makeHandle(
+                return frame.assignValue(iReturn, xRTModuleTemplate.makeHandle(frame.f_context.f_container,
                     ((FileStructure) hTemplate.getComponent()).getModule()));
                 }
 
@@ -112,7 +112,8 @@ public class xRTFileTemplate
                 return module == null
                     ? frame.raiseException(xException.illegalArgument(frame,
                             "Missing module " + hName.getStringValue()))
-                    : frame.assignValue(iReturn, xRTModuleTemplate.makeHandle(module));
+                    : frame.assignValue(iReturn,
+                            xRTModuleTemplate.makeHandle(frame.f_context.f_container, module));
                 }
 
             case "resolve":
@@ -159,7 +160,7 @@ public class xRTFileTemplate
      *
      * @return the resulting {@link ComponentTemplateHandle}
      */
-    public static ComponentTemplateHandle makeHandle(FileStructure fileStruct)
+    public static ComponentTemplateHandle makeHandle(FileStructure fileStruct) // TODO: use the container
         {
         // note: no need to initialize the struct because there are no natural fields
         return new ComponentTemplateHandle(FILE_TEMPLATE_COMPOSITION, fileStruct);

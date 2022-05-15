@@ -4,6 +4,7 @@ package org.xvm.runtime;
 import java.util.List;
 import java.util.Set;
 
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
@@ -245,4 +246,12 @@ public interface TypeComposition
      * @return an array of field value handles (excluding potentially unassigned, lazy and transient)
      */
     ObjectHandle[] getFieldValueArray(GenericHandle hValue);
+
+    /**
+     * @return the ConstantPool for the container this TypeComposition belongs to
+     */
+    default ConstantPool getConstantPool()
+        {
+        return getContainer().getConstantPool();
+        }
     }

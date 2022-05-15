@@ -32,9 +32,16 @@ import org.xvm.runtime.template.numbers.xInt64;
 public class xOSFileChannel
         extends xService
     {
+    public static xOSFileChannel INSTANCE;
+
     public xOSFileChannel(Container container, ClassStructure structure, boolean fInstance)
         {
         super(container, structure, false);
+
+        if (fInstance)
+            {
+            INSTANCE = this;
+            }
         }
 
     @Override
@@ -54,9 +61,7 @@ public class xOSFileChannel
 
         getCanonicalType().invalidateTypeInfo();
 
-        ClassTemplate templateChannel = f_container.getTemplate("fs.FileChannel");
-
-        s_clzOSFileChannel = ensureClass(f_container, templateChannel.getCanonicalType());
+        FILE_CHANNEL_TEMPLATE = f_container.getTemplate("fs.FileChannel");
         }
 
     @Override
@@ -172,15 +177,18 @@ public class xOSFileChannel
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
-    public static int createHandle(Frame frame, FileChannel channel, Path path, int iReturn)
+    public int createHandle(Frame frame, FileChannel channel, Path path, int iReturn)
         {
         if (iReturn == Op.A_IGNORE)
             {
             return Op.R_NEXT;
             }
 
-        ServiceContext context  = frame.f_context.f_container.createServiceContext(path.toString());
-        ChannelHandle  hChannel = new ChannelHandle(s_clzOSFileChannel, context, channel, path.toAbsolutePath());
+        Container      container = frame.f_context.f_container;
+        ServiceContext context   = container.createServiceContext(path.toString());
+        ChannelHandle  hChannel  = new ChannelHandle(
+                ensureClass(container, getCanonicalType(), FILE_CHANNEL_TEMPLATE.getCanonicalType()),
+                context, channel, path.toAbsolutePath());
 
         return frame.assignValue(iReturn, hChannel);
         }
@@ -213,5 +221,5 @@ public class xOSFileChannel
 
     // ----- constants -----------------------------------------------------------------------------
 
-    private static TypeComposition s_clzOSFileChannel;
+    private static ClassTemplate FILE_CHANNEL_TEMPLATE;
     }

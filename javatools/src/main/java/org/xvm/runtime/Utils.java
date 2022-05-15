@@ -69,7 +69,8 @@ public abstract class Utils
      */
     public static void initNative(NativeContainer container)
         {
-        CONTAINER                     = container;
+        ConstantPool pool = container.getConstantPool();
+
         ANNOTATION_TEMPLATE           = container.getTemplate("reflect.Annotation");
         ANNOTATION_TEMPLATE_TEMPLATE  = container.getTemplate("reflect.AnnotationTemplate");
         ARGUMENT_TEMPLATE             = container.getTemplate("reflect.Argument");
@@ -79,6 +80,8 @@ public abstract class Utils
         ARGUMENT_CONSTRUCT            = ARGUMENT_TEMPLATE.getStructure().findMethod("construct", 2);
         RT_PARAMETER_CONSTRUCT        = RT_PARAMETER_TEMPLATE.getStructure().findMethod("construct", 5);
         LIST_MAP_CONSTRUCT            = container.getClassStructure("collections.ListMap").findMethod("construct", 2);
+        ANNOTATION_ARRAY_TYPE         = pool.ensureArrayType(pool.ensureEcstasyTypeConstant("reflect.Annotation"));
+        ARGUMENT_ARRAY_TYPE           =  pool.ensureArrayType(pool.ensureEcstasyTypeConstant("reflect.Argument"));
         }
 
     /**
@@ -131,7 +134,8 @@ public abstract class Utils
      */
     public static int callToString(Frame frame, ObjectHandle hValue)
         {
-        CallChain chain = hValue.getComposition().getMethodCallChain(frame.poolContext().sigToString());
+        TypeComposition clz   = hValue.getComposition();
+        CallChain       chain = clz.getMethodCallChain(clz.getConstantPool().sigToString());
         return chain.isNative()
             ? hValue.getTemplate().buildStringValue(frame, hValue, Op.A_STACK)
             : chain.invoke(frame, hValue, OBJECTS_NONE, Op.A_STACK);
@@ -1537,7 +1541,7 @@ public abstract class Utils
                     }
                 }
             return frameCaller.assignValue(iReturn,
-                    makeAnnoArrayHandle(frameCaller.poolContext(), ahAnno));
+                    makeAnnoArrayHandle(frameCaller.f_context.f_container, ahAnno));
             }
 
         enum Stage {Mixin, ArgumentArray, Value, Argument, Annotation}
@@ -1558,31 +1562,21 @@ public abstract class Utils
     /**
      * @return a constant Annotation array handle
      */
-    public static ArrayHandle makeAnnoArrayHandle(ConstantPool pool, ObjectHandle[] ahAnno)
+    public static ArrayHandle makeAnnoArrayHandle(Container container, ObjectHandle[] ahAnno)
         {
-        if (ANNOTATION_ARRAY_CLZ == null)
-            {
-            TypeConstant typeArray = pool.ensureArrayType(
-                                        pool.ensureEcstasyTypeConstant("reflect.Annotation"));
-            ANNOTATION_ARRAY_CLZ = CONTAINER.resolveClass(typeArray);
-            }
-
-        return xArray.makeArrayHandle(ANNOTATION_ARRAY_CLZ, ahAnno.length, ahAnno, Mutability.Constant);
+        return xArray.makeArrayHandle(
+                container.ensureClassComposition(ANNOTATION_ARRAY_TYPE, xArray.INSTANCE),
+                ahAnno.length, ahAnno, Mutability.Constant);
         }
 
     /**
      * @return a constant Argument array handle
      */
-    public static ArrayHandle makeArgumentArrayHandle(ConstantPool pool, ObjectHandle[] ahArg)
+    public static ArrayHandle makeArgumentArrayHandle(Container container, ObjectHandle[] ahArg)
         {
-        if (ARGUMENT_ARRAY_CLZ == null)
-            {
-            TypeConstant typeArray = pool.ensureArrayType(
-                                        pool.ensureEcstasyTypeConstant("reflect.Argument"));
-            ARGUMENT_ARRAY_CLZ = CONTAINER.resolveClass(typeArray);
-            }
-
-        return xArray.makeArrayHandle(ARGUMENT_ARRAY_CLZ, ahArg.length, ahArg, Mutability.Constant);
+        return xArray.makeArrayHandle(
+                container.ensureClassComposition(ARGUMENT_ARRAY_TYPE, xArray.INSTANCE),
+                ahArg.length, ahArg, Mutability.Constant);
         }
 
     /**
@@ -1725,7 +1719,7 @@ public abstract class Utils
         MethodStructure constructor = ANNOTATION_CONSTRUCT;
         ObjectHandle[]  ahArg       = new ObjectHandle[constructor.getMaxVars()];
         ahArg[0] = hMixin;
-        ahArg[1] = makeArgumentArrayHandle(frame.poolContext(), ahAnnoArg);
+        ahArg[1] = makeArgumentArrayHandle(frame.f_context.f_container, ahAnnoArg);
 
         ClassTemplate template = ANNOTATION_TEMPLATE;
         return template.construct(frame, constructor,
@@ -1748,7 +1742,7 @@ public abstract class Utils
         MethodStructure constructor = ANNOTATION_TEMPLATE_CONSTRUCT;
         ObjectHandle[]  ahArg = new ObjectHandle[constructor.getMaxVars()];
         ahArg[0] = hClass;
-        ahArg[1] = makeArgumentArrayHandle(frame.poolContext(), ahAnnoArg);
+        ahArg[1] = makeArgumentArrayHandle(frame.f_context.f_container, ahAnnoArg);
 
         ClassTemplate template = ANNOTATION_TEMPLATE_TEMPLATE;
         return template.construct(frame, constructor,
@@ -1826,8 +1820,6 @@ public abstract class Utils
 
     public final static Frame.Continuation NEXT = frame -> Op.R_NEXT;
 
-    private static NativeContainer CONTAINER;
-
     // assigned by initNative()
     private static ClassTemplate   ANNOTATION_TEMPLATE;
     private static MethodStructure ANNOTATION_CONSTRUCT;
@@ -1838,8 +1830,6 @@ public abstract class Utils
     private static ClassTemplate   RT_PARAMETER_TEMPLATE;
     private static MethodStructure RT_PARAMETER_CONSTRUCT;
     private static MethodStructure LIST_MAP_CONSTRUCT;
-
-    // assigned lazily
-    private static TypeComposition ANNOTATION_ARRAY_CLZ;
-    private static TypeComposition ARGUMENT_ARRAY_CLZ;
+    private static TypeConstant    ANNOTATION_ARRAY_TYPE;
+    private static TypeConstant    ARGUMENT_ARRAY_TYPE;
     }

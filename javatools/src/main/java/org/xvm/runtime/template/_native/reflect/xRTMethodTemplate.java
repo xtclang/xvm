@@ -112,7 +112,7 @@ public class xRTMethodTemplate
         return aAnno.length > 0
                 ? new Utils.CreateAnnos(aAnno, iReturn).doNext(frame)
                 : frame.assignValue(iReturn,
-                    Utils.makeAnnoArrayHandle(frame.poolContext(), Utils.OBJECTS_NONE));
+                    Utils.makeAnnoArrayHandle(frame.f_context.f_container, Utils.OBJECTS_NONE));
         }
 
     /**
@@ -180,7 +180,7 @@ public class xRTMethodTemplate
     /**
      * @return the TypeComposition for an RTMethodTemplate
      */
-    public static TypeComposition ensureMethodTemplateComposition()
+    public static TypeComposition ensureMethodTemplateComposition() // TODO: use the container
         {
         TypeComposition clz = METHOD_TEMPLATE_COMP;
         if (clz == null)

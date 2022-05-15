@@ -19,6 +19,7 @@ import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.PackageConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -59,6 +60,14 @@ public class xPackage
     @Override
     public void initNative()
         {
+        if (this == INSTANCE)
+            {
+            ConstantPool pool = f_container.getConstantPool();
+            LIST_MAP_TYPE = pool.ensureParameterizedTypeConstant(
+                    pool.ensureEcstasyTypeConstant("collections.ListMap"),
+                    pool.typeString(), pool.typeClass());
+            LIST_MAP_TEMPLATE = f_container.getTemplate(LIST_MAP_TYPE);
+            }
         }
 
     @Override
@@ -133,9 +142,16 @@ public class xPackage
      */
     public int getPropertyClassByName(Frame frame, PackageHandle hTarget, int iReturn)
         {
-        // TODO GG: how to cache the result?
-        ClassStructure  pkg    = hTarget.getStructure();
-        TypeComposition clzMap = ensureListMapComposition();
+        ConstantPool   pool = frame.poolContext();
+        ClassStructure pkg  = hTarget.getStructure();
+
+        if (!pkg.getIdentityConstant().isShared(pool))
+            {
+            return frame.raiseException("Foreign package");
+            }
+
+        Container       container = frame.f_context.f_container;
+        TypeComposition clzMap    = ensureListMapComposition(container);
 
         Map<String, Component>  mapChildren = pkg.getChildByNameMap();
         ArrayList<StringHandle> listNames   = new ArrayList<>(mapChildren.size());
@@ -146,12 +162,12 @@ public class xPackage
             Component component = entry.getValue();
             if (component instanceof ClassStructure)
                 {
-                listNames.add(xString.makeHandle(entry.getKey()));
-                IdentityConstant id = component.getIdentityConstant();
-                ObjectHandle hClass = frame.getConstHandle(
-                        id.getConstantPool().ensureClassConstant(id.getType()));
-                fDeferred |= Op.isDeferred(hClass);
+                IdentityConstant id     = component.getIdentityConstant();
+                ObjectHandle     hClass = frame.getConstHandle(pool.ensureClassConstant(id.getType()));
+
+                listNames  .add(xString.makeHandle(entry.getKey()));
                 listClasses.add(hClass);
+                fDeferred |= Op.isDeferred(hClass);
                 }
             }
 
@@ -165,7 +181,7 @@ public class xPackage
             Frame.Continuation stepNext = frameCaller ->
                 {
                 ObjectHandle hClasses = xArray.createImmutableArray(
-                    xClass.ensureArrayComposition(), ahClasses);
+                    xClass.ensureArrayComposition(container), ahClasses);
                 return Utils.constructListMap(frame, clzMap, hNames, hClasses, iReturn);
                 };
 
@@ -173,7 +189,7 @@ public class xPackage
             }
 
         ObjectHandle hClasses = xArray.createImmutableArray(
-            xClass.ensureArrayComposition(), ahClasses);
+            xClass.ensureArrayComposition(container), ahClasses);
         return Utils.constructListMap(frame, clzMap, hNames, hClasses, iReturn);
         }
 
@@ -205,20 +221,10 @@ public class xPackage
     /**
      * @return the TypeComposition for ListMap<String, Class>
      */
-    private static TypeComposition ensureListMapComposition()
+    private static TypeComposition ensureListMapComposition(Container container)
         {
-        TypeComposition clz = LISTMAP_CLZ;
-        if (clz == null)
-            {
-            ConstantPool pool     = INSTANCE.pool();
-            TypeConstant typeList = pool.ensureEcstasyTypeConstant("collections.ListMap");
-            typeList = pool.ensureParameterizedTypeConstant(typeList, pool.typeString(), pool.typeClass());
-            LISTMAP_CLZ = clz = INSTANCE.f_container.resolveClass(typeList);
-            }
-        return clz;
+        return container.ensureClassComposition(LIST_MAP_TYPE, LIST_MAP_TEMPLATE);
         }
-
-    private static TypeComposition LISTMAP_CLZ;
 
 
     // ----- ObjectHandle --------------------------------------------------------------------------
@@ -278,4 +284,9 @@ public class xPackage
             return obj instanceof PackageHandle that && this.getId().equals(that.getId());
             }
         }
+
+    // ----- constants -----------------------------------------------------------------------------
+
+    private static TypeConstant  LIST_MAP_TYPE;
+    private static ClassTemplate LIST_MAP_TEMPLATE;
     }

@@ -120,8 +120,9 @@ public class xRTPropertyTemplate
      */
     public int getPropertyAnnotations(Frame frame, ComponentTemplateHandle hProp, int iReturn)
         {
-        PropertyStructure prop     = (PropertyStructure) hProp.getComponent();
-        TypeComposition   clzArray = xRTClassTemplate.ensureAnnotationTemplateArrayComposition();
+        Container         container = frame.f_context.f_container;
+        PropertyStructure prop      = (PropertyStructure) hProp.getComponent();
+        TypeComposition   clzArray  = xRTClassTemplate.ensureAnnotationTemplateArrayComposition(container);
 
         Annotation[] aAnnotation = prop.getPropertyAnnotations();
         int          cAnnos      = aAnnotation.length;
@@ -140,7 +141,7 @@ public class xRTPropertyTemplate
             int              cArgs     = aconstArg.length;
 
             ComponentTemplateHandle hClass =
-                    xRTComponentTemplate.makeComponentHandle(idClass.getComponent());
+                    xRTComponentTemplate.makeComponentHandle(container, idClass.getComponent());
 
             ObjectHandle[] ahArg;
             if (cArgs == 0)

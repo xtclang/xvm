@@ -168,6 +168,14 @@ public class ConstantPool
                 Object oLocator = constant.getLocator();
                 if (oLocator != null)
                     {
+                    if (oLocator instanceof Constant constLocator &&
+                            constLocator.getContaining() != this)
+                        {
+                        constLocator = constLocator.adoptedBy(this);
+                        constLocator.registerConstants(this);
+                        oLocator = constLocator;
+                        }
+
                     Constant constOld = ensureLocatorLookup(constant.getFormat()).put(oLocator, constant);
                     if (constOld != null && !constOld.equals(constant))
                         {

@@ -46,10 +46,8 @@ public class xCPFileStore
     @Override
     public void initNative()
         {
-        ConstantPool    pool = pool();
-        TypeComposition clz  = ensureClass(f_container, getCanonicalType(), pool.typeFileStore());
+        ConstantPool pool = f_container.getConstantPool();
 
-        s_clzStruct   = clz.ensureAccess(Access.STRUCT);
         s_constructor = getStructure().findConstructor(pool.typeString(), pool.typeObject());
 
         markNativeMethod("loadNode"     , null, null);
@@ -64,8 +62,11 @@ public class xCPFileStore
         {
         if (constant instanceof FileStoreConstant constStore)
             {
-            GenericHandle  hStruct = new GenericHandle(s_clzStruct);
-            ObjectHandle[] ahVar   = Utils.ensureSize(Utils.OBJECTS_NONE, s_constructor.getMaxVars());
+            TypeComposition clz = ensureClass(frame.f_context.f_container,
+                                        getCanonicalType(), frame.poolContext().typeFileStore());
+
+            GenericHandle   hStruct = new GenericHandle(clz.ensureAccess(Access.STRUCT));
+            ObjectHandle[]  ahVar   = Utils.ensureSize(Utils.OBJECTS_NONE, s_constructor.getMaxVars());
             ahVar[0] = xString.makeHandle(constStore.getPath());
             ahVar[1] = new ConstantHandle(constStore.getValue());
 
@@ -171,6 +172,5 @@ public class xCPFileStore
 
     // ----- constants -----------------------------------------------------------------------------
 
-    private static TypeComposition s_clzStruct;
     private static MethodStructure s_constructor;
     }

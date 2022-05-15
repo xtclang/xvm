@@ -16,6 +16,7 @@ import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.PropertyStructure;
 
+import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.StringConstant;
@@ -65,15 +66,25 @@ public class xRTClassTemplate
         {
         if (this == INSTANCE)
             {
-            ConstantPool   pool      = pool();
-            Container      container = f_container;
-            TypeConstant   typeMask  = pool.ensureEcstasyTypeConstant("reflect.ClassTemplate");
+            ConstantPool pool = f_container.getConstantPool();
 
-            CLASS_TEMPLATE_COMP = ensureClass(container, getCanonicalType(), typeMask);
-            CONTRIBUTION_COMP   = container.resolveClass(
-                pool.ensureEcstasyTypeConstant("reflect.ClassTemplate.Composition.Contribution"));
+            ACTION_TEMPLATE = (xEnum) f_container.getTemplate("reflect.ClassTemplate.Composition.Action");
 
-            ACTION = (xEnum) container.getTemplate("reflect.ClassTemplate.Composition.Action");
+            CLASS_TEMPLATE_TYPE       = pool.ensureEcstasyTypeConstant("reflect.ClassTemplate");
+            CLASS_TEMPLATE_ARRAY_TYPE = pool.ensureArrayType(CLASS_TEMPLATE_TYPE);
+            CONTRIBUTION_ARRAY_TYPE   = pool.ensureArrayType(pool.ensureEcstasyTypeConstant(
+                                            "reflect.ClassTemplate.Composition.Contribution"));
+            MULTI_METHOD_ARRAY_TYPE   = pool.ensureArrayType(pool.ensureEcstasyTypeConstant(
+                                            "reflect.MultiMethodTemplate"));
+            METHOD_ARRAY_TYPE         = pool.ensureArrayType(pool.ensureEcstasyTypeConstant(
+                                            "reflect.MethodTemplate"));
+            ANNOTATION_ARRAY_TYPE     = pool.ensureArrayType(pool.ensureEcstasyTypeConstant(
+                                            "reflect.AnnotationTemplate"));
+
+            EMPTY_PARAMETER_ARRAY     = pool.ensureArrayConstant(
+                                            pool.ensureArrayType(pool.ensureEcstasyTypeConstant(
+                                                "reflect.TypeParameter")),
+                                            Constant.NO_CONSTS);
 
             CREATE_CONTRIB_METHOD         = f_struct.findMethod("createContribution", 6);
             CREATE_TYPE_PARAMETERS_METHOD = f_struct.findMethod("createTypeParameters", 2);
@@ -200,7 +211,8 @@ public class xRTClassTemplate
      */
     public int getPropertyClasses(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
         {
-        ClassStructure clz = (ClassStructure) hComponent.getComponent();
+        Container      container = frame.f_context.f_container;
+        ClassStructure clz       = (ClassStructure) hComponent.getComponent();
         if (!clz.getFileStructure().isLinked())
             {
             return frame.raiseException(xException.illegalState(frame, "FileTemplate is not resolved"));
@@ -218,13 +230,13 @@ public class xRTClassTemplate
                 case ENUMVALUE:
                 case MIXIN:
                 case SERVICE:
-                    listTemplates.add(xRTClassTemplate.makeHandle((ClassStructure) child));
+                    listTemplates.add(xRTClassTemplate.makeHandle(container, (ClassStructure) child));
                     break;
                 }
             }
 
         ArrayHandle hArray = xArray.createImmutableArray(
-                ensureClassTemplateArrayComposition(),
+                ensureClassTemplateArrayComposition(container),
                 listTemplates.toArray(NO_TEMPLATES));
         return frame.assignValue(iReturn, hArray);
         }
@@ -234,7 +246,8 @@ public class xRTClassTemplate
      */
     public int getPropertyContribs(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
         {
-        ClassStructure clz = (ClassStructure) hComponent.getComponent();
+        Container      container = frame.f_context.f_container;
+        ClassStructure clz       = (ClassStructure) hComponent.getComponent();
         if (!clz.getFileStructure().isLinked())
             {
             return frame.raiseException(xException.illegalState(frame, "FileTemplate is not resolved"));
@@ -243,7 +256,6 @@ public class xRTClassTemplate
         List<Contribution>  listContrib = clz.getContributionsAsList();
         Utils.ValueSupplier supplier    = (frameCaller, index) ->
             {
-            ConstantPool pool        = frameCaller.poolContext();
             Contribution contrib     = listContrib.get(index);
             TypeConstant typeContrib = contrib.getTypeConstant();
             ObjectHandle haParams    = xNullable.NULL;
@@ -306,12 +318,12 @@ public class xRTClassTemplate
                             TypeConstant type  = entry.getValue();
 
                             ahNames[i] = xString.makeHandle(sName);
-                            ahTypes[i] = type.ensureTypeHandle(frameCaller.f_context.f_container);
+                            ahTypes[i] = type.ensureTypeHandle(container);
                             i++;
                             }
                         haNames = xArray.makeStringArrayHandle(ahNames);
                         haTypes = xArray.createImmutableArray(
-                                    xRTType.ensureTypeArrayComposition(), ahTypes);
+                                    xRTType.ensureTypeArrayComposition(container), ahTypes);
                         }
                     sAction = "Incorporates";
                     break;
@@ -321,8 +333,8 @@ public class xRTClassTemplate
                 }
 
             ObjectHandle[] ahVar = new ObjectHandle[CREATE_CONTRIB_METHOD.getMaxVars()];
-            ahVar[0] = Utils.ensureInitializedEnum(frameCaller, ACTION.getEnumByName(sAction));
-            ahVar[1] = typeContrib.ensureTypeHandle(frameCaller.f_context.f_container);
+            ahVar[0] = Utils.ensureInitializedEnum(frameCaller, ACTION_TEMPLATE.getEnumByName(sAction));
+            ahVar[1] = typeContrib.ensureTypeHandle(container);
             ahVar[2] = haParams;
             ahVar[3] = hDelegatee;
             ahVar[4] = haNames;
@@ -331,7 +343,7 @@ public class xRTClassTemplate
             return frameCaller.call1(CREATE_CONTRIB_METHOD, hComponent, ahVar, Op.A_STACK);
             };
 
-        return xArray.createAndFill(frame, ensureContribArrayComposition(),
+        return xArray.createAndFill(frame, ensureContribArrayComposition(container),
                 listContrib.size(), supplier, iReturn);
         }
 
@@ -348,19 +360,20 @@ public class xRTClassTemplate
      */
     public int getPropertyMultimethods(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
         {
-        ClassStructure clz = (ClassStructure) hComponent.getComponent();
+        Container      container = frame.f_context.f_container;
+        ClassStructure clz       = (ClassStructure) hComponent.getComponent();
 
         List<ComponentTemplateHandle> listHandles = new ArrayList<>();
         for (Component child : clz.children())
             {
             if (child instanceof MultiMethodStructure)
                 {
-                listHandles.add(makeComponentHandle(child));
+                listHandles.add(makeComponentHandle(container, child));
                 }
             }
 
         ArrayHandle hArray = xArray.createImmutableArray(
-                ensureMultiMethodTemplateArrayComposition(),
+                ensureMultiMethodTemplateArrayComposition(container),
                 listHandles.toArray(NO_TEMPLATES));
 
         return frame.assignValue(iReturn, hArray);
@@ -440,12 +453,13 @@ public class xRTClassTemplate
      */
     public int getPropertyTypeParams(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
         {
-        ClassStructure clz = (ClassStructure) hComponent.getComponent();
+        Container      container = frame.f_context.f_container;
+        ClassStructure clz       = (ClassStructure) hComponent.getComponent();
         List<Map.Entry<StringConstant, TypeConstant>> listParams = clz.getTypeParamsAsList();
 
         if (listParams.isEmpty())
             {
-            return frame.assignValue(iReturn, ensureEmptyTypeParameterArray());
+            return frame.assignValue(iReturn, ensureEmptyTypeParameterArray(container));
             }
 
         int            cParams = listParams.size();
@@ -456,13 +470,13 @@ public class xRTClassTemplate
         for (Map.Entry<StringConstant, TypeConstant> entry : listParams)
             {
             ahName[i]   = xString.makeHandle(entry.getKey().getValue());
-            ahType[i++] = xRTTypeTemplate.makeHandle(frame.f_context.f_container, entry.getValue());
+            ahType[i++] = xRTTypeTemplate.makeHandle(container, entry.getValue());
             }
 
         ObjectHandle[] ahVar = new ObjectHandle[CREATE_TYPE_PARAMETERS_METHOD.getMaxVars()];
         ahVar[0] = xArray.makeStringArrayHandle(ahName);
         ahVar[1] = xArray.createImmutableArray(
-                    xRTTypeTemplate.ensureArrayClassComposition(), ahType);
+                    xRTTypeTemplate.ensureArrayClassComposition(container), ahType);
 
         return frame.call1(CREATE_TYPE_PARAMETERS_METHOD, null, ahVar, iReturn);
         }
@@ -503,114 +517,73 @@ public class xRTClassTemplate
     /**
      * Obtain a {@link ComponentTemplateHandle} for the specified {@link ClassStructure}.
      *
-     * @param structClz  the {@link ClassStructure} to obtain a {@link ComponentTemplateHandle} for
+     * @param container  the container for the handle
+     * @param struct     the {@link ClassStructure} to obtain a {@link ComponentTemplateHandle} for
      *
      * @return the resulting {@link ComponentTemplateHandle}
      */
-    public static ComponentTemplateHandle makeHandle(ClassStructure structClz)
+    public static ComponentTemplateHandle makeHandle(Container container, ClassStructure struct)
         {
         // note: no need to initialize the struct because there are no natural fields
-        return new ComponentTemplateHandle(CLASS_TEMPLATE_COMP, structClz);
+        TypeComposition clz = INSTANCE.ensureClass(container,
+                                INSTANCE.getCanonicalType(), CLASS_TEMPLATE_TYPE);
+        return new ComponentTemplateHandle(clz, struct);
         }
 
     /**
      * @return the ClassComposition for an Array of Contributions
      */
-    public static TypeComposition ensureContribArrayComposition()
+    public static TypeComposition ensureContribArrayComposition(Container container)
         {
-        TypeComposition clz = CONTRIBUTION_ARRAY_COMP;
-        if (clz == null)
-            {
-            ConstantPool pool = INSTANCE.pool();
-            TypeConstant typeContribArray = pool.ensureArrayType(CONTRIBUTION_COMP.getType());
-            CONTRIBUTION_ARRAY_COMP = clz = INSTANCE.f_container.resolveClass(typeContribArray);
-            assert clz != null;
-            }
-        return clz;
+        return container.ensureClassComposition(CONTRIBUTION_ARRAY_TYPE, xArray.INSTANCE);
         }
 
     /**
      * @return the ClassComposition for an Array of ClassTemplates
      */
-    public static TypeComposition ensureClassTemplateArrayComposition()
+    public static TypeComposition ensureClassTemplateArrayComposition(Container container)
         {
-        TypeComposition clz = CLASS_TEMPLATE_ARRAY_COMP;
-        if (clz == null)
-            {
-            ConstantPool pool = INSTANCE.pool();
-            TypeConstant typeTemplateArray = pool.ensureArrayType(CLASS_TEMPLATE_COMP.getType());
-            CLASS_TEMPLATE_ARRAY_COMP = clz = INSTANCE.f_container.resolveClass(typeTemplateArray);
-            assert clz != null;
-            }
-        return clz;
+        return container.ensureClassComposition(CLASS_TEMPLATE_ARRAY_TYPE, xArray.INSTANCE);
         }
 
     /**
      * @return the ClassComposition for an Array of MultiMethodTemplates
      */
-    public static TypeComposition ensureMultiMethodTemplateArrayComposition()
+    public static TypeComposition ensureMultiMethodTemplateArrayComposition(Container container)
         {
-        TypeComposition clz = MULTI_METHOD_TEMPLATE_ARRAY_COMP;
-        if (clz == null)
-            {
-            ConstantPool pool = INSTANCE.pool();
-            TypeConstant typeTemplate = pool.ensureEcstasyTypeConstant("reflect.MultiMethodTemplate");
-            TypeConstant typeTemplateArray = pool.ensureArrayType(typeTemplate);
-            MULTI_METHOD_TEMPLATE_ARRAY_COMP = clz = INSTANCE.f_container.resolveClass(typeTemplateArray);
-            assert clz != null;
-            }
-        return clz;
+        return container.ensureClassComposition(MULTI_METHOD_ARRAY_TYPE, xArray.INSTANCE);
         }
 
     /**
      * @return the ClassComposition for an Array of MethodTemplates
      */
-    public static TypeComposition ensureMethodTemplateArrayComposition()
+    public static TypeComposition ensureMethodTemplateArrayComposition(Container container)
         {
-        TypeComposition clz = METHOD_TEMPLATE_ARRAY_COMP;
-        if (clz == null)
-            {
-            ConstantPool pool = INSTANCE.pool();
-            TypeConstant typeTemplate = pool.ensureEcstasyTypeConstant("reflect.MethodTemplate");
-            TypeConstant typeTemplateArray = pool.ensureArrayType(typeTemplate);
-            METHOD_TEMPLATE_ARRAY_COMP = clz = INSTANCE.f_container.resolveClass(typeTemplateArray);
-            assert clz != null;
-            }
-        return clz;
+        return container.ensureClassComposition(METHOD_ARRAY_TYPE, xArray.INSTANCE);
         }
 
     /**
      * @return the ClassComposition for an Array of AnnotationTemplates
      */
-    public static TypeComposition ensureAnnotationTemplateArrayComposition()
+    public static TypeComposition ensureAnnotationTemplateArrayComposition(Container container)
         {
-        TypeComposition clz = ANNOTATION_TEMPLATE_ARRAY_COMP;
-        if (clz == null)
-            {
-            ConstantPool pool = INSTANCE.pool();
-            TypeConstant typeTemplate = pool.ensureEcstasyTypeConstant("reflect.AnnotationTemplate");
-            TypeConstant typeTemplateArray = pool.ensureArrayType(typeTemplate);
-            ANNOTATION_TEMPLATE_ARRAY_COMP = clz = INSTANCE.f_container.resolveClass(typeTemplateArray);
-            assert clz != null;
-            }
-        return clz;
+        return container.ensureClassComposition(ANNOTATION_ARRAY_TYPE, xArray.INSTANCE);
         }
 
     /**
      * @return the handle for an empty Array of TypeParameters
      */
-    public static ObjectHandle ensureEmptyTypeParameterArray()
+    public ArrayHandle ensureEmptyTypeParameterArray(Container container)
         {
-        if (TYPE_PARAMETER_ARRAY_EMPTY == null)
+        ArrayHandle haEmpty = (ArrayHandle) container.f_heap.getConstHandle(EMPTY_PARAMETER_ARRAY);
+        if (haEmpty == null)
             {
-            ConstantPool pool = INSTANCE.pool();
-            TypeConstant typeTypeParamArray = pool.ensureArrayType(
-                                                pool.ensureEcstasyTypeConstant("reflect.TypeParameter"));
-            TypeComposition clz = INSTANCE.f_container.resolveClass(typeTypeParamArray);
-
-            TYPE_PARAMETER_ARRAY_EMPTY = xArray.createImmutableArray(clz, Utils.OBJECTS_NONE);
+            haEmpty = xArray.createImmutableArray(
+                        container.ensureClassComposition(EMPTY_PARAMETER_ARRAY.getType(), xArray.INSTANCE),
+                        Utils.OBJECTS_NONE);
+            container.f_heap.saveConstHandle(EMPTY_PARAMETER_ARRAY, haEmpty);
             }
-        return TYPE_PARAMETER_ARRAY_EMPTY;
+        return haEmpty;
         }
 
 
@@ -618,17 +591,16 @@ public class xRTClassTemplate
 
     public static ComponentTemplateHandle[] NO_TEMPLATES = new ComponentTemplateHandle[0];
 
-    private static TypeComposition CLASS_TEMPLATE_COMP;
-    private static TypeComposition CLASS_TEMPLATE_ARRAY_COMP;
-    private static TypeComposition MULTI_METHOD_TEMPLATE_ARRAY_COMP;
-    private static TypeComposition METHOD_TEMPLATE_ARRAY_COMP;
-    private static TypeComposition ANNOTATION_TEMPLATE_ARRAY_COMP;
-    private static TypeComposition CONTRIBUTION_COMP;
-    private static TypeComposition CONTRIBUTION_ARRAY_COMP;
+    private static TypeConstant CLASS_TEMPLATE_TYPE;
+    private static TypeConstant CLASS_TEMPLATE_ARRAY_TYPE;
+    private static TypeConstant MULTI_METHOD_ARRAY_TYPE;
+    private static TypeConstant METHOD_ARRAY_TYPE;
+    private static TypeConstant ANNOTATION_ARRAY_TYPE;
+    private static TypeConstant CONTRIBUTION_ARRAY_TYPE;
 
-    private static ArrayHandle     TYPE_PARAMETER_ARRAY_EMPTY;
+    private static ArrayConstant EMPTY_PARAMETER_ARRAY;
 
-    public static xEnum           ACTION;
+    public static xEnum           ACTION_TEMPLATE;
     public static MethodStructure CREATE_CONTRIB_METHOD;
     public static MethodStructure CREATE_TYPE_PARAMETERS_METHOD;
     }

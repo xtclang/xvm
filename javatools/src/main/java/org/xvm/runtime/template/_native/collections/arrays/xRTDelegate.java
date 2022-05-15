@@ -81,43 +81,46 @@ public class xRTDelegate
     @Override
     public void initNative()
         {
-        // register native delegations
-        ConstantPool                   pool         = pool();
-        Map<TypeConstant, xRTDelegate> mapDelegates = new HashMap<>();
+        if (this == INSTANCE)
+            {
+            // register native delegations
+            ConstantPool                   pool         = pool();
+            Map<TypeConstant, xRTDelegate> mapDelegates = new HashMap<>();
 
-        mapDelegates.put(pool.typeNibble(),  xRTNibbleDelegate .INSTANCE);
+            mapDelegates.put(pool.typeNibble(),  xRTNibbleDelegate .INSTANCE);
 
-        mapDelegates.put(pool.typeBoolean(), xRTBooleanDelegate.INSTANCE);
-        mapDelegates.put(pool.typeBit(),     xRTBitDelegate    .INSTANCE);
-        mapDelegates.put(pool.typeChar(),    xRTCharDelegate   .INSTANCE);
+            mapDelegates.put(pool.typeBoolean(), xRTBooleanDelegate.INSTANCE);
+            mapDelegates.put(pool.typeBit(),     xRTBitDelegate    .INSTANCE);
+            mapDelegates.put(pool.typeChar(),    xRTCharDelegate   .INSTANCE);
 
-        mapDelegates.put(pool.typeCInt8(),   xRTInt8Delegate   .INSTANCE);
-        mapDelegates.put(pool.typeCInt16(),  xRTInt16Delegate  .INSTANCE);
-        mapDelegates.put(pool.typeCInt32(),  xRTInt32Delegate  .INSTANCE);
-        mapDelegates.put(pool.typeCInt64(),  xRTInt64Delegate  .INSTANCE);
+            mapDelegates.put(pool.typeCInt8(),   xRTInt8Delegate   .INSTANCE);
+            mapDelegates.put(pool.typeCInt16(),  xRTInt16Delegate  .INSTANCE);
+            mapDelegates.put(pool.typeCInt32(),  xRTInt32Delegate  .INSTANCE);
+            mapDelegates.put(pool.typeCInt64(),  xRTInt64Delegate  .INSTANCE);
 
-        mapDelegates.put(pool.typeCUInt8(),  xRTUInt8Delegate  .INSTANCE);
-        mapDelegates.put(pool.typeCUInt16(), xRTUInt16Delegate .INSTANCE);
-        mapDelegates.put(pool.typeCUInt32(), xRTUInt32Delegate .INSTANCE);
-        mapDelegates.put(pool.typeCUInt64(), xRTUInt64Delegate .INSTANCE);
+            mapDelegates.put(pool.typeCUInt8(),  xRTUInt8Delegate  .INSTANCE);
+            mapDelegates.put(pool.typeCUInt16(), xRTUInt16Delegate .INSTANCE);
+            mapDelegates.put(pool.typeCUInt32(), xRTUInt32Delegate .INSTANCE);
+            mapDelegates.put(pool.typeCUInt64(), xRTUInt64Delegate .INSTANCE);
 
-        mapDelegates.put(pool.typeString(),  xRTStringDelegate .INSTANCE);
+            mapDelegates.put(pool.typeString(),  xRTStringDelegate .INSTANCE);
 
-        DELEGATES = mapDelegates;
+            DELEGATES = mapDelegates;
 
-        // mark native properties and methods
-        markNativeProperty("capacity");
-        markNativeProperty("mutability");
-        markNativeProperty("size");
+            // mark native properties and methods
+            markNativeProperty("capacity");
+            markNativeProperty("mutability");
+            markNativeProperty("size");
 
-        markNativeMethod("getElement", INT, ELEMENT_TYPE);
-        markNativeMethod("setElement", new String[] {"numbers.Int64", "Element"}, VOID);
-        markNativeMethod("elementAt", INT, new String[] {"reflect.Var<Element>"});
-        markNativeMethod("insert", null, THIS);
-        markNativeMethod("delete", INT, THIS);
-        markNativeMethod("reify", null, null);
+            markNativeMethod("getElement", INT, ELEMENT_TYPE);
+            markNativeMethod("setElement", new String[] {"numbers.Int64", "Element"}, VOID);
+            markNativeMethod("elementAt", INT, new String[] {"reflect.Var<Element>"});
+            markNativeMethod("insert", null, THIS);
+            markNativeMethod("delete", INT, THIS);
+            markNativeMethod("reify", null, null);
 
-        getCanonicalType().invalidateTypeInfo();
+            getCanonicalType().invalidateTypeInfo();
+            }
         }
 
     @Override

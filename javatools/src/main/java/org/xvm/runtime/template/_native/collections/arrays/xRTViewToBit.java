@@ -54,23 +54,26 @@ public class xRTViewToBit
     @Override
     public void initNative()
         {
-        // register native views
-        ConstantPool                    pool     = pool();
-        Map<TypeConstant, xRTViewToBit> mapViews = new HashMap<>();
+        if (this == INSTANCE)
+            {
+            // register native views
+            ConstantPool                    pool     = pool();
+            Map<TypeConstant, xRTViewToBit> mapViews = new HashMap<>();
 
-        mapViews.put(pool.typeNibble(), xRTViewToBitFromNibble.INSTANCE);
+            mapViews.put(pool.typeNibble(), xRTViewToBitFromNibble.INSTANCE);
 
-        mapViews.put(pool.typeCInt8() , xRTViewToBitFromInt8  .INSTANCE);
-        mapViews.put(pool.typeCInt16(), xRTViewToBitFromInt16 .INSTANCE);
-        mapViews.put(pool.typeCInt32(), xRTViewToBitFromInt32 .INSTANCE);
-        mapViews.put(pool.typeCInt64(), xRTViewToBitFromInt64 .INSTANCE);
+            mapViews.put(pool.typeCInt8() , xRTViewToBitFromInt8  .INSTANCE);
+            mapViews.put(pool.typeCInt16(), xRTViewToBitFromInt16 .INSTANCE);
+            mapViews.put(pool.typeCInt32(), xRTViewToBitFromInt32 .INSTANCE);
+            mapViews.put(pool.typeCInt64(), xRTViewToBitFromInt64 .INSTANCE);
 
-        mapViews.put(pool.typeCUInt8() , xRTViewToBitFromUInt8 .INSTANCE);
-        mapViews.put(pool.typeCUInt16(), xRTViewToBitFromUInt16.INSTANCE);
-        mapViews.put(pool.typeCUInt32(), xRTViewToBitFromUInt32.INSTANCE);
-        mapViews.put(pool.typeCUInt64(), xRTViewToBitFromUInt64.INSTANCE);
+            mapViews.put(pool.typeCUInt8() , xRTViewToBitFromUInt8 .INSTANCE);
+            mapViews.put(pool.typeCUInt16(), xRTViewToBitFromUInt16.INSTANCE);
+            mapViews.put(pool.typeCUInt32(), xRTViewToBitFromUInt32.INSTANCE);
+            mapViews.put(pool.typeCUInt64(), xRTViewToBitFromUInt64.INSTANCE);
 
-        VIEWS = mapViews;
+            VIEWS = mapViews;
+            }
         }
 
     @Override

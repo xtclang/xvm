@@ -147,6 +147,7 @@ public class xRTPropertyClassTemplate
             return frame.raiseException(xException.illegalState(frame, "FileTemplate is not resolved"));
             }
 
+        Container                     container     = frame.f_context.f_container;
         List<ComponentTemplateHandle> listTemplates = new ArrayList<>();
         for (Component child : prop.children())
             {
@@ -154,13 +155,13 @@ public class xRTPropertyClassTemplate
                 {
                 case CLASS:
                 case CONST:
-                    listTemplates.add(xRTClassTemplate.makeHandle((ClassStructure) child));
+                    listTemplates.add(xRTClassTemplate.makeHandle(container, (ClassStructure) child));
                     break;
                 }
             }
 
         ObjectHandle hArray = xArray.createImmutableArray(
-                xRTClassTemplate.ensureClassTemplateArrayComposition(),
+                xRTClassTemplate.ensureClassTemplateArrayComposition(container),
                 listTemplates.toArray(xRTClassTemplate.NO_TEMPLATES));
         return frame.assignValue(iReturn, hArray);
         }
@@ -179,7 +180,6 @@ public class xRTPropertyClassTemplate
         List<Contribution>  listContrib = prop.getContributionsAsList();
         Utils.ValueSupplier supplier    = (frameCaller, index) ->
             {
-            ConstantPool pool        = frameCaller.poolContext();
             Contribution contrib     = listContrib.get(index);
             TypeConstant typeContrib = contrib.getTypeConstant();
             ObjectHandle hDelegatee  = xNullable.NULL; // TODO
@@ -204,7 +204,7 @@ public class xRTPropertyClassTemplate
                 }
 
             MethodStructure methodCreateContrib = xRTClassTemplate.CREATE_CONTRIB_METHOD;
-            xEnum           enumAction          = xRTClassTemplate.ACTION;
+            xEnum           enumAction          = xRTClassTemplate.ACTION_TEMPLATE;
 
             ObjectHandle[] ahVar = new ObjectHandle[methodCreateContrib.getMaxVars()];
             ahVar[0] = Utils.ensureInitializedEnum(frameCaller, enumAction.getEnumByName(sAction));
@@ -216,7 +216,8 @@ public class xRTPropertyClassTemplate
             return frameCaller.call1(methodCreateContrib, null, ahVar, Op.A_STACK);
             };
 
-        return xArray.createAndFill(frame, xRTClassTemplate.ensureContribArrayComposition(),
+        return xArray.createAndFill(frame,
+                xRTClassTemplate.ensureContribArrayComposition(frame.f_context.f_container),
                 listContrib.size(), supplier, iReturn);
         }
 

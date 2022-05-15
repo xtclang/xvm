@@ -13,6 +13,7 @@ import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.Version;
 
+import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -62,13 +63,23 @@ public class xModule
     @Override
     public void initNative()
         {
-        VERSION_DEFAULT = new VersionConstant(pool(), new Version("CI"));
+        if (this == INSTANCE)
+            {
+            ConstantPool pool = f_container.getConstantPool();
 
-        // while these properties are naturally implementable, they are accessed
-        // by the TypeSystem constructor for modules that belong to the constructed
-        // TypeSystem, creating "the chicken or the egg" problem
-        markNativeProperty("simpleName");
-        markNativeProperty("qualifiedName");
+            MODULE_ARRAY_TYPE  = pool.ensureArrayType(pool.typeModule());
+            EMPTY_MODULE_ARRAY = pool.ensureArrayConstant(MODULE_ARRAY_TYPE, Constant.NO_CONSTS);
+
+            VERSION_DEFAULT = new VersionConstant(pool(), new Version("CI"));
+
+            // while these properties are naturally implementable, they are accessed
+            // by the TypeSystem constructor for modules that belong to the constructed
+            // TypeSystem, creating "the chicken or the egg" problem
+            markNativeProperty("simpleName");
+            markNativeProperty("qualifiedName");
+
+            getCanonicalType().invalidateTypeInfo();
+            }
         }
 
     @Override
@@ -166,9 +177,10 @@ public class xModule
     public int getPropertyModulesByPath(Frame frame, PackageHandle hTarget, int iReturn)
         {
         // TODO GG: how to cache the result?
-        ModuleConstant  idModule = (ModuleConstant) hTarget.getId();
-        ModuleStructure module   = (ModuleStructure) idModule.getComponent();
-        TypeComposition clzMap   = ensureListMapComposition();
+        Container       container = frame.f_context.f_container;
+        ModuleConstant  idModule  = (ModuleConstant) hTarget.getId();
+        ModuleStructure module    = (ModuleStructure) idModule.getComponent();
+        TypeComposition clzMap    = ensureListMapComposition();
 
         // starting with this module, find all module dependencies, and the shortest path to each
         Map<ModuleConstant, String> mapModulePaths = module.collectDependencies();
@@ -176,7 +188,7 @@ public class xModule
         if (cModules == 0)
             {
             return Utils.constructListMap(frame, clzMap,
-                    xString.ensureEmptyArray(), ensureEmptyArray(), iReturn);
+                    xString.ensureEmptyArray(), ensureEmptyArray(container), iReturn);
             }
 
         StringHandle[] ahPaths   = new StringHandle[cModules];
@@ -196,9 +208,8 @@ public class xModule
                 }
             }
 
-        ObjectHandle hPaths = xArray.makeStringArrayHandle(ahPaths);
-
-        TypeComposition clzArray = ensureArrayComposition();
+        ObjectHandle    hPaths   = xArray.makeStringArrayHandle(ahPaths);
+        TypeComposition clzArray = ensureArrayComposition(container);
 
         if (fDeferred)
             {
@@ -339,40 +350,34 @@ public class xModule
         }
 
 
-    // ----- Template, Composition, and handle caching ---------------------------------------------
+    // ----- TypeComposition, and handle caching ---------------------------------------------------
 
     /**
      * @return the TypeComposition for an Array of Module
      */
-    public static TypeComposition ensureArrayComposition()
+    public static TypeComposition ensureArrayComposition(Container container)
         {
-        TypeComposition clz = ARRAY_CLZ;
-        if (clz == null)
-            {
-            ConstantPool pool = INSTANCE.pool();
-            TypeConstant typeModuleArray = pool.ensureArrayType(pool.typeModule());
-            ARRAY_CLZ = clz = INSTANCE.f_container.resolveClass(typeModuleArray);
-            assert clz != null;
-            }
-        return clz;
+        return container.ensureClassComposition(MODULE_ARRAY_TYPE, xArray.INSTANCE);
         }
 
     /**
      * @return the handle for an empty Array of Module
      */
-    public static ArrayHandle ensureEmptyArray()
+    public static ArrayHandle ensureEmptyArray(Container container)
         {
-        if (ARRAY_EMPTY == null)
+        ArrayHandle haEmpty = (ArrayHandle) container.f_heap.getConstHandle(EMPTY_MODULE_ARRAY);
+        if (haEmpty == null)
             {
-            ARRAY_EMPTY = xArray.createImmutableArray(ensureArrayComposition(), Utils.OBJECTS_NONE);
+            haEmpty = xArray.createImmutableArray(ensureArrayComposition(container), Utils.OBJECTS_NONE);
+            container.f_heap.saveConstHandle(EMPTY_MODULE_ARRAY, haEmpty);
             }
-        return ARRAY_EMPTY;
+        return haEmpty;
         }
 
     /**
      * @return the TypeComposition for ListMap<String, Module>
      */
-    private static TypeComposition ensureListMapComposition()
+    private static TypeComposition ensureListMapComposition() // TODO: use the container
         {
         TypeComposition clz = LISTMAP_CLZ;
         if (clz == null)
@@ -389,8 +394,9 @@ public class xModule
 
     // ----- data members --------------------------------------------------------------------------
 
+    private static TypeConstant  MODULE_ARRAY_TYPE;
+    private static ArrayConstant EMPTY_MODULE_ARRAY;
+
     private static TypeComposition LISTMAP_CLZ;
-    private static TypeComposition ARRAY_CLZ;
-    private static ArrayHandle     ARRAY_EMPTY;
     private static VersionConstant VERSION_DEFAULT;
     }

@@ -41,6 +41,7 @@ import org.xvm.compiler.Compiler;
 import org.xvm.compiler.ast.AstNode;
 import org.xvm.compiler.ast.TypeCompositionStatement;
 
+import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.Utils;
 
@@ -1308,7 +1309,7 @@ public class MethodStructure
             List<SingletonConstant> listSingletons = null;
             for (Constant constant : aconstLocal)
                 {
-                listSingletons = addSingleton(constant, listSingletons);
+                listSingletons = addSingleton(frame, constant, listSingletons);
                 }
 
             if (listSingletons != null)
@@ -1337,7 +1338,7 @@ public class MethodStructure
      *
      * @return the resulting list
      */
-    private List<SingletonConstant> addSingleton(Constant constant, List<SingletonConstant> list)
+    private List<SingletonConstant> addSingleton(Frame frame, Constant constant, List<SingletonConstant> list)
         {
         if (constant instanceof SingletonConstant constSingle)
             {
@@ -1345,13 +1346,22 @@ public class MethodStructure
                 {
                 list = new ArrayList<>(7);
                 }
+
+            // make sure we don't leak a singleton handle into the parent's container pool
+            ConstantPool pooThis = frame.poolContext();
+            if (constant.getConstantPool() != pooThis)
+                {
+                Container containerThis = frame.f_context.f_container;
+                Container containerOrig = containerThis.getOriginContainer(constSingle);
+                constSingle = (SingletonConstant) containerOrig.getConstantPool().register(constSingle);
+                }
             list.add(constSingle);
             }
         else if (constant instanceof ArrayConstant constArray)
             {
             for (Constant constElement : constArray.getValue())
                 {
-                list = addSingleton(constElement, list);
+                list = addSingleton(frame, constElement, list);
                 }
             }
         return list;
@@ -1662,6 +1672,11 @@ public class MethodStructure
 
         // force the reloading of the m_structFinally
         that.m_structFinally = null;
+
+        if (this.m_source != null)
+            {
+            that.m_source = this.m_source.clone();
+            }
 
         return that;
         }
@@ -2719,6 +2734,7 @@ public class MethodStructure
      * The Source class represents the source code that was used to compile the method code.
      */
     protected class Source
+            implements Cloneable
         {
         // ----- constructors -----------------------------------------------------------------
 
@@ -2944,6 +2960,23 @@ public class MethodStructure
                         }
                     }
                 m_sSrc = sb.toString();
+                }
+            }
+
+        /**
+         * Create a clone of this source.
+         *
+         * @return the new Source clone
+         */
+        protected Source clone()
+            {
+            try
+                {
+                return (Source) super.clone();
+                }
+            catch (CloneNotSupportedException e)
+                {
+                throw new IllegalStateException();
                 }
             }
 

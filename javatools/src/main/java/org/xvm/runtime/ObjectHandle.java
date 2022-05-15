@@ -642,7 +642,7 @@ public abstract class ObjectHandle
                 return false;
                 }
 
-            if (poolThat == m_pool || isService())
+            if (isService())
                 {
                 return true;
                 }
@@ -655,7 +655,6 @@ public abstract class ObjectHandle
             if (mapVisited.put(this, Boolean.TRUE) != null ||
                     areShared(m_aFields, poolThat, mapVisited))
                 {
-                m_pool = poolThat;
                 return true;
                 }
             return false;
@@ -671,13 +670,6 @@ public abstract class ObjectHandle
          * was injected or explicitly "masked as".
          */
         protected Container m_owner;
-
-        /**
-         * The "m_pool" field is most commonly not set, unless this object is a const that needs to
-         * be passed across the service boundaries and all objects fields belong to the same pool
-         * as the type (TypeConstant).
-         */
-        protected ConstantPool m_pool;
 
         /**
          * Synthetic property holding a reference to a parent instance.

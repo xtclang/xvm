@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.PropertyConstant;
@@ -53,12 +54,30 @@ public class ConstHeap
             return hValue;
             }
 
-        if (constValue instanceof SingletonConstant constSingleton)
+        if (constValue instanceof SingletonConstant constSingle)
             {
-            hValue = constSingleton.getHandle();
-            return hValue == null
-                ? new DeferredSingletonHandle(constSingleton)
-                : saveConstHandle(constValue, hValue);
+            hValue = constSingle.getHandle();
+            if (hValue != null)
+                {
+                return saveConstHandle(constValue, hValue);
+                }
+
+            // make sure we don't leak a singleton handle into the parent's container pool
+            ConstantPool pooThis = frame.poolContext();
+            if (constSingle.getConstantPool() != pooThis)
+                {
+                Container containerThis = frame.f_context.f_container;
+                Container containerOrig = containerThis.getOriginContainer(constSingle);
+
+                constSingle = (SingletonConstant) containerOrig.getConstantPool().register(constSingle);
+                hValue      = constSingle.getHandle();
+                if (hValue != null)
+                    {
+                    return saveConstHandle(constSingle, hValue);
+                    }
+                }
+
+            return new DeferredSingletonHandle(constSingle);
             }
 
         // support for the "local property" mode
@@ -102,7 +121,7 @@ public class ConstHeap
     /**
      * @return saved handle or null
      */
-    protected ObjectHandle getConstHandle(Constant constValue)
+    public ObjectHandle getConstHandle(Constant constValue)
         {
         ObjectHandle hValue = f_mapConstants.get(constValue);
         if (hValue == null)
@@ -128,7 +147,7 @@ public class ConstHeap
      *
      * @return the actual handle
      */
-    protected ObjectHandle saveConstHandle(Constant constValue, ObjectHandle hValue)
+    public ObjectHandle saveConstHandle(Constant constValue, ObjectHandle hValue)
         {
         if (hValue instanceof InitializingHandle hInit)
             {
@@ -139,7 +158,11 @@ public class ConstHeap
                 }
             hValue = hConst;
             }
-
+        ConstantPool pool = f_container.getConstantPool();
+        if (constValue.getConstantPool() != pool)
+            {
+            constValue = pool.register(constValue);
+            }
         ObjectHandle hValue0 = f_mapConstants.putIfAbsent(constValue, hValue);
         return hValue0 == null ? hValue : hValue0;
         }

@@ -43,14 +43,12 @@ public class xRTModuleTemplate
     @Override
     public void initNative()
         {
-        if (this == INSTANCE)
-            {
-            MODULE_TEMPLATE_COMPOSITION = ensureClass(f_container, getCanonicalType(),
-                pool().ensureEcstasyTypeConstant("reflect.ModuleTemplate"));
+        ConstantPool pool = f_container.getConstantPool();
 
-            markNativeProperty("qualifiedName");
-            markNativeProperty("moduleNamesByPath");
-            }
+        MODULE_TEMPLATE_TYPE = pool.ensureEcstasyTypeConstant("reflect.ModuleTemplate");
+
+        markNativeProperty("qualifiedName");
+        markNativeProperty("moduleNamesByPath");
         }
 
     @Override
@@ -114,7 +112,7 @@ public class xRTModuleTemplate
     /**
      * @return the TypeComposition for ListMap<String, String>
      */
-    private static TypeComposition ensureListMapComposition()
+    private static TypeComposition ensureListMapComposition() // TODO: use the container
         {
         TypeComposition clz = LISTMAP_CLZ;
         if (clz == null)
@@ -138,15 +136,17 @@ public class xRTModuleTemplate
      *
      * @return the resulting {@link ComponentTemplateHandle}
      */
-    public static ComponentTemplateHandle makeHandle(ModuleStructure module)
+    public static ComponentTemplateHandle makeHandle(Container container, ModuleStructure module)
         {
         // note: no need to initialize the struct because there are no natural fields
-        return new ComponentTemplateHandle(MODULE_TEMPLATE_COMPOSITION, module);
+        TypeComposition clz = INSTANCE.ensureClass(container,
+                                INSTANCE.getCanonicalType(), MODULE_TEMPLATE_TYPE);
+        return new ComponentTemplateHandle(clz, module);
         }
 
 
     // ----- constants -----------------------------------------------------------------------------
 
-    private static TypeComposition MODULE_TEMPLATE_COMPOSITION;
+    private static TypeConstant MODULE_TEMPLATE_TYPE;
     private static TypeComposition LISTMAP_CLZ;
     }

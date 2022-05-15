@@ -610,7 +610,8 @@ public class xRef
         // TODO GG: can we cache the annotations on the composition?
         return aAnno.length > 0
                 ? new Utils.CreateAnnos(aAnno, iReturn).doNext(frame)
-                : frame.assignValue(iReturn, Utils.makeAnnoArrayHandle(frame.poolContext(), ahAnno));
+                : frame.assignValue(iReturn,
+                        Utils.makeAnnoArrayHandle(frame.f_context.f_container, ahAnno));
         }
 
     /**

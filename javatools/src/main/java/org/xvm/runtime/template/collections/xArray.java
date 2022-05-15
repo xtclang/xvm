@@ -87,7 +87,7 @@ public class xArray
     public void initNative()
         {
         // register array specializations
-        ConstantPool              pool         = pool();
+        ConstantPool              pool         = f_container.getConstantPool();
         Map<TypeConstant, xArray> mapTemplates = new HashMap<>();
 
         mapTemplates.put(pool.typeBit(),  xBitArray.INSTANCE);

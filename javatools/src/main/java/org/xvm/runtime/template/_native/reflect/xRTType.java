@@ -17,6 +17,7 @@ import org.xvm.asm.Op;
 import org.xvm.asm.PackageStructure;
 import org.xvm.asm.Parameter;
 
+import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.ChildInfo;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.FormalTypeChildConstant;
@@ -95,6 +96,11 @@ public class xRTType
     @Override
     public void initNative()
         {
+        ConstantPool pool = f_container.getConstantPool();
+
+        TYPE_ARRAY_TYPE  = pool.ensureArrayType(pool.typeType());
+        EMPTY_TYPE_ARRAY = pool.ensureArrayConstant(TYPE_ARRAY_TYPE, Constant.NO_CONSTS);
+
         markNativeProperty("childTypes");
         markNativeProperty("constants");
         markNativeProperty("constructors");
@@ -145,7 +151,7 @@ public class xRTType
         // "foreign" types, which requires a native implementation
         structType.findMethod("isA"    , 1).markNative();
 
-        pool().typeType().invalidateTypeInfo();
+        pool.typeType().invalidateTypeInfo();
         }
 
     @Override
@@ -160,7 +166,7 @@ public class xRTType
     public TypeComposition ensureClass(Container container, TypeConstant typeActual)
         {
         return typeActual.equals(getCanonicalType())
-            ? getCanonicalClass()
+            ? getCanonicalClass(container)
             : getCanonicalClass(container).ensureCanonicalizedComposition(typeActual);
         }
 
@@ -217,7 +223,7 @@ public class xRTType
         if (idProp.getName().equals("DataType"))
             {
             TypeConstant typeResult = hThis.getUnsafeDataType();
-            return frame.assignValue(iReturn, makeHandle(frame.f_context.f_container, typeResult, !hThis.isForeign()));
+            return frame.assignValue(iReturn, typeResult.ensureTypeHandle(frame.f_context.f_container));
             }
         return super.getPropertyValue(frame, hTarget, idProp, iReturn);
         }
@@ -492,7 +498,7 @@ public class xRTType
             {
             // TODO GG: ask the type's container to answer
             return Utils.constructListMap(frame, ensureListMapComposition(),
-                    xString.ensureEmptyArray(), ensureEmptyTypeArray(), iReturn);
+                    xString.ensureEmptyArray(), ensureEmptyTypeArray(frame.f_context.f_container), iReturn);
             }
 
         // bridge from one module to another if necessary
@@ -535,7 +541,7 @@ public class xRTType
         if (hType.isForeign())
             {
             // TODO GG: ask the type's container to answer
-            return frame.assignValue(iReturn, xRTProperty.ensureEmptyArray());
+            return frame.assignValue(iReturn, xRTProperty.ensureEmptyArray(frame.f_context.f_container));
             }
 
         TypeConstant                        typeTarget = hType.getDataType();
@@ -562,7 +568,7 @@ public class xRTType
         if (hType.isForeign())
             {
             // TODO GG: ask the type's container to answer
-            return frame.assignValue(iReturn, xRTFunction.ensureEmptyArray());
+            return frame.assignValue(iReturn, xRTFunction.ensureEmptyArray(frame.f_context.f_container));
             }
 
         // the actual construction process uses a "construct" function as a structural initializer
@@ -844,10 +850,11 @@ public class xRTType
      */
     public int getPropertyFunctions(Frame frame, TypeHandle hType, int iReturn)
         {
+        Container container = frame.f_context.f_container;
         if (hType.isForeign())
             {
             // TODO GG: ask the type's container to answer
-            return frame.assignValue(iReturn, xRTFunction.ensureEmptyArray());
+            return frame.assignValue(iReturn, xRTFunction.ensureEmptyArray(container));
             }
 
         TypeConstant                    typeTarget  = hType.getDataType();
@@ -864,7 +871,7 @@ public class xRTType
             }
         FunctionHandle[] ahFunctions = listHandles.toArray(new FunctionHandle[0]);
         ObjectHandle     hArray      = xArray.createImmutableArray(
-                xRTFunction.ensureArrayComposition(), ahFunctions);
+                xRTFunction.ensureArrayComposition(container), ahFunctions);
         return frame.assignValue(iReturn, hArray);
         }
 
@@ -912,7 +919,7 @@ public class xRTType
         if (hType.isForeign())
             {
             // TODO GG: ask the type's container to answer
-            return frame.assignValue(iReturn, xRTProperty.ensureEmptyArray());
+            return frame.assignValue(iReturn, xRTProperty.ensureEmptyArray(frame.f_context.f_container));
             }
 
         TypeConstant                        typeTarget = hType.getDataType();
@@ -980,10 +987,11 @@ public class xRTType
      */
     public int getPropertyUnderlyingTypes(Frame frame, TypeHandle hType, int iReturn)
         {
+        Container container = frame.f_context.f_container;
         if (hType.isForeign())
             {
             // TODO GG: ask the type's container to answer
-            return frame.assignValue(iReturn, ensureEmptyTypeArray());
+            return frame.assignValue(iReturn, ensureEmptyTypeArray(container));
             }
 
         TypeConstant   typeTarget  = hType.getDataType();
@@ -1004,10 +1012,11 @@ public class xRTType
         TypeHandle[] ahTypes = new TypeHandle[aUnderlying.length];
         for (int i = 0, c = ahTypes.length; i < c; ++i)
             {
-            ahTypes[i] = aUnderlying[i].ensureTypeHandle(frame.f_context.f_container);
+            ahTypes[i] = aUnderlying[i].ensureTypeHandle(container);
             }
 
-        ObjectHandle hArray = xArray.createImmutableArray(ensureTypeArrayComposition(), ahTypes);
+        ObjectHandle hArray = xArray.createImmutableArray(
+                                ensureTypeArrayComposition(container), ahTypes);
         return frame.assignValue(iReturn, hArray);
         }
 
@@ -1268,7 +1277,8 @@ public class xRTType
             ahTypes[i] = atypes[i].normalizeParameters().ensureTypeHandle(frame.f_context.f_container);
             }
 
-        ObjectHandle hArray = xArray.createImmutableArray(ensureTypeArrayComposition(), ahTypes);
+        ObjectHandle hArray = xArray.createImmutableArray(
+                                ensureTypeArrayComposition(frame.f_context.f_container), ahTypes);
         return frame.assignValues(aiReturn, xBoolean.TRUE, hArray);
         }
 
@@ -1313,7 +1323,6 @@ public class xRTType
         ConstantPool   pool         = frame.poolContext();
         TypeConstant   typeThis     = hType.getDataType();
         TypeConstant[] atypeParams  = new TypeConstant[cFormalTypes];
-        boolean        fShared      = true;
         for (int i = 0; i < cFormalTypes; ++i)
             {
             TypeHandle   hTypeParam = (TypeHandle) ahFormalTypes[i];
@@ -1321,8 +1330,7 @@ public class xRTType
 
             if (hTypeParam.isForeign())
                 {
-                fShared = false;
-                pool    = typeParam.getConstantPool();
+                pool = typeParam.getConstantPool();
                 }
 
             atypeParams[i] = typeParam;
@@ -1331,7 +1339,7 @@ public class xRTType
         try
             {
             TypeConstant typeResult = typeThis.adoptParameters(pool, atypeParams);
-            return frame.assignValue(iReturn, makeHandle(frame.f_context.f_container, typeResult, fShared));
+            return frame.assignValue(iReturn, typeResult.ensureTypeHandle(frame.f_context.f_container));
             }
         catch (RuntimeException e)
             {
@@ -1595,36 +1603,29 @@ public class xRTType
     /**
      * @return the TypeComposition for an Array of Type
      */
-    public static TypeComposition ensureTypeArrayComposition()
+    public static TypeComposition ensureTypeArrayComposition(Container container)
         {
-        TypeComposition clz = TYPE_ARRAY_CLZCOMP;
-        if (clz == null)
-            {
-            ConstantPool pool          = INSTANCE.pool();
-            TypeConstant typeTypeArray = pool.ensureArrayType(pool.typeType());
-            TYPE_ARRAY_CLZCOMP = clz = INSTANCE.f_container.resolveClass(typeTypeArray);
-            assert clz != null;
-            }
-        return clz;
+        return container.ensureClassComposition(TYPE_ARRAY_TYPE, xArray.INSTANCE);
         }
 
     /**
      * @return the handle for an empty Array of Type
      */
-    public static ArrayHandle ensureEmptyTypeArray()
+    public static ArrayHandle ensureEmptyTypeArray(Container container)
         {
-        if (TYPE_ARRAY_EMPTY == null)
+        ArrayHandle haEmpty = (ArrayHandle) container.f_heap.getConstHandle(EMPTY_TYPE_ARRAY);
+        if (haEmpty == null)
             {
-            TYPE_ARRAY_EMPTY = xArray.createImmutableArray(
-                ensureTypeArrayComposition(), Utils.OBJECTS_NONE);
+            haEmpty = xArray.createImmutableArray(ensureTypeArrayComposition(container), Utils.OBJECTS_NONE);
+            container.f_heap.saveConstHandle(EMPTY_TYPE_ARRAY, haEmpty);
             }
-        return TYPE_ARRAY_EMPTY;
+        return haEmpty;
         }
 
     /**
      * @return the TypeComposition for ListMap<String, Type>
      */
-    public static TypeComposition ensureListMapComposition()
+    public static TypeComposition ensureListMapComposition() // TODO: use the container
         {
         TypeComposition clz = LISTMAP_CLZCOMP;
         if (clz == null)
@@ -1683,35 +1684,29 @@ public class xRTType
     /**
      * Helper method used by bi-operators.
      */
-    private int makeRelationalType(Frame frame, TypeHandle hTypeThis, TypeHandle hTypeThat,
+    private int makeRelationalType(Frame frame, TypeHandle hType1, TypeHandle hType2,
                                    RelationalOperation op, int iReturn)
         {
-        ConstantPool pool     = frame.poolContext();
-        TypeConstant typeThis = hTypeThis.getUnsafeDataType();
-        TypeConstant typeThat = hTypeThat.getUnsafeDataType();
-        boolean      fShared  = true;
+        TypeConstant type1 = hType1.getUnsafeDataType();
+        TypeConstant type2 = hType2.getUnsafeDataType();
 
-        if (hTypeThis.isForeign())
+        ConstantPool pool;
+        if (type1.isShared(type2.getConstantPool()))
             {
-            fShared = false;
-            pool    = typeThis.getConstantPool();
+            pool = type2.getConstantPool();
             }
-        else if (hTypeThat.isForeign())
+        else if (type2.isShared(type1.getConstantPool()))
             {
-            fShared = false;
-            pool    = typeThat.getConstantPool();
+            pool = type1.getConstantPool();
             }
-
-        try
-            {
-            TypeConstant typeResult = op.makeRelational(pool, typeThis, typeThat);
-            return frame.assignValue(iReturn, makeHandle(frame.f_context.f_container, typeResult, fShared));
-            }
-        catch (RuntimeException e)
+        else
             {
             return frame.raiseException(xException.invalidType(frame,
-                "No common TypeSystem for (" + typeThis + " and " + typeThat + ")"));
+                "No common TypeSystem for (" + type1 + " and " + type2 + ")"));
             }
+
+        TypeConstant typeResult = op.makeRelational(pool, type1, type2);
+        return frame.assignValue(iReturn, typeResult.ensureTypeHandle(frame.f_context.f_container));
         }
 
     /**
@@ -1808,8 +1803,9 @@ public class xRTType
 
     // ----- data members --------------------------------------------------------------------------
 
-    private static TypeComposition TYPE_ARRAY_CLZCOMP;
-    private static ArrayHandle     TYPE_ARRAY_EMPTY;
+    private static TypeConstant  TYPE_ARRAY_TYPE;
+    private static ArrayConstant EMPTY_TYPE_ARRAY;
+
     private static TypeComposition LISTMAP_CLZCOMP;
 
     private static TypeComposition REGISTER_CLZCOMP;

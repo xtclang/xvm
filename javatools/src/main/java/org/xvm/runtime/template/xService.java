@@ -67,17 +67,20 @@ public class xService
     @Override
     public void initNative()
         {
-        SYNCHRONICITY = (xEnum) f_container.getTemplate("Service.Synchronicity");
+        if (this == INSTANCE)
+            {
+            SYNCHRONICITY = (xEnum) f_container.getTemplate("Service.Synchronicity");
 
-        // since Service is an interface, we cannot annotate the properties naturally and need to do
-        // an ad-hoc check (the list is to be updated)
-        Set<String> setAtomic = new HashSet<>();
-        setAtomic.add("serviceName");
-        setAtomic.add("serviceControl");
-        setAtomic.add("timeout");
-        s_setAtomicProperties = setAtomic;
+            // since Service is an interface, we cannot annotate the properties naturally and need to do
+            // an ad-hoc check (the list is to be updated)
+            Set<String> setAtomic = new HashSet<>();
+            setAtomic.add("serviceName");
+            setAtomic.add("serviceControl");
+            setAtomic.add("timeout");
+            s_setAtomicProperties = setAtomic;
 
-        getCanonicalType().invalidateTypeInfo();
+            getCanonicalType().invalidateTypeInfo();
+            }
         }
 
     @Override

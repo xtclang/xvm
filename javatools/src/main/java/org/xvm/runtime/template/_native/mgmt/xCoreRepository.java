@@ -49,7 +49,6 @@ public class xCoreRepository
     @Override
     public void initNative()
         {
-        ConstantPool pool          = pool();
         TypeConstant typeInception = getInceptionClassConstant().getType();
         TypeConstant typeMask      = getCanonicalType();
 
@@ -99,17 +98,18 @@ public class xCoreRepository
             {
             case "getModule":
                 {
-                String           sName  = ((StringHandle) hArg).getStringValue();
-                ModuleRepository repo   = frame.f_context.f_container.getModuleRepository();
-                ModuleStructure  module = repo.loadModule(sName);
+                Container        container = frame.f_context.f_container;
+                String           sName     = ((StringHandle) hArg).getStringValue();
+                ModuleRepository repo      = container.getModuleRepository();
+                ModuleStructure  module    = repo.loadModule(sName);
 
                 if (module == null)
                     {
-                    return frame.raiseException(xException.illegalArgument(frame,
-                        "Invalid module name " + sName));
+                    return frame.raiseException(
+                            xException.illegalArgument(frame, "Invalid module name " + sName));
                     }
 
-                return frame.assignValue(iReturn, xRTModuleTemplate.makeHandle(module));
+                return frame.assignValue(iReturn, xRTModuleTemplate.makeHandle(container, module));
                 }
             }
 

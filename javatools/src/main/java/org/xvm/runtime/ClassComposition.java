@@ -20,12 +20,14 @@ import org.xvm.asm.MethodStructure;
 
 import org.xvm.asm.constants.AccessTypeConstant;
 import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
 import org.xvm.asm.constants.MethodBody;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.NativeRebaseConstant;
 import org.xvm.asm.constants.PropertyClassTypeConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
+import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
@@ -316,6 +318,25 @@ public class ClassComposition
      */
     private CallChain ensureMethodChain(Object nidMethod)
         {
+        ConstantPool pool = getConstantPool();
+        if (nidMethod instanceof SignatureConstant sig)
+            {
+            if (sig.getConstantPool() != pool)
+                {
+                nidMethod = pool.register(sig);
+                }
+            }
+        else
+            {
+            NestedIdentity   idNested = (NestedIdentity) nidMethod;
+            IdentityConstant idParent = idNested.getIdentityConstant();
+            if (idParent.getConstantPool() != pool)
+                {
+                // REVIEW GG: is this the correct conversion?
+                idParent = (IdentityConstant) pool.register(idParent);
+                nidMethod = idParent.appendNestedIdentity(pool, idNested);
+                }
+            }
         return f_mapMethods.computeIfAbsent(nidMethod,
             nid ->
                 {
@@ -346,6 +367,11 @@ public class ClassComposition
      */
     private CallChain ensureGetterChain(PropertyConstant idProp)
         {
+        ConstantPool pool = getConstantPool();
+        if (idProp.getConstantPool() != pool)
+            {
+            idProp = (PropertyConstant) pool.register(idProp);
+            }
         return f_mapGetters.computeIfAbsent(idProp,
             id ->
                 {
@@ -376,6 +402,11 @@ public class ClassComposition
      */
     private CallChain ensurePropertySetterChain(PropertyConstant idProp)
         {
+        ConstantPool pool = getConstantPool();
+        if (idProp.getConstantPool() != pool)
+            {
+            idProp = (PropertyConstant) pool.register(idProp);
+            }
         return f_mapSetters.computeIfAbsent(idProp,
             id ->
                 {

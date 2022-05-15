@@ -998,6 +998,10 @@ public class ParameterizedTypeConstant
         {
         m_constType   = (TypeConstant) pool.register(m_constType);
         m_atypeParams = registerTypeConstants(pool, m_atypeParams);
+
+        // invalidate cached types
+        m_typeResolverPrev = null;
+        m_typeResolved     = null;
         }
 
     @Override

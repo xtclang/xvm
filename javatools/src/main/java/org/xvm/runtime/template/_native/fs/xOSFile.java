@@ -21,7 +21,6 @@ import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
-import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -71,11 +70,7 @@ public class xOSFile
 
         getCanonicalType().invalidateTypeInfo();
 
-        ClassTemplate   templateFile = f_container.getTemplate("fs.File");
-        TypeComposition clzOSFile    = ensureClass(f_container, templateFile.getCanonicalType());
-
-        s_clzOSFileStruct = clzOSFile.ensureAccess(Constants.Access.STRUCT);
-        s_constructorFile = getStructure().findConstructor();
+        s_constructor = getStructure().findConstructor();
         }
 
     @Override
@@ -211,13 +206,14 @@ public class xOSFile
      */
     public int createHandle(Frame frame, ObjectHandle hOSStore, Path path, int iReturn)
         {
-        TypeComposition clzStruct   = s_clzOSFileStruct;
-        MethodStructure constructor = s_constructorFile;
+        TypeComposition clz = ensureClass(frame.f_context.f_container,
+                                getCanonicalType(), frame.poolContext().typeFile());
 
-        NodeHandle     hStruct = new NodeHandle(clzStruct, path.toAbsolutePath(), hOSStore);
-        ObjectHandle[] ahVar   = Utils.ensureSize(Utils.OBJECTS_NONE, constructor.getMaxVars());
+        NodeHandle     hStruct = new NodeHandle(clz.ensureAccess(Constants.Access.STRUCT),
+                                path.toAbsolutePath(), hOSStore);
+        ObjectHandle[] ahVar   = Utils.ensureSize(Utils.OBJECTS_NONE, s_constructor.getMaxVars());
 
-        return proceedConstruction(frame, constructor, true, hStruct, ahVar, iReturn);
+        return proceedConstruction(frame, s_constructor, true, hStruct, ahVar, iReturn);
         }
 
 
@@ -350,7 +346,7 @@ public class xOSFile
         try
             {
             FileChannel channel = FileChannel.open(path, aOpenOpt);
-            return xOSFileChannel.createHandle(frame, channel, path, iReturn);
+            return xOSFileChannel.INSTANCE.createHandle(frame, channel, path, iReturn);
             }
         catch (IOException e)
             {
@@ -369,6 +365,5 @@ public class xOSFile
     private final static OpenOption[]  WRITE_ONLY = new OpenOption[] {StandardOpenOption.WRITE};
     private final static OpenOption[]  READ_WRITE = new OpenOption[] {StandardOpenOption.READ, StandardOpenOption.WRITE};
 
-    private static TypeComposition s_clzOSFileStruct;
-    private static MethodStructure s_constructorFile;
+    private static MethodStructure s_constructor;
     }
