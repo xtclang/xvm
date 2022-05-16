@@ -934,7 +934,7 @@ public class MethodStructure
                 }
             else
                 {
-                code.ensureAssembled(ConstantPool.getCurrentPool());
+                code.ensureAssembled(getConstantPool());
                 assert m_cScopes > 0;
                 }
             }

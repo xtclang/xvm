@@ -1041,8 +1041,8 @@ public class PropertyInfo
         TypeConstant typeBaseRef = m_typeBaseRef;
         if (typeBaseRef == null)
             {
-            ConstantPool pool     = pool();
             TypeConstant typeProp = getType();
+            ConstantPool pool     = typeProp.getConstantPool();
 
             TypeConstant typeRef = pool.ensureParameterizedTypeConstant(
                 isVar() ? pool.typeVar() : pool.typeRef(), typeProp);
@@ -1392,7 +1392,7 @@ public class PropertyInfo
      */
     private ConstantPool pool()
         {
-        return ConstantPool.getCurrentPool();
+        return m_type.getConstantPool();
         }
 
 

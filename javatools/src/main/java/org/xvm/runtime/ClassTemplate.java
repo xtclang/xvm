@@ -2075,11 +2075,11 @@ public abstract class ClassTemplate
     // ----- helpers -------------------------------------------------------------------------------
 
     /**
-     * @return the constant pool associated with the current execution thread
+     * @return the constant pool associated with the container this template belongs to
      */
     public ConstantPool pool()
         {
-        return ConstantPool.getCurrentPool();
+        return f_container.getConstantPool();
         }
 
 
@@ -2154,7 +2154,6 @@ public abstract class ClassTemplate
             String sParam = sName.substring(ofTypeParam + 1, sName.length() - 1);
             String sSimpleName = sName.substring(0, ofTypeParam);
 
-            // TODO: auto-narrowing (ThisTypeConstant)
             if (sSimpleName.endsWith("!"))
                 {
                 sSimpleName = sSimpleName.substring(0, sSimpleName.length() - 1);
