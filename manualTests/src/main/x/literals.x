@@ -142,7 +142,6 @@ module TestLiterals
         assert !path1.startsWith(path2);
         assert !path1.startsWith(path3);
 
-//        Path path4 = Path:msgs_EN.txt;
         Path path4 = new Path("msgs_EN.txt");
         console.println($"Path ./resources/more/msgs_EN.txt={path4}");
 
@@ -155,9 +154,6 @@ module TestLiterals
         assert !path1.endsWith(path4);
 
         File file = ./resources/more/msgs_EN.txt;
-        console.println($"File ./resources/more/msgs_EN.txt={file}");
-
-        file = File:./resources/more/msgs_EN.txt;
         console.println($"File ./resources/more/msgs_EN.txt={file}");
 
         Directory dir = ./resources/;
@@ -394,4 +390,3 @@ module TestLiterals
             }
         }
     }
-
