@@ -1,0 +1,43 @@
+/acme (aka "[account]")
+  /prj
+    /shop (aka "[project]")
+      /src
+        /main
+          /resources
+          /x
+      /build
+      /lib
+
+    /shopdb
+      /src
+        /main
+          /resources
+          /x
+      /build
+        shopdb.xtc
+        shopdb_jsondb.x
+        shopdb_jsondb.xtc
+      /lib
+
+
+    /shopdb_jsondb   // or this (two files: .x and .xtc) could all be mushed into /shopdb/build
+       /src/main/x
+
+  /host
+    /shop (aka "[deployment]")
+      /data         // empty
+      /fs           // their file system
+      [logs]
+    /shopdb
+      /data         // our database
+      /fs           // their file system [probably empty]
+      [logs]
+    ...
+
+  /lib              // managed by the platform (contains any number of versions, test vs prod for example)
+    shop.xtc
+    shopdb.xtc
+    shopdb_jsondb.xtc
+
+  /bak
+  ...
