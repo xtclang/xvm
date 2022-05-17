@@ -15,8 +15,11 @@ service RTNetwork(Boolean secure)
         implements Network
     {
     @Override
-    @RO NameService nameService.get()
-        {TODO("Native");}
+    // TODO GG: @Lazy(instantiateNameService) NameService nameService;
+    @Lazy NameService nameService.calc()
+        {
+        return instantiateNameService();
+        }
 
     @Override
     @RO NetworkInterface[] interfaces.get()
@@ -55,6 +58,9 @@ service RTNetwork(Boolean secure)
 
 
     // ----- internal ------------------------------------------------------------------------------
+
+    NameService instantiateNameService()
+        {TODO("Native");}
 
     conditional NetworkInterface nativeNicByAddress(Byte[] addressBytes)
         {TODO("Native");}

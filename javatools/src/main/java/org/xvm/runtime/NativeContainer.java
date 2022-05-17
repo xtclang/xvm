@@ -39,8 +39,10 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 
+import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xEnum;
+import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xObject;
 import org.xvm.runtime.template.xService;
 
@@ -55,6 +57,8 @@ import org.xvm.runtime.template._native.lang.src.xRTCompiler;
 
 import org.xvm.runtime.template._native.mgmt.xContainerLinker;
 import org.xvm.runtime.template._native.mgmt.xCoreRepository;
+
+import org.xvm.runtime.template._native.net.xRTNetwork;
 
 import org.xvm.runtime.template._native.numbers.xRTRandom;
 
@@ -329,6 +333,13 @@ public class NativeContainer
         addResourceSupplier(new InjectionKey("curDir" , typeDirectory), this::ensureCurDir);
         addResourceSupplier(new InjectionKey("tmpDir" , typeDirectory), this::ensureTmpDir);
 
+        // +++ Network
+        xRTNetwork   templateNetwork = xRTNetwork.INSTANCE;
+        TypeConstant typeNetwork     = templateNetwork.getCanonicalType();
+        addResourceSupplier(new InjectionKey("network"        , typeNetwork), this::ensureInsecureNetwork);
+        addResourceSupplier(new InjectionKey("insecureNetwork", typeNetwork), this::ensureInsecureNetwork);
+        addResourceSupplier(new InjectionKey("secureNetwork"  , typeNetwork), this::ensureSecureNetwork);
+
         // +++ WebServer
         xRTServer    templateServer = xRTServer.INSTANCE;
         TypeConstant typeServer     = templateServer.getCanonicalType();
@@ -349,7 +360,7 @@ public class NativeContainer
         TypeConstant typeCompiler     = templateCompiler.getCanonicalType();
         addResourceSupplier(new InjectionKey("compiler", typeCompiler), templateCompiler::ensureCompiler);
 
-        // ++ xvmProperties
+        // +++ xvmProperties
         TypeConstant typeProps = pool.ensureParameterizedTypeConstant(pool.typeMap(), pool.typeString(), pool.typeString());
         addResourceSupplier(new InjectionKey("properties", typeProps), this::ensureProperties);
         }
@@ -626,6 +637,77 @@ public class NativeContainer
             }
         }
 
+    /**
+     * Injection support method.
+     */
+    public ObjectHandle ensureSecureNetwork(Frame frame, ObjectHandle hOpts)
+        {
+        ObjectHandle hNetwork = m_hSecureNetwork;
+        if (hNetwork == null)
+            {
+            m_hSecureNetwork = hNetwork = instantiateNetwork(frame, hOpts, true);
+            }
+
+        return hNetwork;
+        }
+
+    /**
+     * Injection support method.
+     */
+    public ObjectHandle ensureInsecureNetwork(Frame frame, ObjectHandle hOpts)
+        {
+        ObjectHandle hNetwork = m_hInsecureNetwork;
+        if (hNetwork == null)
+            {
+            m_hInsecureNetwork = hNetwork = instantiateNetwork(frame, hOpts, false);
+            }
+
+        return hNetwork;
+        }
+
+    protected ObjectHandle instantiateNetwork(Frame frame, ObjectHandle hOpts, boolean fSecure)
+        {
+        ObjectHandle     hNetwork        = null;
+        ClassTemplate    templateNetwork = getTemplate(getIdentityConstant("_native.net.RTNetwork"));
+        ClassComposition clzMask         = templateNetwork.getCanonicalClass();
+        ConstantPool     pool            = getConstantPool();
+        MethodStructure  constructor     = templateNetwork.getStructure().findConstructor(pool.typeBoolean());
+        ObjectHandle[]   ahParams        = new ObjectHandle[] {xBoolean.makeHandle(fSecure)};
+
+        switch (templateNetwork.construct(frame, constructor, clzMask, null, ahParams, Op.A_STACK))
+            {
+            case Op.R_NEXT:
+                hNetwork = frame.popStack();
+                break;
+
+            case Op.R_EXCEPTION:
+                break;
+
+            case Op.R_CALL:
+                {
+                Frame frameNext = frame.m_frameNext;
+                frameNext.addContinuation(frameCaller ->
+                        {
+                        if (fSecure)
+                            {
+                            m_hSecureNetwork = frameCaller.peekStack();
+                            }
+                        else
+                            {
+                            m_hInsecureNetwork = frameCaller.peekStack();
+                            }
+                        return Op.R_NEXT;
+                        });
+                return new ObjectHandle.DeferredCallHandle(frameNext);
+                }
+
+            default:
+                throw new IllegalStateException();
+            }
+
+        return hNetwork;
+        }
+
 
     // ----- Container methods ---------------------------------------------------------------------
 
@@ -836,6 +918,9 @@ public class NativeContainer
     private ObjectHandle m_hCurDir;
     private ObjectHandle m_hTmpDir;
     private ObjectHandle m_hProperties;
+
+    private ObjectHandle m_hSecureNetwork;
+    private ObjectHandle m_hInsecureNetwork;
 
     private final ModuleRepository f_repository;
     private       ModuleStructure  m_moduleSystem;
