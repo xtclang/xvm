@@ -299,7 +299,7 @@ const IPAddress(Byte[] bytes)
             // this silliness up
             if (n > 0)
                 {
-                remain = n; // TODO GG: BUGBUG this code gets omitted by the compiler?!?!
+                remain = n;
                 }
 
             // for part 0 = remain >> 24, part 1 = remain >> 16 & 0xFF, etc.

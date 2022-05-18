@@ -22,7 +22,6 @@ module TestSimple
         console.println($"google.com={addrs}");
 
         String name = "?";
-        assert:debug;
         name := ns.reverseLookup(new IPAddress("127.0.0.1"));
         console.println($"127.0.0.1={name}");
         }

@@ -396,6 +396,13 @@ public class Register
 
         if (obj instanceof Register that)
             {
+            if (that instanceof ShadowRegister)
+                {
+                // ShadowRegister overrides "equals"
+                assert !(this instanceof ShadowRegister);
+                return false;
+                }
+
             return this.m_iArg              == that.m_iArg
                 && this.m_fRO               == that.m_fRO
                 && this.m_fEffectivelyFinal == that.m_fEffectivelyFinal
@@ -720,6 +727,19 @@ public class Register
         public String getIdString()
             {
             return "shadow of " + Register.this;
+            }
+
+        @Override
+        public boolean equals(Object obj)
+            {
+            if (this == obj)
+                {
+                return true;
+                }
+
+            return obj instanceof ShadowRegister that
+                    && this.getOriginalRegister().equals(that.getOriginalRegister())
+                    && this.getType()            .equals(that.getType());
             }
 
         /**
