@@ -2,10 +2,12 @@ package org.xvm.runtime.template._native.lang.src;
 
 
 import java.io.File;
+import java.io.IOException;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.DirRepository;
@@ -13,13 +15,18 @@ import org.xvm.asm.FileRepository;
 import org.xvm.asm.LinkedRepository;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleRepository;
+import org.xvm.asm.ModuleStructure;
+import org.xvm.asm.Op;
 import org.xvm.asm.Version;
 
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.BuildRepository;
 import org.xvm.compiler.CompilerException;
+import org.xvm.compiler.InstantRepository;
 
+import org.xvm.runtime.CallChain;
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
@@ -29,6 +36,7 @@ import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xService;
 
 import org.xvm.runtime.template.collections.xArray;
@@ -39,10 +47,11 @@ import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.runtime.template._native.fs.OSFileNode.NodeHandle;
 
-import org.xvm.runtime.template._native.mgmt.xCoreRepository.CoreRepoHandle;
+import org.xvm.runtime.template._native.reflect.xRTComponentTemplate.ComponentTemplateHandle;
 
 import org.xvm.tool.Compiler;
 
+import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
 
@@ -67,13 +76,28 @@ public class xRTCompiler
     @Override
     public void initNative()
         {
+        ClassStructure structRepo = f_container.getClassStructure("mgmt.ModuleRepository");
+        GET_MODULE_ID = structRepo.findMethod("getModule", 1).getIdentityConstant();
+
         markNativeMethod("compile", null, null);
+
+        getCanonicalType().invalidateTypeInfo();
         }
 
     @Override
     public TypeConstant getCanonicalType()
         {
         return pool().ensureEcstasyTypeConstant("lang.src.Compiler");
+        }
+
+    @Override
+    public ServiceHandle createServiceHandle(ServiceContext context, ClassComposition clz,
+                                             TypeConstant typeMask)
+        {
+        CompilerHandle hCompiler =
+                new CompilerHandle(clz.maskAs(typeMask), context, new CompilerAdapter());
+        context.setService(hCompiler);
+        return hCompiler;
         }
 
     @Override
@@ -124,38 +148,102 @@ public class xRTCompiler
             }
         compiler.setSourceLocations(listSources);
 
-        if (hLibRepo == null || hLibRepo instanceof CoreRepoHandle)
+        // create a new repository list based on the core repository parts
+        LinkedRepository repoCore = (LinkedRepository) f_container.getModuleRepository();
+
+        List<ModuleRepository> listNew = new ArrayList<>();
+        listNew.add(new BuildRepository()); // TODO GG: do we really need this?
+
+        for (ModuleRepository repo : repoCore.asList())
             {
-            // TODO: this is a temporary solution
-            LinkedRepository repoCore = (LinkedRepository) frame.f_context.f_container.getModuleRepository();
-
-            List<ModuleRepository> listNew = new ArrayList<>();
-            listNew.add(new BuildRepository());
-
-            for (ModuleRepository repo : repoCore.asList())
+            // take all read-only repositories
+            if (repo instanceof DirRepository  repoDir  && repoDir .isReadOnly() ||
+                repo instanceof FileRepository repoFile && repoFile.isReadOnly())
                 {
-                // take all read-only repositories
-                if (repo instanceof DirRepository  repoDir  && repoDir .isReadOnly() ||
-                    repo instanceof FileRepository repoFile && repoFile.isReadOnly())
-                    {
-                    listNew.add(repo);
-                    }
+                listNew.add(repo);
                 }
-
-            compiler.setLibraryRepo(
-                new LinkedRepository(true, listNew.toArray(ModuleRepository.NO_REPOS)));
-            }
-        else
-            {
-            throw new UnsupportedOperationException(); // TODO
             }
 
-        boolean      fSuccess;
-        List<String> listErrors;
+        compiler.setLibraryRepos(listNew);
+
+        return doCompile(frame, compiler, hDirOut, hLibRepo, null, aiReturn);
+        }
+
+    private int doCompile(Frame frame, CompilerAdapter compiler, NodeHandle hDirOut, ObjectHandle hRepo,
+                          String sMissingPrev, int[] aiReturn)
+        {
         try
             {
-            compiler.run();
+            String sMissing = compiler.partialCompile(sMissingPrev != null);
+            if (sMissing != null)
+                {
+                if (sMissing.equals(sMissingPrev))
+                    {
+                    // org.xvm.compiler.Compiler.MODULE_MISSING
+                    compiler.log(Severity.FATAL, "Module missing " +  sMissing);
+                    return completeCompilation(frame, compiler, hDirOut, null, aiReturn);
+                    }
+                CallChain chain = computeGetModuleChain(frame, hRepo);
+                switch (chain.invoke(frame, hRepo, xString.makeHandle(sMissing), Op.A_STACK))
+                    {
+                    case Op.R_NEXT:
+                        compiler.addRepo(popModuleStructure(frame));
+                        return doCompile(frame, compiler, hDirOut, hRepo, sMissing, aiReturn);
 
+                    case Op.R_CALL:
+                        Frame.Continuation nextStep = frameCaller ->
+                            {
+                            compiler.addRepo(popModuleStructure(frameCaller));
+                            return doCompile(frameCaller, compiler, hDirOut, hRepo, sMissing, aiReturn);
+                            };
+                        frame.m_frameNext.addContinuation(nextStep);
+                        return Op.R_CALL;
+
+                    case Op.R_EXCEPTION:
+                        return Op.R_EXCEPTION;
+
+                    default:
+                        throw new IllegalStateException();
+                    }
+                }
+            return completeCompilation(frame, compiler, hDirOut, null, aiReturn);
+            }
+        catch (Exception e)
+            {
+            return completeCompilation(frame, compiler, hDirOut, e, aiReturn);
+            }
+        }
+
+    private CallChain computeGetModuleChain(Frame frame, ObjectHandle hRepo)
+        {
+        Object nid = GET_MODULE_ID.resolveNestedIdentity(
+                        frame.poolContext(), frame.getGenericsResolver(true));
+
+        TypeComposition clazz = hRepo.getComposition();
+        CallChain       chain = clazz.getMethodCallChain(nid);
+        if (chain.getDepth() == 0)
+            {
+            return new CallChain.ExceptionChain(xException.makeHandle(frame,
+                "Missing method \"" + GET_MODULE_ID +
+                "\" on " + hRepo.getType().getValueString()));
+            }
+
+        return chain;
+        }
+
+    private ModuleStructure popModuleStructure(Frame frame)
+        {
+        ComponentTemplateHandle hModule = (ComponentTemplateHandle) frame.popStack();
+        return (ModuleStructure) hModule.getComponent();
+        }
+
+    private int completeCompilation(Frame frame, CompilerAdapter compiler, NodeHandle hDirOut,
+                                    Exception exception, int[] aiReturn)
+        {
+        List<String> listErrors = compiler.getErrors();
+        boolean      fSuccess;
+        if (exception == null)
+            {
             fSuccess = compiler.getSeverity().compareTo(Severity.ERROR) < 0;
             if (fSuccess)
                 {
@@ -168,29 +256,26 @@ public class xRTCompiler
                         : new FileRepository(fileOut, false);
                 for (String sModule : repoBuild.getModuleNames())
                     {
-                    repoOut.storeModule(repoBuild.loadModule(sModule));
+                    try
+                        {
+                        repoOut.storeModule(repoBuild.loadModule(sModule));
+                        }
+                    catch (IOException e)
+                        {
+                        fSuccess   = false;
+                        listErrors = addError(e, listErrors);
+                        break;
+                        }
                     }
                 }
-
-            listErrors = compiler.getErrors();
-
-            assert fSuccess || !listErrors.isEmpty(); // a compilation failure must report reasons
             }
-        catch (CompilerException e)
+        else
             {
             fSuccess   = false;
-            listErrors = compiler.getErrors();
-            if (listErrors.isEmpty())
-                {
-                listErrors.add(e.toString());
-                }
+            listErrors = addError(exception, listErrors);
             }
-        catch (Exception e)
-            {
-            fSuccess   = false;
-            listErrors = new ArrayList<>();
-            listErrors.add(e.toString());
-            }
+
+        assert fSuccess || !listErrors.isEmpty(); // a compilation failure must report reasons
 
         ArrayHandle hErrors = xString.ensureEmptyArray();
         if (!listErrors.isEmpty())
@@ -207,12 +292,14 @@ public class xRTCompiler
         return frame.assignValues(aiReturn, xBoolean.makeHandle(fSuccess), hErrors);
         }
 
-    @Override
-    public ServiceHandle createServiceHandle(ServiceContext context, ClassComposition clz, TypeConstant typeMask)
+    private List<String> addError(Exception exception, List<String> listErrors)
         {
-        CompilerHandle hCompiler = new CompilerHandle(clz.maskAs(typeMask), context, new CompilerAdapter());
-        context.setService(hCompiler);
-        return hCompiler;
+        if (listErrors.isEmpty())
+            {
+            listErrors = new ArrayList<>();
+            }
+        listErrors.add(exception.toString());
+        return listErrors;
         }
 
     /**
@@ -254,54 +341,162 @@ public class xRTCompiler
 
         // ----- accessors -------------------------------------------------------------------------
 
-        public ModuleRepository getLibraryRepo()
+        protected void setLibraryRepos(List<ModuleRepository> listRepos)
             {
-            return m_repoLib;
+            m_listRepos = listRepos;
             }
 
-        public void setLibraryRepo(ModuleRepository repoLibs)
+        protected void addRepo(ModuleStructure module)
             {
-            m_repoLib = repoLibs;
+            m_listRepos.add(new InstantRepository(module));
             }
 
-        public List<File> getSourceLocations()
+        protected List<File> getSourceLocations()
             {
             return m_listSources;
             }
 
-        public void setSourceLocations(List<File> listSources)
+        protected void setSourceLocations(List<File> listSources)
             {
             m_listSources = listSources;
             }
 
-        public Version getVersion()
+        protected Version getVersion()
             {
             return m_version;
             }
 
-        public void setVersion(Version version)
+        protected void setVersion(Version version)
             {
             m_version = version;
             }
 
-        public boolean isForcedRebuild()
+        protected boolean isForcedRebuild()
             {
             return true;
             }
 
-        public Severity getSeverity()
+        protected Severity getSeverity()
             {
             return m_sevWorst;
             }
 
-        public List<String> getErrors()
+        protected List<String> getErrors()
             {
             return m_log == null ? Collections.EMPTY_LIST : m_log;
             }
 
-        public ModuleRepository getBuildRepository()
+        protected ModuleRepository getBuildRepository()
             {
             return m_repoResults;
+            }
+
+        /**
+         * This method is basically a copy of {@link Compiler#process()} implementation that allows
+         * a re-entry to the "link" stage.
+         *
+         * @param fReenter if true, skip all steps prior to module linking
+         *
+         * @return a name of a missing module if any
+         */
+        protected String partialCompile(boolean fReenter)
+            {
+            org.xvm.compiler.Compiler[] compilers;
+            ModuleRepository            repoLib;
+            ModuleRepository            repoOutput;
+            Node[]                      allNodes;
+
+            if (fReenter)
+                {
+                compilers  = m_compilers;
+                repoLib    = configureLibraryRepo(null);
+                repoOutput = m_repoOutput;
+                allNodes   = m_allNodes;
+                }
+            else
+                {
+                List<File> listTargets = selectTargets(options().getInputLocations());
+                checkErrors();
+
+                File    fileOutput = resolveOptionalLocation(options().getOutputLocation());
+                boolean fRebuild   = options().isForcedRebuild();
+
+                Map<File, Node> mapTargets     = new ListMap<>(listTargets.size());
+                int             cSystemModules = 0;
+                for (File fileModule : listTargets)
+                    {
+                    Node node = loadSourceTree(fileModule, Stage.Linked);
+
+                    // short-circuit the compilation of any up-to-date modules
+                    if (fRebuild || !moduleUpToDate(node, fileOutput))
+                        {
+                        mapTargets.put(fileModule, node);
+                        if (isSystemModule(node))
+                            {
+                            ++cSystemModules;
+                            }
+                        }
+                    }
+
+                if (mapTargets.isEmpty())
+                    {
+                    log(Severity.INFO, "All modules are up to date; terminating compiler");
+                    return null;
+                    }
+
+                allNodes = mapTargets.values().toArray(new Node[0]);
+                flushAndCheckErrors(allNodes);
+
+                // repository setup
+                repoLib = configureLibraryRepo(options().getModulePath());
+                checkErrors();
+
+                if (cSystemModules == 0)
+                    {
+                    prelinkSystemLibraries(repoLib);
+                    }
+                checkErrors();
+
+                repoOutput = configureResultRepo(fileOutput);
+                checkErrors();
+
+                // the code below could be extracted if necessary: compile(allNodes, repoLib, repoOutput);
+                Map<String, org.xvm.compiler.Compiler> mapCompilers = populateNamespace(allNodes, repoLib);
+                flushAndCheckErrors(allNodes);
+
+                compilers = mapCompilers.values().toArray(NO_COMPILERS);
+                }
+
+            // inline linkModules() implementation
+            for (var compiler : compilers)
+                {
+                String sMissing = compiler.linkModules(repoLib);
+                if (sMissing != null)
+                    {
+                    // save off the necessary state
+                    m_compilers  = compilers;
+                    m_repoOutput = repoOutput;
+                    m_allNodes   = allNodes;
+                    return sMissing;
+                    }
+                }
+
+            resolveNames(compilers);
+            flushAndCheckErrors(allNodes);
+
+            injectNativeTurtle(repoLib);
+            checkErrors();
+
+            validateExpressions(compilers);
+            flushAndCheckErrors(allNodes);
+
+            generateCode(compilers);
+            flushAndCheckErrors(allNodes);
+
+            emitModules(allNodes, repoOutput);
+            flushAndCheckErrors(allNodes);
+
+            return null;
             }
 
         @Override
@@ -310,8 +505,11 @@ public class xRTCompiler
             super.reset();
 
             m_listSources = null;
-            m_repoLib     = null;
+            m_listRepos   = null;
             m_repoResults = null;
+            m_compilers   = null;
+            m_repoOutput  = null;
+            m_allNodes    = null;
             m_log.clear();
             }
 
@@ -320,7 +518,7 @@ public class xRTCompiler
         @Override
         protected ModuleRepository configureLibraryRepo(List<File> ignore)
             {
-            return getLibraryRepo();
+            return new LinkedRepository(true, m_listRepos.toArray(ModuleRepository.NO_REPOS));
             }
 
         @Override
@@ -332,7 +530,15 @@ public class xRTCompiler
         @Override
         public void run()
             {
-            process();
+            // use partialRun() instead
+            throw new IllegalStateException();
+            }
+
+        @Override
+        protected void linkModules(org.xvm.compiler.Compiler[] compilers, ModuleRepository repo)
+            {
+            // inlined; should not be called
+            throw new IllegalStateException();
             }
 
         @Override
@@ -402,10 +608,19 @@ public class xRTCompiler
 
         // ----- fields ----------------------------------------------------------------------------
 
-        private ModuleRepository m_repoLib;
-        private List<File>       m_listSources;
-        private ModuleRepository m_repoResults;
-        private Version          m_version = new Version("CI");
-        private List<String>     m_log = new ArrayList<>();
+        private List<ModuleRepository> m_listRepos;
+        private List<File>             m_listSources;
+        private ModuleRepository       m_repoResults;
+        private Version                m_version = new Version("CI");
+        private List<String>           m_log = new ArrayList<>();
+
+        // re-entry support
+        private org.xvm.compiler.Compiler[] m_compilers;
+        private ModuleRepository            m_repoOutput;
+        private Node[]                      m_allNodes;
         }
+
+    // ----- constants -----------------------------------------------------------------------------
+
+    private static MethodConstant GET_MODULE_ID;
     }

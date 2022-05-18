@@ -42,7 +42,6 @@ import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xEnum;
-import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xObject;
 import org.xvm.runtime.template.xService;
 
@@ -107,9 +106,9 @@ public class NativeContainer
             }
 
         // "root" is a merge of "native" module into the "system"
-        FileStructure fileRoot = new FileStructure(moduleRoot);
-        fileRoot.merge(moduleTurtle, false);
-        fileRoot.merge(moduleNative, false);
+        FileStructure fileRoot = new FileStructure(moduleRoot, true);
+        fileRoot.merge(moduleTurtle, true, false);
+        fileRoot.merge(moduleNative, true, false);
 
         fileRoot.linkModules(f_repository, true);
 
@@ -773,15 +772,16 @@ public class NativeContainer
     public FileStructure createFileStructure(ModuleStructure moduleApp)
         {
         // TODO CP/GG: that needs to be reworked (for now the order is critical)
+        // Note: we don't need to re-synthesize structures for shared modules
         ModuleRepository repo    = f_repository;
-        FileStructure    fileApp = new FileStructure(m_moduleSystem);
+        FileStructure    fileApp = new FileStructure(m_moduleSystem, false);
 
-        fileApp.merge(m_moduleTurtle, false);
-        fileApp.merge(repo.loadModule("crypto.xtclang.org"), false);
-        fileApp.merge(repo.loadModule("net.xtclang.org"), false);
-        fileApp.merge(m_moduleNative, false);
+        fileApp.merge(m_moduleTurtle, false, false);
+        fileApp.merge(repo.loadModule("crypto.xtclang.org"), true, false);
+        fileApp.merge(repo.loadModule("net.xtclang.org"), true, false);
+        fileApp.merge(m_moduleNative, false, false);
 
-        fileApp.merge(moduleApp, true);
+        fileApp.merge(moduleApp, true, true);
 
         assert fileApp.validateConstants();
         return fileApp;

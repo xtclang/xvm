@@ -46,10 +46,7 @@ interface ModuleTemplate
      * Indicates whether this template has been "resolved", which means that it is ready to answer
      * all questions about the module's content (children, contributions, etc.)
      */
-    @RO Boolean resolved.get()
-        {
-        return parent.resolved;
-        }
+    @RO Boolean resolved;
 
 
     // ----- Stringable methods --------------------------------------------------------------------

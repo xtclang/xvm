@@ -34,10 +34,11 @@ public class NestedContainer
     /**
      * Instantiate a nested container.
      *
-     * @param context   the parent container's context
-     * @param idModule  the module id
+     * @param containerParent  the parent container
+     * @param idModule         the module id
+     * @param listShared       a list ids for shared modules
      */
-    public NestedContainer(Container containerParent, ServiceContext context, ModuleConstant idModule,
+    public NestedContainer(Container containerParent, ModuleConstant idModule,
                            List<ModuleConstant> listShared)
         {
         super(containerParent.f_runtime, containerParent, idModule);

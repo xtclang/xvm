@@ -45,6 +45,16 @@ interface FileTemplate
      */
     @RO DateTime? created;
 
+    /**
+     * An array of qualified module names contained within this FileTemplate.
+     */
+    @RO String[] moduleNames.get()
+        {
+        ComponentTemplate[] children = children();
+        return new String[](children.size, i -> children[i].as(ModuleTemplate).qualifiedName)
+                .freeze(True);
+        }
+
     @Override
     @RO FileTemplate containingFile.get()
         {

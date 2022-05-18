@@ -121,7 +121,9 @@ public class LinkedRepository
                     {
                     try
                         {
-                        repos[0].storeModule(module);
+                        // create a copy, allowing the compiler to mutate the repos[0] contents
+                        FileStructure fileClone = new FileStructure(module, false);
+                        repos[0].storeModule(module = fileClone.getModule());
                         }
                     catch (IOException e)
                         {

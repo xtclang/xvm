@@ -13,4 +13,7 @@ class RTModuleTemplate
 
     @Override
     immutable Map<String, String> moduleNamesByPath.get() {TODO("native");}
+
+    @Override
+    @RO Boolean resolved.get()                            {TODO("native");}
     }

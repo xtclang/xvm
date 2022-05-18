@@ -50,12 +50,23 @@ service DirRepository
     @Override
     ModuleTemplate getModule(String name)
         {
-        ensureCache();
+        Boolean fresh = ensureCache();
         if (ModuleInfo info := modulesByName.get(name))
             {
             return info.template;
             }
-        throw new IllegalArgument($"Module ${name} is missing or cannot be loaded");
+
+        if (!fresh)
+            {
+            // refresh the cache before blowing up
+            lastScan = DateTime.EPOCH;
+            ensureCache();
+            if (ModuleInfo info := modulesByName.get(name))
+                {
+                return info.template;
+                }
+            }
+        throw new IllegalArgument($"Module {name} is missing or cannot be loaded");
         }
 
     @Override
@@ -75,12 +86,15 @@ service DirRepository
 
     /**
      * Make sure that the cache is up to date.
+     *
+     * @return True if the directory has just been scanned; False if the cache is still considered
+     *         valid.
      */
-    private void ensureCache()
+    private Boolean ensureCache()
         {
         if (isCacheValid())
             {
-            return;
+            return False;
             }
 
         Map<String, ModuleInfo> oldModules = modulesByName;
@@ -110,6 +124,7 @@ service DirRepository
 
         modulesByName = newModules;
         lastScan      = clock.now;
+        return True;
         }
 
     /**

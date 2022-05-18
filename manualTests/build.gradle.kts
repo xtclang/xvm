@@ -132,7 +132,6 @@ tasks.register<JavaExec>("host") {
         "-L", "${xdk.buildDir}/xdk/lib/",
         "-L", "${xdk.buildDir}/xdk/javatools/javatools_turtle.xtc",
         "-L", "${xdk.buildDir}/xdk/javatools/javatools_bridge.xtc",
-        "-L", "$buildDir",
         "${xdk.buildDir}/xdk/lib/host.xtc")
 
     mainClass.set("org.xvm.tool.Runner")

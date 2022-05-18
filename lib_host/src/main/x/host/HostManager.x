@@ -22,10 +22,6 @@ import Injector.ConsoleBuffer as Buffer;
 service HostManager
         implements platform.HostManager
     {
-    @Inject Console          console;
-    @Inject Directory        curDir;
-    @Inject ModuleRepository repository;
-
     /**
      * Loaded WebHost objects keyed by the application domain name.
      */
@@ -41,67 +37,54 @@ service HostManager
         }
 
     @Override
-    conditional (FileTemplate, Directory) loadTemplate(String path, Log errors)
+    conditional WebHost createWebHost(Directory userDir, String appName, String domain, Log errors)
         {
-        File fileXtc;
-        if (!(fileXtc := curDir.findFile(path)))
+        String    libDirName = "build"; // REVIEW: replace with "lib/"?
+        Directory libDir;
+        if (!(libDir := userDir.findDir(libDirName)))
             {
-            errors.add($"Error: {path.quoted()} - not found");
+            errors.add($"Error: {libDirName.quoted()} directory not found in {userDir}");
             return False;
             }
 
-        Byte[] bytes;
+        @Inject("repository") ModuleRepository coreRepo;
+
+        // TODO: merge with a "public" repository
+        // TODO GG: the following doesn't compile
+        //      [coreRepo, new DirRepository(libDir)].toArray(Constant, True);
+        //      [coreRepo, new DirRepository(libDir)].freeze(True);
+        //      [coreRepo, new DirRepository(libDir)].makeImmutable();
+        ModuleRepository[] baseRepos  = new Array(Constant, [coreRepo, new DirRepository(libDir)]);
+        ModuleRepository   repository = new LinkedRepository(baseRepos);
+        FileTemplate       fileTemplate;
         try
             {
-            bytes = fileXtc.contents;
-            }
-        catch (IOException e)
-            {
-            errors.add($"Error: Failed to read the module: {fileXtc}");
-            return False;
-            }
+            ModuleTemplate template = repository.getResolvedModule(appName);
 
-        FileTemplate fileTemplate;
-        try
-            {
-            @Inject Container.Linker linker;
-
-            fileTemplate = linker.loadFileTemplate(bytes).resolve(repository);
+            fileTemplate = template.parent;
             }
         catch (Exception e)
             {
-            errors.add($"Error: Failed to resolve the module: {fileXtc} ({e.text})");
+            errors.add($"Error: Failed to resolve the module: {appName.quoted()} ({e.text})");
             return False;
             }
 
-        Path?     buildPath = fileXtc.path.parent;
-        Directory workDir   = fileXtc.store.dirFor(buildPath?) : curDir; // temporary
-        Directory homeDir   = ensureHome(workDir, fileTemplate.mainModule.qualifiedName);
-
-        return True, fileTemplate, homeDir;
-        }
-
-    @Override
-    conditional WebHost createWebHost(FileTemplate fileTemplate, Directory appHomeDir,
-                                      String domain, Boolean platform, Log errors)
-        {
-        ModuleTemplate template   = fileTemplate.mainModule;
-        String         moduleName = template.displayName;
-        if (!template.findAnnotation("web.WebModule"))
+        ModuleTemplate mainModule = fileTemplate.mainModule;
+        String         moduleName = mainModule.displayName;
+        if (!mainModule.findAnnotation("web.WebModule"))
             {
             errors.add($"Module \"{moduleName}\" is not a WebModule");
             return False;
             }
 
+        Directory appHomeDir = ensureHome(userDir, mainModule.qualifiedName);
+
         if ((Container container, AppHost[] dependents) :=
-                createContainer(fileTemplate, appHomeDir, platform, errors))
+                createContainer(repository, fileTemplate, appHomeDir, False, errors))
             {
             WebHost webHost = new WebHost(container, moduleName, appHomeDir, domain,
                                 createHttpServer(domain), dependents);
-            if (!platform)
-                {
-                loaded.put(domain, webHost);
-                }
+            loaded.put(domain, webHost);
             return True, webHost;
             }
 
@@ -120,14 +103,16 @@ service HostManager
     /**
      * Create a Container for the specified template.
      *
+     * @param buildDir  the directory to place build artifacts to
+     *
      * @return True iff the container has been loaded successfully
      * @return (optional) the Container
      * @return (optional) an array of AppHost objects for all dependent containers that have been
      *         loaded along the "main" container
      */
-    conditional (Container, AppHost[])
-            createContainer(FileTemplate fileTemplate, Directory appHomeDir,
-                            Boolean platform, Log errors)
+    conditional (Container, AppHost[]) createContainer(
+            ModuleRepository repository, FileTemplate fileTemplate, Directory appHomeDir,
+            Boolean platform, Log errors)
         {
         DbHost[] dbHosts;
         Injector injector;
@@ -139,12 +124,11 @@ service HostManager
 
             for ((String dbPath, String dbModuleName) : dbNames)
                 {
-                Directory workDir = appHomeDir.parent ?: assert;
+                Directory userDir = appHomeDir.parent ?: assert;
                 DbHost    dbHost;
 
-                if (!(dbHost := createDbHost(workDir, dbModuleName, errors)))
+                if (!(dbHost := createDbHost(repository, userDir, dbModuleName, errors)))
                     {
-                    errors.add($"Cannot load the database \"{dbModuleName}\"");
                     return False;
                     }
                 dbHosts += dbHost;
@@ -200,9 +184,10 @@ service HostManager
      *
      * @return (optional) the DbHost
      */
-    conditional DbHost createDbHost(Directory workDir, String dbModuleName, Log errors)
+    conditional DbHost createDbHost(
+            ModuleRepository repository, Directory userDir, String dbModuleName, Log errors)
         {
-        Directory      dbHomeDir = ensureHome(workDir, dbModuleName);
+        Directory      dbHomeDir = ensureHome(userDir, dbModuleName);
         DbHost         dbHost;
         ModuleTemplate dbModuleTemplate;
 
@@ -220,7 +205,9 @@ service HostManager
                 return False;
             }
 
-        if (!(dbModuleTemplate := dbHost.ensureDBModule(repository, workDir, errors)))
+        assert Directory buildDir := userDir.findDir("build");
+
+        if (!(dbModuleTemplate := dbHost.ensureDBModule(repository, buildDir, errors)))
             {
             errors.add($"Error: Failed to create a host for : {dbModuleName}");
             return False;
@@ -298,7 +285,7 @@ service HostManager
         }
 
     /**
-     * TODO
+     * TODO: temporary
      */
     HttpServer createHttpServer(String domain)
         {

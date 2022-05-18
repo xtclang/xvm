@@ -35,7 +35,7 @@ module host.xtclang.org
 
         ModuleTemplate controlModule = repository.getResolvedModule("hostControl.xtclang.org");
         if (Container container :=
-                mgr.createContainer(controlModule.parent, curDir, True, errors))
+                mgr.createContainer(repository, controlModule.parent, curDir, True, errors))
             {
             @Inject("server", "admin.xqiz.it:8080") HttpServer httpAdmin;
             container.invoke("configure", Tuple:(&mgr.maskAs(platform.HostManager), httpAdmin));

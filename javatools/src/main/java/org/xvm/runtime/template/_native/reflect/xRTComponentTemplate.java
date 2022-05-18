@@ -359,7 +359,7 @@ public class xRTComponentTemplate
         switch (component.getFormat())
             {
             case FILE:
-                return xRTFileTemplate.makeHandle((FileStructure) component);
+                return xRTFileTemplate.makeHandle(container, (FileStructure) component);
 
             case MODULE:
                 return xRTModuleTemplate.makeHandle(container, (ModuleStructure) component);

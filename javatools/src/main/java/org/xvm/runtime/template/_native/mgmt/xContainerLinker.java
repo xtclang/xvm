@@ -87,7 +87,7 @@ public class xContainerLinker
                     byte[]        abFile = xByteArray.getBytes((ArrayHandle) hArg);
                     FileStructure struct = new FileStructure(new ByteArrayInputStream(abFile));
 
-                    return frame.assignValue(iReturn, xRTFileTemplate.makeHandle(struct));
+                    return frame.assignValue(iReturn, xRTFileTemplate.makeHandle(frame.f_context.f_container, struct));
                     }
                 catch (IOException e)
                     {
@@ -123,44 +123,73 @@ public class xContainerLinker
         switch (method.getName())
             {
             case "resolveAndLink":
-                {
-                ComponentTemplateHandle hTemplate   = (ComponentTemplateHandle) ahArg[0];
-                ObjectHandle            hModel      = ahArg[1]; // mgmt.Container.Model
-                ObjectHandle            hRepo       = ahArg[2]; // mgmt.ModuleRepository
-                ObjectHandle            hProvider   = ahArg[3]; // mgmt.ResourceProvider
-                ObjectHandle            hShared     = ahArg[4];
-                ObjectHandle            hAdditional = ahArg[5];
-                ObjectHandle            hConditions = ahArg[6];
-
-                Container       container = frame.f_context.f_container;
-                ModuleStructure moduleApp = (ModuleStructure) hTemplate.getComponent();
-                if (!moduleApp.getFileStructure().isLinked())
-                    {
-                    FileStructure fileApp = container.createFileStructure(moduleApp);
-
-                    // TODO GG: this needs to be replaced with linking to the passed in repo
-                    String sMissing = fileApp.linkModules(container.getModuleRepository(), true);
-                    if (sMissing != null)
-                        {
-                        return frame.raiseException("Unable to load module \"" + sMissing + "\"");
-                        }
-                    moduleApp = fileApp.getModule(moduleApp.getName());
-                    }
-
-                if (!hProvider.isService())
-                    {
-                    return frame.raiseException("ResourceProvider must be a service");
-                    }
-
-                NestedContainer containerNested = new NestedContainer(
-                        container, frame.f_context, moduleApp.getIdentityConstant(),
-                        Collections.EMPTY_LIST);
-
-                return new CollectResources(containerNested, hProvider, iReturn).doNext(frame);
-                }
+                return invokeResolveAndLink(frame, ahArg, iReturn);
             }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
+        }
+
+    /**
+     * Native implementation of <code><pre>
+     * "(TypeSystem, Control) resolveAndLink(
+     *      ModuleTemplate    primaryModule, Model             model,
+     *      ModuleRepository? repository,    ResourceProvider? provider,
+     *      Module[]          sharedModules, ModuleTemplate[]  additionalModules,
+     *      String[]          namedConditions)"
+     * </pre></></code>
+     *
+     *  method.
+     */
+    private int invokeResolveAndLink(Frame frame, ObjectHandle[] ahArg, int iReturn)
+        {
+        ComponentTemplateHandle hModule     = (ComponentTemplateHandle) ahArg[0];
+        ObjectHandle            hModel      = ahArg[1]; // mgmt.Container.Model
+        ObjectHandle            hRepo       = ahArg[2]; // mgmt.ModuleRepository
+        ObjectHandle            hProvider   = ahArg[3]; // mgmt.ResourceProvider
+        ObjectHandle            hShared     = ahArg[4];
+        ObjectHandle            hAdditional = ahArg[5];
+        ObjectHandle            hConditions = ahArg[6];
+
+        if (!hProvider.isService())
+            {
+            return frame.raiseException("ResourceProvider must be a service");
+            }
+
+        FileStructure file = hModule.getComponent().getFileStructure();
+
+        switch (xRTFileTemplate.INSTANCE.invokeResolve(frame, file, hRepo, Op.A_STACK))
+            {
+            case Op.R_NEXT:
+                return completeResolveAndLink(frame, popModule(frame), hProvider, iReturn);
+
+            case Op.R_CALL:
+                Frame.Continuation stepNext = frameCaller ->
+                    completeResolveAndLink(frameCaller, popModule(frameCaller), hProvider, iReturn);
+                frame.m_frameNext.addContinuation(stepNext);
+                return Op.R_CALL;
+
+            case Op.R_EXCEPTION:
+                return Op.R_EXCEPTION;
+
+            default:
+                throw new IllegalStateException();
+            }
+        }
+
+    private ModuleStructure popModule(Frame frame)
+        {
+        ComponentTemplateHandle hFile = (ComponentTemplateHandle) frame.popStack();
+        return ((FileStructure) hFile.getComponent()).getModule();
+        }
+
+    private int completeResolveAndLink(Frame frame, ModuleStructure moduleApp,
+                                       ObjectHandle hProvider, int iReturn)
+        {
+        NestedContainer containerNested = new NestedContainer(
+            frame.f_context.f_container, moduleApp.getIdentityConstant(),
+            Collections.EMPTY_LIST);
+
+        return new CollectResources(containerNested, hProvider, iReturn).doNext(frame);
         }
 
     /**

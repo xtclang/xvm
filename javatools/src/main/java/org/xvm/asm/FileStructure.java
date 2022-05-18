@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 
 import java.util.function.Consumer;
@@ -154,9 +155,10 @@ public class FileStructure
     /**
      * Copy constructor.
      *
-     * @param module  the module to copy
+     * @param module       the module to copy
+     * @param fSynthesize  if true, synthesize all necessary structures
      */
-    public FileStructure(ModuleStructure module)
+    public FileStructure(ModuleStructure module, boolean fSynthesize)
         {
         super(null, Access.PUBLIC, true, true, true, Format.FILE, null, null);
 
@@ -166,16 +168,17 @@ public class FileStructure
         m_nMinorVer = fileStructure.m_nMinorVer;
         m_pool      = new ConstantPool(this);
 
-        merge(module, false);
+        merge(module, fSynthesize, false);
         }
 
     /**
      * Merge the specified module into this FileStructure.
      *
-     * @param module     the module to merge
-     * @param fTakeFile  if true, merge the os-file info as well
+     * @param module       the module to merge
+     * @param fSynthesize  if true, synthesize all necessary structures
+     * @param fTakeFile    if true, merge the os-file info as well
      */
-    public void merge(ModuleStructure module, boolean fTakeFile)
+    public void merge(ModuleStructure module, boolean fSynthesize, boolean fTakeFile)
         {
         m_sModuleName = module.getName();
 
@@ -187,27 +190,33 @@ public class FileStructure
 
         ConstantPool pool = m_pool;
 
-        // add fingerprints
-        for (Component child : module.getFileStructure().children())
+        try (var ignore = ConstantPool.withPool(pool))
             {
-            ModuleStructure moduleChild = (ModuleStructure) child;
-            if (moduleChild.isFingerprint() && getModule(moduleChild.getName()) == null)
+            // add fingerprints
+            for (Component child : module.getFileStructure().children())
                 {
-                ModuleStructure moduleChildClone = moduleChild.cloneBody();
-                moduleChildClone.setContaining(this);
-                addChild(moduleChildClone);
-                moduleChildClone.registerConstants(pool);
+                ModuleStructure moduleChild = (ModuleStructure) child;
+                if (moduleChild.isFingerprint() && getModule(moduleChild.getName()) == null)
+                    {
+                    ModuleStructure moduleChildClone = moduleChild.cloneBody();
+                    moduleChildClone.setContaining(this);
+                    addChild(moduleChildClone);
+                    moduleChildClone.registerConstants(pool);
+                    }
                 }
-            }
 
-        moduleClone.registerConstants(pool);
-        moduleClone.registerChildrenConstants(pool);
-        moduleClone.synthesizeChildren();
+            moduleClone.registerConstants(pool);
+            moduleClone.registerChildrenConstants(pool);
+            if (fSynthesize)
+                {
+                moduleClone.synthesizeChildren();
+                }
 
-        TypeConstant typeNakedRef = module.getConstantPool().getNakedRefType();
-        if (typeNakedRef != null)
-            {
-            pool.setNakedRefType(typeNakedRef);
+            TypeConstant typeNakedRef = module.getConstantPool().getNakedRefType();
+            if (typeNakedRef != null)
+                {
+                pool.setNakedRefType(typeNakedRef);
+                }
             }
 
         if (fTakeFile)
@@ -387,10 +396,11 @@ public class FileStructure
             return null;
             }
 
-        ArrayList<FileStructure> listFilesTodo   = new ArrayList<>();
-        ArrayList<String>        listModulesTodo = new ArrayList<>(moduleNames());
-        Set<String>              setModulesDone  = new HashSet<>();
-        String                   sMissing        = null;
+        List<FileStructure>   listFilesTodo   = new ArrayList<>();
+        List<String>          listModulesTodo = new ArrayList<>(moduleNames());
+        List<ModuleStructure> listReplace     = new ArrayList<>();
+        Set<String>           setModulesDone  = new HashSet<>();
+        String                sMissing        = null;
 
         // the primary module is implicitly linked already
         setModulesDone.add(getModuleName());
@@ -420,12 +430,13 @@ public class FileStructure
                 ModuleStructure moduleUnlinked = repository.loadModule(sModule); // TODO versions etc.
                 assert moduleUnlinked != null;
 
+                FileStructure fileUnlinked = moduleUnlinked.getFileStructure();
                 if (fRuntime)
                     {
-                    replace(moduleFingerprint, moduleUnlinked);
+                    listReplace.add(moduleUnlinked);
 
                     // TODO eventually we need to handle the case that these are actual modules and not just pointers to the modules
-                    listModulesTodo.addAll(moduleUnlinked.getFileStructure().moduleNames());
+                    listModulesTodo.addAll(fileUnlinked.moduleNames());
                     }
                 else // compile-time
                     {
@@ -436,10 +447,9 @@ public class FileStructure
                         fileTop.addChild(moduleFingerprint);
                         }
 
-                    FileStructure fileDownstream = moduleUnlinked.getFileStructure();
                     if (!setFilesDone.contains(sModule))
                         {
-                        listFilesTodo.add(fileDownstream);
+                        listFilesTodo.add(fileUnlinked); // recurse downstream
                         }
                     }
                 }
@@ -450,6 +460,11 @@ public class FileStructure
                 // TypeCompositionStatement
                 sMissing = sModule;
                 }
+            }
+
+        if (!listReplace.isEmpty())
+            {
+            replace(listReplace);
             }
 
         for (FileStructure fileDownstream : listFilesTodo)
@@ -468,24 +483,33 @@ public class FileStructure
         }
 
     /**
-     * Replace the specified "fingerprint" module with an actual one.
+     * Replace "fingerprint" modules with an actual ones.
      *
-     * @param moduleFingerprint  the fingerprint module to replace
-     * @param moduleUnlinked     the "raw" module to replace the fingerprint with
+     * @param listUnlinked  the list of "raw" modules to replace the fingerprint with
      */
-    public void replace(ModuleStructure moduleFingerprint, ModuleStructure moduleUnlinked)
+    public void replace(List<ModuleStructure> listUnlinked)
         {
-        ConstantPool    pool         = m_pool;
-        ModuleStructure moduleLinked = moduleUnlinked.cloneBody();
+        List<ModuleStructure> listLinked = new ArrayList<>();
+        for (ModuleStructure moduleUnlinked : listUnlinked)
+            {
+            ModuleStructure moduleLinked = moduleUnlinked.cloneBody();
 
-        moduleLinked.setContaining(this);
-        moduleLinked.cloneChildren(moduleUnlinked.children());
-        moduleLinked.registerConstants(pool);
-        moduleLinked.registerChildrenConstants(pool);
+            moduleLinked.setContaining(this);
+            moduleLinked.cloneChildren(moduleUnlinked.children());
 
-        replaceChild(moduleFingerprint, moduleLinked);
+            replaceChild(getModule(moduleLinked.getName()), moduleLinked);
 
-        moduleLinked.synthesizeChildren();
+            listLinked.add(moduleLinked);
+            }
+
+        ConstantPool pool = m_pool;
+        for (ModuleStructure moduleLinked : listLinked)
+            {
+            moduleLinked.registerConstants(pool);
+            moduleLinked.registerChildrenConstants(pool);
+
+            moduleLinked.synthesizeChildren();
+            }
         }
 
     /**

@@ -2,7 +2,7 @@ import ecstasy.mgmt.ModuleRepository;
 
 import ecstasy.reflect.ModuleTemplate;
 
-class CoreRepository
+const CoreRepository
         implements ModuleRepository
     {
     @Override immutable Set<String> moduleNames.get()

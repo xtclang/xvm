@@ -125,7 +125,7 @@ class DbHost(String moduleName, Directory homeDir)
         File sourceFile = buildDir.fileFor($"{appName}_{hostName}.x");
 
         if (createModule(sourceFile, appName, dbModule, appSchemaTemplate, errors) &&
-            compileModule(sourceFile, buildDir, errors))
+            compileModule(repository, sourceFile, buildDir, errors))
             {
             errors.add($"Info: Created a host module '{hostedName}' for '{moduleName}'");
             return True, repository.getModule(hostedName);
@@ -580,10 +580,11 @@ class DbHost(String moduleName, Directory homeDir)
     /**
      * Compile the specified source file.
      */
-    Boolean compileModule(File sourceFile, Directory buildDir, Log errors)
+    Boolean compileModule(ModuleRepository repository, File sourceFile, Directory buildDir, Log errors)
         {
         @Inject ecstasy.lang.src.Compiler compiler;
 
+        compiler.setLibraryRepository(repository);
         compiler.setResultLocation(buildDir);
 
         (Boolean success, String[] compilationErrors) = compiler.compile([sourceFile]);

@@ -4,7 +4,6 @@ package org.xvm.runtime.template._native.mgmt;
 import java.util.Set;
 
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
@@ -73,7 +72,7 @@ public class xCoreRepository
             {
             case "moduleNames":
                 {
-                ModuleRepository repo     = frame.f_context.f_container.getModuleRepository();
+                ModuleRepository repo     = f_container.getModuleRepository();
                 Set<String>      setNames = repo.getModuleNames();
                 StringHandle[]   ahName   = new StringHandle[setNames.size()];
 
@@ -98,18 +97,18 @@ public class xCoreRepository
             {
             case "getModule":
                 {
-                Container        container = frame.f_context.f_container;
-                String           sName     = ((StringHandle) hArg).getStringValue();
-                ModuleRepository repo      = container.getModuleRepository();
-                ModuleStructure  module    = repo.loadModule(sName);
+                String           sName  = ((StringHandle) hArg).getStringValue();
+                ModuleRepository repo   = f_container.getModuleRepository();
+                ModuleStructure  module = repo.loadModule(sName);
 
                 if (module == null)
                     {
                     return frame.raiseException(
-                            xException.illegalArgument(frame, "Invalid module name " + sName));
+                        xException.illegalArgument(frame, "Invalid module name \"" + sName + '"'));
                     }
 
-                return frame.assignValue(iReturn, xRTModuleTemplate.makeHandle(container, module));
+                return frame.assignValue(iReturn,
+                        xRTModuleTemplate.makeHandle(frame.f_context.f_container, module));
                 }
             }
 

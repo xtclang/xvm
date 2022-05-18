@@ -16,6 +16,8 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
+import org.xvm.runtime.template.xBoolean;
+
 import org.xvm.runtime.template.collections.xArray;
 
 import org.xvm.runtime.template.text.xString;
@@ -49,6 +51,7 @@ public class xRTModuleTemplate
 
         markNativeProperty("qualifiedName");
         markNativeProperty("moduleNamesByPath");
+        markNativeProperty("resolved");
         }
 
     @Override
@@ -66,6 +69,12 @@ public class xRTModuleTemplate
 
             case "moduleNamesByPath":
                 return getPropertyModuleNamesByPath(frame, hTemplate, iReturn);
+
+            case "resolved":
+                {
+                ModuleStructure module = (ModuleStructure) hTemplate.getComponent();
+                return frame.assignValue(iReturn, xBoolean.makeHandle(module.isLinked()));
+                }
             }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
