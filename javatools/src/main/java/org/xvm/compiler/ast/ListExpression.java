@@ -201,22 +201,17 @@ public class ListExpression
         List<Expression> listExprs   = exprs;
         int              cExprs      = listExprs.size();
         boolean          fConstant   = true;
-        TypeConstant     typeElement = null;
+        TypeConstant     typeElement = getImplicitElementType(ctx);
 
-        if (typeRequired != null)
+        if (typeRequired != null &&
+                (typeElement == null ||
+                    !pool.ensureArrayType(typeElement).isA(typeRequired) &&
+                    !pool.ensureSetType(typeElement).isA(typeRequired)))
             {
-            TypeConstant typeEl = getImplicitElementType(ctx);
-            if (typeEl != null &&
-                    (pool.ensureArrayType(typeEl).isA(typeRequired) ||
-                     pool.ensureSetType(typeEl).isA(typeRequired)))
-                {
-                typeElement = typeEl;
-                }
-            else
-                {
-                typeElement = resolveElementType(typeRequired);
-                }
+            // the implicit type is not good; try to resolve it based on the required type
+            typeElement = resolveElementType(typeRequired);
             }
+
         if (typeElement == null)
             {
             typeElement = pool.typeObject();

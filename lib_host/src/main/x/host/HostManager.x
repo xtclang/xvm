@@ -49,12 +49,7 @@ service HostManager
 
         @Inject("repository") ModuleRepository coreRepo;
 
-        // TODO: merge with a "public" repository
-        // TODO GG: the following doesn't compile
-        //      [coreRepo, new DirRepository(libDir)].toArray(Constant, True);
-        //      [coreRepo, new DirRepository(libDir)].freeze(True);
-        //      [coreRepo, new DirRepository(libDir)].makeImmutable();
-        ModuleRepository[] baseRepos  = new Array(Constant, [coreRepo, new DirRepository(libDir)]);
+        ModuleRepository[] baseRepos  = [coreRepo, new DirRepository(libDir)].freeze(True);
         ModuleRepository   repository = new LinkedRepository(baseRepos);
         FileTemplate       fileTemplate;
         try
