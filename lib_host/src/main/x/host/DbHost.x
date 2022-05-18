@@ -95,15 +95,14 @@ class DbHost(String moduleName, Directory homeDir)
         ModuleTemplate dbModule   = repository.getResolvedModule(moduleName);
         String         hostedName = $"{moduleName}_{hostName}";
 
-        if (repository.moduleNames.contains(hostedName))
+        if (ModuleTemplate hostModule := repository.getModule(hostedName))
             {
-            // try to see if the host module already exists and newer than the original module;
+            // try to see if the host module is newer than the original module;
             // if anything goes wrong - follow a regular path
             try
                 {
-                ModuleTemplate hostModule = repository.getModule(hostedName);
-                DateTime?      dbStamp    = dbModule.parent.created;
-                DateTime?      hostStamp  = hostModule.parent.created;
+                DateTime? dbStamp    = dbModule.parent.created;
+                DateTime? hostStamp  = hostModule.parent.created;
                 if (dbStamp != Null && hostStamp != Null && hostStamp > dbStamp)
                     {
                     errors.add($"Info: Host module '{hostedName}' for '{moduleName}' is up to date");
@@ -128,7 +127,7 @@ class DbHost(String moduleName, Directory homeDir)
             compileModule(repository, sourceFile, buildDir, errors))
             {
             errors.add($"Info: Created a host module '{hostedName}' for '{moduleName}'");
-            return True, repository.getModule(hostedName);
+            return repository.getModule(hostedName);
             }
         return False;
         }

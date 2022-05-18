@@ -33,7 +33,7 @@ service ContainerLinker
         else
             {
             assert:arg repository != Null;
-            primaryModule = repository.getModule(primarySpec);
+            assert primaryModule := repository.getModule(primarySpec) as $"Missing {primarySpec}";
             }
 
         ModuleTemplate[] additionalModules = new Array<ModuleTemplate>(additionalSpecs.size, i ->
@@ -44,7 +44,9 @@ service ContainerLinker
                 return spec;
                 }
             assert:arg repository != Null;
-            return repository.getModule(spec);
+            assert ModuleTemplate template :=
+                    repository.getModule(spec) as $"Missing additional module {spec}";
+            return template;
             });
 
         return resolveAndLink(primaryModule, model, repository, provider,

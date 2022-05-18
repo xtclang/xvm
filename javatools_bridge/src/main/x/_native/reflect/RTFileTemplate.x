@@ -71,7 +71,8 @@ class RTFileTemplate
                 throw new Exception($"Missing dependent module: {nextName}");
                 }
 
-            ModuleTemplate unresolved = repository.getModule(nextName);
+            assert ModuleTemplate unresolved := repository.getModule(nextName)
+                as $"Missing module {nextName}";
 
             unresolvedModules += unresolved;
             moduleNamesTodo.addAll(unresolved.parent.as(FileTemplate).moduleNames);

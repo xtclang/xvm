@@ -32,16 +32,16 @@ service LinkedRepository(List<ModuleRepository> repos)
         }
 
     @Override
-    ModuleTemplate getModule(String name)
+    conditional ModuleTemplate getModule(String name)
         {
         for (ModuleRepository repo : repos)
             {
-            if (repo.moduleNames.contains(name))
+            if (ModuleTemplate template := repo.getModule(name))
                 {
-                return repo.getModule(name);
+                return True, template;
                 }
             }
-        throw new IllegalArgument($"Module ${name} is missing");
+        return False;
         }
 
     @Override

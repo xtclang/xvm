@@ -16,7 +16,7 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
 
-import org.xvm.runtime.template.xException;
+import org.xvm.runtime.template.xBoolean;
 
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.ArrayHandle;
@@ -90,29 +90,25 @@ public class xCoreRepository
         }
 
     @Override
-    public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                             ObjectHandle hArg, int iReturn)
+    public int invokeNativeNN(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                              ObjectHandle[] ahArg, int[] aiReturn)
         {
         switch (method.getName())
             {
-            case "getModule":
+            case "getModule": // conditional ModuleTemplate getModule(String name)
                 {
-                String           sName  = ((StringHandle) hArg).getStringValue();
+                String           sName  = ((StringHandle) ahArg[0]).getStringValue();
                 ModuleRepository repo   = f_container.getModuleRepository();
                 ModuleStructure  module = repo.loadModule(sName);
 
-                if (module == null)
-                    {
-                    return frame.raiseException(
-                        xException.illegalArgument(frame, "Invalid module name \"" + sName + '"'));
-                    }
-
-                return frame.assignValue(iReturn,
-                        xRTModuleTemplate.makeHandle(frame.f_context.f_container, module));
+                return module == null
+                    ? frame.assignValue(aiReturn[0], xBoolean.FALSE)
+                    : frame.assignValues(aiReturn, xBoolean.TRUE,
+                            xRTModuleTemplate.makeHandle(frame.f_context.f_container, module));
                 }
             }
 
-        return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
+        return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
         }
 
     /**

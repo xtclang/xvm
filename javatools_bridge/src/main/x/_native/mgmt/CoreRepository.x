@@ -9,7 +9,7 @@ const CoreRepository
         {TODO("Native");}
 
     @Override
-    ModuleTemplate getModule(String name)
+    conditional ModuleTemplate getModule(String name)
         {TODO("Native");}
 
     @Override

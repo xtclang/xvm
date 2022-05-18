@@ -48,12 +48,12 @@ service DirRepository
         }
 
     @Override
-    ModuleTemplate getModule(String name)
+    conditional ModuleTemplate getModule(String name)
         {
         Boolean fresh = ensureCache();
         if (ModuleInfo info := modulesByName.get(name))
             {
-            return info.template;
+            return True, info.template;
             }
 
         if (!fresh)
@@ -63,10 +63,10 @@ service DirRepository
             ensureCache();
             if (ModuleInfo info := modulesByName.get(name))
                 {
-                return info.template;
+                return True, info.template;
                 }
             }
-        throw new IllegalArgument($"Module {name} is missing or cannot be loaded");
+        return False;
         }
 
     @Override

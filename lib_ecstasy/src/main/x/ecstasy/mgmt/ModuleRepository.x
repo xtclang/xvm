@@ -14,19 +14,27 @@ interface ModuleRepository
      * Obtain a module template for the specified module. Note, that the returned template may not
      * be [resolved](`ModuleTemplate.resolved`)
      *
-     * @throws IllegalArgument if the module does not exist
+     * @param name  the module name (qualified)
+     *
+     * @return True iff the module exists
+     * @return (conditional) the ModuleTemplate
      */
-    ModuleTemplate getModule(String name);
+    conditional ModuleTemplate getModule(String name);
 
     /**
-     * Obtain a resolved module template for the specified module.
+     * Obtain a resolved module template for the specified name.
+     *
+     * @param name  the module name (qualified)
+     *
+     * @return the resolved ModuleTemplate
      *
      * @throws IllegalArgument if the module does not exist
      * @throws Exception       if the module cannot be resolved
      */
     ModuleTemplate getResolvedModule(String name)
         {
-        return getModule(name).parent.resolve(this).mainModule;
+        assert ModuleTemplate template := getModule(name) as $"Missing module {name}";
+        return template.parent.resolve(this).mainModule;
         }
 
     /**

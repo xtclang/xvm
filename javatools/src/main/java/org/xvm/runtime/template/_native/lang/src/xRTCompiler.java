@@ -169,33 +169,31 @@ public class xRTCompiler
         return doCompile(frame, compiler, hDirOut, hLibRepo, null, aiReturn);
         }
 
-    private int doCompile(Frame frame, CompilerAdapter compiler, NodeHandle hDirOut, ObjectHandle hRepo,
-                          String sMissingPrev, int[] aiReturn)
+    private int doCompile(Frame frame, CompilerAdapter compiler, NodeHandle hDirOut,
+                          ObjectHandle hRepo, String sMissingPrev, int[] aiReturn)
         {
         try
             {
             String sMissing = compiler.partialCompile(sMissingPrev != null);
             if (sMissing != null)
                 {
-                if (sMissing.equals(sMissingPrev))
+                if (sMissing.equals(sMissingPrev) || hRepo == null)
                     {
-                    // org.xvm.compiler.Compiler.MODULE_MISSING
-                    compiler.log(Severity.FATAL, "Module missing " +  sMissing);
-                    return completeCompilation(frame, compiler, hDirOut, null, aiReturn);
+                    return completeWithError(frame, compiler, sMissing, aiReturn);
                     }
                 CallChain chain = computeGetModuleChain(frame, hRepo);
-                switch (chain.invoke(frame, hRepo, xString.makeHandle(sMissing), Op.A_STACK))
+                switch (chain.invoke(frame, hRepo, xString.makeHandle(sMissing), STACK_2))
                     {
                     case Op.R_NEXT:
-                        compiler.addRepo(popModuleStructure(frame));
-                        return doCompile(frame, compiler, hDirOut, hRepo, sMissing, aiReturn);
+                        return popModuleStructure(frame, compiler)
+                            ? doCompile(frame, compiler, hDirOut, hRepo, sMissing, aiReturn)
+                            : completeWithError(frame, compiler, sMissing, aiReturn);
 
                     case Op.R_CALL:
                         Frame.Continuation nextStep = frameCaller ->
-                            {
-                            compiler.addRepo(popModuleStructure(frameCaller));
-                            return doCompile(frameCaller, compiler, hDirOut, hRepo, sMissing, aiReturn);
-                            };
+                            popModuleStructure(frameCaller, compiler)
+                                ? doCompile(frameCaller, compiler, hDirOut, hRepo, sMissing, aiReturn)
+                                : completeWithError(frameCaller, compiler, sMissing, aiReturn);
                         frame.m_frameNext.addContinuation(nextStep);
                         return Op.R_CALL;
 
@@ -231,10 +229,32 @@ public class xRTCompiler
         return chain;
         }
 
-    private ModuleStructure popModuleStructure(Frame frame)
+    /**
+     * Obtain a ModuleStructure from the natural (conditional ModuleTemplate) return value on the
+     * stack and add it to the CompilerAdapter's repository.
+     *
+     * @return true iff the module was successfully loaded and added
+     */
+    private boolean popModuleStructure(Frame frame, CompilerAdapter compiler)
         {
-        ComponentTemplateHandle hModule = (ComponentTemplateHandle) frame.popStack();
-        return (ModuleStructure) hModule.getComponent();
+        ObjectHandle hReturn = frame.popStack();
+        if (hReturn instanceof ComponentTemplateHandle hModule)
+            {
+            assert frame.popStack() == xBoolean.TRUE;
+            compiler.addRepo((ModuleStructure) hModule.getComponent());
+            return true;
+            }
+
+        assert frame.popStack() == xBoolean.FALSE;
+        return false;
+        }
+
+    private int completeWithError(Frame frame, CompilerAdapter compiler, String
+                                  sMissing, int[] aiReturn)
+        {
+        // org.xvm.compiler.Compiler.MODULE_MISSING
+        compiler.log(Severity.FATAL, "Module missing: \"" + sMissing + '"');
+        return completeCompilation(frame, compiler, null, null, aiReturn);
         }
 
     private int completeCompilation(Frame frame, CompilerAdapter compiler, NodeHandle hDirOut,
@@ -621,6 +641,8 @@ public class xRTCompiler
         }
 
     // ----- constants -----------------------------------------------------------------------------
+
+    private static final int[] STACK_2 = new int[] {Op.A_STACK, Op.A_STACK};
 
     private static MethodConstant GET_MODULE_ID;
     }
