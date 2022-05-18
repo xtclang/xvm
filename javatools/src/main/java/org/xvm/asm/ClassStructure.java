@@ -619,8 +619,7 @@ public class ClassStructure
     public ClassStructure getVirtualChild(String sName)
         {
         Component child = findChildDeep(sName, true);
-        return child instanceof ClassStructure &&
-            ((ClassStructure) child).isVirtualChild()
+        return child instanceof ClassStructure clz && clz.isVirtualChild()
                 ? (ClassStructure) child
                 : null;
         }
@@ -1370,10 +1369,10 @@ public class ClassStructure
                     contribMatch = checkContribution(contrib, typeContrib, idContrib);
                     }
                 }
-            else if (typeContrib instanceof UnionTypeConstant)
+            else if (typeContrib instanceof UnionTypeConstant typeUnion)
                 {
                 // the only relational type contributions we can process further are the union types
-                contribMatch = checkUnionContribution(contrib, (UnionTypeConstant) typeContrib, idContrib);
+                contribMatch = checkUnionContribution(contrib, typeUnion, idContrib);
                 }
 
             if (contribMatch != null)
@@ -1424,8 +1423,8 @@ public class ClassStructure
         TypeConstant type1    = typeContrib.getUnderlyingType();
         Contribution contrib1 = type1.isExplicitClassIdentity(true)
                 ? checkContribution(contrib, type1, idTest)
-                : type1 instanceof UnionTypeConstant
-                    ? checkUnionContribution(contrib, (UnionTypeConstant) type1, idTest)
+                : type1 instanceof UnionTypeConstant typeUnion1
+                    ? checkUnionContribution(contrib, typeUnion1, idTest)
                     : null;
         if (contrib1 != null)
             {
@@ -1435,8 +1434,8 @@ public class ClassStructure
         TypeConstant type2 = typeContrib.getUnderlyingType2();
         return type2.isExplicitClassIdentity(true)
                 ? checkContribution(contrib, type2, idTest)
-                : type2 instanceof UnionTypeConstant
-                    ? checkUnionContribution(contrib, (UnionTypeConstant) type2, idTest)
+                : type2 instanceof UnionTypeConstant typeUnion2
+                    ? checkUnionContribution(contrib, typeUnion2, idTest)
                     : null;
         }
 
@@ -1548,10 +1547,10 @@ public class ClassStructure
                         Object o = component.findVirtualChildSuper(idThis, cDepth, setVisited);
                         if (o != null)
                             {
-                            if (o instanceof Boolean)
+                            if (o instanceof Boolean Flag)
                                 {
                                 // something necessary hasn't resolved yet
-                                assert !((Boolean) o);
+                                assert !Flag;
                                 return false;
                                 }
 
@@ -1591,7 +1590,7 @@ public class ClassStructure
 
             // we are finished walking up the parent chain AFTER we have processed the first class
             // in that chain that is NOT a virtual child class
-            if (parent instanceof ClassStructure && !((ClassStructure) parent).isVirtualChild())
+            if (parent instanceof ClassStructure clz && !clz.isVirtualChild())
                 {
                 break;
                 }
@@ -2587,9 +2586,9 @@ public class ClassStructure
 
         for (Component child : children())
             {
-            if (child instanceof MultiMethodStructure)
+            if (child instanceof MultiMethodStructure mms)
                 {
-                for (MethodStructure method : ((MultiMethodStructure) child).methods())
+                for (MethodStructure method : mms.methods())
                     {
                     if (!method.isStatic() && method.isAccessible(access)
                             && method.consumesFormalType(sName))
@@ -2736,9 +2735,9 @@ public class ClassStructure
 
         for (Component child : children())
             {
-            if (child instanceof MultiMethodStructure)
+            if (child instanceof MultiMethodStructure mms)
                 {
-                for (MethodStructure method : ((MultiMethodStructure) child).methods())
+                for (MethodStructure method : mms.methods())
                     {
                     if (!method.isStatic() && method.isAccessible(access)
                             && method.producesFormalType(sName))
@@ -3927,15 +3926,15 @@ public class ClassStructure
             }
 
         // immediately-nested properties are identified by using only a string name
-        if (id instanceof String)
+        if (id instanceof String sName)
             {
-            return getChild((String) id);
+            return getChild(sName);
             }
 
         // immediately-nested multi-method/method combinations are identified by using only a sig
-        if (id instanceof SignatureConstant)
+        if (id instanceof SignatureConstant sig)
             {
-            return findMethod((SignatureConstant) id);
+            return findMethod(sig);
             }
 
         return ((NestedIdentity) id).getIdentityConstant().relocateNestedIdentity(this);
