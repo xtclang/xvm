@@ -1867,12 +1867,25 @@ public class ConstantPool
      */
     public TypeConstant ensureThisTypeConstant(Constant constClass, Access access)
         {
-        ThisClassConstant constId = switch (constClass.getFormat())
+        ThisClassConstant constId;
+        switch (constClass.getFormat())
             {
-            case ThisClass              -> (ThisClassConstant) constClass;
-            case Module, Package, Class -> ensureThisClassConstant((IdentityConstant) constClass);
-            default                     -> throw new IllegalStateException("constant=" + constClass);
-            };
+            case ThisClass:
+                constId = (ThisClassConstant) constClass;
+                break;
+
+            case NativeClass:
+                constClass = ((NativeRebaseConstant) constClass).getClassConstant();
+                // fall through;
+            case Module:
+            case Package:
+            case Class:
+                constId = ensureThisClassConstant((IdentityConstant) constClass);
+                break;
+
+            default:
+                throw new IllegalStateException("constant=" + constClass);
+            }
 
         // get the raw type
         TypeConstant constType = (TypeConstant) ensureLocatorLookup(Format.TerminalType).get(constId);
