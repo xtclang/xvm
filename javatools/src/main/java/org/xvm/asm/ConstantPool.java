@@ -2756,8 +2756,8 @@ public class ConstantPool
                     constant = new RegisterConstant(this, in);
                     break;
 
-                case DynamicFormal:
-                    constant = new DynamicFormalConstant(this, format, in);
+                case BindTarget:
+                    constant = new MethodBindingConstant(this, in);
                     break;
 
                 /*
@@ -2784,6 +2784,10 @@ public class ConstantPool
 
                 case FormalTypeChild:
                     constant = new FormalTypeChildConstant(this, format, in);
+                    break;
+
+                case DynamicFormal:
+                    constant = new DynamicFormalConstant(this, format, in);
                     break;
 
                 case Signature:

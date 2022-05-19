@@ -9,8 +9,8 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.FrameDependentConstant;
 import org.xvm.asm.constants.PropertyConstant;
-import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.SingletonConstant;
 
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
@@ -41,9 +41,9 @@ public class ConstHeap
      */
     protected ObjectHandle ensureConstHandle(Frame frame, Constant constValue)
         {
-        if (constValue instanceof RegisterConstant constReg)
+        if (constValue instanceof FrameDependentConstant constFrame)
             {
-            return constReg.getHandle(frame);
+            return constFrame.getHandle(frame);
             }
 
         // NOTE: we cannot use computeIfAbsent, since createConstHandle can be recursive,

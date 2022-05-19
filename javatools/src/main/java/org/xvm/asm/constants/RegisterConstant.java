@@ -23,7 +23,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * Constant whose purpose is to represent a run-time register.
  */
 public class RegisterConstant
-        extends Constant
+        extends FrameDependentConstant
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -80,11 +80,10 @@ public class RegisterConstant
                 : f_nReg;
         }
 
-    /**
-     * Obtain the ObjectHandle for this RegisterConstant.
-     *
-     * @return the ObjectHandle (can be DeferredCallHandle)
-     */
+
+    // ----- FrameDependentConstant methods --------------------------------------------------------
+
+    @Override
     public ObjectHandle getHandle(Frame frame)
         {
         try

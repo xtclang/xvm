@@ -21,10 +21,10 @@ import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ConditionalConstant;
+import org.xvm.asm.constants.FrameDependentConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PendingTypeConstant;
-import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -1442,7 +1442,7 @@ public class MethodStructure
                 Constant constArg = aconstArgs[i];
                 if (constArg != null)
                     {
-                    if (!(constArg instanceof RegisterConstant))
+                    if (!(constArg instanceof FrameDependentConstant))
                         {
                         mapValues.put(param.getName(), constArg);
                         }

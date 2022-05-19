@@ -833,7 +833,12 @@ public abstract class Constant
         MultiMethod,
         Method,
         Annotation,
+
+        /*
+         * FrameDependent (run-time aware) identifiers.
+         */
         Register,
+        BindTarget,
 
         /*
          * Pseudo identifiers.
