@@ -148,11 +148,14 @@ public class Context
         }
 
     /**
-     * @return the formal type of the containing class
+     * @return the formal type for "this" (could be narrowed within this context)
      */
     public TypeConstant getThisType()
         {
-        return getThisClass().getFormalType();
+        Argument argThis = getVar("this");
+        return argThis == null
+                ? getThisClass().getFormalType()
+                : argThis.getType().removeAccess();
         }
 
     /**
@@ -1517,7 +1520,7 @@ public class Context
                     {
                     FormalConstant constFormal = entry.getKey();
                     if (constFormal instanceof PropertyConstant &&
-                        constFormal.getName().equals(sFormalName))
+                            constFormal.getName().equals(sFormalName))
                         {
                         return entry.getValue();
                         }
@@ -1533,7 +1536,7 @@ public class Context
                     {
                     return isFunction()
                             ? null
-                            : getThisType().resolveGenericType(sFormalName);
+                            : getThisClass().getFormalType().resolveGenericType(sFormalName);
                     }
 
                 TypeConstant typeType = arg.getType();

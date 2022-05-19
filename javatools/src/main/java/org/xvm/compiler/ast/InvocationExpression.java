@@ -222,13 +222,13 @@ public class InvocationExpression
     @Override
     public boolean validateCondition(ErrorListener errs)
         {
-        return expr instanceof NameExpression
-                && ((NameExpression) expr).getName().equals("versionMatches")
+        return expr instanceof NameExpression exprName
+                && exprName.getName().equals("versionMatches")
                 && args.size() == 1
-                && args.get(0) instanceof LiteralExpression
-                && ((LiteralExpression) args.get(0)).getLiteral().getId() == Id.LIT_VERSION
-                && ((NameExpression) expr).getLeftExpression() != null
-                && ((NameExpression) expr).isOnlyNames()
+                && args.get(0) instanceof LiteralExpression argLit
+                && argLit.getLiteral().getId() == Id.LIT_VERSION
+                && exprName.getLeftExpression() != null
+                && exprName.isOnlyNames()
                 || super.validateCondition(errs);
         }
 
@@ -274,12 +274,11 @@ public class InvocationExpression
     @Override
     protected void updateLineNumber(Code code)
         {
-        if (expr instanceof NameExpression)
+        if (expr instanceof NameExpression exprName)
             {
             // use the line that contains the method name (etc...) as the current line;
             // this is dramatically better for fluent style coding convention
-            code.updateLineNumber(Source.calculateLine(
-                    ((NameExpression) expr).getNameToken().getStartPosition()));
+            code.updateLineNumber(Source.calculateLine(exprName.getNameToken().getStartPosition()));
             }
         else
             {
@@ -440,7 +439,7 @@ public class InvocationExpression
                     if (typeLeft == null)
                         {
                         typeLeft = m_targetInfo == null
-                                ? ctx.getVar("this").getType() // "this" could be narrowed
+                                ? ctx.getThisType()
                                 : m_targetInfo.getTargetType();
                         }
                     SignatureConstant sigMethod = idMethod.getSignature();
@@ -477,10 +476,10 @@ public class InvocationExpression
             // already handled above); the function has two tuple sub-types, the second of which is
             // the "return types" of the function
             TypeConstant typeArg;
-            if (argMethod instanceof PropertyConstant)
+            if (argMethod instanceof PropertyConstant idProp)
                 {
                 TypeInfo     infoLeft = getTypeInfo(ctx, typeLeft, errs);
-                PropertyInfo infoProp = infoLeft.findProperty((PropertyConstant) argMethod);
+                PropertyInfo infoProp = infoLeft.findProperty(idProp);
 
                 typeArg = infoProp == null ? pool.typeObject() : infoProp.getType();
                 }
@@ -866,7 +865,7 @@ public class InvocationExpression
                 if (typeLeft == null && !m_method.isFunction())
                     {
                     typeLeft = m_targetInfo == null
-                            ? ctx.getVar("this").getType() // "this" could be narrowed
+                            ? ctx.getThisType()
                             : m_targetInfo.getTargetType();
                     }
 
@@ -1853,7 +1852,7 @@ public class InvocationExpression
                     }
                 }
             }
-        else if (argFn instanceof Register && ((Register) argFn).isSuper())
+        else if (argFn instanceof Register regFn && regFn.isSuper())
             {
             // non-bound super(...) function still needs to bind a target
             aiArg = new int[0];
@@ -1924,7 +1923,7 @@ public class InvocationExpression
      */
     protected boolean isSuppressCall()
         {
-        return (expr instanceof NameExpression && ((NameExpression) expr).isSuppressDeref())
+        return (expr instanceof NameExpression exprName && exprName.isSuppressDeref())
                 || isAnyArgUnbound();
         }
 
@@ -2060,7 +2059,7 @@ public class InvocationExpression
 
             if (arg == null)
                 {
-                typeLeft = ctx.getVar("this").getType();
+                typeLeft = ctx.getThisType();
 
                 if (ctx.isMethod())
                     {
@@ -2253,9 +2252,9 @@ public class InvocationExpression
                         return idCallable;
                         }
                     }
-                else if (id instanceof PropertyConstant)
+                else if (id instanceof PropertyConstant idProp)
                     {
-                    PropertyInfo prop = info.findProperty((PropertyConstant) id);
+                    PropertyInfo prop = info.findProperty(idProp);
                     if (prop == null)
                         {
                         throw new IllegalStateException("missing property: " + id + " on " + target.getTargetType());
@@ -2291,11 +2290,11 @@ public class InvocationExpression
             assert !(arg instanceof MethodConstant);
 
             // TODO GG the same logic below for imports probably also need to be in NameExpression
-            if (arg instanceof MultiMethodConstant)
+            if (arg instanceof MultiMethodConstant idMM)
                 {
                 // an import name can specify a MultiMethodConstant;
                 // we only allow functions (not methods or constructors)
-                IdentityConstant idClz      = ((MultiMethodConstant) arg).getParentConstant();
+                IdentityConstant idClz      = idMM.getParentConstant();
                 TypeConstant     typeTarget = idClz.getType();
                 TypeInfo         info       = getTypeInfo(ctx, typeTarget, errs);
                 IdentityConstant idCallable = findMethod(ctx, typeTarget, info, sName,
@@ -2318,10 +2317,10 @@ public class InvocationExpression
                 return idCallable;
                 }
 
-            if (arg instanceof PropertyConstant)
+            if (arg instanceof PropertyConstant idProp)
                 {
                 // an import name can specify a static PropertyConstant
-                return testStaticProperty(ctx, (PropertyConstant) arg, atypeReturn, errs);
+                return testStaticProperty(ctx, idProp, atypeReturn, errs);
                 }
 
             log(errs, Severity.ERROR, Compiler.ILLEGAL_INVOCATION, tokName.getValueText());
@@ -2456,10 +2455,10 @@ public class InvocationExpression
                     m_fBindTarget = fSingleton && !m_method.isFunction();
                     return idMethod;
                     }
-                if (arg instanceof PropertyConstant)
+                if (arg instanceof PropertyConstant idProp)
                     {
                     errsTemp.merge();
-                    return testStaticProperty(ctx, (PropertyConstant) arg, atypeReturn, errs);
+                    return testStaticProperty(ctx, idProp, atypeReturn, errs);
                     }
                 }
 

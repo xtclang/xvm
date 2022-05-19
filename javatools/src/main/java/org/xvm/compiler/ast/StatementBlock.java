@@ -670,7 +670,7 @@ public class StatementBlock
                     Context ctxC = exprNew.getCaptureContext();
                     if (ctxC != null)
                         {
-                        return ctxC.getThisType();
+                        return ctxC.getThisClass().getFormalType();
                         }
                     }
                 }
@@ -794,7 +794,7 @@ public class StatementBlock
                     // may have private access
                     MethodConstant idMethod   = getMethod().getIdentityConstant();
                     Access         access     = idMethod.isTopLevel() ? Access.PROTECTED : Access.PRIVATE;
-                    TypeConstant   typeCtx    = pool().ensureAccessTypeConstant(getThisType(), access);
+                    TypeConstant   typeCtx    = pool().ensureAccessTypeConstant(getThisClass().getFormalType(), access);
                     TypeInfo       info       = typeCtx.ensureTypeInfo();
                     MethodInfo     infoMethod = info.getMethodById(idMethod);
                     return infoMethod != null && infoMethod.hasSuper(info);
@@ -903,7 +903,7 @@ public class StatementBlock
             AstNode          node      = StatementBlock.this;
             boolean          fSameFile = true;
             boolean          fHasThis  = isMethod() || isConstructor();
-            TypeConstant     typeThis  = fHasThis ? ctxFrom.getVar("this").getType() : null;
+            TypeConstant     typeThis  = fHasThis ? ctxFrom.getThisType() : null;
             int              cSteps    = 0;
             Access           access    = Access.PRIVATE;
             IdentityConstant idPrev    = null;
@@ -1214,7 +1214,7 @@ public class StatementBlock
                 }
 
             ConstantPool pool     = pool();
-            TypeConstant typeThis = getThisType();
+            TypeConstant typeThis = getThisClass().getFormalType();
             TypeConstant type;
             int          nReg;
             int          cSteps = 0;
@@ -1408,11 +1408,11 @@ public class StatementBlock
         ModuleStructure getModule()
             {
             Component parent = f_method;
-            while (!(parent instanceof ModuleStructure))
+            while (!(parent instanceof ModuleStructure mms))
                 {
                 parent = parent.getParent();
                 }
-            return (ModuleStructure) parent;
+            return mms;
             }
 
         @Override
