@@ -236,7 +236,8 @@ public abstract class ClassTemplate
 
     /**
      * Produce a ClassComposition for this template using the actual types for formal parameters.
-     *  @param container        the ConstantPool to place a potentially created new type into
+     *
+     * @param container   the ConstantPool to place a potentially created new type into
      * @param typeParams  the type parameters
      */
     public TypeComposition ensureParameterizedClass(Container container, TypeConstant... typeParams)
@@ -2353,21 +2354,18 @@ public abstract class ClassTemplate
                                     ctorAnno, hStruct, ahArgs, Op.A_IGNORE);
 
                                 // if an annotation argument is represented by a RegisterConstant,
-                                // then it's either a default value or a current frame's register
-                                // value;
+                                // then it's the *current* frame's register value;
                                 // otherwise, Frame#getConstHandle() may return a deferred handle,
                                 // and since we are going to pass it as an argument for the
-                                // constructor, we need to use the constructor's frame to
+                                // constructor, we need to use the *constructor* frame to
                                 // [potentially] create that deferred handle
                                 for (int i = 0; i < cArgs; i++)
                                     {
                                     Constant constArg = aconstArgs[i];
 
                                     ahArgs[i] = constArg instanceof RegisterConstant constReg
-                                            ? constReg.getRegisterIndex() == Op.A_DEFAULT
-                                                ? ObjectHandle.DEFAULT
-                                                : constReg.getHandle(frameCaller)
-                                        : frameCtor.getConstHandle(constArg);
+                                            ? constReg.getHandle(frameCaller)
+                                            : frameCtor.getConstHandle(constArg);
                                     }
 
                                 prepareFinalizer(frameCtor, ctorAnno, ahArgs);

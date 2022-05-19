@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Op;
 import org.xvm.asm.Register;
 
 import org.xvm.runtime.Frame;
@@ -88,7 +89,8 @@ public class RegisterConstant
         {
         try
             {
-            return frame.getArgument(getRegisterIndex());
+            int nReg = getRegisterIndex();
+            return nReg == Op.A_DEFAULT ? ObjectHandle.DEFAULT : frame.getArgument(nReg);
             }
         catch (ExceptionHandle.WrapperException e)
             {
@@ -112,11 +114,11 @@ public class RegisterConstant
         }
 
     @Override
-    protected int compareDetails(Constant that)
+    protected int compareDetails(Constant constant)
         {
         assert getRegisterIndex() != Register.UNKNOWN;
-        return that instanceof RegisterConstant
-                ? this.getRegisterIndex() - ((RegisterConstant) that).getRegisterIndex()
+        return constant instanceof RegisterConstant that
+                ? this.getRegisterIndex() - that.getRegisterIndex()
                 : -1;
         }
 
