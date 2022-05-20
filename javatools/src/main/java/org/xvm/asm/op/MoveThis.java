@@ -9,7 +9,6 @@ import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.Op;
-import org.xvm.asm.Register;
 import org.xvm.asm.Scope;
 
 import org.xvm.runtime.Frame;
@@ -178,8 +177,16 @@ public class MoveThis
         {
         return super.toString()
                 + " #" + m_cSteps
-                + ", " + Argument.toIdString(m_argTo, m_nToValue)
-                + (m_nAccess == 0 ? "" : " " + Register.getIdString(m_nAccess)) ;
+                + ", "
+                + (switch (m_nAccess)
+                    {
+                    case A_PUBLIC    -> Access.PUBLIC;
+                    case A_PROTECTED -> Access.PROTECTED;
+                    case A_PRIVATE   -> Access.PRIVATE;
+                    case A_STRUCT    -> Access.STRUCT;
+                    default          -> throw new IllegalStateException();
+                    })
+                + " -> " + Argument.toIdString(m_argTo, m_nToValue);
         }
 
     protected int m_cSteps;
