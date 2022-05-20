@@ -16,6 +16,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
+import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.ClassConstant;
@@ -184,6 +185,28 @@ public class AnnotationExpression
         return m_anno = pool.ensureAnnotation(constClass, aconstArgs);
         }
 
+    /**
+     * Check if this expression represents a property annotation and if so, obtain the corresponding
+     * property.
+     *
+     * @return the annotated property or null
+     */
+    protected PropertyStructure getAnnotatedProperty()
+        {
+        return getParent() instanceof PropertyDeclarationStatement stmtProp
+                ? (PropertyStructure) stmtProp.getComponent()
+                : null;
+        }
+
+    /**
+     * @return true iff this expression represents an instance property annotation
+     */
+    protected boolean hasThis()
+        {
+        PropertyStructure prop = getAnnotatedProperty();
+        return prop != null && !prop.isStatic();
+        }
+
 
     // ----- compilation ---------------------------------------------------------------------------
 
@@ -200,13 +223,9 @@ public class AnnotationExpression
             return;
             }
 
-        ClassConstant idAnno   = (ClassConstant) constAnno;
-        TypeConstant  typeAnno = type == null
-                ? idAnno.getFormalType()
-                : type.ensureTypeConstant();
+        ClassConstant idAnno = (ClassConstant) constAnno;
 
-        TypeInfo infoAnno = typeAnno.ensureTypeInfo(errs);
-        if (infoAnno.getFormat() != Format.MIXIN)
+        if (idAnno.getComponent().getFormat() != Format.MIXIN)
             {
             log(errs, Severity.ERROR, Constants.VE_ANNOTATION_NOT_MIXIN, anno.getValueString());
             return;
@@ -223,14 +242,29 @@ public class AnnotationExpression
             return;
             }
 
+        ConstantPool      pool     = pool();
         List<Expression>  listArgs = args;
         int               cArgs    = listArgs == null ? 0 : listArgs.size();
         ValidatingContext ctx      = new ValidatingContext(getComponent().getContainingClass());
         ErrorListener     errsTemp = errs.branch(this);
 
+        TypeConstant  typeAnno = type == null
+                ? idAnno.getType()
+                : type.ensureTypeConstant();
+        if (!typeAnno.isParamsSpecified() && typeAnno.isA(pool.typeRef()))
+            {
+            PropertyStructure prop = getAnnotatedProperty();
+            if (prop != null)
+                {
+                typeAnno = pool.ensureParameterizedTypeConstant(typeAnno, prop.getType());
+                }
+            }
+
+        TypeInfo infoAnno = typeAnno.ensureTypeInfo(errs);
+
         // find a matching constructor on the annotation class
-        MethodConstant idConstruct = findMethod(ctx, typeAnno, infoAnno,
-                    "construct", listArgs, MethodKind.Constructor, true, false, TypeConstant.NO_TYPES, errsTemp);
+        MethodConstant idConstruct = findMethod(ctx, typeAnno, infoAnno, "construct",
+                listArgs, MethodKind.Constructor, true, false, TypeConstant.NO_TYPES, errsTemp);
 
         errsTemp.merge();
         if (idConstruct == null)
@@ -310,7 +344,7 @@ public class AnnotationExpression
                     {
                     if (aconstArgs[iParam] == null)
                         {
-                        aconstArgs[iParam] = pool().valDefault();
+                        aconstArgs[iParam] = pool.valDefault();
                         }
                     }
                 }
