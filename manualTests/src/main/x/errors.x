@@ -55,39 +55,15 @@ module TestCompilerErrors
         Object test = (3, "blind", "mice", "!") [4];
         }
 
-    // asserts
-    void testAssert()
+    // methods
+    class TestMethods
         {
-        assert;
-        String s = "testAssert";
-        }
-
-    void testAssertFalse()
-        {
-        assert False;
-        String s = "testAssertFalse";
-        }
-
-    // loops
-    void testDo()
-        {
-        Int j = 0;
-        Int i;
-        do
+        static void testMethod1()
             {
-            if (j == 4)   // i is not def asn at this point ...
-                {
-                continue; // ... so i is still not def asn at this point
-                }
-
-            i = ++j;
-
-            if (i == 4)
-                {
-                continue;
-                }
+            function void () m1 = testMethod2;      // no "this"
+            function void () m2 = Test.testMethod2; // no target
             }
-        while (i < 10);   // should be an error here (i is not def asn)
-        }
 
+        void testMethod2() {}
+        }
     }

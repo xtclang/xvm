@@ -744,11 +744,28 @@ public class NameExpression
             case Method:
                 {
                 MethodConstant idMethod = (MethodConstant) argRaw;
-                if (m_plan == Plan.None && m_mapTypeParams == null)
+                switch (m_plan)
                     {
-                    constVal = idMethod;
+                    case None:
+                        if (m_mapTypeParams == null)
+                            {
+                            constVal = idMethod;
+                            }
+                        break;
+
+                    case BindTarget:
+                        if (left == null)
+                            {
+                            ctx.requireThis(getStartPosition(), errs);
+                            }
+                        else if (left instanceof NameExpression exprName &&
+                                exprName.getMeaning() == Meaning.Class)
+                            {
+                            log(errs, Severity.ERROR, Compiler.NO_THIS_METHOD,
+                                    idMethod.getValueString(), exprName.getName());
+                            }
+                        break;
                     }
-                break;
                 }
             }
 
