@@ -85,22 +85,32 @@ public class MethodBindingConstant
     @Override
     public ObjectHandle getHandle(Frame frame)
         {
-        // this logic is basically a re-arranged copy of MBind op functionality
         GenericHandle   hThis    = (GenericHandle) frame.getThis();
-        ObjectHandle    hTarget  = hThis.getField(frame, GenericHandle.OUTER);
         MethodConstant  idMethod = m_idMethod;
         MethodStructure method   = (MethodStructure) idMethod.getComponent();
+        ObjectHandle    hTarget;
+        CallChain       chain;
 
-        CallChain chain;
-        if (method != null && method.getAccess() == Access.PRIVATE)
+        if (idMethod.isLambda())
             {
-            chain = new CallChain(method);
+            // the lambda code will get the OUTER handle itself
+            hTarget = hThis;
+            chain   = new CallChain(method);
             }
         else
             {
-            Object nid = idMethod.resolveNestedIdentity(
-                            frame.poolContext(), frame.getGenericsResolver(true));
-            chain = hTarget.getComposition().getMethodCallChain(nid);
+            hTarget = hThis.getField(frame, GenericHandle.OUTER);
+
+            if (method != null && method.getAccess() == Access.PRIVATE)
+                {
+                chain = new CallChain(method);
+                }
+            else
+                {
+                Object nid = idMethod.resolveNestedIdentity(
+                                frame.poolContext(), frame.getGenericsResolver(true));
+                chain = hTarget.getComposition().getMethodCallChain(nid);
+                }
             }
 
         if (chain.getDepth() == 0)

@@ -15,11 +15,7 @@ service RTNetwork(Boolean secure)
         implements Network
     {
     @Override
-    // TODO GG: @Lazy(instantiateNameService) NameService nameService;
-    @Lazy NameService nameService.calc()
-        {
-        return instantiateNameService();
-        }
+    @Lazy(instantiateNameService) NameService nameService;
 
     @Override
     @RO NetworkInterface[] interfaces.get()

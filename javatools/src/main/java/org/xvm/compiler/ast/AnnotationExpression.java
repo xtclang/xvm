@@ -22,6 +22,7 @@ import org.xvm.asm.Register;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ExpressionConstant;
 import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.MethodBindingConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
@@ -305,8 +306,8 @@ public class AnnotationExpression
                 {
                 Expression exprOld = listArgs.get(iArg);
                 int        iParam  = exprOld instanceof LabeledExpression exprLbl
-                        ? constructor.getParam(exprLbl.getName()).getIndex()
-                        : iArg;
+                                        ? constructor.getParam(exprLbl.getName()).getIndex()
+                                        : iArg;
 
                 Expression exprNew = exprOld.validate(ctx, atypeParams[iParam], errs);
                 if (exprNew != null)
@@ -325,15 +326,40 @@ public class AnnotationExpression
                         //       constructed, because we were too early in the compile cycle to resolve
                         //       any constant expressions that refer to anything _by name_
                         aconstArgs[iParam] = exprNew.toConstant();
+                        continue;
                         }
-                    else if (exprNew.isNonBinding())
+
+                    if (exprNew.isNonBinding())
                         {
                         fDefaults = true;
+                        continue;
                         }
-                    else
+
+                    if (hasThis())
                         {
-                        exprOld.log(errs, Severity.ERROR, Compiler.CONSTANT_REQUIRED);
+                        MethodStructure method = null;
+                        if (exprNew instanceof NameExpression exprName &&
+                                exprName.getMeaning() == NameExpression.Meaning.Method)
+                            {
+                            MethodConstant idMethod = (MethodConstant)
+                                exprName.resolveRawArgument(ctx, false, ErrorListener.BLACKHOLE);
+                            method = (MethodStructure) idMethod.getComponent();
+                            }
+                        else if (exprNew instanceof LambdaExpression exprLambda)
+                            {
+                            method = exprLambda.getLambda();
+
+                            exprLambda.calculateBindings(ctx, method.createCode(), errs);
+                            }
+
+                        if (method != null && method.getParamCount() == 0)
+                            {
+                            aconstArgs[iParam] =
+                                    new MethodBindingConstant(pool, method.getIdentityConstant());
+                            continue;
+                            }
                         }
+                    exprOld.log(errs, Severity.ERROR, Compiler.CONSTANT_REQUIRED);
                     }
                 }
 
@@ -575,6 +601,12 @@ public class AnnotationExpression
             }
 
         @Override
+        public boolean isVarReadable(String sName)
+            {
+            return sName.equals("this") && hasThis();
+            }
+
+        @Override
         public boolean isVarWritable(String sName)
             {
             return false;
@@ -598,6 +630,26 @@ public class AnnotationExpression
         public Context exit()
             {
             return this;
+            }
+
+        @Override
+        public void requireThis(long lPos, ErrorListener errs)
+            {
+            if (!hasThis())
+                {
+                // the super call will log the error
+                super.requireThis(lPos, errs);
+                }
+            }
+
+        @Override
+        public TypeConstant getThisType()
+            {
+            // within an instance property annotation "this" refers to the containing class
+            PropertyStructure prop = getAnnotatedProperty();
+            return prop == null || prop.isStatic()
+                    ? null
+                    : prop.getContainingClass().getFormalType();
             }
 
         @Override

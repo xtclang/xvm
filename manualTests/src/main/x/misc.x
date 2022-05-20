@@ -568,10 +568,10 @@ module TestMisc
         console.println("lit=" + lit);
 
         Point point1 = new Point(0, 2);
-        console.println($"point1={point1}");
+        console.println($"point1={point1} hypo={point1.hypo}");
 
         NamedPoint point2 = new NamedPoint("top-left", 1, 0);
-        console.println($"point2={point2}");
+        console.println($"point2={point2} hypo={point2.hypo}");
 
         Hasher<Point>      hasherP = new NaturalHasher<Point>();
         Hasher<NamedPoint> hasherN = new NaturalHasher<NamedPoint>();
@@ -593,7 +593,10 @@ module TestMisc
         assert foo == bar;
         }
 
-    const Point(Int x, Int y);
+    const Point(Int x, Int y)
+        {
+        @Lazy(() -> x*x + y*y) Int hypo;
+        }
 
     const NamedPoint(String name, Int x, Int y)
             extends Point(2*y, x + 1)

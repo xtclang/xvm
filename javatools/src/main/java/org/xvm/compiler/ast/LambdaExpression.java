@@ -1405,14 +1405,8 @@ public class LambdaExpression
         @Override
         public void requireThis(long lPos, ErrorListener errs)
             {
-            if (getOuterContext().isFunction())
-                {
-                errs.log(Severity.ERROR, Compiler.NO_THIS, null, getSource(), lPos, lPos);
-                }
-            else
-                {
-                super.requireThis(lPos, errs);
-                }
+            getOuterContext().requireThis(lPos, errs);
+            captureThis();
             }
 
         @Override
@@ -1430,6 +1424,8 @@ public class LambdaExpression
                     boolean fAllowConstructor = false;
                     switch (sName)
                         {
+                        // the only names that we capture _without_ a capture parameter are the
+                        // various "this" references that refer to "this" object
                         case "this":
                         case "this:struct":
                         case "this:class":
@@ -1439,15 +1435,15 @@ public class LambdaExpression
                         case "this:public":
                         case "this:protected":
                         case "this:private":
-                            // the only names that we capture _without_ a capture parameter are the
-                            // various "this" references that refer to "this" object
-                            if (ctxOuter.isMethod() ||
-                                    fAllowConstructor && ctxOuter.isConstructor())
+                            if (fAllowConstructor && ctxOuter.isConstructor())
                                 {
                                 captureThis();
-                                return;
                                 }
-                            break;
+                            else
+                                {
+                                requireThis(tokName.getStartPosition(), errs);
+                                }
+                            return;
 
                         case "this:service":
                         case "this:module":
