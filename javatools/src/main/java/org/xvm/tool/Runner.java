@@ -245,24 +245,22 @@ public class Runner
 
             // validate the trailing file (to execute)
             File fileModule = getTarget();
-            if (fileModule.getName().endsWith(".xtc"))
+            if (fileModule == null || fileModule.length() == 0 ||
+                    !fileModule.getName().endsWith(".xtc"))
                 {
-                if (fileModule == null || fileModule.length() == 0)
-                    {
-                    log(Severity.ERROR, "Module file required");
-                    }
-                else if (!fileModule.exists())
-                    {
-                    log(Severity.ERROR, "Specified module file does not exist");
-                    }
-                else if (!fileModule.isFile())
-                    {
-                    log(Severity.ERROR, "Specified module file is not a file");
-                    }
-                else if (!fileModule.canRead())
-                    {
-                    log(Severity.ERROR, "Specified module file cannot be read");
-                    }
+                log(Severity.ERROR, "Module file required");
+                }
+            else if (!fileModule.exists())
+                {
+                log(Severity.ERROR, "Specified module file does not exist");
+                }
+            else if (!fileModule.isFile())
+                {
+                log(Severity.ERROR, "Specified module file is not a file");
+                }
+            else if (!fileModule.canRead())
+                {
+                log(Severity.ERROR, "Specified module file cannot be read");
                 }
             }
         }
