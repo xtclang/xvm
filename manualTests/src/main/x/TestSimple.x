@@ -19,7 +19,7 @@ module TestSimple
 
         IPAddress[]? addrs = Null;
         addrs := ns.resolve("google.com");
-        console.println($"google.com={addrs}");
+        console.println($"google.com={addrs ?: "not resolvable"}");
 
         String name = "?";
         name := ns.reverseLookup(new IPAddress("127.0.0.1"));

@@ -4,18 +4,15 @@ package org.xvm.runtime.template._native.net;
 import java.net.InetAddress;
 
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 
-import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHandle.GenericHandle;
-
 import org.xvm.runtime.TypeComposition;
+
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xService;
@@ -27,6 +24,7 @@ import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 import org.xvm.runtime.template.collections.xByteArray;
 
 import org.xvm.runtime.template.text.xString;
+import org.xvm.runtime.template.text.xString.StringHandle;
 
 
 /**
@@ -87,7 +85,7 @@ public class xRTNameService
             {
             case "nativeResolve":   // conditional Byte[][] nativeResolve(String name)
                 {
-                String sName = ((xString.StringHandle) ahArg[0]).getStringValue();
+                String sName = ((StringHandle) ahArg[0]).getStringValue();
                 try
                     {
                     // TODO GG: immediately return a future, and use the executor pool to finish the work async
@@ -105,12 +103,13 @@ public class xRTNameService
                         TypeComposition clz = ensureByteArrayArrayComposition(frame.f_context.f_container);
                         return frame.assignValues(aiReturn, xBoolean.TRUE, xArray.createImmutableArray(clz, ah));
                         }
-                    return frame.assignValue(aiReturn[0], xBoolean.FALSE);
                     }
-                catch (Exception e)
+                catch (Exception ignore)
                     {
-                    return frame.raiseException(xException.makeHandle(frame, e.getMessage()));
+                    // REVIEW CP: do we want to report the reason somehow?
+                    // return frame.raiseException(xException.makeHandle(frame, e.getMessage()));
                     }
+                return frame.assignValue(aiReturn[0], xBoolean.FALSE);
                 }
 
             case "nativeLookup":    // conditional String nativeLookup(Byte[] addressBytes)
@@ -126,12 +125,13 @@ public class xRTNameService
                         {
                         return frame.assignValues(aiReturn, xBoolean.TRUE, xString.makeHandle(sName));
                         }
-                    return frame.assignValue(aiReturn[0], xBoolean.FALSE);
                     }
-                catch (Exception e)
+                catch (Exception ignore)
                     {
-                    return frame.raiseException(xException.makeHandle(frame, e.getMessage()));
+                    // REVIEW CP: do we want to report the reason somehow?
+                    // return frame.raiseException(xException.makeHandle(frame, e.getMessage()));
                     }
+                return frame.assignValue(aiReturn[0], xBoolean.FALSE);
                 }
             }
 
