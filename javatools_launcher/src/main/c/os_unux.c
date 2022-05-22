@@ -38,8 +38,9 @@ void execJava(const char* javaPath,
         }
 
     // the native ecstasy library is located in the same location as the prototype JAR
-    const char* jarFile = buildPath(jarPath, PROTO_JAR);
-    const char* libFile = buildPath(jarPath, PROTO_LIB);
+    const char* jarFile  = buildPath(jarPath, PROTO_JAR);
+    const char* mackFile = buildPath(jarPath, MACK_LIB);
+    const char* libFile  = buildPath(jarPath, PROTO_LIB);
 
     // first, convert the java options into separate parameters
     int          optCount = 0;
@@ -54,7 +55,7 @@ void execJava(const char* javaPath,
     // collect all arguments into one giant list, starting with the call to java
     int allCount = 1          // javaPath
                  + optCount   // javaOpts
-                 + 7          // "-jar" jarFile tool "-L" libPath "-L" libFile
+                 + 9          // "-jar" jarFile tool "-L" libPath "-L" mackFile "-L" libFile
                  + argc;      // user arguments
 
     const char** allArgs = malloc((allCount+1) * sizeof(const char*));
@@ -68,6 +69,8 @@ void execJava(const char* javaPath,
     allArgs[i++] = tool;
     allArgs[i++] = "-L";
     allArgs[i++] = libPath;
+    allArgs[i++] = "-L";
+    allArgs[i++] = mackFile;
     allArgs[i++] = "-L";
     allArgs[i++] = libFile;
     memcpy(allArgs+i, argv, argc * sizeof(const char*)); i += argc;

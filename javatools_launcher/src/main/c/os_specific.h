@@ -3,6 +3,7 @@
 #define DEFAULT_EXEC "java"
 #define DEFAULT_OPTS "-Xms256m -Xmx1024m -ea"
 #define PROTO_JAR    "javatools.jar"
+#define MACK_LIB     "javatools_turtle.xtc"
 #define PROTO_LIB    "javatools_bridge.xtc"
 
 #ifdef windowsLauncher
