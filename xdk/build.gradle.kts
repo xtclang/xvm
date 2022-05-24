@@ -15,9 +15,6 @@ val oodb          = project(":lib_oodb");
 val imdb          = project(":lib_imdb");
 val jsondb        = project(":lib_jsondb");
 val web           = project(":lib_web");
-val platform      = project(":lib_platform");
-val host          = project(":lib_host");
-val hostControl   = project(":lib_hostControl");
 
 val ecstasyMain     = "${ecstasy.projectDir}/src/main"
 val turtleMain      = "${turtle.projectDir}/src/main"
@@ -32,9 +29,6 @@ val oodbMain        = "${oodb.projectDir}/src/main";
 val imdbMain        = "${imdb.projectDir}/src/main";
 val jsondbMain      = "${jsondb.projectDir}/src/main";
 val webMain         = "${web.projectDir}/src/main";
-val platformMain    = "${platform.projectDir}/src/main";
-val hostMain        = "${host.projectDir}/src/main";
-val hostControlMain = "${hostControl.projectDir}/src/main";
 
 val libDir          = "$buildDir/xdk/lib"
 val javaDir         = "$buildDir/xdk/javatools"
@@ -307,71 +301,6 @@ val compileBridge = tasks.register<JavaExec>("compileBridge") {
     }
 }
 
-val compilePlatform = tasks.register<JavaExec>("compilePlatform") {
-    group       = "Execution"
-    description = "Build platform.xtc module"
-
-    dependsOn(javatools.tasks["build"])
-
-    shouldRunAfter(compileWeb)
-
-    jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
-
-    classpath(javatoolsJar)
-    args("-verbose",
-            "-o", "$libDir",
-            "-version", "$version",
-            "-L", "$coreLib",
-            "-L", "$turtleLib",
-            "-L", "$libDir",
-            "$platformMain/x/platform.x")
-    mainClass.set("org.xvm.tool.Compiler")
-}
-
-val compileHost = tasks.register<JavaExec>("compileHost") {
-    group       = "Build"
-    description = "Build host.xtc module"
-
-    dependsOn(javatools.tasks["build"])
-
-    shouldRunAfter(compileIMDB)
-    shouldRunAfter(compileJsonDB)
-    shouldRunAfter(compilePlatform)
-
-    jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
-
-    classpath(javatoolsJar)
-    args("-verbose",
-            "-o", "$libDir",
-            "-version", "$version",
-            "-L", "$coreLib",
-            "-L", "$turtleLib",
-            "-L", "$libDir",
-            "$hostMain/x/host.x")
-    mainClass.set("org.xvm.tool.Compiler")
-}
-
-val compileHostControl = tasks.register<JavaExec>("compileHostControl") {
-    group       = "Execution"
-    description = "Build hostControl.xtc module"
-
-    dependsOn(javatools.tasks["build"])
-
-    shouldRunAfter(compileHost)
-
-    jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
-
-    classpath(javatoolsJar)
-    args("-verbose",
-            "-o", "$libDir",
-            "-version", "$version",
-            "-L", "$coreLib",
-            "-L", "$turtleLib",
-            "-L", "$libDir",
-            "$hostControlMain/x/hostControl.x")
-    mainClass.set("org.xvm.tool.Compiler")
-}
-
 tasks.register("build") {
     group       = "Build"
     description = "Build the XDK"
@@ -484,33 +413,6 @@ tasks.register("build") {
 
     if (bridgeSrc > bridgeDest) {
         dependsOn(compileBridge, compileNet, compileCrypto)
-        }
-
-    // compile platform.xtclang.org
-    val platformSrc = fileTree(platformMain).getFiles().stream().
-    mapToLong({f -> f.lastModified()}).max().orElse(0)
-    val platformDest = file("$libDir/platform.xtc").lastModified()
-
-    if (platformSrc > platformDest) {
-        dependsOn(compilePlatform)
-    }
-
-    // compile host.xtclang.org
-    val hostSrc = fileTree(hostMain).getFiles().stream().
-    mapToLong({f -> f.lastModified()}).max().orElse(0)
-    val hostDest = file("$libDir/host.xtc").lastModified()
-
-    if (hostSrc > hostDest) {
-        dependsOn(compileHost)
-    }
-
-    // compile hostControl.xtclang.org
-    val hostControlSrc = fileTree(hostControlMain).getFiles().stream().
-            mapToLong({f -> f.lastModified()}).max().orElse(0)
-    val hostControlDest = file("$libDir/hostControl.xtc").lastModified()
-
-    if (hostControlSrc > hostControlDest) {
-        dependsOn(compileHostControl)
         }
 
     doLast {

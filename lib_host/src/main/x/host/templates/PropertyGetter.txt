@@ -1,5 +1,0 @@
-            @Override
-            %propertyType% %propertyName%.get()
-                {
-                return this.%appName%Client_.implFor(%propertyId%).as(%propertyType%);
-                }
