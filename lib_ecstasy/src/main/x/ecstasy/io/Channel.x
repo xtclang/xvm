@@ -203,10 +203,6 @@ interface Channel
 
             case 1:
                 ReadBuffer buffer = buffers[0];
-                // TODO GG?
-//                return written == Null
-//                        ? write(buffer)
-//                        : write^(buffer).thenDo(() -> {written(buffer);});
                 if (written == Null)
                     {
                     return write(buffer);

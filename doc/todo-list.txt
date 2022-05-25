@@ -1,0 +1,117 @@
+- need to make _native module non-discoverable (and services for container -1)
+    see TestSimple.x on the shelve
+
+- need a compiler warning if a method type parameter evaluates to Object
+  (see the HttpResponse.x change: "Fix a codec.encode() call" on 4/21/22)
+
+- the XTC compiler disregards "resources" changes if nothing else changed and "-force" option
+  is not specified
+
+- improve error description for
+    "service S extends Closeable" (extends vs. implements)
+    "service S incorporates Closeable" (incorporates vs. implements)
+   etc. -- see TypeCompositionStatement.resolveNames()
+
+// should this compile?
+    if (ParamType body := request.attributes.getAttribute(HttpAttributes.BODY))
+
+- improve toString() for TypeConstant of function type
+    (Function<Tuple<this:Map<Map.Key, Map.Value>.Entry>, Tuple<Boolean>>)
+
+- if not auto-proxy'ed then try to freeze before throwing
+
+- enum ClassCompositions without type parameters could be made into CanonicalCompositions
+
+- roll-over log file; implement time/size options
+
+- entering debugger should stop time
+
+- add a periodic re-schedule to Timer API
+
+- consider using (new ConcurrentSection()) to get "pre-switching" notification
+
+- compiler to report on ambiguous type parameter name across a virtual child and its parent(s)
+
+- add deadlock detection
+
+- Cam: the last case in the switch should not allow "continue"
+
+- clean up OSFile/OSNode etc. service?
+
+- consider not needing the ^ for a return of a tail-call invocation (except in a try block?)
+    "return foo();" should be equivalent to "return foo^();"
+
+- consider an automatic conversion from FutureVar<T> to T, for example, instead of (Channel.x):
+        @Future Int result = write(buffer);
+        &result.thenDo(() -> written(buffer));
+        return result;
+  one could simply write:
+    return write^(buffer).thenDo(() -> written(buffer));
+
+- discuss recursive lambda calls (use this:function?)
+
+- rewrite removeAccess() and removeImmutable(); it blows on virtual children now
+
+- try to get rid of reportNotNewable() by logging at TypeInfo (now we can)
+
+- consider a compiler warning if a return value of Closeable type is ignored (@Adopt annotation)
+
+- consider a new Async mixin:
+        mixin Async into Object implements Service {}
+  allowing to turn a mutable class into a service:
+        ErrorList errs = new @Async ErrorList(10);
+
+- add compiler support for conditional Tuple
+
+- ComponentTemplate equality is not working; how/where to declare it native?
+    static <CompileType extends RTComponentTemplate> Boolean equals(CompileType o1, CompileType o2)
+        {
+        TODO("native");
+        }
+
+- override of @Lazy property with a different @Lazy blows
+
+- TypeInfo is failing to compute (see NumberArray.asBitArray():
+  Var<Bit> v = new Object()
+        {
+        Bit element
+            {
+            @Override
+            Boolean assigned.get()
+                {
+                TODO
+                }
+
+            @Override
+            Bit get()
+                {
+                TODO
+                }
+
+            @Override
+            void set(Bit v)
+                {
+                TODO
+                }
+            }
+        }.&element;
+
+- optimize-out unnecessary array cloning by changing getBytes() to copyBytes(arrayInto)
+
+- file ops to use NIO (ask Mark to take a look)
+
+- add @Proxyable annotation for compiler to enforce proxy-ability of an interface
+
+// DEFERRED:
+- RTFunction should not be xConst
+- classes in methods don't support captures of formal types
+- MethodDeclarationStatement: need to disallow "auto narrowing" for functions is the type is
+  an argument, rather than constraint
+- @Atomic property with a mutable content needs to wrap
+- what if timer.schedule() lambda throws? (exception is invisible)
+- fix xLinker.java
+
+// Mark:
+- infinite loop detection
+- long object handle
+- upon a Future's gc report if an exception has not been handled
