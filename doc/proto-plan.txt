@@ -60,14 +60,6 @@
   This then would be used by Appender<Element> to indicate that it doesn't consume Element,
   which in turn would allow Min/Max aggregators simplification (shelved)
 
-- TemplateRegistry and TypeComposition could be mutated by different threads
-    (hence the use of ConcurrentHashMap in TemplateRegistry and synchronization in TypeComposition)
-
-- DelegatingIterator could use delegation, but how to describe the delegating type?
-
-- is there a way to auto-generate "T x = this.x" in if/for/switch statements that
-  would benefit from type inference; see AnnotationExpression.x#toString(), ImportStatement.x#toString()
-
 - when there are two invocations in the row or a new followed by an invocation, we could analyze the
   expressions right-to-left and do the type inference if all those expression are "fluent" style
   For example, consider OrderedMapSlice.reify() method:
