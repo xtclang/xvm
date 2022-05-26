@@ -53,10 +53,11 @@ executable files are stored as artifacts in GIT; for example `macos_launcher`, `
 `windows_launcher.exe`.
 
 The build for the native module is the GNU `make` utility, with the `makefile` located in the
-`main/src/c` directory. To execute the `makefile` on macOS, open a terminal, `cd` to the `main/src/c`
-directory, and execute the following command: 
+`src/main/c` directory. To execute the `makefile` on macOS, open a terminal, `cd` to the `src/main/c`
+directory, and execute the following command(s): 
 
     make OS_NAME=macos
+    codesign -s "XQIZIT INCORPORATED" ../../../build/exe/macos_launcher
     
 or on Linux (**TODO!!!**):
 
@@ -65,6 +66,10 @@ or on Linux (**TODO!!!**):
 or on Windows:
 
     make OS_NAME=windows
+
+(Note: The code signing step can only be performed if you have the necessary certificates. For
+security reasons, the `xqiz.it` signature is only applied by the xqiz.it development team after
+reviewing any code changes and performing a clean build from local sources.) 
 
 Details:
 
