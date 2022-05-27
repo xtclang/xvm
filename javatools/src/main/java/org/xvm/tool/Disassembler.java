@@ -184,13 +184,13 @@ public class Disassembler
 
             // validate the trailing file (to execute)
             File fileModule = getTarget();
-            if (fileModule.getName().endsWith(".xtc"))
+            if (fileModule == null || fileModule.length() == 0)
                 {
-                if (fileModule == null || fileModule.length() == 0)
-                    {
-                    log(Severity.ERROR, "Module file required");
-                    }
-                else if (!fileModule.exists())
+                log(Severity.ERROR, "Module file required");
+                }
+            else if (fileModule.getName().endsWith(".xtc"))
+                {
+                if (!fileModule.exists())
                     {
                     log(Severity.ERROR, "Specified module file does not exist");
                     }
