@@ -53,12 +53,16 @@ executable files are stored as artifacts in GIT; for example `macos_launcher`, `
 `windows_launcher.exe`.
 
 The build for the native module is the GNU `make` utility, with the `makefile` located in the
-`src/main/c` directory. To execute the `makefile` on macOS, open a terminal, `cd` to the `src/main/c`
+`src/main/c` directory.
+
+To execute the `makefile` on macOS, open a terminal, `cd` to the `src/main/c`
 directory, and execute the following command(s): 
 
     make OS_NAME=macos
     codesign -s "XQIZIT INCORPORATED" ../../../build/exe/macos_launcher
-    
+
+(On `macos`, the result is a universal binary that includes code for both ARM and Intel Macs.) 
+
 or on Linux (**TODO!!!**):
 
     make OS_NAME=linux
@@ -77,10 +81,13 @@ Details:
   if the XDK directory structure has not changed, and if the parameter requirements for the Java
   command line tools have not changed, and if a launcher already exists for your OS in the
   `build/exe` directory, and -- _of course!_ -- if things are working, then do **not** rebuild these.
-* The compiler used is GCC. _Even on Windows and Mac._
-* On macOS, the build uses the command line tools that are available as part of xCode.
-* On Linux, the build uses GCC.
-* On Windows, use Cygwin or MinGW to support GCC.
+* The compiler used is GCC. _Even on Windows._ (On Mac, to do the Intel and ARM cross-compile, the
+  Clang compiler aka `cc` is used.)
+* On macOS, the build uses the command line tools that are available as part of xCode. Alternatively,
+  you could install those same tools with Homebrew, but (WARNING!) it prefixes many of the commands
+  with "g" so that they do not collide with the same tools installed by xCode.
+* On Linux, the build uses GCC. (_TODO: Build and check in a Linux executable._)
+* On Windows, use Cygwin or MinGW to support GCC. (_TODO: Test Windows 11 Linux subsystem support._)
 * When the make command executes successfully, then the resulting executable file is placed into
   `build/exe`.
 * Each supported OS/hardware combination has an artifact in the `build/exe` directory, **and that
