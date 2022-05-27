@@ -1529,18 +1529,6 @@ public abstract class Launcher
 
         while (file != null && file.isDirectory())
             {
-// TODO CP remove this block once the new model is in place
-            {
-            File moduleFile = new File(file, "module.x");
-            if (moduleFile.exists() && moduleFile.isFile())
-                {
-                if (isModule(moduleFile))
-                    {
-                    return moduleFile;
-                    }
-                }
-            }
-
             // if the directory is "/a/b/c/", then check for a module in the "/a/b/c.x" file
             String name = file.getName();
             file = file.getParentFile();
@@ -1625,12 +1613,6 @@ public abstract class Launcher
         {
         List<File> listResult = new ArrayList<>();
 
-        // default (if no source is specified)
-        if (listSources.isEmpty())
-            {
-            listSources = Collections.singletonList(new File("module.x"));  // TODO CP module org changes
-            }
-
         Set<File> setDups = null;
         for (File file : listSources)
             {
@@ -1690,9 +1672,7 @@ public abstract class Launcher
     protected Node loadSourceTree(File fileModule, Stage desired)
         {
         assert fileModule.isFile();
-        Node nodeModule = fileModule.getName().equals("module.x")
-                ? deprecatedBuildSourceTree(null, fileModule) // TODO CP remove
-                : buildSourceTree(fileModule);
+        Node nodeModule = buildSourceTree(fileModule);
         nodeModule.logErrors();
         checkErrors();
 
@@ -1718,83 +1698,6 @@ public abstract class Launcher
             }
 
         return nodeModule;
-        }
-
-    /**
-     * TODO CP remove this method
-     * Build a tree of source files that compose an Ecstasy module, or any sub-package thereof.
-     *
-     * @param parent  the parent node
-     * @param file    a module file, or a directory that is part of a module
-     *
-     * @return a node iff there is anything "there" to compile, otherwise null
-     */
-    protected Node deprecatedBuildSourceTree(DirNode parent, File file)
-        {
-        DirNode node;
-        if (file.isDirectory())
-            {
-            // we're parsing a sub-directory looking for source files
-            // (and sub-directories)
-            assert parent != null;
-            node = makeDirNode(parent, file);
-            File filePkg = new File(file, "package.x");
-            if (filePkg.exists() && filePkg.isFile())
-                {
-                node.configureSource(filePkg, makeFileNode(parent, filePkg));
-                }
-            }
-        else if (file.getName().equalsIgnoreCase("module.x"))
-            {
-            // this is the module root
-            assert parent == null;
-            node = makeDirNode(null, file.getParentFile());
-            node.configureSource(file, makeFileNode(node, file));
-            }
-        else
-            {
-            // this is the entire module
-            assert parent == null;
-            return makeFileNode(null, file);
-            }
-
-        for (File fileChild : node.file().listFiles())
-            {
-            if (fileChild.isDirectory())
-                {
-                DirNode nodeChild = (DirNode) deprecatedBuildSourceTree(node, fileChild);
-                if (nodeChild != null)
-                    {
-                    node.packageNodes().add(nodeChild);
-                    }
-                }
-            else
-                {
-                if (node.sourceFile() != null && fileChild.equals(node.sourceFile()))
-                    {
-                    // this is the module.x or package.x file
-                    continue;
-                    }
-
-                String sChild = fileChild.getName();
-                if (!sChild.endsWith(".x"))
-                    {
-                    continue;
-                    }
-
-                if (sChild.equalsIgnoreCase("module.x") || sChild.equalsIgnoreCase("package.x"))
-                    {
-                    log(Severity.ERROR, "Illegal file encountered: " + fileChild);
-                    continue;
-                    }
-
-                // it's a source file
-                node.classNodes().put(fileChild, makeFileNode(node, fileChild));
-                }
-            }
-
-        return node.sourceFile() == null && node.classNodes().isEmpty()
-            && node.packageNodes().isEmpty() ? null : node;
         }
 
     /**
@@ -2456,11 +2359,11 @@ public abstract class Launcher
         @Override
         public int depth()
             {
-            int cDepth = super.depth();
+            int     cDepth     = super.depth();
             DirNode nodeParent = parent();
-            if (nodeParent != null && this == nodeParent.sourceNode()
-                    && nodeParent.file() != this.file().getParentFile()) // TODO CP remove after new module re-org is complete
+            if (nodeParent != null && nodeParent.parent() == null)
                 {
+                // this is a synthetic "root" parent
                 --cDepth;
                 }
             return cDepth;
