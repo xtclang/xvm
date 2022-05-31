@@ -162,6 +162,13 @@ public abstract class RelationalTypeConstant
         }
 
     @Override
+    public TypeConstant removeImmutable()
+        {
+        return simplifyOrClone(getConstantPool(),
+                m_constType1.removeImmutable(), m_constType2.removeImmutable());
+        }
+
+    @Override
     public boolean isAccessSpecified()
         {
         return m_constType1.isAccessSpecified()

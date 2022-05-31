@@ -5453,7 +5453,9 @@ public abstract class TypeConstant
 
         if (typeRight.isImmutabilitySpecified())
             {
-            relation = typeRight.removeImmutable().calculateRelation(typeLeft);
+            // even though we know that typeLeft doesn't specify immutability directly, relational
+            // types may contain components that do
+            relation = typeRight.removeImmutable().calculateRelation(typeLeft.removeImmutable());
 
             mapRelations.put(typeLeft, relation);
             return relation;
