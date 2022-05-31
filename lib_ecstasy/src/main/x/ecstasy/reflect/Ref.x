@@ -247,7 +247,7 @@ interface Ref<Referent>
     /**
     * The [Property] corresponding to this reference, if this is a reference to a property value.
     */
-    <Container> conditional (Property<Container, Referent, Ref<Referent>>, Container) isProperty();
+    conditional (Property<Object, Referent, Ref<Referent>>, Object) isProperty();
 
     /**
     * The reference annotations. These are the annotations that apply to the reference itself (i.e.

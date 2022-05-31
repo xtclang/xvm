@@ -129,13 +129,13 @@ class DefaultUriRouteMatch
 
             if (Object paramValue := parameterValues.get(name))
                 {
-                parameters = parameters.add(convert(param, paramValue));
+                parameters = parameters.add(convert(param, paramValue).as(param.ParamType));
                 }
             else if (Object variableValue := variableValues.get(name))
                 {
-                parameters = parameters.add(convert(param, variableValue));
+                parameters = parameters.add(convert(param, variableValue).as(param.ParamType));
                 }
-            else if (Object defaultValue := param.defaultValue())
+            else if (param.ParamType defaultValue := param.defaultValue())
                 {
                 parameters = parameters.add(defaultValue);
                 }

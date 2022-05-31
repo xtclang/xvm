@@ -512,8 +512,8 @@ mixin LinkedList<Element>
             {
             Object that = iter.outer;
             if (that.is(LinkedList),
-                    Property<Object> thisProp := this.isProperty(),
-                    Property<Object> thatProp := that.isProperty(),
+                    Property thisProp := this.isProperty(),
+                    Property thatProp := that.isProperty(),
                     &thisProp == &thatProp)
                 {
                 Element? thatNode = that.writeConfig();

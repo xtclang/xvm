@@ -672,10 +672,11 @@ class ObjectOutputStream(Schema schema, Writer writer)
          *
          * @return this
          */
-        protected PointerAwareDocOutput writePointerOrValue((String | Int)?       id,
-                                                            Object                value,
-                                                            function void(String) writePointer,
-                                                            function void()       writeValue)
+        protected <Serializable> PointerAwareDocOutput writePointerOrValue(
+                (String | Int)?       id,
+                Serializable          value,
+                function void(String) writePointer,
+                function void()       writeValue)
             {
             Boolean alreadyInside = inside;
             if (alreadyInside || value.is(Primitive))

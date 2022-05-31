@@ -299,14 +299,19 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes>>
 
         for (Int i : [0..c))
             {
-            Type t1 = value1.elementAt(i).actualType;
-            Type t2 = value2.elementAt(i).actualType;
-            if (t1 != t2)
+            val ref1 = value1.elementAt(i);
+            val ref2 = value2.elementAt(i);
+            if (ref1 == ref2)
                 {
-                return False;
+                // identical references (including two Null values)
+                continue;
                 }
 
-            if (!t1.DataType.equals(value1[i], value2[i]))
+            val val1 = ref1.get();
+            val val2 = ref2.get();
+            if (val1 == Null || val2 == Null                            // eliminate either-is-Null
+                || (ref1.Referent-Nullable) != (ref2.Referent-Nullable) // so ignore type Nullable
+                || val1.as(ref1.Referent) != val2.as(ref1.Referent))
                 {
                 return False;
                 }

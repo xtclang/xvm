@@ -94,7 +94,9 @@ class RequestBinderRegistry
             if (String                       name   := p.hasName(),
                 ParameterBinder<HttpRequest> binder := findParameterBinder(p, req))
                 {
-                BindingResult result = binder.bind(p, req);
+                Type paramType = p.ParamType;
+                BindingResult<paramType.DataType> result =
+                        binder.bind(p.as(Parameter<paramType.DataType>), req);
                 if (result.bound)
                     {
                     arguments.put(name, result.value);

@@ -41,7 +41,7 @@ const JsonCodec
     @Override
     <ObjectType> ObjectType decode<ObjectType>(Type type, InputStream in)
         {
-        assert Mapping     mapper := schema.findMapping(type);
+        assert Mapping     mapper := schema.findMapping(type.DataType);
         ObjectInputStream  o_in   = schema.createObjectInput(new UTF8Reader(in)).as(ObjectInputStream);
         ElementInputStream e_in   = o_in.ensureElementInput();
         return mapper.read(e_in).as(ObjectType);

@@ -891,34 +891,44 @@ public class InvocationExpression
                         return null;
                         }
 
-                    Argument[] aargTypeParam = new Argument[mapTypeParams.size()];
-                    int ix = 0;
+                    Argument[]   aargTypeParam  = new Argument[mapTypeParams.size()];
+                    List<String> listUnresolved = null;
+                    int          iArg           = 0;
                     for (TypeConstant typeArg : mapTypeParams.values())
                         {
-                        if (typeArg.containsUnresolved())
+                        if (typeArg.containsUnresolved() || typeArg.equals(pool.typeObject()))
                             {
-                            log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNRESOLVABLE,
-                                    method.getParam(ix).getName());
-                            return null;
+                            if (listUnresolved == null)
+                                {
+                                listUnresolved = new ArrayList<>();
+                                }
+                            listUnresolved.add(method.getParam(iArg++).getName());
+                            continue;
                             }
 
-                        TypeConstant typeParam = idMethod.getRawParams()[ix].getParamType(0);
+                        TypeConstant typeConstraint = idMethod.getRawParams()[iArg].getParamType(0);
 
                         // there's a possibility that type parameter constraints refer to
                         // previous type parameters, for example:
                         //   <T1 extends Base, T2 extends T1> foo(T1 v1, T2 v2) {...}
-                        if (typeParam.containsTypeParameter(true))
+                        if (typeConstraint.containsTypeParameter(true))
                             {
-                            typeParam = typeParam.resolveGenerics(pool, mapTypeParams::get);
+                            typeConstraint = typeConstraint.resolveGenerics(pool, mapTypeParams::get);
                             }
 
-                        if (!typeArg.isA(typeParam))
+                        if (!typeArg.isA(typeConstraint))
                             {
                             log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
-                                    typeParam.getValueString(), typeArg.getValueString());
+                                    typeConstraint.getValueString(), typeArg.getValueString());
                             return null;
                             }
-                        aargTypeParam[ix++] = typeArg.getType();
+                        aargTypeParam[iArg++] = typeArg.getType();
+                        }
+
+                    if (listUnresolved != null)
+                        {
+                        log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNRESOLVABLE, listUnresolved);
+                        return null;
                         }
                     m_aargTypeParams = aargTypeParam;
                     }

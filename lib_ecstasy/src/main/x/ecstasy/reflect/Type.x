@@ -636,7 +636,7 @@ interface Type<DataType, OuterType>
                 {
                 if (fn.ParamTypes.size == 1)
                     {
-                    assert fn.ParamTypes[0] == OuterType;
+                    assert fn.ParamTypes[0] == OuterType.DataType;
                     return True, fn.as(function DataType(OuterType)).
                         bind(fn.params[0].as(Parameter<OuterType>), outer)
                             .as(function DataType());
@@ -1166,5 +1166,3 @@ interface Type<DataType, OuterType>
         return new iterators.EmptyIterator<typeActual.DataType>().as(Iterator<DataType>);
         }
     }
-
-
