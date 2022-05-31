@@ -152,7 +152,7 @@ public class xRTCompiler
         LinkedRepository repoCore = (LinkedRepository) f_container.getModuleRepository();
 
         List<ModuleRepository> listNew = new ArrayList<>();
-        listNew.add(new BuildRepository()); // TODO GG: do we really need this?
+        listNew.add(new BuildRepository());
 
         for (ModuleRepository repo : repoCore.asList())
             {

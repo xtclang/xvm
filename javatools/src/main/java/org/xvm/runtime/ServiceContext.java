@@ -1084,7 +1084,7 @@ public class ServiceContext
      * The caller is responsible for handling any potential exceptions thrown by the called
      * function, which would be provided via the returned CompletableFuture.
      *
-     * @param frameCaller  (optional) the caller's frame TODO GG: remove; always null
+     * @param frameCaller  (optional) the caller's frame
      *
      * @return a CompletableFuture for the call or null if the service has terminated
      */
