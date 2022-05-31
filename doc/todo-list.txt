@@ -1,9 +1,6 @@
 - need to make _native module non-discoverable (and services for container -1)
     see TestSimple.x on the shelve
 
-- need a compiler warning if a method type parameter evaluates to Object
-  (see the HttpResponse.x change: "Fix a codec.encode() call" on 4/21/22)
-
 - the XTC compiler disregards "resources" changes if nothing else changed and "-force" option
   is not specified
 
@@ -100,7 +97,7 @@
 
 - file ops to use NIO (ask Mark to take a look)
 
-- add @Proxyable annotation for compiler to enforce proxy-ability of an interface
+- consider @Proxyable annotation for compiler to enforce proxy-ability of an interface
 
 // DEFERRED:
 - RTFunction should not be xConst
