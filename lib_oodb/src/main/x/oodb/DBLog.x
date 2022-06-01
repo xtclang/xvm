@@ -59,7 +59,8 @@ interface DBLog<Element extends immutable Const>
      * @param txIds   (optional) the transaction id (or range of ids) to search for
      * @param txName  (optional) the transaction name to search for
      *
-     * @return True iff any log entries were selected
+     * @return True iff the application is permitted to access the log contents, **and** any log
+     *         entries were selected
      * @return (conditional) a `List` that represents the selected log entries
      */
     conditional List<Entry> select((Range<DateTime>|Duration)? period = Null,
