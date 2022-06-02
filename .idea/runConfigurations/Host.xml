@@ -2,7 +2,7 @@
   <configuration default="false" name="Host" type="Application" factoryName="Application">
     <option name="MAIN_CLASS_NAME" value="org.xvm.tool.Runner" />
     <module name="xvm.javatools.main" />
-    <option name="PROGRAM_PARAMETERS" value="-L ~/Development/xvm/xdk/build/xdk/lib -L ~/Development/xvm/xdk/build/xdk/javatools/javatools_turtle.xtc -L ~/Development/xvm/xdk/build/xdk/javatools/javatools_bridge.xtc ~/Development/xvm/xdk/build/xdk/lib/host.xtc" />
+    <option name="PROGRAM_PARAMETERS" value="-L ~/Development/xvm/xdk/build/xdk/lib -L ~/Development/xvm/xdk/build/xdk/javatools/javatools_turtle.xtc -L ~/Development/xvm/xdk/build/xdk/javatools/javatools_bridge.xtc -L ~/Development/platform/lib ~/Development/platform/lib/host.xtc" />
     <option name="VM_PARAMETERS" value="-Xms1024m -Xmx1024m -ea -Dxvm.parallelism=1" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/manualTests" />
     <method v="2">
