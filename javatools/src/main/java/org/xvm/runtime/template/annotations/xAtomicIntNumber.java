@@ -17,7 +17,7 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
 
-import org.xvm.runtime.template.numbers.xInt64;
+import org.xvm.runtime.template.numbers.xConstrainedInteger;
 
 
 /**
@@ -28,6 +28,13 @@ public class xAtomicIntNumber
     {
     public static xAtomicIntNumber INSTANCE;
 
+    public xAtomicIntNumber(xConstrainedInteger templateIntNumber)
+        {
+        super(templateIntNumber.f_container, INSTANCE.f_struct, false);
+
+        f_templateReferent = templateIntNumber;
+        }
+
     public xAtomicIntNumber(Container container, ClassStructure structure, boolean fInstance)
         {
         super(container, structure, false);
@@ -36,6 +43,7 @@ public class xAtomicIntNumber
             {
             INSTANCE = this;
             }
+        f_templateReferent = null;
         }
 
     @Override
@@ -59,7 +67,9 @@ public class xAtomicIntNumber
         markNativeMethod("shiftRightAssign", INT, VOID);
         markNativeMethod("shiftAllRightAssign", INT, VOID);
 
-        // TODO: how to implement checked/unchecked optimally?
+        getCanonicalType().invalidateTypeInfo();
+
+        // TODO GG: how to implement boundary checks optimally?
         }
 
 
@@ -91,7 +101,7 @@ public class xAtomicIntNumber
                 long lNew = ((JavaLong) hArg).getValue();
                 long lOld = atomic.getAndSet(lNew);
 
-                return frame.assignValue(iReturn, xInt64.makeHandle(lOld));
+                return frame.assignValue(iReturn, f_templateReferent.makeJavaLong(lOld));
                 }
 
             case "addAssign":
@@ -215,7 +225,7 @@ public class xAtomicIntNumber
                         return frame.assignValue(aiReturn[0], xBoolean.FALSE);
                         }
                     }
-                return frame.assignValues(aiReturn, xBoolean.TRUE, xInt64.makeHandle(lOld));
+                return frame.assignValues(aiReturn, xBoolean.TRUE, f_templateReferent.makeJavaLong(lOld));
                 }
             }
 
@@ -235,7 +245,8 @@ public class xAtomicIntNumber
             return frame.raiseException(xException.unassignedReference(frame));
             }
 
-        return frame.assignValue(iReturn, xInt64.makeHandle(atomic.incrementAndGet()));
+        return frame.assignValue(iReturn,
+                f_templateReferent.makeJavaLong(atomic.incrementAndGet()));
         }
 
     @Override
@@ -248,7 +259,8 @@ public class xAtomicIntNumber
             return frame.raiseException(xException.unassignedReference(frame));
             }
 
-        return frame.assignValue(iReturn, xInt64.makeHandle(atomic.getAndIncrement()));
+        return frame.assignValue(iReturn,
+                f_templateReferent.makeJavaLong(atomic.getAndIncrement()));
         }
 
     @Override
@@ -261,7 +273,8 @@ public class xAtomicIntNumber
             return frame.raiseException(xException.unassignedReference(frame));
             }
 
-        return frame.assignValue(iReturn, xInt64.makeHandle(atomic.decrementAndGet()));
+        return frame.assignValue(iReturn,
+                f_templateReferent.makeJavaLong(atomic.decrementAndGet()));
         }
 
     @Override
@@ -274,7 +287,8 @@ public class xAtomicIntNumber
             return frame.raiseException(xException.unassignedReference(frame));
             }
 
-        return frame.assignValue(iReturn, xInt64.makeHandle(atomic.getAndDecrement()));
+        return frame.assignValue(iReturn,
+                f_templateReferent.makeJavaLong(atomic.getAndDecrement()));
         }
 
     @Override
@@ -450,16 +464,28 @@ public class xAtomicIntNumber
     @Override
     protected int invokeGetReferent(Frame frame, RefHandle hTarget, int iReturn)
         {
+        return getReferentImpl(frame, hTarget, false, iReturn);
+        }
+
+    @Override
+    protected int invokeSetReferent(Frame frame, RefHandle hTarget, ObjectHandle hValue)
+        {
+        return setReferentImpl(frame, hTarget, false, hValue);
+        }
+
+    @Override
+    protected int getReferentImpl(Frame frame, RefHandle hTarget, boolean fNative, int iReturn)
+        {
         AtomicIntVarHandle hAtomic = (AtomicIntVarHandle) hTarget;
         AtomicLong         atomic  = hAtomic.m_atomicValue;
 
         return atomic == null
             ? frame.raiseException(xException.unassignedReference(frame))
-            : frame.assignValue(iReturn, xInt64.makeHandle(atomic.get()));
+            : frame.assignValue(iReturn, f_templateReferent.makeJavaLong(atomic.get()));
         }
 
     @Override
-    protected int invokeSetReferent(Frame frame, RefHandle hTarget, ObjectHandle hValue)
+    protected int setReferentImpl(Frame frame, RefHandle hTarget, boolean fNative, ObjectHandle hValue)
         {
         AtomicIntVarHandle hAtomic = (AtomicIntVarHandle) hTarget;
         AtomicLong         atomic  = hAtomic.m_atomicValue;
@@ -474,7 +500,7 @@ public class xAtomicIntNumber
         }
 
 
-    // ----- the handle -----
+    // ----- the handle ----------------------------------------------------------------------------
 
     public static class AtomicIntVarHandle
             extends RefHandle
@@ -499,4 +525,9 @@ public class xAtomicIntNumber
                     (m_atomicValue == null ? "unassigned" : m_atomicValue.get());
             }
         }
+
+
+    // ----- data fields ---------------------------------------------------------------------------
+
+    private final xConstrainedInteger f_templateReferent;
     }

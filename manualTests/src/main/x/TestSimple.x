@@ -1,28 +1,24 @@
 module TestSimple
     {
-    package net import net.xtclang.org;
-    import net.*;
-
     @Inject Console console;
-    @Inject Network network;
-    @Inject Network insecureNetwork;
-    @Inject Network secureNetwork;
 
     void run()
         {
-        console.println("Hello world!");
-        console.println($"network={&network.actualType}, secureNetwork={&secureNetwork.actualType}, insecureNetwork={&insecureNetwork.actualType}");
-        assert !network.isSecure();
+        console.println("Hello atomics!");
 
-        NameService ns = network.nameService;
-        console.println($"nameService={&ns.actualType}");
+        @Atomic Int i64 = 42;
+        i64++;
+        i64--;
+        assert i64 == 42;
 
-        IPAddress[]? addrs = Null;
-        addrs := ns.resolve("google.com");
-        console.println($"google.com={addrs ?: "not resolvable"}");
+        @Atomic UInt ui64 = 42;
+        ui64++;
+        ui64--;
+        assert ui64 == 42;
 
-        String name = "?";
-        name := ns.reverseLookup(new IPAddress("127.0.0.1"));
-        console.println($"127.0.0.1={name}");
+        @Atomic Int32 ui32 = 42;
+        ui32++;
+        ui32--;
+        assert ui32 == 42;
         }
     }

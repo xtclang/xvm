@@ -3,19 +3,18 @@ package org.xvm.runtime.template.numbers;
 
 import org.xvm.asm.ClassStructure;
 
-import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 
 
 /**
- * TODO:
+ * Native IntNumber support.
  */
 public class xIntNumber
-        extends ClassTemplate
+        extends xNumber
     {
     public xIntNumber(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(container, structure);
+        super(container, structure, false);
         }
 
     @Override

@@ -15,7 +15,6 @@ import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xBoolean;
-import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xOrdered;
 
 import org.xvm.runtime.template.numbers.xIntLiteral.IntNHandle;
@@ -29,12 +28,13 @@ import org.xvm.util.PackedInteger;
  * Base class for IntN/UIntN integer types.
  */
 public abstract class xUnconstrainedInteger
-        extends xConst
+        extends xIntNumber
     {
     protected xUnconstrainedInteger(Container container, ClassStructure structure,
              boolean fUnsigned, boolean fChecked)
         {
         super(container, structure, false);
+
         f_fChecked = fChecked;
         f_fSigned  = !fUnsigned;
         }

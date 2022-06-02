@@ -19,7 +19,6 @@ import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xBoolean;
-import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xOrdered;
 
@@ -39,7 +38,7 @@ import org.xvm.util.PackedInteger;
  * (Int8, UInt16, @Unchecked Int32, ...)
  */
 public abstract class xConstrainedInteger
-        extends xConst
+        extends xIntNumber
     {
     protected xConstrainedInteger(Container container, ClassStructure structure,
                                   long cMinValue, long cMaxValue,

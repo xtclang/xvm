@@ -1,9 +1,13 @@
 package org.xvm.runtime.template.annotations;
 
 
+import java.util.HashMap;
+import java.util.Map;
+
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
@@ -16,8 +20,25 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
 
+import org.xvm.runtime.template.numbers.xUncheckedInt16;
+import org.xvm.runtime.template.numbers.xUncheckedInt32;
+import org.xvm.runtime.template.numbers.xUncheckedInt64;
+import org.xvm.runtime.template.numbers.xUncheckedInt8;
+import org.xvm.runtime.template.numbers.xUncheckedUInt16;
+import org.xvm.runtime.template.numbers.xUncheckedUInt32;
+import org.xvm.runtime.template.numbers.xUncheckedUInt64;
+import org.xvm.runtime.template.numbers.xUncheckedUInt8;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
+
+import org.xvm.runtime.template.numbers.xInt16;
+import org.xvm.runtime.template.numbers.xInt32;
+import org.xvm.runtime.template.numbers.xInt64;
+import org.xvm.runtime.template.numbers.xInt8;
+import org.xvm.runtime.template.numbers.xUInt16;
+import org.xvm.runtime.template.numbers.xUInt32;
+import org.xvm.runtime.template.numbers.xUInt64;
+import org.xvm.runtime.template.numbers.xUInt8;
 
 import org.xvm.runtime.template.reflect.xVar;
 
@@ -47,16 +68,41 @@ public class xAtomicVar
         markNativeMethod("replace", null, BOOLEAN);
         markNativeMethod("replaceFailed", null, null);
 
+        ConstantPool                        pool         = f_container.getConstantPool();
+        Map<TypeConstant, xAtomicIntNumber> mapTemplates = new HashMap<>();
+
+        // checked
+        mapTemplates.put(pool.typeCInt8(),   new xAtomicIntNumber(xInt8 .INSTANCE));
+        mapTemplates.put(pool.typeCInt16(),  new xAtomicIntNumber(xInt16.INSTANCE));
+        mapTemplates.put(pool.typeCInt32(),  new xAtomicIntNumber(xInt32.INSTANCE));
+        mapTemplates.put(pool.typeCInt64(),  new xAtomicIntNumber(xInt64.INSTANCE));
+
+        mapTemplates.put(pool.typeCUInt8(),  new xAtomicIntNumber(xUInt8.INSTANCE));
+        mapTemplates.put(pool.typeCUInt16(), new xAtomicIntNumber(xUInt16.INSTANCE));
+        mapTemplates.put(pool.typeCUInt32(), new xAtomicIntNumber(xUInt32.INSTANCE));
+        mapTemplates.put(pool.typeCUInt64(), new xAtomicIntNumber(xUInt64.INSTANCE));
+
+        // unchecked
+        mapTemplates.put(pool.typeInt8(),   new xAtomicIntNumber(xUncheckedInt8.INSTANCE));
+        mapTemplates.put(pool.typeInt16(),  new xAtomicIntNumber(xUncheckedInt16.INSTANCE));
+        mapTemplates.put(pool.typeInt32(),  new xAtomicIntNumber(xUncheckedInt32.INSTANCE));
+        mapTemplates.put(pool.typeInt64(),  new xAtomicIntNumber(xUncheckedInt64.INSTANCE));
+
+        mapTemplates.put(pool.typeUInt8(),  new xAtomicIntNumber(xUncheckedUInt8.INSTANCE));
+        mapTemplates.put(pool.typeUInt16(), new xAtomicIntNumber(xUncheckedUInt16.INSTANCE));
+        mapTemplates.put(pool.typeUInt32(), new xAtomicIntNumber(xUncheckedUInt32.INSTANCE));
+        mapTemplates.put(pool.typeUInt64(), new xAtomicIntNumber(xUncheckedUInt64.INSTANCE));
+
+        NUMBER_TEMPLATES = mapTemplates;
+
         getCanonicalType().invalidateTypeInfo();
         }
 
     @Override
     public ClassTemplate getTemplate(TypeConstant type)
         {
-        // if Referent is Int64, then the template should be AtomicIntNumber
-        return type.getParamType(0) == pool().typeCInt64() // REVIEW GG checked vs. unchecked
-            ? xAtomicIntNumber.INSTANCE
-            : this;
+        xAtomicIntNumber templateAtomicInt = NUMBER_TEMPLATES.get(type.getParamType(0));
+        return templateAtomicInt == null ? this : templateAtomicInt;
         }
 
     @Override
@@ -373,4 +419,9 @@ public class xAtomicVar
                 }
             }
         }
+
+
+    // ----- data fields ---------------------------------------------------------------------------
+
+    protected static Map<TypeConstant, xAtomicIntNumber> NUMBER_TEMPLATES;
     }
