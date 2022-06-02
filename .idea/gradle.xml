@@ -19,14 +19,11 @@
             <option value="$PROJECT_DIR$/lib_collections" />
             <option value="$PROJECT_DIR$/lib_crypto" />
             <option value="$PROJECT_DIR$/lib_ecstasy" />
-            <option value="$PROJECT_DIR$/lib_host" />
-            <option value="$PROJECT_DIR$/lib_hostControl" />
             <option value="$PROJECT_DIR$/lib_imdb" />
             <option value="$PROJECT_DIR$/lib_json" />
             <option value="$PROJECT_DIR$/lib_jsondb" />
             <option value="$PROJECT_DIR$/lib_net" />
             <option value="$PROJECT_DIR$/lib_oodb" />
-            <option value="$PROJECT_DIR$/lib_platform" />
             <option value="$PROJECT_DIR$/lib_web" />
             <option value="$PROJECT_DIR$/manualTests" />
             <option value="$PROJECT_DIR$/xdk" />
