@@ -47,6 +47,8 @@
 
 - discuss recursive lambda calls (use this:function?)
 
+- implement boundary checks for atomic integers
+
 - rewrite removeAccess() and removeImmutable(); it blows on virtual children now
 
 - try to get rid of reportNotNewable() by logging at TypeInfo (now we can)
