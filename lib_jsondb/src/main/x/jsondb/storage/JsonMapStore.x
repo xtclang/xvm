@@ -850,19 +850,21 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                 valueHistory.remove(txId);
                 sizeByTx    .remove(txId);
 
-                assert FileLayout  fileLayout  := storageLayout.get(txId),
-                       EntryLayout entryLayout := fileLayout.get(fileName);
-                entryLayout.remove(key);
-                if (entryLayout.empty)
+                if (FileLayout  fileLayout  := storageLayout.get(txId),
+                    EntryLayout entryLayout := fileLayout.get(fileName))
                     {
-                    fileLayout.remove(fileName);
-                    if (fileLayout.empty)
+                    entryLayout.remove(key);
+                    if (entryLayout.empty)
                         {
-                        storageLayout.remove(txId);
+                        fileLayout.remove(fileName);
+                        if (fileLayout.empty)
+                            {
+                            storageLayout.remove(txId);
+                            }
                         }
-                    }
 
-                cleanupPending.add(fileName);
+                    cleanupPending.add(fileName);
+                    }
                 };
 
             processDiscarded(lastCommit, valueHistory.keys.iterator(), inUseTxIds.iterator(), discard);
