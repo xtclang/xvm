@@ -1,3 +1,4 @@
+#include <limits.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -9,6 +10,23 @@
 
 // shared code for Linux and macos implementations
 
+const char* resolveLinks(const char* path)
+    {
+    char ach[PATH_MAX];
+    if (!realpath(path, ach))
+        {
+        abortLaunch("Unresolvable link");
+        }
+
+    if (strcmp(path, ach) == 0)
+        {
+        return path;
+        }
+
+    char* result = allocBuffer(strlen(ach)+1);
+    strcpy(result, ach);
+    return result;
+    }
 
 void execJava(const char* javaPath,
               const char* javaOpts,

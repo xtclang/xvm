@@ -24,6 +24,15 @@
 extern const char* findLauncherPath();
 
 /**
+ * If the file is a link, follow the link until a real file is found.
+ *
+ * @param path  the path to a file that may be a link
+ *
+ * @return the file at the end of the linked list of links
+ */
+extern const char* resolveLinks(const char* path);
+
+/**
  * Execute the JVM against the specified JAR.
  *
  * @param javaPath  the path to use to execute the JVM (e.g. "java")

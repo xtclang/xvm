@@ -30,7 +30,7 @@ int main(int argc, const char* argv[])
     const char* execPath = findLauncherPath();
 
     // next, load the optional config for the executable
-    const char* execDir  = extractDir(execPath);
+    const char* execDir  = extractDir(resolveLinks(execPath));
     const char* execFile = removeExtension(extractFile(execPath));
     const char* cfgPath  = buildPath(execDir, withExtension(execFile, ".cfg"));
     const char* cfg      = readFile(cfgPath);
@@ -54,6 +54,9 @@ static int   garbageCount = 0;
  */
 static void init()
     {
+    // for any debug output, stdout must not be buffered
+    setbuf(stdout, NULL);
+
     memset(garbage, 0, MAX_GARBAGE * sizeof(void*));
     }
 
