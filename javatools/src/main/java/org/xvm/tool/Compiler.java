@@ -477,7 +477,7 @@ public class Compiler
 
         if (cErrs > 0)
             {
-            // if there are any COMPILER errors, suppress all VERIFY errors
+            // if there are any COMPILER errors, suppress all VERIFY errors except the first three
             boolean fSuppressVerify = false;
 
             for (ErrorInfo err : listErrs)
@@ -489,9 +489,10 @@ public class Compiler
                     }
                 }
 
+            int cVerify = 0;
             for (ErrorInfo err : listErrs)
                 {
-                if (fSuppressVerify && err.getCode().startsWith("VERIFY"))
+                if (fSuppressVerify && err.getCode().startsWith("VERIFY") && ++cVerify > 3)
                     {
                     continue;
                     }

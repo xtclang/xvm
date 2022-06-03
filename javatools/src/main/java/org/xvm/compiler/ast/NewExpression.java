@@ -619,10 +619,11 @@ public class NewExpression
             }
 
         // unless it's a virtual new, the target type must be new-able
-        if (!fVirt && !infoTarget.isNewable(errs))
+        if (!fVirt && !infoTarget.isNewable(errsTemp))
             {
             String sTarget = infoTarget.getType().removeAccess().getValueString();
-            reportNotNewable(sTarget, infoTarget, null, errs);
+            reportNotNewable(sTarget, infoTarget, null, errsTemp);
+            errsTemp.merge();
             return null;
             }
 
