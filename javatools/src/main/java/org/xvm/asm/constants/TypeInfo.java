@@ -1861,7 +1861,7 @@ public class TypeInfo
                     ? (IdentityConstant) type.getDefiningConstant()
                     : null;
 
-            sigResolved = sigMethod.resolveAutoNarrowing(pool, type, idCtx).removeAutoNarrowing();
+            sigResolved = sigMethod.resolveAutoNarrowing(pool, type, idCtx);
             }
         else
             {
