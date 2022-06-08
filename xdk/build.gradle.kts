@@ -37,7 +37,7 @@ val coreLib         = "$libDir/ecstasy.xtc"
 val turtleLib       = "$javaDir/javatools_turtle.xtc"
 val bridgeLib       = "$javaDir/javatools_bridge.xtc"
 
-val version         = "0.3-alpha"
+val version         = rootProject.version
 
 tasks.register("clean") {
     group       = "Build"

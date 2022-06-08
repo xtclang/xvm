@@ -7,15 +7,17 @@ plugins {
 }
 
 tasks.withType(Jar::class) {
+    val version = rootProject.version
+
     manifest {
         attributes["Manifest-Version"] = "1.0"
         attributes["Sealed"] = "true"
         attributes["Name"] = "/org/xvm/util"
         attributes["Specification-Title"] = "xvm"
-        attributes["Specification-Version"] = "0.3.0"
+        attributes["Specification-Version"] = version
         attributes["Specification-Vendor"] = "xtclang.org"
         attributes["Implementation-Title"] = "xvm-javatools_utils"
-        attributes["Implementation-Version"] = "0.3.0"
+        attributes["Implementation-Version"] = version
         attributes["Implementation-Vendor"] = "xtclang.org"
     }
 }

@@ -42,7 +42,7 @@ And please respect our [code of conduct](CODE_OF_CONDUCT.md) and each other.
 
 ## Status:
 
-Version 0.3.0. That's way _before_ a 1.0. In other words, Ecstasy is about as mature as Windows 3.1
+Version 0.4. That's way _before_ a 1.0. In other words, Ecstasy is about as mature as Windows 3.1
 was.
 
 **Warning:** The Ecstasy project is not yet certified for production use. This is a large and

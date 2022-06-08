@@ -59,7 +59,7 @@ import org.xvm.util.Severity;
  * <p/>The version of the resulting module can be specified by using the {@code -version} option;
  * for example:
  *
- * <p/>{@code  xtc -version 0.3-alpha}
+ * <p/>{@code  xtc -version 0.4-alpha}
  *
  * <p/>In addition to built-in Ecstasy modules and modules located in the Ecstasy runtime library,
  * it is possible to provide a search path for modules that will be used by the compiler. The search

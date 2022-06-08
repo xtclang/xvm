@@ -2,8 +2,8 @@
  * Main build file for the XVM project, producing the XDK.
  */
 
-group = "org.xvm"
-version = "0.3.0"
+group   = "org.xvm"
+version = "0.4.2"
 
 allprojects {
     configurations.all {
