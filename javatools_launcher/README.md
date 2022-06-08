@@ -13,9 +13,10 @@ half-decent operating system. This allows us to hide the Java-specific command l
 complications of invoking the JVM.
 
 The solution is a single native executable (one per hardware/OS combination, e.g. `macos_launcher`)
-that can then be copied to as many different command names as necessary (e.g. `xtc` for the compiler,
-and `xec` for the runtime). When executed, each command executable (which is an identical copy of the
-original) uses the OS to determine its own name (e.g. "xtc" or "xec"), and passes that name to a Java
+that can then be copied to as many different command names as necessary (e.g. `xtc` for the
+compiler, and `xec` for the runtime). When executed, each command executable (which is an identical
+copy of the original (or on Linux or UNIX, a symbolic link to the executable is supported as well)
+uses the OS to determine its own name (e.g. "xtc" or "xec"), and passes that name to a Java
 utility inside of the `javatools.jar` file, along with all of the command line parameters.
 
 For example:
@@ -114,9 +115,9 @@ To create a debugging session in IntelliJ IDEA for a native launcher command, th
 native launcher will need to be started in a debug mode, and then IDEA will need connect to that JVM,
 which will allow you to debug from IDEA:
   
-* Make a debug copy of the native launcher that you need to debug. For example, to debug the `xec` 
-  command, copy the `xec` file  to `debug_xec`. (The prefix of "debug" or "debug_" is required for
-  this purpose; it is stripped off later by the `org.xvm.tool.Launcher` class.)
+* Make a debug copy of (or link to) the native launcher that you need to debug. For example, to
+  debug the `xec` command, copy the `xec` file  to `debug_xec`. (The prefix of "debug" or "debug_"
+  is required for this purpose; it is stripped off later by the `org.xvm.tool.Launcher` class.)
   
 * Create a config file for the new executable. Continuing the above example, that would be a file
   named `debug_xec.cfg`. Place the necessary JVM options into the configuration file, such as:
