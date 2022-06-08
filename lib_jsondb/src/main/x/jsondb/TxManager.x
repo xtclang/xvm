@@ -157,6 +157,8 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         internalJsonSchema = catalog.internalJsonSchema;
         }
 
+    typedef Client<Schema>.DBObjectImpl as DBObjectImpl;
+
 
     // ----- properties ----------------------------------------------------------------------------
 
@@ -464,9 +466,9 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      */
     static const Requirement<Result extends immutable Const>
         (
-        Int                       dboId,
-        function Result(DBObject) test,
-        Result                    result,
+        Int                           dboId,
+        function Result(DBObjectImpl) test,
+        Result                        result,
         );
 
     /**
@@ -681,7 +683,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                             }
                         }
 
-                    closeLog();
+                    &result.thenDo(closeLog);
                     status = Disabled;
 
                     if (finalTermination())
@@ -808,7 +810,8 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      * @param writeId  the transaction id
      * @param req      the Requirement
      */
-    <Result extends immutable Const> Result registerRequirement(Int writeId, Int dboId, function Result(DBObject) test)
+    <Result extends immutable Const> Result
+            registerRequirement(Int writeId, Int dboId, function Result(DBObjectImpl) test)
         {
         checkEnabled();
 

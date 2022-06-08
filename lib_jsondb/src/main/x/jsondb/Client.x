@@ -1010,7 +1010,7 @@ service Client<Schema extends RootSchema>
             }
 
         @Override
-        <Result extends immutable Const> Result require(function Result(DBObject) test)
+        <Result extends immutable Const> Result require(function Result(DBObjectImpl) test)
             {
             Transaction tx = requireTransaction_("require()");
             return outer.txManager.registerRequirement(tx.id_, info_.id, test);
