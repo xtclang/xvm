@@ -12,6 +12,13 @@ import org.xvm.asm.Op;
 import org.xvm.asm.OpJump;
 import org.xvm.asm.Register;
 
+import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.runtime.Frame;
+import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xOrdered;
+
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -153,6 +160,67 @@ public abstract class OpSwitch
         registerArguments(m_aConstCase, registry);
         }
 
+    /**
+     * Make natural calls to determine if the specified value sits in the range (inclusive) between
+     * the specified low and hign values. The resulting Boolean value should be placed on the
+     * caller's stack.
+     *
+     * @return one of Op.R_NEXT, Op.R_CALL or Op.R_EXCEPTION values
+     */
+    protected int checkRange(Frame frame, TypeConstant typeCompare, ObjectHandle hValue,
+                             ObjectHandle hLow, ObjectHandle hHigh, boolean fLow,
+                             Frame.Continuation continuation)
+        {
+        switch (typeCompare.callCompare(frame, hValue, fLow ? hLow : hHigh, Op.A_STACK))
+            {
+            case Op.R_NEXT:
+                if (fLow)
+                    {
+                    if (frame.popStack() != xOrdered.GREATER)
+                        {
+                        // we're done; no match
+                        frame.pushStack(xBoolean.FALSE);
+                        return continuation.proceed(frame);
+                        }
+
+                    return checkRange(frame, typeCompare, hValue, hLow, hHigh, false, continuation);
+                    }
+                else
+                    {
+                    frame.pushStack(xBoolean.makeHandle(frame.popStack() != xOrdered.LESSER));
+                    return continuation.proceed(frame);
+                    }
+
+            case Op.R_CALL:
+                Frame.Continuation stepNext = frameCaller ->
+                    {
+                    if (fLow)
+                        {
+                        if (frameCaller.popStack() != xOrdered.GREATER)
+                            {
+                            // we're done; no match
+                            frameCaller.pushStack(xBoolean.FALSE);
+                            return continuation.proceed(frameCaller);
+                            }
+
+                        return checkRange(frameCaller, typeCompare, hValue, hLow, hHigh, false, continuation);
+                        }
+                    else
+                        {
+                        frameCaller.pushStack(xBoolean.makeHandle(frameCaller.popStack() != xOrdered.LESSER));
+                        return continuation.proceed(frameCaller);
+                        }
+                    };
+                frame.m_frameNext.addContinuation(stepNext);
+                return Op.R_CALL;
+
+            case Op.R_EXCEPTION:
+                return Op.R_EXCEPTION;
+
+            default:
+                throw new IllegalStateException();
+            }
+        }
 
     @Override
     public String toString()
@@ -228,24 +296,9 @@ public abstract class OpSwitch
                 }
             }
 
-        boolean isRange()
-            {
-            switch (this)
-                {
-                case NativeRange:
-                case NaturalRange:
-                    return true;
-
-                default:
-                    return false;
-                }
-            }
-
         Algorithm worstOf(Algorithm that)
             {
             return this.compareTo(that) <= 0 ? that : this;
             }
         }
     }
-
-

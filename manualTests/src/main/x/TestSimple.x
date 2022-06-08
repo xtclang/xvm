@@ -4,21 +4,17 @@ module TestSimple
 
     void run()
         {
-        console.println("Hello atomics!");
+        DateTime? dt1 = Null;
+        DateTime? dt2 = DateTime.EPOCH;
 
-        @Atomic Int i64 = 42;
-        i64++;
-        i64--;
-        assert i64 == 42;
+        Ordered order = dt1? <=> dt2? : switch (dt1, dt2)  // this used to NPE
+            {
+            case (Null, Null): Equal;
+            case (Null, _): Greater;
+            case (_, Null): Lesser;
+            default: assert;
+            };
 
-        @Atomic UInt ui64 = 42;
-        ui64++;
-        ui64--;
-        assert ui64 == 42;
-
-        @Atomic Int32 ui32 = 42;
-        ui32++;
-        ui32--;
-        assert ui32 == 42;
+        console.println(order);
         }
     }

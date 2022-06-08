@@ -21,6 +21,7 @@ module TestMisc
         testSwitchExpr2();
         testSwitchExpr3();
         testSwitchExpr4();
+        testSwitchNatural();
         testStmtExpr();
         testAssignOps();
 
@@ -364,6 +365,29 @@ module TestMisc
                 case (Greater, 2..6):   "more #2..6";
                 default:                "default";
                 });
+            }
+        }
+
+    void testSwitchNatural()
+        {
+        console.println("\n** testSwitchNatural()");
+
+        assert test(new Point(0, 0)) == "min";
+        assert test(new Point(2, 2)) == "between";
+        assert test(new Point(4, 4)) == "max";
+        assert test(new Point(5, 5)) == "outside";
+
+        static Point MIN = new Point(0, 0);
+        static Point MAX = new Point(4, 4);
+
+        static String test(Point p)
+            {
+            return switch (p)
+                {
+                case MIN: "min";
+                case MAX: "max";
+                default : MIN < p < MAX ? "between" : "outside";
+                };
             }
         }
 

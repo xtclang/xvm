@@ -1212,7 +1212,8 @@ public class CaseManager<CookieType>
                 exprCond = new ToIntExpression(exprCond, getJmpIntOffset(), errs);
                 }
 
-            Argument[] aArgsAdd = exprCond.generateArguments(ctx, code, true, true, errs);
+            // don't use stack
+            Argument[] aArgsAdd = exprCond.generateArguments(ctx, code, true, false, errs);
             int cArgsAdd = aArgsAdd.length;
             System.arraycopy(aArgsAdd, 0, aArgVal, ofArgVal, cArgsAdd);
             ofArgVal += cArgsAdd;
