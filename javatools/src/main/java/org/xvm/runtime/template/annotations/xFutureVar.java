@@ -776,7 +776,7 @@ public class xFutureVar
                 if (frame.f_context != hService.f_context)
                     {
                     return hService.f_context.sendProperty10Request(frame, hRef, null, hValue,
-                        (frameCaller, hTarget, idProp_, hVal) ->
+                        (frameCaller, hTarget, null_, hVal) ->
                             setReferentImpl(frameCaller, (RefHandle) hTarget, true, hVal));
                     }
                 }
@@ -786,12 +786,12 @@ public class xFutureVar
 
         assert hValue != null;
 
-        if (hValue instanceof FutureHandle)
+        if (hValue instanceof FutureHandle hFuture)
             {
             // this is only possible if this "handle" is a "dynamic ref" and the passed in
             // "handle" is a synthetic or dynamic one (see Frame.assignValue)
 
-            CompletableFuture<ObjectHandle> cfThat = ((FutureHandle) hValue).getFuture();
+            CompletableFuture<ObjectHandle> cfThat = hFuture.getFuture();
 
             // "connect" the futures
             cfThat.whenComplete((r, e) ->

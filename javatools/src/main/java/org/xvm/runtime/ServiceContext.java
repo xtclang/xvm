@@ -1105,8 +1105,7 @@ public class ServiceContext
         }
 
     /**
-     * Send an asynchronous Op-based message to this context with one return value. The caller
-     * will be blocked until the asynchronous operation completes.
+     * Send an asynchronous Op-based message to this context with one return value.
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
@@ -1332,8 +1331,7 @@ public class ServiceContext
         }
 
     /**
-     * Send an asynchronous property "read" operation request. The caller will be blocked until the
-     * result is returned.
+     * Send an asynchronous property "read" operation request.
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
@@ -1369,7 +1367,9 @@ public class ServiceContext
 
     /**
      * Send an asynchronous property "update" operation request. The caller will be blocked until
-     * the asynchronous operation completes.
+     * the asynchronous operation completes. This method could is also used to update Var referents.
+     *
+     * @param idProp if null, this request updates a Var referent; property value otherwise
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
@@ -1391,7 +1391,9 @@ public class ServiceContext
             }
         else
             {
-            hPassValue = hValue.getTemplate().createProxyHandle(this, hValue, idProp.getType());
+            hPassValue = idProp == null
+                    ? null
+                    : hValue.getTemplate().createProxyHandle(this, hValue, idProp.getType());
             if (hPassValue == null)
                 {
                 return frameCaller.raiseException(xException.mutableObject(frameCaller));
@@ -1407,7 +1409,7 @@ public class ServiceContext
 
             public String toString()
                 {
-                return idProp.getPathString();
+                return idProp == null ? "<Referent>" : idProp.getPathString();
                 }
             };
 
