@@ -430,74 +430,83 @@ val build = tasks.register("build") {
                 into("$binDir/")
            }
         }
-
-        // TODO GG this be moved into its own target (i.e. not part of "build")
-        // getting the homebrew xdl location using "readlink -f `which xec`" command
-        val output = java.io.ByteArrayOutputStream()
-
-        project.exec {
-            commandLine("which", "xec")
-            standardOutput = output
-            setIgnoreExitValue(true)
-        }
-
-        val xecLink = output.toString().trim()
-        if (xecLink.length > 0) {
-            output.reset()
-            project.exec {
-                commandLine("readlink", "-f", xecLink)
-                standardOutput = output
-            }
-
-            val xecFile    = output.toString().trim();
-            val libexecDir = file("$xecFile/../..")
-            var updated    = false;
-
-            val srcBin = fileTree("$binDir").getFiles().stream().
-                    mapToLong({f -> f.lastModified()}).max().orElse(0)
-            val dstBin = fileTree("$libexecDir/bin").getFiles().stream().
-                    mapToLong({f -> f.lastModified()}).max().orElse(0)
-            if (srcBin > dstBin) {
-                copy {
-                    from("$binDir/")
-                    into("$libexecDir/bin")
-                }
-                updated = true;
-            }
-
-            val srcLib = fileTree("$libDir/").getFiles().stream().
-                    mapToLong({f -> f.lastModified()}).max().orElse(0)
-            val dstLib = fileTree("$libexecDir/lib").getFiles().stream().
-                    mapToLong({f -> f.lastModified()}).max().orElse(0)
-            if (srcLib > dstLib) {
-                copy {
-                    from("$libDir/")
-                    into("$libexecDir/lib")
-                }
-                updated = true;
-            }
-
-            val srcJts = fileTree("$javaDir/").getFiles().stream().
-                    mapToLong({f -> f.lastModified()}).max().orElse(0)
-            val dstJts = fileTree("$libexecDir/javatools").getFiles().stream().
-                    mapToLong({f -> f.lastModified()}).max().orElse(0)
-            if (srcJts > dstJts) {
-                copy {
-                    from("$javaDir/")
-                    into("$libexecDir/javatools")
-                }
-                updated = true;
-            }
-
-            if (updated) {
-                println("Updated local homebrew directory $libexecDir")
-            }
-        }
         println("Finished task: build")
     }
 }
 
 // TODO wiki
+
+tasks.register<Tar>("dist-local") {
+    group       = "Distribution"
+    description = "Copy the xdk to the local homebrew cellar"
+
+    dependsOn(build)
+
+    // getting the homebrew xdl location using "readlink -f `which xec`" command
+    val output = java.io.ByteArrayOutputStream()
+
+    project.exec {
+        commandLine("which", "xec")
+        standardOutput = output
+        setIgnoreExitValue(true)
+    }
+
+    val xecLink = output.toString().trim()
+    if (xecLink.length > 0) {
+        output.reset()
+        project.exec {
+            commandLine("readlink", "-f", xecLink)
+            standardOutput = output
+        }
+
+        val xecFile    = output.toString().trim();
+        val libexecDir = file("$xecFile/../..")
+        var updated    = false;
+
+        val srcBin = fileTree("$binDir").getFiles().stream().
+                mapToLong({f -> f.lastModified()}).max().orElse(0)
+        val dstBin = fileTree("$libexecDir/bin").getFiles().stream().
+                mapToLong({f -> f.lastModified()}).max().orElse(0)
+        if (srcBin > dstBin) {
+            copy {
+                from("$binDir/")
+                into("$libexecDir/bin")
+            }
+            updated = true;
+        }
+
+        val srcLib = fileTree("$libDir/").getFiles().stream().
+                mapToLong({f -> f.lastModified()}).max().orElse(0)
+        val dstLib = fileTree("$libexecDir/lib").getFiles().stream().
+                mapToLong({f -> f.lastModified()}).max().orElse(0)
+        if (srcLib > dstLib) {
+            copy {
+                from("$libDir/")
+                into("$libexecDir/lib")
+            }
+            updated = true;
+        }
+
+        val srcJts = fileTree("$javaDir/").getFiles().stream().
+                mapToLong({f -> f.lastModified()}).max().orElse(0)
+        val dstJts = fileTree("$libexecDir/javatools").getFiles().stream().
+                mapToLong({f -> f.lastModified()}).max().orElse(0)
+        if (srcJts > dstJts) {
+            copy {
+                from("$javaDir/")
+                into("$libexecDir/javatools")
+            }
+            updated = true;
+        }
+
+        if (updated) {
+            println("Updated local homebrew directory $libexecDir")
+        }
+    }
+    else {
+        println("Missing local homebrew installation; run \"brew install xdk\" command first")
+    }
+}
 
 tasks.register<Tar>("dist") {
     group       = "Distribution"
