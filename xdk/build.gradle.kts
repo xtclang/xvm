@@ -40,7 +40,7 @@ val bridgeLib       = "$javaDir/javatools_bridge.xtc"
 
 val distDir         = "$buildDir/dist"
 
-val version         = rootProject.version
+val xdkVersion      = rootProject.version
 
 tasks.register("clean") {
     group       = "Build"
@@ -81,7 +81,7 @@ val compileEcstasy = tasks.register<JavaExec>("compileEcstasy") {
     classpath(javatoolsJar)
     args("-verbose",
             "-o", "$libDir",
-            "-version", "$version",
+            "-version", "$xdkVersion",
             "$ecstasyMain/x/ecstasy.x",
             "$turtleMain/x/mack.x")
     mainClass.set("org.xvm.tool.Compiler")
@@ -106,7 +106,7 @@ val compileAggregate = tasks.register<JavaExec>("compileAggregate") {
     classpath(javatoolsJar)
     args("-verbose",
             "-o", "$libDir",
-            "-version", "$version",
+            "-version", "$xdkVersion",
             "-L", "$coreLib",
             "-L", "$turtleLib",
             "$aggregateMain/x/aggregate.x")
@@ -126,7 +126,7 @@ val compileCollections = tasks.register<JavaExec>("compileCollections") {
     classpath(javatoolsJar)
     args("-verbose",
             "-o", "$libDir",
-            "-version", "$version",
+            "-version", "$xdkVersion",
             "-L", "$coreLib",
             "-L", "$turtleLib",
             "$collectionsMain/x/collections.x")
@@ -146,7 +146,7 @@ val compileCrypto = tasks.register<JavaExec>("compileCrypto") {
     classpath(javatoolsJar)
     args("-verbose",
             "-o", "$libDir",
-            "-version", "$version",
+            "-version", "$xdkVersion",
             "-L", "$coreLib",
             "-L", "$turtleLib",
             "$cryptoMain/x/crypto.x")
@@ -166,7 +166,7 @@ val compileNet = tasks.register<JavaExec>("compileNet") {
     classpath(javatoolsJar)
     args("-verbose",
             "-o", "$libDir",
-            "-version", "$version",
+            "-version", "$xdkVersion",
             "-L", "$coreLib",
             "-L", "$turtleLib",
             "-L", "$libDir",
@@ -187,7 +187,7 @@ val compileJson = tasks.register<JavaExec>("compileJson") {
     classpath(javatoolsJar)
     args("-verbose",
             "-o", "$libDir",
-            "-version", "$version",
+            "-version", "$xdkVersion",
             "-L", "$coreLib",
             "-L", "$turtleLib",
             "$jsonMain/x/json.x")
@@ -207,7 +207,7 @@ val compileOODB = tasks.register<JavaExec>("compileOODB") {
     classpath(javatoolsJar)
     args("-verbose",
             "-o", "$libDir",
-            "-version", "$version",
+            "-version", "$xdkVersion",
             "-L", "$coreLib",
             "-L", "$turtleLib",
             "$oodbMain/x/oodb.x")
@@ -227,7 +227,7 @@ val compileIMDB = tasks.register<JavaExec>("compileIMDB") {
     classpath(javatoolsJar)
     args("-verbose",
             "-o", "$libDir",
-            "-version", "$version",
+            "-version", "$xdkVersion",
             "-L", "$coreLib",
             "-L", "$turtleLib",
             "-L", "$libDir",
@@ -248,7 +248,7 @@ val compileJsonDB = tasks.register<JavaExec>("compileJsonDB") {
     classpath(javatoolsJar)
     args("-verbose",
             "-o", "$libDir",
-            "-version", "$version",
+            "-version", "$xdkVersion",
             "-L", "$coreLib",
             "-L", "$turtleLib",
             "-L", "$libDir",
@@ -269,7 +269,7 @@ val compileWeb = tasks.register<JavaExec>("compileWeb") {
     classpath(javatoolsJar)
     args("-verbose",
             "-o", "$libDir",
-            "-version", "$version",
+            "-version", "$xdkVersion",
             "-L", "$coreLib",
             "-L", "$turtleLib",
             "-L", "$libDir",
@@ -290,7 +290,7 @@ val compileBridge = tasks.register<JavaExec>("compileBridge") {
     classpath(javatoolsJar)
     args("-verbose",
             "-o", "$libDir",
-            "-version", "$version",
+            "-version", "$xdkVersion",
             "-L", "$coreLib",
             "-L", "$turtleLib",
             "-L", "$libDir",
@@ -505,8 +505,7 @@ tasks.register<Tar>("dist") {
 
     dependsOn(build)
 
-    // TODO GG note that referring to "version" did not work here, but "rootProject.version" did work
-    var distName = rootProject.version
+    var distName = xdkVersion
     val isCI     = System.getenv("CI")
     val buildNum = System.getenv("BUILD_NUMBER")
     if (isCI != null && isCI != "0" && isCI != "false" && buildNum != null) {
