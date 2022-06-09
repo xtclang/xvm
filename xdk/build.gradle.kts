@@ -505,8 +505,18 @@ tasks.register<Tar>("dist") {
 
     dependsOn(build)
 
-    // TODO GG using just "version" did not work here:
-    archiveFileName.set("xdk-${rootProject.version}.tar.gz")
+    // TODO GG note that referring to "version" did not work here, but "rootProject.version" did work
+    var distName = rootProject.version
+    val buildNum = System.getenv("BUILD_NUMBER")
+    if (buildNum != null) {
+        distName = "${distName}ci${buildNum}"
+        val changeId = System.getenv("CHANGE_ID")
+        if (changeId != null) {
+            distName = "${distName}+${changeId}"
+        }
+    }
+
+    archiveFileName.set("xdk-${distName}.tar.gz")
     destinationDirectory.set(file("$distDir/"))
     compression = Compression.GZIP
     from("$buildDir/") {
