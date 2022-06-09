@@ -507,11 +507,19 @@ tasks.register<Tar>("dist") {
 
     // TODO GG note that referring to "version" did not work here, but "rootProject.version" did work
     var distName = rootProject.version
+    val isCI     = System.getenv("CI")
     val buildNum = System.getenv("BUILD_NUMBER")
-    if (buildNum != null) {
+    if (isCI != null && isCI != "0" && isCI != "false" && buildNum != null) {
         distName = "${distName}ci${buildNum}"
-        val changeId = System.getenv("CHANGE_ID")
-        if (changeId != null) {
+
+        val output = java.io.ByteArrayOutputStream()
+        project.exec {
+            commandLine("git", "rev-parse", "master")
+            standardOutput = output
+            setIgnoreExitValue(true)
+        }
+        val changeId = output.toString().trim()
+        if (changeId.length > 0) {
             distName = "${distName}+${changeId}"
         }
     }
