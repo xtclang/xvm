@@ -30,12 +30,15 @@ val imdbMain        = "${imdb.projectDir}/src/main";
 val jsondbMain      = "${jsondb.projectDir}/src/main";
 val webMain         = "${web.projectDir}/src/main";
 
-val libDir          = "$buildDir/xdk/lib"
-val javaDir         = "$buildDir/xdk/javatools"
-
+val xdkDir          = "$buildDir/xdk"
+val binDir          = "$xdkDir/bin"
+val libDir          = "$xdkDir/lib"
 val coreLib         = "$libDir/ecstasy.xtc"
+val javaDir         = "$xdkDir/javatools"
 val turtleLib       = "$javaDir/javatools_turtle.xtc"
 val bridgeLib       = "$javaDir/javatools_bridge.xtc"
+
+val distDir         = "$buildDir/dist"
 
 val version         = rootProject.version
 
@@ -57,7 +60,7 @@ val copyOutline = tasks.register<Copy>("copyOutline") {
 
 val copyJavatools = tasks.register<Copy>("copyJavatools") {
     from(javatoolsJar)
-    into("$buildDir/xdk/javatools/")
+    into("$javaDir/")
 
     dependsOn(javatools.tasks["build"])
     dependsOn(copyOutline)
@@ -301,7 +304,7 @@ val compileBridge = tasks.register<JavaExec>("compileBridge") {
     }
 }
 
-tasks.register("build") {
+val build = tasks.register("build") {
     group       = "Build"
     description = "Build the XDK"
 
@@ -418,16 +421,17 @@ tasks.register("build") {
     doLast {
         val macSrc = file(macos_launcher).lastModified()
         val winSrc = file(windows_launcher).lastModified()
-        val binDst = fileTree("$buildDir/xdk/bin/").getFiles().stream().
+        val binDst = fileTree("$binDir/").getFiles().stream().
                     mapToLong({f -> f.lastModified()}).max().orElse(0)
 
         if (macSrc > binDst || winSrc > binDst) {
             copy {
                 from(macos_launcher, windows_launcher)
-                into("$buildDir/xdk/bin")
+                into("$binDir/")
            }
         }
 
+        // TODO GG this be moved into its own target (i.e. not part of "build")
         // getting the homebrew xdl location using "readlink -f `which xec`" command
         val output = java.io.ByteArrayOutputStream()
 
@@ -447,40 +451,39 @@ tasks.register("build") {
 
             val xecFile    = output.toString().trim();
             val libexecDir = file("$xecFile/../..")
-            val xdkDir     = "$buildDir/xdk"
             var updated    = false;
 
-            val srcBin = fileTree("$xdkDir/bin").getFiles().stream().
+            val srcBin = fileTree("$binDir").getFiles().stream().
                     mapToLong({f -> f.lastModified()}).max().orElse(0)
             val dstBin = fileTree("$libexecDir/bin").getFiles().stream().
                     mapToLong({f -> f.lastModified()}).max().orElse(0)
             if (srcBin > dstBin) {
                 copy {
-                    from("$xdkDir/bin")
+                    from("$binDir/")
                     into("$libexecDir/bin")
                 }
                 updated = true;
             }
 
-            val srcLib = fileTree("$xdkDir/lib").getFiles().stream().
+            val srcLib = fileTree("$libDir/").getFiles().stream().
                     mapToLong({f -> f.lastModified()}).max().orElse(0)
             val dstLib = fileTree("$libexecDir/lib").getFiles().stream().
                     mapToLong({f -> f.lastModified()}).max().orElse(0)
             if (srcLib > dstLib) {
                 copy {
-                    from("$xdkDir/lib")
+                    from("$libDir/")
                     into("$libexecDir/lib")
                 }
                 updated = true;
             }
 
-            val srcJts = fileTree("$xdkDir/javatools").getFiles().stream().
+            val srcJts = fileTree("$javaDir/").getFiles().stream().
                     mapToLong({f -> f.lastModified()}).max().orElse(0)
             val dstJts = fileTree("$libexecDir/javatools").getFiles().stream().
                     mapToLong({f -> f.lastModified()}).max().orElse(0)
             if (srcJts > dstJts) {
                 copy {
-                    from("$xdkDir/javatools")
+                    from("$javaDir/")
                     into("$libexecDir/javatools")
                 }
                 updated = true;
@@ -492,8 +495,21 @@ tasks.register("build") {
         }
         println("Finished task: build")
     }
+}
 
 // TODO wiki
-// TODO ZIP the resulting xdk directory; e.g. on macOS:
-//    `zip -r xdk.zip ./xdk -x *.DS_Store`
+
+tasks.register<Tar>("dist") {
+    group       = "Distribution"
+    description = "Create the XDK .tar.gz file"
+
+    dependsOn(build)
+
+    // TODO GG using just "version" did not work here:
+    archiveFileName.set("xdk-${rootProject.version}.tar.gz")
+    destinationDirectory.set(file("$distDir/"))
+    compression = Compression.GZIP
+    from("$buildDir/") {
+        include("xdk/**")
+    }
 }
