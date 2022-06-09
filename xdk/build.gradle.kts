@@ -514,7 +514,7 @@ tasks.register<Tar>("dist") {
 
         val output = java.io.ByteArrayOutputStream()
         project.exec {
-            commandLine("git", "rev-parse", "master")
+            commandLine("git", "rev-parse", "HEAD")
             standardOutput = output
             setIgnoreExitValue(true)
         }
