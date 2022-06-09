@@ -79,11 +79,10 @@ val compileEcstasy = tasks.register<JavaExec>("compileEcstasy") {
     jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
 
     classpath(javatoolsJar)
-    args("-verbose",
-            "-o", "$libDir",
-            "-version", "$xdkVersion",
-            "$ecstasyMain/x/ecstasy.x",
-            "$turtleMain/x/mack.x")
+    args("-o", "$libDir",
+         "-version", "$xdkVersion",
+         "$ecstasyMain/x/ecstasy.x",
+         "$turtleMain/x/mack.x")
     mainClass.set("org.xvm.tool.Compiler")
 
     doLast {
@@ -104,12 +103,11 @@ val compileAggregate = tasks.register<JavaExec>("compileAggregate") {
     jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
 
     classpath(javatoolsJar)
-    args("-verbose",
-            "-o", "$libDir",
-            "-version", "$xdkVersion",
-            "-L", "$coreLib",
-            "-L", "$turtleLib",
-            "$aggregateMain/x/aggregate.x")
+    args("-o", "$libDir",
+         "-version", "$xdkVersion",
+         "-L", "$coreLib",
+         "-L", "$turtleLib",
+         "$aggregateMain/x/aggregate.x")
     mainClass.set("org.xvm.tool.Compiler")
 }
 
@@ -124,12 +122,11 @@ val compileCollections = tasks.register<JavaExec>("compileCollections") {
     jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
 
     classpath(javatoolsJar)
-    args("-verbose",
-            "-o", "$libDir",
-            "-version", "$xdkVersion",
-            "-L", "$coreLib",
-            "-L", "$turtleLib",
-            "$collectionsMain/x/collections.x")
+    args("-o", "$libDir",
+         "-version", "$xdkVersion",
+         "-L", "$coreLib",
+         "-L", "$turtleLib",
+         "$collectionsMain/x/collections.x")
     mainClass.set("org.xvm.tool.Compiler")
 }
 
@@ -144,12 +141,11 @@ val compileCrypto = tasks.register<JavaExec>("compileCrypto") {
     jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
 
     classpath(javatoolsJar)
-    args("-verbose",
-            "-o", "$libDir",
-            "-version", "$xdkVersion",
-            "-L", "$coreLib",
-            "-L", "$turtleLib",
-            "$cryptoMain/x/crypto.x")
+    args("-o", "$libDir",
+         "-version", "$xdkVersion",
+         "-L", "$coreLib",
+         "-L", "$turtleLib",
+         "$cryptoMain/x/crypto.x")
     mainClass.set("org.xvm.tool.Compiler")
 }
 
@@ -164,13 +160,12 @@ val compileNet = tasks.register<JavaExec>("compileNet") {
     jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
 
     classpath(javatoolsJar)
-    args("-verbose",
-            "-o", "$libDir",
-            "-version", "$xdkVersion",
-            "-L", "$coreLib",
-            "-L", "$turtleLib",
-            "-L", "$libDir",
-            "$netMain/x/net.x")
+    args("-o", "$libDir",
+         "-version", "$xdkVersion",
+         "-L", "$coreLib",
+         "-L", "$turtleLib",
+         "-L", "$libDir",
+         "$netMain/x/net.x")
     mainClass.set("org.xvm.tool.Compiler")
 }
 
@@ -185,12 +180,11 @@ val compileJson = tasks.register<JavaExec>("compileJson") {
     jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
 
     classpath(javatoolsJar)
-    args("-verbose",
-            "-o", "$libDir",
-            "-version", "$xdkVersion",
-            "-L", "$coreLib",
-            "-L", "$turtleLib",
-            "$jsonMain/x/json.x")
+    args("-o", "$libDir",
+         "-version", "$xdkVersion",
+         "-L", "$coreLib",
+         "-L", "$turtleLib",
+         "$jsonMain/x/json.x")
     mainClass.set("org.xvm.tool.Compiler")
 }
 
@@ -205,12 +199,11 @@ val compileOODB = tasks.register<JavaExec>("compileOODB") {
     jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
 
     classpath(javatoolsJar)
-    args("-verbose",
-            "-o", "$libDir",
-            "-version", "$xdkVersion",
-            "-L", "$coreLib",
-            "-L", "$turtleLib",
-            "$oodbMain/x/oodb.x")
+    args("-o", "$libDir",
+         "-version", "$xdkVersion",
+         "-L", "$coreLib",
+         "-L", "$turtleLib",
+         "$oodbMain/x/oodb.x")
    mainClass.set("org.xvm.tool.Compiler")
 }
 
@@ -225,13 +218,12 @@ val compileIMDB = tasks.register<JavaExec>("compileIMDB") {
     jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
 
     classpath(javatoolsJar)
-    args("-verbose",
-            "-o", "$libDir",
-            "-version", "$xdkVersion",
-            "-L", "$coreLib",
-            "-L", "$turtleLib",
-            "-L", "$libDir",
-            "$imdbMain/x/imdb.x")
+    args("-o", "$libDir",
+         "-version", "$xdkVersion",
+         "-L", "$coreLib",
+         "-L", "$turtleLib",
+         "-L", "$libDir",
+         "$imdbMain/x/imdb.x")
     mainClass.set("org.xvm.tool.Compiler")
 }
 
@@ -246,13 +238,12 @@ val compileJsonDB = tasks.register<JavaExec>("compileJsonDB") {
     jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
 
     classpath(javatoolsJar)
-    args("-verbose",
-            "-o", "$libDir",
-            "-version", "$xdkVersion",
-            "-L", "$coreLib",
-            "-L", "$turtleLib",
-            "-L", "$libDir",
-            "$jsondbMain/x/jsondb.x")
+    args("-o", "$libDir",
+         "-version", "$xdkVersion",
+         "-L", "$coreLib",
+         "-L", "$turtleLib",
+         "-L", "$libDir",
+         "$jsondbMain/x/jsondb.x")
     mainClass.set("org.xvm.tool.Compiler")
 }
 
@@ -267,13 +258,12 @@ val compileWeb = tasks.register<JavaExec>("compileWeb") {
     jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
 
     classpath(javatoolsJar)
-    args("-verbose",
-            "-o", "$libDir",
-            "-version", "$xdkVersion",
-            "-L", "$coreLib",
-            "-L", "$turtleLib",
-            "-L", "$libDir",
-            "$webMain/x/web.x")
+    args("-o", "$libDir",
+         "-version", "$xdkVersion",
+         "-L", "$coreLib",
+         "-L", "$turtleLib",
+         "-L", "$libDir",
+         "$webMain/x/web.x")
     mainClass.set("org.xvm.tool.Compiler")
 }
 
@@ -288,13 +278,12 @@ val compileBridge = tasks.register<JavaExec>("compileBridge") {
     jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
 
     classpath(javatoolsJar)
-    args("-verbose",
-            "-o", "$libDir",
-            "-version", "$xdkVersion",
-            "-L", "$coreLib",
-            "-L", "$turtleLib",
-            "-L", "$libDir",
-            "$bridgeMain/x/_native.x")
+    args("-o", "$libDir",
+         "-version", "$xdkVersion",
+         "-L", "$coreLib",
+         "-L", "$turtleLib",
+         "-L", "$libDir",
+         "$bridgeMain/x/_native.x")
     mainClass.set("org.xvm.tool.Compiler")
 
     doLast {
