@@ -42,7 +42,7 @@ And please respect our [code of conduct](CODE_OF_CONDUCT.md) and each other.
 
 ## Installation
                             
-For **macOS**:
+For **macOS** (and also for Linux, if you use Homebrew on Linux):
 
 * If you do not already have the `brew` command available, install [Homebrew](https://brew.sh/)
  
@@ -56,11 +56,11 @@ brew tap xtclang/xvm && brew install xdk-latest
 brew update && brew upgrade
 ```
 
-For **Windows**:
+For **Windows** with the `winget` package manager:
 
 * _Coming soon..._ `winget` support planned
 
-For **Linux**:
+For Debian or Ubuntu **Linux**, or any other Linux with `apt`:
 
 * _Coming soon..._ `sdk` and `apt` support planned           
 
