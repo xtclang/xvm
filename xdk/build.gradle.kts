@@ -299,6 +299,7 @@ val build = tasks.register("build") {
 
     // we assume that the launcher project has been built
     val launcher         = project(":javatools_launcher")
+    val linux_launcher   = "${launcher.buildDir}/exe/linux_launcher"
     val macos_launcher   = "${launcher.buildDir}/exe/macos_launcher"
     val windows_launcher = "${launcher.buildDir}/exe/windows_launcher.exe"
 
@@ -409,7 +410,7 @@ val build = tasks.register("build") {
 
     doLast {
         copy {
-            from(macos_launcher, windows_launcher)
+            from(linux_launcher, macos_launcher, windows_launcher)
             into(binDir)
         }
         println("Finished task: build")
