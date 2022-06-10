@@ -15,7 +15,7 @@ complications of invoking the JVM.
 The solution is a single native executable (one per hardware/OS combination, e.g. `macos_launcher`)
 that can then be copied to as many different command names as necessary (e.g. `xtc` for the
 compiler, and `xec` for the runtime). When executed, each command executable (which is an identical
-copy of the original (or on Linux or UNIX, a symbolic link to the executable is supported as well)
+copy of the original, or on Linux or UNIX, a symbolic link to the executable is supported as well)
 uses the OS to determine its own name (e.g. "xtc" or "xec"), and passes that name to a Java
 utility inside of the `javatools.jar` file, along with all of the command line parameters.
 
@@ -47,7 +47,7 @@ Which in turn results in an execution of that "main class" in the specified JAR 
     [4] = "../javatools/javatools_bridge.xtc"
     [5] = "HelloWorld.x"
 
-Each OS works slightly differently, so the OS-specific functionality is (mostly) encapsuted into the
+Each OS works slightly differently, so the OS-specific functionality is (mostly) encapsulated into the
 source files `os_macos.c`, `os_linux.c`, and `os_windows.c`. The build for each OS must be performed
 on that OS (because we do not have a dependable cross-compiler readily available). The resulting
 executable files are stored as artifacts in GIT; for example `macos_launcher`, `linux_launcher`, and
@@ -135,6 +135,6 @@ which will allow you to debug from IDEA:
       
 * The command will block (because the JVM options specified `suspend=y`).
 
-* In IDEA, use the "Select Run/Debug Configuration" drop-down in the tool-bar to select the name
+* In IDEA, use the "Select Run/Debug Configuration" drop-down in the toolbar to select the name
   previously configured; for example, `Debug Ecstasy Command`. Then press the "Debug" button
   (usually `Shift-F9`). At this point, IDEA should connect to the command that you wish to debug.
