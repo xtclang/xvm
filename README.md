@@ -40,6 +40,45 @@ Find out more about [how you can contribute to Ecstasy](CONTRIBUTING.md).
 
 And please respect our [code of conduct](CODE_OF_CONDUCT.md) and each other.
 
+## Installation
+                            
+For **macOS**:
+
+* If you do not already have the `brew` command available, install [Homebrew](https://brew.sh/)
+ 
+* Add a "tap" to access the XDK CI builds, and install the latest XDK CI build: 
+```
+brew tap xtclang/xvm && brew install xdk-latest
+```
+
+* To upgrade to the latest XDK CI build at any time:  
+```
+brew update && brew upgrade
+```
+
+For **Windows**:
+
+* _Coming soon..._ `winget` support planned
+
+For **Linux**:
+
+* _Coming soon..._ `sdk` and `apt` support planned           
+
+Alternative for **any computer** (for advanced users):
+      
+* Install Java (version 17 or later) and Gradle
+
+* Use `git` to obtain the XDK:
+```
+git clone https://github.com/xtclang/xvm.git
+```
+      
+* `cd` into the git repo (the directory will contain [these files](https://github.com/xtclang/xvm/))
+  and execute the Gradle build:
+```
+gradle build
+```
+
 ## Status:
 
 Version 0.4. That's way _before_ a 1.0. In other words, Ecstasy is about as mature as Windows 3.1
