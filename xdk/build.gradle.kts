@@ -408,16 +408,9 @@ val build = tasks.register("build") {
         }
 
     doLast {
-        val macSrc = file(macos_launcher).lastModified()
-        val winSrc = file(windows_launcher).lastModified()
-        val binDst = fileTree("$binDir/").getFiles().stream().
-                    mapToLong({f -> f.lastModified()}).max().orElse(0)
-
-        if (macSrc > binDst || winSrc > binDst) {
-            copy {
-                from(macos_launcher, windows_launcher)
-                into("$binDir/")
-           }
+        copy {
+            from(macos_launcher, windows_launcher)
+            into(binDir)
         }
         println("Finished task: build")
     }
