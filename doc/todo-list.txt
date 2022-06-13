@@ -23,6 +23,8 @@
 
 - entering debugger should stop time
 
+- debugger stops on exceptions even if that breakpoint is disabled
+
 - add a periodic re-schedule to Timer API
 
 - consider using (new ConcurrentSection()) to get "pre-switching" notification
