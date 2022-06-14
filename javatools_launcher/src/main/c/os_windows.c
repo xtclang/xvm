@@ -23,6 +23,11 @@ const char* findLauncherPath()
     return result;
     }
 
+const char* resolveLinks(const char* path)
+    {
+    return path;
+    }
+
 void execJava(const char* javaPath,
               const char* javaOpts,
               const char* jarPath,
