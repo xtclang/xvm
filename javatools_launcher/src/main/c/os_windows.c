@@ -56,8 +56,9 @@ void execJava(const char* javaPath,
         }
 
     // the native ecstasy library is located in the same location as the prototype JAR
-    const char* jarFile = buildPath(jarPath, PROTO_JAR);
-    const char* libFile = buildPath(jarPath, PROTO_LIB);
+    const char* jarFile  = buildPath(jarPath, PROTO_JAR);
+    const char* mackFile = buildPath(jarPath, MACK_LIB);
+    const char* libFile  = buildPath(jarPath, PROTO_LIB);
 
     // make the executable file name into the first arg without a path or extension
     assert(argc >= 1);
@@ -75,6 +76,8 @@ void execJava(const char* javaPath,
             + strlen(tool)
             + strlen(" -L ")
             + strlen(libPath)
+            + strlen(" -L ")
+            + strlen(mackFile)
             + strlen(" -L ")
             + strlen(libFile);
     for (int i = 0; i < argc; ++i)
@@ -94,6 +97,8 @@ void execJava(const char* javaPath,
     strcat(cmd, tool);
     strcat(cmd, " -L ");
     strcat(cmd, libPath);
+    strcat(cmd, " -L ");
+    strcat(cmd, mackFile);
     strcat(cmd, " -L ");
     strcat(cmd, libFile);
     for (int i = 0; i < argc; ++i)
