@@ -421,6 +421,13 @@ val build = tasks.register("build") {
 
 // TODO wiki
 
+val prepareDirs = tasks.register("prepareDirs") {
+    mustRunAfter("clean")
+    doLast {
+        mkdir("$distDir")
+    }
+}
+
 tasks.register("dist-local") {
     group       = "Distribution"
     description = "Copy the xdk to the local homebrew cellar"
@@ -498,6 +505,7 @@ val distTGZ = tasks.register<Tar>("distTGZ") {
     description = "Create the XDK .tar.gz file"
 
     dependsOn(build)
+    dependsOn(prepareDirs)
 
     var distName = xdkVersion
     val isCI     = System.getenv("CI")
@@ -530,6 +538,7 @@ val distZIP = tasks.register<Zip>("distZIP") {
     description = "Create the XDK .zip file"
 
     dependsOn(build)
+    dependsOn(prepareDirs)
 
     var distName = xdkVersion
     val isCI     = System.getenv("CI")
@@ -561,6 +570,7 @@ val distMSI = tasks.register("distMSI") {
     description = "Create the XDK .msi file (Windows installer)"
 
     dependsOn(build)
+    dependsOn(prepareDirs)
 
     doLast {
         val output = java.io.ByteArrayOutputStream()
@@ -597,6 +607,7 @@ tasks.register("dist") {
     group = "Distribution"
     description = "Create the various XDK distributions"
 
+    dependsOn(prepareDirs)
     dependsOn(distTGZ)
     dependsOn(distZIP)
     dependsOn(distMSI)
