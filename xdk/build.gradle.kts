@@ -421,77 +421,75 @@ val build = tasks.register("build") {
 
 // TODO wiki
 
-tasks.register<Tar>("dist-local") {
+tasks.register("dist-local") {
     group       = "Distribution"
     description = "Copy the xdk to the local homebrew cellar"
 
     dependsOn(build)
 
-    doLast {
-        // getting the homebrew xdl location using "readlink -f `which xec`" command
-        val output = java.io.ByteArrayOutputStream()
+    // getting the homebrew xdl location using "readlink -f `which xec`" command
+    val output = java.io.ByteArrayOutputStream()
 
+    project.exec {
+        commandLine("which", "xec")
+        standardOutput = output
+        setIgnoreExitValue(true)
+    }
+
+    val xecLink = output.toString().trim()
+    if (xecLink.length > 0) {
+        output.reset()
         project.exec {
-            commandLine("which", "xec")
+            commandLine("readlink", "-f", xecLink)
             standardOutput = output
-            setIgnoreExitValue(true)
         }
 
-        val xecLink = output.toString().trim()
-        if (xecLink.length > 0) {
-            output.reset()
-            project.exec {
-                commandLine("readlink", "-f", xecLink)
-                standardOutput = output
-            }
+        val xecFile    = output.toString().trim();
+        val libexecDir = file("$xecFile/../..")
+        var updated    = false;
 
-            val xecFile    = output.toString().trim();
-            val libexecDir = file("$xecFile/../..")
-            var updated    = false;
-
-            val srcBin = fileTree("$binDir").getFiles().stream().
-                    mapToLong({f -> f.lastModified()}).max().orElse(0)
-            val dstBin = fileTree("$libexecDir/bin").getFiles().stream().
-                    mapToLong({f -> f.lastModified()}).max().orElse(0)
-            if (srcBin > dstBin) {
-                copy {
-                    from("$binDir/")
-                    into("$libexecDir/bin")
-                }
-                updated = true;
+        val srcBin = fileTree("$binDir").getFiles().stream().
+                mapToLong({f -> f.lastModified()}).max().orElse(0)
+        val dstBin = fileTree("$libexecDir/bin").getFiles().stream().
+                mapToLong({f -> f.lastModified()}).max().orElse(0)
+        if (srcBin > dstBin) {
+            copy {
+                from("$binDir/")
+                into("$libexecDir/bin")
             }
-
-            val srcLib = fileTree("$libDir/").getFiles().stream().
-                    mapToLong({f -> f.lastModified()}).max().orElse(0)
-            val dstLib = fileTree("$libexecDir/lib").getFiles().stream().
-                    mapToLong({f -> f.lastModified()}).max().orElse(0)
-            if (srcLib > dstLib) {
-                copy {
-                    from("$libDir/")
-                    into("$libexecDir/lib")
-                }
-                updated = true;
-            }
-
-            val srcJts = fileTree("$javaDir/").getFiles().stream().
-                    mapToLong({f -> f.lastModified()}).max().orElse(0)
-            val dstJts = fileTree("$libexecDir/javatools").getFiles().stream().
-                    mapToLong({f -> f.lastModified()}).max().orElse(0)
-            if (srcJts > dstJts) {
-                copy {
-                    from("$javaDir/")
-                    into("$libexecDir/javatools")
-                }
-                updated = true;
-            }
-
-            if (updated) {
-                println("Updated local homebrew directory $libexecDir")
-            }
+            updated = true;
         }
-        else {
-            println("Missing local homebrew installation; run \"brew install xdk\" command first")
+
+        val srcLib = fileTree("$libDir/").getFiles().stream().
+                mapToLong({f -> f.lastModified()}).max().orElse(0)
+        val dstLib = fileTree("$libexecDir/lib").getFiles().stream().
+                mapToLong({f -> f.lastModified()}).max().orElse(0)
+        if (srcLib > dstLib) {
+            copy {
+                from("$libDir/")
+                into("$libexecDir/lib")
+            }
+            updated = true;
         }
+
+        val srcJts = fileTree("$javaDir/").getFiles().stream().
+                mapToLong({f -> f.lastModified()}).max().orElse(0)
+        val dstJts = fileTree("$libexecDir/javatools").getFiles().stream().
+                mapToLong({f -> f.lastModified()}).max().orElse(0)
+        if (srcJts > dstJts) {
+            copy {
+                from("$javaDir/")
+                into("$libexecDir/javatools")
+            }
+            updated = true;
+        }
+
+        if (updated) {
+            println("Updated local homebrew directory $libexecDir")
+        }
+    }
+    else {
+        println("Missing local homebrew installation; run \"brew install xdk\" command first")
     }
 }
 
@@ -501,31 +499,29 @@ val distTGZ = tasks.register<Tar>("distTGZ") {
 
     dependsOn(build)
 
-    doLast {
-        var distName = xdkVersion
-        val isCI     = System.getenv("CI")
-        val buildNum = System.getenv("BUILD_NUMBER")
-        if (isCI != null && isCI != "0" && isCI != "false" && buildNum != null) {
-            distName = "${distName}ci${buildNum}"
+    var distName = xdkVersion
+    val isCI     = System.getenv("CI")
+    val buildNum = System.getenv("BUILD_NUMBER")
+    if (isCI != null && isCI != "0" && isCI != "false" && buildNum != null) {
+        distName = "${distName}ci${buildNum}"
 
-            val output = java.io.ByteArrayOutputStream()
-            project.exec {
-                commandLine("git", "rev-parse", "HEAD")
-                standardOutput = output
-                setIgnoreExitValue(true)
-            }
-            val changeId = output.toString().trim()
-            if (changeId.length > 0) {
-                distName = "${distName}+${changeId}"
-            }
+        val output = java.io.ByteArrayOutputStream()
+        project.exec {
+            commandLine("git", "rev-parse", "HEAD")
+            standardOutput = output
+            setIgnoreExitValue(true)
         }
+        val changeId = output.toString().trim()
+        if (changeId.length > 0) {
+            distName = "${distName}+${changeId}"
+        }
+    }
 
-        archiveFileName.set("xdk-${distName}.tar.gz")
-        destinationDirectory.set(file("$distDir/"))
-        compression = Compression.GZIP
-        from("$buildDir/") {
-            include("xdk/**")
-        }
+    archiveFileName.set("xdk-${distName}.tar.gz")
+    destinationDirectory.set(file("$distDir/"))
+    compression = Compression.GZIP
+    from("$buildDir/") {
+        include("xdk/**")
     }
 }
 
@@ -535,57 +531,68 @@ val distZIP = tasks.register<Zip>("distZIP") {
 
     dependsOn(build)
 
-    doLast {
-        var distName = xdkVersion
-        val isCI     = System.getenv("CI")
-        val buildNum = System.getenv("BUILD_NUMBER")
-        if (isCI != null && isCI != "0" && isCI != "false" && buildNum != null) {
-            distName = "${distName}ci${buildNum}"
+    var distName = xdkVersion
+    val isCI     = System.getenv("CI")
+    val buildNum = System.getenv("BUILD_NUMBER")
+    if (isCI != null && isCI != "0" && isCI != "false" && buildNum != null) {
+        distName = "${distName}ci${buildNum}"
 
-            val output = java.io.ByteArrayOutputStream()
-            project.exec {
-                commandLine("git", "rev-parse", "HEAD")
-                standardOutput = output
-                setIgnoreExitValue(true)
-            }
-            val changeId = output.toString().trim()
-            if (changeId.length > 0) {
-                distName = "${distName}+${changeId}"
-            }
+        val output = java.io.ByteArrayOutputStream()
+        project.exec {
+            commandLine("git", "rev-parse", "HEAD")
+            standardOutput = output
+            setIgnoreExitValue(true)
         }
+        val changeId = output.toString().trim()
+        if (changeId.length > 0) {
+            distName = "${distName}+${changeId}"
+        }
+    }
 
-        archiveFileName.set("xdk-${distName}.zip")
-        destinationDirectory.set(file("$distDir/"))
-        from("$buildDir/") {
-            include("xdk/**")
-        }
+    archiveFileName.set("xdk-${distName}.zip")
+    destinationDirectory.set(file("$distDir/"))
+    from("$buildDir/") {
+        include("xdk/**")
     }
 }
 
-val distMSI = tasks.register<Tar>("distMSI") {
+val distMSI = tasks.register("distMSI") {
     group = "Distribution"
     description = "Create the XDK .msi file (Windows installer)"
 
     dependsOn(build)
 
-    doLast {
-        // notes:
-        // - requires NSIS to be installed (e.g. "sudo apt install nsis" works on Debian/Ubuntu)
-        // - requires the "makensis" command to be in the path
-        // - requires the EnVar plugin to be installed (i.e. unzipped) into NSIS
+    val output = java.io.ByteArrayOutputStream()
+    project.exec {
+        commandLine("which", "makensis")
+        standardOutput = output
+        setIgnoreExitValue(true)
+    }
+    if (output.toString().trim().length > 0) {
+        doLast {
+            // notes:
+            // - requires NSIS to be installed (e.g. "sudo apt install nsis" works on Debian/Ubuntu)
+            // - requires the "makensis" command to be in the path
+            // - requires the EnVar plugin to be installed (i.e. unzipped) into NSIS
 
-        val src  = file("src/main/nsi/xdkinstall.nsi")
-        val dest = "${distDir}/xdkinstall.msi"
-        val ico  = "${launcherMain}/c/x.ico"
+            val src = file("src/main/nsi/xdkinstall.nsi")
+            val dest = "${distDir}/xdkinstall.msi"
+            val ico = "${launcherMain}/c/x.ico"
 
-        project.exec {
-            commandLine("makensis", "${src}", "-NOCD", "-DSRC=${xdkDir}", "-DVER=${xdkVersion}",
-                    "-DMUI_ICON=${ico}", "-DOutFile=${dest}")
+            project.exec {
+                commandLine("makensis", "${src}", "-NOCD", "-DSRC=${xdkDir}", "-DVER=${xdkVersion}",
+                        "-DMUI_ICON=${ico}", "-DOutFile=${dest}")
+            }
         }
     }
+    else {
+        println("Missing makensis command")
+    }
+
+
 }
 
-tasks.register<Tar>("dist") {
+tasks.register("dist") {
     group = "Distribution"
     description = "Create the various XDK distributions"
 
