@@ -27,7 +27,7 @@ Outfile "xdkinstall.exe"
 
 !verbose push
 !verbose 4
-!echo "passed in:
+!echo "passed in:"
 !echo "   SRC=${SRC}"
 !echo "   VER=${VER}"
 !echo "   ICO=${MUI_ICON}"
