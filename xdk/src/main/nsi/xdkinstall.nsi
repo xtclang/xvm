@@ -8,6 +8,11 @@
 !define VER  "$%NSIS_VER%"
 !define DESC "${NAME} ${VER}"
 
+!ifdef OutFile
+!undefine OutFile
+!endif
+!define OutFile "$%NSIS_OUT%"
+
 RequestExecutionLevel admin
 
 ; ----- UI setup -----------------------------------------------------------------------------------
@@ -22,7 +27,11 @@ Outfile "xdkinstall.exe"
 
 !verbose push
 !verbose 4
-!echo "passed in: SRC=${SRC}, VER=${VER}, ICON=${MUI_ICON}"
+!echo "passed in:
+!echo "   SRC=${SRC}"
+!echo "   VER=${VER}"
+!echo "   ICO=${MUI_ICON}"
+!echo "   OUT=${OutFile}"
 !verbose pop
 
 ; ----- pages --------------------------------------------------------------------------------------

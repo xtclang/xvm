@@ -562,14 +562,14 @@ val distMSI = tasks.register("distMSI") {
 
     dependsOn(build)
 
-    val output = java.io.ByteArrayOutputStream()
-    project.exec {
-        commandLine("which", "makensis")
-        standardOutput = output
-        setIgnoreExitValue(true)
-    }
-    if (output.toString().trim().length > 0) {
-        doLast {
+    doLast {
+        val output = java.io.ByteArrayOutputStream()
+        project.exec {
+            commandLine("which", "makensis")
+            standardOutput = output
+            setIgnoreExitValue(true)
+        }
+        if (output.toString().trim().length > 0) {
             // notes:
             // - requires NSIS to be installed (e.g. "sudo apt install nsis" works on Debian/Ubuntu)
             // - requires the "makensis" command to be in the path
@@ -583,12 +583,13 @@ val distMSI = tasks.register("distMSI") {
                 environment("NSIS_SRC", "${xdkDir}")
                 environment("NSIS_ICO", "${ico}")
                 environment("NSIS_VER", "${xdkVersion}")
+                environment("NSIS_OUT", "${dest}")
                 commandLine("makensis", "${src}", "-NOCD")
             }
         }
-    }
-    else {
-        println("*** Failure building \"distMSI\": Missing \"makensis\" command")
+        else {
+            println("*** Failure building \"distMSI\": Missing \"makensis\" command")
+        }
     }
 }
 
