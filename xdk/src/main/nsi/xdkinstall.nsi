@@ -3,21 +3,9 @@
 
 ; ----- installer setup ----------------------------------------------------------------------------
 
-!ifndef SRC
-!verbose push
-!verbose 4
-!error "SRC is required (location of XDK build contents)"
-!verbose pop
-!endif
-
-!ifndef VER
-!verbose push
-!verbose 4
-!error "VER is required (XDK version number)"
-!verbose pop
-!endif
-
+!define SRC  "$%NSIS_SRC%"
 !define NAME "XDK"
+!define VER  "$%NSIS_VER%"
 !define DESC "${NAME} ${VER}"
 
 RequestExecutionLevel admin
@@ -27,13 +15,7 @@ RequestExecutionLevel admin
 Name "the Ecstasy development kit"
 Outfile "xdkinstall.exe"
 
-!ifndef MUI_ICON
-!verbose push
-!verbose 4
-!error "MUI_ICON is required (path to the Ecstasy icon file)"
-!verbose pop
-!endif
-
+!define MUI_ICON "$%NSIS_ICO%"
 !define MUI_HEADERIMAGE
 !define MUI_ABORTWARNING
 !define MUI_WELCOMEPAGE_TITLE "${NAME} Setup"

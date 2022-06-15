@@ -575,21 +575,21 @@ val distMSI = tasks.register("distMSI") {
             // - requires the "makensis" command to be in the path
             // - requires the EnVar plugin to be installed (i.e. unzipped) into NSIS
 
-            val src = file("src/main/nsi/xdkinstall.nsi")
+            val src  = file("src/main/nsi/xdkinstall.nsi")
             val dest = "${distDir}/xdkinstall.msi"
-            val ico = "${launcherMain}/c/x.ico"
+            val ico  = "${launcherMain}/c/x.ico"
 
             project.exec {
-                commandLine("makensis", "${src}", "-NOCD", "-DSRC=${xdkDir}", "-DVER=${xdkVersion}",
-                        "-DMUI_ICON=${ico}", "-DOutFile=${dest}")
+                environment("NSIS_SRC", "${xdkDir}")
+                environment("NSIS_ICO", "${ico}")
+                environment("NSIS_VER", "${xdkVersion}")
+                commandLine("makensis", "${src}", "-NOCD")
             }
         }
     }
     else {
-        println("Missing makensis command")
+        println("*** Failure building \"distMSI\": Missing \"makensis\" command")
     }
-
-
 }
 
 tasks.register("dist") {
