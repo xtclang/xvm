@@ -8,17 +8,12 @@
 !define VER  "$%NSIS_VER%"
 !define DESC "${NAME} ${VER}"
 
-!ifdef OutFile
-!undefine OutFile
-!endif
-!define OutFile "$%NSIS_OUT%"
-
 RequestExecutionLevel admin
 
 ; ----- UI setup -----------------------------------------------------------------------------------
 
 Name "the Ecstasy development kit"
-Outfile "xdkinstall.exe"
+OutFile "$%NSIS_OUT%"
 
 !define MUI_ICON "$%NSIS_ICO%"
 !define MUI_HEADERIMAGE
