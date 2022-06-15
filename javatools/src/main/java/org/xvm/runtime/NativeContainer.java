@@ -4,6 +4,10 @@ package org.xvm.runtime;
 import java.io.File;
 import java.io.IOException;
 
+import java.net.URLDecoder;
+
+import java.nio.charset.StandardCharsets;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -127,6 +131,8 @@ public class NativeContainer
             }
 
         String sRoot = xObject.class.getProtectionDomain().getCodeSource().getLocation().getFile();
+        sRoot = URLDecoder.decode(sRoot, StandardCharsets.UTF_8);
+
         Map<String, Class> mapTemplateClasses = new HashMap<>();
         if (sRoot.endsWith(".jar"))
             {

@@ -28,6 +28,29 @@ const char* resolveLinks(const char* path)
     return path;
     }
 
+const char* escapePath(const char* path)
+    {
+    if (*path == '\0' || *path == '\"' || !strchr(path, ' '))
+        {
+        return path;
+        }	      
+
+    int   len    = strlen(path);
+    char* result = allocBuffer(len+3);
+    result[0] = '\"';
+    strcpy(result+1, path);
+
+    // disallow path ending in slash
+    while (len >= 0 && result[len] == '\\')
+        {
+        --len;
+        }
+
+    result[len+1] = '\"';
+    result[len+2] = '\0';
+    return result;
+    }
+
 void execJava(const char* javaPath,
               const char* javaOpts,
               const char* jarPath,
@@ -65,6 +88,22 @@ void execJava(const char* javaPath,
     const char* tool = removeExtension(extractFile(argv[0]));
     --argc;
     ++argv;
+
+    // handle windows weirdness with paths
+    javaPath = escapePath(javaPath);
+    jarFile  = escapePath(jarFile);
+    libPath  = escapePath(libPath);
+    mackFile = escapePath(mackFile);
+    libFile  = escapePath(libFile);
+
+    #ifdef DEBUG
+    printf("after escape: javaPath=%s, jarFile=%s, tool=%s, libPath=%s, mackFile=%s, libFile=%s\n",
+                          javaPath,    jarFile,    tool,    libPath,    mackFile,    libFile);
+    for (int i = 0; i < argc; ++i)
+        {
+        printf("[%d] = \"%s\"\n", i, argv[i]);
+        }
+    #endif // DEBUG
 
     // collect all arguments into one giant string, starting with the call to java
     int len = strlen(javaPath)
