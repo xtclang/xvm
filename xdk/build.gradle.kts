@@ -3,32 +3,34 @@
  */
 
 val javatools     = project(":javatools")
+val launcher      = project(":javatools_launcher")
 val turtle        = project(":javatools_turtle")
 val bridge        = project(":javatools_bridge")
 val ecstasy       = project(":lib_ecstasy")
-val aggregate     = project(":lib_aggregate");
-val collections   = project(":lib_collections");
-val crypto        = project(":lib_crypto");
-val net           = project(":lib_net");
-val json          = project(":lib_json");
-val oodb          = project(":lib_oodb");
-val imdb          = project(":lib_imdb");
-val jsondb        = project(":lib_jsondb");
-val web           = project(":lib_web");
+val aggregate     = project(":lib_aggregate")
+val collections   = project(":lib_collections")
+val crypto        = project(":lib_crypto")
+val net           = project(":lib_net")
+val json          = project(":lib_json")
+val oodb          = project(":lib_oodb")
+val imdb          = project(":lib_imdb")
+val jsondb        = project(":lib_jsondb")
+val web           = project(":lib_web")
 
 val ecstasyMain     = "${ecstasy.projectDir}/src/main"
 val turtleMain      = "${turtle.projectDir}/src/main"
 val bridgeMain      = "${bridge.projectDir}/src/main"
 val javatoolsJar    = "${javatools.buildDir}/libs/javatools.jar"
-val aggregateMain   = "${aggregate.projectDir}/src/main";
-val collectionsMain = "${collections.projectDir}/src/main";
-val cryptoMain      = "${crypto.projectDir}/src/main";
-val netMain         = "${net.projectDir}/src/main";
-val jsonMain        = "${json.projectDir}/src/main";
-val oodbMain        = "${oodb.projectDir}/src/main";
-val imdbMain        = "${imdb.projectDir}/src/main";
-val jsondbMain      = "${jsondb.projectDir}/src/main";
-val webMain         = "${web.projectDir}/src/main";
+val launcherMain    = "${launcher.projectDir}/src/main"
+val aggregateMain   = "${aggregate.projectDir}/src/main"
+val collectionsMain = "${collections.projectDir}/src/main"
+val cryptoMain      = "${crypto.projectDir}/src/main"
+val netMain         = "${net.projectDir}/src/main"
+val jsonMain        = "${json.projectDir}/src/main"
+val oodbMain        = "${oodb.projectDir}/src/main"
+val imdbMain        = "${imdb.projectDir}/src/main"
+val jsondbMain      = "${jsondb.projectDir}/src/main"
+val webMain         = "${web.projectDir}/src/main"
 
 val xdkDir          = "$buildDir/xdk"
 val binDir          = "$xdkDir/bin"
@@ -491,7 +493,7 @@ tasks.register<Tar>("dist-local") {
     }
 }
 
-tasks.register<Tar>("dist") {
+val distTGZ = tasks.register<Tar>("distTGZ") {
     group       = "Distribution"
     description = "Create the XDK .tar.gz file"
 
@@ -521,4 +523,65 @@ tasks.register<Tar>("dist") {
     from("$buildDir/") {
         include("xdk/**")
     }
+}
+
+val distZIP = tasks.register<Zip>("distZIP") {
+    group       = "Distribution"
+    description = "Create the XDK .zip file"
+
+    dependsOn(build)
+
+    var distName = xdkVersion
+    val isCI     = System.getenv("CI")
+    val buildNum = System.getenv("BUILD_NUMBER")
+    if (isCI != null && isCI != "0" && isCI != "false" && buildNum != null) {
+        distName = "${distName}ci${buildNum}"
+
+        val output = java.io.ByteArrayOutputStream()
+        project.exec {
+            commandLine("git", "rev-parse", "HEAD")
+            standardOutput = output
+            setIgnoreExitValue(true)
+        }
+        val changeId = output.toString().trim()
+        if (changeId.length > 0) {
+            distName = "${distName}+${changeId}"
+        }
+    }
+
+    archiveFileName.set("xdk-${distName}.zip")
+    destinationDirectory.set(file("$distDir/"))
+    from("$buildDir/") {
+        include("xdk/**")
+    }
+}
+
+val distMSI = tasks.register<Tar>("distMSI") {
+    group = "Distribution"
+    description = "Create the XDK .msi file (Windows installer)"
+
+    dependsOn(build)
+
+    // notes:
+    // - requires NSIS to be installed (e.g. "sudo apt install nsis" works on Debian/Ubuntu)
+    // - requires the "makensis" command to be in the path
+    // - requires the EnVar plugin to be installed (i.e. unzipped) into NSIS
+
+    val src  = file("src/main/nsi/xdkinstall.nsi")
+    val dest = "${distDir}/xdkinstall.msi"
+    val ico  = "${launcherMain}/c/x.ico"
+
+    project.exec {
+        commandLine("makensis", "${src}", "-NOCD", "-DSRC=${xdkDir}", "-DVER=${xdkVersion}",
+                "-DMUI_ICON=${ico}", "-DOutFile=${dest}")
+    }
+}
+
+tasks.register<Tar>("dist") {
+    group = "Distribution"
+    description = "Create the various XDK distributions"
+
+    dependsOn(distTGZ)
+    dependsOn(distZIP)
+    dependsOn(distMSI)
 }
