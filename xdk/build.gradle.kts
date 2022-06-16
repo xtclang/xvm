@@ -548,9 +548,9 @@ val distZIP = tasks.register<Zip>("distZIP") {
     }
 }
 
-val distMSI = tasks.register("distMSI") {
+val distEXE = tasks.register("distEXE") {
     group = "Distribution"
-    description = "Create the XDK .msi file (Windows installer)"
+    description = "Create the XDK .exe file (Windows installer)"
 
     dependsOn(build)
     dependsOn(prepareDirs)
@@ -569,7 +569,7 @@ val distMSI = tasks.register("distMSI") {
             // - requires the EnVar plugin to be installed (i.e. unzipped) into NSIS
 
             val src  = file("src/main/nsi/xdkinstall.nsi")
-            val dest = "${distDir}/xdk-${distName}.msi"
+            val dest = "${distDir}/xdk-${distName}.exe"
             val ico  = "${launcherMain}/c/x.ico"
 
             project.exec {
@@ -581,7 +581,7 @@ val distMSI = tasks.register("distMSI") {
             }
         }
         else {
-            println("*** Failure building \"distMSI\": Missing \"makensis\" command")
+            println("*** Failure building \"distEXE\": Missing \"makensis\" command")
         }
     }
 }
@@ -593,5 +593,5 @@ tasks.register("dist") {
     dependsOn(prepareDirs)
     dependsOn(distTGZ)
     dependsOn(distZIP)
-    dependsOn(distMSI)
+    dependsOn(distEXE)
 }
