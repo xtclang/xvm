@@ -44,6 +44,23 @@ val distDir         = "$buildDir/dist"
 
 val xdkVersion      = rootProject.version
 var distName        = xdkVersion
+val isCI            = System.getenv("CI")
+val buildNum        = System.getenv("BUILD_NUMBER")
+if (isCI != null && isCI != "0" && isCI != "false" && buildNum != null) {
+    distName = "${distName}ci${buildNum}"
+
+    val output = java.io.ByteArrayOutputStream()
+    project.exec {
+        commandLine("git", "rev-parse", "HEAD")
+        standardOutput = output
+        setIgnoreExitValue(true)
+    }
+    val changeId = output.toString().trim()
+    if (changeId.length > 0) {
+        distName = "${distName}+${changeId}"
+    }
+}
+println("*** XDK distName=${distName}")
 
 tasks.register("clean") {
     group       = "Build"
@@ -424,24 +441,6 @@ val build = tasks.register("build") {
 
 val prepareDirs = tasks.register("prepareDirs") {
     mustRunAfter("clean")
-
-    val isCI     = System.getenv("CI")
-    val buildNum = System.getenv("BUILD_NUMBER")
-    if (isCI != null && isCI != "0" && isCI != "false" && buildNum != null) {
-        distName = "${distName}ci${buildNum}"
-
-        val output = java.io.ByteArrayOutputStream()
-        project.exec {
-            commandLine("git", "rev-parse", "HEAD")
-            standardOutput = output
-            setIgnoreExitValue(true)
-        }
-        val changeId = output.toString().trim()
-        if (changeId.length > 0) {
-            distName = "${distName}+${changeId}"
-        }
-    }
-    println("*** XDK distName=${distName}")
 
     doLast {
         mkdir("$distDir")
