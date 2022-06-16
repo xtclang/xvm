@@ -569,7 +569,7 @@ val distMSI = tasks.register("distMSI") {
             // - requires the EnVar plugin to be installed (i.e. unzipped) into NSIS
 
             val src  = file("src/main/nsi/xdkinstall.nsi")
-            val dest = "${distDir}/xdkinstall.msi"
+            val dest = "${distDir}/xdk-${distName}.msi"
             val ico  = "${launcherMain}/c/x.ico"
 
             project.exec {
