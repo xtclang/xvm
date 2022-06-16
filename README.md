@@ -57,7 +57,8 @@ brew update && brew upgrade
 ```
 
 For **Windows** with the `winget` package manager:
-
+      
+* Visit [http://xtclang.org] to download a Windows installer for the latest XDK build  
 * _Coming soon..._ `winget` support planned
 
 For Debian or Ubuntu **Linux**, or any other Linux with `apt`:
