@@ -56,13 +56,16 @@ brew tap xtclang/xvm && brew install xdk-latest
 brew update && brew upgrade
 ```
 
-For **Windows** with the `winget` package manager:
+For **Windows**:
       
-* Visit [http://xtclang.org] to download a Windows installer for the latest XDK build  
+* Visit [http://xtclang.org/xdk-latest.html](http://xtclang.org/xdk-latest.html) to download a
+  Windows installer for the latest XDK build  
 * _Coming soon..._ `winget` support planned
 
-For Debian or Ubuntu **Linux**, or any other Linux with `apt`:
+For **Linux**:
 
+* Visit [http://xtclang.org/xdk-latest.html](http://xtclang.org/xdk-latest.html) to download a
+  <code>.tar.gz</code> for the latest XDK build
 * _Coming soon..._ `sdk` and `apt` support planned           
 
 Alternative for **any computer** (for advanced users):
