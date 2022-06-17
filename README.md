@@ -129,7 +129,7 @@ made aware of, and remains (c) The Ecstasy Project, all rights reserved.
 
 ## Layout
 
-The project is organized as a number of sub-projects, with the important ones to know about being:
+The project is organized as a number of subprojects, with the important ones to know about being:
 
 * The Ecstasy core library is in the [xvm/lib_ecstasy](./lib_ecstasy) directory, and is conceptually
   like `stdlib` for C, or `rt.jar` for Java. When the XDK is built, the resulting module is located
