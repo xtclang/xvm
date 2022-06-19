@@ -59,54 +59,45 @@ public class AsExpression
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
-        TypeExpression exprType    = (TypeExpression) expr2.validate(ctx, pool().typeType(), errs);
-        TypeConstant   type        = null;
-        TypeConstant   typeRequest = null;
-        boolean        fValid      = true;
+        TypeExpression exprType = (TypeExpression) expr2.validate(ctx, pool().typeType(), errs);
 
         if (exprType == null)
             {
-            fValid = false;
+            return null;
             }
-        else
-            {
-            expr2 = exprType;
-            type  = exprType.ensureTypeConstant(ctx, errs).resolveAutoNarrowingBase();
 
-            if (!exprType.isDynamic() && expr1.testFit(ctx, type, null).isFit())
-                {
-                typeRequest     = type;
-                m_fCastRequired = false;
-                }
+        TypeConstant typeRequest = null;
+
+        TypeConstant type = exprType.ensureTypeConstant(ctx, errs).resolveAutoNarrowingBase();
+
+        if (!exprType.isDynamic() && expr1.testFit(ctx, type, null).isFit())
+            {
+            typeRequest     = type;
+            m_fCastRequired = false;
             }
 
         Expression exprTarget = expr1.validate(ctx, typeRequest, errs);
         if (exprTarget == null)
             {
-            fValid = false;
+            return null;
             }
-        else
+
+        expr1 = exprTarget;
+        expr2 = exprType;
+
+        TypeConstant typeTarget = exprTarget.getType();
+        if (!type.isA(typeTarget))
             {
-            expr1 = exprTarget;
-
-            TypeConstant typeTarget = exprTarget.getType();
-            if (!type.isA(typeTarget))
-                {
-                type = new CastTypeConstant(pool(), typeTarget, type);
-                }
+            type = new CastTypeConstant(pool(), typeTarget, type);
             }
 
-        if (fValid)
+        Constant constVal = null;
+        if (!m_fCastRequired && exprTarget.isConstant())
             {
-            Constant constVal = null;
-            if (!m_fCastRequired && expr1.isConstant())
-                {
-                constVal = expr1.toConstant();
-                }
-
-            return finishValidation(ctx, typeRequired, type, TypeFit.Fit, constVal, errs);
+            constVal = exprTarget.toConstant();
             }
-        return null;
+
+        return finishValidation(ctx, typeRequired, type, TypeFit.Fit, constVal, errs);
         }
 
     @Override

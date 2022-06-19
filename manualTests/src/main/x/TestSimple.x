@@ -4,17 +4,13 @@ module TestSimple
 
     void run()
         {
-        DateTime? dt1 = Null;
-        DateTime? dt2 = DateTime.EPOCH;
+        console.println();
 
-        Ordered order = dt1? <=> dt2? : switch (dt1, dt2)  // this used to NPE
-            {
-            case (Null, Null): Equal;
-            case (Null, _): Greater;
-            case (_, Null): Lesser;
-            default: assert;
-            };
+        String s = foo()().as(Wrong.Name);  // used to NPE
+        }
 
-        console.println(order);
+    function Object() foo()
+        {
+        TODO
         }
     }
