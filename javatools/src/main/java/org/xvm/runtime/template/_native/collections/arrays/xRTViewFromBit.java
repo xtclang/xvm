@@ -110,7 +110,7 @@ public class xRTViewFromBit
      * DelegateArray<NumType> view delegate.
      */
     protected static class ViewHandle
-            extends DelegateHandle
+            extends xRTView.ViewHandle
         {
         public final DelegateHandle f_hSource;
 
@@ -121,6 +121,12 @@ public class xRTViewFromBit
 
             f_hSource = hSource;
             m_cSize   = cSize;
+            }
+
+        @Override
+        public DelegateHandle getSource()
+            {
+            return f_hSource;
             }
         }
     }

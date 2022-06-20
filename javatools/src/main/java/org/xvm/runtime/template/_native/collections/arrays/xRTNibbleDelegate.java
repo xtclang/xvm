@@ -312,6 +312,12 @@ public class xRTNibbleDelegate
             }
 
         @Override
+        public long getBitCount()
+            {
+            return m_cSize*4;
+            }
+
+        @Override
         protected void purgeUnusedSpace()
             {
             byte[] ab = m_abValue;

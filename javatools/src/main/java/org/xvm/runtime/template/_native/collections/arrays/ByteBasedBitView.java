@@ -38,18 +38,28 @@ public abstract class ByteBasedBitView
         if (hSource instanceof SliceHandle hSlice)
             {
             // bytes.slice().asBitArray() -> bytes.asBitArray().slice()
-            ByteArrayHandle hBytes = (ByteArrayHandle) hSlice.f_hSource;
-            ViewHandle      hView  = new ViewHandle(clzView,
-                                        hBytes, hBytes.m_cSize*8, mutability);
+            hSource = hSlice.f_hSource;
+
+            if (hSource instanceof xRTView.ViewHandle hView)
+                {
+                hSource = hView.unwrapSource();
+                }
+
+            DelegateHandle hView = hSource instanceof ByteArrayHandle hBytes
+                    ? new ViewHandle(clzView, hBytes, hBytes.getBitCount(), mutability)
+                    : xRTViewToBit.INSTANCE.createBitViewDelegate(hSource, mutability);
+
             return slice(hView, hSlice.f_ofStart*8, hSlice.m_cSize*8, false);
             }
 
-        if (hSource instanceof xRTViewFromBit.ViewHandle hView)
+        if (hSource instanceof xRTView.ViewHandle hView)
             {
-            return new ViewHandle(clzView, (ByteArrayHandle) hView.f_hSource, hSource.m_cSize*8, mutability);
+            hSource = hView.unwrapSource();
             }
 
-        return new ViewHandle(clzView, (ByteArrayHandle) hSource, hSource.m_cSize*8, mutability);
+        return hSource instanceof ByteArrayHandle hBytes
+                    ? new ViewHandle(clzView, hBytes, hBytes.getBitCount(), mutability)
+                    : xRTViewToBit.INSTANCE.createBitViewDelegate(hSource, mutability);
         }
 
 
@@ -150,7 +160,7 @@ public abstract class ByteBasedBitView
      * DelegateArray<Bit> view delegate.
      */
     protected static class ViewHandle
-            extends DelegateHandle
+            extends xRTView.ViewHandle
         {
         protected final ByteArrayHandle f_hSource;
 
@@ -162,8 +172,11 @@ public abstract class ByteBasedBitView
             f_hSource = hSource;
             m_cSize   = cSize;
             }
+
+        @Override
+        public DelegateHandle getSource()
+            {
+            return f_hSource;
+            }
         }
-
-
-    // ----- constants -----------------------------------------------------------------------------
     }

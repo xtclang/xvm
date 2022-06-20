@@ -407,6 +407,14 @@ public abstract class ByteBasedDelegate
             return super.makeImmutable();
             }
 
+        /**
+         * @return the number of bits represented by this handle
+         */
+        public long getBitCount()
+            {
+            return m_cSize*8;
+            }
+
         protected void purgeUnusedSpace()
             {
             byte[] ab = m_abValue;

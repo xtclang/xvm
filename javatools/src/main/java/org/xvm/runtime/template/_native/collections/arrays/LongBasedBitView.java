@@ -39,6 +39,8 @@ public abstract class LongBasedBitView
     @Override
     public DelegateHandle createBitViewDelegate(DelegateHandle hSource, Mutability mutability)
         {
+        // REVIEW: we probably need some logic similar to ByteBasedBitView.java
+
         ClassComposition clzView = getCanonicalClass();
         if (hSource instanceof SliceHandle hSlice)
             {
@@ -154,7 +156,7 @@ public abstract class LongBasedBitView
      * DelegateArray<Bit> view delegate.
      */
     protected static class ViewHandle
-            extends DelegateHandle
+            extends xRTView.ViewHandle
         {
         protected final LongArrayHandle f_hSource;
 
@@ -165,6 +167,12 @@ public abstract class LongBasedBitView
 
             f_hSource = hSource;
             m_cSize   = cSize;
+            }
+
+        @Override
+        public DelegateHandle getSource()
+            {
+            return f_hSource;
             }
         }
 

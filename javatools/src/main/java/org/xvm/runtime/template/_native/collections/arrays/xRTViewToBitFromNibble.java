@@ -173,7 +173,7 @@ public class xRTViewToBitFromNibble
      * DelegateArray<Bit> view delegate.
      */
     protected static class ViewHandle
-            extends DelegateHandle
+            extends xRTView.ViewHandle
         {
         protected final NibbleArrayHandle f_hSource;
 
@@ -184,6 +184,12 @@ public class xRTViewToBitFromNibble
 
             f_hSource = hSource;
             m_cSize   = cSize;
+            }
+
+        @Override
+        public DelegateHandle getSource()
+            {
+            return f_hSource;
             }
         }
     }

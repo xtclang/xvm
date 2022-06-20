@@ -404,6 +404,12 @@ public abstract class BitBasedDelegate
             }
 
         @Override
+        public long getBitCount()
+            {
+            return m_cSize;
+            }
+
+        @Override
         protected void purgeUnusedSpace()
             {
             byte[] ab = m_abValue;

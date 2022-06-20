@@ -11,8 +11,11 @@ import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
+import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xException;
+
+import org.xvm.runtime.template.collections.xArray.Mutability;
 
 
 /**
@@ -76,5 +79,33 @@ abstract public class xRTView
     public DelegateHandle deleteRange(DelegateHandle hTarget, long ofStart, long cSize)
         {
         return null;
+        }
+
+
+    // ----- handle --------------------------------------------------------------------------------
+
+    /**
+     * The abstract base of view handles.
+     */
+    protected abstract static class ViewHandle
+            extends DelegateHandle
+        {
+        protected ViewHandle(TypeComposition clazz, Mutability mutability)
+            {
+            super(clazz, mutability);
+            }
+
+        abstract public DelegateHandle getSource();
+
+        /**
+         * @return the underlying (fully unwrapped) delegate handle
+         */
+        public DelegateHandle unwrapSource()
+            {
+            DelegateHandle hSource = getSource();
+            return hSource instanceof ViewHandle hView
+                    ? hView.unwrapSource()
+                    : hSource;
+            }
         }
     }
