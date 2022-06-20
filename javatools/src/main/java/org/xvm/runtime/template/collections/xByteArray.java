@@ -19,6 +19,7 @@ import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.numbers.xInt64;
 
 import org.xvm.runtime.template._native.collections.arrays.BitView;
+import org.xvm.runtime.template._native.collections.arrays.ByteBasedDelegate.ByteArrayHandle;
 import org.xvm.runtime.template._native.collections.arrays.ByteView;
 import org.xvm.runtime.template._native.collections.arrays.xRTDelegate.DelegateHandle;
 import org.xvm.runtime.template._native.collections.arrays.xRTSlicingDelegate.SliceHandle;
@@ -52,6 +53,7 @@ public class xByteArray
         {
         ClassTemplate mixin = f_container.getTemplate("collections.arrays.ByteArray");
 
+        mixin.markNativeMethod("asByteArray", VOID, null);
         mixin.markNativeMethod("asInt8Array", VOID, null);
         mixin.markNativeMethod("asInt16Array", VOID, null);
         mixin.markNativeMethod("asInt64Array", VOID, null);
@@ -83,6 +85,18 @@ public class xByteArray
         {
         switch (method.getName())
             {
+            case "asByteArray":
+                {
+                ArrayHandle hArray = (ArrayHandle) hTarget;
+                if (hArray.m_hDelegate instanceof ByteArrayHandle)
+                    {
+                    return frame.assignValue(iReturn, hArray);
+                    }
+
+                // TODO GG: we need a reifiable view (see the comments in ByteArray.x)
+                return frame.raiseException(
+                        xException.unsupportedOperation(frame, "Not implemented"));
+                }
             case "asInt8Array":
                 {
                 ArrayHandle hArray = (ArrayHandle) hTarget;
