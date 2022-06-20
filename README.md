@@ -42,45 +42,38 @@ And please respect our [code of conduct](CODE_OF_CONDUCT.md) and each other.
 
 ## Installation
                             
-For **macOS** (and also for Linux, if you use Homebrew on Linux):
+For **macOS** and **Linux**:
 
-* If you do not already have the `brew` command available, install [Homebrew](https://brew.sh/)
+1. If you do not already have the `brew` command available, install [Homebrew](https://brew.sh/)
  
-* Add a "tap" to access the XDK CI builds, and install the latest XDK CI build: 
+2. Add a "tap" to access the XDK CI builds, and install the latest XDK CI build: 
 ```
-brew tap xtclang/xvm && brew install xdk-latest
+  brew tap xtclang/xvm && brew install xdk-latest
 ```
 
-* To upgrade to the latest XDK CI build at any time:  
+3. To upgrade to the latest XDK CI build at any time:  
 ```
-brew update && brew upgrade
+  brew update && brew upgrade xdk-latest
 ```
 
 For **Windows**:
       
 * Visit [http://xtclang.org/xdk-latest.html](http://xtclang.org/xdk-latest.html) to download a
   Windows installer for the latest XDK build  
-* _Coming soon..._ `winget` support planned
 
-For **Linux**:
-
-* Visit [http://xtclang.org/xdk-latest.html](http://xtclang.org/xdk-latest.html) to download a
-  <code>.tar.gz</code> for the latest XDK build
-* _Coming soon..._ `sdk` and `apt` support planned           
-
-Alternative for **any computer** (for advanced users):
+Manual local build for **any computer** (for advanced users):
       
 * Install Java (version 17 or later) and Gradle
 
 * Use `git` to obtain the XDK:
 ```
-git clone https://github.com/xtclang/xvm.git
+  git clone https://github.com/xtclang/xvm.git
 ```
       
 * `cd` into the git repo (the directory will contain [these files](https://github.com/xtclang/xvm/))
   and execute the Gradle build:
 ```
-gradle build
+  gradle build
 ```
 
 ## Status:
