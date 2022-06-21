@@ -229,6 +229,14 @@ public abstract class TypeConstant
         }
 
     /**
+     * @return true iff this TypeConstant refers to an immutable Object type
+     */
+    public boolean isImmutableOnly()
+        {
+        return isImmutable() && getUnderlyingType().equals(getConstantPool().typeObject());
+        }
+
+    /**
      * Create a potentially new type that represents "this" immutable type.
      *
      * @return a type constant that represents an immutable type of this type constant

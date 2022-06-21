@@ -358,6 +358,14 @@ public class xRTType
         // hArg may be a Type, a Method, or a Property
         if (hArg instanceof TypeHandle hTypeThat)
             {
+            if (hTypeThis.getUnsafeDataType().isImmutableOnly())
+                {
+                return ensureImmutable(frame, hTypeThat, iReturn);
+                }
+            if (hTypeThat.getUnsafeDataType().isImmutableOnly())
+                {
+                return ensureImmutable(frame, hTypeThis, iReturn);
+                }
             return makeRelationalType(frame, hTypeThis, hTypeThat,
                     ConstantPool::ensureUnionTypeConstant, iReturn);
             }
@@ -373,6 +381,15 @@ public class xRTType
             }
 
         return super.invokeAdd(frame, hTarget, hArg, iReturn);
+        }
+
+    private int ensureImmutable(Frame frame, TypeHandle hType, int iReturn)
+        {
+        TypeConstant type = hType.getUnsafeDataType();
+        return type.isImmutabilitySpecified()
+                ? frame.assignValue(iReturn, hType)
+                : frame.assignValue(iReturn,
+                    type.freeze().ensureTypeHandle(frame.f_context.f_container));
         }
 
     @Override

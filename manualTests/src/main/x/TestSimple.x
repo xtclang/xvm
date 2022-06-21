@@ -4,40 +4,15 @@ module TestSimple
 
     void run()
         {
-        Int[] ints = [1, 2];
-        ints = ints.reify(Mutable);
-        test(ints.asByteArray());
+        Map<Int, String> map = new HashMap();
 
-        UInt32[] uints = [1, 2];
-        uints = uints.reify(Mutable);
-        test(uints.asByteArray());
+        Type type = &map.actualType;
+        console.println(type);
 
-        Bit[] bits = Int:1.toBitArray();
-        bits = bits.reify(Mutable);
-        test(bits.asByteArray());
-        }
+        Type type1 = (immutable).add(type);
+        console.println(type1);
 
-    void test(Byte[] bytes)
-        {
-        console.println($"bytes = {bytes}");
-
-        Byte[] bytes2 = bytes[0..7];
-        console.println($"bytes2 = {bytes2}");
-
-        //  CCE
-        Bit[] bits = bytes.asBitArray();
-        console.println($"bits = {bits}");
-
-        Byte[] bytes3 = bits.asByteArray();
-        console.println($"bytes3 = {bytes3}");
-
-        Byte[] bytes4 = bytes[0..7];
-        console.println($"bytes4 = {bytes4}");
-
-        Bit[] bits2 = bytes4.asBitArray();
-        console.println($"bits2 = {bits2}");
-
-        UInt64 value = bytes4.toUInt64();
-        console.println($"value={value}");
+        Type type2 = type.add((immutable));
+        console.println(type2);
         }
     }
