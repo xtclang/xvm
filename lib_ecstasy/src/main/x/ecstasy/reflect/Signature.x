@@ -18,6 +18,40 @@ interface Signature<ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tu
     @RO Parameter[] params;
 
     /**
+     * @return the number of parameters with default values
+     */
+    @RO Int defaultParamCount.get()
+        {
+        Int count = 0;
+        for (Parameter param : params)
+            {
+            if (param.defaultValue())
+                {
+                count++;
+                }
+            }
+        return count;
+        }
+
+    /**
+     * @return the number of required parameters (without default values)
+     */
+    @RO Int requiredParamCount.get()
+        {
+        Int count = 0;
+        for (Parameter param : params)
+            {
+            if (param.defaultValue())
+                {
+                // there are no regular parameters after the first parameter with a default value
+                break;
+                }
+            count++;
+            }
+        return count;
+        }
+
+    /**
      * Find a parameter by the provided name.
      *
      * @param name  the name of the parameter to find

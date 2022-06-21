@@ -48,7 +48,14 @@ mixin Narrowable<Serializable>
             Schema schema = out.schema;
             if (schema.enableMetadata)
                 {
-                out.prepareMetadata(schema.typeKey, schema.nameForType(type));
+                // there is no reason to record the immutability modifier for the type;
+                // we only support immutable types and it makes it simpler for the reader
+                Type typeSansImmutable = type;
+                if (type.explicitlyImmutable)
+                    {
+                    assert typeSansImmutable := type.modifying();
+                    }
+                out.prepareMetadata(schema.typeKey, schema.nameForType(typeSansImmutable));
                 }
 
             if (Mapping<Serializable> substitute := narrow(schema, type), &substitute != &this)

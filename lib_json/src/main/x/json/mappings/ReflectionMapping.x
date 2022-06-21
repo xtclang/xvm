@@ -137,7 +137,20 @@ const ReflectionMapping<Serializable, StructType extends Struct>(
                         return True, new ArrayMapping<elementType.DataType>(elementMapping).as(Mapping<SubType>);
                         }
                     return False;
-                }
+                    }
+
+                if (type.is(Type<Map>))
+                    {
+                    assert Type keyType   := type.resolveFormalType("Key");
+                    assert Type valueType := type.resolveFormalType("Value");
+                    if (val keyMapping   := schema.findMapping(keyType.DataType),
+                        val valueMapping := schema.findMapping(valueType.DataType))
+                        {
+                        return True, new @Narrowable MapMapping<keyType.DataType, valueType.DataType>
+                                (keyMapping, valueMapping).as(Mapping<SubType>);
+                        }
+                    return False;
+                    }
 
                 assert val clazz := type.fromClass();
 

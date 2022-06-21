@@ -634,7 +634,7 @@ interface Type<DataType, OuterType>
             assert:arg outer != Null;
             for (val fn : constructors)
                 {
-                if (fn.ParamTypes.size == 1)
+                if (fn.requiredParamCount == 1)
                     {
                     assert fn.ParamTypes[0] == OuterType.DataType;
                     return True, fn.as(function DataType(OuterType)).
@@ -647,7 +647,7 @@ interface Type<DataType, OuterType>
             {
             for (val fn : constructors)
                 {
-                if (fn.ParamTypes.size == 0)
+                if (fn.requiredParamCount == 0)
                     {
                     return True, fn.as(function DataType());
                     }
