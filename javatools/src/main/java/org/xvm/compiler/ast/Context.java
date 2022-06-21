@@ -1993,6 +1993,7 @@ public class Context
                     mapDst.put(sName, entry.getValue());
                     }
                 }
+            ctxDst.setReachable(ctxSrc.isReachable());
             }
 
         private void discardBranch(boolean fWhenTrue)

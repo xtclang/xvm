@@ -2,17 +2,25 @@ module TestSimple
     {
     @Inject Console console;
 
-    void run()
+    void run( )
         {
-        Map<Int, String> map = new HashMap();
+        Boolean flag = True;
 
-        Type type = &map.actualType;
-        console.println(type);
+        Map<Int, String> map;
+        if (String name := name(), flag)
+            {
+            TODO
+            }
+        else
+            {
+            map = new HashMap();
+            }
 
-        Type type1 = (immutable).add(type);
-        console.println(type1);
+        console.println(map); // use to fail to compile: Variable "map" is not definitely assigned
+        }
 
-        Type type2 = type.add((immutable));
-        console.println(type2);
+    conditional String name()
+        {
+        return False;
         }
     }
