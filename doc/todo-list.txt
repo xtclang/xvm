@@ -1,3 +1,7 @@
+- MapMapping doesn't work for properties that declared as Map classes, e.g.
+    const Test(Map<Int, String> map)     - json serialization works
+    const Test(HashMap<Int, String> map) - json serialization DOESN'T WORK
+
 - need to make _native module non-discoverable (and services for container -1)
     see TestSimple.x on the shelve
 
