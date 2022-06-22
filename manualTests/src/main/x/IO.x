@@ -47,6 +47,7 @@ module TestIO
         testJSONPrint();
         testJSONBuild();
         testPoint();
+        testMap();
         testMetadata();
         testPointers();
         }
@@ -364,6 +365,18 @@ module TestIO
             }
         }
 
+    private <Ser> void testSer(Schema schema, String name, Ser val)
+        {
+        StringBuffer buf = new StringBuffer();
+        schema.createObjectOutput(buf).write(val);
+
+        String s = buf.toString();
+        console.println($"JSON {name} written out={s}");
+
+        Ser val2 = schema.createObjectInput(new CharArrayReader(s)).read<Ser>();
+        console.println($"read {name} back in={val2}");
+        }
+
     void testPoint()
         {
         console.println("\n*** testPoint()");
@@ -398,18 +411,6 @@ module TestIO
         // test ReflectionMapping
         testSer(schema, "point", point);
 
-        private <Ser> void testSer(Schema schema, String name, Ser val)
-            {
-            StringBuffer buf = new StringBuffer();
-            schema.createObjectOutput(buf).write(val);
-
-            String s = buf.toString();
-            console.println($"JSON {name} written out={s}");
-
-            Ser val2 = schema.createObjectInput(new CharArrayReader(s)).read<Ser>();
-            console.println($"read {name} back in={val2}");
-            }
-
         console.println("\n(random access tests)");
         Schema schemaRA = new Schema([new PointMapper()], randomAccess = True);
         testSer(schemaRA, "point", point);
@@ -442,6 +443,24 @@ module TestIO
                 }
             }
         }
+
+    void testMap()
+        {
+        console.println("\n*** testMap()");
+
+        Schema schema = Schema.DEFAULT;
+
+        Map<Int, String> map1 = new HashMap();
+        map1 = map1.put(1, "a");
+        map1 = map1.put(2, "b");
+        testSer(schema, "map", new Test<Int, String>(map1));
+        testSer(schema, "map", map1);
+
+        Map<String, Int> map2 = Map:["a"=1, "b"=2];
+        testSer(schema, "map", new Test<String, Int>(map2));
+        // testSer(schema, "map", map2); TODO GG: throws TypeMismatch
+        }
+    const Test<Key, Value>(Map<Key, Value> map);
 
     void testMetadata()
         {
