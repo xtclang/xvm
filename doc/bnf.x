@@ -136,9 +136,9 @@ ElseComposition
 Composition
     "extends" TypeExpression ArgumentList-opt
     "implements" ExtendedTypeExpression
-    "delegates" ExtendedTypeExpression "(" Expression ")"
+    "delegates" AnyTypeExpression "(" Expression ")"
     "incorporates" IncorporatesFinish
-    "into" ExtendedTypeExpression
+    "into" AnyTypeExpression
     ImportClause QualifiedName VersionRequirement-opt
     "default" "(" Expression ")"
 
@@ -579,7 +579,7 @@ UsingStatement
     "using" "(" UsingResources ")" StatementBlock
 
 TypeDefStatement
-    "typedef" ExtendedTypeExpression "as" Name ";"
+    "typedef" AnyTypeExpression "as" Name ";"
 
 #
 # expressions
@@ -730,8 +730,8 @@ PostfixExpression
     PostfixExpression NoWhitespace "?"
     PostfixExpression "." "&"-opt Name TypeParameterTypeList-opt
     PostfixExpression ".new" NewFinish
-    PostfixExpression ".as" "(" ExtendedTypeExpression ")"
-    PostfixExpression ".is" "(" ExtendedTypeExpression ")"
+    PostfixExpression ".as" "(" AnyTypeExpression ")"
+    PostfixExpression ".is" "(" AnyTypeExpression ")"
 
 ArrayDims
     "[" DimIndicators-opt "]"
@@ -1086,6 +1086,22 @@ TypeExpression
 ExtendedTypeExpression
     ExtendedUnionedTypeExpression
 
+AnyTypeExpression
+    AnonTypeExpression
+    ExtendedTypeExpression
+
+AnonTypeExpression
+    "{" NameOrSignatureList ";" "}"             # note: at least one name or signature is required
+
+NameOrSignatureList
+    NameOrSignature
+    NameOrSignatureList ";" NameOrSignature
+
+NameOrSignature
+    Name                                                                    # ref to 1+ property/method
+    PropertyModifiers-opt TypeExpression Name                               # property
+    MethodModifiers-opt TypeParameterList-opt MethodIdentity ParameterList  # method
+
 # '+' creates a union of two types; '-' creates a difference of two types
 UnionedTypeExpression
     IntersectingTypeExpression
@@ -1102,6 +1118,7 @@ IntersectingTypeExpression
     IntersectingTypeExpression | NonBiTypeExpression
 
 ExtendedIntersectingTypeExpression
+    AnonTypeExpression
     ExtendedNonBiTypeExpression
     ExtendedIntersectingTypeExpression | ExtendedNonBiTypeExpression
 
