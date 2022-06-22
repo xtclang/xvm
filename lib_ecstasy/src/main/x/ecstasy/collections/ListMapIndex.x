@@ -48,7 +48,7 @@ mixin ListMapIndex<Key extends Hashable, Value>
         Bucket[]? buckets = this.buckets;
         if (buckets == Null)
             {
-            if (size > MINSIZE)
+            if (size > MINSIZE && inPlace)
                 {
                 buildIndex();
                 buckets = this.buckets;
@@ -171,14 +171,17 @@ mixin ListMapIndex<Key extends Hashable, Value>
     @Override
     ListMapIndex clear()
         {
-        buckets = Null;
+        if (inPlace)
+            {
+            buckets = Null;
+            }
         return super();
         }
 
     @Override
     immutable ListMapIndex makeImmutable()
         {
-        if (buckets == Null && size > MINSIZE)
+        if (buckets == Null && size > MINSIZE && inPlace)
             {
             buildIndex();
             }

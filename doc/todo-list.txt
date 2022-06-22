@@ -3,7 +3,9 @@
     const Test(HashMap<Int, String> map) - json serialization DOESN'T WORK
 
 - need to make _native module non-discoverable (and services for container -1)
-    see TestSimple.x on the shelve
+    see TestSimple.x on the shelf
+
+- need to implement "persistent" mutators for HasherMap
 
 - the XTC compiler disregards "resources" changes if nothing else changed and "-force" option
   is not specified

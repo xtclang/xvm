@@ -43,8 +43,10 @@ class ListMap<Key, Value>
      */
     construct(Key[] keys, Value[] vals)
         {
-        this.keyArray = keys;
-        this.valArray = vals;
+        this.keyArray = keys.mutability == Persistent || keys.mutability == Constant
+                            ? keys : keys.freeze(inPlace=False);
+        this.valArray = vals.mutability == Persistent || vals.mutability == Constant
+                            ? vals : vals.freeze(inPlace=False);
         this.inPlace  = False;
 
         // TODO various checks, and do we need to copy the array(s) if they aren't immutable?
@@ -208,14 +210,39 @@ class ListMap<Key, Value>
         {
         if (Int index := indexOf(key))
             {
+            verifyInPlace();
             valArray[index] = value;
-            }
-        else
-            {
-            appendEntry(key, value);
+            return this;
             }
 
-        return this;
+        if (inPlace)
+            {
+            appendEntry(key, value);
+            return this;
+            }
+
+        // persistent
+        Key[]   keys = keyArray.add(key);
+        Value[] vals = valArray.add(value);
+        return new ListMap(keys, vals);
+        }
+
+    @Override
+    ListMap putAll(Map<Key, Value> that)
+        {
+        if (inPlace)
+            {
+            for ((Key key, Value value) : that)
+                {
+                put(key, value);
+                }
+            return this;
+            }
+
+        // persistent
+        Key[]   keys = keyArray.addAll(that.keys.toArray());
+        Value[] vals = valArray.addAll(that.values.toArray());
+        return new ListMap(keys, vals);
         }
 
     @Override
@@ -223,7 +250,16 @@ class ListMap<Key, Value>
         {
         if (Int index := indexOf(key))
             {
-            deleteEntryAt(index);
+            if (inPlace)
+                {
+                deleteEntryAt(index);
+                }
+            else // persistent
+                {
+                Key[]   keys = keyArray.delete(index);
+                Value[] vals = valArray.delete(index);
+                return new ListMap(keys, vals);
+                }
             }
 
         return this;
@@ -236,8 +272,17 @@ class ListMap<Key, Value>
             {
             if (valArray[index] == value)
                 {
-                deleteEntryAt(index);
-                return True, this;
+                if (inPlace)
+                    {
+                    deleteEntryAt(index);
+                    return True, this;
+                    }
+                else // persistent
+                    {
+                    Key[]   keys = keyArray.delete(index);
+                    Value[] vals = valArray.delete(index);
+                    return True, new ListMap(keys, vals);
+                    }
                 }
             }
 
@@ -250,9 +295,16 @@ class ListMap<Key, Value>
         Int count = size;
         if (count > 0)
             {
-            keyArray.clear();
-            valArray.clear();
-            deletes += count;
+            if (inPlace)
+                {
+                keyArray.clear();
+                valArray.clear();
+                deletes += count;
+                }
+            else // persistent
+                {
+                return new ListMap([], []);
+                }
             }
 
         return this;
