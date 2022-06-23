@@ -167,7 +167,6 @@ public class Connector
         while (!f_runtime.isIdle() || !m_containerMain.isIdle());
 
         m_containerMain = null;
-        f_runtime.shutdown();
         }
 
 
