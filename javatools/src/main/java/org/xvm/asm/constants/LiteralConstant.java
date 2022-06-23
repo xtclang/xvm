@@ -34,7 +34,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * <li>IntLiteral</li>
  * <li>FPLiteral</li>
  * <li>Date</li>
- * <li>Time</li>
+ * <li>TimeOfDay</li>
  * <li>DateTime</li>
  * <li>Duration</li>
  * <li>TimeInterval</li>
@@ -78,7 +78,7 @@ public class LiteralConstant
                 // TODO
                 break;
 
-            case Time:
+            case TimeOfDay:
                 // TODO
                 break;
 
@@ -129,7 +129,7 @@ public class LiteralConstant
             case IntLiteral:
             case FPLiteral:
             case Date:
-            case Time:
+            case TimeOfDay:
             case DateTime:
             case Duration:
             case Version:
@@ -185,7 +185,7 @@ public class LiteralConstant
             case Date:
                 return pool.typeDate();
 
-            case Time:
+            case TimeOfDay:
                 return pool.typeTime();
 
             case DateTime:
@@ -1469,7 +1469,7 @@ public class LiteralConstant
                 return this.toDecNConstant().apply(op, that);
 
             // case Date: // TODO can add a duration
-            // case Time: // TODO can add a duration
+            // case TimeOfDay: // TODO can add a duration
             // case DateTime: // TODO can add a duration
             // case Duration: // TODO can add another duration
             // case TimeInterval: // TODO not sure why we even have this type - can you add another time interval? a duration?

@@ -1085,18 +1085,18 @@ service JsonProcessorStore<Message extends immutable Const>
 
     private void appendJsonSchedule(StringBuffer buf, Pid pid, Schedule? schedule)
         {
-        // {"pid":[Int],"s":{"at":[DateTime],"daily":[Time],"repeat":[Duration],"policy":[Policy],"priority":[Priority]}}
+        // {"pid":[Int],"s":{"at":[DateTime],"daily":[TimeOfDay],"repeat":[Duration],"policy":[Policy],"priority":[Priority]}}
         if (schedule == Null)
             {
             buf.append($"\{\"pid\":{pid}}");
             return;
             }
 
-        DateTime? scheduledAt    = schedule.scheduledAt;
-        Time?     scheduledDaily = schedule.scheduledDaily;
-        Duration? repeatInterval = schedule.repeatInterval;
-        Policy    repeatPolicy   = schedule.repeatPolicy;
-        Priority  priority       = schedule.priority;
+        DateTime?  scheduledAt    = schedule.scheduledAt;
+        TimeOfDay? scheduledDaily = schedule.scheduledDaily;
+        Duration?  repeatInterval = schedule.repeatInterval;
+        Policy     repeatPolicy   = schedule.repeatPolicy;
+        Priority   priority       = schedule.priority;
 
         buf.append($"\{\"pid\":{pid}, \"s\":\{");
 

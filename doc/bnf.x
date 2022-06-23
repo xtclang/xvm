@@ -976,7 +976,7 @@ DateLiteral
     "Date:" Digit Digit Digit Digit "-" Digit Digit "-" Digit Digit         # NoWhitespace
 
 TimeLiteral
-    "Time:" Digit Digit ":" Digit Digit Seconds-opt                         # NoWhitespace
+    "TimeOfDay:" Digit Digit ":" Digit Digit Seconds-opt                    # NoWhitespace
 
 Seconds
      ":" Digit Digit SecondsFraction-opt                                    # NoWhitespace

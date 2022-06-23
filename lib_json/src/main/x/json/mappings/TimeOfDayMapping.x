@@ -1,19 +1,19 @@
 /**
- * A mapping for Time values.
+ * A mapping for TimeOfDay values.
  */
 const TimeMapping
-        implements Mapping<Time>
+        implements Mapping<TimeOfDay>
     {
     @Override
     String typeName.get()
         {
-        return "Time";
+        return "TimeOfDay";
         }
 
     @Override
     Serializable read(ElementInput in)
         {
-        return new Time(in.readString());
+        return new TimeOfDay(in.readString());
         }
 
     @Override

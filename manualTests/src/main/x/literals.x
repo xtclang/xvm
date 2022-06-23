@@ -293,17 +293,17 @@ module TestLiterals
         {
         console.println("\n** testTimes()");
 
-        Time time = new Time("12:01:23");
-        console.println($"time={time} or {Time:12:01:23}");
+        TimeOfDay timeOfDay = new TimeOfDay("12:01:23");
+        console.println($"timeOfDay={timeOfDay} or {TimeOfDay:12:01:23}");
 
-        time = new Time("120123");
-        console.println($"time={time} or {Time:120123}");
+        timeOfDay = new TimeOfDay("120123");
+        console.println($"timeOfDay={timeOfDay} or {TimeOfDay:120123}");
 
-        time = new Time("12:01:23.456");
-        console.println($"time={time} or {Time:12:01:23.456}");
+        timeOfDay = new TimeOfDay("12:01:23.456");
+        console.println($"timeOfDay={timeOfDay} or {TimeOfDay:12:01:23.456}");
 
-        time = new Time("120123.456");
-        console.println($"time={time} or {Time:120123.456}");
+        timeOfDay = new TimeOfDay("120123.456");
+        console.println($"timeOfDay={timeOfDay} or {TimeOfDay:120123.456}");
         }
 
     void testDateTimes()

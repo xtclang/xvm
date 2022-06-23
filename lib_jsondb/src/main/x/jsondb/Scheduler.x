@@ -401,10 +401,10 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
             // time (since we already covered the non-repeating and non-scheduled options above);
             // if we scheduled a daily run at 11:59, but we did so at 12:01, then we need to wait
             // until the next day (at 11:59) to run it
-            assert Time daily ?= schedule.scheduledDaily;
+            assert TimeOfDay daily ?= schedule.scheduledDaily;
             return created.with(
-                    date = (created.time < daily ? created.date : created.date + Duration:1D),
-                    time = daily);
+                    date      = (created.timeOfDay < daily ? created.date : created.date + Duration:1D),
+                    timeOfDay = daily);
             }
 
         // at this point, only Completed and Abandoned statuses remain, and they are both treated
@@ -418,7 +418,7 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
         assert created <= started <= finished <= now;
 
         // attempt to determine if the previous run was an "unaligned initial run"
-        if (DateTime initial ?= schedule.scheduledAt, Time daily ?= schedule.scheduledDaily)
+        if (DateTime initial ?= schedule.scheduledAt, TimeOfDay daily ?= schedule.scheduledDaily)
             {
             assert created <= initial <= started;
 
@@ -427,8 +427,8 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
             // started between 6pm and midnight on the scheduledAt date (i.e. before the first of
             // the "repeating midnights"), then special handling is used
             DateTime secondRun = initial.with(
-                    date = (initial.time < daily ? initial.date : initial.date + Duration:1D),
-                    time = daily);
+                    date      = (initial.timeOfDay < daily ? initial.date : initial.date + Duration:1D),
+                    timeOfDay = daily);
 
             if (started < secondRun)
                 {
@@ -440,8 +440,8 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
                     case SkipOverlapped:
                         return finished > secondRun
                                 ? finished.with(
-                                    date = (finished.time < daily ? finished.date : finished.date + Duration:1D),
-                                    time = daily)
+                                    date      = (finished.timeOfDay < daily ? finished.date : finished.date + Duration:1D),
+                                    timeOfDay = daily)
                                 : secondRun;
 
                     case SuggestedMinimum:
@@ -452,15 +452,15 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
             }
 
         // complexities specific to daily repeating at a particular time
-        if (repeatPolicy != MeasureFromCommit, Time daily ?= schedule.scheduledDaily)
+        if (repeatPolicy != MeasureFromCommit, TimeOfDay daily ?= schedule.scheduledDaily)
             {
             DateTime originalPlan = started.with(
-                    date = (started.time < daily ? started.date : started.date + Duration:1D),
-                    time = daily);
+                    date      = (started.timeOfDay < daily ? started.date : started.date + Duration:1D),
+                    timeOfDay = daily);
 
             DateTime revisedPlan = finished.with(
-                    date = (finished.time < daily ? finished.date : finished.date + Duration:1D),
-                    time = daily);
+                    date      = (finished.timeOfDay < daily ? finished.date : finished.date + Duration:1D),
+                    timeOfDay = daily);
 
             switch (repeatPolicy)
                 {

@@ -1,6 +1,6 @@
 /**
  * A TimeZone contains the necessary information to convert a UTC DateTime value into a localized
- * Date and Time value.
+ * Date and TimeOfDay value.
  *
  * There are four categories of TimeZones:
  * * UTC - Raw, unadjusted, universally-coordinated DateTime information. This is the internal form
@@ -30,7 +30,7 @@ const TimeZone(Int picos, String? name = Null)
      */
     construct(Int picos, String? name = Null)
         {
-        assert picos.abs() <= Time.PICOS_PER_DAY;
+        assert picos.abs() <= TimeOfDay.PICOS_PER_DAY;
         this.picos = picos;
         this.name  = name;
         }
@@ -93,7 +93,7 @@ const TimeZone(Int picos, String? name = Null)
 
             if (0 <= hours <= 16 && 0 <= mins <= 59)
                 {
-                Int offset = (hours * Time.PICOS_PER_HOUR + mins * Time.PICOS_PER_MINUTE);
+                Int offset = (hours * TimeOfDay.PICOS_PER_HOUR + mins * TimeOfDay.PICOS_PER_MINUTE);
                 construct TimeZone((tz[0]=='-' ? -1 : +1) * offset);
                 return;
                 }
@@ -191,10 +191,10 @@ const TimeZone(Int picos, String? name = Null)
         @Override
         DateTime adopt(DateTime orig)
             {
-            // strip off the timezone, but leave the date and time reflecting what the original
-            // TimeZone would have calculated
+            // strip off the timezone, but leave the date and time-of-day reflecting what the
+            // original TimeZone would have calculated
             // note: this only supports dates on or after 1582-10-15 on the Gregorian calendar
-            return orig.timezone.isNoTZ ? orig : new DateTime(orig.date, orig.time, this);
+            return orig.timezone.isNoTZ ? orig : new DateTime(orig.date, orig.timeOfDay, this);
             }
         };
 
@@ -244,13 +244,13 @@ const TimeZone(Int picos, String? name = Null)
     @RO Int hours.get()
         {
         assert resolved;
-        return picos / Time.PICOS_PER_HOUR;
+        return picos / TimeOfDay.PICOS_PER_HOUR;
         }
 
     @RO Int minutes.get()
         {
         // note: calculate the remainder (may be negative), and not the modulo
-        return (picos - hours * Time.PICOS_PER_HOUR) / Time.PICOS_PER_MINUTE;
+        return (picos - hours * TimeOfDay.PICOS_PER_HOUR) / TimeOfDay.PICOS_PER_MINUTE;
         }
 
     /**
@@ -269,9 +269,9 @@ const TimeZone(Int picos, String? name = Null)
 
         if (orig.timezone.isNoTZ)
             {
-            // transplant the date and time from the timezoneless DateTime into a DateTime using
-            // this TimeZone
-            return new DateTime(orig.date, orig.time, this);
+            // transplant the date and time-of-day from the timezoneless DateTime into a DateTime
+            // using this TimeZone
+            return new DateTime(orig.date, orig.timeOfDay, this);
             }
 
         return new DateTime(orig.epochPicos, this);
@@ -303,10 +303,10 @@ const TimeZone(Int picos, String? name = Null)
             picos = picos.abs();
             }
 
-        Int normalized = (picos % Time.PICOS_PER_DAY).toInt64();
-        if (normalized > 12 * Time.PICOS_PER_HOUR)
+        Int normalized = (picos % TimeOfDay.PICOS_PER_DAY).toInt64();
+        if (normalized > 12 * TimeOfDay.PICOS_PER_HOUR)
             {
-            normalized -= Time.PICOS_PER_DAY;
+            normalized -= TimeOfDay.PICOS_PER_DAY;
             }
 
         return negative ? -normalized : +normalized;
@@ -320,7 +320,7 @@ const TimeZone(Int picos, String? name = Null)
         Int difference = this.picos - timezone.picos;
         if (difference < 0)
             {
-            difference += Time.PICOS_PER_DAY;
+            difference += TimeOfDay.PICOS_PER_DAY;
             }
 
         return new Duration(difference.toUInt128());
@@ -369,13 +369,13 @@ const TimeZone(Int picos, String? name = Null)
             // +hh:mm or -hh:mm
             size += 6;
 
-            if (picos % Time.PICOS_PER_MINUTE != 0)
+            if (picos % TimeOfDay.PICOS_PER_MINUTE != 0)
                 {
-                Int remainder = (picos - hours * Time.PICOS_PER_HOUR - minutes * Time.PICOS_PER_MINUTE).abs();
-                Int seconds   = remainder / Time.PICOS_PER_SECOND;
+                Int remainder = (picos - hours * TimeOfDay.PICOS_PER_HOUR - minutes * TimeOfDay.PICOS_PER_MINUTE).abs();
+                Int seconds   = remainder / TimeOfDay.PICOS_PER_SECOND;
                 size += 3;
 
-                remainder -= seconds * Time.PICOS_PER_SECOND;
+                remainder -= seconds * TimeOfDay.PICOS_PER_SECOND;
                 if (remainder > 0)
                     {
                     size += 1 + Duration.picosFractionalLength(remainder);
@@ -428,19 +428,19 @@ const TimeZone(Int picos, String? name = Null)
                 }
             minutes.appendTo(buf);
 
-            if (picos % Time.PICOS_PER_MINUTE != 0)
+            if (picos % TimeOfDay.PICOS_PER_MINUTE != 0)
                 {
                 assert !iso8601;
 
-                Int remainder = (picos - hours * Time.PICOS_PER_HOUR - minutes * Time.PICOS_PER_MINUTE).abs();
-                Int seconds   = remainder / Time.PICOS_PER_SECOND;
+                Int remainder = (picos - hours * TimeOfDay.PICOS_PER_HOUR - minutes * TimeOfDay.PICOS_PER_MINUTE).abs();
+                Int seconds   = remainder / TimeOfDay.PICOS_PER_SECOND;
                 buf.add(':');
                 if (seconds < 10)
                     {
                     buf.add('0');
                     }
                 seconds.appendTo(buf);
-                Duration.appendPicosFractional(buf, remainder - seconds * Time.PICOS_PER_SECOND);
+                Duration.appendPicosFractional(buf, remainder - seconds * TimeOfDay.PICOS_PER_SECOND);
                 }
 
             if (showName)

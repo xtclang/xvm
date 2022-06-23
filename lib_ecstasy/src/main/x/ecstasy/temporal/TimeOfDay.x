@@ -1,8 +1,8 @@
 /**
- * A Time represents information about "time-of-day". It is primarily intended to support human
+ * A TimeOfDay represents information about "time-of-day". It is primarily intended to support human
  * interface concepts, such as scheduling, or to assist in displaying information.
  */
-const Time(Int picos)
+const TimeOfDay(Int picos)
     {
     static IntLiteral PICOS_PER_NANO   = 1000;
     static IntLiteral PICOS_PER_MICRO  = 1000 * PICOS_PER_NANO;
@@ -12,10 +12,10 @@ const Time(Int picos)
     static IntLiteral PICOS_PER_HOUR   = 60   * PICOS_PER_MINUTE;
     static IntLiteral PICOS_PER_DAY    = 24   * PICOS_PER_HOUR;
 
-    static Time MIDNIGHT = new Time(0);
+    static TimeOfDay MIDNIGHT = new TimeOfDay(0);
 
     /**
-     * Construct a Time based on the number of picoseconds elapsed since 00:00:00.
+     * Construct a TimeOfDay based on the number of picoseconds elapsed since 00:00:00.
      *
      * @param picos  the number of picoseconds elapsed since 00:00:00
      */
@@ -26,7 +26,7 @@ const Time(Int picos)
         }
 
     /**
-     * Construct a Time based on number hours, minutes, seconds, and so on.
+     * Construct a TimeOfDay based on number hours, minutes, seconds, and so on.
      *
      * @param hour    the number of hours, in the range 0..23
      * @param minute  the number of minutes, in the range 0..59
@@ -39,18 +39,18 @@ const Time(Int picos)
         assert minute >= 0 && minute < 60;
         assert second >= 0 && second < 60;
         assert picos  >= 0 && picos  < PICOS_PER_SECOND;
-        construct Time(((hour * 60 + minute) * 60 + second) * PICOS_PER_SECOND + picos);
+        construct TimeOfDay(((hour * 60 + minute) * 60 + second) * PICOS_PER_SECOND + picos);
         }
 
     /**
-     * Construct a Time from an ISO-8601 time string.
+     * Construct a TimeOfDay from an ISO-8601 time string.
      */
-    construct (String time)
+    construct (String text)
         {
         String   hours;
         String   mins;
         String   secs  = "";
-        String[] parts = time.split(':');
+        String[] parts = text.split(':');
         switch (parts.size)
             {
             case 3:
@@ -62,21 +62,21 @@ const Time(Int picos)
                 break;
 
             case 1:
-                Int len = time.size;
+                Int len = text.size;
                 if (len >= 4)
                     {
-                    hours = time[0..1];
-                    mins  = time[2..3];
+                    hours = text[0..1];
+                    mins  = text[2..3];
                     if (len > 4)
                         {
-                        secs = time[4..len);
+                        secs = text[4..len);
                         }
                     break;
                     }
                 continue;
 
             default:
-                throw new IllegalArgument($"invalid ISO-8601 time: \"{time}\"");
+                throw new IllegalArgument($"invalid ISO-8601 time: \"{text}\"");
             }
 
         Int hour = new IntLiteral(hours);
@@ -111,7 +111,7 @@ const Time(Int picos)
                 }
             }
 
-        construct Time(hour, min, sec, pico);
+        construct TimeOfDay(hour, min, sec, pico);
         }
 
     private static Int[] SCALE_10 = [           1_000_000_000_000,
@@ -187,7 +187,7 @@ const Time(Int picos)
 
     // ----- operators -----------------------------------------------------------------------------
 
-    @Op("+") Time add(Duration duration)
+    @Op("+") TimeOfDay add(Duration duration)
         {
         UInt128 period = duration.picoseconds;
         if (period == 0)
@@ -195,10 +195,10 @@ const Time(Int picos)
             return this;
             }
 
-        return new Time(((picos.toUInt128() + period) % PICOS_PER_DAY).toInt64());
+        return new TimeOfDay(((picos.toUInt128() + period) % PICOS_PER_DAY).toInt64());
         }
 
-    @Op("-") Time sub(Duration duration)
+    @Op("-") TimeOfDay sub(Duration duration)
         {
         Int minuend    = this.picos;
         Int subtrahend = (duration.picoseconds % PICOS_PER_DAY).toInt64();
@@ -206,13 +206,13 @@ const Time(Int picos)
             {
             minuend += PICOS_PER_DAY;
             }
-        return new Time(minuend - subtrahend);
+        return new TimeOfDay(minuend - subtrahend);
         }
 
-    @Op("-") Duration sub(Time time)
+    @Op("-") Duration sub(TimeOfDay timeOfDay)
         {
         Int picosStop  = this.picos;
-        Int picosStart = time.picos;
+        Int picosStart = timeOfDay.picos;
         if (picosStart > picosStop)
             {
             picosStop += PICOS_PER_DAY;
@@ -223,7 +223,7 @@ const Time(Int picos)
     // ----- conversions ---------------------------------------------------------------------------
 
     /**
-     * @return the Duration of time since midnight represented by this Time object
+     * @return the Duration of time since midnight represented by this TimeOfDay object
      */
     Duration toDuration()
         {

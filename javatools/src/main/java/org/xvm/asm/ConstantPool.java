@@ -340,7 +340,7 @@ public class ConstantPool
             case IntLiteral:
             case FPLiteral:
             case Date:
-            case Time:
+            case TimeOfDay:
             case DateTime:
             case Duration:
             case Path:
@@ -2410,7 +2410,7 @@ public class ConstantPool
     protected ClassConstant  clzDate()         {return (ClassConstant) getImplicitlyImportedIdentity("Date"                 );}
     protected ClassConstant  clzDateTime()     {return (ClassConstant) getImplicitlyImportedIdentity("DateTime"             );}
     protected ClassConstant  clzDuration()     {return (ClassConstant) getImplicitlyImportedIdentity("Duration"             );}
-    protected ClassConstant  clzTime()         {return (ClassConstant) getImplicitlyImportedIdentity("Time"                 );}
+    protected ClassConstant  clzTime()         {return (ClassConstant) getImplicitlyImportedIdentity("TimeOfDay"            );}
     protected ClassConstant  clzTimeZone()     {return (ClassConstant) getImplicitlyImportedIdentity("TimeZone"             );}
     protected ClassConstant  clzPath()         {return (ClassConstant) getImplicitlyImportedIdentity("Path"                 );}
     protected ClassConstant  clzVersion()      {return (ClassConstant) getImplicitlyImportedIdentity("Version"              );}
@@ -2587,7 +2587,7 @@ public class ConstantPool
                 case IntLiteral:
                 case FPLiteral:
                 case Date:
-                case Time:
+                case TimeOfDay:
                 case DateTime:
                 case Duration:
                 case Path:

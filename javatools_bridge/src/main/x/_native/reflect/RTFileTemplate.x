@@ -28,7 +28,7 @@ class RTFileTemplate
         Int createdMillis = this.createdMillis;
         return createdMillis == 0
                 ? Null
-                : new DateTime(createdMillis*Time.PICOS_PER_MILLI);
+                : new DateTime(createdMillis*TimeOfDay.PICOS_PER_MILLI);
         }
 
 

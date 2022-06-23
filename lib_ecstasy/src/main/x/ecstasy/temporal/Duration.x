@@ -57,8 +57,8 @@ const Duration(UInt128 picoseconds)
 
                 case 'T':
                     assert:arg stage < 3 as
-                            $|Duration includes 'T' to separate date from time components, and must\
-                             | contain no other occurrences of 'T': {duration.quoted()}
+                            $|Duration includes 'T' to separate date from time-of-day components,\
+                             | and must contain no other occurrences of 'T': {duration.quoted()}
                             ;
                     stage = 3;
                     break;
@@ -84,22 +84,22 @@ const Duration(UInt128 picoseconds)
                         {
                         case 'D':
                             stageNew = 2;
-                            factor   = Time.PICOS_PER_DAY;
+                            factor   = TimeOfDay.PICOS_PER_DAY;
                             break;
 
                         case 'H':
                             stageNew = 4;
-                            factor   = Time.PICOS_PER_HOUR;
+                            factor   = TimeOfDay.PICOS_PER_HOUR;
                             break;
 
                         case 'M':
                             stageNew = 5;
-                            factor   = Time.PICOS_PER_MINUTE;
+                            factor   = TimeOfDay.PICOS_PER_MINUTE;
                             break;
 
                         case '.':
                             stageNew = 6;
-                            factor   = Time.PICOS_PER_SECOND;
+                            factor   = TimeOfDay.PICOS_PER_SECOND;
                             break;
 
                         case 'S':
@@ -122,7 +122,7 @@ const Duration(UInt128 picoseconds)
                                 }
                             else
                                 {
-                                factor = Time.PICOS_PER_SECOND;
+                                factor = TimeOfDay.PICOS_PER_SECOND;
                                 }
                             stageNew = 7;
                             break;

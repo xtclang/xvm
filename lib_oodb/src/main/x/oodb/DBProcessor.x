@@ -440,11 +440,11 @@ interface DBProcessor<Message extends immutable Const>
     /**
      * Represents the schedule for a message to be processed.
      */
-    static const Schedule(DateTime? scheduledAt      = Null,
-                          Time?     scheduledDaily   = Null,
-                          Duration? repeatInterval   = Null,
-                          Policy    repeatPolicy     = AllowOverlapping,
-                          Priority  priority         = Normal,
+    static const Schedule(DateTime?  scheduledAt    = Null,
+                          TimeOfDay? scheduledDaily = Null,
+                          Duration?  repeatInterval = Null,
+                          Policy     repeatPolicy   = AllowOverlapping,
+                          Priority   priority       = Normal,
                          )
         {
         assert()
@@ -467,11 +467,11 @@ interface DBProcessor<Message extends immutable Const>
         /**
          * Create a new Schedule from this Schedule with only the specified properties modified.
          */
-        Schedule with(DateTime? scheduledAt      = Null,
-                      Time?     scheduledDaily   = Null,
-                      Duration? repeatInterval   = Null,
-                      Policy?   repeatPolicy     = Null,
-                      Priority? priority         = Null,
+        Schedule with(DateTime?  scheduledAt    = Null,
+                      TimeOfDay? scheduledDaily = Null,
+                      Duration?  repeatInterval = Null,
+                      Policy?    repeatPolicy   = Null,
+                      Priority?  priority       = Null,
                      )
             {
             return new Schedule(scheduledAt    ?: this.scheduledAt,
@@ -485,7 +485,7 @@ interface DBProcessor<Message extends immutable Const>
         /**
          * Determine if a specific time is set for the message to be processed.
          *
-         * @return True iff the schedule indicates a specific point-in-time or daily-time that the
+         * @return True iff the schedule indicates a specific point-in-time or time-of-day that the
          *         pending message should be processed
          */
         Boolean isScheduled()
@@ -574,7 +574,7 @@ interface DBProcessor<Message extends immutable Const>
             }
 
         /**
-         * Schedule the work to occur on a daily basis, at the specified time.
+         * Schedule the work to occur on a daily basis, at the specified time-of-day.
          *
          * The database will attempt to process the work at that point in time, but may be forced
          * to delay the processing based on various factors, including the load profile of the
@@ -586,7 +586,7 @@ interface DBProcessor<Message extends immutable Const>
          *
          * @return an interface that allows the work to be prioritized
          */
-        Schedule dailyAt(Time timeOfDay, Policy? policy=Null)
+        Schedule dailyAt(TimeOfDay timeOfDay, Policy? policy=Null)
             {
             return this.with(scheduledDaily = timeOfDay,
                              repeatPolicy   = policy ?: this.repeatPolicy);

@@ -1,5 +1,5 @@
 /**
- * A DateTime is a value that can provide Date and Time information based on a combination of the
+ * A DateTime is a value that can provide Date and TimeOfDay information based on a combination of the
  * number of picoseconds elapsed since 1970-01-01T00:00:00Z, and a TimeZone.
  *
  * The DateTime _renders_ dates according to the Gregorian calendar, which began on 1582-10-15.
@@ -7,30 +7,30 @@
 const DateTime(Int128 epochPicos, TimeZone timezone = UTC)
     {
     /**
-     * Create a new DateTime based on a Date, a Time, and a TimeZone.
+     * Create a new DateTime based on a Date, a TimeOfDay, and a TimeZone.
      *
-     * @param date      the date value
-     * @param time      the time value
-     * @param timezone  the timezone value
+     * @param date       the date value
+     * @param timeOfDay  the time-of-day value
+     * @param timezone   the timezone value
      */
-    construct(Date date, Time time, TimeZone timezone)
+    construct(Date date, TimeOfDay timeOfDay, TimeZone timezone)
         {
-        // it is not possible to reverse a date and time from an unresolved TimeZone, such as
+        // it is not possible to reverse a date and time-of-day from an unresolved TimeZone, such as
         // America/New_York, because it will have both duplicate (DST "fall back") and missing
-        // (DST "spring forward") date and time values
+        // (DST "spring forward") date and time-of-day values
         assert timezone.resolved;
 
-        Int128 picos = date.epochDay.toInt128() * Time.PICOS_PER_DAY
-                     + time.picos.toInt128()
+        Int128 picos = date.epochDay.toInt128() * TimeOfDay.PICOS_PER_DAY
+                     + timeOfDay.picos.toInt128()
                      - timezone.picos.toInt128();
 
         construct DateTime(picos, timezone);
         }
 
     /**
-     * Construct a DateTime from an ISO-8601 date and time string with optional timezone.
+     * Construct a DateTime from an ISO-8601 date and time-of-day string with optional timezone.
      *
-     * @param dt  the date time value in an ISO-8601 format (or alternatively, in the format
+     * @param dt  the datetime value in an ISO-8601 format (or alternatively, in the format
      *            produced by the [toString] method)
      */
     construct(String dt)
@@ -64,9 +64,9 @@ const DateTime(Int128 epochPicos, TimeZone timezone = UTC)
                     tzOffset = dt.size;
                     }
 
-                Date date = new Date(dt[0..timeOffset));
-                Time time = new Time(dt[timeOffset+1..tzOffset));
-                construct DateTime(date, time, zone);
+                Date      date      = new Date(dt[0..timeOffset));
+                TimeOfDay timeOfDay = new TimeOfDay(dt[timeOffset+1..tzOffset));
+                construct DateTime(date, timeOfDay, zone);
                 return;
                 }
             }
@@ -74,10 +74,10 @@ const DateTime(Int128 epochPicos, TimeZone timezone = UTC)
         String[] parts = dt.split(' ');
         if (2 <= parts.size <= 3)
             {
-            Date     date = new Date(parts[0]);
-            Time     time = new Time(parts[1]);
-            TimeZone zone = parts.size == 3 ? new TimeZone(parts[2]) : TimeZone.NoTZ;
-            construct DateTime(date, time, zone);
+            Date      date      = new Date(parts[0]);
+            TimeOfDay timeOfDay = new TimeOfDay(parts[1]);
+            TimeZone  zone      = parts.size == 3 ? new TimeZone(parts[2]) : TimeZone.NoTZ;
+            construct DateTime(date, timeOfDay, zone);
             return;
             }
 
@@ -90,22 +90,22 @@ const DateTime(Int128 epochPicos, TimeZone timezone = UTC)
     // ----- withers -------------------------------------------------------------------------------
 
     /**
-     * Create a new DateTime based on this DateTime, but with the Date and/or Time and/or TimeZone
+     * Create a new DateTime based on this DateTime, but with the Date and/or TimeOfDay and/or TimeZone
      * replaced with a new value.
      *
-     * @param date      (optional) the new date value
-     * @param time      (optional) the new time value
-     * @param timezone  (optional) the new timezone value
+     * @param date       (optional) the new date value
+     * @param timeOfDay  (optional) the new time-of-day value
+     * @param timezone   (optional) the new timezone value
      *
      * @return the new DateTime
      */
-    DateTime with(Date?     date     = Null,
-                  Time?     time     = Null,
-                  TimeZone? timezone = Null)
+    DateTime with(Date?      date      = Null,
+                  TimeOfDay? timeOfDay = Null,
+                  TimeZone?  timezone  = Null)
         {
-        return new DateTime(date     ?: this.date,
-                            time     ?: this.time,
-                            timezone ?: this.timezone);
+        return new DateTime(date      ?: this.date,
+                            timeOfDay ?: this.timeOfDay,
+                            timezone  ?: this.timezone);
         }
 
 
@@ -115,7 +115,7 @@ const DateTime(Int128 epochPicos, TimeZone timezone = UTC)
      * The offset (in number of picoseconds) from the epoch to the beginning of the Gregorian
      * calendar, 1582-10-14T00:00:00.
      */
-    static Int128 GREGORIAN_OFFSET = Date.GREGORIAN_OFFSET * Time.PICOS_PER_DAY;
+    static Int128 GREGORIAN_OFFSET = Date.GREGORIAN_OFFSET * TimeOfDay.PICOS_PER_DAY;
 
     Int128 adjustedPicos.get()
         {
@@ -129,16 +129,16 @@ const DateTime(Int128 epochPicos, TimeZone timezone = UTC)
         {
         Int128 picos = adjustedPicos;
         return new Date(picos >= 0
-                ? (picos / Time.PICOS_PER_DAY).toInt64()
-                : -1 - ((picos.abs() - 1) / Time.PICOS_PER_DAY).toInt64());
+                ? (picos / TimeOfDay.PICOS_PER_DAY).toInt64()
+                : -1 - ((picos.abs() - 1) / TimeOfDay.PICOS_PER_DAY).toInt64());
         }
 
     /**
-     * The time portion of the date/time value.
+     * The time-of-day portion of the date/time value.
      */
-    Time time.get()
+    TimeOfDay timeOfDay.get()
         {
-        return new Time((adjustedPicos % Time.PICOS_PER_DAY).toInt64());
+        return new TimeOfDay((adjustedPicos % TimeOfDay.PICOS_PER_DAY).toInt64());
         }
 
     /**
@@ -237,7 +237,7 @@ const DateTime(Int128 epochPicos, TimeZone timezone = UTC)
         {
         date.appendTo(buf);
         buf.add(iso8601 ? 'T' : ' ');
-        time.appendTo(buf);
+        timeOfDay.appendTo(buf);
 
         if (iso8601 || timezone.picos != 0)
             {

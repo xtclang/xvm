@@ -696,8 +696,8 @@ class Lexer
                     {
                     case "Date":
                         return eatDateLiteral(before);
-                    case "Time":
-                        return eatTimeLiteral(before);
+                    case "TimeOfDay":
+                        return eatTimeOfDayLiteral(before);
                     case "DateTime":
                         return eatDateTimeLiteral(before);
                     case "TimeZone":
@@ -762,7 +762,7 @@ class Lexer
         }
 
     /**
-     * Lex a time literal token, starting with the colon.
+     * Lex a time-of-day literal token, starting with the colon.
      *
      * @param before    the position of the first character of the token
      * @param embedded  True indicates that this literal value is part of a larger datetime value
@@ -770,7 +770,7 @@ class Lexer
      * @return id     the token id
      * @return value  the token value
      */
-    protected (Id id, Time value) eatTimeLiteral(TextPosition before, Boolean embedded = False)
+    protected (Id id, TimeOfDay value) eatTimeOfDayLiteral(TextPosition before, Boolean embedded = False)
         {
         assert embedded || nextChar() == ':';
         TextPosition start = embedded ? reader.position : before;
@@ -819,10 +819,10 @@ class Lexer
                 && (0 <= minutes <= 59)
                 && (0 <= seconds <= 59 || minutes == 59 && seconds == 60)))
             {
-            TextPosition end  = reader.position;
-            String       time = reader[start..end);
-            log(Error, BadTime, [time], before, end);
-            return LitTime, MIDNIGHT;
+            TextPosition end       = reader.position;
+            String       timeOfDay = reader[start..end);
+            log(Error, BadTimeOfDay, [timeOfDay], before, end);
+            return LitTimeOfDay, MIDNIGHT;
             }
 
         if (!embedded)
@@ -830,7 +830,7 @@ class Lexer
             peekNotIdentifierOrNumber();
             }
 
-        return LitTime, new Time(hours, minutes, seconds, picos);
+        return LitTimeOfDay, new TimeOfDay(hours, minutes, seconds, picos);
         }
 
     /**
@@ -890,11 +890,11 @@ class Lexer
             {
             TextPosition end      = reader.position;
             String       timezone = reader[start..end);
-            log(Error, BadTime, [timezone], before, end);
+            log(Error, BadTimezone, [timezone], before, end);
             return LitTimezone, NoTZ;
             }
 
-        Int offset = hour * Time.PICOS_PER_HOUR + minute * Time.PICOS_PER_MINUTE;
+        Int offset = hour * TimeOfDay.PICOS_PER_HOUR + minute * TimeOfDay.PICOS_PER_MINUTE;
         return LitTimezone, new TimeZone((minus ? -1 : +1) * offset);
         }
 
@@ -910,13 +910,13 @@ class Lexer
         {
         assert nextChar() == ':';
 
-        (_, Date date)    = eatDateLiteral(before, True);
-        Time     time     = MIDNIGHT;
-        TimeZone timezone = NoTZ;
+        (_, Date date)      = eatDateLiteral(before, True);
+        TimeOfDay timeOfDay = MIDNIGHT;
+        TimeZone  timezone  = NoTZ;
 
         if (match('t') || expect('T'))
             {
-            (_, time) = eatTimeLiteral(before, True);
+            (_, timeOfDay) = eatTimeOfDayLiteral(before, True);
 
             switch (peekChar())
                 {
@@ -931,7 +931,7 @@ class Lexer
             log(Error, BadDatetime, [reader[before..reader.position).toString()], before, reader.position);
             }
 
-        return LitDatetime, new DateTime(date, time, timezone);
+        return LitDatetime, new DateTime(date, timeOfDay, timezone);
         }
 
     /**
@@ -2459,10 +2459,10 @@ class Lexer
         ExpectedChar      ("LEXER-11", "Expected \"{0}\"; found \"{1}\"."),
         ExpectedDigits    ("LEXER-12", "\"{0}\" digits were required; only \"{1}\" digits were found."),
         BadDate           ("LEXER-13", "Invalid ISO-8601 date \"{0}\"; date must be in the format \"YYYY-MM-DD\" with valid values for each."),
-        BadTime           ("LEXER-14", "Invalid ISO-8601 time \"{0}\"; time must be in the format \"hh:mm:ss.sss\" or \"hhmmss.sss\" (with seconds and fractions of seconds optional) with valid values for each."),
-        BadDatetime       ("LEXER-15", "Invalid ISO-8601 datetime \"{0}\"; datetime must be in the format date+\"T\"+time+timezone (with timezone optional), with valid values for each."),
+        BadTimeOfDay      ("LEXER-14", "Invalid ISO-8601 time \"{0}\"; time-of-day must be in the format \"hh:mm:ss.sss\" or \"hhmmss.sss\" (with seconds and fractions of seconds optional) with valid values for each."),
+        BadDatetime       ("LEXER-15", "Invalid ISO-8601 datetime \"{0}\"; datetime must be in the format date+\"T\"+timeOfDay+timezone (with timezone optional), with valid values for each."),
         BadTimezone       ("LEXER-16", "Invalid ISO-8601 timezone \"{0}\"; timezone must be \"Z\" (for UTC), or in the format \"+hh:mm\" or \"+hhmm\" (using either \"+\" or \"-\", and with minutes optional) with valid values for each."),
-        BadDuration       ("LEXER-17", "Invalid ISO-8601 duration \"{0}\"; duration must be in the format \"PnYnMnDTnHnMnS\" (with the year, month, day, and time value optional, and the hours, minutes, and seconds values optional within the time portion), with valid values for each."),
+        BadDuration       ("LEXER-17", "Invalid ISO-8601 duration \"{0}\"; duration must be in the format \"PnYnMnDTnHnMnS\" (with the year, month, day, and time-of-day value optional, and the hours, minutes, and seconds values optional within the time portion), with valid values for each."),
         UnexpectedChar    ("LEXER-18", "Unexpected character: \"{0}\"."),
         TemplateNoTerm    ("LEXER-19", "Template is not terminated."),
         BadVersion        ("PARSER-04", "Bad version value.");
@@ -2556,12 +2556,12 @@ class Lexer
                 case LitChar:       value.as(Char).quoted();
                 case LitString:     value.as(String).quoted();
 
-                case LitDate:      "Date:"     + value.toString();
-                case LitTime:      "Time:"     + value.toString();
-                case LitDatetime:  "DateTime:" + value.toString();
-                case LitTimezone:  "TimeZone:" + value.toString();
-                case LitDuration:  "Duration:" + value.toString();
-                case LitVersion:   "Version:"  + value.toString();
+                case LitDate:      "Date:"      + value.toString();
+                case LitTimeOfDay: "TimeOfDay:" + value.toString();
+                case LitDatetime:  "DateTime:"  + value.toString();
+                case LitTimezone:  "TimeZone:"  + value.toString();
+                case LitDuration:  "Duration:"  + value.toString();
+                case LitVersion:   "Version:"   + value.toString();
 
                 case LitBinstr:
                     {
@@ -2750,7 +2750,7 @@ class Lexer
         LitDec       <FPLiteral >(Null             ),
         LitFloat     <FPLiteral >(Null             ),
         LitDate      <Date      >(Null             ),
-        LitTime      <Time      >(Null             ),
+        LitTimeOfDay <TimeOfDay >(Null             ),
         LitDatetime  <DateTime  >(Null             ),
         LitTimezone  <TimeZone  >(Null             ),
         LitDuration  <Duration  >(Null             ),

@@ -876,7 +876,7 @@ class Parser
             // the following are already accounted for the by the Lexer, but they are repeated here
             // to avoid generating confusing errors
             case "Date":
-            case "Time":
+            case "TimeOfDay":
             case "DateTime":
             case "TimeZone":
             case "Duration":

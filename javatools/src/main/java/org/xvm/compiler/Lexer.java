@@ -785,7 +785,7 @@ public class Lexer
 
                                     case "Date":
                                         return eatDate(lInitPos, false);
-                                    case "Time":
+                                    case "TimeOfDay":
                                         return eatTime(lInitPos, false);
                                     case "DateTime":
                                         return eatDateTime(lInitPos);

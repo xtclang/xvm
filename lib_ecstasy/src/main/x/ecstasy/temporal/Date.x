@@ -197,7 +197,7 @@ const Date(Int epochDay)
      */
     DateTime toDateTime()
         {
-        return new DateTime(this, Time.MIDNIGHT, TimeZone.NoTZ);
+        return new DateTime(this, TimeOfDay.MIDNIGHT, TimeZone.NoTZ);
         }
 
 

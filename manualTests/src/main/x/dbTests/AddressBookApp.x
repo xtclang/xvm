@@ -46,7 +46,7 @@ module AddressBookApp
             contacts.put(george.rolodexName, george);
             contacts.addContact(john);
 
-            dbc.title.set($"My Contacts as of {clock.now.time}");
+            dbc.title.set($"My Contacts as of {clock.now.timeOfDay}");
             dbc.requestCount.adjustBy(2);
             }
 

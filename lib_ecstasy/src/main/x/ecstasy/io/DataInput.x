@@ -240,11 +240,11 @@ interface DataInput
         }
 
     /**
-     * @return  a value of type Time read from the stream
+     * @return  a value of type TimeOfDay read from the stream
      */
-    Time readTime()
+    TimeOfDay readTime()
         {
-        return new Time(readInt64());
+        return new TimeOfDay(readInt64());
         }
 
     /**

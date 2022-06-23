@@ -17,7 +17,7 @@ service PseudoRandom(UInt seed = 0)
             @Inject Clock clock;
             DateTime now = clock.now;
 
-            seed = (now.date.epochDay ^ now.time.picos).magnitude;
+            seed = (now.date.epochDay ^ now.timeOfDay.picos).magnitude;
             if (seed == 0)
                 {
                 seed = 42; // RIP DNA

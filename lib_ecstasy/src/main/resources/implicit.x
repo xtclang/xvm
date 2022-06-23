@@ -159,7 +159,7 @@ import ecstasy.temporal.Date;
 import ecstasy.temporal.DateTime;
 import ecstasy.temporal.Clock;
 import ecstasy.temporal.Duration;
-import ecstasy.temporal.Time;
+import ecstasy.temporal.TimeOfDay;
 import ecstasy.temporal.Timer;
 import ecstasy.temporal.TimeZone;
 

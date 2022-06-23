@@ -111,7 +111,7 @@ public class xConst
                 findMethod("construct", 1, pool.typeString());
             DATE_CONSTRUCT     = f_container.getClassStructure("temporal.Date").
                 findMethod("construct", 1, pool.typeString());
-            TIME_CONSTRUCT     = f_container.getClassStructure("temporal.Time").
+            TIME_CONSTRUCT     = f_container.getClassStructure("temporal.TimeOfDay").
                 findMethod("construct", 1, pool.typeString());
             DURATION_CONSTRUCT = f_container.getClassStructure("temporal.Duration").
                 findMethod("construct", 1, pool.typeString());
@@ -176,7 +176,7 @@ public class xConst
                     constructor = DATE_CONSTRUCT;
                     break;
 
-                case Time:
+                case TimeOfDay:
                     clz         = ensureClass(container, pool.typeTime());
                     constructor = TIME_CONSTRUCT;
                     break;

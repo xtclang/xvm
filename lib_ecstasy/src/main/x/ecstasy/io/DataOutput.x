@@ -290,11 +290,11 @@ interface DataOutput
         }
 
     /**
-     * Write a Time value to the stream.
+     * Write a TimeOfDay value to the stream.
      *
-     * @param value  a value of type Time to write to the stream
+     * @param value  a value of type TimeOfDay to write to the stream
      */
-    void writeTime(Time value)
+    void writeTime(TimeOfDay value)
         {
         writeInt64(value.picos);
         }

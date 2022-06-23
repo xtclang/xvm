@@ -387,7 +387,7 @@ public class LiteralExpression
                 return pool.ensureLiteralConstant(Format.Date, (String) literal.getValue());
 
             case LIT_TIME:
-                return pool.ensureLiteralConstant(Format.Time, (String) literal.getValue());
+                return pool.ensureLiteralConstant(Format.TimeOfDay, (String) literal.getValue());
 
             case LIT_DATETIME:
                 return pool.ensureLiteralConstant(Format.DateTime, (String) literal.getValue());
@@ -463,7 +463,7 @@ public class LiteralExpression
                 return "Date:" + literal.getValue();
 
             case LIT_TIME:
-                return "Time:" + literal.getValue();
+                return "TimeOfDay:" + literal.getValue();
 
             case LIT_DATETIME:
                 return "DateTime:" + literal.getValue();

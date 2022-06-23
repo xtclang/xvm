@@ -457,10 +457,10 @@ module TestReflection
         Class c3 = Map<Int, String>;
         analyzeClass(c3);
 
-        Class c4 = ecstasy.collections.ListMap<Date, Time>;
+        Class c4 = ecstasy.collections.ListMap<Date, TimeOfDay>;
         analyzeClass(c4);
 
-        Class c7 = ecstasy.collections.ListMap<Date, Time>.Entries;
+        Class c7 = ecstasy.collections.ListMap<Date, TimeOfDay>.Entries;
         analyzeClass(c7);
 
         Map<Int, String> map = new ecstasy.collections.ListMap();
