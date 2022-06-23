@@ -3,7 +3,7 @@
  */
 
 group   = "org.xvm"
-version = "0.4.2"
+version = "0.4.3"
 
 allprojects {
     configurations.all {
