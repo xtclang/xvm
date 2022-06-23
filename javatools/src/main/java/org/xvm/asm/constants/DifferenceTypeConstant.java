@@ -73,6 +73,12 @@ public class DifferenceTypeConstant
             return ((DifferenceTypeConstant) type1).andNotInternal(type2);
             }
 
+        if (type1.isImmutabilitySpecified() && type2.isImmutableOnly())
+            {
+            // ((immutable X) - immutable) -> X
+            return type1.removeImmutable();
+            }
+
         if (type1.isRelationalType() || type1.isAnnotated())
             {
             TypeConstant typeResult = type1.andNot(getConstantPool(), type2);
@@ -180,7 +186,7 @@ public class DifferenceTypeConstant
         }
 
     /**
-     * @return a simplified type or null if it cannot bee simplified
+     * @return a simplified type or null if it cannot be simplified
      */
     private TypeConstant andNotInternal(TypeConstant that)
         {
@@ -205,14 +211,14 @@ public class DifferenceTypeConstant
     @Override
     public boolean containsGenericParam(String sName)
         {
-        // only the left side needs to have it and it doesn't matter what the right side has
+        // only the left side needs to have it, and it doesn't matter what the right side has
         return m_constType1.containsGenericParam(sName);
         }
 
     @Override
     protected TypeConstant getGenericParamType(String sName, List<TypeConstant> listParams)
         {
-        // only the left side needs to have it and it doesn't matter what the right side has
+        // only the left side needs to have it, and it doesn't matter what the right side has
         return m_constType1.getGenericParamType(sName, listParams);
         }
 
