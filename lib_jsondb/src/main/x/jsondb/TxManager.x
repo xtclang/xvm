@@ -3354,18 +3354,21 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                    );
 
         // update the "current log file" status record
-        LogFileInfo oldInfo = logInfos[logInfos.size-1];
-        assert oldInfo.name == logFile.name;
-
-        Range<Int> txIds = oldInfo.txIds;
-        if (lastCommitted > txIds.effectiveUpperBound)
+        if (!logInfos.empty)
             {
-            txIds = txIds.effectiveLowerBound .. lastCommitted;
-            }
+            LogFileInfo oldInfo = logInfos[logInfos.size-1];
+            assert oldInfo.name == logFile.name;
 
-        LogFileInfo newInfo = new LogFileInfo(logFile.name, txIds, safepoint, logFile.size, logFile.modified);
-        logInfos[logInfos.size-1] = newInfo;
-        writeStatus();
+            Range<Int> txIds = oldInfo.txIds;
+            if (lastCommitted > txIds.effectiveUpperBound)
+                {
+                txIds = txIds.effectiveLowerBound .. lastCommitted;
+                }
+
+            LogFileInfo newInfo = new LogFileInfo(logFile.name, txIds, safepoint, logFile.size, logFile.modified);
+            logInfos[logInfos.size-1] = newInfo;
+            writeStatus();
+            }
         }
 
 
