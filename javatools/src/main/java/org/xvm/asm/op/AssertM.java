@@ -24,7 +24,7 @@ public class AssertM
         extends Assert
     {
     /**
-     * Construct an ASSERT_T op based on the specified arguments.
+     * Construct an ASSERT_M op based on the specified arguments.
      *
      * @param argTest      the test Argument
      * @param constructor  the exception constructor (or null for a breakpoint)
