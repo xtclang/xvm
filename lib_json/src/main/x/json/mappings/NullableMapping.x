@@ -1,7 +1,7 @@
 /**
  * A mapping for Nullable values.
  */
-const NullableMapping<Serializable>
+const NullableMapping<Serializable>(Mapping<NonNullable> underlying)
         implements Mapping<Serializable>
     {
     typedef (Serializable-Nullable) as NonNullable;
@@ -14,8 +14,6 @@ const NullableMapping<Serializable>
 
         this.underlying = underlying.as(Mapping<NonNullable>);
         }
-
-    Mapping<NonNullable> underlying;
 
     @Override
     String typeName.get()
@@ -52,13 +50,8 @@ const NullableMapping<Serializable>
                 left == Nullable, right != NonNullable,
                 val narrowedUnderlying := underlying.narrow(schema, right.as(Type<NonNullable>)))
             {
-            // TODO GG
-//            Mapping<right.DataType> narrowedNullable =
-//                    new NullableMapping(narrowedUnderlying.as(Mapping<right.DataType>));
-            Mapping narrowedNullable =
-                    new NullableMapping<right.DataType>(narrowedUnderlying.as(Mapping<right.DataType>));
-
-            return True, narrowedNullable.as(Mapping<SubType>);
+            return True, new NullableMapping(narrowedUnderlying.as(Mapping<right.DataType>))
+                    .as(Mapping<SubType>);
             }
 
         return False;
