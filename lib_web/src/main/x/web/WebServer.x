@@ -9,7 +9,7 @@ service WebServer(HttpServer httpServer)
      * The "down stream" handler.
      */
     @Unassigned
-    private Handler handler;
+    private RoutingHandler handler;
 
     /**
      * The router.
@@ -30,12 +30,31 @@ service WebServer(HttpServer httpServer)
     /**
      * Start this web server.
      */
+    @Synchronized
     void start()
         {
         assert !&handler.assigned;
 
         this.handler = new RoutingHandler(httpServer, router.freeze(True));
         httpServer.attachHandler(this);
+        }
+
+    /**
+     * Shutdown this web server.
+     */
+    @Synchronized
+    void shutdown()
+        {
+        if (handler.pendingRequests == 0)
+            {
+            httpServer.close();
+            }
+        else
+            {
+            // wait a second
+            @Inject Timer timer;
+            timer.schedule(SECOND, () -> httpServer.close());
+            }
         }
 
     /**
@@ -55,15 +74,22 @@ service WebServer(HttpServer httpServer)
     static service RoutingHandler(HttpServer httpServer, Router router)
             implements Handler
         {
+        /**
+         * Pending request counter.
+         */
+        Int pendingRequests;
+
         @Override
         void handle(Object context, String uri, String methodName,
                     String[] headerNames, String[][] headerValues, Byte[] body)
             {
-            @Future HttpResponse result =
-                router.handle(uri, methodName, headerNames, headerValues, body);
+            HttpResponse result =
+                router.handle^(uri, methodName, headerNames, headerValues, body);
+            pendingRequests++;
 
             &result.whenComplete((response, e) ->
                 {
+                pendingRequests--;
                 if (response == Null)
                     {
                     httpServer.send(context, HttpStatus.InternalServerError.code, [], [], []);
