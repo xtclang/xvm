@@ -341,7 +341,7 @@ public class ConstantPool
             case FPLiteral:
             case Date:
             case TimeOfDay:
-            case DateTime:
+            case Time:
             case Duration:
             case Path:
             case RegEx:
@@ -666,38 +666,37 @@ public class ConstantPool
     /**
      * @param ft  the FileTime value or null
      *
-     * @return the DateTime constant for the specified FileTime (or the epoch if the FileTime is
-     *         null)
+     * @return the Time constant for the specified FileTime (or the epoch if the FileTime is null)
      */
-    public LiteralConstant ensureDateTimeConstant(FileTime ft)
+    public LiteralConstant ensureTimeConstant(FileTime ft)
         {
         if (ft == null)
             {
-            return defaultDateTimeConstant();
+            return defaultTimeConstant();
             }
 
         String sDT = ft.toInstant().atOffset(ZoneOffset.UTC).toString();
-        return ensureLiteralConstant(Format.DateTime, sDT);
+        return ensureLiteralConstant(Format.Time, sDT);
         }
 
     /**
      * @param instant  the Instant value or null
      *
-     * @return the DateTime constant for the specified instant (or the epoch if the Instant is null)
+     * @return the Time constant for the specified instant (or the epoch if the Instant is null)
      */
-    public LiteralConstant ensureDateTimeConstant(Instant instant)
+    public LiteralConstant ensureTimeConstant(Instant instant)
         {
         return instant == null
-                ? defaultDateTimeConstant()
-                : ensureLiteralConstant(Format.DateTime, instant.toString());
+                ? defaultTimeConstant()
+                : ensureLiteralConstant(Format.Time, instant.toString());
         }
 
     /**
-     * @return the DateTime constant for the epoch (zero) value
+     * @return the Time constant for the epoch (zero) value
      */
-    public LiteralConstant defaultDateTimeConstant()
+    public LiteralConstant defaultTimeConstant()
         {
-        return ensureLiteralConstant(Format.DateTime, Instant.EPOCH.toString());
+        return ensureLiteralConstant(Format.Time, Instant.EPOCH.toString());
         }
 
     /**
@@ -2331,8 +2330,8 @@ public class ConstantPool
     public TypeConstant      typeTuple0()       {TypeConstant      c = m_typeTuple0;      if (c == null) {m_typeTuple0      = c = ensureParameterizedTypeConstant(typeTuple()                     );} return c;}
     public TypeConstant      typeCondTuple()    {TypeConstant      c = m_typeCondTuple;   if (c == null) {m_typeCondTuple   = c = ensureTerminalTypeConstant(clzCondTuple()                       );} return c;}
     public TypeConstant      typeDate()         {TypeConstant      c = m_typeDate;        if (c == null) {m_typeDate        = c = ensureTerminalTypeConstant(clzDate()                            );} return c;}
+    public TypeConstant      typeTimeOfDay()    {TypeConstant      c = m_typeTimeOfDay;   if (c == null) {m_typeTimeOfDay   = c = ensureTerminalTypeConstant(clzTimeOfDay()                       );} return c;}
     public TypeConstant      typeTime()         {TypeConstant      c = m_typeTime;        if (c == null) {m_typeTime        = c = ensureTerminalTypeConstant(clzTime()                            );} return c;}
-    public TypeConstant      typeDateTime()     {TypeConstant      c = m_typeDateTime;    if (c == null) {m_typeDateTime    = c = ensureTerminalTypeConstant(clzDateTime()                        );} return c;}
     public TypeConstant      typeTimeZone()     {TypeConstant      c = m_typeTimeZone;    if (c == null) {m_typeTimeZone    = c = ensureTerminalTypeConstant(clzTimeZone()                        );} return c;}
     public TypeConstant      typeDuration()     {TypeConstant      c = m_typeDuration;    if (c == null) {m_typeDuration    = c = ensureTerminalTypeConstant(clzDuration()                        );} return c;}
     public TypeConstant      typeVersion()      {TypeConstant      c = m_typeVersion;     if (c == null) {m_typeVersion     = c = ensureTerminalTypeConstant(clzVersion()                         );} return c;}
@@ -2408,9 +2407,9 @@ public class ConstantPool
     protected ClassConstant  clzSequential()   {return (ClassConstant) getImplicitlyImportedIdentity("Sequential"           );}
     protected ClassConstant  clzFreezable()    {return (ClassConstant) getImplicitlyImportedIdentity("Freezable"            );}
     protected ClassConstant  clzDate()         {return (ClassConstant) getImplicitlyImportedIdentity("Date"                 );}
-    protected ClassConstant  clzDateTime()     {return (ClassConstant) getImplicitlyImportedIdentity("DateTime"             );}
+    protected ClassConstant  clzTime()         {return (ClassConstant) getImplicitlyImportedIdentity("Time"                 );}
     protected ClassConstant  clzDuration()     {return (ClassConstant) getImplicitlyImportedIdentity("Duration"             );}
-    protected ClassConstant  clzTime()         {return (ClassConstant) getImplicitlyImportedIdentity("TimeOfDay"            );}
+    protected ClassConstant  clzTimeOfDay()    {return (ClassConstant) getImplicitlyImportedIdentity("TimeOfDay"            );}
     protected ClassConstant  clzTimeZone()     {return (ClassConstant) getImplicitlyImportedIdentity("TimeZone"             );}
     protected ClassConstant  clzPath()         {return (ClassConstant) getImplicitlyImportedIdentity("Path"                 );}
     protected ClassConstant  clzVersion()      {return (ClassConstant) getImplicitlyImportedIdentity("Version"              );}
@@ -2588,7 +2587,7 @@ public class ConstantPool
                 case FPLiteral:
                 case Date:
                 case TimeOfDay:
-                case DateTime:
+                case Time:
                 case Duration:
                 case Path:
                     constant = new LiteralConstant(this, format, in);
@@ -3182,8 +3181,8 @@ public class ConstantPool
         m_typeTuple0      = null;
         m_typeCondTuple   = null;
         m_typeDate        = null;
+        m_typeTimeOfDay   = null;
         m_typeTime        = null;
-        m_typeDateTime    = null;
         m_typeTimeZone    = null;
         m_typeDuration    = null;
         m_typeVersion     = null;
@@ -4099,8 +4098,8 @@ public class ConstantPool
     private transient TypeConstant      m_typeTuple0;
     private transient TypeConstant      m_typeCondTuple;
     private transient TypeConstant      m_typeDate;
+    private transient TypeConstant      m_typeTimeOfDay;
     private transient TypeConstant      m_typeTime;
-    private transient TypeConstant      m_typeDateTime;
     private transient TypeConstant      m_typeTimeZone;
     private transient TypeConstant      m_typeDuration;
     private transient TypeConstant      m_typeVersion;

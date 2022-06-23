@@ -33,22 +33,22 @@ const OSFileNode
         }
 
     @Override
-    @Lazy DateTime created.calc()
+    @Lazy Time created.calc()
         {
         // TODO: should it be the "local" timezone?
-        return new DateTime(createdMillis*TimeOfDay.PICOS_PER_MILLI);
+        return new Time(createdMillis*TimeOfDay.PICOS_PER_MILLI);
         }
 
     @Override
-    DateTime modified.get()
+    Time modified.get()
         {
-        return new DateTime(modifiedMillis*TimeOfDay.PICOS_PER_MILLI);
+        return new Time(modifiedMillis*TimeOfDay.PICOS_PER_MILLI);
         }
 
     @Override
-    @RO DateTime accessed.get()
+    @RO Time accessed.get()
         {
-        return new DateTime(accessedMillis*TimeOfDay.PICOS_PER_MILLI);
+        return new Time(accessedMillis*TimeOfDay.PICOS_PER_MILLI);
         }
 
     @Override

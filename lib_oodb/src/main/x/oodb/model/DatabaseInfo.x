@@ -1,28 +1,28 @@
 /**
  * A simple `const` implementation of `DBInfo`.
  */
-const DatabaseInfo(String   name,
-                   Version  version,
-                   DateTime created,
-                   DateTime modified,
-                   DateTime accessed,
-                   Boolean  readable,
-                   Boolean  writable,
-                   Int      size,
+const DatabaseInfo(String  name,
+                   Version version,
+                   Time    created,
+                   Time    modified,
+                   Time    accessed,
+                   Boolean readable,
+                   Boolean writable,
+                   Int     size,
                   )
         implements DBInfo
     {
     /**
      * Create a copy of this `const` with only the specified properties modified.
      */
-    DatabaseInfo with(String?   name     = Null,
-                      Version?  version  = Null,
-                      DateTime? created  = Null,
-                      DateTime? modified = Null,
-                      DateTime? accessed = Null,
-                      Boolean?  readable = Null,
-                      Boolean?  writable = Null,
-                      Int?      size     = Null,
+    DatabaseInfo with(String?  name     = Null,
+                      Version? version  = Null,
+                      Time?    created  = Null,
+                      Time?    modified = Null,
+                      Time?    accessed = Null,
+                      Boolean? readable = Null,
+                      Boolean? writable = Null,
+                      Int?     size     = Null,
                      )
         {
         return new DatabaseInfo(name     = name     ?: this.name,

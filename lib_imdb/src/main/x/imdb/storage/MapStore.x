@@ -13,8 +13,8 @@ class MapStore<Key extends immutable Const, Value extends immutable Const>
     /**
      * The key/values and dates.
      */
-    protected Map<Key, Value>    contents = new HashMap<Key, Value>();
-    protected Map<Key, DateTime> dates    = new HashMap<Key, DateTime>();
+    protected Map<Key, Value> contents = new HashMap<Key, Value>();
+    protected Map<Key, Time>  dates    = new HashMap<Key, Time>();
 
     @Override
     MapStore put(Key key, Value value)
@@ -105,7 +105,7 @@ class MapStore<Key extends immutable Const, Value extends immutable Const>
                 contents.remove(key);
                 }
 
-            DateTime now = clock.now;
+            Time now = clock.now;
             for ((Key key, Value value) : change.added)
                 {
                 contents.put(key, value);

@@ -4065,8 +4065,8 @@ public class Parser
             case LIT_FLOATN:
             case LIT_BFLOAT16:
             case LIT_DATE:
+            case LIT_TIMEOFDAY:
             case LIT_TIME:
-            case LIT_DATETIME:
             case LIT_TIMEZONE:
             case LIT_DURATION:
             case LIT_VERSION:

@@ -205,7 +205,7 @@ interface Session
      * longer operational, which could be many years. This value does not indicate "when the user
      * started the app today", or "when the user logged on".
      */
-    @RO DateTime created;
+    @RO Time created;
 
     /**
      * The total number of requests that have been received that were associated with this session.
@@ -221,7 +221,7 @@ interface Session
      * This is the date/time that the most recent request related to this session was completed, or
      * if any requests are currently active, the date/time value will be "now".
      */
-    @RO DateTime lastUse;
+    @RO Time lastUse;
 
     /**
      * This is the last known IPAddress associated with the session. Each request has an IP address,
@@ -271,7 +271,7 @@ interface Session
     /**
      * This is the date/time that the session was last authenticated; otherwise `Null`.
      */
-    @RO DateTime? lastAuthenticated;
+    @RO Time? lastAuthenticated;
 
     /**
      * This is the current trust level associated with this session. Authentication will tend to

@@ -43,7 +43,7 @@ interface FileTemplate
      * The date/time at which the FileTemplate was created. The value is not Null for FileTemplates
      * that are read from a persistent storage.
      */
-    @RO DateTime? created;
+    @RO Time? created;
 
     /**
      * An array of qualified module names contained within this FileTemplate.

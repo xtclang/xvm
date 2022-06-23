@@ -15,7 +15,7 @@ service PseudoRandom(UInt seed = 0)
         if (seed == 0)
             {
             @Inject Clock clock;
-            DateTime now = clock.now;
+            Time now = clock.now;
 
             seed = (now.date.epochDay ^ now.timeOfDay.picos).magnitude;
             if (seed == 0)

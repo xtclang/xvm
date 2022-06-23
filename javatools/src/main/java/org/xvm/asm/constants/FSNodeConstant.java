@@ -54,8 +54,8 @@ public class FSNodeConstant
 
         m_fmt           = Format.FSDir;
         m_constName     = pool.ensureStringConstant(sName);
-        m_constCreated  = pool.ensureDateTimeConstant(ftCreated);
-        m_constModified = pool.ensureDateTimeConstant(ftModified);
+        m_constCreated  = pool.ensureTimeConstant(ftCreated);
+        m_constModified = pool.ensureTimeConstant(ftModified);
         m_constData     = pool.ensureArrayConstant(pool.ensureArrayType(pool.typeFileNode()), aFSNodes);
         }
 
@@ -88,8 +88,8 @@ public class FSNodeConstant
 
         m_fmt           = Format.FSFile;
         m_constName     = pool.ensureStringConstant(sName);
-        m_constCreated  = pool.ensureDateTimeConstant(ftCreated);
-        m_constModified = pool.ensureDateTimeConstant(ftModified);
+        m_constCreated  = pool.ensureTimeConstant(ftCreated);
+        m_constModified = pool.ensureTimeConstant(ftModified);
         m_constData     = pool.ensureByteStringConstant(ab);
         }
 
@@ -122,8 +122,8 @@ public class FSNodeConstant
 
         m_fmt           = Format.FSLink;
         m_constName     = pool.ensureStringConstant(sName);
-        m_constCreated  = pool.ensureDateTimeConstant(ftCreated);
-        m_constModified = pool.ensureDateTimeConstant(ftModified);
+        m_constCreated  = pool.ensureTimeConstant(ftCreated);
+        m_constModified = pool.ensureTimeConstant(ftModified);
         m_constData     = constLinkTo;
         }
 

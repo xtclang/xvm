@@ -698,8 +698,8 @@ class Lexer
                         return eatDateLiteral(before);
                     case "TimeOfDay":
                         return eatTimeOfDayLiteral(before);
-                    case "DateTime":
-                        return eatDateTimeLiteral(before);
+                    case "Time":
+                        return eatTimeLiteral(before);
                     case "TimeZone":
                         return eatTimeZoneLiteral(before);
                     case "Duration":
@@ -719,7 +719,7 @@ class Lexer
      * Lex a date literal token, starting with the colon.
      *
      * @param before    the position of the first character of the token
-     * @param embedded  True indicates that this literal value is part of a larger datetime value
+     * @param embedded  True indicates that this literal value is part of a larger time value
      *
      * @return id     the token id
      * @return value  the token value
@@ -765,7 +765,7 @@ class Lexer
      * Lex a time-of-day literal token, starting with the colon.
      *
      * @param before    the position of the first character of the token
-     * @param embedded  True indicates that this literal value is part of a larger datetime value
+     * @param embedded  True indicates that this literal value is part of a larger time value
      *
      * @return id     the token id
      * @return value  the token value
@@ -837,7 +837,7 @@ class Lexer
      * Lex a timezone literal token, starting with the colon.
      *
      * @param before    the position of the first character of the token
-     * @param embedded  True indicates that this literal value is part of a larger datetime value
+     * @param embedded  True indicates that this literal value is part of a larger time value
      *
      * @return id     the token id
      * @return value  the token value
@@ -906,7 +906,7 @@ class Lexer
      * @return id     the token id
      * @return value  the token value
      */
-    protected (Id id, DateTime value) eatDateTimeLiteral(TextPosition before)
+    protected (Id id, Time value) eatTimeLiteral(TextPosition before)
         {
         assert nextChar() == ':';
 
@@ -928,10 +928,10 @@ class Lexer
             }
         else
             {
-            log(Error, BadDatetime, [reader[before..reader.position).toString()], before, reader.position);
+            log(Error, BadTime, [reader[before..reader.position).toString()], before, reader.position);
             }
 
-        return LitDatetime, new DateTime(date, timeOfDay, timezone);
+        return LitTime, new Time(date, timeOfDay, timezone);
         }
 
     /**
@@ -1035,7 +1035,7 @@ class Lexer
 
         if (err || !any)
             {
-            log(Error, BadDatetime, [reader[before..reader.position).toString()], before, reader.position);
+            log(Error, BadTime, [reader[before..reader.position).toString()], before, reader.position);
             return LitDuration, NONE;
             }
 
@@ -2460,7 +2460,7 @@ class Lexer
         ExpectedDigits    ("LEXER-12", "\"{0}\" digits were required; only \"{1}\" digits were found."),
         BadDate           ("LEXER-13", "Invalid ISO-8601 date \"{0}\"; date must be in the format \"YYYY-MM-DD\" with valid values for each."),
         BadTimeOfDay      ("LEXER-14", "Invalid ISO-8601 time \"{0}\"; time-of-day must be in the format \"hh:mm:ss.sss\" or \"hhmmss.sss\" (with seconds and fractions of seconds optional) with valid values for each."),
-        BadDatetime       ("LEXER-15", "Invalid ISO-8601 datetime \"{0}\"; datetime must be in the format date+\"T\"+timeOfDay+timezone (with timezone optional), with valid values for each."),
+        BadTime           ("LEXER-15", "Invalid ISO-8601 datetime \"{0}\"; date/time must be in the format date+\"T\"+timeOfDay+timezone (with timezone optional), with valid values for each."),
         BadTimezone       ("LEXER-16", "Invalid ISO-8601 timezone \"{0}\"; timezone must be \"Z\" (for UTC), or in the format \"+hh:mm\" or \"+hhmm\" (using either \"+\" or \"-\", and with minutes optional) with valid values for each."),
         BadDuration       ("LEXER-17", "Invalid ISO-8601 duration \"{0}\"; duration must be in the format \"PnYnMnDTnHnMnS\" (with the year, month, day, and time-of-day value optional, and the hours, minutes, and seconds values optional within the time portion), with valid values for each."),
         UnexpectedChar    ("LEXER-18", "Unexpected character: \"{0}\"."),
@@ -2558,7 +2558,7 @@ class Lexer
 
                 case LitDate:      "Date:"      + value.toString();
                 case LitTimeOfDay: "TimeOfDay:" + value.toString();
-                case LitDatetime:  "DateTime:"  + value.toString();
+                case LitTime:      "Time:"      + value.toString();
                 case LitTimezone:  "TimeZone:"  + value.toString();
                 case LitDuration:  "Duration:"  + value.toString();
                 case LitVersion:   "Version:"   + value.toString();
@@ -2751,7 +2751,7 @@ class Lexer
         LitFloat     <FPLiteral >(Null             ),
         LitDate      <Date      >(Null             ),
         LitTimeOfDay <TimeOfDay >(Null             ),
-        LitDatetime  <DateTime  >(Null             ),
+        LitTime      <Time      >(Null             ),
         LitTimezone  <TimeZone  >(Null             ),
         LitDuration  <Duration  >(Null             ),
         LitVersion   <Version   >(Null             ),

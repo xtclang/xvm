@@ -168,7 +168,7 @@ interface DBProcessor<Message extends immutable Const>
     Boolean autoRetry(Message                  message,
                       CommitResult | Exception result,
                       Schedule?                when,
-                      Range<DateTime>          elapsed,
+                      Range<Time>              elapsed,
                       Int                      timesAttempted)
         {
         // TODO check repeating schedule+policy against start time and current time (abandon if it
@@ -232,7 +232,7 @@ interface DBProcessor<Message extends immutable Const>
     void abandon(Message                  message,
                  CommitResult | Exception result,
                  Schedule?                when,
-                 Range<DateTime>          elapsed,
+                 Range<Time>              elapsed,
                  Int                      timesAttempted)
         {
         String messageString;
@@ -440,7 +440,7 @@ interface DBProcessor<Message extends immutable Const>
     /**
      * Represents the schedule for a message to be processed.
      */
-    static const Schedule(DateTime?  scheduledAt    = Null,
+    static const Schedule(Time?      scheduledAt    = Null,
                           TimeOfDay? scheduledDaily = Null,
                           Duration?  repeatInterval = Null,
                           Policy     repeatPolicy   = AllowOverlapping,
@@ -467,7 +467,7 @@ interface DBProcessor<Message extends immutable Const>
         /**
          * Create a new Schedule from this Schedule with only the specified properties modified.
          */
-        Schedule with(DateTime?  scheduledAt    = Null,
+        Schedule with(Time?      scheduledAt    = Null,
                       TimeOfDay? scheduledDaily = Null,
                       Duration?  repeatInterval = Null,
                       Policy?    repeatPolicy   = Null,
@@ -538,7 +538,7 @@ interface DBProcessor<Message extends immutable Const>
          *
          * @return the new schedule
          */
-        Schedule at(DateTime when)
+        Schedule at(Time when)
             {
             return this.with(scheduledAt=when);
             }

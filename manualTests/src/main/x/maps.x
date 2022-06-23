@@ -652,7 +652,7 @@ module TestMaps
             }
         }
 
-    static DateTime now()
+    static Time now()
         {
         @Inject Clock clock;
         return clock.now;

@@ -786,9 +786,9 @@ public class Lexer
                                     case "Date":
                                         return eatDate(lInitPos, false);
                                     case "TimeOfDay":
-                                        return eatTime(lInitPos, false);
-                                    case "DateTime":
-                                        return eatDateTime(lInitPos);
+                                        return eatTimeOfDay(lInitPos, false);
+                                    case "Time":
+                                        return eatTime(lInitPos);
                                     case "TimeZone":
                                         return eatTimeZone(lInitPos);
                                     case "Duration":
@@ -1972,14 +1972,14 @@ public class Lexer
         }
 
     /**
-     * Eat a literal ISO-8601 time value.
+     * Eat a literal ISO-8601 time value (the Ecstasy "TimeOfDay" class).
      *
-     * @param lInitPos  the location of the start of the literal token
+     * @param lInitPos    the location of the start of the literal token
      * @param fContinued  true if this is just part of a larger literal
      *
      * @return the literal as a Token
      */
-    protected Token eatTime(long lInitPos, boolean fContinued)
+    protected Token eatTimeOfDay(long lInitPos, boolean fContinued)
         {
         final Source source = m_source;
         final long   lStart = source.getPosition();
@@ -2033,34 +2033,34 @@ public class Lexer
                     && (nMin >= 0 && nMin <= 59)
                     && (nSec >= 0 && nSec <= 59 || nMin == 59 && nSec == 60)))
                 {
-                log(Severity.ERROR, BAD_TIME, new Object[] {sTime}, lStart, lEnd);
+                log(Severity.ERROR, BAD_TIME_OF_DAY, new Object[] {sTime}, lStart, lEnd);
                 }
             }
 
-        return new Token(lInitPos, lEnd, Id.LIT_TIME, sTime);
+        return new Token(lInitPos, lEnd, Id.LIT_TIMEOFDAY, sTime);
         }
 
     /**
-     * Eat a literal ISO-8601 datetime value.
+     * Eat a literal ISO-8601 datetime value (the Ecstasy "Time" class).
      *
      * @param lInitPos  the location of the start of the literal token
      *
      * @return the literal as a Token
      */
-    protected Token eatDateTime(long lInitPos)
+    protected Token eatTime(long lInitPos)
         {
         Token tokDate = eatDate(lInitPos, true);
         if (!(match('t') || expect('T')))
             {
-            log(Severity.ERROR, BAD_DATETIME, new Object[] {tokDate.getValue()},
+            log(Severity.ERROR, BAD_TIME, new Object[] {tokDate.getValue()},
                     tokDate.getStartPosition(), tokDate.getEndPosition());
             return tokDate;
             }
 
-        Token tokTime = eatTime(lInitPos, true);
-        long  lEndPos = tokTime.getEndPosition();
+        Token tokTimeOfDay = eatTimeOfDay(lInitPos, true);
+        long  lEndPos      = tokTimeOfDay.getEndPosition();
 
-        String sDT = tokDate.getValue() + "T" + tokTime.getValue();
+        String sDT = tokDate.getValue() + "T" + tokTimeOfDay.getValue();
         if (match('Z') || match('z') || match('+') || match('-'))
             {
             m_source.rewind();
@@ -2069,7 +2069,7 @@ public class Lexer
             lEndPos = tokZone.getEndPosition();
             }
 
-        return new Token(lInitPos, lEndPos, Id.LIT_DATETIME, sDT);
+        return new Token(lInitPos, lEndPos, Id.LIT_TIME, sDT);
         }
 
     /**
@@ -3143,11 +3143,11 @@ public class Lexer
     /**
      * Invalid ISO-8601 time {0}; ...
      */
-    public static final String BAD_TIME             = "LEXER-14";
+    public static final String BAD_TIME_OF_DAY      = "LEXER-14";
     /**
      * Invalid ISO-8601 datetime {0}; ...
      */
-    public static final String BAD_DATETIME         = "LEXER-15";
+    public static final String BAD_TIME             = "LEXER-15";
     /**
      * Invalid ISO-8601 timezone {0}; ...
      */

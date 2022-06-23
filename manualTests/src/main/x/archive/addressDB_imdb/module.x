@@ -106,7 +106,7 @@ module AddressBookDB_imdb
             // ----- DBObject interface ------------------------------------------------------------
 
             @Override
-            Tuple dbInvoke(String | Function fn, Tuple args = Tuple:(), (Duration|DateTime)? when = Null)
+            Tuple dbInvoke(String | Function fn, Tuple args = Tuple:(), (Duration|Time)? when = Null)
                 {
                 if (fn == "addContact" && when == Null)
                     {

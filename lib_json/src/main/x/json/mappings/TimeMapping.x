@@ -1,19 +1,19 @@
 /**
- * A mapping for DateTime values.
+ * A mapping for Time values.
  */
-const DateTimeMapping
-        implements Mapping<DateTime>
+const TimeMapping
+        implements Mapping<Time>
     {
     @Override
     String typeName.get()
         {
-        return "DateTime";
+        return "Time";
         }
 
     @Override
     Serializable read(ElementInput in)
         {
-        return new DateTime(in.readString());
+        return new Time(in.readString());
         }
 
     @Override

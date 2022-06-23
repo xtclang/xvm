@@ -877,7 +877,7 @@ class Parser
             // to avoid generating confusing errors
             case "Date":
             case "TimeOfDay":
-            case "DateTime":
+            case "Time":
             case "TimeZone":
             case "Duration":
             case "Version":

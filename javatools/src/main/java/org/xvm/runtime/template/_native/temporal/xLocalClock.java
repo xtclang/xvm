@@ -58,7 +58,7 @@ public class xLocalClock
         markNativeProperty("now");
         markNativeProperty("timezone");
 
-        markNativeMethod("schedule", new String[]{"temporal.DateTime", "temporal.Clock.Alarm"}, null);
+        markNativeMethod("schedule", new String[]{"temporal.Time", "temporal.Clock.Alarm"}, null);
 
         getCanonicalType().invalidateTypeInfo();
         }
@@ -75,7 +75,7 @@ public class xLocalClock
         switch (sPropName)
             {
             case "now":
-                return frame.assignValue(iReturn, dateTimeNow(frame));
+                return frame.assignValue(iReturn, timeNow(frame));
 
             case "timezone":
                 return frame.assignValue(iReturn, timezone(frame));
@@ -136,17 +136,17 @@ public class xLocalClock
 
     // -----  helpers ------------------------------------------------------------------------------
 
-    protected GenericHandle dateTimeNow(Frame frame)
+    protected GenericHandle timeNow(Frame frame)
         {
-        TypeComposition clzDateTime = ensureDateTimeClass();
-        GenericHandle hDateTime = new GenericHandle(clzDateTime);
+        TypeComposition clzTime = ensureTimeClass();
+        GenericHandle   hTime   = new GenericHandle(clzTime);
 
         LongLong llNow = new LongLong(System.currentTimeMillis()).mul(PICOS_PER_MILLI_LL);
-        hDateTime.setField(frame, "epochPicos", xUInt128.INSTANCE.makeLongLong(llNow));
-        hDateTime.setField(frame, "timezone", timezone(frame));
-        hDateTime.makeImmutable();
+        hTime.setField(frame, "epochPicos", xUInt128.INSTANCE.makeLongLong(llNow));
+        hTime.setField(frame, "timezone", timezone(frame));
+        hTime.makeImmutable();
 
-        return hDateTime;
+        return hTime;
         }
 
     protected GenericHandle timezone(Frame frame)
@@ -176,13 +176,13 @@ public class xLocalClock
         return hTimeZone;
         }
 
-    protected TypeComposition ensureDateTimeClass()
+    protected TypeComposition ensureTimeClass()
         {
-        TypeComposition clz = m_clzDateTime;
+        TypeComposition clz = m_clzTime;
         if (clz == null)
             {
-            clz = m_clzDateTime =
-                f_container.getTemplate("temporal.DateTime").getCanonicalClass();
+            clz = m_clzTime =
+                f_container.getTemplate("temporal.Time").getCanonicalClass();
             }
         return clz;
         }
@@ -246,9 +246,9 @@ public class xLocalClock
     protected static final LongLong PICOS_PER_MILLI_LL = xNanosTimer.PICOS_PER_MILLI_LL;
 
     /**
-     * Cached DateTime class.
+     * Cached Time class.
      */
-    private TypeComposition m_clzDateTime;
+    private TypeComposition m_clzTime;
 
     /**
      * Cached TimeZone handle.

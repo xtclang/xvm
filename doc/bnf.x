@@ -850,8 +850,8 @@ Literal
     MapLiteral
     VersionLiteral
     DateLiteral
+    TimeOfDayLiteral
     TimeLiteral
-    DateTimeLiteral
     TimeZoneLiteral
     DurationLiteral
     PathLiteral
@@ -975,7 +975,7 @@ NonGAPrefix:        # note: not (!!!) case sensitive
 DateLiteral
     "Date:" Digit Digit Digit Digit "-" Digit Digit "-" Digit Digit         # NoWhitespace
 
-TimeLiteral
+TimeOfDayLiteral
     "TimeOfDay:" Digit Digit ":" Digit Digit Seconds-opt                    # NoWhitespace
 
 Seconds
@@ -985,8 +985,8 @@ SecondsFraction
      "." NoWhitespace Digits
 
 # with NoWhitespace
-DateTimeLiteral
-    "DateTime:" Digit Digit Digit Digit "-" Digit Digit "-" Digit Digit "T" Digit Digit ":" Digit Digit Seconds-opt TimeZone-opt
+TimeLiteral
+    "Time:" Digit Digit Digit Digit "-" Digit Digit "-" Digit Digit "T" Digit Digit ":" Digit Digit Seconds-opt TimeZone-opt
 
 TimeZoneLiteral
     "TimeZone:" NoWhitespace TimeZone

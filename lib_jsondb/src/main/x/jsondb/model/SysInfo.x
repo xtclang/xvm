@@ -1,10 +1,12 @@
+import Catalog.Status as CatStat;
+
 /**
  * Database system status record, stored in the root database directory as `/sys.json`.
  */
-const SysInfo(Catalog.Status status,
-              DateTime       stampedBy,
-              DateTime       updated,
-              Version?       version)
+const SysInfo(CatStat  status,
+              Time     stampedBy,
+              Time     updated,
+              Version? version)
     {
     /**
      * Create a SysInfo for the specified Catalog.
@@ -25,10 +27,10 @@ const SysInfo(Catalog.Status status,
      * @param updated    (optional) the time at which the status was last updated
      * @param version    (optional) the new version
      */
-    SysInfo with(Catalog.Status? status    = Null,
-                 DateTime?       stampedBy = Null,
-                 DateTime?       updated   = Null,
-                 Version?        version   = Null)
+    SysInfo with(CatStat? status    = Null,
+                 Time?    stampedBy = Null,
+                 Time?    updated   = Null,
+                 Version? version   = Null)
         {
         return new SysInfo(status    = status    ?: this.status,
                            stampedBy = stampedBy ?: this.stampedBy,

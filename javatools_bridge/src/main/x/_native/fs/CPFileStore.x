@@ -14,7 +14,7 @@ const CPFileStore(String path, Object constRoot)
     @Override
     @Lazy Directory root.calc()
         {
-        (Boolean isDir, String name, DateTime created, DateTime modified, Int size) = loadNode(constRoot);
+        (Boolean isDir, String name, Time created, Time modified, Int size) = loadNode(constRoot);
         assert isDir;
         return new CPDirectory(constRoot, this, Path.ROOT, created, modified, size);
         }
@@ -86,7 +86,7 @@ const CPFileStore(String path, Object constRoot)
                 }
             }
 
-        return new CPDirectory(Null, this, path, DateTime.EPOCH, DateTime.EPOCH, 0);
+        return new CPDirectory(Null, this, path, Time.EPOCH, Time.EPOCH, 0);
         }
 
     @Override
@@ -100,7 +100,7 @@ const CPFileStore(String path, Object constRoot)
                 }
             }
 
-        return new CPFile(Null, this, path, DateTime.EPOCH, DateTime.EPOCH, 0);
+        return new CPFile(Null, this, path, Time.EPOCH, Time.EPOCH, 0);
         }
 
     @Override
@@ -180,7 +180,7 @@ const CPFileStore(String path, Object constRoot)
     /**
      * Load meta-data for a node.
      */
-    static (Boolean isDir, String name, DateTime created, DateTime modified, Int size) loadNode(Object constNode)
+    static (Boolean isDir, String name, Time created, Time modified, Int size) loadNode(Object constNode)
         {
         TODO("native");
         }

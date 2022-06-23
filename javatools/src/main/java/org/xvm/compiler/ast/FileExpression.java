@@ -219,15 +219,15 @@ public class FileExpression
             {
             case "FileStore" ->
                 pool().ensureFileStoreConstant(sPath, pool.ensureDirectoryConstant(file.getName(),
-                    createdDateTime(pool, file), modifiedDateTime(pool, file), FSNodeConstant.NO_NODES));
+                    createdTime(pool, file), modifiedTime(pool, file), FSNodeConstant.NO_NODES));
 
             case "Directory" ->
                 pool.ensureDirectoryConstant(file.getName(),
-                    createdDateTime(pool, file), modifiedDateTime(pool, file), FSNodeConstant.NO_NODES);
+                    createdTime(pool, file), modifiedTime(pool, file), FSNodeConstant.NO_NODES);
 
             case "File" ->
                 pool.ensureFileConstant(file.getName(),
-                    createdDateTime(pool, file), modifiedDateTime(pool, file), new byte[0]);
+                    createdTime(pool, file), modifiedTime(pool, file), new byte[0]);
 
             default ->
                 throw new IllegalStateException("type=" + sType);
@@ -264,7 +264,7 @@ public class FileExpression
             }
 
         return pool.ensureDirectoryConstant(dir.getName(),
-                createdDateTime(pool, dir), modifiedDateTime(pool, dir), aConsts);
+                createdTime(pool, dir), modifiedTime(pool, dir), aConsts);
         }
 
     /**
@@ -282,7 +282,7 @@ public class FileExpression
         {
         byte[] ab = Handy.readFileBytes(file);
         return pool.ensureFileConstant(file.getName(),
-                createdDateTime(pool, file), modifiedDateTime(pool, file), ab);
+                createdTime(pool, file), modifiedTime(pool, file), ab);
         }
 
     /**
@@ -293,7 +293,7 @@ public class FileExpression
      *
      * @return the FileTime for the date/time that the file was created
      */
-    public static FileTime createdDateTime(ConstantPool pool, File file)
+    public static FileTime createdTime(ConstantPool pool, File file)
         {
         try
             {
@@ -314,7 +314,7 @@ public class FileExpression
      *
      * @return the FileTime for the date/time that the file was modified
      */
-    public static FileTime modifiedDateTime(ConstantPool pool, File file)
+    public static FileTime modifiedTime(ConstantPool pool, File file)
         {
         try
             {

@@ -193,11 +193,11 @@ const Date(Int epochDay)
     // ----- conversions ---------------------------------------------------------------------------
 
     /**
-     * @return a DateTime that corresponds to midnight (start of day) on this Date
+     * @return a Time that corresponds to midnight (start of day) on this Date
      */
-    DateTime toDateTime()
+    Time toTime()
         {
-        return new DateTime(this, TimeOfDay.MIDNIGHT, TimeZone.NoTZ);
+        return new Time(this, TimeOfDay.MIDNIGHT, TimeZone.NoTZ);
         }
 
 

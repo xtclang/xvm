@@ -22,13 +22,13 @@ class RTFileTemplate
     ModuleTemplate getModule(String name)               {TODO("native");}
 
     @Override
-    DateTime? created.get()
+    Time? created.get()
         {
         // see OSFileNode.created.get()
         Int createdMillis = this.createdMillis;
         return createdMillis == 0
                 ? Null
-                : new DateTime(createdMillis*TimeOfDay.PICOS_PER_MILLI);
+                : new Time(createdMillis*TimeOfDay.PICOS_PER_MILLI);
         }
 
 

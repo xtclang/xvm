@@ -75,7 +75,7 @@ import ObjectStore.PrepareResult;
  *   (3) TxManager enabled, (4) TxManager disabled.
  *
  * * The log archives are copies of the previous `txlog.json` files, from when those files passed a
- *   certain size threshold. They are named `txlog_<datetime>.json`
+ *   certain size threshold. They are named `txlog_<time>.json`
  *
  * An example of the transaction file format:
  *
@@ -260,13 +260,13 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
     /**
      * A snapshot of information about a transactional log file.
      */
-    static const LogFileInfo(String name, Range<Int> txIds, Int safepoint, Int size, DateTime timestamp)
+    static const LogFileInfo(String name, Range<Int> txIds, Int safepoint, Int size, Time timestamp)
         {
         LogFileInfo with(String?     name      = Null,
                          Range<Int>? txIds     = Null,
                          Int?        safepoint = Null,
                          Int?        size      = Null,
-                         DateTime?   timestamp = Null)
+                         Time?       timestamp = Null)
             {
             return new LogFileInfo(name      ?: this.name,
                                    txIds     ?: this.txIds,
@@ -306,7 +306,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
     /**
      * Previous modified date/time of the log.
      */
-    protected DateTime expectedLogTimestamp = EPOCH;
+    protected Time expectedLogTimestamp = EPOCH;
 
     /**
      * The JSON Schema to use (for system classes).
@@ -373,12 +373,12 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
     /**
      * Used to determine idleness.
      */
-    protected DateTime lastActivity = EPOCH;
+    protected Time lastActivity = EPOCH;
 
     /**
      * Used to determine when the next storage cleanup should occur.
      */
-    protected DateTime lastCleanupTime = EPOCH;
+    protected Time lastCleanupTime = EPOCH;
 
     /**
      * Used to determine when the next storage cleanup should occur.
@@ -3094,9 +3094,9 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      *
      * @param file  a possible log file
      *
-     * @return the DateTime that the LogFile was rotated, or Null if it is the current log file
+     * @return the Time that the LogFile was rotated, or Null if it is the current log file
      */
-    static conditional DateTime? isLogFile(File file)
+    static conditional Time? isLogFile(File file)
         {
         String name = file.name;
         if (name == "txlog.json")
@@ -3109,7 +3109,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             String timestamp = name[6..name.size-5);
             try
                 {
-                return True, new DateTime(timestamp);
+                return True, new Time(timestamp);
                 }
             catch (Exception e) {}
             }
@@ -3127,10 +3127,10 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      */
     static Ordered orderLogFiles(File file1, File file2)
         {
-        assert DateTime? dt1 := isLogFile(file1);
-        assert DateTime? dt2 := isLogFile(file2);
+        assert Time? dt1 := isLogFile(file1);
+        assert Time? dt2 := isLogFile(file2);
 
-        // sort the null datetime to the end, because it represents the "current" log file
+        // sort the null time to the end, because it represents the "current" log file
         return dt1? <=> dt2? : switch (dt1, dt2)
             {
             case (Null, Null): Equal;
@@ -3411,8 +3411,8 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 {
                 // the database is considered idle if no transactions are in the pipeline, and the
                 // most recent activity occurred sufficiently in the past
-                DateTime now  = clock.now;
-                Boolean  idle = currentlyPreparing == NO_TX && pendingPrepare.empty
+                Time    now  = clock.now;
+                Boolean idle = currentlyPreparing == NO_TX && pendingPrepare.empty
                         && now - lastActivity > Duration:1s;
                 if (idle)
                     {

@@ -22,12 +22,12 @@ interface DBTransaction<Schema extends RootSchema>
     /**
      * When the transaction began.
      */
-    @RO DateTime created;
+    @RO Time created;
 
     /**
      * When the transaction closed with a commit or roll-back.
      */
-    @RO DateTime? retired;
+    @RO Time? retired;
 
     /**
      * The time consumed by the transaction, from creation to the beginning of the commit.

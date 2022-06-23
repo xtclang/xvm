@@ -61,7 +61,7 @@ interface FileNode
      * The date/time at which the file node was created. The value has no meaning for a
      * file-node that does not exist, or in a file system that does not track creation times.
      */
-    @RO DateTime created;
+    @RO Time created;
 
     /**
      * The date/time at which the file node was last modified. The value has no meaning for a
@@ -72,13 +72,13 @@ interface FileNode
      * @throws AccessDenied  if an attempt is made to modify the value, and permission to change the
      *                       metadata for the file has not been granted
      */
-    DateTime modified;
+    Time modified;
 
     /**
      * The date/time at which the file node was last accessed. The value has no meaning for a
      * file-node that does not exist, or in a file system that does not track access times.
      */
-    @RO DateTime accessed;
+    @RO Time accessed;
 
     /**
      * True iff the file node is readable.

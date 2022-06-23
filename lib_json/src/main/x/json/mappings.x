@@ -49,7 +49,7 @@ package mappings
 
         new DateMapping(),
         new TimeMapping(),
-        new DateTimeMapping(),
+        new TimeMapping(),
         new TimeZoneMapping(),
         new DurationMapping(),
 

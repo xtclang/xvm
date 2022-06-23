@@ -18,19 +18,19 @@ interface DBInfo
      * The date/time at which the database was created. The value has no meaning for a database
      * that does not retain the creation time.
      */
-    @RO DateTime created;
+    @RO Time created;
 
     /**
      * The date/time at which the database was last modified. The value has no meaning for a
      * database that does not retain the last modification time.
      */
-    @RO DateTime modified;
+    @RO Time modified;
 
     /**
      * The date/time at which data in the database was last accessed. The value has no meaning
      * for a database that does not retain the last access time.
      */
-    @RO DateTime accessed;
+    @RO Time accessed;
 
     /**
      * True iff the database is readable.

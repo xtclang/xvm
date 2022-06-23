@@ -5,7 +5,7 @@ service LocalClock
         implements Clock
     {
     @Override
-    @RO DateTime now;
+    @RO Time now;
 
     @Override
     @RO TimeZone timezone;
@@ -23,5 +23,5 @@ service LocalClock
         }
 
     @Override
-    Cancellable schedule(DateTime when, Alarm alarm);
+    Cancellable schedule(Time when, Alarm alarm);
     }

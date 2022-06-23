@@ -162,7 +162,7 @@ module TestServices
             }
         }
 
-    static DateTime now()
+    static Time now()
         {
         @Inject Clock clock;
         return clock.now;
@@ -170,7 +170,7 @@ module TestServices
 
     static String tag()
         {
-        static DateTime base = now();
+        static Time base = now();
         return $"{(now() - base).seconds}:\t" + (this:service.serviceName == "TestService" ? "[svc ]" : "[main]");
         }
     }

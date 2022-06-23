@@ -15,8 +15,8 @@ module TestLiterals
         testHex();
         testDirs();
         testDates();
+        testTimeOfDays();
         testTimes();
-        testDateTimes();
         testDurations();
 //        testLexer();
         }
@@ -289,9 +289,9 @@ module TestLiterals
         console.println($"date={date} or {Date:9999-01-23} (one less 9)");
         }
 
-    void testTimes()
+    void testTimeOfDays()
         {
-        console.println("\n** testTimes()");
+        console.println("\n** testTimeOfDays()");
 
         TimeOfDay timeOfDay = new TimeOfDay("12:01:23");
         console.println($"timeOfDay={timeOfDay} or {TimeOfDay:12:01:23}");
@@ -306,27 +306,27 @@ module TestLiterals
         console.println($"timeOfDay={timeOfDay} or {TimeOfDay:120123.456}");
         }
 
-    void testDateTimes()
+    void testTimes()
         {
-        console.println("\n** testDateTimes()");
+        console.println("\n** testTimes()");
 
-        DateTime dt = new DateTime("1999-12-25T12:01:23");
-        console.println($"dt={dt} or {DateTime:1999-12-25T12:01:23}");
+        Time dt = new Time("1999-12-25T12:01:23");
+        console.println($"dt={dt} or {Time:1999-12-25T12:01:23}");
 
-        dt = new DateTime("19991225T120123");
-        console.println($"dt={dt} or {DateTime:19991225T120123}");
+        dt = new Time("19991225T120123");
+        console.println($"dt={dt} or {Time:19991225T120123}");
 
-        dt = new DateTime("99999-01-23T12:01:23.456");
-        console.println($"dt={dt} or {DateTime:9999-01-23T12:01:23.456} (one less 9)");
+        dt = new Time("99999-01-23T12:01:23.456");
+        console.println($"dt={dt} or {Time:9999-01-23T12:01:23.456} (one less 9)");
 
-        dt = new DateTime("2019-05-22T120123.456Z");
-        console.println($"dt={dt} or {DateTime:2019-05-22T120123.456Z}");
+        dt = new Time("2019-05-22T120123.456Z");
+        console.println($"dt={dt} or {Time:2019-05-22T120123.456Z}");
 
-        dt = new DateTime("2019-05-22T120123.456+01:30");
-        console.println($"dt={dt} or {DateTime:2019-05-22T120123.456+01:30}");
+        dt = new Time("2019-05-22T120123.456+01:30");
+        console.println($"dt={dt} or {Time:2019-05-22T120123.456+01:30}");
 
-        dt = new DateTime("2019-05-22T120123.456-5:00");
-        console.println($"dt={dt} or {DateTime:2019-05-22T120123.456-05:00}");
+        dt = new Time("2019-05-22T120123.456-5:00");
+        console.println($"dt={dt} or {Time:2019-05-22T120123.456-05:00}");
         }
 
     void testDurations()

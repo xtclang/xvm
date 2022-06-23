@@ -106,16 +106,16 @@ public class xConst
             NIBBLE_CONSTRUCT = f_container.getClassStructure("numbers.Nibble").
                 findMethod("construct", 1, typeBitArray);
 
-            // DateTime support
-            DATETIME_CONSTRUCT = f_container.getClassStructure("temporal.DateTime").
+            // Time support
+            TIME_CONSTRUCT      = f_container.getClassStructure("temporal.Time").
                 findMethod("construct", 1, pool.typeString());
-            DATE_CONSTRUCT     = f_container.getClassStructure("temporal.Date").
+            DATE_CONSTRUCT      = f_container.getClassStructure("temporal.Date").
                 findMethod("construct", 1, pool.typeString());
-            TIME_CONSTRUCT     = f_container.getClassStructure("temporal.TimeOfDay").
+            TIMEOFDAY_CONSTRUCT = f_container.getClassStructure("temporal.TimeOfDay").
                 findMethod("construct", 1, pool.typeString());
-            DURATION_CONSTRUCT = f_container.getClassStructure("temporal.Duration").
+            DURATION_CONSTRUCT  = f_container.getClassStructure("temporal.Duration").
                 findMethod("construct", 1, pool.typeString());
-            VERSION_CONSTRUCT = f_container.getClassStructure("reflect.Version").
+            VERSION_CONSTRUCT   = f_container.getClassStructure("reflect.Version").
                 findMethod("construct", 1, pool.typeString());
 
             PATH_CONSTRUCT = f_container.getClassStructure("fs.Path").
@@ -166,9 +166,9 @@ public class xConst
             MethodStructure constructor;
             switch (constant.getFormat())
                 {
-                case DateTime:
-                    clz         = ensureClass(container, pool.typeDateTime());
-                    constructor = DATETIME_CONSTRUCT;
+                case Time:
+                    clz         = ensureClass(container, pool.typeTime());
+                    constructor = TIME_CONSTRUCT;
                     break;
 
                 case Date:
@@ -177,8 +177,8 @@ public class xConst
                     break;
 
                 case TimeOfDay:
-                    clz         = ensureClass(container, pool.typeTime());
-                    constructor = TIME_CONSTRUCT;
+                    clz         = ensureClass(container, pool.typeTimeOfDay());
+                    constructor = TIMEOFDAY_CONSTRUCT;
                     break;
 
                 case Duration:
@@ -785,9 +785,9 @@ public class xConst
     private static MethodStructure FN_FREEZE;
     private static MethodStructure RANGE_CONSTRUCT;
     private static MethodStructure NIBBLE_CONSTRUCT;
-    private static MethodStructure DATETIME_CONSTRUCT;
-    private static MethodStructure DATE_CONSTRUCT;
     private static MethodStructure TIME_CONSTRUCT;
+    private static MethodStructure DATE_CONSTRUCT;
+    private static MethodStructure TIMEOFDAY_CONSTRUCT;
     private static MethodStructure DURATION_CONSTRUCT;
     private static MethodStructure VERSION_CONSTRUCT;
     private static MethodStructure PATH_CONSTRUCT;

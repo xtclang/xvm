@@ -270,7 +270,7 @@ service JsonProcessorStore<Message extends immutable Const>
         }
 
     @Override
-    void processCompleted(Int txId, Message message, Int pid, Range<DateTime> elapsed)
+    void processCompleted(Int txId, Message message, Int pid, Range<Time> elapsed)
         {
         assert Changes tx := checkTx(txId, writing=True);
 
@@ -290,13 +290,13 @@ service JsonProcessorStore<Message extends immutable Const>
         }
 
     @Override
-    void retryPending(Int txId, Message message, Int pid, Range<DateTime> elapsed, CommitResult | Exception result)
+    void retryPending(Int txId, Message message, Int pid, Range<Time> elapsed, CommitResult | Exception result)
         {
         TODO
         }
 
     @Override
-    void abandonPending(Int txId, Message message, Int pid, Range<DateTime> elapsed, CommitResult | Exception result)
+    void abandonPending(Int txId, Message message, Int pid, Range<Time> elapsed, CommitResult | Exception result)
         {
         TODO
         }
@@ -1085,14 +1085,14 @@ service JsonProcessorStore<Message extends immutable Const>
 
     private void appendJsonSchedule(StringBuffer buf, Pid pid, Schedule? schedule)
         {
-        // {"pid":[Int],"s":{"at":[DateTime],"daily":[TimeOfDay],"repeat":[Duration],"policy":[Policy],"priority":[Priority]}}
+        // {"pid":[Int],"s":{"at":[Time],"daily":[TimeOfDay],"repeat":[Duration],"policy":[Policy],"priority":[Priority]}}
         if (schedule == Null)
             {
             buf.append($"\{\"pid\":{pid}}");
             return;
             }
 
-        DateTime?  scheduledAt    = schedule.scheduledAt;
+        Time?      scheduledAt    = schedule.scheduledAt;
         TimeOfDay? scheduledDaily = schedule.scheduledDaily;
         Duration?  repeatInterval = schedule.repeatInterval;
         Policy     repeatPolicy   = schedule.repeatPolicy;

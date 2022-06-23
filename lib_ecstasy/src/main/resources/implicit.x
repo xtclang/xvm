@@ -156,7 +156,7 @@ import ecstasy.reflect.Var;
 import ecstasy.reflect.Version;
 
 import ecstasy.temporal.Date;
-import ecstasy.temporal.DateTime;
+import ecstasy.temporal.Time;
 import ecstasy.temporal.Clock;
 import ecstasy.temporal.Duration;
 import ecstasy.temporal.TimeOfDay;

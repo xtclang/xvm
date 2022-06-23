@@ -173,7 +173,7 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
      * This property will only have a dependable value when the storage is not closed and/or has
      * completed either a quick scan or a deep scan.
      */
-    public/protected DateTime? lastAccessed = Null;
+    public/protected Time? lastAccessed = Null;
 
     /**
      * Statistics: The last time that the storage was modified. Null indicates no record of
@@ -182,7 +182,7 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
      * This property will only have a dependable value when the storage is not closed and/or has
      * completed either a quick scan or a deep scan.
      */
-    public/protected DateTime? lastModified = Null;
+    public/protected Time? lastModified = Null;
 
     /**
      * Determine if this ObjectStore for a DBObject is allowed to write to disk. True iff the

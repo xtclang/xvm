@@ -300,11 +300,11 @@ interface DataOutput
         }
 
     /**
-     * Write a DateTime value to the stream.
+     * Write a Time value to the stream.
      *
-     * @param value  a value of type DateTime to write to the stream
+     * @param value  a value of type Time to write to the stream
      */
-    void writeDateTime(DateTime value)
+    void writeTime(Time value)
         {
         writeInt128(value.epochPicos);
         writeTimeZone(value.timezone);

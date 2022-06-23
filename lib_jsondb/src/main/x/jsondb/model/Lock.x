@@ -2,8 +2,8 @@
  * Database lock record, stored (for the duration of a state change) in the root database directory
  * as `/sys.lock`.
  */
-const Lock(DateTime stampedBy,
-           DateTime created)
+const Lock(Time stampedBy,
+           Time created)
     {
     construct(Catalog catalog)
         {

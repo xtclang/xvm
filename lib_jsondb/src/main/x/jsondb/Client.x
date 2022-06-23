@@ -379,7 +379,7 @@ service Client<Schema extends RootSchema>
      * @return the elapsed processing time
      * @return the exceptional processing failure, iff the processing failed
      */
-    <Message extends immutable Const> (Range<DateTime>, Exception?) processMessage(Int dboId, Int pid, Message message)
+    <Message extends immutable Const> (Range<Time>, Exception?) processMessage(Int dboId, Int pid, Message message)
         {
         assert internal;
 
@@ -440,7 +440,7 @@ service Client<Schema extends RootSchema>
             Message                  message,
             CommitResult | Exception result,
             Schedule?                when,
-            Range<DateTime>          elapsed,
+            Range<Time>              elapsed,
             Int                      timesAttempted,
             Boolean                  abandoning,
             )
@@ -2176,10 +2176,10 @@ service Client<Schema extends RootSchema>
         @Override
         conditional List<
                          DBLog<Value>.        // TODO GG why is "DBLog<Value>." required for "Entry"
-                         Entry> select((Range<DateTime>|Duration)? period = Null,
-                                       DBUser?                     user   = Null,
-                                       (UInt|Range<UInt>)?         txIds  = Null,
-                                       String?                     txName = Null)
+                         Entry> select((Range<Time>|Duration)? period = Null,
+                                       DBUser?                 user   = Null,
+                                       (UInt|Range<UInt>)?     txIds  = Null,
+                                       String?                 txName = Null)
             {
             // TODO
             return False;
@@ -2315,12 +2315,12 @@ service Client<Schema extends RootSchema>
          * @return the elapsed processing time
          * @return the exceptional processing failure, iff the processing failed
          */
-        (Range<DateTime>, Exception?) process_(Int pid, Message message)
+        (Range<Time>, Exception?) process_(Int pid, Message message)
             {
-            Transaction     tx      = requireTransaction_("process()");
-            Exception?      failure = Null;
-            DateTime        start   = clock.now;
-            Range<DateTime> elapsed;
+            Transaction tx      = requireTransaction_("process()");
+            Exception?  failure = Null;
+            Time        start   = clock.now;
+            Range<Time> elapsed;
             try
                 {
                 process(message);
@@ -2364,7 +2364,7 @@ service Client<Schema extends RootSchema>
         Boolean autoRetry(Message                  message,
                           CommitResult | Exception result,
                           Schedule?                when,
-                          Range<DateTime>          elapsed,
+                          Range<Time>              elapsed,
                           Int                      timesAttempted)
             {
             using (val tx = ensureTransaction(this))
@@ -2378,7 +2378,7 @@ service Client<Schema extends RootSchema>
          */
         void retrying_(Message                  message,
                        Int                      pid,
-                       Range<DateTime>          elapsed,
+                       Range<Time>              elapsed,
                        CommitResult | Exception result)
             {
             Transaction tx = requireTransaction_("retryPending()");
@@ -2390,7 +2390,7 @@ service Client<Schema extends RootSchema>
          */
         void abandoning_(Message                  message,
                          Int                      pid,
-                         Range<DateTime>          elapsed,
+                         Range<Time>              elapsed,
                          CommitResult | Exception result)
             {
             Transaction tx = requireTransaction_("abandonPending()");
@@ -2401,7 +2401,7 @@ service Client<Schema extends RootSchema>
         void abandon(Message                  message,
                      CommitResult | Exception result,
                      Schedule?                when,
-                     Range<DateTime>          elapsed,
+                     Range<Time>              elapsed,
                      Int                      timesAttempted)
             {
             using (val tx = ensureTransaction(this))

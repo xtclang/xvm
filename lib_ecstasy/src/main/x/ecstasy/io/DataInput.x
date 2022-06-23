@@ -248,11 +248,11 @@ interface DataInput
         }
 
     /**
-     * @return  a value of type DateTime read from the stream
+     * @return  a value of type Time read from the stream
      */
-    DateTime readDateTime()
+    Time readTime()
         {
-        return new DateTime(readInt128(), readTimeZone());
+        return new Time(readInt128(), readTimeZone());
         }
 
     /**

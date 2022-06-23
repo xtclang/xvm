@@ -37,7 +37,7 @@ mixin SoftVar<Referent>(function void ()? notify)
      * soft references are *not* cleared. Furthermore, the garbage collector is permitted to alter
      * or reset this value, so this value should not be trusted as authoritative.
      */
-    public/private DateTime? lastAccessTime;
+    public/private Time? lastAccessTime;
 
     /**
      * The number of times that this reference has been accessed, maintained for the use of the
@@ -69,9 +69,9 @@ mixin SoftVar<Referent>(function void ()? notify)
             {
             // TODO assert (&this).incorporates_(LazyVar);
 
-            DateTime start = clock.now;
+            Time     start = clock.now;
             Referent value = super();
-            DateTime stop  = clock.now;
+            Time     stop  = clock.now;
 
             ++accessCount;
             lastAccessTime   = stop;

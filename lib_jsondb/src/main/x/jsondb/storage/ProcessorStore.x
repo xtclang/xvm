@@ -83,7 +83,7 @@ interface ProcessorStore<Message extends immutable Const>
      * @param pid      the process id
      * @param elapsed  the interval of time that the processing consumed
      */
-    void processCompleted(Int txId, Message message, Int pid, Range<DateTime> elapsed);
+    void processCompleted(Int txId, Message message, Int pid, Range<Time> elapsed);
 
     /**
      * Notification of a decision to retry. Whether or not the transaction commits, the information
@@ -95,7 +95,7 @@ interface ProcessorStore<Message extends immutable Const>
      * @param elapsed  the interval of time that the processing consumed
      * @param result   the indication of the failure
      */
-    void retryPending(Int txId, Message message, Int pid, Range<DateTime> elapsed, CommitResult | Exception result);
+    void retryPending(Int txId, Message message, Int pid, Range<Time> elapsed, CommitResult | Exception result);
 
     /**
      * Notification of a decision to abandon. Whether or not the transaction commits, the
@@ -107,5 +107,5 @@ interface ProcessorStore<Message extends immutable Const>
      * @param elapsed  the interval of time that the processing consumed
      * @param result   the indication of the failure
      */
-    void abandonPending(Int txId, Message message, Int pid, Range<DateTime> elapsed, CommitResult | Exception result);
+    void abandonPending(Int txId, Message message, Int pid, Range<Time> elapsed, CommitResult | Exception result);
     }

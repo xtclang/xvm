@@ -1,7 +1,7 @@
 /**
  * A mapping for TimeOfDay values.
  */
-const TimeMapping
+const TimeOfDayMapping
         implements Mapping<TimeOfDay>
     {
     @Override

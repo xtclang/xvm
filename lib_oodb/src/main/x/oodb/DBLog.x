@@ -22,9 +22,9 @@ interface DBLog<Element extends immutable Const>
     interface Entry
         {
         /**
-         * The `DateTime` that the item was logged.
+         * The `Time` that the item was logged.
          */
-        @RO DateTime datetime;
+        @RO Time time;
 
         /**
          * The `DBUser` that the item was logged on behalf of.
@@ -63,10 +63,10 @@ interface DBLog<Element extends immutable Const>
      *         entries were selected
      * @return (conditional) a `List` that represents the selected log entries
      */
-    conditional List<Entry> select((Range<DateTime>|Duration)? period = Null,
-                                   DBUser?                     user   = Null,
-                                   (UInt|Range<UInt>)?         txIds  = Null,
-                                   String?                     txName = Null);
+    conditional List<Entry> select((Range<Time>|Duration)? period = Null,
+                                   DBUser?                 user   = Null,
+                                   (UInt|Range<UInt>)?     txIds  = Null,
+                                   String?                 txName = Null);
 
 
     // ----- transactional information -------------------------------------------------------------

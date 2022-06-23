@@ -1,13 +1,13 @@
 /**
- * A DateTime is a value that can provide Date and TimeOfDay information based on a combination of the
+ * A Time is a value that can provide Date and TimeOfDay information based on a combination of the
  * number of picoseconds elapsed since 1970-01-01T00:00:00Z, and a TimeZone.
  *
- * The DateTime _renders_ dates according to the Gregorian calendar, which began on 1582-10-15.
+ * The Time _renders_ dates according to the Gregorian calendar, which began on 1582-10-15.
  */
-const DateTime(Int128 epochPicos, TimeZone timezone = UTC)
+const Time(Int128 epochPicos, TimeZone timezone = UTC)
     {
     /**
-     * Create a new DateTime based on a Date, a TimeOfDay, and a TimeZone.
+     * Create a new Time based on a Date, a TimeOfDay, and a TimeZone.
      *
      * @param date       the date value
      * @param timeOfDay  the time-of-day value
@@ -24,13 +24,13 @@ const DateTime(Int128 epochPicos, TimeZone timezone = UTC)
                      + timeOfDay.picos.toInt128()
                      - timezone.picos.toInt128();
 
-        construct DateTime(picos, timezone);
+        construct Time(picos, timezone);
         }
 
     /**
-     * Construct a DateTime from an ISO-8601 date and time-of-day string with optional timezone.
+     * Construct a Time from an ISO-8601 date and time-of-day string with optional timezone.
      *
-     * @param dt  the datetime value in an ISO-8601 format (or alternatively, in the format
+     * @param dt  the Time value in an ISO-8601 format (or alternatively, in the format
      *            produced by the [toString] method)
      */
     construct(String dt)
@@ -66,7 +66,7 @@ const DateTime(Int128 epochPicos, TimeZone timezone = UTC)
 
                 Date      date      = new Date(dt[0..timeOffset));
                 TimeOfDay timeOfDay = new TimeOfDay(dt[timeOffset+1..tzOffset));
-                construct DateTime(date, timeOfDay, zone);
+                construct Time(date, timeOfDay, zone);
                 return;
                 }
             }
@@ -77,35 +77,35 @@ const DateTime(Int128 epochPicos, TimeZone timezone = UTC)
             Date      date      = new Date(parts[0]);
             TimeOfDay timeOfDay = new TimeOfDay(parts[1]);
             TimeZone  zone      = parts.size == 3 ? new TimeZone(parts[2]) : TimeZone.NoTZ;
-            construct DateTime(date, timeOfDay, zone);
+            construct Time(date, timeOfDay, zone);
             return;
             }
 
-        throw new IllegalArgument($"invalid ISO-8601 datetime: \"{dt}\"");
+        throw new IllegalArgument($"invalid ISO-8601 Time: \"{dt}\"");
         }
 
-    static DateTime EPOCH = new DateTime(0, UTC);
+    static Time EPOCH = new Time(0, UTC);
 
 
     // ----- withers -------------------------------------------------------------------------------
 
     /**
-     * Create a new DateTime based on this DateTime, but with the Date and/or TimeOfDay and/or TimeZone
+     * Create a new Time based on this Time, but with the Date and/or TimeOfDay and/or TimeZone
      * replaced with a new value.
      *
      * @param date       (optional) the new date value
      * @param timeOfDay  (optional) the new time-of-day value
      * @param timezone   (optional) the new timezone value
      *
-     * @return the new DateTime
+     * @return the new Time
      */
-    DateTime with(Date?      date      = Null,
-                  TimeOfDay? timeOfDay = Null,
-                  TimeZone?  timezone  = Null)
+    Time with(Date?      date      = Null,
+              TimeOfDay? timeOfDay = Null,
+              TimeZone?  timezone  = Null)
         {
-        return new DateTime(date      ?: this.date,
-                            timeOfDay ?: this.timeOfDay,
-                            timezone  ?: this.timezone);
+        return new Time(date      ?: this.date,
+                        timeOfDay ?: this.timeOfDay,
+                        timezone  ?: this.timezone);
         }
 
 
@@ -142,14 +142,14 @@ const DateTime(Int128 epochPicos, TimeZone timezone = UTC)
         }
 
     /**
-     * The TimeZone of the DateTime value.
+     * The TimeZone of the Time value.
      */
     TimeZone timezone;
 
     /**
-     * For a DateTime value, obtain the UTC DateTime value.
+     * For a Time value, obtain the UTC Time value.
      */
-    DateTime utc()
+    Time utc()
         {
         return TimeZone.UTC.adopt(this);
         }
@@ -158,47 +158,47 @@ const DateTime(Int128 epochPicos, TimeZone timezone = UTC)
     // ----- operators -----------------------------------------------------------------------------
 
     /**
-     * Add a Duration to this DateTime, resulting in a DateTime.
+     * Add a Duration to this Time, resulting in a Time.
      */
-    @Op("+") DateTime add(Duration duration)
+    @Op("+") Time add(Duration duration)
         {
-        return new DateTime(epochPicos + duration.picoseconds.toInt128(), timezone);
+        return new Time(epochPicos + duration.picoseconds.toInt128(), timezone);
         }
 
     /**
-     * Subtract a Duration from this DateTime, resulting in a DateTime.
+     * Subtract a Duration from this Time, resulting in a Time.
      */
-    @Op("-") DateTime sub(Duration duration)
+    @Op("-") Time sub(Duration duration)
         {
-        return new DateTime(epochPicos - duration.picoseconds.toInt128(), timezone);
+        return new Time(epochPicos - duration.picoseconds.toInt128(), timezone);
         }
 
     /**
-     * Subtract a second DateTime from this DateTime, resulting in a Duration that represents the
-     * difference between the two DateTime values. It is an error for the DateTime to subtract (the
+     * Subtract a second Time from this Time, resulting in a Duration that represents the
+     * difference between the two Time values. It is an error for the Time to subtract (the
      * subtrahend) to be greater than the DataTime being subtracted from (minuend). It is an error
-     * for exactly one of the two DateTime values to use the NoTZ TimeZone, as DateTime values with
-     * a real TimeZone cannot be compared to DateTime values that use the NoTZ TimeZone.
+     * for exactly one of the two Time values to use the NoTZ TimeZone, as Time values with
+     * a real TimeZone cannot be compared to Time values that use the NoTZ TimeZone.
      */
-    @Op("-") Duration sub(DateTime datetime)
+    @Op("-") Duration sub(Time time)
         {
-        assert this.timezone.isNoTZ == datetime.timezone.isNoTZ;
-        return new Duration((this.epochPicos - datetime.epochPicos).toUInt128());
+        assert this.timezone.isNoTZ == time.timezone.isNoTZ;
+        return new Duration((this.epochPicos - time.epochPicos).toUInt128());
         }
 
     /**
-     * Compare two DateTime values for order.
+     * Compare two Time values for order.
      */
-    static <CompileType extends DateTime> Ordered compare(CompileType value1, CompileType value2)
+    static <CompileType extends Time> Ordered compare(CompileType value1, CompileType value2)
         {
         assert value1.timezone.isNoTZ == value2.timezone.isNoTZ;
         return value1.epochPicos <=> value2.epochPicos;
         }
 
     /**
-     * Compare two DateTime values for equality.
+     * Compare two Time values for equality.
      */
-    static <CompileType extends DateTime> Boolean equals(CompileType value1, CompileType value2)
+    static <CompileType extends Time> Boolean equals(CompileType value1, CompileType value2)
         {
         assert value1.timezone.isNoTZ == value2.timezone.isNoTZ;
         return value1.epochPicos == value2.epochPicos;

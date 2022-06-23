@@ -1,22 +1,22 @@
 /**
- * A TimeZone contains the necessary information to convert a UTC DateTime value into a localized
+ * A TimeZone contains the necessary information to convert a UTC Time value into a localized
  * Date and TimeOfDay value.
  *
  * There are four categories of TimeZones:
- * * UTC - Raw, unadjusted, universally-coordinated DateTime information. This is the internal form
- *   of the information held by DateTime, such that all DateTime conversions are performed starting
- *   from UTC data, and all DateTime values with a legitimate TimeZone can be trivially converted to
+ * * UTC - Raw, unadjusted, universally-coordinated Time information. This is the internal form
+ *   of the information held by Time, such that all Time conversions are performed starting
+ *   from UTC data, and all Time values with a legitimate TimeZone can be trivially converted to
  *   UTC data (or to any other TimeZone).
  * * Fixed - an offset from UTC measured in terms of picoseconds, but generally measured in terms of
  *   hour, half-hour, or quarter-hour increments, and optionally associated with a timezone name.
  * * Rule-Based - Represents a complex timezone in which more than one fixed offset has been or will
  *   be used at some point in time. The most common example is Daylight Savings Time, which allows
  *   a single Rule-Based TimeZone to provide two different Fixed TimeZone instances, with the
- *   selection of the Fixed TimeZone being a function of the underlying UTC DateTime. Far more
+ *   selection of the Fixed TimeZone being a function of the underlying UTC Time. Far more
  *   complex examples exist, such as "America/New_York", which has well over a dozen historical
  *   rules.
  * * The "Un"-TimeZone - a special TimeZone that specifies the absence of any TimeZone information,
- *   useful for acting like a UTC time, but whose DateTime values are incapable of being compared
+ *   useful for acting like a UTC time, but whose Time values are incapable of being compared
  *   with those of any other TimeZone.
  */
 const TimeZone(Int picos, String? name = Null)
@@ -133,9 +133,9 @@ const TimeZone(Int picos, String? name = Null)
             }
 
         @Override
-        TimeZone resolve(DateTime datetime)
+        TimeZone resolve(Time time)
             {
-            assert datetime.timezone.isUTC;
+            assert time.timezone.isUTC;
             return this;
             }
 
@@ -170,9 +170,9 @@ const TimeZone(Int picos, String? name = Null)
             }
 
         @Override
-        TimeZone resolve(DateTime datetime)
+        TimeZone resolve(Time time)
             {
-            assert datetime.timezone.isNoTZ;
+            assert time.timezone.isNoTZ;
             return this;
             }
 
@@ -189,12 +189,12 @@ const TimeZone(Int picos, String? name = Null)
             }
 
         @Override
-        DateTime adopt(DateTime orig)
+        Time adopt(Time orig)
             {
             // strip off the timezone, but leave the date and time-of-day reflecting what the
             // original TimeZone would have calculated
             // note: this only supports dates on or after 1582-10-15 on the Gregorian calendar
-            return orig.timezone.isNoTZ ? orig : new DateTime(orig.date, orig.timeOfDay, this);
+            return orig.timezone.isNoTZ ? orig : new Time(orig.date, orig.timeOfDay, this);
             }
         };
 
@@ -228,13 +228,13 @@ const TimeZone(Int picos, String? name = Null)
         }
 
     /**
-     * Using this TimeZone information, obtain a TimeZone for the given DateTime that
+     * Using this TimeZone information, obtain a TimeZone for the given Time that
      */
-    TimeZone! resolve(DateTime datetime)
+    TimeZone! resolve(Time time)
         {
         if (resolved)
             {
-            assert this.isNoTZ == datetime.timezone.isNoTZ;
+            assert this.isNoTZ == time.timezone.isNoTZ;
             return this;
             }
 
@@ -254,13 +254,13 @@ const TimeZone(Int picos, String? name = Null)
         }
 
     /**
-     * Given a DateTime value, provide back a corresponding DateTime value that is in this TimeZone.
+     * Given a Time value, provide back a corresponding Time value that is in this TimeZone.
      *
-     * @param orig  the original DateTime value
+     * @param orig  the original Time value
      *
-     * @return a DateTime that is in this TimeZone
+     * @return a Time that is in this TimeZone
      */
-    DateTime adopt(DateTime orig)
+    Time adopt(Time orig)
         {
         if (orig.&timezone == &this)
             {
@@ -269,12 +269,12 @@ const TimeZone(Int picos, String? name = Null)
 
         if (orig.timezone.isNoTZ)
             {
-            // transplant the date and time-of-day from the timezoneless DateTime into a DateTime
+            // transplant the date and time-of-day from the timezoneless Time into a Time
             // using this TimeZone
-            return new DateTime(orig.date, orig.timeOfDay, this);
+            return new Time(orig.date, orig.timeOfDay, this);
             }
 
-        return new DateTime(orig.epochPicos, this);
+        return new Time(orig.epochPicos, this);
         }
 
 

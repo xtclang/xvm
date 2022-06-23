@@ -210,7 +210,7 @@ service Catalog<Schema extends RootSchema>
      * The timestamp from when this Catalog was created; used as an assumed-unique identifier.
      */
     @Concurrent
-    public/private DateTime timestamp;
+    public/private Time timestamp;
 
     /**
      * The directory used to store the contents of the database
@@ -345,9 +345,9 @@ service Catalog<Schema extends RootSchema>
     protected Int systemCounter = 0;
 
     /**
-     * The datetime that the database appears to have been idle since; otherwise, `Null`.
+     * The time that the database appears to have been idle since; otherwise, `Null`.
      */
-    protected DateTime? idleSince;
+    protected Time? idleSince;
 
 
     // ----- visibility ----------------------------------------------------------------------------

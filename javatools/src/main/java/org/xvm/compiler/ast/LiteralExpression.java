@@ -137,11 +137,11 @@ public class LiteralExpression
             case LIT_DATE:
                 return pool.typeDate();
 
+            case LIT_TIMEOFDAY:
+                return pool.typeTimeOfDay();
+
             case LIT_TIME:
                 return pool.typeTime();
-
-            case LIT_DATETIME:
-                return pool.typeDateTime();
 
             case LIT_TIMEZONE:
                 return pool.typeTimeZone();
@@ -386,11 +386,11 @@ public class LiteralExpression
             case LIT_DATE:
                 return pool.ensureLiteralConstant(Format.Date, (String) literal.getValue());
 
-            case LIT_TIME:
+            case LIT_TIMEOFDAY:
                 return pool.ensureLiteralConstant(Format.TimeOfDay, (String) literal.getValue());
 
-            case LIT_DATETIME:
-                return pool.ensureLiteralConstant(Format.DateTime, (String) literal.getValue());
+            case LIT_TIME:
+                return pool.ensureLiteralConstant(Format.Time, (String) literal.getValue());
 
             case LIT_TIMEZONE:
                 return pool.ensureLiteralConstant(Format.TimeZone, (String) literal.getValue());
@@ -462,11 +462,11 @@ public class LiteralExpression
             case LIT_DATE:
                 return "Date:" + literal.getValue();
 
-            case LIT_TIME:
+            case LIT_TIMEOFDAY:
                 return "TimeOfDay:" + literal.getValue();
 
-            case LIT_DATETIME:
-                return "DateTime:" + literal.getValue();
+            case LIT_TIME:
+                return "Time:" + literal.getValue();
 
             case LIT_TIMEZONE:
                 return "TimeZone:" + literal.getValue();
