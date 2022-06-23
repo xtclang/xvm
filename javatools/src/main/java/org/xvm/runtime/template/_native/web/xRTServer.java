@@ -13,7 +13,9 @@ import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Map;
 
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
@@ -150,7 +152,18 @@ public class xRTServer
         if (hServer.m_httpHandler == null)
             {
             // this is a very first call; set up the thread pool
-            httpServer.setExecutor(Executors.newFixedThreadPool(4));
+            String        sName   = "HttpHandler";
+            ThreadGroup   group   = new ThreadGroup(sName);
+            ThreadFactory factory = r ->
+                {
+                Thread thread = new Thread(group, r);
+                thread.setDaemon(true);
+                thread.setName(sName + "@" + thread.hashCode());
+                return thread;
+                };
+
+            // TODO: replace the pool with dynamic
+            httpServer.setExecutor(Executors.newFixedThreadPool(4, factory));
             httpServer.start();
 
             // prevent the container from being terminated
@@ -186,7 +199,10 @@ public class xRTServer
             }
         httpServer.removeContext("/");
         httpServer.stop(0);
+        ((ExecutorService) httpServer.getExecutor()).shutdown();
         hServer.m_httpHandler = null;
+        hServer.f_context.f_container.getServiceContext().unregisterNotification();
+
         return Op.R_NEXT;
         }
 
