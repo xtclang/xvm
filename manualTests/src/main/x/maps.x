@@ -299,10 +299,11 @@ module TestMaps
 
         void modifyAttempt(Map<String, String> map)
             {
+            Map<String, String> mapNew;
             try
                 {
-                map.put("1", "a");
-                assert False as $"Invalid modification for {&map.actualType}";
+                mapNew = map.put("1", "a");
+                assert mapNew != map as $"Invalid modification for {&map.actualType}";
                 }
             catch (ReadOnly e)
                 {
@@ -310,8 +311,8 @@ module TestMaps
 
             try
                 {
-                map.put("2", "b");
-                assert False as $"Invalid insert for {&map.actualType}";
+                mapNew = map.put("2", "b");
+                assert mapNew != map as $"Invalid insert for {&map.actualType}";
                 }
             catch (ReadOnly e)
                 {
