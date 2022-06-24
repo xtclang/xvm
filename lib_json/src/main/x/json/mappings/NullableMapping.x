@@ -6,19 +6,13 @@ const NullableMapping<Serializable>(Mapping<NonNullable> underlying)
     {
     typedef (Serializable-Nullable) as NonNullable;
 
-    construct(Mapping<Serializable> underlying)
+    construct(Mapping<NonNullable> underlying)
         {
         assert !underlying.is(NullableMapping);
         assert !Null.is(underlying.Serializable);
-        assert underlying.Serializable.is(Type<NonNullable>);
 
-        this.underlying = underlying.as(Mapping<NonNullable>);
-        }
-
-    @Override
-    String typeName.get()
-        {
-        return underlying.typeName + '?';
+        this.underlying = underlying;
+        this.typeName   = underlying.typeName + '?';
         }
 
     @Override
