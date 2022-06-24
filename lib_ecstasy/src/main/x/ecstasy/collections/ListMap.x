@@ -868,6 +868,16 @@ class ListMap<Key, Value>
         }
 
 
+    // ----- Freezable -----------------------------------------------------------------------------
+
+    @Override
+    immutable ListMap makeImmutable()
+        {
+        this.inPlace = False;
+        return super();
+        }
+
+
     // ----- helpers -------------------------------------------------------------------------------
 
     /**
