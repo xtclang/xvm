@@ -210,9 +210,15 @@ class ListMap<Key, Value>
         {
         if (Int index := indexOf(key))
             {
-            verifyInPlace();
-            valArray[index] = value;
-            return this;
+            if (inPlace)
+                {
+                valArray[index] = value;
+                return this;
+                }
+
+            // persistent
+            Value[] vals = valArray.replace(index, value);
+            return new ListMap(keyArray, vals);
             }
 
         if (inPlace)
@@ -240,9 +246,39 @@ class ListMap<Key, Value>
             }
 
         // persistent
-        Key[]   keys = keyArray.addAll(that.keys.toArray());
-        Value[] vals = valArray.addAll(that.values.toArray());
-        return new ListMap(keys, vals);
+        Int thatCount = that.size;
+        if (thatCount == 0)
+            {
+            return this;
+            }
+
+        Value[] valsNew = valArray;
+        Key[]   keysAdd = new Array<Key>(thatCount);
+        Value[] valsAdd = new Array<Value>(thatCount);
+        for ((Key key, Value value) : that)
+            {
+            if (Int index := indexOf(key))
+                {
+                valsNew = valsNew.replace(index, value);
+                }
+            else
+                {
+                keysAdd += key;
+                valsAdd += value;
+                }
+            }
+
+        Key[] keysNew;
+        if (keysAdd.empty)
+            {
+            keysNew = keyArray;
+            }
+        else
+            {
+            keysNew = keyArray.addAll(keysAdd);
+            valsNew = valsNew .addAll(valsAdd);
+            }
+        return new ListMap(keysNew, valsNew);
         }
 
     @Override
