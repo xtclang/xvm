@@ -534,7 +534,7 @@ class ObjectInputStream(Schema schema, Parser parser)
                 }
 
             ParentInput parent = super(cause);
-            current = parent?.as(DocInputStream<>?) : Null;
+            current = parent?.as(DocInputStream!<>?) : Null;
             parent?.childClosed(this);
             return parent;
             }
