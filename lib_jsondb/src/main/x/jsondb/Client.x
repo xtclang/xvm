@@ -2085,7 +2085,7 @@ service Client<Schema extends RootSchema>
 
         @Override
         protected class CursorEntry
-                implements DBMap<Key, Value>.Entry  // TODO GG this line should not be required!
+                implements DBMap<Key, Value>.Entry
             {
             @Override
             Map<Key, Value>.Entry reify()
