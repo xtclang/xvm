@@ -1862,6 +1862,10 @@ public class TypeInfo
                     : null;
 
             sigResolved = sigMethod.resolveAutoNarrowing(pool, type, idCtx);
+            if (method.isConstructor())
+                {
+                sigResolved = sigResolved.removeAutoNarrowing();
+                }
             }
         else
             {
