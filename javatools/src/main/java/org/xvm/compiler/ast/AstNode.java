@@ -1062,7 +1062,7 @@ public abstract class AstNode
             Set<MethodConstant> setIs      = new HashSet<>();
             Set<MethodConstant> setConvert = new HashSet<>();
 
-            collectMatchingMethods(ctx, infoTarget, setMethods, listExprArgs, fCall,
+            collectMatchingMethods(ctx, typeTarget, infoTarget, setMethods, listExprArgs, fCall,
                     mapNamedExpr, atypeReturn, setIs, setConvert, errsTemp);
 
             // now choose the best match
@@ -1166,6 +1166,7 @@ public abstract class AstNode
      */
     private void collectMatchingMethods(
             Context                 ctx,
+            TypeConstant            typeTarget,
             TypeInfo                infoTarget,
             Set<MethodConstant>     setMethods,
             List<Expression>        listExprArgs,
@@ -1370,7 +1371,7 @@ public abstract class AstNode
 
             if (fit.isFit() && cReturns > 0)
                 {
-                fit = calculateReturnFit(sigMethod, fCall, atypeReturn, ctx.getThisType(), errsTemp);
+                fit = calculateReturnFit(sigMethod, fCall, atypeReturn, typeTarget, errsTemp);
                 }
 
             if (!fit.isFit())

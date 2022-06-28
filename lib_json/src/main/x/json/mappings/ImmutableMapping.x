@@ -25,7 +25,7 @@ const ImmutableMapping<Serializable>(Mapping<Mutable> underlying)
         Mutable value = in.readUsing(underlying);
         return value.is(Freezable)
                 ? value.freeze(inPlace=True)
-                : value.makeImmutable().as(Serializable); // TODO GG: as() should not be necessary
+                : value.makeImmutable();
         }
 
     @Override
