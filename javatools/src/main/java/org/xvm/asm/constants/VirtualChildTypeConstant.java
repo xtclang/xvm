@@ -345,6 +345,21 @@ public class VirtualChildTypeConstant
         }
 
     @Override
+    public boolean isAutoNarrowing()
+        {
+        return m_fThisClass;
+        }
+
+    @Override
+    public TypeConstant ensureAutoNarrowing()
+        {
+        return m_fThisClass
+                ? this
+                : getConstantPool().
+                    ensureThisVirtualChildTypeConstant(m_typeParent, m_constName.getValue());
+        }
+
+    @Override
     public TypeConstant resolveAutoNarrowing(ConstantPool pool, boolean fRetainParams,
                                              TypeConstant typeTarget, IdentityConstant idCtx)
         {

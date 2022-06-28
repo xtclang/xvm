@@ -743,6 +743,19 @@ public class TerminalTypeConstant
         }
 
     @Override
+    public boolean isAutoNarrowing()
+        {
+        return ensureResolvedConstant().isAutoNarrowing();
+        }
+
+    public TypeConstant ensureAutoNarrowing()
+        {
+        return isAutoNarrowing()
+                ? this
+                : getConstantPool().ensureThisTypeConstant(getDefiningConstant(), null);
+        }
+
+    @Override
     public TypeConstant resolveAutoNarrowing(ConstantPool pool, boolean fRetainParams,
                                              TypeConstant typeTarget, IdentityConstant idCtx)
         {

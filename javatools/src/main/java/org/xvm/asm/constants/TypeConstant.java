@@ -1052,6 +1052,34 @@ public abstract class TypeConstant
         }
 
     /**
+     * This method is only used to check if the type's base is auto-narrowing, for any other purpose
+     * use {@link #containsAutoNarrowing} API.
+     */
+    @Override
+    public boolean isAutoNarrowing()
+        {
+        return isModifyingType() && getUnderlyingType().isAutoNarrowing();
+        }
+
+    /**
+     * If this type has {@link #isExplicitClassIdentity an explicity class identity}, create an
+     * "equivalent" type that has an {@link #isAutoNarrowing auto-narrowing base}.
+     *
+     * @return the TypeConstant that has an auto-narrowing base and the same class identity
+     */
+    public TypeConstant ensureAutoNarrowing()
+        {
+        assert isModifyingType();
+
+        TypeConstant constOriginal = getUnderlyingType();
+        TypeConstant constResolved = constOriginal.ensureAutoNarrowing();
+
+        return constResolved == constOriginal
+                ? this
+                : cloneSingle(getConstantPool(), constResolved);
+        }
+
+    /**
      * If this type is auto-narrowing (or has any references to auto-narrowing types), replace any
      * auto-narrowing portion with an explicit class identity in the context of the specified target.
      *
@@ -6728,13 +6756,6 @@ public abstract class TypeConstant
                 : pool.typeObject();
 
         return pool.ensureParameterizedTypeConstant(pool.typeType(), this, typeParent);
-        }
-
-    @Override
-    public boolean isAutoNarrowing()
-        {
-        // use containsAutoNarrowing() API instead
-        throw new UnsupportedOperationException();
         }
 
     @Override

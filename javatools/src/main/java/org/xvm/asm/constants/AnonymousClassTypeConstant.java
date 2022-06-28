@@ -173,6 +173,12 @@ public class AnonymousClassTypeConstant
         }
 
     @Override
+    public TypeConstant ensureAutoNarrowing()
+        {
+        throw new UnsupportedOperationException();
+        }
+
+    @Override
     public ResolutionResult resolveContributedName(
             String sName, Access access, MethodConstant idMethod, ResolutionCollector collector)
         {
