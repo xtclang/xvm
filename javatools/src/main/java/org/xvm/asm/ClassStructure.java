@@ -866,6 +866,23 @@ public class ClassStructure
         }
 
     /**
+     * This method is similar to the one above, except that it creates a "this"
+     * {@link VirtualChildTypeConstant} for virtual child components.
+     *
+     * @return the formal type
+     */
+    public TypeConstant getAutoNarrowingFormalType()
+        {
+        if (isVirtualChild())
+            {
+            ClassStructure clzParent = (ClassStructure) getParent();
+            return getConstantPool().ensureThisVirtualChildTypeConstant(
+                    clzParent.getAutoNarrowingFormalType(), getName());
+            }
+        return getFormalType();
+        }
+
+    /**
      * @return the canonical type (e.g. Map<Object, Object>)
      */
     public TypeConstant getCanonicalType()
@@ -2344,6 +2361,45 @@ public class ClassStructure
 
                     return Relation.INCOMPATIBLE;
                     }
+
+                // similar to the comment above, without any additional context auto-narrowing virtual
+                // children of the same name are assignable if the parents are assignable in any direction
+                IdentityConstant idClzLeft = (IdentityConstant) constIdLeft;
+                if (typeLeft.isVirtualChild() && typeRight.isVirtualChild() &&
+                        idClzLeft.getName().equals(idClzRight.getName()))
+                    {
+                    TypeConstant typeParentLeft  = typeLeft.getParentType();
+                    TypeConstant typeParentRight = typeRight.getParentType();
+
+                    if (typeParentRight.isA(typeParentLeft))
+                        {
+                        return calculateAssignability(pool, typeLeft.getParamTypes(),
+                                    typeLeft.getAccess(), typeRight.getParamTypes());
+                        }
+
+                    if (typeRight.containsAutoNarrowing(true) && typeParentLeft.isA(typeParentRight))
+                        {
+                        return ((ClassStructure) idClzLeft.getComponent()).
+                                calculateAssignability(pool, typeLeft.getParamTypes(),
+                                    typeLeft.getAccess(), typeRight.getParamTypes());
+                        }
+
+                    return Relation.INCOMPATIBLE;
+                    }
+
+                TypeConstant typeRebase = getRebaseType();
+                if (typeRebase != null)
+                    {
+                    ClassStructure clzRebase = (ClassStructure)
+                        typeRebase.getSingleUnderlyingClass(true).getComponent();
+
+                    // rebase types are never parameterized and therefore cannot be "weak"
+                    if (clzRebase.calculateRelationImpl(typeLeft,
+                            clzRebase.getCanonicalType(), fAllowInto) == Relation.IS_A)
+                        {
+                        return Relation.IS_A;
+                        }
+                    }
                 break;
 
             case Property:
@@ -2356,8 +2412,16 @@ public class ClassStructure
             case ThisClass:
             case ParentClass:
             case ChildClass:
+                {
                 assert typeLeft.containsAutoNarrowing(false);
-                return calculateRelationImpl(typeLeft.removeAutoNarrowing(), typeRight, fAllowInto);
+                Relation relation = calculateRelationImpl(typeLeft.removeAutoNarrowing(), typeRight, fAllowInto);
+                if (relation != Relation.INCOMPATIBLE)
+                    {
+                    return relation;
+                    }
+                // TODO explain
+                break;
+                }
 
             case Typedef:
                 return calculateRelationImpl(
@@ -2373,45 +2437,6 @@ public class ClassStructure
 
             default:
                 throw new IllegalStateException("unexpected constant: " + constIdLeft);
-            }
-
-        // similar to the comment above, without any additional context auto-narrowing virtual
-        // children of the same name are assignable if the parents are assignable in any direction
-        IdentityConstant idClzLeft = (IdentityConstant) constIdLeft;
-        if (typeLeft.isVirtualChild() && typeRight.isVirtualChild() &&
-                idClzLeft.getName().equals(idClzRight.getName()))
-            {
-            TypeConstant typeParentLeft  = typeLeft.getParentType();
-            TypeConstant typeParentRight = typeRight.getParentType();
-
-            if (typeParentRight.isA(typeParentLeft))
-                {
-                return calculateAssignability(pool, typeLeft.getParamTypes(),
-                            typeLeft.getAccess(), typeRight.getParamTypes());
-                }
-
-            if (typeRight.containsAutoNarrowing(true) && typeParentLeft.isA(typeParentRight))
-                {
-                return ((ClassStructure) idClzLeft.getComponent()).
-                        calculateAssignability(pool, typeLeft.getParamTypes(),
-                            typeLeft.getAccess(), typeRight.getParamTypes());
-                }
-
-            return Relation.INCOMPATIBLE;
-            }
-
-        TypeConstant typeRebase = getRebaseType();
-        if (typeRebase != null)
-            {
-            ClassStructure clzRebase = (ClassStructure)
-                typeRebase.getSingleUnderlyingClass(true).getComponent();
-
-            // rebase types are never parameterized and therefore cannot be "weak"
-            if (clzRebase.calculateRelationImpl(typeLeft,
-                    clzRebase.getCanonicalType(), fAllowInto) == Relation.IS_A)
-                {
-                return Relation.IS_A;
-                }
             }
 
         Relation relation = Relation.INCOMPATIBLE;
@@ -2437,7 +2462,11 @@ public class ClassStructure
                         }
 
                     typeContrib = typeContrib.resolveGenerics(pool, typeRight.normalizeParameters());
-                    relation    = relation.bestOf(typeContrib.calculateRelation(typeLeft));
+                    if (typeRight.isAutoNarrowing() && typeContrib.isSingleUnderlyingClass(true))
+                        {
+                        typeContrib = typeContrib.ensureAutoNarrowing();
+                        }
+                    relation = relation.bestOf(typeContrib.calculateRelation(typeLeft));
                     if (relation == Relation.IS_A)
                         {
                         return Relation.IS_A;

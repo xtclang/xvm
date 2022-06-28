@@ -1710,19 +1710,24 @@ public class ConstantPool
 
         assert !clzBase.containsUnresolvedContribution();
 
-        boolean fAutoNarrow = false;
+        boolean  fAutoNarrow = false;
+        boolean  fThisClass  = false;
+        Constant constOrig   = constTarget;
         switch (constTarget.getFormat())
             {
             case ThisClass:
                 fAutoNarrow = true;
+                fThisClass  = true;
                 constTarget = ((ThisClassConstant) constTarget).getDeclarationLevelClass();
                 break;
 
             case ParentClass:
+                fAutoNarrow = true;
                 constTarget = ((ParentClassConstant) constTarget).getChildClass();
                 break;
 
             case ChildClass:
+                fAutoNarrow = true;
                 constTarget = ((ChildClassConstant) constTarget).getParent();
                 break;
             }
@@ -1744,7 +1749,8 @@ public class ConstantPool
         else
             {
             // as we recurse, always parameterize the parent, which is never auto-narrowing
-            typeParent = ensureVirtualTypeConstant(clzBase, clzParent, fFormal, true, constTarget);
+            typeParent = ensureVirtualTypeConstant(clzBase, clzParent, fFormal, true,
+                fThisClass ? constOrig : constTarget);
             if (typeParent == null)
                 {
                 return null;
@@ -1752,10 +1758,9 @@ public class ConstantPool
             fCheckAuto = false;
             }
 
-        if (fCheckAuto && constTarget instanceof ThisClassConstant)
+        if (fCheckAuto && constTarget instanceof ThisClassConstant constThis)
             {
-            typeParent  = ((ThisClassConstant) constTarget).getDeclarationLevelClass().
-                                getType().adoptParameters(this, typeParent);
+            typeParent  = constThis.getDeclarationLevelClass().getType().adoptParameters(this, typeParent);
             fAutoNarrow = true;
             }
 

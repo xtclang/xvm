@@ -739,9 +739,9 @@ public class NamedTypeExpression
         TypeConstant type;
         if (left == null)
             {
-            if (m_constId instanceof TypeConstant)
+            if (m_constId instanceof TypeConstant constType)
                 {
-                type = (TypeConstant) m_constId;
+                type = constType;
                 }
             else
                 {
@@ -1064,7 +1064,7 @@ public class NamedTypeExpression
                         boolean fFormalChild = fFormalParent && fAllowFormal && paramTypes == null;
 
                         typeTarget = fParent
-                                ? clzTarget.getFormalType()
+                                ? clzTarget.getAutoNarrowingFormalType()
                                 : pool.ensureVirtualTypeConstant(
                                     clzBase, clzTarget, fFormalParent, fFormalChild, constTarget);
                         assert typeTarget != null;
