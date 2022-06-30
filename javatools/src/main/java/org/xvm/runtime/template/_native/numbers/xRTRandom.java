@@ -153,12 +153,12 @@ public class xRTRandom
      */
     public ObjectHandle ensureDefaultRandom(Frame frame, ObjectHandle hOpts)
         {
-        long lSeed = hOpts instanceof JavaLong   ? ((JavaLong) hOpts).getValue() :
-                     hOpts instanceof IntNHandle ? ((IntNHandle) hOpts).getValue().getLong() :
+        long lSeed = hOpts instanceof JavaLong   hInt  ? hInt.getValue() :
+                     hOpts instanceof IntNHandle hIntN ? hIntN.getValue().getLong() :
                      0;
         if (lSeed != 0)
             {
-            return createRandomHandle(frame.f_context.f_container.createServiceContext("Random"),
+            return createRandomHandle(f_container.createServiceContext("Random"),
                     getCanonicalClass(), getCanonicalType(), lSeed);
             }
 
@@ -166,7 +166,7 @@ public class xRTRandom
         if (hRnd == null)
             {
             m_hRandom = hRnd = createRandomHandle(
-                frame.f_context.f_container.createServiceContext("Random"),
+                f_container.createServiceContext("Random"),
                     getCanonicalClass(), getCanonicalType(), 0L);
             }
 

@@ -37,6 +37,7 @@ import org.xvm.asm.TypedefStructure;
 
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -201,6 +202,9 @@ public class NativeContainer
             {
             template.initNative();
             }
+
+        ensureServiceContext();
+
         ConstantPool.setCurrentPool(null);
         return pool;
         }
@@ -389,12 +393,13 @@ public class NativeContainer
         ObjectHandle hStorage = m_hOSStorage;
         if (hStorage == null)
             {
-            ClassTemplate    templateStorage = getTemplate("_native.fs.OSStorage");
-            ClassComposition clzStorage      = templateStorage.getCanonicalClass();
-            MethodStructure  constructor     = templateStorage.getStructure().findConstructor();
+            ClassTemplate    template    = getTemplate("_native.fs.OSStorage");
+            ClassComposition clzStorage  = template.getCanonicalClass();
+            MethodStructure  constructor = template.getStructure().findConstructor();
+            ServiceContext   contextNew  = createServiceContext("OSStorage");
 
-            switch (templateStorage.construct(frame, constructor, clzStorage,
-                                              null, Utils.OBJECTS_NONE, Op.A_STACK))
+            switch (contextNew.sendConstructRequest(frame, clzStorage, constructor,
+                            null, Utils.OBJECTS_NONE, Op.A_STACK))
                 {
                 case Op.R_NEXT:
                     hStorage = frame.popStack();
@@ -540,14 +545,13 @@ public class NativeContainer
             ObjectHandle haKeys   = xArray.makeStringArrayHandle(listKeys.toArray(Utils.STRINGS_NONE));
             ObjectHandle haValues = xArray.makeStringArrayHandle(listVals.toArray(Utils.STRINGS_NONE));
 
-            ConstantPool pool    = frame.poolContext();
+            ConstantPool pool    = getConstantPool();
             TypeConstant typeMap = pool.ensureParameterizedTypeConstant(
                                     pool.ensureEcstasyTypeConstant("collections.ListMap"),
-                                    pool.typeString(),
-                                    pool.typeString());
+                                        pool.typeString(), pool.typeString());
 
             switch (Utils.constructListMap(frame,
-                            typeMap.ensureClass(frame), haKeys, haValues, Op.A_STACK))
+                            resolveClass(typeMap), haKeys, haValues, Op.A_STACK))
                 {
                 case Op.R_NEXT:
                     hProps = frame.popStack();
@@ -717,6 +721,12 @@ public class NativeContainer
     // ----- Container methods ---------------------------------------------------------------------
 
     @Override
+    public ModuleConstant getModule()
+        {
+        return m_moduleSystem.getIdentityConstant();
+        }
+
+    @Override
     public ConstantPool getConstantPool()
         {
         return m_moduleNative.getConstantPool();
@@ -730,13 +740,6 @@ public class NativeContainer
         return key != null && key.f_type.isA(type)
                 ? f_mapResources.get(key).apply(frame, hOpts)
                 : null;
-        }
-
-    @Override
-    public ObjectHandle ensureConstHandle(Frame frame, Constant constValue)
-        {
-        // nothing should be running in the native container
-        throw new IllegalStateException();
         }
 
     @Override
@@ -777,14 +780,14 @@ public class NativeContainer
     @Override
     public FileStructure createFileStructure(ModuleStructure moduleApp)
         {
-        // TODO CP/GG: that needs to be reworked (for now the order is critical)
         // Note: we don't need to re-synthesize structures for shared modules
-        ModuleRepository repo    = f_repository;
-        FileStructure    fileApp = new FileStructure(m_moduleSystem, false);
+        FileStructure fileApp = new FileStructure(m_moduleSystem, false);
 
+        // TODO CP/GG: that needs to be reworked (for now the order is critical)
         fileApp.merge(m_moduleTurtle, false, false);
-        fileApp.merge(repo.loadModule("crypto.xtclang.org"), true, false);
-        fileApp.merge(repo.loadModule("net.xtclang.org"), true, false);
+        fileApp.merge(f_repository.loadModule("crypto.xtclang.org"), true, false);
+        fileApp.merge(f_repository.loadModule("net.xtclang.org"), true, false);
+        fileApp.merge(f_repository.loadModule("web.xtclang.org"), true, false);
         fileApp.merge(m_moduleNative, false, false);
 
         fileApp.merge(moduleApp, true, true);

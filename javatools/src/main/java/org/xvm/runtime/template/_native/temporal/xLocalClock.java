@@ -114,7 +114,7 @@ public class xLocalClock
         if (hClock == null)
             {
             m_hLocalClock = hClock = createServiceHandle(
-                frame.f_context.f_container.createServiceContext("LocalClock"),
+                f_container.createServiceContext("LocalClock"),
                     getCanonicalClass(), getCanonicalType());
             }
 

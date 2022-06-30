@@ -328,7 +328,7 @@ public class xRTCompiler
     public ObjectHandle ensureCompiler(Frame frame, ObjectHandle hOpts)
         {
         return createServiceHandle(
-                frame.f_context.f_container.createServiceContext("Compiler"),
+                f_container.createServiceContext("Compiler"),
                     getCanonicalClass(), getCanonicalType());
         }
 

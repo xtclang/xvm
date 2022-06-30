@@ -146,7 +146,7 @@ public class xNanosTimer
     public ObjectHandle ensureTimer(Frame frame, ObjectHandle hOpts)
         {
         return createServiceHandle(
-                frame.f_context.f_container.createServiceContext("Timer"),
+                f_container.createServiceContext("Timer"),
                     getCanonicalClass(), getCanonicalType());
         }
 

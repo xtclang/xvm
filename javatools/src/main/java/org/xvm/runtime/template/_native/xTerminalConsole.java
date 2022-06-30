@@ -159,7 +159,7 @@ public class xTerminalConsole
         if (hConsole == null)
             {
             hConsole = m_hConsole = createServiceHandle(
-                    frame.f_context.f_container.createServiceContext("Console"),
+                    f_container.createServiceContext("Console"),
                         getCanonicalClass(), getCanonicalType());
             }
         return hConsole;

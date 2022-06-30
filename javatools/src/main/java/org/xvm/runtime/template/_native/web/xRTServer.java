@@ -22,6 +22,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -77,6 +78,19 @@ public class xRTServer
         getCanonicalType().invalidateTypeInfo();
         }
 
+    @Override
+    public TypeConstant getCanonicalType()
+        {
+        TypeConstant type = m_typeCanonical;
+        if (type == null)
+            {
+            var pool = f_container.getConstantPool();
+            m_typeCanonical = type = pool.ensureTerminalTypeConstant(pool.ensureClassConstant(
+                    pool.ensureModuleConstant("web.xtclang.org"), "HttpServer"));
+            }
+        return type;
+        }
+
     /**
      * Injection support method.
      */
@@ -103,9 +117,10 @@ public class xRTServer
             {
             HttpServer httpServer = HttpServer.create(new InetSocketAddress(sHost, nPort), 0);
 
-            Container      container = frame.f_context.f_container;
-            ServiceContext context   = container.createServiceContext("HttpServer@" + sAddress);
-            ServiceHandle  hService  = new HttpServerHandle(getCanonicalClass(container), context, httpServer);
+            Container       container = f_container;
+            ServiceContext  context   = container.createServiceContext("HttpServer@" + sAddress);
+            ServiceHandle   hService  = new HttpServerHandle(
+                                            getCanonicalClass(container), context, httpServer);
             context.setService(hService);
             return hService;
             }
@@ -124,7 +139,7 @@ public class xRTServer
                 return invokeAttachHandler(frame, (HttpServerHandle) hTarget, (ServiceHandle) hArg);
 
             case "close":
-                return invokeClose(frame, (HttpServerHandle) hTarget);
+                return invokeClose((HttpServerHandle) hTarget);
             }
 
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
@@ -188,7 +203,7 @@ public class xRTServer
     /**
      * Implementation of "close()" method.
      */
-    private int invokeClose(Frame frame, HttpServerHandle hServer)
+    private int invokeClose(HttpServerHandle hServer)
         {
         HttpServer httpServer = hServer.f_httpServer;
         if (httpServer.getExecutor() == null)
@@ -409,4 +424,9 @@ public class xRTServer
     // ----- data fields and constants -------------------------------------------------------------
 
     private static TypeComposition ARRAY_OF_STRING_ARRAY_CLZ;
+
+    /**
+     * Cached canonical type.
+     */
+    private TypeConstant m_typeCanonical;
     }

@@ -55,9 +55,9 @@ public abstract class Container
     {
     protected Container(Runtime runtime, Container containerParent, ModuleConstant idModule)
         {
-        f_runtime   = runtime;
-        f_parent    = containerParent;
-        f_heap      = new ConstHeap(this);
+        f_runtime  = runtime;
+        f_parent   = containerParent;
+        f_heap     = new ConstHeap(this);
         f_idModule = idModule;
 
         // don't register the native container
@@ -106,7 +106,7 @@ public abstract class Container
             {
             try (var ignore = ConstantPool.withPool(getConstantPool()))
                 {
-                m_contextMain = ctx = createServiceContext(f_idModule.getName());
+                m_contextMain = ctx = createServiceContext(getModule().getName());
                 xService.INSTANCE.createServiceHandle(ctx,
                     xService.INSTANCE.getCanonicalClass(),
                     xService.INSTANCE.getCanonicalType());
@@ -464,11 +464,15 @@ public abstract class Container
     // ----- x:Container API helpers ---------------------------------------------------------------
 
     /**
-     * @return true iff there are no pending requests for this service
+     * This method is only used to determine whether the connector can be terminated (once and done
+     * execution mode).
+     *
+     * @return true iff there are no pending requests for this container
      */
     public boolean isIdle()
         {
-        return f_pendingWorkCount.get() == 0 && m_contextMain.isIdle();
+        return f_pendingWorkCount.get() == 0 && m_contextMain.isIdle() &&
+                (f_parent == null || f_parent.isIdle());
         }
 
     /**
@@ -581,7 +585,7 @@ public abstract class Container
     public boolean isPresent(IdentityConstant constId)
         {
         // TODO: is this sufficient - part of the Ecstasy module?
-        return constId.getModuleConstant().equals(f_idModule);
+        return constId.getModuleConstant().equals(getModule());
         }
 
     @Override
@@ -603,14 +607,14 @@ public abstract class Container
 
     private NativeContainer getNativeContainer()
         {
-        Container parent = f_parent;
+        Container container = this;
         while (true)
             {
-            if (parent instanceof NativeContainer nativeContainer)
+            if (container instanceof NativeContainer nativeContainer)
                 {
                 return nativeContainer;
                 }
-            parent = parent.f_parent;
+            container = container.f_parent;
             }
         }
 

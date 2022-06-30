@@ -201,7 +201,7 @@ public class xContainerLinker
         if (hLinker == null)
             {
             m_hLinker = hLinker = createServiceHandle(
-                    frame.f_context.f_container.createServiceContext("Linker"),
+                    f_container.createServiceContext("Linker"),
                         getCanonicalClass(), getCanonicalType());
             }
 
