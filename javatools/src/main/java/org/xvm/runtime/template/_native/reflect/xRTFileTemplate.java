@@ -9,6 +9,7 @@ import java.nio.file.attribute.BasicFileAttributes;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.FileStructure;
@@ -16,12 +17,15 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-
 import org.xvm.runtime.TypeComposition;
+
+import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
 
@@ -41,7 +45,7 @@ import org.xvm.runtime.template._native.mgmt.xCoreRepository;
  * Native FileTemplate implementation.
  */
 public class xRTFileTemplate
-        extends xRTModuleTemplate
+        extends xRTComponentTemplate
     {
     public static xRTFileTemplate INSTANCE;
 
@@ -201,6 +205,36 @@ public class xRTFileTemplate
             }
         file.replace(listUnlinked);
         return Op.R_NEXT;
+        }
+
+    @Override
+    protected int invokeChildren(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
+        {
+        // calling the super() would pick up all modules, including the native, so we limit
+        // the modules to the dependents of the main module
+
+        FileStructure   file   = (FileStructure) hComponent.getComponent();
+        ModuleStructure module = file.getModule();
+
+        Map<ModuleConstant, String> mapModulePaths = module.collectDependencies();
+
+        int            cModules  = mapModulePaths.size() - 1;
+        ObjectHandle[] ahModule  = new ObjectHandle[cModules];
+        Container      container = frame.f_context.f_container;
+        int            index     = 0;
+
+        for (ModuleConstant idDep : mapModulePaths.keySet())
+            {
+            if (!idDep.equals(module.getIdentityConstant()))
+                {
+                ahModule[index++] = makeComponentHandle(container, file.getModule(idDep.getName()));
+                }
+            }
+        assert index == cModules;
+
+        return frame.assignValue(iReturn,
+            xArray.createImmutableArray(ensureComponentArrayType(), ahModule));
+
         }
 
     @Override
