@@ -100,6 +100,10 @@ import ecstasy.net.IPAddress;
  *
  * There are at least two other HTTP events that factor into the trust equation:
  *
+ * * A TLS interruption: Implementations that have visibility to TLS session negotiation can raise
+ *   an event when a TLS session is re-negotiated. The TLS session lifespan tends to match that of
+ *   the persistent (e.g. "keep-alive") TCP connection itself.
+ *
  * * An IP address change: When a worker logged into a work application takes their notebook home
  *   and opens it back up to continue working from home, the IP address that is associated with
  *   their session (their office IP address) will be different than the IP address that shows up on
@@ -109,11 +113,20 @@ import ecstasy.net.IPAddress;
  *   cause the `User-Agent` in the HTTP requests to differ from the `User-Agent` associated with the
  *   the session.
  *
- * For security purposes, these events may lower the trust level of the session, which may force
- * re-authentication. The underlying reason is that these events can also indicate that a cookie has
- * been taken from one device to be used on another; such attacks ("cookie stealing", "cookie
- * hijacking", "cookie scraping") do exist, so in the general case, this behavior should be
- * configurable on an application basis.
+ * * A user agent _fingerprint_ change: Minor details about the user agent can be gleaned from the
+ *   incoming requests. These details are often abused in order to uniquely identify users by the
+ *   set of details collected as part of the fingerprint, so the session interface design carefully
+ *   avoids specifying any of the details that it collects, and the means that it uses to detect
+ *   actionable changes in those details. Instead, if the feature is available and enabled, the
+ *   session emits an event when the user agent fingerprint appears to have changed, such that a
+ *   new user agent may have been somehow substituted for the former one.
+ *
+ * For security purposes, these events will tend to lower the trust level of the session, which may
+ * result in re-authentication being required. The underlying reason is that these events may
+ * indicate a man-in-the-middle or a cookie-stealing attack, i.e. that a cookie has been taken from
+ * one application or device to be used on another. These types of attacks do exist, so in the
+ * general case, this behavior should be configurable on an application basis, based on security
+ * requirements of each application.
  *
  * There are details related to the session that are automatically managed by the server, and are
  * visible to the application logic running on the server, and there are operations that the session
@@ -161,8 +174,6 @@ import ecstasy.net.IPAddress;
  *
  * 5. Never use property or method names that end with the underscore `_` character.
  *
- * TODO how to have a compile time type for the session + all mixins
- *
  * The prototypical session example is to hold shopping cart data in an e-commerce application.
  * However, modern e-commerce applications will almost always persist shopping cart information in
  * the database for authenticated users, so that they can place items into the cart on one device,
@@ -176,10 +187,11 @@ import ecstasy.net.IPAddress;
  * exist for the application to place custom code on.
  *
  * TODO
- *   - cookie: two flags available to protect cookies: (1) "Secure" implies HTTPS only, and
+ *   - cookie: two flags available to protect cookies included in an HTTP response:
+ *     (1) "Secure" implies HTTPS only, and
  *     (2) "HttpOnly" protects the cookie from client-side JavaScript
- *   - SameSite cookie attribute: Strict, Lax or None
- *   - impersonation: how to have one session impersonate another e.g. for customer service
+ *   - SameSite cookie attribute in an HTTP response: Strict, Lax or None
+ *   - secure impersonation: how to have one session impersonate another e.g. for customer service
  */
 interface Session
         extends service
@@ -369,7 +381,29 @@ interface Session
     void sessionDeauthenticated(String user);
 
     /**
-     * This event is invoked when the user's IP address changes.
+     * This event is invoked when a TLS connection is re-negotiated. It is possible for non-TLS
+     * traffic to exist concurrently with TLS traffic, but this notification only exists for the
+     * portion of the traffic that uses TLS, since resources that are **not** protected by TLS are
+     * not protected to begin with.
+     *
+     * If this feature is supported, when a session had previously been accessed on TLS, and a new
+     * request arrives on a new TLS connection, this notification is raised. Modern user agents are
+     * expected to hold a TLS connection open for a long period of time, typically as long as
+     * possible.
+     *
+     * @return the suggested new `TrustLevel` for the session, based on the TLS interruption
+     */
+    TrustLevel tlsChanged()
+        {
+        // trust on a single-user device only degrades to the normal level
+        return trustLevel.minOf(exclusiveAgent ? Normal : None);
+        }
+
+    /**
+     * This event is invoked when the user agent's IP address changes. This most commonly occurs
+     * when a user changes their device location, e.g. from home to work or vice versa, but it can
+     * occur for any of a number of reasons. In a cookie stealing attack, for example, one would
+     * expect the IP address to differ.
      *
      * @param oldAddress  the previously known IP address
      * @param newAddress  the newly observed IP address
@@ -408,5 +442,28 @@ interface Session
             // should have been lost e.g. if the browser was upgraded
             return None;
             }
+        }
+
+    /**
+     * This event is invoked when the user agent fingerprint (something other than the user agent
+     * string itself) changes, iff user agent fingerprinting is enabled. Neither the details of what
+     * composes a fingerprint nor what form a fingerprint takes is defined, and the fingerprint
+     * information is purposefully hidden from user code.
+     *
+     * User agent fingerprinting is often used to track users against their will, which is a
+     * capability that this design consciously avoids. However, the ability to detect even minor
+     * changes in the details about a user agent can be extremely useful for safeguarding a user's
+     * information, which is a worthwhile goal. It is a careful decision to expose the fact that the
+     * fingerprint associated with the session has changed, but to hide any details of the
+     * fingerprint information itself, including how the change was detected.
+     *
+     * @return the suggested new `TrustLevel` for the session, based on the user agent fingerprint
+     *         change
+     *
+     */
+    TrustLevel fingerprintChanged()
+        {
+        // trust on a single-user device only degrades to the normal level
+        return trustLevel.minOf(exclusiveAgent ? Normal : None);
         }
     }
