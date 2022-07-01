@@ -4,8 +4,9 @@ package org.xvm.runtime;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 
+import java.lang.ref.WeakReference;
+
 import java.util.EnumMap;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
@@ -259,7 +260,12 @@ public class ServiceContext
     public Object getOpInfo(Op op, Enum category)
         {
         EnumMap mapByCategory = f_mapOpInfo.get(op);
-        return mapByCategory == null ? null : mapByCategory.get(category);
+        if (mapByCategory == null)
+            {
+            return null;
+            }
+        WeakReference ref = (WeakReference) mapByCategory.get(category);
+        return ref == null ? null : ref.get();
         }
 
     /**
@@ -272,7 +278,7 @@ public class ServiceContext
     public void setOpInfo(Op op, Enum category, Object info)
         {
         f_mapOpInfo.computeIfAbsent(op, (op_) -> new EnumMap(category.getClass()))
-                   .put(category, info);
+                   .put(category, new WeakReference(info));
         }
 
     /**
@@ -2015,8 +2021,9 @@ public class ServiceContext
     /**
      * A "service-local" cache for run-time information that needs to be calculated by various ops.
      * Since only one fiber can access the service context at any time, a simple HashMap is used.
+     * To prevent leaks, the values in the EnumMap are WekRef objects.
      */
-    private final Map<Op, EnumMap> f_mapOpInfo = new HashMap<>();
+    private final Map<Op, EnumMap> f_mapOpInfo = new WeakHashMap<>();
 
     /**
      * A "service-local" cache for transient field values.
