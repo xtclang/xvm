@@ -218,23 +218,13 @@ service Container
                 String[]          namedConditions   = []);
 
         /**
-         * TODO: remove this temporary method
+         * TODO: remove this temporary method (e.g. use a FileTemplateImpl constructor instead)
          *
-         * Validate the content of the provided XTC structure and return the name of the primary
-         * module.
+         * Create the FileTemplate from the specified file.
          *
-         * @throws an Exception if the bytes don't represent a valid module
+         * @throws an Exception if the file doesn't contain a valid module
          */
-        String validate(Byte[] bytes);
-
-        /**
-         * TODO: remove this temporary method (e.g. as a FileTemplate constructor)
-         *
-         * Create the FileTemplate from its serialized content.
-         *
-         * @throws an Exception if the bytes don't represent a valid module
-         */
-        FileTemplate loadFileTemplate(Byte[] bytes);
+        FileTemplate loadFileTemplate(File xtcFile);
         }
 
     /**

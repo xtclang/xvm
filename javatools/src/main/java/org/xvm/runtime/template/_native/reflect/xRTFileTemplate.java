@@ -94,7 +94,7 @@ public class xRTFileTemplate
 
             case "createdMillis":
                 {
-                File fileOS = ((FileStructure) hFile.getComponent()).getOSFile();
+                File fileOS = file.getOSFile();
                 if (fileOS != null)
                     {
                     try

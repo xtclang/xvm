@@ -2,6 +2,7 @@ package org.xvm.runtime.template._native.mgmt;
 
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
 
 import java.util.Collections;
@@ -30,6 +31,8 @@ import org.xvm.runtime.template.collections.xByteArray;
 
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
+
+import org.xvm.runtime.template._native.fs.OSFileNode.NodeHandle;
 
 import org.xvm.runtime.template._native.reflect.xRTComponentTemplate.ComponentTemplateHandle;
 import org.xvm.runtime.template._native.reflect.xRTFileTemplate;
@@ -61,7 +64,6 @@ public class xContainerLinker
                 pool().ensureEcstasyClassConstant("mgmt.ResourceProvider").getComponent();
         GET_RESOURCE = clz.findMethod("getResource", 2).getIdentityConstant().getSignature();
 
-        markNativeMethod("validate", null, null);
         markNativeMethod("loadFileTemplate", null, null);
         markNativeMethod("resolveAndLink", null, null);
 
@@ -84,27 +86,10 @@ public class xContainerLinker
                 {
                 try
                     {
-                    byte[]        abFile = xByteArray.getBytes((ArrayHandle) hArg);
-                    FileStructure struct = new FileStructure(new ByteArrayInputStream(abFile));
+                    NodeHandle    hFile  = (NodeHandle) hArg;
+                    FileStructure struct = new FileStructure(hFile.getPath().toFile());
 
                     return frame.assignValue(iReturn, xRTFileTemplate.makeHandle(frame.f_context.f_container, struct));
-                    }
-                catch (IOException e)
-                    {
-                    return frame.raiseException(xException.ioException(frame, e.getMessage()));
-                    }
-
-                }
-
-            case "validate":
-                {
-                try
-                    {
-                    byte[]        abFile  = xByteArray.getBytes((ArrayHandle) hTarget);
-                    FileStructure struct  = new FileStructure(new ByteArrayInputStream(abFile));
-                    String        sModule = struct.getModuleName();
-
-                    return frame.assignValue(iReturn, xString.makeHandle(sModule));
                     }
                 catch (IOException e)
                     {

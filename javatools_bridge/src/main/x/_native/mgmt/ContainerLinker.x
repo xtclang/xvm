@@ -11,9 +11,8 @@ import ecstasy.reflect.ModuleTemplate;
 service ContainerLinker
         implements Container.Linker
     {
-    // TODO remove temporary methods
-    @Override String       validate(Byte[] bytes)         {TODO("Native");}
-    @Override FileTemplate loadFileTemplate(Byte[] bytes) {TODO("Native");}
+    // TODO remove the temporary method
+    @Override FileTemplate loadFileTemplate(File file) {TODO("Native");}
 
     @Override
     Control loadAndLink(

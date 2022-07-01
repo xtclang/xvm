@@ -168,7 +168,7 @@ public class FileStructure
         m_nMinorVer = fileStructure.m_nMinorVer;
         m_pool      = new ConstantPool(this);
 
-        merge(module, fSynthesize, false);
+        merge(module, fSynthesize, true);
         }
 
     /**
