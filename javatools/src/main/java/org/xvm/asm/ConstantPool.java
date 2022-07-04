@@ -981,9 +981,9 @@ public class ConstantPool
     public ConditionalConstant ensureNotCondition(ConditionalConstant cond)
         {
         // avoid double-negatives
-        if (cond instanceof NotCondition)
+        if (cond instanceof NotCondition condNot)
             {
-            return ((NotCondition) cond).getUnderlyingCondition();
+            return condNot.getUnderlyingCondition();
             }
 
         NotCondition condNot = (NotCondition) ensureLocatorLookup(Format.ConditionNot).get(cond);
@@ -1830,9 +1830,9 @@ public class ConstantPool
      */
     public PseudoConstant ensureParentClassConstant(PseudoConstant constClass)
         {
-        if (constClass instanceof ChildClassConstant)
+        if (constClass instanceof ChildClassConstant constChild)
             {
-            return ((ChildClassConstant) constClass).getParent();
+            return constChild.getParent();
             }
 
         // the ParentClassConstant's locator is the underlying constClass
@@ -3503,7 +3503,7 @@ public class ConstantPool
     /**
      * While it's known that the left type is a method:
      * <pre>
-     *    {@code typeLeft.getSingleUnderlyingClass(true).equals(clz.Method())}
+     *    {@code typeLeft.getSingleUnderlyingClass(true).equals(clzMethod())}
      * </pre>
      * and the right type has a single underlying class:
      * <pre>
@@ -4179,7 +4179,7 @@ public class ConstantPool
             }
         catch (Exception e)
             {
-            throw e instanceof RuntimeException ? (RuntimeException) e : new RuntimeException(e);
+            throw e instanceof RuntimeException ex ? ex : new RuntimeException(e);
             }
         }
 
