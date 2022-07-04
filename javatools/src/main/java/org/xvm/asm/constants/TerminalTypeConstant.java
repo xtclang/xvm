@@ -186,10 +186,20 @@ public class TerminalTypeConstant
                 return false;
 
             case Property:
-            case TypeParameter:
-            case FormalTypeChild:
             case DynamicFormal:
-                return (((FormalConstant) constant)).getConstraintType().isImmutable();
+            case FormalTypeChild:
+                {
+                // a formal type for an immutable type must be an immutable or a service
+                FormalConstant constFormal    = (FormalConstant) constant;
+                TypeConstant   typeParent     = constFormal.getParentConstant().getType();
+                TypeConstant   typeConstraint = constFormal.getConstraintType();
+                return typeConstraint.isImmutable() ||
+                        typeParent.getAccess() != Access.STRUCT && typeParent.isImmutable()
+                            && !typeConstraint.isA(getConstantPool().typeService());
+                }
+
+            case TypeParameter:
+                return ((FormalConstant) constant).getConstraintType().isImmutable();
 
             case NativeClass:
                 constant = ((NativeRebaseConstant) constant).getClassConstant();

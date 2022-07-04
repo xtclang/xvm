@@ -481,7 +481,7 @@ public class InvocationExpression
                 TypeInfo     infoLeft = getTypeInfo(ctx, typeLeft, errs);
                 PropertyInfo infoProp = infoLeft.findProperty(idProp);
 
-                typeArg = infoProp == null ? pool.typeObject() : infoProp.getType();
+                typeArg = infoProp == null ? pool.typeObject() : infoProp.inferImmutable(typeLeft);
                 }
             else
                 {
@@ -1029,7 +1029,7 @@ public class InvocationExpression
                                 idProp.getValueString(), typeLeft.getValueString());
                         return null;
                         }
-                    typeFn = infoProp.getType();
+                    typeFn = infoProp.inferImmutable(typeLeft);
                     }
                 else
                     {

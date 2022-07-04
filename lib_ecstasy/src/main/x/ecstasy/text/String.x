@@ -826,7 +826,7 @@ const String
      */
     immutable Char[] toCharArray()
         {
-        return chars.as(immutable Char[]);
+        return chars;
         }
 
     /**
@@ -834,7 +834,7 @@ const String
      */
     Reader toReader()
         {
-        return new io.CharArrayReader(chars.as(immutable Char[])); // TODO GG why is cast necessary here?
+        return new io.CharArrayReader(chars);
         }
 
     @Override

@@ -1622,7 +1622,7 @@ public class StatementBlock
                         ? idProp.isFormalType()
                                 ? idProp.getFormalType()
                                 : idProp.getType()
-                        : infoProp.getType();
+                        : infoProp.inferImmutable(typeTarget);
                 }
             else
                 {

@@ -733,8 +733,9 @@ public class ClassComposition
      */
     public TypeConstant getFieldType(String sProp)
         {
-        PropertyInfo info = getInceptionType().ensureTypeInfo().findProperty(sProp);
-        return info == null ? null : info.getType();
+        TypeConstant typeParent = getInceptionType();
+        PropertyInfo info       = typeParent.ensureTypeInfo().findProperty(sProp);
+        return info == null ? null : info.inferImmutable(typeParent);
         }
 
     /**

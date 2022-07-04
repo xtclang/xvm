@@ -2072,7 +2072,7 @@ public class NameExpression
      * @return the type of the expression
      */
     protected TypeConstant planCodeGen(Context ctx, Argument argRaw,
-            TypeConstant[]  aTypeParams, TypeConstant typeDesired, ErrorListener errs)
+            TypeConstant[] aTypeParams, TypeConstant typeDesired, ErrorListener errs)
         {
         assert ctx != null && argRaw != null;
         ConstantPool pool           = pool();
@@ -2286,8 +2286,7 @@ public class NameExpression
                 // argRaw refers to the actual property identity, while the targetInfo may point to
                 // a context specific id (i.e. nested)
                 PropertyConstant  idProp = (PropertyConstant) argRaw;
-                PropertyStructure prop   = (PropertyStructure) idProp.getComponent();
-                TypeConstant      type   = prop.getType();
+                TypeConstant      type   = idProp.getType();
                 TargetInfo        target = m_targetInfo;
                 boolean           fClass = m_fClassAttribute; // the class of Class?
                 PropertyInfo      infoProp;
@@ -2322,7 +2321,7 @@ public class NameExpression
                     if (infoProp == null)
                         {
                         log(errs, Severity.ERROR, Compiler.PROPERTY_INACCESSIBLE,
-                                prop.getName(), typeLeft.getValueString());
+                                idProp.getName(), typeLeft.getValueString());
                         return null;
                         }
 
@@ -2337,6 +2336,7 @@ public class NameExpression
                     return idProp.getConstraintType();
                     }
 
+                PropertyStructure prop = (PropertyStructure) idProp.getComponent();
                 if (prop.isConstant() && !fSuppressDeref)
                     {
                     assert !m_fAssignable;
@@ -2367,7 +2367,8 @@ public class NameExpression
                         Argument argNarrowed = ctx.getVar(prop.getName());
                         type = argNarrowed instanceof TargetInfo
                                 ? argNarrowed.getType()
-                                : infoProp.getType().resolveAutoNarrowing(pool, false, typeLeft, idCtx);
+                                : infoProp.inferImmutable(typeLeft).
+                                        resolveAutoNarrowing(pool, false, typeLeft, idCtx);
                         }
                     }
                 else
@@ -2479,7 +2480,7 @@ public class NameExpression
                             }
                         else
                             {
-                            TypeConstant typeResolved = infoProp.getType();
+                            TypeConstant typeResolved = infoProp.inferImmutable(typeLeft);
 
                             // strictly speaking, we could call "resolveDynamicType" regardless of
                             // the desired type, but the implications of that are quite significant,

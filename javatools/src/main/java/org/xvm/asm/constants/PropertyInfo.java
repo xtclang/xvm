@@ -633,6 +633,29 @@ public class PropertyInfo
         }
 
     /**
+     * Infer immutability of the property type based on the property container's immutability.
+     *
+     * @param typeParent  the container's type
+     *
+     * @return the inferred property type
+     */
+    public TypeConstant inferImmutable(TypeConstant typeParent)
+        {
+        TypeConstant typeProp = getType();
+
+        if (typeParent != null && hasField())
+            {
+            ConstantPool pool = typeParent.getConstantPool();
+            if (typeParent.getAccess() != Access.STRUCT && typeParent.isImmutable()
+                    && !typeProp.isImmutable() && !typeProp.isA(pool.typeService()))
+                {
+                typeProp = pool.ensureImmutableTypeConstant(typeProp);
+                }
+            }
+        return typeProp;
+        }
+
+    /**
      * @return true iff this property represents a constant (a static property)
      */
     public boolean isConstant()
