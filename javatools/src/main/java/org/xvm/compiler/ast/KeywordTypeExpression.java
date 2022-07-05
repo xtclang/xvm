@@ -7,7 +7,10 @@ import org.xvm.asm.ErrorListener;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
+
+import org.xvm.util.Severity;
 
 
 /**
@@ -46,6 +49,12 @@ public class KeywordTypeExpression
     protected TypeConstant instantiateTypeConstant(Context ctx, ErrorListener errs)
         {
         ConstantPool pool = pool();
+
+        if (keyword.getId() == Token.Id.ANY)
+            {
+            log(errs, Severity.ERROR, Compiler.KEYWORD_UNEXPECTED, keyword.getValueText());
+            return pool.typeObject(); // TODO need a poison/error type that is known by the compiler
+            }
 
         return switch (keyword.getId())
             {

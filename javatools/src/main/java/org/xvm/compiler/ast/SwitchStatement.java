@@ -451,6 +451,12 @@ public class SwitchStatement
             List<CaseBlockContext> listBlocks = f_listBlocks;
             int                    cBlocks    = listBlocks.size();
 
+            if (cBlocks == 0)
+                {
+                // there's already been an error logged to get to this point
+                return;
+                }
+
             if (cBlocks == 1)
                 {
                 // degenerated case - just take all the only block has

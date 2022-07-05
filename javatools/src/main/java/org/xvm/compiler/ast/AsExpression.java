@@ -150,6 +150,15 @@ public class AsExpression
         }
 
 
+    // ----- debugging assistance ------------------------------------------------------------------
+
+    @Override
+    public String toString()
+        {
+        return String.valueOf(expr1) + '.' + operator.getId().TEXT + '(' + expr2 + ')';
+        }
+
+
     // ----- fields --------------------------------------------------------------------------------
 
     protected long lEndPos;

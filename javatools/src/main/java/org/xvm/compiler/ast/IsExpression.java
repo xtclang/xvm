@@ -295,6 +295,15 @@ public class IsExpression
         }
 
 
+    // ----- debugging assistance ------------------------------------------------------------------
+
+    @Override
+    public String toString()
+        {
+        return String.valueOf(expr1) + '.' + operator.getId().TEXT + '(' + expr2 + ')';
+        }
+
+
     // ----- fields --------------------------------------------------------------------------------
 
     private final long lEndPos;

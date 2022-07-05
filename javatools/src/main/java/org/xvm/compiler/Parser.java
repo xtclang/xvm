@@ -4885,6 +4885,9 @@ public class Parser
                 return type;
                 }
 
+            case ANY:
+                return new KeywordTypeExpression(current());
+
             case STRUCT:
             case PUBLIC:
             case PROTECTED:
