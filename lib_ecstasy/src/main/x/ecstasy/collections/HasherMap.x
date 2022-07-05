@@ -86,6 +86,7 @@ class HasherMap<Key, Value>
             }
         }
     finally // REVIEW GG+CP - wouldn't it be nice if "finally" could capture from the "construct" block?
+            // e.g.: Boolean optimized = that.is(HasherMap) && hasher == that.hasher;
         {
         if (!(that.is(HasherMap) && hasher == that.hasher))
             {
@@ -1399,7 +1400,6 @@ class HasherMap<Key, Value>
      */
     protected class EntrySet
             extends CollectionImpl<Entry>
-            implements Collection<Entry>
         {
         @Override
         protected class IteratorImpl
