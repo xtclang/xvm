@@ -1,9 +1,10 @@
+- roll-over log file; implement time/size options
+
+- file ops (contents.get/set, truncate, append) to use NIO (ask Mark to take a look)
+
 - MapMapping doesn't work for properties that declared as Map classes, e.g.
     const Test(Map<Int, String> map)     - json serialization works
     const Test(HashMap<Int, String> map) - json serialization DOESN'T WORK
-
-- need to make _native module non-discoverable (and services for container -1)
-    see TestSimple.x on the shelf
 
 - need to implement "persistent" mutators for HasherMap
 
@@ -25,11 +26,11 @@
 
 - enum ClassCompositions without type parameters could be made into CanonicalCompositions
 
-- roll-over log file; implement time/size options
-
 - entering debugger should stop time
 
 - debugger stops on exceptions even if that breakpoint is disabled
+
+- debugger should print an exception stack for natural exceptions thrown by "toString()"
 
 - add a periodic re-schedule to Timer API
 
@@ -40,8 +41,6 @@
 - add deadlock detection
 
 - Cam: the last case in the switch should not allow "continue"
-
-- clean up OSFile/OSNode etc. service?
 
 - consider not needing the ^ for a return of a tail-call invocation (except in a try block?)
     "return foo();" should be equivalent to "return foo^();"
@@ -105,20 +104,13 @@
 
 - optimize-out unnecessary array cloning by changing getBytes() to copyBytes(arrayInto)
 
-- file ops to use NIO (ask Mark to take a look)
-
 - consider @Proxyable annotation for compiler to enforce proxy-ability of an interface
 
 // DEFERRED:
 - RTFunction should not be xConst
 - classes in methods don't support captures of formal types
-- MethodDeclarationStatement: need to disallow "auto narrowing" for functions is the type is
-  an argument, rather than constraint
 - @Atomic property with a mutable content needs to wrap
 - what if timer.schedule() lambda throws? (exception is invisible)
-- fix xLinker.java
-
-// Mark:
 - infinite loop detection
 - long object handle
 - upon a Future's gc report if an exception has not been handled
