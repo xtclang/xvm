@@ -30,6 +30,7 @@ import org.xvm.runtime.template.xBoolean;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.readPackedInt;
+import static org.xvm.util.Handy.readPackedLong;
 import static org.xvm.util.Handy.writePackedLong;
 
 
@@ -47,15 +48,17 @@ public class JumpVal_N
      * Construct a JMP_VAL_N op.
      *
      * @param aArgVal     an array of value Arguments (the "condition")
+     * @param afIsSwitch  a bit array of indicators for "isA" instead of "equals" testing
      * @param aConstCase  an array of "case" values (constants)
      * @param aOpCase     an array of Ops to jump to
      * @param opDefault   an Op to jump to in the "default" case
      */
-    public JumpVal_N(Argument[] aArgVal, Constant[] aConstCase, Op[] aOpCase, Op opDefault)
+    public JumpVal_N(Argument[] aArgVal, long afIsSwitch, Constant[] aConstCase, Op[] aOpCase, Op opDefault)
         {
         super(aConstCase, aOpCase, opDefault);
 
-        m_aArgCond = aArgVal;
+        m_aArgCond   = aArgVal;
+        m_afIsSwitch = afIsSwitch;
         }
 
     /**
@@ -71,6 +74,7 @@ public class JumpVal_N
 
         int   cArgs = readMagnitude(in);
         int[] anArg = new int[cArgs];
+        m_afIsSwitch = readPackedLong(in);
         for (int i = 0; i < cArgs; ++i)
             {
             anArg[i] = readPackedInt(in);
@@ -92,6 +96,7 @@ public class JumpVal_N
         int[] anArg = m_anArgCond;
         int   cArgs = anArg.length;
         writePackedLong(out, cArgs);
+        writePackedLong(out, m_afIsSwitch);
         for (int i = 0; i < cArgs; ++i)
             {
             writePackedLong(out, anArg[i]);
@@ -137,6 +142,12 @@ public class JumpVal_N
     protected int explodeConstants(Frame frame, int iPC, ObjectHandle[] ahValue, int iRow,
                                    ObjectHandle[][] aahCases)
         {
+        // TODO GG
+        if (m_afIsSwitch != 0)
+            {
+            throw new UnsupportedOperationException("switch (o.is(_))");
+            }
+
         for (int cRows = m_aofCase.length; iRow < cRows; iRow++)
             {
             int            cColumns     = ahValue.length;
@@ -557,8 +568,9 @@ public class JumpVal_N
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected int[]      m_anArgCond;
-    private   Argument[] m_aArgCond;
+    private int[]      m_anArgCond;
+    private long       m_afIsSwitch;
+    private Argument[] m_aArgCond;
 
     /**
      * Cached array of case constant values.

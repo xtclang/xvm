@@ -391,7 +391,7 @@ public class JumpVal
     /**
      * Cached array of case constant values.
      */
-    private transient ObjectHandle[] m_ahCase;
+    protected transient ObjectHandle[] m_ahCase;
 
     /**
      * Cached jump map. The Integer represents the matching case.

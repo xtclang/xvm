@@ -178,9 +178,11 @@
 +JMP_NCOND  COND, addr                              ; jump if the link-time condition evaluates to False
 +JMP_NFIRST addr                                    ; jump if this is NOT the first time the op has been executed
 +JMP_NSAMPL rvalue, addr                            ; jump if this is NOT a selected sample based on the rvalue sample rate (a compile-time or run-time constant)
-+JMP_INT    rvalue, offset, #:(addr), addr-default      ; if (value - offset) equals (0,1,2,...), jump to corresponding address, otherwise default
-+JMP_VAL    rvalue, #:(CONST, addr), addr-default       ; if value equals a constant, jump to address, otherwise default
--JMP_VAL_N  #:(rvalue), #:(CONST, addr), addr-default   ; if values equals fields of a tuple constant, jump to address, otherwise default
+
++JMP_INT    rvalue, offset, #:(addr), addr-default         ; if (value - offset) equals (0,1,2,...), jump to corresponding address, otherwise default
++JMP_VAL    rvalue, #:(CONST, addr), addr-default          ; if value equals a constant, jump to address, otherwise default
+-JMP_ISA    rvalue, #:(CONST, addr), addr-default          ; if value "isA" a constant, jump to address, otherwise default
++JMP_VAL_N  #:(rvalue), isA, #:(CONST, addr), addr-default ; if values equals (or isA) fields of a tuple constant, jump to address, otherwise default
 
 // asserts
 // (specifying CONSTRUCT as A_IGNORE implies a breakpoint only, and not a raised exception)

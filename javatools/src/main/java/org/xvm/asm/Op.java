@@ -1219,6 +1219,7 @@ public abstract class Op
             case OP_JMP_NSAMPLE: return new JumpNSample (in, aconst);
             case OP_JMP_INT:     return new JumpInt     (in, aconst);
             case OP_JMP_VAL:     return new JumpVal     (in, aconst);
+            case OP_JMP_ISA:     return new JumpIsA     (in, aconst);
             case OP_JMP_VAL_N:   return new JumpVal_N   (in, aconst);
 
             case OP_IS_ZERO:     return new IsZero      (in, aconst);
@@ -1453,6 +1454,7 @@ public abstract class Op
             case OP_JMP_NSAMPLE: return "JMP_NSAMPLE";
             case OP_JMP_INT:     return "JMP_INT";
             case OP_JMP_VAL:     return "JMP_VAL";
+            case OP_JMP_ISA:     return "JMP_ISA";
             case OP_JMP_VAL_N:   return "JMP_VAL_N";
             case OP_IS_ZERO:     return "IS_ZERO";
             case OP_IS_NZERO:    return "IS_NZERO";
@@ -1803,6 +1805,7 @@ public abstract class Op
     public static final int OP_JMP_NSAMPLE  = 0x8B;
     public static final int OP_JMP_INT      = 0x8C;
     public static final int OP_JMP_VAL      = 0x8D;
+    public static final int OP_JMP_ISA      = 0xF2;
     public static final int OP_JMP_VAL_N    = 0x8E;
 
     public static final int OP_ASSERT       = 0x8F;
@@ -1913,7 +1916,6 @@ public abstract class Op
     public static final int OP_MIP_OR       = 0xF0;
     public static final int OP_MIP_XOR      = 0xF1;
 
-    public static final int OP_RSVD_F2      = 0xF2;
     public static final int OP_RSVD_F3      = 0xF3;
     public static final int OP_RSVD_F4      = 0xF4;
     public static final int OP_RSVD_F5      = 0xF5;

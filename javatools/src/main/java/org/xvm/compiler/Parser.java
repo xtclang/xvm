@@ -2321,16 +2321,8 @@ public class Parser
             return null;
             }
 
-        // a single condition expression
-        AstNode expr = parseSwitchConditionExpression();
-        if (!peek(Id.COMMA))
-            {
-            return Collections.singletonList(expr);
-            }
-
-        // multi-condition expression
         List<AstNode> list = new ArrayList<>();
-        list.add(expr);
+        list.add(parseSwitchConditionExpression());
         while (match(Id.COMMA) != null)
             {
             list.add(parseSwitchConditionExpression());

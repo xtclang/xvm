@@ -2,82 +2,29 @@ module TestSimple
     {
     @Inject Console console;
 
-    package json import json.xtclang.org;
-
-    import ecstasy.reflect.*;
-
-    import json.Schema;
-
     void run()
         {
-        testTemplate(TestSimple);
-        testTemplate(Schema);
-
-        testTypeSystem();
-        }
-
-    void testTemplate(Class clz)
-        {
-        ClassTemplate  ct = clz.baseTemplate;
-        ModuleTemplate mt = ct.containingModule;
-
-        // this used to show "_native.xtclang.org" and its dependencies
-        console.println(mt.parent.moduleNames);
-        }
-
-    void testTypeSystem()
-        {
-        console.println("\n** testTypeSystem");
-
-        TypeSystem ts = this:service.typeSystem;
-        console.println($"current TypeSystem={ts}");
-        console.println($"modules              : {ts.modules              }");
-        console.println($"sharedModules        : {ts.sharedModules        }");
-        console.println($"moduleBySimpleName   : {ts.moduleBySimpleName   }");
-        console.println($"moduleByQualifiedName: {ts.moduleByQualifiedName}");
-
-        console.println("modules:");
-        for (Module _module : ts.modules)
+        for (Int i : 0..3)
             {
-            displayModule(_module);
-            }
-
-        String[] names =
-                [
-                "json.Schema",
-                ];
-
-        for (String name : names)
-            {
-            try
+            switch (foo(i).is(_))
                 {
-                if (Class clz := ts.classForName(name))
-                    {
-                    console.println($"class for \"{name}\"={clz}");
-                    }
-                else
-                    {
-                    console.println($"no such class: \"{name}\"");
-                    }
-                }
-            catch (Exception e)
-                {
-                console.println($"exception occurred lookup up class \"{name}\"; exception={e}");
+                case String:
+                    console.println("String");
+                    break;
+                case Object:
+                    console.println("Object");
+                    break;
                 }
             }
         }
 
-    void displayModule(Module _module)
+    Object foo(Int i)
         {
-        console.println($"module \"{_module.simpleName}\" (\"{_module.qualifiedName}\")");
-        val deps = _module.modulesByPath;
-        if (!deps.empty)
+        return switch (i)
             {
-            console.println($" - dependencies:");
-            for ((String path, Module dep) : deps)
-                {
-                console.println($"    - \"{path}\" => \"{dep.qualifiedName}\"");
-                }
-            }
+            case 0: Int:0..Int:3;
+            case 1:  "hello";
+            default: Int:3;
+            } ;
         }
     }

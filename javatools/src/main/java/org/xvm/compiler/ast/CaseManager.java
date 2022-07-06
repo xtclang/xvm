@@ -24,6 +24,7 @@ import org.xvm.asm.constants.ValueConstant;
 import org.xvm.asm.op.Assert;
 import org.xvm.asm.op.Jump;
 import org.xvm.asm.op.JumpInt;
+import org.xvm.asm.op.JumpIsA;
 import org.xvm.asm.op.JumpVal;
 import org.xvm.asm.op.JumpVal_N;
 import org.xvm.asm.op.Label;
@@ -93,6 +94,15 @@ public class CaseManager<CookieType>
     public int getConditionCount()
         {
         return m_cCondVals;
+        }
+
+    /**
+     * @return true iff the switch has exactly one expression value to switch on, and the comparison
+     *         is for equality
+     */
+    public boolean isSingleEquals()
+        {
+        return m_cCondVals == 1 && m_afIsSwitch == 0;
         }
 
     /**
@@ -229,18 +239,21 @@ public class CaseManager<CookieType>
             // the first one that matches "True" will be used
             m_cCondVals  = 0;
             m_atypeCond  = new TypeConstant[] {pool.typeBoolean()};
+            m_afIsSwitch = 0;
             m_aconstCond = new Constant[] {pool.valTrue()};
             }
         else
             {
             List<TypeConstant> listTypes  = new ArrayList<>();
             List<Constant>     listConsts = new ArrayList<>();
+            long               afIsSwitch = 0L;
             boolean            fAllConst  = true;
             for (int i = 0, c = listCond.size(); i < c; ++i)
                 {
-                AstNode        node   = listCond.get(i);
-                TypeConstant[] atype  = null;
-                Constant[]     aconst = null;
+                AstNode        node      = listCond.get(i);
+                TypeConstant[] atype     = null;
+                boolean        fIsSwitch = false;
+                Constant[]     aconst    = null;
                 AstNode        nodeNew;
                 if (node instanceof AssignmentStatement stmtCond)
                     {
@@ -259,6 +272,19 @@ public class CaseManager<CookieType>
                                     ? stmtMulti.getTypes()
                                     : nodeLVal.getLValueExpression().getTypes();
                         }
+                    }
+                else if (node instanceof IsExpression exprIs
+                        && exprIs.getExpression2() instanceof KeywordTypeExpression exprType
+                        && exprType.getKeyword().getId() == Token.Id.ANY)
+                    {
+                    // replace "x.is(_)" with "x", and this node's test becomes an "is switch"
+                    nodeNew   = exprIs.getExpression1().validate(ctx, null, errs);
+                    if (nodeNew != null)
+                        {
+                        nodeNew.setParent(node.getParent());
+                        }
+                    atype     = new TypeConstant[] {pool.typeType()};
+                    fIsSwitch = true;
                     }
                 else
                     {
@@ -299,6 +325,14 @@ public class CaseManager<CookieType>
                             }
 
                         listTypes.add(type);
+                        if (fIsSwitch)
+                            {
+                            if (i >= 63)
+                                {
+                                node.log(errs, Severity.ERROR, Compiler.SWITCH_OVERFLOW);
+                                }
+                            afIsSwitch |= 1L << i;
+                            }
                         }
                     }
 
@@ -321,8 +355,9 @@ public class CaseManager<CookieType>
                     }
                 }
 
-            m_cCondVals = listTypes.size();
-            m_atypeCond = listTypes.toArray(TypeConstant.NO_TYPES);
+            m_cCondVals  = listTypes.size();
+            m_atypeCond  = listTypes.toArray(TypeConstant.NO_TYPES);
+            m_afIsSwitch = afIsSwitch;
             if (fValid)
                 {
                 if (fAllConst)
@@ -333,7 +368,7 @@ public class CaseManager<CookieType>
                     {
                     // check if any of the conditions are Type based, in which case we can do the
                     // type inference during validation
-                    for (int i = 0; i < m_cCondVals; i++)
+                    for (int i = 0, c = m_cCondVals; i < c; ++i)
                         {
                         if (m_atypeCond[i].isTypeOfType())
                             {
@@ -588,7 +623,7 @@ public class CaseManager<CookieType>
             }
 
         Constant constCase = m_listsetCase.last();
-        if (m_cCondVals == 1)
+        if (getConditionCount() == 1)
             {
             if (constCase instanceof TypeConstant typeCase)
                 {
@@ -793,7 +828,7 @@ public class CaseManager<CookieType>
             return true;
             }
 
-        if (m_mapWild != null)
+        if (usesNonExactMatching())
             {
             for (Entry<Constant, Long> entry : m_mapWild.entrySet())
                 {
@@ -995,15 +1030,14 @@ public class CaseManager<CookieType>
      */
     private boolean areAllCasesCovered()
         {
-        int cCondVals = m_cCondVals;
-        if (cCondVals == 0)
+        if (usesIfLadder())
             {
-            // if-ladder
             return false;
             }
 
         int cCases = m_listsetCase.size();
-        if (cCondVals == 1)
+        int cConds = getConditionCount();
+        if (cConds == 1)
             {
             TypeConstant typeCase = m_typeCase;
             if (!typeCase.isIntConvertible())
@@ -1019,13 +1053,7 @@ public class CaseManager<CookieType>
                 }
 
             int cCovered = 0;
-            if (m_mapWild == null)
-                {
-                // without a wildcard or ranges (since we know that the simple cases don't
-                // intersect) the answer is simple
-                cCovered = cCases;
-                }
-            else
+            if (usesNonExactMatching())
                 {
                 // we know that the ranges don't intersect, but there is a possibility that some
                 // former values intersect with later ranges; so we need to account for those
@@ -1061,6 +1089,12 @@ public class CaseManager<CookieType>
                         }
                     }
                 }
+            else
+                {
+                // without a wildcard or ranges (since we know that the simple cases don't
+                // intersect) the answer is simple
+                cCovered = cCases;
+                }
 
             assert cCardinality >= cCovered;
             return cCardinality == cCovered;
@@ -1068,12 +1102,12 @@ public class CaseManager<CookieType>
 
         // there are multiple columns; be reasonable on the number of possible combinations
         TypeConstant[] atype = m_typeCase.getParamTypesArray();
-        assert atype.length == cCondVals;
+        assert atype.length == cConds;
 
-        int[]      aiCardinals = new int[cCondVals];
-        Constant[] aconstBase  = new Constant[cCondVals];
+        int[]      aiCardinals = new int[cConds];
+        Constant[] aconstBase  = new Constant[cConds];
         int        cTotal      = 1;
-        for (int i = 0; i < cCondVals; i++)
+        for (int i = 0; i < cConds; i++)
             {
             TypeConstant typeCase = atype[i];
             if (!typeCase.isIntConvertible())
@@ -1104,7 +1138,7 @@ public class CaseManager<CookieType>
             }
 
         BitCube cube    = new BitCube(aiCardinals);
-        int[]   anPoint = new int[cCondVals];
+        int[]   anPoint = new int[cConds];
 
         Iterator<Constant> iter = m_listsetCase.iterator();
         for (int iCase = 0; iCase < cCases; iCase++)
@@ -1116,9 +1150,9 @@ public class CaseManager<CookieType>
                 }
 
             Constant[] aconstCase = ((ArrayConstant) constTuple).getValue();
-            assert aconstCase.length == cCondVals;
+            assert aconstCase.length == cConds;
 
-            processCondition(cube, 0, anPoint, cCondVals, aconstCase, aconstBase);
+            processCondition(cube, 0, anPoint, cConds, aconstCase, aconstBase);
             }
         return cube.isFull();
         }
@@ -1252,18 +1286,23 @@ public class CaseManager<CookieType>
 
         Argument[] aArgVal    = generateConditionArguments(ctx, code, errs);
         Label[]    alabelCase = m_alabelCase;
-        int        cCondVals  = m_cCondVals;
         if (usesJmpInt())
             {
-            assert cCondVals == 1 && aArgVal.length == 1;
+            assert getConditionCount() == 1 && aArgVal.length == 1;
             code.add(new JumpInt(aArgVal[0], alabelCase, labelDefault));
+            }
+        else if (isSingleEquals())
+            {
+            code.add(new JumpVal(aArgVal[0], m_aconstCase, alabelCase, labelDefault));
+            }
+        else if (getConditionCount() == 1)
+            {
+            assert m_afIsSwitch == 1;
+            code.add(new JumpIsA(aArgVal[0], m_aconstCase, alabelCase, labelDefault));
             }
         else
             {
-            Constant[] aconstCase = m_aconstCase;
-            code.add(cCondVals > 1
-                    ? new JumpVal_N(aArgVal, aconstCase, alabelCase, labelDefault)
-                    : new JumpVal(aArgVal[0], aconstCase, alabelCase, labelDefault));
+            code.add(new JumpVal_N(aArgVal, m_afIsSwitch, m_aconstCase, alabelCase, labelDefault));
             }
 
         if (fDefaultAssert)
@@ -1348,6 +1387,12 @@ public class CaseManager<CookieType>
      * The type of each condition expression / tuple field of case statements.
      */
     private TypeConstant[] m_atypeCond;
+
+    /**
+     * "Bit set" (encoded as a long) for each condition expression / tuple field of case statement
+     * that is an "is switch" (an "is a" instead of an equals test).
+     */
+    private long m_afIsSwitch;
 
     /**
      * If the condition evaluates to a constant, then this holds that value.

@@ -30,6 +30,14 @@ public class KeywordTypeExpression
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    /**
+     * @return the token used to create this type expression
+     */
+    public Token getKeyword()
+        {
+        return keyword;
+        }
+
     @Override
     public long getStartPosition()
         {

@@ -1303,6 +1303,10 @@ public class Compiler
      */
     public static final String EXPRESSION_NOT_STATEMENT            = "COMPILER-180";
     /**
+     * Too many conditions for an "is" switch.
+     */
+    public static final String SWITCH_OVERFLOW                     = "COMPILER-181";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                     = "COMPILER-NI";
