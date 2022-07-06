@@ -343,7 +343,7 @@ public class JumpVal_N
                         // fall through
                         }
 
-                    case NativeSimple:
+                    case NaturalSimple:
                         {
                         switch (typeColumn.callEquals(frame, hValue, hCase, Op.A_STACK))
                             {
