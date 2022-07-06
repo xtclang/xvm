@@ -677,11 +677,14 @@ public abstract class Utils
                     CompletableFuture<ObjectHandle> cfResult =
                         ctxMain.sendConstantRequest(frame, listSingletons);
 
-                    // create a pseudo frame to deal with the wait, but don't allow any other fiber
-                    // to interleave until a response comes back (as in "forbidden" reentrancy)
-                    ctxCurr.setSynchronicity(frame.f_fiber, Synchronicity.Critical);
-                    cfResult.whenComplete((r, e) ->
-                        ctxCurr.setSynchronicity(null, Synchronicity.Concurrent));
+                    if (ctxCurr.getSynchronicity() == Synchronicity.Concurrent)
+                        {
+                        // create a pseudo frame to deal with the wait, but don't allow any other fiber
+                        // to interleave until a response comes back (as in "forbidden" reentrancy)
+                        ctxCurr.setSynchronicity(frame.f_fiber, Synchronicity.Critical);
+                        cfResult.whenComplete((r, e) ->
+                            ctxCurr.setSynchronicity(null, Synchronicity.Concurrent));
+                        }
 
                     Frame frameWait = createWaitFrame(frame, cfResult, Op.A_IGNORE);
                     frameWait.addContinuation(continuation);

@@ -124,9 +124,9 @@ public class ServiceContext
         }
 
     /**
-     * Supporting method for natural Service.registerCriticalSection() API.
+     * Supporting method for Service.synchronizedSection.get().
      *
-     * @return the current CriticalSection? handle
+     * @return the current SynchronizedSection? handle
      */
     public ObjectHandle getSynchronizedSection()
         {
@@ -134,13 +134,22 @@ public class ServiceContext
         }
 
     /**
-     * Supporting method for natural Service.registerCriticalSection() API.
+     * Supporting method for Service.registerSynchronizedSection().
      *
-     * @param hSection  the new CriticalSection? handle
+     * @param frame     the frame that registers or unregisters the SynchronizedSection
+     * @param hSection  the new SynchronizedSection? handle
+     *
+     * @return one of the {@link Op#R_NEXT} or {@link Op#R_EXCEPTION} values
      */
-    public void setSynchronizedSection(Fiber fiber, ObjectHandle hSection)
+    public int setSynchronizedSection(Frame frame, ObjectHandle hSection)
         {
         assert hSection != null;
+
+        if (m_hSynchronizedSection != xNullable.NULL && m_fiberSyncOwner != frame.f_fiber)
+            {
+            // should never happen
+            return frame.raiseException("Attempt to reset unowned SynchronizedSection");
+            }
 
         m_hSynchronizedSection = hSection;
 
@@ -152,9 +161,11 @@ public class ServiceContext
             {
             ObjectHandle hCritical = ((GenericHandle) hSection).getField(null, "critical");
 
-            setSynchronicity(fiber, ((BooleanHandle) hCritical).get() ?
+            setSynchronicity(frame.f_fiber, ((BooleanHandle) hCritical).get() ?
                     Synchronicity.Critical : Synchronicity.Synchronized);
             }
+
+        return Op.R_NEXT;
         }
 
     /**
@@ -1917,7 +1928,7 @@ public class ServiceContext
     private ObjectHandle m_hTimeout = xNullable.NULL;
 
     /**
-     * The current CriticalSection for the service.
+     * The current SynchronizedSection for the service.
      */
     private ObjectHandle m_hSynchronizedSection = xNullable.NULL;
 

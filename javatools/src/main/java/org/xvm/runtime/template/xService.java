@@ -237,12 +237,9 @@ public class xService
                 return Op.R_NEXT;
 
             case "registerSynchronizedSection":
-                if (frame.f_context == hService.f_context)
-                    {
-                    frame.f_context.setSynchronizedSection(frame.f_fiber, hArg);
-                    return Op.R_NEXT;
-                    }
-                return frame.raiseException("Call out of context");
+                return frame.f_context == hService.f_context
+                        ? frame.f_context.setSynchronizedSection(frame, hArg)
+                        : frame.raiseException("Call out of context");
 
             case "registerShuttingDownNotification":
                 return frame.raiseException("Not implemented");
