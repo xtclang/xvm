@@ -8,8 +8,7 @@ import json.ObjectOutputStream;
  */
 @Concurrent
 service JsonNtxLogStore<Element extends immutable Const>
-        extends ObjectStore(catalog, info)
-        implements LogStore<Element>
+        extends JsonLogStoreBase<Element>
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -20,41 +19,8 @@ service JsonNtxLogStore<Element extends immutable Const>
               Int              truncateSize,
               )
         {
-        super(catalog, info);
-
-        this.jsonSchema     = catalog.jsonSchema;
-        this.elementMapping = elementMapping;
-        this.truncateSize   = truncateSize;
+        super(catalog, info, elementMapping, expiry, truncateSize);
         }
-
-
-    // ----- properties ----------------------------------------------------------------------------
-
-    @Inject Clock clock;
-
-    /**
-     * A cached reference to the JSON schema.
-     */
-    public/protected json.Schema jsonSchema;
-
-    /**
-     * The JSON Mapping for the log elements.
-     */
-    public/protected Mapping<Element> elementMapping;
-
-    /**
-     * The file owned by this LogStore for purpose of its data storage. The LogStore may
-     * create, modify, and remove this file.
-     */
-    @Lazy public/private File dataFile.calc()
-        {
-        return dataDir.fileFor("log.json");
-        }
-
-    /**
-     * The maximum size log to store in any one log file.
-     */
-    protected Int truncateSize;
 
 
     // ----- storage API exposed to the client -----------------------------------------------------
@@ -63,6 +29,8 @@ service JsonNtxLogStore<Element extends immutable Const>
     @Synchronized
     void append(Int txId, Element element)
         {
+        checkWrite();
+
         StringBuffer buf = new StringBuffer(64);
 
         buf.append(",\n{\"t\":\"")
@@ -92,41 +60,7 @@ service JsonNtxLogStore<Element extends immutable Const>
         length += buf.size;
         if (length > truncateSize)
             {
-            // TODO schedule a rotation
+            rotateLog();
             }
-        }
-
-
-    // ----- transaction API exposed to TxManager --------------------------------------------------
-
-    @Override
-    void initializeEmpty()
-        {
-        assert model == Empty;
-        // TODO
-        }
-
-    @Override
-    void loadInitial()
-        {
-        assert model != Empty;
-        // TODO
-        }
-
-    @Override
-    void unload()
-        {
-        // TODO
-        }
-
-
-    // ----- internal ------------------------------------------------------------------------------
-
-    protected void rotateLog()
-        {
-        String timestamp   = clock.now.toString(True);
-        String rotatedName = $"log_{timestamp}.json";
-
-        assert File rotatedFile := dataFile.renameTo(rotatedName);
         }
     }
