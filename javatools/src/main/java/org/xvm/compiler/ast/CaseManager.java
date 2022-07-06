@@ -278,10 +278,10 @@ public class CaseManager<CookieType>
                         && exprType.getKeyword().getId() == Token.Id.ANY)
                     {
                     // replace "x.is(_)" with "x", and this node's test becomes an "is switch"
-                    nodeNew   = exprIs.getExpression1().validate(ctx, null, errs);
+                    nodeNew = exprIs.getExpression1().validate(ctx, null, errs);
                     if (nodeNew != null)
                         {
-                        nodeNew.setParent(node.getParent());
+                        nodeNew.setParent(exprIs.getParent());
                         }
                     atype     = new TypeConstant[] {pool.typeType()};
                     fIsSwitch = true;
@@ -330,6 +330,7 @@ public class CaseManager<CookieType>
                             if (i >= 63)
                                 {
                                 node.log(errs, Severity.ERROR, Compiler.SWITCH_OVERFLOW);
+                                fValid = false;
                                 }
                             afIsSwitch |= 1L << i;
                             }

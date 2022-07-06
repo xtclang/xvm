@@ -28,6 +28,8 @@ import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean;
 
+import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
+
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.readPackedLong;
@@ -74,6 +76,7 @@ public class JumpVal_N
 
         int   cArgs = readMagnitude(in);
         int[] anArg = new int[cArgs];
+
         m_afIsSwitch = readPackedLong(in);
         for (int i = 0; i < cArgs; ++i)
             {
@@ -142,12 +145,6 @@ public class JumpVal_N
     protected int explodeConstants(Frame frame, int iPC, ObjectHandle[] ahValue, int iRow,
                                    ObjectHandle[][] aahCases)
         {
-        // TODO GG
-        if (m_afIsSwitch != 0)
-            {
-            throw new UnsupportedOperationException("switch (o.is(_))");
-            }
-
         for (int cRows = m_aofCase.length; iRow < cRows; iRow++)
             {
             int            cColumns     = ahValue.length;
@@ -209,6 +206,7 @@ public class JumpVal_N
         Algorithm[]               aAlg   = m_aAlgorithm;
         Map<ObjectHandle, Long>[] aMap   = m_amapJumpSmall;
         long[]                    alWild = m_alWildcardSmall;
+        long                      afIs   = m_afIsSwitch;
         long                      ixBits = -1;
 
         // first go over the native columns
@@ -245,10 +243,28 @@ public class JumpVal_N
 
                 case NativeSimple:
                     {
-                    Long LBits = aMap[iCol].get(hValue);
-                    if (LBits != null)
+                    if ((afIs & (1L << iCol)) == 0)
                         {
-                        ixColumn |= LBits.longValue();
+                        Long LBits = aMap[iCol].get(hValue);
+                        if (LBits != null)
+                            {
+                            ixColumn |= LBits.longValue();
+                            }
+                        }
+                    else
+                        {
+                        // this is an "is(_)" column
+                        TypeConstant     typeVal  = hValue.getType();
+                        ObjectHandle[][] aahCases = m_aahCases;
+
+                        for (int iRow = 0, cRows = aahCases.length; iRow < cRows; iRow++)
+                            {
+                            TypeHandle hCase = (TypeHandle) aahCases[iRow][iCol];
+                            if (typeVal.isA(hCase.getDataType()))
+                                {
+                                ixColumn |= (1L << iRow);
+                                }
+                            }
                         }
                     break;
                     }
@@ -410,6 +426,7 @@ public class JumpVal_N
         ObjectHandle[][] aahCases    = m_aahCases;
         int[]            anConstCase = m_anConstCase;
         int[]            anArg       = m_anArgCond;
+        long             afIs        = m_afIsSwitch;
         int              cRows       = anConstCase.length;
         int              cColumns    = anArg.length;
 
@@ -422,7 +439,10 @@ public class JumpVal_N
         Arrays.fill(aAlgorithm, Algorithm.NativeSimple); // assume native
         for (int iC = 0; iC < cColumns; iC++)
             {
-            amapJump[iC]    = new HashMap<>(cRows);
+            if ((afIs & (1L << iC)) == 0)
+                {
+                amapJump[iC] = new HashMap<>(cRows);
+                }
             atypeColumn[iC] = frame.getLocalType(anArg[iC], null);
             }
 
@@ -454,8 +474,12 @@ public class JumpVal_N
                     {
                     if (hCase.isNativeEqual())
                         {
-                        amapJump[iC].compute(hCase, (h, LOld) ->
-                            Long.valueOf(lCaseBit | (LOld == null ?  0 : LOld.longValue())));
+                        Map<ObjectHandle, Long> mapJump = amapJump[iC];
+                        if (mapJump != null)
+                            {
+                            mapJump.compute(hCase, (h, LOld) ->
+                                Long.valueOf(lCaseBit | (LOld == null ?  0 : LOld.longValue())));
+                            }
                         }
                     else if (fRange)
                         {
@@ -569,7 +593,7 @@ public class JumpVal_N
     // ----- fields --------------------------------------------------------------------------------
 
     private int[]      m_anArgCond;
-    private long       m_afIsSwitch;
+    private final long m_afIsSwitch;
     private Argument[] m_aArgCond;
 
     /**

@@ -2,32 +2,18 @@ package org.xvm.asm.op;
 
 
 import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 
-import org.xvm.asm.constants.ParameterizedTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHandle.ExceptionHandle;
-import org.xvm.runtime.ObjectHandle.GenericHandle;
-import org.xvm.runtime.Utils;
 
-import org.xvm.runtime.template._native.reflect.xRTType;
-import org.xvm.runtime.template.xBoolean;
-
-import static org.xvm.util.Handy.readPackedInt;
-import static org.xvm.util.Handy.writePackedLong;
+import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
 
 /**
@@ -72,12 +58,11 @@ public class JumpIsA
     @Override
     protected int complete(Frame frame, int iPC, ObjectHandle hValue)
         {
-        // REVIEW GG
         ObjectHandle[] ahCase  = m_ahCase;
         TypeConstant   typeVal = hValue.getType();
         for (int i = 0, c = ahCase.length; i < c; ++i)
             {
-            if (typeVal.isA(((xRTType.TypeHandle) ahCase[i]).getDataType()))
+            if (typeVal.isA(((TypeHandle) ahCase[i]).getDataType()))
                 {
                 return iPC + m_aofCase[i];
                 }
