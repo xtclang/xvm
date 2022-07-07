@@ -253,7 +253,7 @@ val compileJsonDB = tasks.register<JavaExec>("compileJsonDB") {
 
     dependsOn(javatools.tasks["build"])
 
-    shouldRunAfter(compileJson)
+    shouldRunAfter(compileJson, compileOODB)
 
     jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
 
