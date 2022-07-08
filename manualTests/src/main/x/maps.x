@@ -4,6 +4,8 @@ module TestMaps
 
     import collections.ConcurrentHashMap;
 
+    import ecstasy.text.Log;
+
     @Inject Console console;
     @Inject Timer   timer;
     Log log = new ecstasy.io.ConsoleLog(console);

@@ -43,9 +43,4 @@ package io
      * A Writer is simply an `Appender<Char>`.
      */
     typedef Appender<Char> as Writer;
-
-    /**
-     * A Log is simply an `Appender<String>`.
-     */
-    typedef Appender<String> as Log;
     }

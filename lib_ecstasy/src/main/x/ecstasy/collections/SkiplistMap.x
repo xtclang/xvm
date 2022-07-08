@@ -1,6 +1,8 @@
 import maps.EntryValues;
 import maps.OrderedMapSlice;
 
+import text.Log;
+
 /**
  * The SkiplistMap is an OrderedMap implementation using a "Skip List" data structure.
  *

@@ -1,3 +1,5 @@
+import text.Log;
+
 /**
  * A Log implementation that delegates to a Console.
  *
