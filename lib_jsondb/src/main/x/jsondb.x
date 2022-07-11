@@ -360,7 +360,6 @@ module jsondb.xtclang.org
             @Override
             Supplier getResource(Type type, String name)
                 {
-                Boolean wrongName = False;
                 switch (type, name)
                     {
                     case (Console, "console"):
