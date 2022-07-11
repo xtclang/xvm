@@ -148,7 +148,7 @@ public class Compiler
     /**
      * Second pass: Link the modules together based on their declared dependencies.
      *
-     * @param repo   the module repository to use
+     * @param repo  the module repository to use
      *
      * @return a name of a first missing module, if any
      */
