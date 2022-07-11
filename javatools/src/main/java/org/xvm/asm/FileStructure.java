@@ -507,7 +507,10 @@ public class FileStructure
             {
             moduleLinked.registerConstants(pool);
             moduleLinked.registerChildrenConstants(pool);
+            }
 
+        for (ModuleStructure moduleLinked : listLinked)
+            {
             moduleLinked.synthesizeChildren();
             }
         }
