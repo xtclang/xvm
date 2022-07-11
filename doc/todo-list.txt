@@ -1,4 +1,6 @@
-- roll-over log file; implement time/size options
+- implement log file roll-over
+
+- move ecstasy.mgmt package to a separate module
 
 - file ops (contents.get/set, truncate, append) to use NIO (ask Mark to take a look)
 

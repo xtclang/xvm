@@ -1,51 +1,76 @@
 /**
- * A test for DBProcessor functionality.
+ * A stand-alone test for DBProcessor functionality.
  *
- *  To prepare the test, follow steps 1-5 outlined in TestSimpleWeb.
- *
- *  To run the test:
- *      curl -i -w '\n' -X GET http://[domain]:8080/run
- *
- *  To check the counters:
- *      curl -i -w '\n' -X GET http://[domain]:8080/dump
- *
- * See [CounterDB] database module.
+ * To run:
+ *      gradle compileOne -PtestName=dbTests/CounterDB
+ *      gradle runOne -PtestName=dbTests/CounterTest
  */
-@web.WebModule
 module CounterTest
     {
-    package web import web.xtclang.org;
+    package oodb   import oodb.xtclang.org;
+    package jsondb import jsondb.xtclang.org;
 
-    package CounterDB import CounterDB;
+    package counterDB import CounterDB;
 
-    import CounterDB.CounterSchema;
-    import CounterDB.oodb.Connection;
-    import CounterDB.oodb.DBMap;
+    import counterDB.CounterSchema;
 
-    @web.WebService
-    service Test
+    typedef (oodb.Connection<CounterSchema> + CounterSchema) as Connection;
+
+    void run(String[] args = [])
         {
-        @Inject Random        rnd;
-        @Inject CounterSchema schema;
+        @Inject Console   console;
+        @Inject Directory homeDir;
+        @Inject Random    rnd;
 
-        @web.Get("/run")
-        String run()
+        Directory dataDir  = homeDir.dirFor("Development/xvm/manualTests/data/counterDB").ensure();
+        Directory buildDir = homeDir.dirFor("Development/xvm/manualTests/build").ensure();
+
+        Connection connection =
+                jsondb.createConnection("CounterDB", dataDir, buildDir).as(Connection);
+
+        console.println(dump(connection));
+
+        StringBuffer msg = new StringBuffer().append($"cranking up schedules: ");
+        for (Int i : 1..3)
             {
-            for (Int i : 1..3)
-                {
-                // pick a letter to schedule
-                String name = ('A' + rnd.uint(26).toUInt32()).toString();
-                schema.logger.add($"cranking up schedule \"{name}\"...");
-                schema.cranker.schedule(name);
-                }
-            return dump();
-            }
+            // pick a letter to schedule
+            String name = ('A' + rnd.uint(26).toUInt32()).toString();
 
-        @web.Get("/dump")
-        String dump()
+            connection.logger.add($"cranking up schedule \"{name}\"...");
+            connection.cranker.schedule(name);
+
+            msg.append(name).append(", ");
+            }
+        console.println(msg.truncate(-2).toString());
+
+        wait(connection, Duration:1s);
+        }
+
+    void wait(Connection connection, Duration duration)
+        {
+        @Inject Console console;
+        @Inject Timer timer;
+
+        @Future Tuple<> result;
+        timer.schedule(duration, () ->
+            {
+            console.println(dump(connection));
+            try
+                {
+                connection.close();
+                }
+            catch (Exception ignore) {}
+            result=Tuple:();
+            });
+        return result;
+        }
+
+    String dump(Connection connection)
+        {
+        try (val tx = connection.createTransaction())
             {
             StringBuffer buf = new StringBuffer();
-            for ((String name, Int count) : schema.counters)
+            for ((String name, Int count) : connection.counters)
                 {
                 buf.append($"{name}={count}, ");
                 }

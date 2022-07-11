@@ -85,7 +85,7 @@
  * * [ObjectStore] - each DBO that is declared in the schema has a DSS, which is a sub-class
  *   of the `ObjectStore` service. The `ObjectStore` manages the reading and writing of JSON data
  *   from and to disk. By making each into its own service, I/O can theoretically be more highly
- *   concurrent, and caching can be managed close to the I/O implementaiton for the data being
+ *   concurrent, and caching can be managed close to the I/O implementation for the data being
  *   cached.
  *
  * Transactional management:
@@ -284,5 +284,150 @@ module jsondb.xtclang.org
         while (--retry > 0);
 
         throw failure;
+        }
+
+    /**
+     * Create a connection for the specified database module.
+     *
+     * This method is intended to be used by stand-alone database applications (command line
+     * utilities and tests) that use a `RootSchema` declared by the specified database module.
+     * The caller is expected to create only a single connection at a time and
+     * [close](oodb.Connection.close()) it before terminating, at which point the database will be
+     * shut down cleanly.
+     *
+     * @param dbModuleName  the name of the database module
+     * @param dataDir       the directory to use for the database data
+     * @param buildDir      the directory to use for the auto-generated classes and modules
+     */
+    static oodb.Connection createConnection(String dbModuleName, Directory dataDir, Directory buildDir,
+                                            oodb.DBUser? user = Null)
+        {
+        import ecstasy.annotations.InjectedRef;
+
+        import ecstasy.lang.src.Compiler;
+
+        import ecstasy.mgmt.Container;
+        import ecstasy.mgmt.Container.Linker;
+        import ecstasy.mgmt.DirRepository;
+        import ecstasy.mgmt.LinkedRepository;
+        import ecstasy.mgmt.ModuleRepository;
+        import ecstasy.mgmt.ResourceProvider;
+
+        import ecstasy.reflect.ModuleTemplate;
+
+        import ecstasy.text.Log;
+        import ecstasy.text.SimpleLog;
+
+        import tools.ModuleGenerator;
+
+        @Inject("repository") ModuleRepository coreRepo;
+
+        ModuleGenerator  gen  = new ModuleGenerator(dbModuleName);
+        ModuleRepository repo = new LinkedRepository([new DirRepository(buildDir), coreRepo].freeze(True));
+        Log              log  = new SimpleLog();
+
+        ModuleTemplate dbTemplate;
+        if (!(dbTemplate := gen.ensureDBModule(repo, buildDir, log)))
+            {
+            log.add($"Error: Failed to create a host for: {dbModuleName}");
+            throw new Exception(log.toString());
+            }
+
+        Container       container = new Container(dbTemplate, Lightweight, repo, new Injector(dataDir));
+        CatalogMetadata meta      = container.innerTypeSystem.primaryModule.as(CatalogMetadata);
+        Catalog         catalog   = meta.createCatalog(dataDir);
+
+        catalog.ensureOpenDB(dbModuleName);
+
+        user ?:= new oodb.model.User(1, "admin");
+
+        return catalog.createClient(user, autoShutdown=True).conn ?: assert;
+
+        /**
+         * The Injector service that provides a minimum set of resources for Database modules and
+         * maps all * Directory resources as relative to the specified home directory.
+         */
+        service Injector(Directory homeDir)
+                implements ResourceProvider
+            {
+            @Lazy FileStore store.calc()
+                {
+                import ecstasy.fs.DirectoryFileStore;
+
+                return new DirectoryFileStore(homeDir);
+                }
+
+            @Override
+            Supplier getResource(Type type, String name)
+                {
+                Boolean wrongName = False;
+                switch (type, name)
+                    {
+                    case (Console, "console"):
+                        @Inject Console console;
+                        return console;
+
+                    case (Clock, "clock"):
+                        @Inject Clock clock;
+                        return clock;
+
+                    case (Timer, "timer"):
+                        return (InjectedRef.Options opts) ->
+                            {
+                            @Inject(opts=opts) Timer timer;
+                            return timer;
+                            };
+
+                    case (FileStore, "storage"):
+                        return &store.maskAs(FileStore);
+
+                    case (Directory, _):
+                        switch (name)
+                            {
+                            case "rootDir":
+                                Directory root = store.root;
+                                return &root.maskAs(Directory);
+
+                            case "homeDir":
+                                Directory root = store.root;
+                                return &root.maskAs(Directory);
+
+                            case "curDir":
+                                Directory root = store.root;
+                                return &root.maskAs(Directory);
+
+                            case "tmpDir":
+                                Directory temp = store.root.find("_temp").as(Directory).ensure();
+                                return &temp.maskAs(Directory);
+
+                            default:
+                                throw new Exception($"Invalid Directory resource: \"{name}\"");
+                            }
+
+                    case (Random, "random"):
+                    case (Random, "rnd"):
+                        return (InjectedRef.Options opts) ->
+                            {
+                            @Inject(opts=opts) Random random;
+                            return random;
+                            };
+
+                    case (Compiler, "compiler"):
+                        @Inject Compiler compiler;
+                        return compiler;
+
+                    case (Linker, "linker"):
+                        @Inject Linker linker;
+                        return linker;
+
+                    case (ModuleRepository, "repository"):
+                        @Inject ModuleRepository repository;
+                        return repository;
+
+                    default:
+                       throw new Exception($"Invalid resource: type=\"{type}\", name=\"{name}\"");
+                    }
+               }
+            }
         }
     }

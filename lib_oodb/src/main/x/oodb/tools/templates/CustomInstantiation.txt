@@ -1,0 +1,5 @@
+                case %propertyId%:
+                    DBObjectInfo_ info = this.%appName%Client_.infoFor(%propertyId%);
+                    %propertyStoreType% store =
+                        this.%appName%Client_.storeFor(%propertyId%).as(%propertyStoreType%);
+                    return new %propertyTypeName%Impl_(info, store);

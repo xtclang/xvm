@@ -365,6 +365,45 @@ service Catalog<Schema extends RootSchema>
     // ----- support ----------------------------------------------------------------------------
 
     /**
+     * A helper method for openeing the database, recovering or creating the database if necessary.
+     *
+     * @param dbModuleName  the database module name used for logging
+     */
+    void ensureOpenDB(String dbModuleName)
+        {
+        Boolean success = False;
+        try
+            {
+            success = open();
+            }
+        catch (IllegalState e)
+            {
+            log($"Failed to open the catalog for \"{dbModuleName}\"; reason={e.text}");
+            }
+
+        if (!success)
+            {
+            // failed to open; try to recover
+            try
+                {
+                recover();
+                success = True;
+                }
+            catch (IllegalState e)
+                {
+                log($"Failed to recover the catalog for \"{dbModuleName}\"; reason={e.text}");
+                }
+            }
+
+        if (!success)
+            {
+            // failed to recover; try to create
+            create(dbModuleName);
+            assert open() as $"Failed to create the catalog for \"{dbModuleName}\"";
+            }
+        }
+
+    /**
      * An error and message log for the database.
      */
     @Concurrent
@@ -1107,25 +1146,30 @@ service Catalog<Schema extends RootSchema>
      * be substituted for the default, which allows custom schemas and other custom functionality to
      * be provided in a type-safe manner.
      *
-     * @param dbUser    (optional) the user that the `Client` will represent
-     * @param readOnly  (optional) pass True to indicate that client is not permitted to modify
-     *                  any data
-     * @param system    (optional) pass True to indicate that the client is an internal (or
-     *                  "system") client, that does client work on behalf of the system itself
+     * @param dbUser        (optional) the user that the `Client` will represent
+     * @param readOnly      (optional) pass True to indicate that client is not permitted to modify
+     *                      any data
+     * @param system        (optional) pass True to indicate that the client is an internal (or
+     *                      "system") client, that does client work on behalf of the system itself
+     * @param autoShutdown  (optional) pass True to indicate that the database should be closed
+     *                      when the connection is closed
      *
      * @return a new `Client` instance
      */
     @Concurrent
-    Client<Schema> createClient(DBUser? dbUser=Null, Boolean readOnly=False, Boolean system=False)
+    Client<Schema> createClient(DBUser? dbUser=Null, Boolean readOnly=False, Boolean system=False,
+                                Boolean autoShutdown=False)
         {
         dbUser ?:= DefaultUser;
 
-        Int clientId   = system ? genInternalClientId() : genClientId();
-        val metadata   = this.metadata;
+        Int clientId = system ? genInternalClientId() : genClientId();
+        val metadata = this.metadata;
+
+        function void(Client) notifyOnClose = unregisterClient(_, autoShutdown);
 
         Client<Schema> client = metadata == Null
-                ? new Client<Schema>(this, clientId, dbUser, readOnly, unregisterClient)
-                : metadata.createClient(this, clientId, dbUser, readOnly, unregisterClient);
+                ? new Client<Schema>(this, clientId, dbUser, readOnly, notifyOnClose)
+                : metadata.createClient(this, clientId, dbUser, readOnly, notifyOnClose);
 
         registerClient(client);
         return client;
@@ -1176,12 +1220,18 @@ service Catalog<Schema extends RootSchema>
     /**
      * Unregister a Client instance.
      *
-     * @param client  the Client object to unregister
+     * @param client    the Client object to unregister
+     * @param shutdown  pass True to indicate that the database should be closed
      */
     @Concurrent
-    protected void unregisterClient(Client client)
+    protected void unregisterClient(Client client, Boolean shutdown)
         {
         assert client.catalog == this;
         clients.remove(client.id, client);
+
+        if (shutdown)
+            {
+            close();
+            }
         }
     }
