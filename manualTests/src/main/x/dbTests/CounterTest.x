@@ -36,7 +36,6 @@ module CounterTest
             // pick a letter to schedule
             String name = ('A' + rnd.uint(26).toUInt32()).toString();
 
-            connection.logger.add($"cranking up schedule \"{name}\"...");
             connection.cranker.schedule(name);
 
             msg.append(name).append(", ");
