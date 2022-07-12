@@ -118,7 +118,7 @@ public class Runner
                 }
             }
 
-        // check the respository for a module of that name
+        // check the repository for a module of that name
         if (module == null && fExtension)
             {
             module = repo.loadModule(stripExtension(sModule));
