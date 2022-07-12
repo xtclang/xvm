@@ -115,6 +115,13 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         this.catalog = catalog;
         this.clock   = catalog.clock;
 
+        Directory root  = catalog.dir;
+        FileStore store = root.store;
+
+        this.sysDir     = store.dirFor (root.path + "sys");
+        this.logFile    = store.fileFor(root.path + "sys" + "txlog.json");
+        this.statusFile = store.fileFor(root.path + "sys" + "txmgr.json");
+
         // build the quick lookup information for the optional transactional "modifiers"
         // (validators, rectifiers, and distributors)
         Boolean hasValidators    = catalog.metadata?.dbObjectInfos.any(info -> !info.validators   .empty) : False;
@@ -233,29 +240,17 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
     /**
      * The system directory (./sys).
      */
-    @Lazy public/private Directory sysDir.calc()
-        {
-        Directory root = catalog.dir;
-        return root.store.dirFor(root.path + "sys");
-        }
+    public/private Directory sysDir;
 
     /**
      * The transaction log file (sys/txlog.json).
      */
-    @Lazy public/private File logFile.calc()
-        {
-        Directory root = catalog.dir;
-        return root.store.fileFor(root.path + "sys" + "txlog.json");
-        }
+    public/private File logFile;
 
     /**
      * The transaction log file (sys/txlog.json).
      */
-    @Lazy public/private File statusFile.calc()
-        {
-        Directory root = catalog.dir;
-        return root.store.fileFor(root.path + "sys" + "txmgr.json");
-        }
+    public/private File statusFile;
 
     /**
      * A snapshot of information about a transactional log file.
@@ -301,7 +296,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      * The maximum size log to store in any one log file.
      * TODO this setting should be configurable (need a "Prefs" API)
      */
-    protected Int maxLogSize = 100K;
+    public/protected Int maxLogSize = 100K;
 
     /**
      * Previous modified date/time of the log.
@@ -3162,7 +3157,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      */
     protected LogFileInfo[] loadLogs(File[] logFiles)
         {
-        return logFiles.map(f -> loadLog(f), new LogFileInfo[]).as(LogFileInfo[]).toArray(Mutable, True);
+        return logFiles.map(f -> loadLog(f), new LogFileInfo[]).as(LogFileInfo[]);
         }
 
     /**
