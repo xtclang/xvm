@@ -108,9 +108,9 @@ public class xIntLiteral
     @Override
     public int createConstHandle(Frame frame, Constant constant)
         {
-        LiteralConstant constVal = (LiteralConstant) constant;
-        StringHandle hText       = (StringHandle) frame.getConstHandle(constVal.getStringConstant());
-        IntNHandle hIntLiteral = makeIntLiteral(constVal.getPackedInteger(), hText);
+        LiteralConstant constVal    = (LiteralConstant) constant;
+        StringHandle    hText       = (StringHandle) frame.getConstHandle(constVal.getStringConstant());
+        IntNHandle      hIntLiteral = makeIntLiteral(constVal.getPackedInteger(), hText);
 
         return frame.pushStack(hIntLiteral);
         }

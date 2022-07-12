@@ -22,6 +22,7 @@ import org.xvm.type.Decimal64;
 
 import org.xvm.util.PackedInteger;
 
+import static org.xvm.util.Handy.hexitValue;
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
 
@@ -280,23 +281,143 @@ public class LiteralConstant
         PackedInteger pint = m_oVal instanceof PackedInteger ? (PackedInteger) m_oVal : null;
         if (pint == null)
             {
-            String s = getValue().replace("_", ""); // TODO all of the lexer logic has to show up here
-            int    r = getRadix();
-            if (r == 10)
+            String s   = getValue();
+            char   ch  = s.charAt(0);
+            int    of  = 1;
+            int    cch = s.length();
+
+            // the first character could be a sign (+ or -)
+            boolean fNeg = false;
+            if (ch == '+' || ch == '-')
                 {
-                pint = s.length() < 20
-                        ? PackedInteger.valueOf(Long.parseLong(s))
-                        : new PackedInteger(new BigInteger(s));
+                fNeg = (ch == '-');
+                ch   = s.charAt(of++);
                 }
-            else
+
+            // if the next character is '0', it is potentially part of a prefix denoting a radix
+            int radix = 10;
+            if (ch == '0' && of < cch)
                 {
-                boolean fNeg = s.startsWith("-");
-                int     of   = fNeg ? 1 : 0;
-                String  sNum = (fNeg ? "-" : "") + s.substring(of+2);
-                pint = s.length() < of+2 + (64 / Integer.numberOfTrailingZeros(r))
-                        ? new PackedInteger(Long.parseLong(sNum, r))
-                        : new PackedInteger(new BigInteger(sNum, r));
+                switch (s.charAt(of++))
+                    {
+                    case 'B':
+                    case 'b':
+                        radix = 2;
+                        break;
+                    case 'o':
+                        radix = 8;
+                        break;
+                    case 'X':
+                    case 'x':
+                        radix = 16;
+                        break;
+                    default:
+                        --of;           // oops, bad guess
+                        break;
+                    }
                 }
+
+            long       lValue = 0;
+            BigInteger bigint = null;   // just in case
+            EatDigits: while (true)
+                {
+                switch (ch)
+                    {
+                    case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':     // base 16
+                    case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
+                        if (radix < 16)
+                            {
+                            break EatDigits;
+                            }
+                        // fall through
+                    case '9': case '8':                                             // base 10
+                    case '7': case '6': case '5': case '4': case '3': case '2':     // base 8
+                    case '1': case '0':                                             // base 2
+                        if (bigint == null)
+                            {
+                            lValue = lValue * radix + hexitValue(ch);
+                            if (lValue > 0x00FFFFFFFFFFFFFFL)
+                                {
+                                bigint = BigInteger.valueOf(fNeg ? -lValue : lValue);
+                                }
+                            }
+                        else
+                            {
+                            bigint = bigint.multiply(BigInteger.valueOf(radix)).add(BigInteger.valueOf(hexitValue(ch)));
+                            }
+                        break;
+
+                    case '_':
+                        break;
+
+                    default:
+                        // anything else (including '.') means go to the next step
+                        break EatDigits;
+                    }
+
+                if (of < cch)
+                    {
+                    ch = s.charAt(of++);
+                    }
+                else
+                    {
+                    ch = 0; // EOF
+                    break EatDigits;
+                    }
+                }
+            pint = bigint == null ? new PackedInteger(fNeg ? -lValue : lValue) : new PackedInteger(bigint);
+
+            PossibleSuffix: if (radix == 10)
+                {
+                // allow KI/KB, MI/MB, GI/GB TI/TB, PI/PB, EI/EB, ZI/ZB, YI/YB
+                int iMul;
+                switch (ch)
+                    {
+                    case 'K': case 'k':
+                        iMul = 0;
+                        break;
+
+                    case 'M': case 'm':
+                        iMul = 1;
+                        break;
+
+                    case 'G': case 'g':
+                        iMul = 2;
+                        break;
+
+                    case 'T': case 't':
+                        iMul = 3;
+                        break;
+
+                    case 'P': case 'p':
+                        iMul = 4;
+                        break;
+
+                    case 'E': case 'e':
+                        iMul = 5;
+                        break;
+
+                    case 'Z': case 'z':
+                        iMul = 6;
+                        break;
+
+                    case 'Y': case 'y':
+                        iMul = 7;
+                        break;
+
+                    default:
+                        break PossibleSuffix;
+                    }
+
+                PackedInteger[] factors = PackedInteger.xB_FACTORS;
+                if (of < cch && (s.charAt(of) == 'I' || s.charAt(of) == 'i'))
+                    {
+                    factors = PackedInteger.xI_FACTORS;
+                    }
+
+                pint = pint.mul(factors[iMul]);
+                }
+
             m_oVal = pint;
             }
 
