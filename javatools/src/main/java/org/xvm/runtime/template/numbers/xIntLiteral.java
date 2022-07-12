@@ -5,11 +5,16 @@ import java.math.BigInteger;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
+import org.xvm.asm.ErrorList;
 import org.xvm.asm.MethodStructure;
 
 import org.xvm.asm.constants.LiteralConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.compiler.Lexer;
+import org.xvm.compiler.Source;
+import org.xvm.compiler.Token;
 
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
@@ -120,20 +125,28 @@ public class xIntLiteral
                          ObjectHandle hParent, ObjectHandle[] ahVar, int iReturn)
         {
         StringHandle hText = (StringHandle) ahVar[0];
+        String       sText = hText.getStringValue();
 
-        // TODO: large numbers
+        PackedInteger pi;
         try
             {
-            long lValue = Long.parseLong(hText.getStringValue());
-
-            return frame.assignValue(iReturn,
-                makeIntLiteral(new PackedInteger(lValue), hText));
+            pi = new PackedInteger(Long.parseLong(sText));
             }
         catch (NumberFormatException e)
             {
-            return frame.raiseException(
-                xException.illegalArgument(frame, "Invalid number \"" + hText.getStringValue() + "\""));
+            ErrorList errs   = new ErrorList(5);
+            Lexer     lexer  = new Lexer(new Source(sText), errs);
+            Token     tokLit = lexer.next();
+            if (errs.hasSeriousErrors() || tokLit.getId() != Token.Id.LIT_INT)
+                {
+                return frame.raiseException(
+                    xException.illegalArgument(frame, "Invalid number \"" + sText + "\""));
+                }
+
+            pi = (PackedInteger) tokLit.getValue();
             }
+
+        return frame.assignValue(iReturn, makeIntLiteral(pi, hText));
         }
 
     @Override

@@ -1664,13 +1664,12 @@ public class Lexer
                     break PossibleSuffix;
                 }
 
+            PackedInteger[] factors = PackedInteger.xB_FACTORS;
             if (source.hasNext())
                 {
-                PackedInteger[] factors;
                 switch (nextChar())
                     {
                     case 'B': case 'b':
-                        factors = PackedInteger.xB_FACTORS;
                         break;
 
                     case 'I': case 'i':
@@ -1697,17 +1696,11 @@ public class Lexer
                             }
                     default:
                         source.rewind();
-                        factors = PackedInteger.xB_FACTORS;
                         break;
                     }
+                }
 
-                pi = pi.mul(factors[iMul]);
-                }
-            else
-                {
-                source.rewind();
-                break PossibleSuffix;
-                }
+            pi = pi.mul(factors[iMul]);
             }
 
         return pi;

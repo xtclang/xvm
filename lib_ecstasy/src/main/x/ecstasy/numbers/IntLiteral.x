@@ -30,102 +30,158 @@ const IntLiteral(String text)
      */
     construct(String text)
         {
-        assert:arg text.size > 0;
+        assert:arg text.size > 0 as $"Illegal integer literal: The literal is empty";
 
         // optional leading sign
-        Int of = 0;
-        switch (text[of])
+        Int offset = 0;
+        Int length = text.size;
+        switch (text[offset])
             {
             case '-':
                 explicitSign = Signum.Negative;
-                ++of;
+                ++offset;
                 break;
 
             case '+':
                 explicitSign = Signum.Positive;
-                ++of;
+                ++offset;
                 break;
             }
 
         // optional leading format
-        Boolean underscoreOk = False;
-        if (text.size - of >= 2 && text[of] == '0')
+        if (length - offset >= 2 && text[offset] == '0')
             {
-            switch (text[of+1])
+            switch (text[offset+1])
                 {
-                case 'X':
-                case 'x':
-                    radix = 16;
+                case 'B', 'b':
+                    radix   = 2;
+                    offset += 2;
                     break;
 
-                case 'B':
-                case 'b':
-                    radix = 2;
+                case      'o':      // capital 'o' is not allowed; it gets confused with zero
+                    radix   = 8;
+                    offset += 2;
                     break;
 
-                case 'o':
-                    radix = 8;
+                case 'X', 'x':
+                    radix   = 16;
+                    offset += 2;
                     break;
-                }
 
-            if (radix != 10)
-                {
-                of += 2;
-                underscoreOk = True;
+                default:
+                    radix   = 10;
+                    break;
                 }
             }
 
         // digits
         UIntN magnitude = 0;
         Int   digits    = 0;
-        NextChar: while (of < text.size)
+        NextChar: while (offset < length)
             {
-            Char   ch = text[of];
-            UInt32 nch;
-            switch (ch)
+            Char ch = text[offset];
+            if (UInt8 n := ch.asciiHexit())
                 {
-                case '0'..'9':
-                    nch = ch - '0';
+                if (n >= radix)
+                    {
+                    break NextChar;
+                    }
+
+                magnitude = magnitude * radix + n;
+                ++digits;
+                }
+            else if (ch == '_')
+                {
+                assert:arg digits > 0 as $|Illegal initial underscore character at the beginning \
+                                          |of the integer literal {text.quoted()}
+                                         ;
+                }
+            else
+                {
+                break NextChar;
+                }
+
+            ++offset;
+            }
+
+        // allow KI/KB, MI/MB, GI/GB TI/TB, PI/PB, EI/EB, ZI/ZB, YI/YB
+        PossibleSuffix: if (radix == 10 && offset < length)
+            {
+            Int factorIndex;
+            switch (text[offset])
+                {
+                case 'K', 'k':
+                    factorIndex = 0;
                     break;
 
-                case 'A'..'F':
-                    nch = 10 + (ch - 'A');
+                case 'M', 'm':
+                    factorIndex = 1;
                     break;
 
-                case 'a'..'f':
-                    nch = 10 + (ch - 'a');
+                case 'G', 'g':
+                    factorIndex = 2;
                     break;
 
-                case '_':
-                    if (underscoreOk)
-                        {
-                        continue NextChar;
-                        }
-                    continue;
+                case 'T', 't':
+                    factorIndex = 3;
+                    break;
+
+                case 'P', 'p':
+                    factorIndex = 4;
+                    break;
+
+                case 'E', 'e':
+                    factorIndex = 5;
+                    break;
+
+                case 'Z', 'z':
+                    factorIndex = 6;
+                    break;
+
+                case 'Y', 'y':
+                    factorIndex = 7;
+                    break;
 
                 default:
-                    throw new IllegalArgument($|Illegal character {ch.toSourceString()} at \
-                                               |offset {of} in integer literal {text.quoted()}
-                                             );
+                    break PossibleSuffix;
                 }
+            ++offset;
 
-            if (nch >= radix)
+            Factor[] factors = DecimalFactor.values;    // implicitly decimal, e.g. "k"
+            if (offset < length)
                 {
-                throw new IllegalArgument($|Illegal digit {ch.toSourceString()} for radix \
-                                           |{radix} in integer literal {text.quoted()}
-                                         );
+                switch (text[offset])
+                    {
+                    case 'B', 'b':                      // explicitly decimal, e.g. "kb"
+                        ++offset;
+                        break;
+
+                    case 'I', 'i':                      // explicitly binary, e.g. "ki"
+                        ++offset;
+                        factors = BinaryFactor.values;
+
+                        if (offset < length)            // optional traliing "b", e.g. "kib"
+                            {
+                            Char optionalB = text[offset];
+                            if (optionalB == 'B' || optionalB == 'b')
+                                {
+                                ++offset;
+                                }
+                            }
+                        break;
+                    }
                 }
 
-            magnitude    = magnitude * radix + nch;
-            underscoreOk = True;
-            ++digits;
-            ++of;
+            magnitude *= factors[factorIndex].factor;
             }
 
-        if (digits == 0)
-            {
-            throw new IllegalArgument($"Illegal integer literal {text.quoted()}");
-            }
+        assert:arg offset == length as $|Illegal character {text[offset].toSourceString()} at offset \
+                                        |{offset} in radix {radix}} integer literal {text.quoted()}
+                                       ;
+
+        assert:arg digits > 0 as $|Illegal radix {radix} integer literal; literal contains \
+                                  |no valid digits: {text.quoted()}
+                                 ;
 
         this.magnitude = magnitude;
         this.text      = text;
@@ -151,6 +207,46 @@ const IntLiteral(String text)
      * The literal text.
      */
     private String text;
+
+    /**
+     * A value that holds a factor.
+     */
+    interface Factor
+        {
+        @RO UIntN factor;
+        }
+
+    /**
+     * The decimal (1000x) factors.
+     */
+    enum DecimalFactor(UIntN factor)
+            implements Factor
+        {
+        KB(1_000),
+        MB(1_000_000),
+        GB(1_000_000_000),
+        TB(1_000_000_000_000),
+        PB(1_000_000_000_000_000),
+        EB(1_000_000_000_000_000_000),
+        ZB(1_000_000_000_000_000_000_000),
+        YB(1_000_000_000_000_000_000_000_000),
+        }
+
+    /**
+     * The binary (1024x) factors.
+     */
+    enum BinaryFactor(UIntN factor)
+            implements Factor
+        {
+        KI(1024),
+        MI(1024 * 1024),
+        GI(1024 * 1024 * 1024),
+        TI(1024 * 1024 * 1024 * 1024),
+        PI(1024 * 1024 * 1024 * 1024 * 1024),
+        EI(1024 * 1024 * 1024 * 1024 * 1024 * 1024),
+        ZI(1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024),
+        YI(1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024),
+        }
 
     /**
      * The minimum number of bits to store the IntLiteral's value as a signed integer in

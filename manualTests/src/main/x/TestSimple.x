@@ -8,7 +8,7 @@ module TestSimple
         IntLiteral n = 1K;
         val show = () ->
             {
-            console.println($"{s} == {n}");
+            console.println($"{s} === {new IntLiteral(s)} === {new IntLiteral(s).toInt128()} == {n}");
             };
         show();
 

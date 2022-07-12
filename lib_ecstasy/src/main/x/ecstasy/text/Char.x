@@ -759,13 +759,13 @@ const Char
      * @return True iff the character is an ASCII hexadecimal digit (a "hexit")
      * @return (conditional) a value in the range `[0..15]`
      */
-    conditional Int asciiHexit()
+    conditional UInt8 asciiHexit()
         {
         return switch (this)
             {
-            case '0'..'9': (True,       (this - '0'));
-            case 'A'..'F': (True, 0xA + (this - 'A'));
-            case 'a'..'f': (True, 0xa + (this - 'a'));
+            case '0'..'9': (True,       (this - '0').toUInt8());
+            case 'A'..'F': (True, 0xA + (this - 'A').toUInt8());
+            case 'a'..'f': (True, 0xa + (this - 'a').toUInt8());
             default      : False;
             };
         }
