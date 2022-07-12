@@ -331,6 +331,14 @@ public abstract class RelationalTypeConstant
         }
 
     @Override
+    public boolean containsFunctionType()
+        {
+        // for now, don't allow coalescing functions for either Union or Intersection types
+        return m_constType1.containsFunctionType()
+            || m_constType2.containsFunctionType();
+        }
+
+    @Override
     public TypeConstant adoptParameters(ConstantPool pool, TypeConstant[] atypeParams)
         {
         TypeConstant constOriginal1 = m_constType1;
@@ -609,7 +617,7 @@ public abstract class RelationalTypeConstant
 
 
     /**
-     * Produce a map of TypeParams for for a merge of the specified TypeInfos.
+     * Produce a map of TypeParams for a merge of the specified TypeInfos.
      *
      * Note, that either of the two TypeInfos can be null.
      *
@@ -618,7 +626,7 @@ public abstract class RelationalTypeConstant
     abstract protected Map<Object, ParamInfo> mergeTypeParams(TypeInfo info1, TypeInfo info2, ErrorListener errs);
 
     /**
-     * Produce an array of mixin Annotations for for a merge of the specified TypeInfos.
+     * Produce an array of mixin Annotations for a merge of the specified TypeInfos.
      *
      * Note, that either of the two TypeInfos can be null.
      *
@@ -627,7 +635,7 @@ public abstract class RelationalTypeConstant
     abstract protected Annotation[] mergeAnnotations(TypeInfo info1, TypeInfo info2, ErrorListener errs);
 
     /**
-     * Produce a map of properties for for a merge of the specified TypeInfos.
+     * Produce a map of properties for a merge of the specified TypeInfos.
      *
      * Note, that either of the two TypeInfos can be null.
      *
@@ -636,7 +644,7 @@ public abstract class RelationalTypeConstant
     abstract protected Map<PropertyConstant, PropertyInfo> mergeProperties(TypeInfo info1, TypeInfo info2, ErrorListener errs);
 
     /**
-     * Produce a map of methods for for a merge of the specified TypeInfos.
+     * Produce a map of methods for a merge of the specified TypeInfos.
      *
      * Note, that either of the two TypeInfos can be null.
      *
@@ -645,7 +653,7 @@ public abstract class RelationalTypeConstant
     abstract protected Map<MethodConstant, MethodInfo> mergeMethods(TypeInfo info1, TypeInfo info2, ErrorListener errs);
 
     /**
-     * Produce a ListMap of children for for a merge of the specified TypeInfos.
+     * Produce a ListMap of children for a merge of the specified TypeInfos.
      *
      * Note, that either of the two TypeInfos can be null.
      *
@@ -723,17 +731,17 @@ public abstract class RelationalTypeConstant
         }
 
     @Override
-    protected int compareDetails(Constant that)
+    protected int compareDetails(Constant obj)
         {
-        if (!(that instanceof RelationalTypeConstant))
+        if (!(obj instanceof RelationalTypeConstant that))
             {
             return -1;
             }
 
-        int n = this.m_constType1.compareTo(((RelationalTypeConstant) that).m_constType1);
+        int n = this.m_constType1.compareTo(that.m_constType1);
         if (n == 0)
             {
-            n = this.m_constType2.compareTo(((RelationalTypeConstant) that).m_constType2);
+            n = this.m_constType2.compareTo(that.m_constType2);
             }
         return n;
         }

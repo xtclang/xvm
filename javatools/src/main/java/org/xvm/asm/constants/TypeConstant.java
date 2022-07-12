@@ -6283,6 +6283,16 @@ public abstract class TypeConstant
         }
 
     /**
+     * Check if this TypeConstant contains a function type.
+     *
+     * @return true iff the TypeConstant contains a function type
+     */
+    public boolean containsFunctionType()
+        {
+        return getUnderlyingType().containsFunctionType();
+        }
+
+    /**
      * @return true iff the TypeConstant represents a "formal type" that materializes into a type
      *         sequence
      */

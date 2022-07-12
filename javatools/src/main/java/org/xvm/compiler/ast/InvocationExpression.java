@@ -1998,15 +1998,11 @@ public class InvocationExpression
      * @param atypeReturn (optional) an array of return types
      * @param errs        the error listener to log errors to
      *
-     * @return the method constant, or null if it was not determinable,
-     *         in which case an error has been reported
+     * @return the method constant, or null if it was not determinable, in which case an error has
+     *         been reported
      */
-    protected Argument resolveName(
-            Context        ctx,
-            boolean        fForce,
-            TypeConstant   typeLeft,
-            TypeConstant[] atypeReturn,
-            ErrorListener  errs)
+    protected Argument resolveName(Context ctx, boolean fForce, TypeConstant typeLeft,
+                                   TypeConstant[] atypeReturn, ErrorListener errs)
         {
         if (!fForce && m_argMethod != null)
             {
@@ -2038,7 +2034,7 @@ public class InvocationExpression
 
             TypeConstant typeFn = atypeReturn[0];
 
-            if (typeFn.isA(pool.typeFunction()))
+            if (typeFn.containsFunctionType())
                 {
                 atypeReturn = pool.extractFunctionReturns(typeFn);
                 }

@@ -179,6 +179,12 @@ public class TypeSequenceTypeConstant
         }
 
     @Override
+    public boolean containsFunctionType()
+        {
+        return false;
+        }
+
+    @Override
     public boolean isFormalTypeSequence()
         {
         return true;

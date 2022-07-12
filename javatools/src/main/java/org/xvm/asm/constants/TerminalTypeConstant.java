@@ -1187,6 +1187,18 @@ public class TerminalTypeConstant
         }
 
     @Override
+    public boolean containsFunctionType()
+        {
+        if (isSingleDefiningConstant())
+            {
+            return getDefiningConstant().equals(getConstantPool().clzFunction());
+            }
+
+        TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
+        return constId.getReferredToType().containsFunctionType();
+        }
+
+    @Override
     public boolean isFormalTypeSequence()
         {
         return isGenericType() &&

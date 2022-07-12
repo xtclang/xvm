@@ -105,6 +105,12 @@ public class RecursiveTypeConstant
         }
 
     @Override
+    public boolean containsFunctionType()
+        {
+        return false;
+        }
+
+    @Override
     public boolean isSingleDefiningConstant()
         {
         return false;

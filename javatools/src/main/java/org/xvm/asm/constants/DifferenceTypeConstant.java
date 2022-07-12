@@ -68,9 +68,9 @@ public class DifferenceTypeConstant
     @Override
     protected TypeConstant simplifyInternal(TypeConstant type1, TypeConstant type2)
         {
-        if (type1 instanceof DifferenceTypeConstant)
+        if (type1 instanceof DifferenceTypeConstant typeDiff)
             {
-            return ((DifferenceTypeConstant) type1).andNotInternal(type2);
+            return typeDiff.andNotInternal(type2);
             }
 
         if (type1.isImmutabilitySpecified() && type2.isImmutableOnly())
@@ -274,6 +274,12 @@ public class DifferenceTypeConstant
         return type1.isNestMateOf(idClass);
         }
 
+    @Override
+    public boolean containsFunctionType()
+        {
+        return false;
+        }
+
 
     // ----- TypeInfo support ----------------------------------------------------------------------
 
@@ -447,13 +453,13 @@ public class DifferenceTypeConstant
                 }
             }
 
-        if (typeLeft instanceof DifferenceTypeConstant)
+        if (typeLeft instanceof DifferenceTypeConstant typeDiff)
             {
             // if A <= A' and B' <= B, then A - B <= A' - B'
             TypeConstant typeR1 = m_constType1;
             TypeConstant typeR2 = m_constType2;
-            TypeConstant typeL1 = ((DifferenceTypeConstant) typeLeft).m_constType1;
-            TypeConstant typeL2 = ((DifferenceTypeConstant) typeLeft).m_constType2;
+            TypeConstant typeL1 = typeDiff.m_constType1;
+            TypeConstant typeL2 = typeDiff.m_constType2;
 
             Relation rel = typeR1.calculateRelation(typeL1);
             if (rel != Relation.INCOMPATIBLE)

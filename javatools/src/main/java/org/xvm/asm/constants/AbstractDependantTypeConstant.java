@@ -188,6 +188,12 @@ public abstract class AbstractDependantTypeConstant
         }
 
     @Override
+    public boolean containsFunctionType()
+        {
+        return false;
+        }
+
+    @Override
     public boolean isTuple()
         {
         return false;

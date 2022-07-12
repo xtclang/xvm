@@ -3720,6 +3720,15 @@ public class ConstantPool
                     }
                 return TypeConstant.NO_TYPES;
                 }
+
+            if (typeFunction instanceof RelationalTypeConstant typeRel)
+                {
+                TypeConstant[] atype1 = extractFunctionParams(typeRel.getUnderlyingType());
+                TypeConstant[] atype2 = extractFunctionParams(typeRel.getUnderlyingType2());
+                return atype2 == null ? atype1 :
+                       atype1 == null ? atype2 :
+                                        null;
+                }
             }
 
         return null;
@@ -3761,6 +3770,15 @@ public class ConstantPool
                         }
                     }
                 return TypeConstant.NO_TYPES;
+                }
+
+            if (typeFunction instanceof RelationalTypeConstant typeRel)
+                {
+                TypeConstant[] atype1 = extractFunctionReturns(typeRel.getUnderlyingType());
+                TypeConstant[] atype2 = extractFunctionReturns(typeRel.getUnderlyingType2());
+                return atype2 == null ? atype1 :
+                       atype1 == null ? atype2 :
+                                        null;
                 }
             }
 
