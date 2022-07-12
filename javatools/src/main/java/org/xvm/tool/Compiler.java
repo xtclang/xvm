@@ -633,9 +633,14 @@ public class Compiler
 
             // validate the trailing file(s)/dir(s)
             List<File> listInputs = getInputLocations();
-            for (File file : listInputs)
+            for (int i = 0, c = listInputs.size(); i < c; ++i)
                 {
-                validateSourceInput(file);
+                File fileOld = listInputs.get(i);
+                File fileNew = validateSourceInput(fileOld);
+                if (fileNew != fileOld)
+                    {
+                    listInputs.set(i, fileNew);
+                    }
                 }
 
             // validate the -o file/dir
