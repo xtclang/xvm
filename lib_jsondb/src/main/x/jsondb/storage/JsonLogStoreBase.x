@@ -25,6 +25,7 @@ service JsonLogStoreBase<Element extends immutable Const>
 
         this.jsonSchema     = catalog.jsonSchema;
         this.elementMapping = elementMapping;
+        this.expiry         = expiry.maxOf(MINUTE);
         this.truncateSize   = truncateSize > 0 ? truncateSize.maxOf(2K) : Int.maxvalue;
         this.maxFileSize    = maxFileSize.minOf(this.truncateSize/2);
         }
@@ -60,6 +61,11 @@ service JsonLogStoreBase<Element extends immutable Const>
         {
         return new LogStorageSupport(dataDir, "log");
         }
+
+    /**
+     * The duration of time to hold the log information for.
+     */
+    protected Duration expiry;
 
     /**
      * The total size of log files to keep before truncation is allowed.
@@ -135,8 +141,8 @@ service JsonLogStoreBase<Element extends immutable Const>
 
     protected void rotateLog()
         {
-        String timestamp   = clock.now.toString(True);
-        String rotatedName = $"log_{timestamp}.json";
+        Time   now         = clock.now;
+        String rotatedName = $"log_{now.toString(True)}.json";
 
         assert File rotatedFile := dataFile.renameTo(rotatedName);
 
@@ -149,6 +155,30 @@ service JsonLogStoreBase<Element extends immutable Const>
             rolledFiles = rolledFiles.delete(0);
 
             oldestFile.delete();
+            }
+
+        if (expiry != NONE)
+            {
+            Int expiryIndex = -1;
+            CheckExpiry: for (File file : rolledFiles)
+                {
+                assert Time? timestamp := support.isLogFile(file), timestamp != Null;
+                if (now > timestamp + expiry)
+                    {
+                    expiryIndex = CheckExpiry.count;
+                    rolledSize  -= file.size;
+                    file.delete();
+                    }
+                else
+                    {
+                    // the files are sorted - most recent at the tail
+                    break;
+                    }
+                }
+            if (expiryIndex != -1)
+                {
+                rolledFiles = rolledFiles.deleteAll(0..expiryIndex);
+                }
             }
 
         rolledSize  += rotatedFile.size;
