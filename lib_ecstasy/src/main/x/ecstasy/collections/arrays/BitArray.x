@@ -1253,7 +1253,9 @@ mixin BitArray<Element extends Bit>
             String                    trunc  = "...",
             function String(Element)? render = Null)
         {
-        return super(sep, pre, post, limit, trunc, render);
+        return sep == "" && limit == Null && render == Null
+                ? (pre?.size : 0) + size + (post?.size : 0)
+                : super(sep, pre, post, limit, trunc, render);
         }
 
     @Override

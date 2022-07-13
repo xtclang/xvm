@@ -880,7 +880,7 @@ interface Collection<Element>
             return count;
             }
 
-        Int displayCount = limit ?: elementCount;
+        Int displayCount = limit?.minOf(elementCount) : elementCount;
 
         if (render == Null && Element.is(Type<Stringable>))
             {

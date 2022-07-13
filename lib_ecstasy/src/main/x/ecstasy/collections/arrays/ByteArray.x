@@ -967,8 +967,8 @@ mixin ByteArray<Element extends Byte>
             String                    trunc  = "...",
             function String(Element)? render = Null)
         {
-        return sep == "" && pre == "0x" && post == Null && render == Null
-                ? asNibbleArray().estimateStringLength(sep, pre, post, limit?*2 : Null, trunc, render)
+        return sep == "" && limit == Null && render == Null
+                ? (pre?.size : 0) + size*2 + (post?.size : 0)
                 : super(sep, pre, post, limit, trunc, render);
         }
 
@@ -982,8 +982,8 @@ mixin ByteArray<Element extends Byte>
             String                    trunc  = "...",
             function String(Element)? render = Null)
         {
-        return sep == "" && pre == "0x" && post == Null && render == Null
-                ? asNibbleArray().appendTo(buf, sep, pre, post, limit?*2 : Null, trunc, render)
+        return sep == "" && limit == Null && render == Null
+                ? asNibbleArray().appendTo(buf, sep, pre, post)
                 : super(buf, sep, pre, post, limit, trunc, render);
         }
     }
