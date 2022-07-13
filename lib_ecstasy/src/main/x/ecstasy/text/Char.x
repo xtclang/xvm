@@ -743,11 +743,11 @@ const Char
      * @return True iff the character is an ASCII digit
      * @return (conditional) a value in the range `[0..9]`
      */
-    conditional Int asciiDigit()
+    conditional UInt8 asciiDigit()
         {
         return switch (this)
             {
-            case '0'..'9': (True, this - '0');
+            case '0'..'9': (True, (this - '0').toUInt8());
             default      : False;
             };
         }
