@@ -365,7 +365,7 @@ service Catalog<Schema extends RootSchema>
     // ----- support ----------------------------------------------------------------------------
 
     /**
-     * A helper method for openeing the database, recovering or creating the database if necessary.
+     * A helper method for opening the database, recovering or creating the database if necessary.
      *
      * @param dbModuleName  the database module name used for logging
      */
