@@ -253,6 +253,14 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
     public/private File statusFile;
 
     /**
+     * A LogStorageSupport.
+     */
+    @Lazy protected storage.LogStorageSupport support.calc()
+        {
+        return new storage.LogStorageSupport(sysDir, "txlog");
+        }
+
+    /**
      * A snapshot of information about a transactional log file.
      */
     static const LogFileInfo(String name, Range<Int> txIds, Int safepoint, Int size, Time timestamp)
@@ -2811,7 +2819,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             log("TxManager status file was not recoverable");
 
             // scan the directory for log files
-            File[] logFiles = findLogs();
+            File[] logFiles = support.findLogs();
             if (logFiles.empty)
                 {
                 log("TxManager failed to locate any log files to recover; abandoning automatic recovery");
@@ -3082,70 +3090,6 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             }
 
         return !error;
-        }
-
-    /**
-     * Determine if the passed file is a log file.
-     *
-     * @param file  a possible log file
-     *
-     * @return the Time that the LogFile was rotated, or Null if it is the current log file
-     */
-    static conditional Time? isLogFile(File file)
-        {
-        String name = file.name;
-        if (name == "txlog.json")
-            {
-            return True, Null;
-            }
-
-        if (name.startsWith("txlog_") && name.endsWith(".json"))
-            {
-            String timestamp = name[6..name.size-5);
-            try
-                {
-                return True, new Time(timestamp);
-                }
-            catch (Exception e) {}
-            }
-
-        return False;
-        }
-
-    /**
-     * Compare two log files for order.
-     *
-     * @param file1  the first log file
-     * @param file2  the second log file
-     *
-     * @return the order to sort the two files into
-     */
-    static Ordered orderLogFiles(File file1, File file2)
-        {
-        assert Time? dt1 := isLogFile(file1);
-        assert Time? dt2 := isLogFile(file2);
-
-        // sort the null time to the end, because it represents the "current" log file
-        return dt1? <=> dt2? : switch (dt1, dt2)
-            {
-            case (Null, Null): Equal;
-            case (Null, _): Greater;
-            case (_, Null): Lesser;
-            default: assert;
-            };
-        }
-
-    /**
-     * Find all of the log files.
-     *
-     * @return a mutable array of log files, sorted from oldest to current
-     */
-    protected File[] findLogs()
-        {
-        return sysDir.files()
-                .filter(f -> isLogFile(f))
-                .sorted(orderLogFiles)
-                .toArray(Mutable);
         }
 
     /**

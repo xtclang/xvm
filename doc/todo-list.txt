@@ -1,5 +1,3 @@
-- implement log file roll-over
-
 - move ecstasy.mgmt package to a separate module
 
 - file ops (contents.get/set, truncate, append) to use NIO (ask Mark to take a look)
@@ -13,12 +11,14 @@
 - the XTC compiler disregards "resources" changes if nothing else changed and "-force" option
   is not specified
 
+- add "-version" option to xec command
+
 - improve error description for
     "service S extends Closeable" (extends vs. implements)
     "service S incorporates Closeable" (incorporates vs. implements)
    etc. -- see TypeCompositionStatement.resolveNames()
 
-// should this compile?
+- should this compile?
     if (ParamType body := request.attributes.getAttribute(HttpAttributes.BODY))
 
 - improve toString() for TypeConstant of function type

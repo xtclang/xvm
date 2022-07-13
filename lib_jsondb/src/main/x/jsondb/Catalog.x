@@ -666,12 +666,15 @@ service Catalog<Schema extends RootSchema>
 
         Map<String, immutable Object> options = info.options;
 
-        Duration expiry   = options.getOrDefault("expiry", Duration.NONE).as(Duration);
-        Int      truncate = options.getOrDefault("truncate", Int:-1).as(Int);
+        Duration expiry     = options.getOrDefault("expiry", Duration.NONE).as(Duration);
+        Int      truncate   = options.getOrDefault("truncate", Int:-1).as(Int);
+        Int      maxLogSize = txManager.maxLogSize;
 
         return info.transactional
-                ? new JsonLogStore<elementType.DataType>   (this, info, elementMapping, expiry, truncate)
-                : new JsonNtxLogStore<elementType.DataType>(this, info, elementMapping, expiry, truncate);
+                ? new JsonLogStore<elementType.DataType>
+                    (this, info, elementMapping, expiry, truncate, maxLogSize)
+                : new JsonNtxLogStore<elementType.DataType>
+                    (this, info, elementMapping, expiry, truncate, maxLogSize);
         }
 
     @Concurrent

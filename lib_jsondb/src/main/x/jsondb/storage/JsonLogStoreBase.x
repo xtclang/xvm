@@ -18,13 +18,15 @@ service JsonLogStoreBase<Element extends immutable Const>
               Mapping<Element> elementMapping,
               Duration         expiry,
               Int              truncateSize,
+              Int              maxFileSize,
               )
         {
         super(catalog, info);
 
         this.jsonSchema     = catalog.jsonSchema;
         this.elementMapping = elementMapping;
-        this.truncateSize   = truncateSize > 0 ? truncateSize.maxOf(1024) : Int.maxvalue;
+        this.truncateSize   = truncateSize > 0 ? truncateSize.maxOf(2K) : Int.maxvalue;
+        this.maxFileSize    = maxFileSize.minOf(this.truncateSize/2);
         }
 
 
@@ -52,9 +54,34 @@ service JsonLogStoreBase<Element extends immutable Const>
         }
 
     /**
-     * The maximum size log to store in any one log file.
+     * A LogStorageSupport.
+     */
+    @Lazy protected LogStorageSupport support.calc()
+        {
+        return new LogStorageSupport(dataDir, "log");
+        }
+
+    /**
+     * The total size of log files to keep before truncation is allowed.
      */
     protected Int truncateSize;
+
+    /**
+     * The maximum size log to store in any one log file. If the `truncateSize` is specified
+     * (less then Int.maxvalue), this value is held below half of the `truncateSize`, so as the logs
+     * accumulate, in addition to the current log file there will be at least two rolled over files.
+     */
+    protected Int maxFileSize;
+
+    /**
+     * The total size of all the existent log files except the current one.
+     */
+    protected Int rolledSize;
+
+    /**
+     * A record of all of the existent rolled-over log files.
+     */
+    protected File[] rolledFiles = new File[];
 
 
     // ----- transaction API exposed to TxManager --------------------------------------------------
@@ -70,6 +97,11 @@ service JsonLogStoreBase<Element extends immutable Const>
         {
         assert model != Empty;
 
+        // scan the directory for log files
+        File[] logFiles   = support.findLogs();
+        Int    logCount   = logFiles.size;
+        Int    rolledSize = logFiles.map(f -> f.size).reduce(new aggregate.Sum<Int>());
+
         File file = dataFile;
         if (file.exists)
             {
@@ -83,6 +115,13 @@ service JsonLogStoreBase<Element extends immutable Const>
                 {
                 file.append("\n]".utf8());
                 }
+            this.rolledSize  = rolledSize - file.size;
+            this.rolledFiles = logFiles.delete(logCount-1);
+            }
+        else
+            {
+            this.rolledSize  = rolledSize;
+            this.rolledFiles = logFiles;
             }
         }
 
@@ -100,5 +139,19 @@ service JsonLogStoreBase<Element extends immutable Const>
         String rotatedName = $"log_{timestamp}.json";
 
         assert File rotatedFile := dataFile.renameTo(rotatedName);
+
+        while (rolledSize > truncateSize)
+            {
+            // remove the oldest file from the head
+            File oldestFile = rolledFiles[0];
+
+            rolledSize -= oldestFile.size;
+            rolledFiles = rolledFiles.delete(0);
+
+            oldestFile.delete();
+            }
+
+        rolledSize  += rotatedFile.size;
+        rolledFiles += rotatedFile; // the newest goes to the tail
         }
     }

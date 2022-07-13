@@ -17,9 +17,10 @@ service JsonNtxLogStore<Element extends immutable Const>
               Mapping<Element> elementMapping,
               Duration         expiry,
               Int              truncateSize,
+              Int              maxFileSize,
               )
         {
-        super(catalog, info, elementMapping, expiry, truncateSize);
+        super(catalog, info, elementMapping, expiry, truncateSize, maxFileSize);
         }
 
 
@@ -58,7 +59,7 @@ service JsonNtxLogStore<Element extends immutable Const>
             }
 
         length += buf.size;
-        if (length > truncateSize)
+        if (length > maxFileSize)
             {
             rotateLog();
             }
