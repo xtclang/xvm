@@ -495,7 +495,6 @@ public class Token
         SHR          (">>"             ),
         USHR         (">>>"            ),
         BIT_AND      ("&"              ),
-        AND_NOT      ("&!"             ),
         BIT_OR       ("|"              ),
         BIT_XOR      ("^"              ),
         BIT_NOT      ("~"              ),

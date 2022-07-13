@@ -3231,7 +3231,6 @@ public class Parser
                 case SHR:
                 case USHR:
                 case BIT_AND:
-                case AND_NOT: // TODO
                 case BIT_XOR:
                 case BIT_OR:
                     expr = new RelOpExpression(expr, current(), parseAdditiveExpression(fExtended));
@@ -4851,7 +4850,6 @@ public class Parser
                         case BIT_OR:
                         case ADD:
                         case SUB:
-                        case AND_NOT:
                             return new KeywordTypeExpression(tokImmut);
                         }
                     }

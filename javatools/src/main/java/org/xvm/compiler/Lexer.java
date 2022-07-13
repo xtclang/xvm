@@ -478,9 +478,6 @@ public class Lexer
                     {
                     switch (nextChar())
                         {
-                        case '!':
-                            return new Token(lInitPos, source.getPosition(), Id.AND_NOT);
-
                         case '&':
                             if (source.hasNext())
                                 {
