@@ -201,13 +201,16 @@ public class ConvertExpression
 
         // replace the LVal to convert into with a temp, and ask the underlying expression to fill
         // in the resulting set of LVals, and then convert that one value
+        int          iVal      = m_iVal;
         Assignable[] aLValTemp = aLVal.clone();
-        code.add(new Var(getUnderlyingExpression().getTypes()[m_iVal]));
+
+        code.add(new Var(getUnderlyingExpression().getTypes()[iVal]));
+
         Register regTemp = code.lastRegister();
-        aLValTemp[m_iVal] = new Assignable(regTemp);
+        aLValTemp[iVal] = new Assignable(regTemp);
 
         // create a temporary to hold the Boolean result for a conditional call, if necessary
-        boolean  fCond   = isConditionalResult() && m_iVal > 0;
+        boolean  fCond   = isConditionalResult() && iVal > 0;
         Register regCond = null;
         Label    lblSkip = new Label("skip_conv");
         if (fCond)
@@ -239,14 +242,14 @@ public class ConvertExpression
             }
 
         // determine the destination of the conversion
-        Assignable LVal = aLVal[m_iVal];
+        Assignable LVal = aLVal[iVal];
         if (LVal.isLocalArgument())
             {
             code.add(new Invoke_01(regTemp, m_idConv, LVal.getLocalArgument()));
             }
         else
             {
-            Register regResult = new Register(getTypes()[m_iVal], Op.A_STACK);
+            Register regResult = new Register(getTypes()[iVal], Op.A_STACK);
             code.add(new Invoke_01(regTemp, m_idConv, regResult));
             LVal.assign(regResult, code, errs);
             }

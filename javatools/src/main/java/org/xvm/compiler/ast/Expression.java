@@ -876,7 +876,9 @@ public abstract class Expression
                 MethodConstant idConv = aIdConv[i];
                 if (idConv != null)
                     {
-                    // TODO GG this is wrong (!!!) if i>0 && isConditionalResult
+                    // TODO if (i>0 && isConditionalResult()) --> this is where we would ask the
+                    //      parent to handle the conversion if the parent is already handling the
+                    //      conditionality (e.g. IfStatement)
                     exprResult = new ConvertExpression(exprResult, i, idConv, errs);
                     }
                 }

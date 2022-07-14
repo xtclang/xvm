@@ -106,8 +106,15 @@ module TestMisc
                 dec = $"\'{value}\'";
                 }
 
-            console.println($"char {ch.toSourceString()}, unicode={ch.unicode}, cat={ch.category}, lower={ch.lowercase.toSourceString()}, upper={ch.uppercase.toSourceString()}, title={ch.titlecase.toSourceString()}, dec={dec}, num={ch.numericValue}");
+            console.println($|char {ch.toSourceString()}, unicode={ch.unicode}, cat={ch.category}, \
+                             |lower={ch.lowercase.toSourceString()}, upper={ch.uppercase.toSourceString()}, \
+                             |title={ch.titlecase.toSourceString()}, dec={dec}, num={ch.numericValue}
+                             );
             }
+
+        // this also tests the conditional UInt8 to Int conversion
+        assert Int n := chars[0].asciiDigit(), n == 1;
+        assert !chars[1].asciiDigit();
         }
 
     void testIsA()
