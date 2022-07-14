@@ -1,22 +1,14 @@
 package org.xvm.runtime.template._native.net;
 
 
-import com.sun.net.httpserver.HttpServer;
-
-import java.io.IOException;
-
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 
 import org.xvm.asm.Op;
-import org.xvm.asm.constants.ClassConstant;
-import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassComposition;
@@ -26,9 +18,6 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 
-import org.xvm.runtime.ServiceContext;
-import org.xvm.runtime.Utils;
-import org.xvm.runtime.template._native.web.xRTServer;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
 import org.xvm.runtime.template.xException;
@@ -260,7 +249,7 @@ public class xRTNetwork
     // -----  helpers ------------------------------------------------------------------------------
 
     /**
-     * @return true iff the "Network" is configured to usef TLS for security
+     * @return true iff the "Network" is configured to use TLS for security
      */
     public boolean isSecure(Frame frame, ServiceHandle hNetwork)
         {

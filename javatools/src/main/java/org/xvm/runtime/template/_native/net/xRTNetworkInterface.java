@@ -1,10 +1,6 @@
 package org.xvm.runtime.template._native.net;
 
 
-import java.net.InetAddress;
-import java.net.NetworkInterface;
-import java.net.SocketException;
-
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
 
@@ -22,11 +18,8 @@ import org.xvm.runtime.template.xService;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction;
 
-import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 import org.xvm.runtime.template.collections.xByteArray;
-
-import org.xvm.runtime.template.text.xString;
 
 
 /**

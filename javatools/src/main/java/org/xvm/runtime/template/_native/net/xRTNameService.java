@@ -14,7 +14,6 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xBoolean;
-import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xService;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction;
@@ -89,15 +88,15 @@ public class xRTNameService
                 try
                     {
                     // TODO GG: immediately return a future, and use the executor pool to finish the work async
-                    InetAddress[] aAddrs = InetAddress.getAllByName(sName);
-                    if (aAddrs != null && aAddrs.length > 0)
+                    InetAddress[] aAddr = InetAddress.getAllByName(sName);
+                    if (aAddr != null && aAddr.length > 0)
                         {
                         // construct an array of byte arrays
-                        int            c  = aAddrs.length;
+                        int            c  = aAddr.length;
                         ObjectHandle[] ah = new ObjectHandle[c];
                         for (int i = 0; i < c; ++i)
                             {
-                            ah[i] = xArray.makeByteArrayHandle(aAddrs[i].getAddress(), xArray.Mutability.Constant);
+                            ah[i] = xArray.makeByteArrayHandle(aAddr[i].getAddress(), xArray.Mutability.Constant);
                             }
 
                         TypeComposition clz = ensureByteArrayArrayComposition(frame.f_context.f_container);
