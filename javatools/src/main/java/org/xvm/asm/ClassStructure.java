@@ -3969,6 +3969,64 @@ public class ClassStructure
         return ((NestedIdentity) id).getIdentityConstant().relocateNestedIdentity(this);
         }
 
+    /**
+     * Create (if necessary) a synthetic method for the specified signature at this synthetic class.
+     *
+     * @param sig  the SignatureConstant for the synthetic method
+     *
+     * @return the corresponding method
+     */
+    public MethodStructure ensureSyntheticMethod(SignatureConstant sig)
+        {
+        assert isSynthetic();
+
+        MethodStructure method = findMethod(sig);
+        if (method == null)
+            {
+            ConstantPool   pool        = getConstantPool();
+            TypeConstant[] atypeParam  = sig.getRawParams();
+            TypeConstant[] atypeReturn = sig.getRawReturns();
+            int            cParams     = atypeParam.length;
+            int            cReturns    = atypeReturn.length;
+
+            Parameter[] aParam = new Parameter[cParams];
+            for (int i = 0; i < cParams; i++)
+                {
+                aParam[i] = new Parameter(pool, atypeParam[i], "p"+i, null, false, i, false);
+                }
+
+            Parameter[] aReturn = new Parameter[cReturns];
+            for (int i = 0; i < cReturns; i++)
+                {
+                aReturn[i] = new Parameter(pool, atypeReturn[i], null, null, true, i, false);
+                }
+            method = createMethod(/*function*/ false, Access.PUBLIC, null, aReturn,
+                            sig.getName(), aParam, /*hasCode*/ false, /*usesSuper*/ false);
+            method.setSynthetic(true);
+            }
+        return method;
+        }
+
+    /**
+     * Create (if necessary) a synthetic property for the specified name and type.
+     *
+     * @param sName  the property name
+     * @param type   the property type
+     *
+     * @return the corresponding property
+     */
+    public PropertyStructure ensureSyntheticProperty(String sName, TypeConstant type)
+        {
+        assert isSynthetic();
+
+        PropertyStructure prop = (PropertyStructure) getChild(sName);
+        if (prop == null)
+            {
+            prop = createProperty(false, Access.PUBLIC, Access.PUBLIC, type, sName);
+            }
+        return prop;
+        }
+
 
     // ----- Object methods ------------------------------------------------------------------------
 

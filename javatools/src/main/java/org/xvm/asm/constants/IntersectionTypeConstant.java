@@ -15,6 +15,7 @@ import java.util.Objects;
 import java.util.Set;
 
 import org.xvm.asm.Annotation;
+import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Component.ResolutionCollector;
 import org.xvm.asm.Component.ResolutionResult;
@@ -22,6 +23,13 @@ import org.xvm.asm.Component.SimpleCollector;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.MethodStructure;
+import org.xvm.asm.ModuleStructure;
+
+import org.xvm.asm.PropertyStructure;
+
+import org.xvm.asm.constants.MethodBody.Implementation;
+import org.xvm.asm.constants.PropertyBody.Effect;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -108,9 +116,9 @@ public class IntersectionTypeConstant
 
     private void testMatch(TypeConstant type1, TypeConstant typeMatch, Set<TypeConstant> set)
         {
-        if (type1 instanceof IntersectionTypeConstant)
+        if (type1 instanceof IntersectionTypeConstant typeInter)
             {
-            ((IntersectionTypeConstant) type1).collectMatching(typeMatch, set);
+            typeInter.collectMatching(typeMatch, set);
             }
         else if (type1.isA(typeMatch))
             {
@@ -275,7 +283,7 @@ public class IntersectionTypeConstant
     @Override
     protected TypeConstant getGenericParamType(String sName, List<TypeConstant> listParams)
         {
-        // for Intersection types, both sides need to find it and we'll take the wider one
+        // for Intersection types, both sides need to find it, and we'll take the wider one
         TypeConstant typeActual1 = m_constType1.getGenericParamType(sName, listParams);
         TypeConstant typeActual2 = m_constType2.getGenericParamType(sName, listParams);
 
@@ -535,28 +543,45 @@ public class IntersectionTypeConstant
                         {
                         if (body2.getIdentity().equals(id1))
                             {
-                            // for now we use just one body; may need to take a full chain
+                            // for now, we use just one body; may need to take a full chain
                             // (e.g. Arrays.copyOfRange(abody1, i1, c1))
                             map.put(id1, new PropertyInfo(body1, prop1.getRank()));
                             continue NextEntry;
                             }
                         }
                     }
+                TypeConstant type1 = prop1.getType();
+                TypeConstant type2 = prop2.getType();
 
-                // there is no common identity; at least one must be an interfaces, the allow it
-                // to be called as it was duck-typeable
+                // there is no common identity; at least one must be an interface to allow it to be
+                // called as it were duck-typeable
                 boolean f1 = info1.getFormat() == Component.Format.INTERFACE;
                 boolean f2 = info2.getFormat() == Component.Format.INTERFACE;
                 if (f1 || f2)
                     {
-                    if (f1)
+                    if (f1 && type2.isA(type1))
                         {
                         map.put(prop1.getIdentity(), prop1);
                         }
-                    else
+                    else if (f2 && type1.isA(type2))
                         {
                         map.put(prop2.getIdentity(), prop2);
                         }
+                    continue;
+                    }
+
+                // nothing worked, but if the types are identical, we can still create an implicit
+                // PropertyBody that would allow it to be accessed at run-time
+                if (type1.equals(type2) && prop1.isVirtual() && prop2.isVirtual())
+                    {
+                    ModuleStructure   module         = getConstantPool().getFileStructure().getModule();
+                    ClassStructure    clzSynthParent = module.ensureSyntheticInterface(getValueString());
+                    PropertyStructure propSynth      = clzSynthParent.ensureSyntheticProperty(sName, type1);
+
+                    PropertyBody bodySynth = new PropertyBody(propSynth, Implementation.Implicit,
+                        null, type1, /*fRO*/ false, /*fRO*/ true, /*fCustom*/ false,
+                        Effect.None, Effect.None, /*fReqField*/ false, /*fConst*/ false, null, null);
+                    map.put(propSynth.getIdentityConstant(), new PropertyInfo(bodySynth, 0));
                     }
                 }
             }
@@ -624,8 +649,8 @@ public class IntersectionTypeConstant
                         }
                     }
 
-                // there is no common identity; at least one must be an interface to allow it
-                // to be called as it were duck-typeable
+                // there is no common identity; at least one must be an interface to allow it to be
+                // called as it were duck-typeable
                 boolean f1 = info1.getFormat() == Component.Format.INTERFACE;
                 boolean f2 = info2.getFormat() == Component.Format.INTERFACE;
                 if (f1 || f2)
@@ -646,6 +671,21 @@ public class IntersectionTypeConstant
                             mapCapped.put(method2, info2);
                             }
                         }
+                    continue;
+                    }
+
+                // nothing worked, but if the signatures are identical, we can still create an
+                // implicit MethodBody that would allow it to be invoked at run-time
+                if (method1.getSignature().equals(method2.getSignature()) &&
+                        method1.isVirtual() && method2.isVirtual())
+                    {
+                    ModuleStructure module         = getConstantPool().getFileStructure().getModule();
+                    ClassStructure  clzSynthParent = module.ensureSyntheticInterface(getValueString());
+                    MethodStructure methodSynth    = clzSynthParent.ensureSyntheticMethod(sig);
+                    MethodConstant  idSynthMethod  = methodSynth.getIdentityConstant();
+
+                    mapMerged.put(idSynthMethod,
+                        new MethodInfo(new MethodBody(idSynthMethod, sig, Implementation.Implicit)));
                     }
                 }
             }
@@ -808,8 +848,8 @@ public class IntersectionTypeConstant
         {
         return type.isTuple()
                 ? type
-                : type instanceof IntersectionTypeConstant
-                    ? ((IntersectionTypeConstant) type).extractTuple()
+                : type instanceof IntersectionTypeConstant typeInter
+                    ? typeInter.extractTuple()
                     : null;
         }
 

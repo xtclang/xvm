@@ -126,9 +126,6 @@ public class ClassConstant
             switch (parent.getFormat())
                 {
                 case Class:
-                    ++cLevelsDown;
-                    break;
-
                 case Property:
                 case Method:
                 case MultiMethod:
@@ -290,7 +287,7 @@ public class ClassConstant
 
 
     /**
-     * @return if this ClassConstant represents a an implicitly imported class return it's
+     * @return if this ClassConstant represents an implicitly imported class return it's
      *         implicit name; null otherwise
      */
     public String getImplicitImportName()
@@ -346,9 +343,9 @@ public class ClassConstant
     public String getDescription()
         {
         Constant constParent = getNamespace();
-        while (constParent instanceof ClassConstant)
+        while (constParent instanceof ClassConstant idParent)
             {
-            constParent = ((ClassConstant) constParent).getNamespace();
+            constParent = idParent.getNamespace();
             }
 
         return "class=" + getValueString() + ", " + constParent.getDescription();

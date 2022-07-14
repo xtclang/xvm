@@ -142,7 +142,7 @@ public abstract class Component
         {
         super(xsParent);
         assert (xsParent == null) == (this instanceof FileStructure);   // file doesn't have a parent
-        assert (constId == null) == (this instanceof FileStructure);    // file doesn't have constId
+        assert (constId == null)  == (this instanceof FileStructure);   // file doesn't have constId
         assert condition == null || !(this instanceof FileStructure);   // file can't be conditional
 
         if (constId != null)
@@ -195,9 +195,9 @@ public abstract class Component
                 return null;
                 }
 
-            if (containing instanceof Component)
+            if (containing instanceof Component component)
                 {
-                parent = (Component) containing;
+                parent = component;
                 break;
                 }
 
@@ -241,10 +241,10 @@ public abstract class Component
         Component parent = getParent();
         while (parent != null)
             {
-            if (parent instanceof ClassStructure &&
-                    (fAllowAnonymous || !((ClassStructure) parent).isAnonInnerClass()))
+            if (parent instanceof ClassStructure clzParent &&
+                    (fAllowAnonymous || !clzParent.isAnonInnerClass()))
                 {
-                return (ClassStructure) parent;
+                return clzParent;
                 }
             parent = parent.getParent();
             }
@@ -1252,17 +1252,17 @@ public abstract class Component
      * @param fFunction    true if the method is actually a function (not a method)
      * @param access       the access flag for the method
      * @param annotations  an array of annotations, or null
-     * @param returnTypes  the return values of the method
+     * @param aReturns     the return values of the method
      * @param sName        the method name, or null if the name is unknown
-     * @param paramTypes   the parameters for the method
+     * @param aParams      the parameters for the method
      * @param fHasCode     true indicates that the method is known to have a natural body
      * @param fUsesSuper   true indicates that the method is known to reference "super"
      *
      * @return a new MethodStructure or null if the equivalent method already exists
      */
-    public MethodStructure createMethod(boolean fFunction, Access access,
-            Annotation[] annotations, Parameter[] returnTypes, String sName, Parameter[] paramTypes,
-            boolean fHasCode, boolean fUsesSuper)
+    public MethodStructure createMethod(boolean fFunction, Access access, Annotation[] annotations,
+                                        Parameter[] aReturns, String sName, Parameter[] aParams,
+                                        boolean fHasCode, boolean fUsesSuper)
         {
         assert sName != null;
         assert access != null;
@@ -1270,7 +1270,7 @@ public abstract class Component
         MultiMethodStructure multimethod = ensureMultiMethodStructure(sName);
         return multimethod == null
                 ? null
-                : multimethod.createMethod(fFunction, access, annotations, returnTypes, paramTypes,
+                : multimethod.createMethod(fFunction, access, annotations, aReturns, aParams,
                         fHasCode, fUsesSuper);
         }
 
@@ -1279,9 +1279,9 @@ public abstract class Component
         Component sibling = getChildByNameMap().get(sName);
         while (sibling != null)
             {
-            if (sibling instanceof MultiMethodStructure)
+            if (sibling instanceof MultiMethodStructure mms)
                 {
-                return (MultiMethodStructure) sibling;
+                return mms;
                 }
 
             sibling = sibling.getNextSibling();
@@ -1432,9 +1432,9 @@ public abstract class Component
      */
     public Component getChild(Constant constId)
         {
-        if (constId instanceof NamedConstant)
+        if (constId instanceof NamedConstant constNamed)
             {
-            Component firstSibling = getChildByNameMap().get(((NamedConstant) constId).getName());
+            Component firstSibling = getChildByNameMap().get(constNamed.getName());
 
             return findLinkedChild(constId, firstSibling);
             }
@@ -3505,15 +3505,14 @@ public abstract class Component
 
                     // extract the type name from the type param
                     if (constParam.isSingleDefiningConstant()
-                            && constParam.getDefiningConstant() instanceof PropertyConstant)
+                            && constParam.getDefiningConstant() instanceof PropertyConstant idProp)
                         {
-                        StringConstant constName = ((PropertyConstant)
-                            constParam.getDefiningConstant()).getNameConstant();
+                        StringConstant constName       = idProp.getNameConstant();
                         TypeConstant   constConstraint = m_mapParams.get(constName);
                         if (constConstraint != null)
                             {
                             sb.append(" extends ")
-                                    .append(constConstraint.getValueString());
+                              .append(constConstraint.getValueString());
                             }
                         }
                     }

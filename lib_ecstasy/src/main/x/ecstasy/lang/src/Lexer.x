@@ -748,36 +748,35 @@ class Lexer
 
                     case "Dec32":
                         (Id id, IntLiteral|FPLiteral value) = eatNumericLiteral(before);
-                        // TODO GG: return LitDec32, value.toDec32();
-                        return LitDec32, value.is(IntLiteral) ? value.toDec32() : value.toDec32();
+                        return LitDec32, value.toDec32();
                     case "Dec64", "Dec":
                         (Id id, IntLiteral|FPLiteral value) = eatNumericLiteral(before);
-                        return LitDec64, value.is(IntLiteral) ? value.toDec64() : value.toDec64();
+                        return LitDec64, value.toDec64();
                     case "Dec128":
                         (Id id, IntLiteral|FPLiteral value) = eatNumericLiteral(before);
-                        return LitDec128, value.is(IntLiteral) ? value.toDec128() : value.toDec128();
+                        return LitDec128, value.toDec128();
                     case "DecN":
                         (Id id, IntLiteral|FPLiteral value) = eatNumericLiteral(before);
-                        return LitDecN, value.is(IntLiteral) ? value.toDecN() : value.toDecN();
+                        return LitDecN, value.toDecN();
 
                     case "Float16":
                         (Id id, IntLiteral|FPLiteral value) = eatNumericLiteral(before);
-                        return LitFloat16, value.is(IntLiteral) ? value.toFloat16() : value.toFloat16();
+                        return LitFloat16, value.toFloat16();
                     case "Float32":
                         (Id id, IntLiteral|FPLiteral value) = eatNumericLiteral(before);
-                        return LitFloat32, value.is(IntLiteral) ? value.toFloat32() : value.toFloat32();
+                        return LitFloat32, value.toFloat32();
                     case "Float64", "Float":
                         (Id id, IntLiteral|FPLiteral value) = eatNumericLiteral(before);
-                        return LitFloat64, value.is(IntLiteral) ? value.toFloat64() : value.toFloat64();
+                        return LitFloat64, value.toFloat64();
                     case "Float128":
                         (Id id, IntLiteral|FPLiteral value) = eatNumericLiteral(before);
-                        return LitFloat128, value.is(IntLiteral) ? value.toFloat128() : value.toFloat128();
+                        return LitFloat128, value.toFloat128();
                     case "FloatN":
                         (Id id, IntLiteral|FPLiteral value) = eatNumericLiteral(before);
-                        return LitFloatN, value.is(IntLiteral) ? value.toFloatN() : value.toFloatN();
+                        return LitFloatN, value.toFloatN();
                     case "BFloat16":
                         (Id id, IntLiteral|FPLiteral value) = eatNumericLiteral(before);
-                        return LitBFloat16, value.is(IntLiteral) ? value.toBFloat16() : value.toBFloat16();
+                        return LitBFloat16, value.toBFloat16();
 
                     case "Date":
                         return eatDateLiteral(before);

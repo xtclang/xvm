@@ -316,6 +316,25 @@ public class ModuleStructure
         return mapModulePaths;
         }
 
+    /**
+     * Create (if necessary) a synthetic ClassStructure for the specified name.
+     *
+     * This method is currently used to create a synthetic interface that represents an intersection
+     * of two types.
+     *
+     * @return a synthetic ClassStructure
+     */
+    public ClassStructure ensureSyntheticInterface(String sName)
+        {
+        ClassStructure clzInterface = (ClassStructure) getChild(sName);
+        if (clzInterface == null)
+            {
+            clzInterface = createClass(Access.PUBLIC, Component.Format.INTERFACE, sName, null);
+            clzInterface.setSynthetic(true);
+            }
+        return clzInterface;
+        }
+
 
     // ----- Component methods ---------------------------------------------------------------------
 

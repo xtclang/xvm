@@ -160,7 +160,7 @@ public class xPackage
         for (Map.Entry<String, Component> entry : mapChildren.entrySet())
             {
             Component component = entry.getValue();
-            if (component instanceof ClassStructure)
+            if (component instanceof ClassStructure && !component.isSynthetic())
                 {
                 IdentityConstant id     = component.getIdentityConstant();
                 ObjectHandle     hClass = frame.getConstHandle(pool.ensureClassConstant(id.getType()));
