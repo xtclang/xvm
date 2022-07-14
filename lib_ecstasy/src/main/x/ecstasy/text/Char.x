@@ -2,25 +2,19 @@ import collections.ConstOrdinalList;
 
 import io.IllegalUTF;
 
-const Char
+const Char(UInt32 codepoint)
         implements Sequential
         default('\u0000')
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    /**
-     * Construct a character from the codepoint indicated by the passed `UInt32` value.
-     *
-     * @param n  the codepoint for the character
-     */
-    construct(UInt32 codepoint)
+    assert()
         {
-        if (codepoint > 0x10FFFF ||                     // unicode limit
-            codepoint > 0xD7FF && codepoint < 0xE000)   // surrogate values are illegal
-            {
-            throw new IllegalUTF($"illegal code-point: {codepoint}");
-            }
-        this.codepoint = codepoint;
+        assert codepoint <= 0x10FFFF as $"Character code-point ({codepoint}) out of Unicode range";
+
+        assert !(0xD7FF < codepoint < 0xE000) as $|Character code-point ({codepoint}) is a surrogate; \
+                                                  |surrogates are not valid Unicode characters
+                                                 ;
         }
 
     /**
@@ -106,59 +100,6 @@ const Char
      * The unicode code-point for this character.
      */
     UInt32 codepoint;
-
-
-    // ----- numeric conversion support ------------------------------------------------------------
-
-    /**
-     * Determine if the character represents a nibble value.
-     *
-     * @return True iff the character represents a nibble value
-     * @return (optional) the corresponding Nibble
-     */
-    conditional Nibble isNibble()
-        {
-        return switch (this)
-            {
-            case '0'..'9':
-            case 'A'..'F':
-            case 'a'..'f': (True, Nibble.of(this));
-
-            default: False;
-            };
-        }
-
-    /**
-     * Determine if the character represents a digit (base 10) value.
-     *
-     * @return True iff the character represents a digit value
-     * @return (optional) the Int value of the corresponding digit
-     */
-    conditional Int isDigit()
-        {
-        Int codepoint = this.codepoint;
-        return 0x30 <= codepoint <= 0x39
-                ? (True, codepoint - 0x30)
-                : False;
-        }
-
-    /**
-     * Determine if the character represents a hexit (base 16) value.
-     *
-     * @return True iff the character represents a hexit value
-     * @return (optional) the Int value of the corresponding hexit
-     */
-    conditional Int isHexit()
-        {
-        Int codepoint = this.codepoint;
-        return switch (codepoint)
-            {
-            case 0x30..0x39: (True, codepoint - 0x30);
-            case 0x41..0x46: (True, codepoint - 0x41 + 0x0A);
-            case 0x61..0x66: (True, codepoint - 0x61 + 0x0A);
-            default: False;
-            };
-        }
 
 
     // ----- Sequential ----------------------------------------------------------------------------
@@ -767,6 +708,27 @@ const Char
             case 'A'..'F': (True, 0xA + (this - 'A').toUInt8());
             case 'a'..'f': (True, 0xa + (this - 'a').toUInt8());
             default      : False;
+            };
+        }
+
+
+    // ----- numeric conversion support ------------------------------------------------------------
+
+    /**
+     * Determine if the character represents a nibble value.
+     *
+     * @return True iff the character represents a nibble value
+     * @return (optional) the corresponding Nibble
+     */
+    conditional Nibble isNibble()
+        {
+        return switch (this)
+            {
+            case '0'..'9':
+            case 'A'..'F':
+            case 'a'..'f': (True, Nibble.of(this));
+
+            default: False;
             };
         }
 

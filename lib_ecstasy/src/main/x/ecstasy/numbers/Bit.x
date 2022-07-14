@@ -62,7 +62,8 @@ const Bit(IntLiteral literal)
     /**
      * @return the [Int8] value of either 0 or 1 that corresponds to this bit's value
      */
-    @Auto Int8 toInt8()
+    @Auto
+    Int8 toInt8()
         {
         return literal.toInt8();
         }

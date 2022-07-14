@@ -673,7 +673,7 @@ const UriTemplate(String template, List<PathSegment> segments, Int variableCount
 
         private String applyModifier(String modifierStr, Char modifierChar, String result, Int len)
             {
-            if (modifierChar == ':' && modifierStr.size > 0 && modifierStr[0].isDigit())
+            if (modifierChar == ':' && modifierStr.size > 0 && modifierStr[0].asciiDigit())
                 {
                 try
                     {

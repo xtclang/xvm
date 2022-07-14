@@ -2,10 +2,15 @@
  * A Nibble is half of a byte (bite); basically, a nibble is the number of bits necessary to hold a
  * hexadecimal value (a _hexit_, akin to a digit).
  */
-const Nibble
+const Nibble(Bit[] bits)
         implements Sequential
         default(0)
     {
+    assert()
+        {
+        assert bits.size == 4;
+        }
+
     // ----- constants -----------------------------------------------------------------------------
 
     /**
@@ -18,19 +23,40 @@ const Nibble
      */
     static IntLiteral maxvalue = 0xF;
 
+    /**
+     * The entire set of nibbles, in magnitude order.
+     */
+    private static Nibble[] values =
+        [
+        new Nibble([0, 0, 0, 0]),
+        new Nibble([0, 0, 0, 1]),
+        new Nibble([0, 0, 1, 0]),
+        new Nibble([0, 0, 1, 1]),
+        new Nibble([0, 1, 0, 0]),
+        new Nibble([0, 1, 0, 1]),
+        new Nibble([0, 1, 1, 0]),
+        new Nibble([0, 1, 1, 1]),
+        new Nibble([1, 0, 0, 0]),
+        new Nibble([1, 0, 0, 1]),
+        new Nibble([1, 0, 1, 0]),
+        new Nibble([1, 0, 1, 1]),
+        new Nibble([1, 1, 0, 0]),
+        new Nibble([1, 1, 0, 1]),
+        new Nibble([1, 1, 1, 0]),
+        new Nibble([1, 1, 1, 1]),
+        ];
 
-    // ----- constructors --------------------------------------------------------------------------
+
+    // ----- properties ----------------------------------------------------------------------------
 
     /**
-     * Construct a Nibble from a bit array.
-     *
-     * @param bits  an array of 4 bits
+     * The actual array of bits representing this nibble, ordered from left-to-right, Most
+     * Significant Bit (MSB) to Least Significant Bit (LSB).
      */
-    construct(Bit[] bits)
-        {
-        assert bits.size == 4;
-        this.bits = bits;
-        }
+    private Bit[] bits;
+
+
+    // ----- obtaining a Nibble --------------------------------------------------------------------
 
     /**
      * Obtain the nibble corresponding to an integer value.
@@ -65,38 +91,6 @@ const Nibble
                                               );
             }];
         }
-
-
-    // ----- properties ----------------------------------------------------------------------------
-
-    /**
-     * The actual array of bits representing this nibble, ordered from left-to-right, Most
-     * Significant Bit (MSB) to Least Significant Bit (LSB).
-     */
-    private Bit[] bits;
-
-    /**
-     * The entire set of nibbles, in magnitude order.
-     */
-    private static Nibble[] values =
-        [
-        new Nibble([0, 0, 0, 0]),
-        new Nibble([0, 0, 0, 1]),
-        new Nibble([0, 0, 1, 0]),
-        new Nibble([0, 0, 1, 1]),
-        new Nibble([0, 1, 0, 0]),
-        new Nibble([0, 1, 0, 1]),
-        new Nibble([0, 1, 1, 0]),
-        new Nibble([0, 1, 1, 1]),
-        new Nibble([1, 0, 0, 0]),
-        new Nibble([1, 0, 0, 1]),
-        new Nibble([1, 0, 1, 0]),
-        new Nibble([1, 0, 1, 1]),
-        new Nibble([1, 1, 0, 0]),
-        new Nibble([1, 1, 0, 1]),
-        new Nibble([1, 1, 1, 0]),
-        new Nibble([1, 1, 1, 1]),
-        ];
 
 
     // ----- Sequential interface ------------------------------------------------------------------
@@ -147,7 +141,8 @@ const Nibble
      *
      * @throws OutOfBounds  if the resulting value is out of range for this type
      */
-    @Op("+") Nibble add(Nibble n)
+    @Op("+")
+    Nibble add(Nibble n)
         {
         return add(n.toInt64());
         }
@@ -161,7 +156,8 @@ const Nibble
      *
      * @throws OutOfBounds  if the resulting value is out of range for this type
      */
-    @Op("-") Nibble sub(Nibble n)
+    @Op("-")
+    Nibble sub(Nibble n)
         {
         return sub(n.toInt64());
         }
@@ -175,7 +171,8 @@ const Nibble
      *
      * @throws OutOfBounds  if the resulting value is out of range for this type
      */
-    @Op("+") Nibble add(IntNumber n)
+    @Op("+")
+    Nibble add(IntNumber n)
         {
         Int sum = this.toInt64() + n.toInt64();
         assert:bounds 0 <= sum < 16;
@@ -191,7 +188,8 @@ const Nibble
      *
      * @throws OutOfBounds  if the resulting value is out of range for this type
      */
-    @Op("-") Nibble sub(IntNumber n)
+    @Op("-")
+    Nibble sub(IntNumber n)
         {
         Int dif = this.toInt64() - n.toInt64();
         assert:bounds 0 <= dif < 16;
@@ -214,9 +212,19 @@ const Nibble
         }
 
     /**
+     * Convert the number to an unsigned 8-bit integer.
+     *
+     * A second name for the [toUInt8] method, to assist with readability. By using a property
+     * to alias the method, instead of creating a second delegating method, this prevents the
+     * potential for accidentally overriding the wrong method.
+     */
+    static Method<Bit, <>, <Byte>> toByte = toUInt8;
+
+    /**
      * @return the character representation of the nibble, which is the digit `0..9` or the alpha
      *         letter `A..F`
      */
+    @Auto
     Char toChar()
         {
         UInt32 n = toUInt32();
@@ -226,7 +234,8 @@ const Nibble
     /**
      * @return the Int8 value corresponding to the magnitude of the nibble, in the range `[0..F]`
      */
-    @Auto Int8 toInt8()
+    @Auto
+    Int8 toInt8()
         {
         return toUInt8().toInt8();
         }
@@ -234,7 +243,8 @@ const Nibble
     /**
      * @return the Int16 value corresponding to the magnitude of the nibble, in the range `[0..F]`
      */
-    @Auto Int16 toInt16()
+    @Auto
+    Int16 toInt16()
         {
         return toUInt8().toInt16();
         }
@@ -242,7 +252,8 @@ const Nibble
     /**
      * @return the Int32 value corresponding to the magnitude of the nibble, in the range `[0..F]`
      */
-    @Auto Int32 toInt32()
+    @Auto
+    Int32 toInt32()
         {
         return toUInt8().toInt32();
         }
@@ -250,7 +261,8 @@ const Nibble
     /**
      * @return the Int64 value corresponding to the magnitude of the nibble, in the range `[0..F]`
      */
-    @Auto Int64 toInt64()
+    @Auto
+    Int64 toInt64()
         {
         return toUInt8().toInt64();
         }
@@ -258,16 +270,27 @@ const Nibble
     /**
      * @return the Int128 value corresponding to the magnitude of the nibble, in the range `[0..F]`
      */
-    @Auto Int128 toInt128()
+    @Auto
+    Int128 toInt128()
         {
         return toUInt8().toInt128();
+        }
+
+    /**
+     * @return the IntN value corresponding to the magnitude of the nibble, in the range `[0..F]`
+     */
+    @Auto
+    IntN toIntN()
+        {
+        return toUInt8().toIntN();
         }
 
     /**
      * @return the Int8 (Byte) value corresponding to the magnitude of the nibble, in the range
      *         `[0..F]`
      */
-    @Auto UInt8 toUInt8()
+    @Auto
+    UInt8 toUInt8()
         {
         return bits.toUInt8();
         }
@@ -275,7 +298,8 @@ const Nibble
     /**
      * @return the UInt16 value corresponding to the magnitude of the nibble, in the range `[0..F]`
      */
-    @Auto UInt16 toUInt16()
+    @Auto
+    UInt16 toUInt16()
         {
         return toUInt8().toUInt16();
         }
@@ -283,7 +307,8 @@ const Nibble
     /**
      * @return the UInt32 value corresponding to the magnitude of the nibble, in the range `[0..F]`
      */
-    @Auto UInt32 toUInt32()
+    @Auto
+    UInt32 toUInt32()
         {
         return toUInt8().toUInt32();
         }
@@ -291,7 +316,8 @@ const Nibble
     /**
      * @return the UInt64 value corresponding to the magnitude of the nibble, in the range `[0..F]`
      */
-    @Auto UInt64 toUInt64()
+    @Auto
+    UInt64 toUInt64()
         {
         return toUInt8().toUInt64();
         }
@@ -299,7 +325,8 @@ const Nibble
     /**
      * @return the UInt128 value corresponding to the magnitude of the nibble, in the range `[0..F]`
      */
-    @Auto UInt128 toUInt128()
+    @Auto
+    UInt128 toUInt128()
         {
         return toUInt8().toUInt128();
         }
@@ -307,7 +334,8 @@ const Nibble
     /**
      * @return the UIntN value corresponding to the magnitude of the nibble, in the range `[0..F]`
      */
-    @Auto UIntN toUIntN()
+    @Auto
+    UIntN toUIntN()
         {
         return toUInt8().toUIntN();
         }

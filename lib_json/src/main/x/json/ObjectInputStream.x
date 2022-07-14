@@ -258,7 +258,7 @@ class ObjectInputStream(Schema schema, Parser parser)
                         + $" \"{this.pointer}\" is not supported");
                 }
 
-            if (Int steps := pointer[0].isDigit())
+            if (Int steps := pointer[0].asciiDigit())
                 {
                 // this is a relative pointer format
                 Int    cur  = 1;
@@ -275,7 +275,7 @@ class ObjectInputStream(Schema schema, Parser parser)
                         }
 
                     Char ch = pointer[cur];
-                    if (Int n := ch.isDigit())
+                    if (Int n := ch.asciiDigit())
                         {
                         steps = steps * 10 + n;
                         cur++;

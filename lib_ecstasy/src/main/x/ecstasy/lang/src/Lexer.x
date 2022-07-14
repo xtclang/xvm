@@ -1387,7 +1387,7 @@ class Lexer
         Loop: while (!eof)
             {
             Char ch = nextChar();
-            if (Int n := ch.isHexit())
+            if (Int n := ch.asciiHexit())
                 {
                 nibs.add(n.toByte());
                 }
