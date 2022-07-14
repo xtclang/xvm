@@ -445,6 +445,9 @@ class Lexer
                                 return CompareLTEQ, Null;
                             }
 
+                    case '-':
+                        return AsnExpr, Null;
+
                     default:
                         rewind();
                         return CompareLT, Null;
@@ -563,6 +566,9 @@ class Lexer
             case '^':
                 switch (nextChar())
                     {
+                    case '(':
+                        return AsyncParen, Null;
+
                     case '^':
                         return BoolXor, Null;
 
@@ -694,6 +700,85 @@ class Lexer
                 // check for some specific literal type formats
                 switch (name)
                     {
+                    case "Bit":
+                        IntLiteral value = eatIntLiteral(before, Bit.minvalue, Bit.maxvalue, True);
+                        return LitBit, value.toBit();
+
+                    case "Nibble":
+                        IntLiteral value = eatIntLiteral(before, Nibble.minvalue, Nibble.maxvalue, True);
+                        return LitNibble, value.toNibble();
+
+                    case "Int8":
+                        IntLiteral value = eatIntLiteral(before, Int8.minvalue, Int8.maxvalue, True);
+                        return LitInt8, value.toInt8();
+                    case "Int16":
+                        IntLiteral value = eatIntLiteral(before, Int16.minvalue, Int16.maxvalue, True);
+                        return LitInt16, value.toInt16();
+                    case "Int32":
+                        IntLiteral value = eatIntLiteral(before, Int32.minvalue, Int32.maxvalue, True);
+                        return LitInt32, value.toInt32();
+                    case "Int64", "Int":
+                        IntLiteral value = eatIntLiteral(before, Int64.minvalue, Int64.maxvalue, True);
+                        return LitInt64, value.toInt64();
+                    case "Int128":
+                        IntLiteral value = eatIntLiteral(before, Int128.minvalue, Int128.maxvalue, True);
+                        return LitInt128, value.toInt128();
+                    case "IntN":
+                        IntLiteral value = eatIntLiteral(before, explicitlyInt=True);
+                        return LitIntN, value.toIntN();
+
+                    case "UInt8":
+                        IntLiteral value = eatIntLiteral(before, UInt8.minvalue, UInt8.maxvalue, True);
+                        return LitUInt8, value.toUInt8();
+                    case "UInt16":
+                        IntLiteral value = eatIntLiteral(before, UInt16.minvalue, UInt16.maxvalue, True);
+                        return LitUInt16, value.toUInt16();
+                    case "UInt32":
+                        IntLiteral value = eatIntLiteral(before, UInt32.minvalue, UInt32.maxvalue, True);
+                        return LitUInt32, value.toUInt32();
+                    case "UInt64", "UInt":
+                        IntLiteral value = eatIntLiteral(before, UInt64.minvalue, UInt64.maxvalue, True);
+                        return LitUInt64, value.toUInt64();
+                    case "UInt128":
+                        IntLiteral value = eatIntLiteral(before, UInt128.minvalue, UInt128.maxvalue, True);
+                        return LitUInt128, value.toUInt128();
+                    case "UIntN":
+                        IntLiteral value = eatIntLiteral(before, explicitlyInt=True);
+                        return LitUIntN, value.toUIntN();
+
+                    case "Dec32":
+                        (Id id, IntLiteral|FPLiteral value) = eatNumericLiteral(before);
+                        // TODO GG: return LitDec32, value.toDec32();
+                        return LitDec32, value.is(IntLiteral) ? value.toDec32() : value.toDec32();
+                    case "Dec64", "Dec":
+                        (Id id, IntLiteral|FPLiteral value) = eatNumericLiteral(before);
+                        return LitDec64, value.is(IntLiteral) ? value.toDec64() : value.toDec64();
+                    case "Dec128":
+                        (Id id, IntLiteral|FPLiteral value) = eatNumericLiteral(before);
+                        return LitDec128, value.is(IntLiteral) ? value.toDec128() : value.toDec128();
+                    case "DecN":
+                        (Id id, IntLiteral|FPLiteral value) = eatNumericLiteral(before);
+                        return LitDecN, value.is(IntLiteral) ? value.toDecN() : value.toDecN();
+
+                    case "Float16":
+                        (Id id, IntLiteral|FPLiteral value) = eatNumericLiteral(before);
+                        return LitFloat16, value.is(IntLiteral) ? value.toFloat16() : value.toFloat16();
+                    case "Float32":
+                        (Id id, IntLiteral|FPLiteral value) = eatNumericLiteral(before);
+                        return LitFloat32, value.is(IntLiteral) ? value.toFloat32() : value.toFloat32();
+                    case "Float64", "Float":
+                        (Id id, IntLiteral|FPLiteral value) = eatNumericLiteral(before);
+                        return LitFloat64, value.is(IntLiteral) ? value.toFloat64() : value.toFloat64();
+                    case "Float128":
+                        (Id id, IntLiteral|FPLiteral value) = eatNumericLiteral(before);
+                        return LitFloat128, value.is(IntLiteral) ? value.toFloat128() : value.toFloat128();
+                    case "FloatN":
+                        (Id id, IntLiteral|FPLiteral value) = eatNumericLiteral(before);
+                        return LitFloatN, value.is(IntLiteral) ? value.toFloatN() : value.toFloatN();
+                    case "BFloat16":
+                        (Id id, IntLiteral|FPLiteral value) = eatNumericLiteral(before);
+                        return LitBFloat16, value.is(IntLiteral) ? value.toBFloat16() : value.toBFloat16();
+
                     case "Date":
                         return eatDateLiteral(before);
                     case "TimeOfDay":
@@ -704,6 +789,7 @@ class Lexer
                         return eatTimeZoneLiteral(before);
                     case "Duration":
                         return eatDurationLiteral(before);
+
                     case "Version":
                     case "v":
                         return eatVersionLiteral(before);
@@ -1231,7 +1317,7 @@ class Lexer
      * @return id     the token id
      * @return value  the token value
      */
-    protected (Id id, Object value) eatNumericLiteral(TextPosition before)
+    protected (Id id, IntLiteral|FPLiteral value) eatNumericLiteral(TextPosition before)
         {
         (IntLiteral intVal, Int radix) = eatIntLiteral();
         StringBuffer? fpBuf = Null;
@@ -1273,7 +1359,7 @@ class Lexer
                 fpBin = True;
                 continue;
             case 'E', 'e':
-                IntLiteral exp = eatIntLiteral();
+                IntLiteral exp = eatIntLiteral(explicitlyInt=True);
                 fpBuf ?:= new StringBuffer().addAll(intVal.toString());
                 fpBuf.add(ch);
                 fpBuf.addAll(exp.toString());
@@ -1303,10 +1389,13 @@ class Lexer
      *
      * @return an IntLiteral
      */
-    protected (IntLiteral value, Int radix) eatIntLiteral()
+    protected (IntLiteral value, Int radix) eatIntLiteral(TextPosition? before        = Null,
+                                                          IntLiteral?   min           = Null,
+                                                          IntLiteral?   max           = Null,
+                                                          Boolean       explicitlyInt = False)
         {
         StringBuffer buf   = new StringBuffer();
-        TextPosition start = reader.position;
+        TextPosition start = before ?: reader.position;
 
         // the first character could be a sign (+ or -)
         if (match('+'))
@@ -1353,22 +1442,95 @@ class Lexer
                     }
                 }
 
-            while (ch := nextDigit(radix))
+            Digits: while (ch := nextDigit(radix, !Digits.first))
                 {
                 buf.add(ch);
                 legal = True;
                 }
             }
 
+        PossibleSuffix: if (legal && radix == 10)
+            {
+            Boolean possibleExponent = False;
+            switch (Char suffix = nextChar())
+                {
+                case 'P', 'p':
+                case 'E', 'e':
+                    possibleExponent = !explicitlyInt;
+                    continue;
+                case 'K', 'k':
+                case 'M', 'm':
+                case 'G', 'g':
+                case 'T', 't':
+                case 'Z', 'z':
+                case 'Y', 'y':
+                    buf.add(suffix);
+                    break;
+
+                default:
+                    rewind();
+                    break PossibleSuffix;
+                }
+
+            switch (Char suffix = nextChar())
+                {
+                case 'B', 'b':                      // explicitly decimal, e.g. "kb"
+                    buf.add(suffix);
+                    break;
+
+                case 'I', 'i':                      // explicitly binary, e.g. "ki" or "kib"
+                    buf.add(suffix);
+
+                    Char optionalB = nextChar();
+                    if (optionalB == 'B' || optionalB == 'b')
+                        {
+                        buf.add(optionalB);
+                        }
+                    else
+                        {
+                        rewind();
+                        }
+                    break;
+
+                case '+', '-', '0'..'9':
+                    rewind();
+                    if (possibleExponent)
+                        {
+                        // the "P" or the "E" was for an exponent, not for the integer
+                        rewind();
+                        buf.truncate(buf.size-1);
+                        break PossibleSuffix;
+                        }
+                    break;
+
+                default:
+                    rewind();
+                    break;
+                }
+            }
+
+        IntLiteral value;
         if (legal)
             {
-            return new IntLiteral(buf.toString()), radix;
+            value = new IntLiteral(buf.toString());
+            if (value < min?)
+                {
+                log(Error, IntSubceedsMin, [buf.toString(), min], start, reader.position);
+                value = 0;
+                }
+            else if (value > max?)
+                {
+                log(Error, IntExceedsMax, [buf.toString(), max], start, reader.position);
+                value = 0;
+                }
             }
         else
             {
             log(Error, IllegalNumber, [buf.toString()], start, reader.position);
-            return 0, radix;
+            value = 0;
             }
+
+        return value, radix;
         }
 
     /**
@@ -1383,13 +1545,13 @@ class Lexer
      */
     protected (Id id, Byte[] value) eatBinaryLiteral(TextPosition before, Boolean multiline)
         {
-        Byte[] nibs = new Byte[];
+        Nibble[] nibs = new Nibble[];
         Loop: while (!eof)
             {
             Char ch = nextChar();
-            if (Int n := ch.asciiHexit())
+            if (Nibble nib := ch.isNibble())
                 {
-                nibs.add(n.toByte());
+                nibs.add(nib);
                 }
             else if (ch == '_')
                 {
@@ -1402,7 +1564,12 @@ class Lexer
                 }
             else if (!multiline)
                 {
-                // the first non-hexit / non-underscore character indicates an end-of-value
+                // the first non-hexit / non-underscore character indicates an end-of-value;
+                // however, there needs to be separation before encountering another token
+                if (isIdentifierPart(ch))
+                    {
+                    log(Error, IllegalHex, [ch.quoted()], before, reader.position);
+                    }
                 rewind();
                 break;
                 }
@@ -1424,23 +1591,7 @@ class Lexer
                 }
             }
 
-        // REVIEW this code needs to be reusable and placed somewhere else (or use Nibble[])
-        Int    bytesLen  = (nibs.size + 1) / 2;
-        Byte[] bytes     = new Byte[bytesLen];
-        Int    nibIndex  = 0;
-        Int    byteIndex = 0;
-        if (nibs.size & 0x1 != 0)
-            {
-            bytes[0]  = nibs[0];
-            nibIndex  = 1;
-            byteIndex = 1;
-            }
-        while (byteIndex < bytesLen)
-            {
-            bytes[byteIndex++] = nibs[nibIndex++] << 4 | nibs[nibIndex++];
-            }
-
-        return LitBinstr, bytes;
+        return LitBinstr, nibs.toByteArray();
         }
 
     /**
@@ -2192,12 +2343,13 @@ class Lexer
     /**
      * Get the next character of source code if it is a digit of the specified radix.
      *
-     * @param radix  the radix of the desired digit
+     * @param radix            the radix of the desired digit
+     * @param allowUnderscore  pass True to allow an underscore character
      *
      * @return True iff the next character is a digit of the specified radix
      * @return (conditional) the digit character
      */
-    conditional Char nextDigit(Int radix = 10)
+    conditional Char nextDigit(Int radix = 10, Boolean allowUnderscore=False)
         {
         if (!eof)
             {
@@ -2223,6 +2375,13 @@ class Lexer
                 case 'A'..'F':
                 case 'a'..'f':
                     if (radix >= 16)
+                        {
+                        return True, ch;
+                        }
+                    break;
+
+                case '_':
+                    if (allowUnderscore)
                         {
                         return True, ch;
                         }
@@ -2450,21 +2609,23 @@ class Lexer
         ExpectedEndComment("LEXER-02", "Expected a comment-ending \"star slash\" but never found one."),
         IllegalChar       ("LEXER-03", "Invalid character: \"{0}\"."),
         IllegalNumber     ("LEXER-04", "Illegal number: \"{0}\"."),
-        CharNoTerm        ("LEXER-05", "An illegal character literal, missing closing quote: \"{0}\"."),
-        CharBadEsc        ("LEXER-06", "An illegally escaped character literal: \"{0}\"."),
-        CharNoChar        ("LEXER-07", "An illegal character literal missing the character: \"{0}\"."),
-        StringNoTerm      ("LEXER-08", "An illegally terminated string literal: \"{0}\"."),
-        StringBadEsc      ("LEXER-09", "An illegally escaped string literal: \"{0}\"."),
-        IllegalHex        ("LEXER-10", "Illegal hex value: \"{0}\"."),
-        ExpectedChar      ("LEXER-11", "Expected \"{0}\"; found \"{1}\"."),
-        ExpectedDigits    ("LEXER-12", "\"{0}\" digits were required; only \"{1}\" digits were found."),
-        BadDate           ("LEXER-13", "Invalid ISO-8601 date \"{0}\"; date must be in the format \"YYYY-MM-DD\" with valid values for each."),
-        BadTimeOfDay      ("LEXER-14", "Invalid ISO-8601 time \"{0}\"; time-of-day must be in the format \"hh:mm:ss.sss\" or \"hhmmss.sss\" (with seconds and fractions of seconds optional) with valid values for each."),
-        BadTime           ("LEXER-15", "Invalid ISO-8601 datetime \"{0}\"; date/time must be in the format date+\"T\"+timeOfDay+timezone (with timezone optional), with valid values for each."),
-        BadTimezone       ("LEXER-16", "Invalid ISO-8601 timezone \"{0}\"; timezone must be \"Z\" (for UTC), or in the format \"+hh:mm\" or \"+hhmm\" (using either \"+\" or \"-\", and with minutes optional) with valid values for each."),
-        BadDuration       ("LEXER-17", "Invalid ISO-8601 duration \"{0}\"; duration must be in the format \"PnYnMnDTnHnMnS\" (with the year, month, day, and time-of-day value optional, and the hours, minutes, and seconds values optional within the time portion), with valid values for each."),
-        UnexpectedChar    ("LEXER-18", "Unexpected character: \"{0}\"."),
-        TemplateNoTerm    ("LEXER-19", "Template is not terminated."),
+        IntSubceedsMin    ("LEXER-05", "Integer value {0} subceeds minimum ({1})."),
+        IntExceedsMax     ("LEXER-06", "Integer value {0} exceeds maximum ({1})."),
+        CharNoTerm        ("LEXER-07", "An illegal character literal, missing closing quote: \"{0}\"."),
+        CharBadEsc        ("LEXER-08", "An illegally escaped character literal: \"{0}\"."),
+        CharNoChar        ("LEXER-09", "An illegal character literal missing the character: \"{0}\"."),
+        StringNoTerm      ("LEXER-10", "An illegally terminated string literal: \"{0}\"."),
+        StringBadEsc      ("LEXER-11", "An illegally escaped string literal: \"{0}\"."),
+        IllegalHex        ("LEXER-12", "Illegal hex value: \"{0}\"."),
+        ExpectedChar      ("LEXER-13", "Expected \"{0}\"; found \"{1}\"."),
+        ExpectedDigits    ("LEXER-14", "\"{0}\" digits were required; only \"{1}\" digits were found."),
+        BadDate           ("LEXER-15", "Invalid ISO-8601 date \"{0}\"; date must be in the format \"YYYY-MM-DD\" with valid values for each."),
+        BadTimeOfDay      ("LEXER-16", "Invalid ISO-8601 time \"{0}\"; time-of-day must be in the format \"hh:mm:ss.sss\" or \"hhmmss.sss\" (with seconds and fractions of seconds optional) with valid values for each."),
+        BadTime           ("LEXER-17", "Invalid ISO-8601 datetime \"{0}\"; date/time must be in the format date+\"T\"+timeOfDay+timezone (with timezone optional), with valid values for each."),
+        BadTimezone       ("LEXER-18", "Invalid ISO-8601 timezone \"{0}\"; timezone must be \"Z\" (for UTC), or in the format \"+hh:mm\" or \"+hhmm\" (using either \"+\" or \"-\", and with minutes optional) with valid values for each."),
+        BadDuration       ("LEXER-19", "Invalid ISO-8601 duration \"{0}\"; duration must be in the format \"PnYnMnDTnHnMnS\" (with the year, month, day, and time-of-day value optional, and the hours, minutes, and seconds values optional within the time portion), with valid values for each."),
+        UnexpectedChar    ("LEXER-20", "Unexpected character: \"{0}\"."),
+        TemplateNoTerm    ("LEXER-21", "Template is not terminated."),
         BadVersion        ("PARSER-04", "Bad version value.");
 
         /**
@@ -2512,6 +2673,24 @@ class Lexer
             }
 
         /**
+         * @return a copy made from this token, with only the specified properties changed
+         */
+        Token with(Id?           id          = Null,
+                   TextPosition? start       = Null,
+                   TextPosition? end         = Null,
+                   Object?       value       = Null,
+                   Boolean?      spaceBefore = Null,
+                   Boolean?      spaceAfter  = Null)
+              {
+              return new Token(id          ?: this.id,
+                               start       ?: this.start,
+                               end         ?: this.end,
+                               value       ?: this.value,
+                               spaceBefore ?: this.spaceBefore,
+                               spaceAfter  ?: this.spaceAfter);
+              }
+
+        /**
          * @return the value's text, or if there is no value, then the token id's text
          */
         String valueText.get()
@@ -2556,40 +2735,60 @@ class Lexer
                 case LitChar:       value.as(Char).quoted();
                 case LitString:     value.as(String).quoted();
 
-                case LitDate:      "Date:"      + value.toString();
-                case LitTimeOfDay: "TimeOfDay:" + value.toString();
-                case LitTime:      "Time:"      + value.toString();
-                case LitTimezone:  "TimeZone:"  + value.toString();
-                case LitDuration:  "Duration:"  + value.toString();
-                case LitVersion:   "Version:"   + value.toString();
+                case LitBit:
+                case LitNibble:
+                case LitInt8:
+                case LitInt16:
+                case LitInt32:
+                case LitInt64:
+                case LitInt128:
+                case LitIntN:
+                case LitUInt8:
+                case LitUInt16:
+                case LitUInt32:
+                case LitUInt64:
+                case LitUInt128:
+                case LitUIntN:
+                case LitDec32:
+                case LitDec64:
+                case LitDec128:
+                case LitDecN:
+                case LitFloat16:
+                case LitFloat32:
+                case LitFloat64:
+                case LitFloat128:
+                case LitFloatN:
+                case LitBFloat16:
+                case LitDate:
+                case LitTimeOfDay:
+                case LitTime:
+                case LitTimezone:
+                case LitDuration:
+                case LitVersion:    $"{id.name.substring(3)}:{value.toString()}";
 
                 case LitBinstr:
-                    {
-                    // TODO most of this should be on Byte[] or Nibble[]
-                    Byte[]       bytes = value.as(Byte[]);
-                    StringBuffer buf   = new StringBuffer((1+bytes.size * 2).minOf(37));
-                    buf.append('#');
-                    Loop: for (Byte b : bytes)
-                        {
-                        if (Loop.count >= 17)
-                            {
-                            buf.add('.').add('.');
-                            break;
-                            }
-                        buf.add((b >>> 4).toHexit())
-                           .add((b      ).toHexit());
-                        }
-                    return buf.toString();
-                    };
+                    value.as(Byte[]).appendTo(new StringBuffer(40), pre="#", limit=17).toString();
 
 
-                case Identifier:  Id.allKeywords.contains(value.as(String))
-                                          ? '$' + value.toString()
-                                          : value.toString();
+                case Identifier:
+                    Id.allKeywords.contains(value.as(String))
+                            ? $"${value.toString()}"
+                            : value.toString();
 
-                case DocComment:  value.is(String) ? "/** " + (value.size > 35 ? value[0..33]+".. */" : value + " */") : "/** */";
-                case EncComment:  value.is(String) ? "/* "  + (value.size > 35 ? value[0..33]+".. */" : value + " */") : "/* */";
-                case EolComment:  value.is(String) ? "// "  + (value.size > 35 ? value[0..33]+".."    : value        ) : "//";
+                case DocComment:
+                    value.is(String)
+                            ? $"/** {value.size > 35 ? value[0..33]+".." : value} */"
+                            : "/** */";
+
+                case EncComment:
+                    value.is(String)
+                            ? $"/* {value.size > 35 ? value[0..33]+".." : value} */"
+                            : "/* */";
+
+                case EolComment:
+                    value.is(String)
+                            ? $"// {value.size > 35 ? value[0..33]+".." : value}"
+                            : "//";
 
                 default: id.text ?: "???";
                 };
@@ -2614,6 +2813,7 @@ class Lexer
         CurrentDir   <Object    >("./"             ),
         ParentDir    <Object    >("../"            ),
         LeftParen    <Object    >("("              ),
+        AsyncParen   <Object    >("^("             ),
         RightParen   <Object    >(")"              ),
         LeftCurly    <Object    >("{"              ),
         RightCurly   <Object    >("}"              ),
@@ -2668,6 +2868,7 @@ class Lexer
         Increment    <Object    >("++"             ),
         Decrement    <Object    >("--"             ),
         Lambda       <Object    >("->"             ),
+        AsnExpr      <Object    >("<-"             ),
         Any          <Object    >("_"              ),
         Allow        <Object    >("allow"          , ContextSensitive),
         As           <Object    >("as"             ),
@@ -2743,12 +2944,36 @@ class Lexer
         Void         <Object    >("void"           ),
         While        <Object    >("while"          ),
         Identifier   <String    >(Null             ),
+        LitBit       <Bit       >(Null             ),
+        LitNibble    <Nibble    >(Null             ),
         LitChar      <Char      >(Null             ),
         LitString    <String    >(Null             ),
         LitBinstr    <Byte[]    >(Null             ),
         LitInt       <IntLiteral>(Null             ),
+        LitInt8      <Int8      >(Null             ),
+        LitInt16     <Int16     >(Null             ),
+        LitInt32     <Int32     >(Null             ),
+        LitInt64     <Int64     >(Null             ),
+        LitInt128    <Int128    >(Null             ),
+        LitIntN      <IntN      >(Null             ),
+        LitUInt8     <UInt8     >(Null             ),
+        LitUInt16    <UInt16    >(Null             ),
+        LitUInt32    <UInt32    >(Null             ),
+        LitUInt64    <UInt64    >(Null             ),
+        LitUInt128   <UInt128   >(Null             ),
+        LitUIntN     <UIntN     >(Null             ),
         LitDec       <FPLiteral >(Null             ),
+        LitDec32     <Dec32     >(Null             ),
+        LitDec64     <Dec64     >(Null             ),
+        LitDec128    <Dec128    >(Null             ),
+        LitDecN      <DecN      >(Null             ),
         LitFloat     <FPLiteral >(Null             ),
+        LitFloat16   <Float16   >(Null             ),
+        LitFloat32   <Float32   >(Null             ),
+        LitFloat64   <Float64   >(Null             ),
+        LitFloat128  <Float128  >(Null             ),
+        LitFloatN    <FloatN    >(Null             ),
+        LitBFloat16  <BFloat16  >(Null             ),
         LitDate      <Date      >(Null             ),
         LitTimeOfDay <TimeOfDay >(Null             ),
         LitTime      <Time      >(Null             ),
