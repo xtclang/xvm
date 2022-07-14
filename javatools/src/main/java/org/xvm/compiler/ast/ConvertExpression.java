@@ -12,6 +12,8 @@ import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.Invoke_01;
+import org.xvm.asm.op.JumpFalse;
+import org.xvm.asm.op.Label;
 import org.xvm.asm.op.Var;
 
 
@@ -24,6 +26,15 @@ public class ConvertExpression
     {
     // ----- constructors --------------------------------------------------------------------------
 
+    /**
+     * Construct a ConvertExpression that will convert a result from the passed expression to a
+     * different type using the provided method.
+     *
+     * @param expr    the expression that yields the raw results
+     * @param iVal    the index of the raw result that needs conversion
+     * @param idConv  the method of conversion
+     * @param errs    the ErrorListener to log errors to
+     */
     public ConvertExpression(Expression expr, int iVal, MethodConstant idConv, ErrorListener errs)
         {
         super(expr);
@@ -92,6 +103,12 @@ public class ConvertExpression
 
 
     // ----- Expression compilation ----------------------------------------------------------------
+
+    @Override
+    public boolean isConditionalResult()
+        {
+        return expr.isConditionalResult();
+        }
 
     @Override
     protected boolean hasMultiValueImpl()
@@ -188,7 +205,38 @@ public class ConvertExpression
         code.add(new Var(getUnderlyingExpression().getTypes()[m_iVal]));
         Register regTemp = code.lastRegister();
         aLValTemp[m_iVal] = new Assignable(regTemp);
+
+        // create a temporary to hold the Boolean result for a conditional call, if necessary
+        boolean  fCond   = isConditionalResult() && m_iVal > 0;
+        Register regCond = null;
+        Label    lblSkip = new Label("skip_conv");
+        if (fCond)
+            {
+            Assignable aLValCond = aLValTemp[0];
+            if (aLValCond.isNormalVariable())
+                {
+                regCond = aLValCond.getRegister();
+                }
+            else
+                {
+                code.add(new Var(pool().typeBoolean()));
+                regCond = code.lastRegister();
+                aLValTemp[0] = new Assignable(regCond);
+                }
+            }
+
+        // generate the pre-converted value
         getUnderlyingExpression().generateAssignments(ctx, code, aLValTemp, errs);
+
+        // skip the conversion if the conditional result was False
+        if (fCond)
+            {
+            if (aLVal[0] != aLValTemp[0])
+                {
+                aLVal[0].assign(regCond, code, errs);
+                }
+            code.add(new JumpFalse(regCond, lblSkip));
+            }
 
         // determine the destination of the conversion
         Assignable LVal = aLVal[m_iVal];
@@ -201,6 +249,11 @@ public class ConvertExpression
             Register regResult = new Register(getTypes()[m_iVal], Op.A_STACK);
             code.add(new Invoke_01(regTemp, m_idConv, regResult));
             LVal.assign(regResult, code, errs);
+            }
+
+        if (fCond)
+            {
+            code.add(lblSkip);
             }
         }
 
