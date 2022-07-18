@@ -16,6 +16,9 @@ import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
 
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
+
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
@@ -24,6 +27,7 @@ import org.xvm.asm.Op;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
@@ -83,16 +87,24 @@ public class xOSFile
                 {
                 Path path = hFile.f_path;
 
-                try
+                Callable<byte[]> task = () ->
+                        Handy.readFileBytes(path.toFile());
+
+                CompletableFuture<byte[]> cfRead = frame.f_context.f_container.scheduleIO(task);
+                Frame.Continuation continuation = frameCaller ->
                     {
-                    byte[] ab = Handy.readFileBytes(path.toFile());
-                    return frame.assignValue(iReturn,
-                        xArray.makeByteArrayHandle(ab, Mutability.Constant));
-                    }
-                catch (IOException e)
-                    {
-                    return raisePathException(frame, e, hFile.f_path);
-                    }
+                    try
+                        {
+                        return frameCaller.assignValue(iReturn,
+                            xArray.makeByteArrayHandle(cfRead.get(), Mutability.Constant));
+                        }
+                    catch (Throwable e)
+                        {
+                        return raisePathException(frameCaller, e, path);
+                        }
+                    };
+
+                return frame.waitForIO(cfRead, continuation);
                 }
             }
 
@@ -108,16 +120,36 @@ public class xOSFile
         switch (sPropName)
             {
             case "contents":
-                Path path = hFile.f_path;
-                try (FileOutputStream out = new FileOutputStream(path.toFile()))
+                {
+                Path   path = hFile.f_path;
+                byte[] ab   = xByteArray.getBytes((ArrayHandle) hValue);
+
+                Callable<Void> task = () ->
                     {
-                    out.write(xByteArray.getBytes((ArrayHandle) hValue));
-                    }
-                catch (IOException e)
+                    try (FileOutputStream out = new FileOutputStream(path.toFile()))
+                        {
+                        out.write(ab);
+                        return null;
+                        }
+                    };
+
+                CompletableFuture cfWrite = frame.f_context.f_container.scheduleIO(task);
+
+                Frame.Continuation continuation = frameCaller ->
                     {
-                    return raisePathException(frame, e, hFile.f_path);
-                    }
-                return Op.R_NEXT;
+                    try
+                        {
+                        cfWrite.get();
+                        return Op.R_NEXT;
+                        }
+                    catch (Throwable e)
+                        {
+                        return raisePathException(frameCaller, e, path);
+                        }
+                    };
+
+                return frame.waitForIO(cfWrite, continuation);
+                }
             }
         return super.invokeNativeSet(frame, hTarget, sPropName, hValue);
         }
@@ -132,17 +164,34 @@ public class xOSFile
             {
             case "appendImpl": // void appendImpl(Byte[] contents)
                 {
-                Path path = hFile.f_path;
-                try (FileOutputStream out = new FileOutputStream(path.toFile(), /*append*/ true))
-                    {
-                    out.write(xByteArray.getBytes((ArrayHandle) hArg));
-                    }
-                catch (IOException e)
-                    {
-                    return raisePathException(frame, e, path);
-                    }
+                Path   path = hFile.f_path;
+                byte[] ab   = xByteArray.getBytes((ArrayHandle) hArg);
 
-                return Op.R_NEXT;
+                Callable<Void> task = () ->
+                    {
+                    try (FileOutputStream out = new FileOutputStream(path.toFile(), /*append*/ true))
+                        {
+                        out.write(ab);
+                        return null;
+                        }
+                    };
+
+                CompletableFuture cfAppend = frame.f_context.f_container.scheduleIO(task);
+
+                Frame.Continuation continuation = frameCaller ->
+                    {
+                    try
+                        {
+                        cfAppend.get();
+                        return Op.R_NEXT;
+                        }
+                    catch (Throwable e)
+                        {
+                        return raisePathException(frameCaller, e, path);
+                        }
+                    };
+
+                return frame.waitForIO(cfAppend, continuation);
                 }
 
             case "truncateImpl": // void truncateImpl(Int newSize)
@@ -150,27 +199,43 @@ public class xOSFile
                 Path path = hFile.f_path;
                 File file = path.toFile();
                 long cOld = file.length();
-                long cNew = ((ObjectHandle.JavaLong) hArg).getValue();
+                long cNew = ((JavaLong) hArg).getValue();
+
                 if (cNew > cOld || cNew < 0)
                     {
                     return frame.raiseException(xException.outOfBounds(frame, cNew, cOld));
                     }
 
-                try (FileChannel channel = cNew == 0
-                        ? FileChannel.open(path, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING)
-                        : FileChannel.open(path, StandardOpenOption.WRITE))
+                Callable<Void> task = () ->
                     {
-                    if (cNew > 0)
+                    try (FileChannel channel = cNew == 0
+                            ? FileChannel.open(path, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING)
+                            : FileChannel.open(path, StandardOpenOption.WRITE))
                         {
-                        channel.truncate(cNew);
+                        if (cNew > 0)
+                            {
+                            channel.truncate(cNew);
+                            }
+                        return null;
                         }
-                    }
-                catch (IOException e)
-                    {
-                    return raisePathException(frame, e, path);
-                    }
+                    };
 
-                return Op.R_NEXT;
+                CompletableFuture cfTruncate = frame.f_context.f_container.scheduleIO(task);
+
+                Frame.Continuation continuation = frameCaller ->
+                    {
+                    try
+                        {
+                        cfTruncate.get();
+                        return Op.R_NEXT;
+                        }
+                    catch (Throwable e)
+                        {
+                        return raisePathException(frameCaller, e, path);
+                        }
+                    };
+
+                return frame.waitForIO(cfTruncate, continuation);
                 }
             }
 
@@ -236,7 +301,7 @@ public class xOSFile
         // the most common two cases are Read/Write and Read/NoWrite
         if (hWriteOption == ObjectHandle.DEFAULT)
             {
-            // the write default is Write
+            // the default is "Read/Write"
             switch (optRead)
                 {
                 case NoRead:

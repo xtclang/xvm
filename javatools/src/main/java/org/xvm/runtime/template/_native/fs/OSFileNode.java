@@ -7,6 +7,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
 
+import java.util.concurrent.ExecutionException;
+
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Op;
 
@@ -145,6 +147,20 @@ public abstract class OSFileNode
 
 
     // ----- helper methods ------------------------------------------------------------------------
+
+    public static int raisePathException(Frame frame, Throwable e, Path path)
+        {
+        if (e instanceof ExecutionException ee)
+            {
+            e = ee.getCause();
+            if (e instanceof IOException ioe)
+                {
+                return raisePathException(frame, ioe, path);
+                }
+            }
+
+        return frame.raiseException(e.getMessage());
+        }
 
     public static int raisePathException(Frame frame, IOException e, Path path)
         {

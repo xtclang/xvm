@@ -3,6 +3,7 @@ package org.xvm.runtime;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Deque;
 import java.util.List;
 
@@ -28,8 +29,8 @@ import org.xvm.asm.constants.TypeParameterConstant;
 
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+import org.xvm.runtime.ObjectHandle.NativeFutureHandle;
 import org.xvm.runtime.ServiceContext.Synchronicity;
-import org.xvm.runtime.Utils.ContinuationChain;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
@@ -225,6 +226,93 @@ public class Frame
         }
 
     /**
+     * Create a new pseudo frame that will wait on the specified future.
+     *
+     * @param cfResult  the CompletableFuture to wait for
+     * @param iReturn   the return register for the result
+     *
+     * @return a new frame
+     */
+    public Frame createWaitFrame(CompletableFuture<ObjectHandle> cfResult, int iReturn)
+        {
+        ObjectHandle[] ahFuture = new ObjectHandle[]{xFutureVar.makeHandle(cfResult)};
+
+        Frame frameNext = createNativeFrame(WAIT_FOR_FUTURE, ahFuture, iReturn, null);
+
+        frameNext.f_aInfo[0] = new VarInfo(xFutureVar.TYPE, VAR_DYNAMIC_REF);
+
+        // add a wait completion notification; the service is responsible for timing out
+        cfResult.whenComplete((r, x) -> f_fiber.onResponse());
+
+        return frameNext;
+        }
+
+    /**
+     * Create a new pseudo frame that will wait on multiple specified futures.
+     *
+     * @param cfResult  the CompletableFuture to wait for
+     * @param aiReturn  the return registers for the results
+     *
+     * @return a new frame
+     */
+    public Frame createWaitFrame(CompletableFuture<ObjectHandle[]> cfResult, int[] aiReturn)
+        {
+        int            cReturns = aiReturn.length;
+        ObjectHandle[] ahFuture = new ObjectHandle[cReturns];
+
+        Frame frameNext = createNativeFrame(WAIT_FOR_FUTURE, ahFuture, Op.A_MULTI, aiReturn);
+
+        for (int i = 0; i < cReturns; i++)
+            {
+            final int iResult = i;
+
+            CompletableFuture<ObjectHandle> cfReturn =
+                    cfResult.thenApply(ahResult -> ahResult[iResult]);
+
+            ahFuture[i] = xFutureVar.makeHandle(cfReturn);
+
+            frameNext.f_aInfo[i] = new VarInfo(xFutureVar.TYPE, VAR_DYNAMIC_REF);
+            }
+
+        // add a wait completion notification; the service is responsible for timing out
+        cfResult.whenComplete((r, x) -> f_fiber.onResponse());
+
+        return frameNext;
+        }
+
+    /**
+     * Create a new pseudo frame that will wait on the specified IO operations. Unlike the regular
+     * "Wait" frame, the WaitIO frame doesn't return any result to the caller, it is solely a
+     * responsibility of the specified continuation.
+     *
+     * @param cfResult      the CompletableFuture to wait for
+     * @param continuation  the continuation that is responsible for assigning the result
+     *
+     * @return a new frame
+     */
+    public Frame createWaitIOFrame(CompletableFuture<Object> cfResult, Continuation continuation)
+        {
+        ObjectHandle[] ahFuture = new ObjectHandle[]{new NativeFutureHandle(cfResult)};
+
+        Frame frameNext = createNativeFrame(WAIT_FOR_IO, ahFuture, Op.A_IGNORE, null);
+
+        frameNext.f_aInfo[0] = new VarInfo(poolContext().typeObject(), VAR_STANDARD);
+
+        // add a wait completion notification; the service is responsible for timing out
+        cfResult.whenComplete((r, x) ->
+            {
+            f_fiber.onResponse();
+
+            // unlike the regular "Wait" frame scenario, there is no message coming back from
+            // a callee that would schedule the caller's fiber
+            f_context.ensureScheduled(true);
+            });
+
+        frameNext.addContinuation(continuation);
+        return frameNext;
+        }
+
+    /**
      * Ensure that all the singleton constants are initialized for the specified frame.
      *
      * @param frameNext  the frame to be called by this frame
@@ -347,6 +435,28 @@ public class Frame
         frameNext.m_nChainDepth = nDepth;
 
         return ensureInitialized(frameNext);
+        }
+
+    // a convenience method
+    public int wait(CompletableFuture<ObjectHandle> cf, int iReturn)
+        {
+        return call(createWaitFrame(cf, iReturn));
+        }
+
+    // a convenience method
+    public int wait(CompletableFuture<ObjectHandle> cf, Continuation continuation, int iReturn)
+        {
+        assert continuation != null;
+
+        Frame frameNext = createWaitFrame(cf, iReturn);
+        frameNext.addContinuation(continuation);
+        return call(frameNext);
+        }
+
+    // a convenience method
+    public int waitForIO(CompletableFuture cf, Continuation continuation)
+        {
+        return call(createWaitIOFrame(cf, continuation));
         }
 
     // start the specified guard as a "current" one
@@ -894,7 +1004,7 @@ public class Frame
             }
 
         // the wait frame will deal with exceptions
-        return call(Utils.createWaitFrame(this, cfResult, iReturn));
+        return wait(cfResult, iReturn);
         }
 
     /**
@@ -1809,6 +1919,9 @@ public class Frame
         return m_debug;
         }
 
+
+    // ----- StackTrace support --------------------------------------------------------------------
+
     /**
      * @return the frame stack in a human-readable format
      */
@@ -2122,7 +2235,9 @@ public class Frame
         return formatFrameDetails(f_context, f_function, m_iPC, f_aOp, f_framePrev);
         }
 
-    // try-catch support
+
+    // ----- try-catch support ---------------------------------------------------------------------
+
     public abstract static class Guard
         {
         protected final int f_nStartAddress;
@@ -2269,6 +2384,9 @@ public class Frame
         private       int m_ixGuard;     // the index of the next AllGuard to proceed to
         private final int m_ixGuardBase; // the index of the AllGuard to stop at
         }
+
+
+    // ----- inner classes -------------------------------------------------------------------------
 
     /**
      * The variable (register) info.
@@ -2525,7 +2643,147 @@ public class Frame
             }
         };
 
-    // ----- TEMPORARY ------
+    /**
+     * Continuation chain support.
+     */
+    protected static class ContinuationChain
+            implements Frame.Continuation
+        {
+        public ContinuationChain(Frame.Continuation step0)
+            {
+            f_list = new ArrayList<>();
+            f_list.add(step0);
+            }
+
+        public void add(Frame.Continuation stepNext)
+            {
+            f_list.add(stepNext);
+            }
+
+        @Override
+        public int proceed(Frame frameCaller)
+            {
+            while (++index < f_list.size())
+                {
+                int iResult = f_list.get(index).proceed(frameCaller);
+                switch (iResult)
+                    {
+                    case Op.R_NEXT:
+                        continue;
+
+                    case Op.R_CALL:
+                        Frame              frameNext = frameCaller.m_frameNext;
+                        Frame.Continuation contNext  = frameNext.m_continuation;
+
+                        if (contNext != null)
+                            {
+                            // the previous continuation caused another call and the callee has
+                            // its own continuations; in that case we need to execute those
+                            // continuations before continuing with our own chain
+                            // (assuming everyone returns normally)
+                            f_list.set(index--, contNext);
+                            }
+                        frameNext.m_continuation = this;
+                        return Op.R_CALL;
+
+                    case Op.R_EXCEPTION:
+                        assert frameCaller.m_hException != null;
+                        return Op.R_EXCEPTION;
+
+                    default:
+                        // only the very last continuation can return a specific op index
+                        // (see OpCondJump) or an Op.R_RETURN
+                        if (index + 1 == f_list.size())
+                            {
+                            return iResult;
+                            }
+                        throw new IllegalStateException();
+                    }
+                }
+            return Op.R_NEXT;
+            }
+
+        private final List<Frame.Continuation> f_list;
+        private int index = -1;
+        }
+
+    /**
+     * Wait for the completion of a FutureHandle associated with a service request.
+     */
+    protected static final Op[] WAIT_FOR_FUTURE = new Op[]
+        {
+        new Op()
+            {
+            public int process(Frame frame, int iPC)
+                {
+                int cValues = frame.f_ahVar.length;
+
+                assert cValues > 0;
+
+                if (cValues == 1)
+                    {
+                    assert frame.f_aiReturn == null;
+
+                    FutureHandle hFuture = (FutureHandle) frame.f_ahVar[0];
+
+                    return hFuture.isAssigned(frame)
+                            ? frame.returnValue(hFuture, true)
+                            : R_REPEAT;
+                    }
+
+                assert frame.f_iReturn == A_MULTI;
+
+                FutureHandle[] ahFuture = new FutureHandle[cValues];
+                for (int i = 0; i < cValues; i++)
+                    {
+                    FutureHandle hFuture = (FutureHandle) frame.f_ahVar[i];
+                    if (hFuture.isAssigned(frame))
+                        {
+                        ahFuture[i] = hFuture;
+                        }
+                    else
+                        {
+                        return R_REPEAT;
+                        }
+                    }
+
+                boolean[] afDynamic = new boolean[cValues];
+                Arrays.fill(afDynamic, true);
+
+                return frame.returnValues(ahFuture, afDynamic);
+                }
+
+            public String toString()
+                {
+                return "WaitForResult";
+                }
+            }
+        };
+
+    /**
+     * Wait for the completion of a FutureHandle associated with an IO request.
+     */
+    protected static final Op[] WAIT_FOR_IO = new Op[]
+        {
+        new Op()
+            {
+            public int process(Frame frame, int iPC)
+                {
+                assert frame.f_ahVar.length == 1 && frame.f_iReturn == A_IGNORE;
+
+                CompletableFuture cf = ((NativeFutureHandle) frame.f_ahVar[0]).f_future;
+
+                return cf.isDone() ? R_RETURN : R_REPEAT;
+                }
+            public String toString()
+                {
+                return "WaitForIO";
+                }
+            }
+        };
+
+
+    // ----- TEMPORARY -----------------------------------------------------------------------------
 
     static final boolean REPORT_WRAPPING = System.getProperties().containsKey("DEBUG");
     }

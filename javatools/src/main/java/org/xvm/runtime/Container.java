@@ -5,6 +5,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.WeakHashMap;
 
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -152,7 +154,7 @@ public abstract class Container
         // directly to the top level runtime.
 
         f_pendingWorkCount.incrementAndGet();
-        f_runtime.submit(() ->
+        f_runtime.submitService(() ->
             {
             try
                 {
@@ -179,8 +181,30 @@ public abstract class Container
     public void terminate(ServiceContext service)
         {
         f_setServices.remove(service);
+        }
 
-        // TODO: should we do something else if nothing left?
+    /**
+     * Schedule an IO task.
+     *
+     * @param task  the task
+     *
+     * @return a CompletableFuture associated with the scheduled task
+     */
+    public <R> CompletableFuture<R> scheduleIO(Callable<R> task)
+        {
+        CompletableFuture<R> cf = new CompletableFuture<>();
+        f_runtime.submitIO(() ->
+            {
+            try
+                {
+                cf.complete(task.call());
+                }
+            catch (Throwable e)
+                {
+                cf.completeExceptionally(e);
+                }
+            });
+        return cf;
         }
 
     /**

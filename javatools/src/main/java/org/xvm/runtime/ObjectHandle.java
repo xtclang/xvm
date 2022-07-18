@@ -7,6 +7,7 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.xvm.asm.Constant;
@@ -1206,6 +1207,27 @@ public abstract class ObjectHandle
             }
         }
 
+    /**
+     * A handle that is used for blocking IO operations.
+     */
+    public static class NativeFutureHandle
+            extends ObjectHandle
+        {
+        protected NativeFutureHandle(CompletableFuture cf)
+            {
+            super(null);
+
+            f_future = cf;
+            }
+
+        @Override
+        public String toString()
+            {
+            return "Native: " + f_future;
+            }
+
+        public final CompletableFuture f_future;
+        }
     /**
      * A handle that is used as an indicator for a default method argument value.
      */

@@ -755,7 +755,7 @@ public class xFutureVar
             ? assignDone(frame, cf, iReturn)
 
             // wait for the assignment/completion; the service is responsible for timing out
-            : frame.call(Utils.createWaitFrame(frame, cf, iReturn));
+            : frame.wait(cf, iReturn);
         }
 
     @Override
@@ -969,7 +969,7 @@ public class xFutureVar
             CompletableFuture<ObjectHandle> cf = f_future;
             return cf.isDone()
                     ? assignDone(frame, cf, iReturn)
-                    : frame.call(Utils.createWaitFrame(frame, cf, iReturn));
+                    : frame.wait(cf, iReturn);
             }
 
         @Override

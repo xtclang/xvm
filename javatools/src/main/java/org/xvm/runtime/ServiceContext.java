@@ -367,7 +367,7 @@ public class ServiceContext
                         Utils.log(frame, "\nUnhandled exception at " + frame
                             + (nLine > 0 ? "; line=" + nLine : "; iPC=" + frame.m_iPC));
                         }
-                    e.printStackTrace(System.out);
+                    e.printStackTrace(System.err);
                     System.exit(-1);
                     }
                 }
@@ -1344,7 +1344,7 @@ public class ServiceContext
             }
 
         // TODO replace with: assignFutureResults()
-        return frameCaller.call(Utils.createWaitFrame(frameCaller, future, aiReturn));
+        return frameCaller.call(frameCaller.createWaitFrame(future, aiReturn));
         }
 
     /**
