@@ -748,7 +748,7 @@ public abstract class TypeConstant
      * but still one time is more descriptive that another and the way combine() is called may be
      * significant.
      *
-     * @return a reduction for the union of two types
+     * @return a reduction for the intersection of two types
      */
     public TypeConstant combine(ConstantPool pool, TypeConstant that)
         {
@@ -777,22 +777,22 @@ public abstract class TypeConstant
         return this.isTypeOfType() && this.getParamsCount() > 0 &&
                that.isTypeOfType() && that.getParamsCount() > 0
                 ? this.getParamType(0).combine(pool, that.getParamType(0)).getType()
-                : pool.ensureUnionTypeConstant(this, that);
+                : pool.ensureIntersectionTypeConstant(this, that);
         }
 
     /**
      * Produce a minimal representation of a type that both this type and the specified type are
      * known to be assignable to.
      *
-     * @return a reduction for the intersection of two types
+     * @return a reduction for the union of two types
      */
-    public TypeConstant intersect(ConstantPool pool, TypeConstant that)
+    public TypeConstant union(ConstantPool pool, TypeConstant that)
         {
         TypeConstant thisResolved = this.resolveTypedefs();
         TypeConstant thatResolved = that.resolveTypedefs();
         if (thisResolved != this || thatResolved != that)
             {
-            return thisResolved.intersect(pool, thatResolved);
+            return thisResolved.union(pool, thatResolved);
             }
 
         if (this.isA(that))
@@ -808,8 +808,8 @@ public abstract class TypeConstant
         // Type<X> | Type<Y> == Type<X | Y>
         return this.isTypeOfType() && this.getParamsCount() > 0 &&
                that.isTypeOfType() && that.getParamsCount() > 0
-                ? this.getParamType(0).intersect(pool, that.getParamType(0)).getType()
-                : pool.ensureIntersectionTypeConstant(this, that);
+                ? this.getParamType(0).union(pool, that.getParamType(0)).getType()
+                : pool.ensureUnionTypeConstant(this, that);
         }
 
     /**
@@ -1270,7 +1270,7 @@ public abstract class TypeConstant
         // String? s1 = ...
         // String  s2 = ...
         // if (s1 == s2) // is allowed despite the types are not equal
-        // TODO: consider allowing this for any IntersectionType: (T1 | T2) == T1
+        // TODO: consider allowing this for any UnionType: (T1 | T2) == T1
 
         if (typeThis.isNullable())
             {
@@ -3490,8 +3490,8 @@ public abstract class TypeConstant
                         {
                         // TODO both the current and contributed parameters have a constraint type;
                         //      if those types are different, then keep the narrower of the two; if
-                        //      there is no "narrower of the two", then keep the union of the two;
-                        //      if there is no union of the two (e.g. 2 class types), then it's an error
+                        //      there is no "narrower of the two", then keep the intersection of the two;
+                        //      if there is no intersection of the two (e.g. 2 class types), then it's an error
                         continue;
                         }
 
@@ -5841,13 +5841,13 @@ public abstract class TypeConstant
 
     /**
      * Find any contribution for this (R-Value) type that is assignable to the specified (L-Value)
-     * intersection type. This type must not be an intersection type.
+     * union type. This type must not be a union type.
      *
      * @return a relation between this and the specified types
      */
-    protected Relation findIntersectionContribution(IntersectionTypeConstant typeLeft)
+    protected Relation findUnionContribution(UnionTypeConstant typeLeft)
         {
-        assert !(this instanceof IntersectionTypeConstant);
+        assert !(this instanceof UnionTypeConstant);
 
         TypeConstant typeRight = this;
 
@@ -5873,7 +5873,7 @@ public abstract class TypeConstant
                     ((IdentityConstant) constIdRight).getComponent();
 
                 // continue recursively with the right side analysis
-                return clzRight.findIntersectionContribution(typeLeft, typeRight.getParamTypes());
+                return clzRight.findUnionContribution(typeLeft, typeRight.getParamTypes());
                 }
 
             case ThisClass:
@@ -5883,12 +5883,12 @@ public abstract class TypeConstant
                 PseudoConstant idRight  = (PseudoConstant) constIdRight;
                 ClassStructure clzRight = (ClassStructure)
                         idRight.getDeclarationLevelClass().getComponent();
-                return clzRight.findIntersectionContribution(typeLeft, typeRight.getParamTypes());
+                return clzRight.findUnionContribution(typeLeft, typeRight.getParamTypes());
                 }
 
             case Typedef:
                 return ((TypedefConstant) constIdRight).
-                        getReferredToType().findIntersectionContribution(typeLeft);
+                        getReferredToType().findUnionContribution(typeLeft);
 
             case IsConst:
             case IsEnum:
@@ -5899,7 +5899,7 @@ public abstract class TypeConstant
                 TypeConstant   typeBase = ((KeywordConstant) constIdRight).getBaseType();
                 ClassStructure clzRight = (ClassStructure)
                         typeBase.getSingleUnderlyingClass(true).getComponent();
-                return clzRight.findIntersectionContribution(typeLeft, typeRight.getParamTypes());
+                return clzRight.findUnionContribution(typeLeft, typeRight.getParamTypes());
                 }
 
             default:

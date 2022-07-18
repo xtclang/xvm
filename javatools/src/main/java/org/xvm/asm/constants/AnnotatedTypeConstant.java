@@ -580,7 +580,7 @@ public class AnnotatedTypeConstant
     @Override
     protected Relation calculateRelationToLeft(TypeConstant typeLeft)
         {
-        // this logic is identical to the union of the annotation type and the underlying type
+        // this logic is identical to the intersection of the annotation type and the underlying type
         if (typeLeft.isRelationalType() || typeLeft.isAnnotated())
             {
             return super.calculateRelationToLeft(typeLeft);
@@ -596,7 +596,7 @@ public class AnnotatedTypeConstant
     @Override
     protected Relation calculateRelationToRight(TypeConstant typeRight)
         {
-        // this logic is identical to the union of the annotation type and the underlying type
+        // this logic is identical to the intersection of the annotation type and the underlying type
         TypeConstant typeAnno = getAnnotationType();
         TypeConstant typeOrig = getUnderlyingType();
 
@@ -606,9 +606,9 @@ public class AnnotatedTypeConstant
         }
 
     @Override
-    protected Relation findIntersectionContribution(IntersectionTypeConstant typeLeft)
+    protected Relation findUnionContribution(UnionTypeConstant typeLeft)
         {
-        // the annotation cannot be of an intersection type
+        // the annotation cannot be of a union type
         return Relation.INCOMPATIBLE;
         }
 
@@ -657,7 +657,7 @@ public class AnnotatedTypeConstant
     @Override
     public MethodInfo findFunctionInfo(SignatureConstant sig)
         {
-        // identical to UnionTypeConstant implementation
+        // identical to IntersectionTypeConstant implementation
         MethodInfo info1 = m_annotation.getAnnotationType().findFunctionInfo(sig);
         MethodInfo info2 = m_constType.findFunctionInfo(sig);
 

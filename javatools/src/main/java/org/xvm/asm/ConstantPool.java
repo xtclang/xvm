@@ -2143,7 +2143,7 @@ public class ConstantPool
      *
      * @param constType  the type being made Nullable
      *
-     * @return the intersection of the specified type and Nullable
+     * @return the union of the specified type and Nullable
      */
     public TypeConstant ensureNullableTypeConstant(TypeConstant constType)
         {
@@ -2151,27 +2151,13 @@ public class ConstantPool
         //       TypeConstant, such that "Object" would NOT be made into "Nullable|Object"
         return typeNull().isA(constType)
                 ? constType
-                : ensureIntersectionTypeConstant(typeNullable(), constType);
+                : ensureUnionTypeConstant(typeNullable(), constType);
         }
 
     /**
-     * Given two types, obtain a TypeConstant that represents the intersection of those two types.
+     * Given two types, obtain a TypeConstant that represents the union of those two types.
      * This corresponds to the "|" operator when applied to types, and is also used when a type is
-     * permitted to be null (i.e. "intersection of Nullable and the other type").
-     *
-     * @param constType1  the first type
-     * @param constType2  the second type
-     *
-     * @return the intersection of the two specified types
-     */
-    public IntersectionTypeConstant ensureIntersectionTypeConstant(TypeConstant constType1, TypeConstant constType2)
-        {
-        return (IntersectionTypeConstant) register(new IntersectionTypeConstant(this, constType1, constType2));
-        }
-
-    /**
-     * Given two types, obtain a TypeConstant that represents the union of those two types. This
-     * corresponds to the "+" operator when applied to types.
+     * permitted to be null (i.e. "union of Nullable and the other type").
      *
      * @param constType1  the first type
      * @param constType2  the second type
@@ -2181,6 +2167,20 @@ public class ConstantPool
     public UnionTypeConstant ensureUnionTypeConstant(TypeConstant constType1, TypeConstant constType2)
         {
         return (UnionTypeConstant) register(new UnionTypeConstant(this, constType1, constType2));
+        }
+
+    /**
+     * Given two types, obtain a TypeConstant that represents the intersection of those two types. This
+     * corresponds to the "+" operator when applied to types.
+     *
+     * @param constType1  the first type
+     * @param constType2  the second type
+     *
+     * @return the intersection of the two specified types
+     */
+    public IntersectionTypeConstant ensureIntersectionTypeConstant(TypeConstant constType1, TypeConstant constType2)
+        {
+        return (IntersectionTypeConstant) register(new IntersectionTypeConstant(this, constType1, constType2));
         }
 
     /**
@@ -2860,12 +2860,12 @@ public class ConstantPool
                     constant = new PropertyClassTypeConstant(this, format, in);
                     break;
 
-                case UnionType:
-                    constant = new UnionTypeConstant(this, format, in);
-                    break;
-
                 case IntersectionType:
                     constant = new IntersectionTypeConstant(this, format, in);
+                    break;
+
+                case UnionType:
+                    constant = new UnionTypeConstant(this, format, in);
                     break;
 
                 case DifferenceType:

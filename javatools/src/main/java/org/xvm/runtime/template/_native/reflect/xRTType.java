@@ -367,7 +367,7 @@ public class xRTType
                 return ensureImmutable(frame, hTypeThis, iReturn);
                 }
             return makeRelationalType(frame, hTypeThis, hTypeThat,
-                    ConstantPool::ensureUnionTypeConstant, iReturn);
+                    ConstantPool::ensureIntersectionTypeConstant, iReturn);
             }
         else if (hArg instanceof MethodHandle)
             {
@@ -441,7 +441,7 @@ public class xRTType
         if (hArg instanceof TypeHandle hTypeThat)
             {
             return makeRelationalType(frame, hTypeThis, hTypeThat,
-                    ConstantPool::ensureIntersectionTypeConstant, iReturn);
+                    ConstantPool::ensureUnionTypeConstant, iReturn);
             }
 
         return super.invokeOr(frame, hTarget, hArg, iReturn);

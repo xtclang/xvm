@@ -1396,7 +1396,7 @@ public class Context
                 TypeConstant typeOld = argOld.getType();
                 TypeConstant typeNew = argNew.getType();
 
-                TypeConstant typeJoin = typeNew.intersect(pool(), typeOld);
+                TypeConstant typeJoin = typeNew.union(pool(), typeOld);
                 map.put(sName, regOld.narrowType(typeJoin));
                 }
             else
@@ -1418,7 +1418,7 @@ public class Context
             {
             TypeConstant typeNew = argNew.getType();
 
-            TypeConstant typeJoin = typeNew.intersect(pool(), typeOld);
+            TypeConstant typeJoin = typeNew.union(pool(), typeOld);
             map.put(constFormal, typeJoin);
             }
         else

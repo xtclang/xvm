@@ -2449,8 +2449,8 @@ const Type<DataType>
 // a Type that represents a value that is an instance of either type A or type B (possibly both)
 const OrType
     {
-    // the "all methods" represents the intersection of the two types
-    // one property to obtain the resolved type of this, i.e. the intersection type
+    // the "all methods" represents the union of the two types
+    // one property to obtain the resolved type of this, i.e. the union type
     // two properties to obtain the type A and type B
     // implements an equals to compare with another OrType
     // note: order (of A and B) is important

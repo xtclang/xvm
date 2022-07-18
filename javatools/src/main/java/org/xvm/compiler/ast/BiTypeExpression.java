@@ -70,8 +70,8 @@ public class BiTypeExpression
         ConstantPool pool = pool();
         return switch (operator.getId())
             {
-            case ADD    -> pool.ensureUnionTypeConstant(constType1, constType2);
-            case BIT_OR -> pool.ensureIntersectionTypeConstant(constType1, constType2);
+            case ADD    -> pool.ensureIntersectionTypeConstant(constType1, constType2);
+            case BIT_OR -> pool.ensureUnionTypeConstant(constType1, constType2);
             case SUB    -> pool.ensureDifferenceTypeConstant(constType1, constType2);
             default     -> throw new IllegalStateException("unsupported operator: " + operator);
             };
@@ -89,8 +89,8 @@ public class BiTypeExpression
                 break;
 
             case BIT_OR:
-                // cannot implement an intersection type in an anonymous inner class
-                log(info.getErrorListener(true), Severity.ERROR, Compiler.ANON_CLASS_EXTENDS_INTERSECTION);
+                // cannot implement a union type in an anonymous inner class
+                log(info.getErrorListener(true), Severity.ERROR, Compiler.ANON_CLASS_EXTENDS_UNION);
                 break;
 
             case SUB:

@@ -1081,10 +1081,10 @@ IdentifierTrail
 #
 
 TypeExpression
-    UnionedTypeExpression
+    IntersectingTypeExpression
 
 ExtendedTypeExpression
-    ExtendedUnionedTypeExpression
+    ExtendedIntersectingTypeExpression
 
 AnyTypeExpression
     AnonTypeExpression
@@ -1102,25 +1102,25 @@ NameOrSignature
     PropertyModifiers-opt TypeExpression Name                               # property
     MethodModifiers-opt TypeParameterList-opt MethodIdentity ParameterList  # method
 
-# '+' creates a union of two types; '-' creates a difference of two types
-UnionedTypeExpression
-    IntersectingTypeExpression
-    UnionedTypeExpression + IntersectingTypeExpression
-    UnionedTypeExpression - IntersectingTypeExpression
-
-ExtendedUnionedTypeExpression
-    ExtendedIntersectingTypeExpression
-    ExtendedUnionedTypeExpression + ExtendedIntersectingTypeExpression
-    ExtendedUnionedTypeExpression - ExtendedIntersectingTypeExpression
-
+# '+' creates an intersection of two types; '-' creates a difference of two types
 IntersectingTypeExpression
-    NonBiTypeExpression
-    IntersectingTypeExpression | NonBiTypeExpression
+    UnionedTypeExpression
+    IntersectingTypeExpression + UnionedTypeExpression
+    IntersectingTypeExpression - UnionedTypeExpression
 
 ExtendedIntersectingTypeExpression
+    ExtendedUnionedTypeExpression
+    ExtendedIntersectingTypeExpression + ExtendedUnionedTypeExpression
+    ExtendedIntersectingTypeExpression - ExtendedUnionedTypeExpression
+
+UnionedTypeExpression
+    NonBiTypeExpression
+    UnionedTypeExpression | NonBiTypeExpression
+
+ExtendedUnionedTypeExpression
     AnonTypeExpression
     ExtendedNonBiTypeExpression
-    ExtendedIntersectingTypeExpression | ExtendedNonBiTypeExpression
+    ExtendedUnionedTypeExpression | ExtendedNonBiTypeExpression
 
 NonBiTypeExpression
     "(" ExtendedTypeExpression ")"

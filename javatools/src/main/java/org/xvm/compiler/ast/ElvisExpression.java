@@ -57,10 +57,10 @@ public class ElvisExpression
 
         // hey, wouldn't it be nice if we could just do this?
         //
-        //   return typeResult ?: pool().ensureIntersectionTypeConstant(type1, type2);
+        //   return typeResult ?: pool().ensureUnionTypeConstant(type1, type2);
         //
         return typeResult == null
-                ? pool().ensureIntersectionTypeConstant(type1, type2)
+                ? pool().ensureUnionTypeConstant(type1, type2)
                 : typeResult;
         }
 
@@ -134,7 +134,7 @@ public class ElvisExpression
         TypeConstant typeResult = Op.selectCommonType(type1Non, type2, errs);
         if (typeResult == null)
             {
-            typeResult = pool.ensureIntersectionTypeConstant(type1Non, type2);
+            typeResult = pool.ensureUnionTypeConstant(type1Non, type2);
             }
 
         // in the unlikely event that one or both of the sub expressions are constant, it may be

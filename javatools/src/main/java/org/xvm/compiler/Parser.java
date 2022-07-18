@@ -4673,14 +4673,14 @@ public class Parser
      *
      * <p/><code><pre>
      * TypeExpression
-     *     UnionedTypeExpression
+     *     IntersectingTypeExpression
      * </pre></code>
      *
      * @return a TypeExpression
      */
     public TypeExpression parseTypeExpression()
         {
-        return parseUnionedTypeExpression(false);
+        return parseIntersectingTypeExpression(false);
         }
 
     /**
@@ -4688,44 +4688,44 @@ public class Parser
      *
      * <p/><code><pre>
      * ExtendedTypeExpression
-     *     ExtendedUnionedTypeExpression
+     *     ExtendedIntersectingTypeExpression
      * </pre></code>
      *
      * @return a TypeExpression
      */
     public TypeExpression parseExtendedTypeExpression()
         {
-        return parseUnionedTypeExpression(true);
+        return parseIntersectingTypeExpression(true);
         }
 
     /**
      * Parse a type expression of the form "Type + Type" or "Type - Type".
      *
      * <p/><code><pre>
-     * UnionedTypeExpression
-     *     IntersectingTypeExpression
-     *     UnionedTypeExpression + IntersectingTypeExpression
-     *     UnionedTypeExpression - IntersectingTypeExpression
+     * IntersectingTypeExpression
+     *     UnionedTypeExpression
+     *     IntersectingTypeExpression + UnionedTypeExpression
+     *     IntersectingTypeExpression - UnionedTypeExpression
      *
-     * ExtendedUnionedTypeExpression
-     *     ExtendedIntersectingTypeExpression
-     *     ExtendedUnionedTypeExpression + ExtendedIntersectingTypeExpression
-     *     ExtendedUnionedTypeExpression - ExtendedIntersectingTypeExpression
+     * ExtendedIntersectingTypeExpression
+     *     ExtendedUnionedTypeExpression
+     *     ExtendedIntersectingTypeExpression + ExtendedUnionedTypeExpression
+     *     ExtendedIntersectingTypeExpression - ExtendedUnionedTypeExpression
      * </pre></code>
      *
      * @param fExtended  true to parse for the "extended" form instead of the "limited" form
      *
      * @return a type expression
      */
-    TypeExpression parseUnionedTypeExpression(boolean fExtended)
+    TypeExpression parseIntersectingTypeExpression(boolean fExtended)
         {
-        TypeExpression expr = parseIntersectingTypeExpression(fExtended);
+        TypeExpression expr = parseUnionedTypeExpression(fExtended);
         Token tokOp;
         do
             {
             if ((tokOp = match(Id.ADD)) != null || (tokOp = match(Id.SUB)) != null)
                 {
-                expr = new BiTypeExpression(expr, tokOp, parseIntersectingTypeExpression(fExtended));
+                expr = new BiTypeExpression(expr, tokOp, parseUnionedTypeExpression(fExtended));
                 }
             }
         while (tokOp != null);
@@ -4736,20 +4736,20 @@ public class Parser
      * Parse a type expression of the form "Type | Type", otherwise .
      *
      * <p/><code><pre>
-     * IntersectingTypeExpression
+     * UnionedTypeExpression
      *     NonBiTypeExpression
-     *     IntersectingTypeExpression | NonBiTypeExpression
+     *     UnionedTypeExpression | NonBiTypeExpression
      *
-     * ExtendedIntersectingTypeExpression
+     * ExtendedUnionedTypeExpression
      *     ExtendedNonBiTypeExpression
-     *     ExtendedIntersectingTypeExpression | ExtendedNonBiTypeExpression
+     *     ExtendedUnionedTypeExpression | ExtendedNonBiTypeExpression
      * </pre></code>
      *
      * @param fExtended  true to parse for the "extended" form instead of the "limited" form
      *
      * @return a type expression
      */
-    TypeExpression parseIntersectingTypeExpression(boolean fExtended)
+    TypeExpression parseUnionedTypeExpression(boolean fExtended)
         {
         TypeExpression expr = parseNonBiTypeExpression(fExtended);
         while (peek(Id.BIT_OR))

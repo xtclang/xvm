@@ -47,10 +47,11 @@ import reflect.TypeTemplate;
  * * The form of the type, and information related to that form.
  *
  * The form of the type provides information related to the origin of how the type came to be, such
- * as (i) from a class, (ii) as a union of two types, (iii) as an explicitly immutable form of
- * another type, and so so. In each case, the form implies additional information, such as (i) what
- * class the type represents, (ii) what the two types were that formed the union, and (iii) what the
- * underlying type was for which the explicitly-immutable form of the type was created.
+ * as (i) from a class, (ii) as an intersection of two types, (iii) as an explicitly immutable form
+ * of another type, and so so. In each case, the form implies additional information, such as (i)
+ * what class the type represents, (ii) what the two types were that formed the intersection, and
+ * (iii) what the underlying type was for which the explicitly-immutable form of the type was
+ * created.
  *
  * For convenience purposes, the type provides additional information that is associated with the
  * type, but is not technically part of the type itself. For example, the type provides _constants_
@@ -162,8 +163,8 @@ interface Type<DataType, OuterType>
 
     /**
      * Determine if the type non-ambiguously represents a class, and if so, obtain the class. The
-     * class can be ambiguous, for example, if the type is a intersection type and the two
-     * intersected types do not each represent the same class.
+     * class can be ambiguous, for example, if the type is a union type and the two unioned types do
+     * not each represent the same class.
      *
      * A type of form `Class` always represents a class.
      *
@@ -174,8 +175,8 @@ interface Type<DataType, OuterType>
 
     /**
      * Determine if the type non-ambiguously represents a property. The property can be ambiguous,
-     * for example, if the type is a intersection type and the two intersected types do not each
-     * represent the same property.
+     * for example, if the type is a union type and the two unioned types do not each represent the
+     * same property.
      *
      * A type of form `Property` always represents a property.
      *
@@ -244,8 +245,8 @@ interface Type<DataType, OuterType>
 
     /**
      * Determine if the type has a non-conflicting annotation, and if so, obtain the first one. A
-     * conflicting annotation can occur, for example, in an intersection of two types that do not
-     * each have the same annotation.
+     * conflicting annotation can occur, for example, in a union of two types that do not each have
+     * the same annotation.
      *
      * A type whose form is `Annotated` will always have a non-conflicting annotation.
      *
@@ -507,13 +508,13 @@ interface Type<DataType, OuterType>
     Type!<> annotate(Annotation annotation);
 
     /**
-     * Create a type that is the union of this type and another type.
+     * Create a type that is the intersection of this type and another type.
      *
      * @param that  a type
      *
-     * @return a relational type that is the union of `this` type and `that` type
+     * @return a relational type that is the intersection of `this` type and `that` type
      *
-     * @throws InvalidType  if the union would violate the rules of the type system
+     * @throws InvalidType  if the intersection would violate the rules of the type system
      */
     @Op("+")
     Type!<> add(Type!<> that);
@@ -545,31 +546,31 @@ interface Type<DataType, OuterType>
     Type!<> add(Property[] properties = []);
 
     /**
-     * Create a type that is the intersection of this type and another type. Note that the bitwise
+     * Create a type that is the union of this type and another type. Note that the bitwise
      * "or" symbol is used to indicate that the result will be a relational type representing "this"
      * type **or** "that" type; however the contents of the type -- the methods and properties --
      * are identical to the result of the "and" operator.
      *
      * @param that  a type
      *
-     * @return a relational type that is the intersection of `this` type and `that` type
+     * @return a relational type that is the union of `this` type and `that` type
      *
-     * @throws InvalidType  if the intersection would violate the rules of the type system
+     * @throws InvalidType  if the union would violate the rules of the type system
      */
     @Op("|")
     Type!<> or(Type!<> that);
 
     /**
-     * Create a type that is the intersection of this type and another type. Note that the bitwise
+     * Create a type that is the union of this type and another type. Note that the bitwise
      * "and" symbol is used to indicate that the result will be a simple type representing only the
-     * common methods of the two types, and not a relational intersection type result.
+     * common methods of the two types, and not a relational union type result.
      *
      * @param that  a type
      *
      * @return a type that contains only the common properties and methods of `this` type and `that`
      *         type
      *
-     * @throws InvalidType  if the intersection would violate the rules of the type system
+     * @throws InvalidType  if the union would violate the rules of the type system
      */
     @Op("&")
     Type!<> and(Type!<> that);
@@ -716,13 +717,13 @@ interface Type<DataType, OuterType>
                 assert String name := named();
                 return OuterType.estimateStringLength() + 1 + name.size + estimateParameterizedStringLength();
 
-            case Intersection:
+            case Union:
                 assert (Type!<> t1, Type!<> t2) := relational();
                 return t1 == Nullable
                         ? t2.estimateStringLength() + (t2.relational() ? 3 : 1)
                         : t1.estimateStringLength() + 3 + t2.estimateStringLength();
 
-            case Union:
+            case Intersection:
             case Difference:
                 assert (Type!<> t1, Type!<> t2) := relational();
                 return t1.estimateStringLength() + 3 + t2.estimateStringLength();
@@ -777,7 +778,7 @@ interface Type<DataType, OuterType>
         }
 
     @Override
-    Appender<Char> appendTo(Appender<Char> buf, Boolean insideIntersection = False)
+    Appender<Char> appendTo(Appender<Char> buf, Boolean insideUnion = False)
         {
         switch (form)
             {
@@ -836,9 +837,9 @@ interface Type<DataType, OuterType>
                 appendParameterizedTo(buf);
                 break;
 
-            case Intersection:
+            case Union:
                 assert (Type!<> t1, Type!<> t2) := relational();
-                if (t1 == Nullable && !insideIntersection)
+                if (t1 == Nullable && !insideUnion)
                     {
                     if (t2.relational() || t2.annotated())
                         {
@@ -854,7 +855,7 @@ interface Type<DataType, OuterType>
                     }
                 else
                     {
-                    t1   .appendTo(buf, insideIntersection=True);
+                    t1   .appendTo(buf, insideUnion=True);
                     " | ".appendTo(buf);
                     if (t2.relational())
                         {
@@ -869,7 +870,7 @@ interface Type<DataType, OuterType>
                     }
                 break;
 
-            case Union:
+            case Intersection:
                 assert (Type!<> t1, Type!<> t2) := relational();
                 t1   .appendTo(buf);
                 " + ".appendTo(buf);
@@ -1058,7 +1059,7 @@ interface Type<DataType, OuterType>
                         }
                     break;
 
-                case Intersection:
+                case Union:
                     {
                     assert (Type!<> t1, Type!<> t2) := relational();
 
@@ -1107,7 +1108,7 @@ interface Type<DataType, OuterType>
                     break;
                     }
 
-                case Union:
+                case Intersection:
                     {
                     assert (Type!<> t1, Type!<> t2) := relational();
 

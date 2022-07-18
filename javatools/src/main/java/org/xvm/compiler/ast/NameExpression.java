@@ -1880,26 +1880,26 @@ public class NameExpression
                             //       return hash;
                             //       }
                             //
-                            // typeLeft is a type of the "CompileType" type parameter, and we need to
-                            // produce "CompileType.Element" formal child constant
+                            // typeLeft is a type of the "CompileType" type parameter, and we need
+                            // to produce "CompileType.Element" formal child constant
                             //
                             // Another example is:
                             //  Boolean f = CompileType.is(Type<Array>) && CompileType.Element.is(Type<Int>);
                             //
-                            // in that case, "typeLeft" for the second expression is a union
-                            // (CompileType + Array), but we still need to produce "CompileType.Element"
-                            // formal child constant
-                            // or
+                            // in that case, "typeLeft" for the second expression is an intersection
+                            // (CompileType + Array), but we still need to produce
+                            // "CompileType.Element" formal child constant
+                            //
                             // b) the name refers to a property on the Type object represented by
                             //    this variable (e.g. NullableMapping.x):
                             // <Subtype> conditional Mapping<SubType<>> narrow(Type<SubType> type)
                             //    {
-                            //    if (type.form == Intersection) {...}
+                            //    if (type.form == Union) {...}
                             //    }
                             TypeConstant typeData = typeLeft.getParamType(0);
                             if (typeData.containsGenericParam(sName))
                                 {
-                                // typeData can be a synthetic union type produced by type inference
+                                // typeData can be a synthetic intersection type produced by type inference
                                 // logic, and we cannot simply ask it for the defining constant
                                 Register     argLeft    = (Register) exprLeft.m_arg;
                                 TypeConstant typeFormal = argLeft.getOriginalType().getParamType(0);

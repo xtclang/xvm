@@ -13,10 +13,10 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
-import org.xvm.asm.constants.IntersectionTypeConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeCollector;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.UnionTypeConstant;
 
 import org.xvm.asm.op.Var_S;
 import org.xvm.asm.op.Var_SN;
@@ -391,10 +391,10 @@ public class ListExpression
     private TypeConstant resolveElementType(TypeConstant typeRequired)
         {
         TypeConstant typeElement = typeRequired.resolveGenericType("Element");
-        if (typeElement == null && typeRequired instanceof IntersectionTypeConstant typeIntersect)
+        if (typeElement == null && typeRequired instanceof UnionTypeConstant typeUnion)
             {
             // try to calculate an element type that would probably accommodate the required type
-            Set<TypeConstant> setSeqType = typeIntersect.collectMatching(pool().typeList(), null);
+            Set<TypeConstant> setSeqType = typeUnion.collectMatching(pool().typeList(), null);
             if (!setSeqType.isEmpty())
                 {
                 for (TypeConstant typeSeq : setSeqType)

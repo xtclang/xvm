@@ -15,14 +15,14 @@ import org.xvm.asm.ConstantPool;
  * equality and comparison. It allows a developer to direct the run-time object comparison using
  * a specific compile-time type, regardless of the actual run-time object types.
  * <br/>
- * While the first pattern is completely covered by the UnionTypeConstant, the second requires the
+ * While the first pattern is completely covered by the IntersectionTypeConstant, the second requires the
  * knowledge that the combined type was produced explicitly by the ".as()" operation.
  * <br/>
  * Note: this type is transient in nature; used only by the compiler and cannot be stored in a
  * ConstantPool.
  */
 public class CastTypeConstant
-        extends UnionTypeConstant
+        extends IntersectionTypeConstant
     {
     public CastTypeConstant(ConstantPool pool, TypeConstant constType1, TypeConstant constType2)
         {

@@ -43,8 +43,8 @@ public abstract class RelationalTypeConstant
      * Construct a relational constant based on two specified types.
      *
      * @param pool        the ConstantPool that will contain this Constant
-     * @param constType1  the first TypeConstant to union
-     * @param constType2  the second TypeConstant to union
+     * @param constType1  the first TypeConstant
+     * @param constType2  the second TypeConstant
      */
     protected RelationalTypeConstant(ConstantPool pool, TypeConstant constType1, TypeConstant constType2)
         {

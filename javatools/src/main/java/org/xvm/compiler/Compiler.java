@@ -974,9 +974,9 @@ public class Compiler
      */
     public static final String ANON_CLASS_MUTABILITY_CONFUSED     = "COMPILER-99";
     /**
-     * An anonymous inner class may not specify an intersection type.
+     * An anonymous inner class may not specify a union type.
      */
-    public static final String ANON_CLASS_EXTENDS_INTERSECTION    = "COMPILER-100";
+    public static final String ANON_CLASS_EXTENDS_UNION           = "COMPILER-100";
     /**
      * The initialization of the property {0} is implied by a constructor parameter, but the
      * property does not exist or not settable.

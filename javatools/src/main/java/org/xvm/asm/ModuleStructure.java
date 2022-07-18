@@ -319,7 +319,7 @@ public class ModuleStructure
     /**
      * Create (if necessary) a synthetic ClassStructure for the specified name.
      *
-     * This method is currently used to create a synthetic interface that represents an intersection
+     * This method is currently used to create a synthetic interface that represents a union
      * of two types.
      *
      * @return a synthetic ClassStructure

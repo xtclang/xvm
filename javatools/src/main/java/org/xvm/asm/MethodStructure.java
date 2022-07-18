@@ -866,7 +866,7 @@ public class MethodStructure
                     }
                 else
                     {
-                    // the type are not compatible; use the common type (TODO: consider intersection?)
+                    // the type are not compatible; use the common type (TODO: consider union?)
                     typeResult = Op.selectCommonType(typePrev, typeResult, ErrorListener.BLACKHOLE);
                     if (typeResult == null)
                         {

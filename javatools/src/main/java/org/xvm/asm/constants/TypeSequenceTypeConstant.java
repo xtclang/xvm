@@ -64,7 +64,7 @@ public class TypeSequenceTypeConstant
     @Override
     public TypeConstant combine(ConstantPool pool, TypeConstant that)
         {
-        // a union of the turtle type with any other tuple is that tuple
+        // an intersection of the turtle type with any other tuple is that tuple
         return that.isTuple() ? that : super.combine(pool, that);
         }
 

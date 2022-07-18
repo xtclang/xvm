@@ -1368,7 +1368,7 @@ class SkiplistMap<Key extends Orderable, Value>
      */
     private static conditional Type isNullable(Type t)
         {
-        if ((Type t1, Type t2) := t.relational(), t.form == Intersection && t1 == Nullable)
+        if ((Type t1, Type t2) := t.relational(), t.form == Union && t1 == Nullable)
             {
             return True, t2;
             }

@@ -238,15 +238,15 @@ public class AnonInnerClass
                 return;
                 }
 
-            case UnionType:
+            case IntersectionType:
                 {
                 addContribution(exprType, type.getUnderlyingType());
                 addContribution(exprType, type.getUnderlyingType2());
                 return;
                 }
 
-            case IntersectionType:
-                exprType.log(getErrorListener(true), Severity.ERROR, Compiler.ANON_CLASS_EXTENDS_INTERSECTION);
+            case UnionType:
+                exprType.log(getErrorListener(true), Severity.ERROR, Compiler.ANON_CLASS_EXTENDS_UNION);
                 return;
 
             case VirtualChildType:  // treat it as a terminal type

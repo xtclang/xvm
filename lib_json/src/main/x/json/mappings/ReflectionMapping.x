@@ -104,7 +104,7 @@ const ReflectionMapping<Serializable, StructType extends Struct>(
         // disassemble traits (immutable, :private/:protected/:public etc.) and '&'/'|' types
         switch (type.form)
             {
-            case Intersection:
+            case Union:
                 if ((Type left, Type right) := type.relational(), left == Nullable)
                     {
                     if (val underlying := schema.findMapping(right.DataType))
@@ -114,7 +114,7 @@ const ReflectionMapping<Serializable, StructType extends Struct>(
                     }
                 TODO
 
-            case Union:
+            case Intersection:
                 TODO
 
             case Immutable:

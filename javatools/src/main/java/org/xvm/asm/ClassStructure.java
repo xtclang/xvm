@@ -644,7 +644,7 @@ public class ClassStructure
             {
             TypeConstant typeContrib = contrib.getTypeConstant();
 
-            // TODO: allow union types to be traversed as well
+            // TODO: allow intersection types to be traversed as well
             if (   typeContrib.containsUnresolved()
                || !typeContrib.isExplicitClassIdentity(true)) // disregard relational type contributions
                 {
@@ -1266,7 +1266,7 @@ public class ClassStructure
      * Check if the specified annotation mixin type is "into Class", meaning that the mixin applies
      * to the meta-data of the class and is not actually mixed into the class functionality itself.
      *
-     * A slight complication comes from a scenario when the mixin applies to an intersection of
+     * A slight complication comes from a scenario when the mixin applies to a union of
      * types, for example:
      * <code>
      *   <pre>
@@ -1386,10 +1386,11 @@ public class ClassStructure
                     contribMatch = checkContribution(contrib, typeContrib, idContrib);
                     }
                 }
-            else if (typeContrib instanceof UnionTypeConstant typeUnion)
+            else if (typeContrib instanceof IntersectionTypeConstant typeIntersection)
                 {
-                // the only relational type contributions we can process further are the union types
-                contribMatch = checkUnionContribution(contrib, typeUnion, idContrib);
+                // the only relational type contributions we can process further are the
+                // intersection types
+                contribMatch = checkIntersectionContribution(contrib, typeIntersection, idContrib);
                 }
 
             if (contribMatch != null)
@@ -1406,7 +1407,7 @@ public class ClassStructure
      *
      * @param contrib      the contribution
      * @param typeContrib  the type of the contribution or one of its composing types (in the case
-     *                     of a union type)
+     *                     of an intersection type)
      * @param idTest       the identity to test with
      *
      * @return the contribution that matches the specified identity
@@ -1425,8 +1426,8 @@ public class ClassStructure
         }
 
     /**
-     * Check whether specified contribution of the union type or any of its descendants matches the
-     * specified identity.
+     * Check whether specified contribution of the intersection type or any of its descendants
+     * matches the specified identity.
      *
      * @param contrib      the contribution
      * @param typeContrib  the type of the contribution
@@ -1434,15 +1435,16 @@ public class ClassStructure
      *
      * @return the contribution that matches the specified identity
      */
-    private Contribution checkUnionContribution(Contribution contrib,
-                                                UnionTypeConstant typeContrib, IdentityConstant idTest)
+    private Contribution checkIntersectionContribution(Contribution             contrib,
+                                                       IntersectionTypeConstant typeContrib,
+                                                       IdentityConstant         idTest)
         {
         TypeConstant type1    = typeContrib.getUnderlyingType();
         Contribution contrib1 = type1.isExplicitClassIdentity(true)
                 ? checkContribution(contrib, type1, idTest)
-                : type1 instanceof UnionTypeConstant typeUnion1
-                    ? checkUnionContribution(contrib, typeUnion1, idTest)
-                    : null;
+                : type1 instanceof IntersectionTypeConstant typeIntersection1
+                        ? checkIntersectionContribution(contrib, typeIntersection1, idTest)
+                        : null;
         if (contrib1 != null)
             {
             return contrib1;
@@ -1451,9 +1453,9 @@ public class ClassStructure
         TypeConstant type2 = typeContrib.getUnderlyingType2();
         return type2.isExplicitClassIdentity(true)
                 ? checkContribution(contrib, type2, idTest)
-                : type2 instanceof UnionTypeConstant typeUnion2
-                    ? checkUnionContribution(contrib, typeUnion2, idTest)
-                    : null;
+                : type2 instanceof IntersectionTypeConstant typeIntersection2
+                        ? checkIntersectionContribution(contrib, typeIntersection2, idTest)
+                        : null;
         }
 
     /**
@@ -2529,15 +2531,15 @@ public class ClassStructure
 
     /**
      * For this class structure representing an R-Value, find a contribution assignable to the
-     * specified L-Value intersection type.
+     * specified L-Value union type.
      *
-     * @param typeLeft    the L-Value intersection type
+     * @param typeLeft    the L-Value union type
      * @param listRight   the list of actual generic parameters for this class
      *
      * @return the relation
      */
-    public Relation findIntersectionContribution(IntersectionTypeConstant typeLeft,
-                                                 List<TypeConstant> listRight)
+    public Relation findUnionContribution(UnionTypeConstant typeLeft,
+                                          List<TypeConstant> listRight)
         {
         ConstantPool pool     = typeLeft.getConstantPool();
         Relation     relation = Relation.INCOMPATIBLE;
@@ -2553,12 +2555,12 @@ public class ClassStructure
                     assert typeContrib.isExplicitClassIdentity(true);
 
                     ClassConstant constContrib = (ClassConstant)
-                        typeContrib.getSingleUnderlyingClass(true);
+                            typeContrib.getSingleUnderlyingClass(true);
 
                     TypeConstant typeResolved = contrib.resolveType(pool, this, listRight);
 
                     relation = relation.bestOf(((ClassStructure) constContrib.getComponent()).
-                        findIntersectionContribution(typeLeft, typeResolved.getParamTypes()));
+                            findUnionContribution(typeLeft, typeResolved.getParamTypes()));
                     if (relation == Relation.IS_A)
                         {
                         return Relation.IS_A;
@@ -2588,7 +2590,7 @@ public class ClassStructure
                 case Delegates:
                 case Annotation:
                 case Incorporates:
-                    // delegation, annotation and incorporation cannot be of an intersection type
+                    // delegation, annotation and incorporation cannot be of a union type
                     return Relation.INCOMPATIBLE;
 
                 default:

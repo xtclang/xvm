@@ -14,9 +14,9 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Argument;
 
 import org.xvm.asm.constants.ArrayConstant;
-import org.xvm.asm.constants.IntersectionTypeConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.UnionTypeConstant;
 
 import org.xvm.asm.op.Var_T;
 import org.xvm.asm.op.Var_TN;
@@ -324,11 +324,11 @@ public class TupleExpression
                 }
             else if (!typeRequired.equals(pool.typeObject()))
                 {
-                // required type could be an intersection type. e.g. (T1 | Tuple<T2>), in which case
+                // required type could be a union type. e.g. (T1 | Tuple<T2>), in which case
                 // we could use a very simple helper; otherwise use implicit types
-                if (typeRequired instanceof IntersectionTypeConstant)
+                if (typeRequired instanceof UnionTypeConstant)
                     {
-                    TypeConstant typeTuple = ((IntersectionTypeConstant) typeRequired).extractTuple();
+                    TypeConstant typeTuple = ((UnionTypeConstant) typeRequired).extractTuple();
                     if (typeTuple != null)
                         {
                         aReqTypes = typeTuple.getParamTypesArray();

@@ -169,7 +169,7 @@ public class VirtualChildTypeConstant
                 }
             }
 
-        // there is a possibility of a union type contribution, e.g.:
+        // there is a possibility of an intersection type contribution, e.g.:
         //      mixin ListFreezer<Element extends ImmutableAble>
         //        into List<Element> + CopyableCollection<Element>
         // in which case parent.getVirtualChild(sChild) fails to find the child;

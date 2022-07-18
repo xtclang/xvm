@@ -1253,7 +1253,7 @@ public class StatementBlock
                     break;
 
                 case "this:struct":
-                    type   = pool.ensureUnionTypeConstant(pool.typeStruct(),
+                    type   = pool.ensureIntersectionTypeConstant(pool.typeStruct(),
                                  pool.ensureAccessTypeConstant(typeThis, Access.STRUCT));
                     nReg   = Op.A_STRUCT;
                     cSteps = getMethod().getThisSteps();
@@ -1264,7 +1264,7 @@ public class StatementBlock
                             pool.ensureAccessTypeConstant(typeThis, Access.PUBLIC),
                             pool.ensureAccessTypeConstant(typeThis, Access.PROTECTED),
                             pool.ensureAccessTypeConstant(typeThis, Access.PRIVATE),
-                            pool.ensureUnionTypeConstant(pool.typeStruct(),
+                            pool.ensureIntersectionTypeConstant(pool.typeStruct(),
                                 pool.ensureAccessTypeConstant(typeThis, Access.STRUCT))); // TODO helpers for these all or getThisType passing access
                     nReg   = Op.A_CLASS;
                     cSteps = getMethod().getThisSteps();

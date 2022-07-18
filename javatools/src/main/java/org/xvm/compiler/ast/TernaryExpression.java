@@ -214,7 +214,7 @@ public class TernaryExpression
                         break;
                         }
 
-                    // nothing worked; try an intersection of the resolved types
+                    // nothing worked; try a union of the resolved types
                     if (cThen == 0)
                         {
                         use = Usage.Else;
@@ -226,7 +226,7 @@ public class TernaryExpression
                         break;
                         }
 
-                    use = Usage.Intersection;
+                    use = Usage.Union;
 
                     if (atypeThenR != null && atypeElseR != null)
                         {
@@ -239,7 +239,7 @@ public class TernaryExpression
                             }
                         }
 
-                    // continue to validation with a regular intersection (which is most likely to fail now)
+                    // continue to validation with a regular union (which is most likely to fail now)
                     atypeThen = atypeElse = selectCommonTypes(atypeThen, atypeElse);
                     break;
                     }
@@ -288,7 +288,7 @@ public class TernaryExpression
             // TODO check if it is short circuiting
 
             atypeThenV = exprNewThen.getTypes();
-            if (atypeThen.length == 0 || use == Usage.Intersection)
+            if (atypeThen.length == 0 || use == Usage.Union)
                 {
                 atypeThen = atypeThenV;
                 }
@@ -310,7 +310,7 @@ public class TernaryExpression
             // TODO check if it is short circuiting
 
             atypeElseV = exprNewElse.getTypes();
-            if (atypeElse.length == 0 || use == Usage.Intersection)
+            if (atypeElse.length == 0 || use == Usage.Union)
                 {
                 atypeElse = atypeElseV;
                 }
@@ -343,11 +343,11 @@ public class TernaryExpression
                     {
                     atypeResult = switch (use)
                         {
-                        case Required     -> selectWiderTypes(atypeThenV, atypeElseV, atypeRequired);
-                        case Any          -> selectNarrowerTypes(atypeThen, atypeElse);
-                        case Then         -> atypeThen;
-                        case Else         -> atypeElse;
-                        case Intersection -> selectCommonTypes(atypeThen, atypeElse);
+                        case Required -> selectWiderTypes(atypeThenV, atypeElseV, atypeRequired);
+                        case Any      -> selectNarrowerTypes(atypeThen, atypeElse);
+                        case Then     -> atypeThen;
+                        case Else     -> atypeElse;
+                        case Union    -> selectCommonTypes(atypeThen, atypeElse);
                         };
                     break;
                     }
@@ -708,7 +708,7 @@ public class TernaryExpression
     private enum Plan {Symmetrical, ThenIsFalse, ElseIsFalse}
     private transient Plan m_plan = Plan.Symmetrical;
 
-    private enum Usage {Required, Any, Then, Else, Intersection}
+    private enum Usage {Required, Any, Then, Else, Union}
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(TernaryExpression.class, "cond", "exprThen", "exprElse");
     }

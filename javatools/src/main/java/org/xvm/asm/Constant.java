@@ -873,9 +873,9 @@ public abstract class Constant
         VirtualChildType,
         AnonymousClassType,
         PropertyClassType,
-        UnionType,
-        CastType,
         IntersectionType,
+        CastType,
+        UnionType,
         DifferenceType,
         RecursiveType,
 

@@ -24,7 +24,6 @@ import org.xvm.asm.Register;
 import org.xvm.asm.Assignment;
 
 import org.xvm.asm.constants.FormalConstant;
-import org.xvm.asm.constants.IntersectionTypeConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PendingTypeConstant;
 import org.xvm.asm.constants.PropertyConstant;
@@ -32,6 +31,7 @@ import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeCollector;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeParameterConstant;
+import org.xvm.asm.constants.UnionTypeConstant;
 
 import org.xvm.asm.op.FBind;
 import org.xvm.asm.op.L_Get;
@@ -396,7 +396,7 @@ public class LambdaExpression
 
         assert typeRequired != null; // the calcFit() above would have returned a "Fit""
 
-        if (typeRequired instanceof IntersectionTypeConstant typeInter)
+        if (typeRequired instanceof UnionTypeConstant typeInter)
             {
             Set<TypeConstant> setFunctions = typeInter.collectMatching(pool.typeFunction(), null);
             for (TypeConstant typeFunction : setFunctions)
@@ -490,7 +490,7 @@ public class LambdaExpression
         if (typeRequired != null)
             {
             typeReqFn = typeRequired = typeRequired.resolveTypedefs();
-            if (typeRequired instanceof IntersectionTypeConstant typeInter)
+            if (typeRequired instanceof UnionTypeConstant typeInter)
                 {
                 Set<TypeConstant> setFunctions = typeInter.collectMatching(pool.typeFunction(), null);
                 for (TypeConstant typeFunction : setFunctions)

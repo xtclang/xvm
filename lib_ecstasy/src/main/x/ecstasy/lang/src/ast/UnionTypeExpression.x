@@ -6,7 +6,7 @@ import src.Lexer.Token;
 /**
  * Represents a union type expressions, such as:
  *
- *     OutputStream + DataOutput
+ *     Nullable | String
  */
 const UnionTypeExpression(TypeExpression left, Token operator, TypeExpression right)
         extends RelationalTypeExpression(left, operator, right)
@@ -20,7 +20,7 @@ const UnionTypeExpression(TypeExpression left, Token operator, TypeExpression ri
                 {
                 try
                     {
-                    return True, leftType + rightType;
+                    return True, leftType | rightType;
                     }
                 catch (InvalidType e)
                     {
@@ -35,3 +35,4 @@ const UnionTypeExpression(TypeExpression left, Token operator, TypeExpression ri
         return False;
         }
     }
+

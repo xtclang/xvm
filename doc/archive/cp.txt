@@ -64,9 +64,9 @@ Contributions and call chains:
   type, all of which hold declarative members, but none of which has the ability to provide default
   member implementations:
   (i)   a "difference type" is always an interface type;
-  (ii)  an "intersection type" always yields an interface type (in addition to yielding two separate
+  (ii)  an "union type" always yields an interface type (in addition to yielding two separate
         constraint types); and
-  (iii) a "union type" of types 'a' and 'b' yields an interface type iff both 'a' and 'b' are
+  (iii) a "intersection type" of types 'a' and 'b' yields an interface type iff both 'a' and 'b' are
         interface types.
 - Mixins have a dramatically larger set of contributions available:
   (i)   the members of the mixin itself (internally using an "equals" contribution);

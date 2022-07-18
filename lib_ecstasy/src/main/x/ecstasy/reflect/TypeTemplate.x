@@ -63,13 +63,13 @@ interface TypeTemplate // TODO move
          */
         FormalChild,
         /**
-         * An intersection of two types, such as `(Int | String)`, or `String?`.
+         * A union of two types, such as `(Int | String)`, or `String?`.
          */
-        Intersection (relational = True),
+        Union (relational = True),
         /**
-         * A union of two types, such as `(Hashable + Orderable)`.
+         * An intersection of two types, such as `(Hashable + Orderable)`.
          */
-        Union        (relational = True),
+        Intersection        (relational = True),
         /**
          * The _relative complement_ of two types, such as `(DataInput - BinaryInput)`
          */
@@ -136,8 +136,8 @@ interface TypeTemplate // TODO move
 
     /**
      * Determine if the type non-ambiguously represents a Class [Composition], and if so, obtain the
-     * composition. The composition can be ambiguous, for example, if the type is an intersection
-     * type and the two intersected types do not each represent the same class.
+     * composition. The composition can be ambiguous, for example, if the type is a union type and
+     * the two unioned types do not each represent the same class.
      *
      * A type of form `Class` always represents a class composition.
      *
@@ -148,8 +148,8 @@ interface TypeTemplate // TODO move
 
     /**
      * Determine if the type non-ambiguously represents a property. The property can be ambiguous,
-     * for example, if the type is a intersection type and the two intersected types do not each
-     * represent the same property.
+     * for example, if the type is a union type and the two unioned types do not each represent the
+     * same property.
      *
      * A type of form `Property` always represents a property.
      *
@@ -208,8 +208,8 @@ interface TypeTemplate // TODO move
 
     /**
      * Determine if the type has a non-conflicting annotation, and if so, obtain the first one. A
-     * conflicting annotation can occur, for example, in an intersection of two types that do not
-     * each have the same annotation.
+     * conflicting annotation can occur, for example, in a union of two types that do not each have
+     * the same annotation.
      *
      * A type whose form is `Annotated` will always have a non-conflicting annotation.
      *
@@ -360,8 +360,8 @@ interface TypeTemplate // TODO move
                 t1.appendTo(buf);
                 buf.addAll(switch (form)
                         {
-                        case Intersection: " | ";
-                        case Union:        " + ";
+                        case Union:        " | ";
+                        case Intersection: " + ";
                         case Difference:   " - ";
                         default: assert;
                         });

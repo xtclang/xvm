@@ -2062,7 +2062,7 @@ public abstract class Expression
             atypeCommon[i] = typeCommon == null && typeThen != null && typeElse != null
                     ? typeThen.isOnlyNullable() ? pool.ensureNullableTypeConstant(typeElse)
                     : typeElse.isOnlyNullable() ? pool.ensureNullableTypeConstant(typeThen)
-                        : pool.ensureIntersectionTypeConstant(typeThen, typeElse)
+                        : pool.ensureUnionTypeConstant(typeThen, typeElse)
                         : typeCommon;
             }
         return atypeCommon;

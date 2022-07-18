@@ -61,14 +61,14 @@ public class NullableTypeExpression
     protected TypeConstant instantiateTypeConstant(Context ctx, ErrorListener errs)
         {
         ConstantPool pool = pool();
-        return pool.ensureIntersectionTypeConstant(
+        return pool.ensureUnionTypeConstant(
                 pool.typeNullable(), type.ensureTypeConstant(ctx, errs));
         }
 
     @Override
     protected void collectAnonInnerClassInfo(AnonInnerClass info)
         {
-        log(info.getErrorListener(true), Severity.ERROR, Compiler.ANON_CLASS_EXTENDS_INTERSECTION);
+        log(info.getErrorListener(true), Severity.ERROR, Compiler.ANON_CLASS_EXTENDS_UNION);
         }
 
 

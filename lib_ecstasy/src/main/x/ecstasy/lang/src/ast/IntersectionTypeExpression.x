@@ -6,7 +6,7 @@ import src.Lexer.Token;
 /**
  * Represents an intersection type expressions, such as:
  *
- *     Nullable | String
+ *     OutputStream + DataOutput
  */
 const IntersectionTypeExpression(TypeExpression left, Token operator, TypeExpression right)
         extends RelationalTypeExpression(left, operator, right)
@@ -20,7 +20,7 @@ const IntersectionTypeExpression(TypeExpression left, Token operator, TypeExpres
                 {
                 try
                     {
-                    return True, leftType | rightType;
+                    return True, leftType + rightType;
                     }
                 catch (InvalidType e)
                     {
@@ -35,4 +35,3 @@ const IntersectionTypeExpression(TypeExpression left, Token operator, TypeExpres
         return False;
         }
     }
-

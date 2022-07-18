@@ -160,7 +160,7 @@ const IntLiteral(String text)
                         ++offset;
                         factors = BinaryFactor.values;
 
-                        if (offset < length)            // optional traliing "b", e.g. "kib"
+                        if (offset < length)            // optional trailing "b", e.g. "kib"
                             {
                             Char optionalB = text[offset];
                             if (optionalB == 'B' || optionalB == 'b')

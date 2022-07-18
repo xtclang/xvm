@@ -137,13 +137,13 @@ class Parser
      * Parse a type expression.
      *
      *     TypeExpression
-     *         UnionedTypeExpression
+     *         IntersectingTypeExpression
      *
      * @return a `TypeExpression`
      */
     TypeExpression parseTypeExpression()
         {
-        return parseUnionedTypeExpression();
+        return parseIntersectingTypeExpression();
         }
 
 
@@ -345,26 +345,26 @@ class Parser
     /**
      * Parse a type expression of the form "Type + Type" or "Type - Type".
      *
-     *     UnionedTypeExpression
-     *         IntersectingTypeExpression
-     *         UnionedTypeExpression + IntersectingTypeExpression
-     *         UnionedTypeExpression - IntersectingTypeExpression
+     *     IntersectingTypeExpression
+     *         UnionedTypeExpression
+     *         IntersectingTypeExpression + UnionedTypeExpression
+     *         IntersectingTypeExpression - UnionedTypeExpression
      *
      * @return a type expression
      */
-    protected TypeExpression parseUnionedTypeExpression()
+    protected TypeExpression parseIntersectingTypeExpression()
         {
-        TypeExpression expr = parseIntersectingTypeExpression();
+        TypeExpression expr = parseUnionedTypeExpression();
         while (True)
             {
             switch (peek().id)
                 {
                 case Add:
-                    expr = new UnionTypeExpression(expr, expect(Add), parseIntersectingTypeExpression());
+                    expr = new IntersectionTypeExpression(expr, expect(Add), parseUnionedTypeExpression());
                     break;
 
                 case Sub:
-                    expr = new DifferenceTypeExpression(expr, expect(Sub), parseIntersectingTypeExpression());
+                    expr = new DifferenceTypeExpression(expr, expect(Sub), parseUnionedTypeExpression());
                     break;
 
                 default:
@@ -376,13 +376,13 @@ class Parser
     /**
      * Parse a type expression of the form "Type | Type".
      *
-     *     IntersectingTypeExpression
+     *     UnionedTypeExpression
      *         NonBiTypeExpression
-     *         IntersectingTypeExpression | NonBiTypeExpression
+     *         UnionedTypeExpression | NonBiTypeExpression
      *
      * @return a type expression
      */
-    protected TypeExpression parseIntersectingTypeExpression()
+    protected TypeExpression parseUnionedTypeExpression()
         {
         TypeExpression expr = parseNonBiTypeExpression();
         while (True)
@@ -390,7 +390,7 @@ class Parser
             switch (peek().id)
                 {
                 case BitOr:
-                    expr = new IntersectionTypeExpression(expr, expect(BitOr), parseNonBiTypeExpression());
+                    expr = new UnionTypeExpression(expr, expect(BitOr), parseNonBiTypeExpression());
                     break;
 
                 default:

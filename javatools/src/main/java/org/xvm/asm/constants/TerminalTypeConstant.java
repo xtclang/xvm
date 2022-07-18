@@ -1072,7 +1072,7 @@ public class TerminalTypeConstant
                  *   if (!e.is(immutable Element))
                  *      {
                  *      // logically, the type inference implication here should be the same
-                 *      // as above, but the logic in IntersectionTypeConstant.andNot()
+                 *      // as above, but the logic in UnionTypeConstant.andNot()
                  *      // doesn't have enough knowledge to figure that out.
                  *      // The logic below answers this very narrow scenario..
                  *      }

@@ -51,8 +51,8 @@ public class DifferenceTypeConstant
      * Construct a constant whose value is the difference of two types.
      *
      * @param pool        the ConstantPool that will contain this Constant
-     * @param constType1  the first TypeConstant to union
-     * @param constType2  the second TypeConstant to union
+     * @param constType1  the first TypeConstant (the minuend)
+     * @param constType2  the second TypeConstant (the subtrahend)
      */
     public DifferenceTypeConstant(ConstantPool pool, TypeConstant constType1, TypeConstant constType2)
         {
@@ -477,10 +477,10 @@ public class DifferenceTypeConstant
     protected Relation calculateRelationToRight(TypeConstant typeRight)
         {
         // if [typeRight] A is assignable to B, then A is assignable to [this] (B - C) unless B is
-        // an intersection of (X | C), in which case it should have been simplified by andNot();
+        // a union of (X | C), in which case it should have been simplified by andNot();
         // otherwise defer the answer to the duck-type check
         TypeConstant type1 = m_constType1;
-        if (type1 instanceof IntersectionTypeConstant)
+        if (type1 instanceof UnionTypeConstant)
             {
             TypeConstant typeR = simplifyOrClone(getConstantPool(), type1, m_constType2);
             if (typeR != this)
@@ -493,7 +493,7 @@ public class DifferenceTypeConstant
         }
 
     @Override
-    protected Relation findIntersectionContribution(IntersectionTypeConstant typeLeft)
+    protected Relation findUnionContribution(UnionTypeConstant typeLeft)
         {
         // defer the answer to the duck-type check
         return Relation.INCOMPATIBLE;
