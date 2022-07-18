@@ -9,16 +9,32 @@ package text
      * Simple Log implementation.
      */
     class SimpleLog
-            delegates Log(errors)
+            delegates Log(messages)
         {
-        String[] errors = new String[];
+        protected String[] messages = new String[];
+
+        /**
+         * True if the log is empty.
+         */
+        Boolean empty.get()
+            {
+            return messages.empty;
+            }
+
+        /**
+         * Clean up all messages.
+         */
+        void reset()
+            {
+            messages.clear();
+            }
 
         @Override
         String toString()
             {
             StringBuffer buf = new StringBuffer(
-                errors.estimateStringLength(sep="\n", pre="", post=""));
-            return errors.appendTo(buf, sep="\n", pre="", post="").toString();
+                messages.estimateStringLength(sep="\n", pre="", post=""));
+            return messages.appendTo(buf, sep="\n", pre="", post="").toString();
             }
         }
     }
