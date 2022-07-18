@@ -3005,7 +3005,8 @@ public abstract class TypeConstant
                 collectSelfTypeParameters(struct, mapTypeParams, mapContribProps, nBaseRank, errs);
 
                 ArrayList<PropertyConstant> listExplode = new ArrayList<>();
-                if (!collectChildInfo(constId, isInterface(constId, struct), struct, mapTypeParams,
+                boolean                     fInterface  = struct.getFormat() == Component.Format.INTERFACE;
+                if (!collectChildInfo(constId, fInterface, struct, mapTypeParams,
                         mapContribProps, mapContribMethods, mapContribChildren, listExplode, nBaseRank, errs))
                     {
                     fIncomplete = true;
@@ -4580,6 +4581,9 @@ public abstract class TypeConstant
         ConstantPool pool    = getConstantPool();
         boolean      fRebase = constId instanceof NativeRebaseConstant;
 
+        // all rebase types are interfaces
+        assert fInterface || !fRebase;
+
         if (structContrib instanceof MethodStructure method)
             {
             boolean           fHasNoCode   = !method.hasCode();
@@ -4615,11 +4619,12 @@ public abstract class TypeConstant
                 return true;
                 }
 
-            assert !(fRebase && fInterface); // cannot be native and interface at the same time
+            // rebase properties should be computed as they were *not* from an interface
+            boolean fFromIface = fInterface && !fRebase;
 
             PropertyConstant  id    = prop.getIdentityConstant();
             int               nRank = nBaseRank + mapProps.size() + 1;
-            PropertyInfo      info  = createPropertyInfo(prop, constId, fRebase, fInterface, nRank, errs);
+            PropertyInfo      info  = createPropertyInfo(prop, constId, fRebase, fFromIface, nRank, errs);
             mapProps.put(id, info);
 
             if (info.isCustomLogic() || info.isRefAnnotated())
