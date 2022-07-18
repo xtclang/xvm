@@ -94,6 +94,11 @@ public interface TypeComposition
     boolean isConst();
 
     /**
+     * @return true iff the inception type represents a virtual child
+     */
+    boolean isVirtualChild();
+
+    /**
      * @return true iff this TypeComposition represents an instance inner class
      */
     default boolean isInstanceChild()

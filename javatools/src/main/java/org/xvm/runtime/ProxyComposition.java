@@ -108,6 +108,12 @@ public class ProxyComposition
         }
 
     @Override
+    public boolean isVirtualChild()
+        {
+        return false;
+        }
+
+    @Override
     public MethodStructure ensureAutoInitializer()
         {
         throw new UnsupportedOperationException();

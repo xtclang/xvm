@@ -271,6 +271,12 @@ public class ClassComposition
         }
 
     @Override
+    public boolean isVirtualChild()
+        {
+        return f_typeInception.isVirtualChild();
+        }
+
+    @Override
     public MethodStructure ensureAutoInitializer()
         {
         if (m_mapFields.isEmpty())

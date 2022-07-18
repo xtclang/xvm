@@ -164,6 +164,12 @@ public class PropertyComposition
         }
 
     @Override
+    public boolean isVirtualChild()
+        {
+        return false;
+        }
+
+    @Override
     public MethodStructure ensureAutoInitializer()
         {
         return f_clzRef.ensureAutoInitializer();

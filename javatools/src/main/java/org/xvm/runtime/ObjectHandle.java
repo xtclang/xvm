@@ -498,7 +498,7 @@ public abstract class ObjectHandle
         @Override
         public boolean isService()
             {
-            if (m_fMutable && getComposition().getType().isVirtualChild())
+            if (m_fMutable && getComposition().isVirtualChild())
                 {
                 ObjectHandle hParent = getField(null, OUTER);
                 return hParent != null && hParent.isService();
