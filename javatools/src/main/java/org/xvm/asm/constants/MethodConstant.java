@@ -214,6 +214,14 @@ public class MethodConstant
         }
 
     /**
+     * @return the method's return types as a Tuple
+     */
+    public TypeConstant getReturnsAsTuple()
+        {
+        return getConstantPool().ensureTupleType(getRawReturns());
+        }
+
+    /**
      * Note: This is just a helper method; the "whether this refers to a function or not" question
      * belongs to either the component or the type info, and not to the constant, but we need this
      * information.

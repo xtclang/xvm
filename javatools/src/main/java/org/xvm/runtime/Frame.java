@@ -1093,7 +1093,9 @@ public class Frame
                 int          iReturn   = f_aiReturn[0];
                 TypeConstant typeTuple = iReturn < 0
                         ? poolContext().typeTuple0()
-                        : framePrev.getVarInfo(iReturn).getType();
+                        : framePrev.isNative()
+                            ? f_function.getIdentityConstant().getReturnsAsTuple()
+                            : framePrev.getRegisterType(iReturn);
                 TypeComposition clzTuple = f_context.f_container.resolveClass(typeTuple);
                 if (fDynamic)
                     {
@@ -1230,10 +1232,13 @@ public class Frame
             case Op.A_TUPLE:
                 if (afDynamic == null)
                     {
-                    int          iReturn = f_aiReturn[0];
-                    TypeConstant type    = iReturn >= 0
-                            ? f_framePrev.getRegisterType(iReturn)
-                            : poolContext().typeTuple();
+                    Frame        framePrev = f_framePrev;
+                    int          iReturn   = f_aiReturn[0];
+                    TypeConstant type      = iReturn < 0
+                            ? poolContext().typeTuple()
+                            : framePrev.isNative()
+                                ? f_function.getIdentityConstant().getReturnsAsTuple()
+                                : framePrev.getRegisterType(iReturn);
                     return returnValue(iReturn,
                         xTuple.makeHandle(type.ensureClass(this), ahValue), false);
                     }
