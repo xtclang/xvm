@@ -65,8 +65,8 @@ class ModuleGenerator(String implName, String moduleName)
             // if anything goes wrong - follow a regular path
             try
                 {
-                Time? dbStamp    = dbModule.parent.modified;
-                Time? hostStamp  = hostModule.parent.modified;
+                Time? dbStamp    = dbModule.parent.created;
+                Time? hostStamp  = hostModule.parent.created;
                 if (dbStamp != Null && hostStamp != Null && hostStamp > dbStamp)
                     {
                     errors.add($"Info: Host module '{hostedName}' for '{moduleName}' is up to date");

@@ -100,7 +100,7 @@ public class xRTFileTemplate
                     try
                         {
                         BasicFileAttributes attr = Files.readAttributes(fileOS.toPath(), BasicFileAttributes.class);
-                        return frame.assignValue(iReturn, xInt64.makeHandle(attr.creationTime().toMillis()));
+                        return frame.assignValue(iReturn, xInt64.makeHandle(attr.lastModifiedTime().toMillis()));
                         }
                     catch (IOException ignore) {}
                     }
