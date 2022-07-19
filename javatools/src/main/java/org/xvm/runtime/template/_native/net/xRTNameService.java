@@ -3,6 +3,9 @@ package org.xvm.runtime.template._native.net;
 
 import java.net.InetAddress;
 
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
+
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
 
@@ -19,6 +22,7 @@ import org.xvm.runtime.template.xService;
 import org.xvm.runtime.template._native.reflect.xRTFunction;
 
 import org.xvm.runtime.template.collections.xArray;
+import org.xvm.runtime.template.collections.xArray.Mutability;
 import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 import org.xvm.runtime.template.collections.xByteArray;
 
@@ -84,53 +88,73 @@ public class xRTNameService
             {
             case "nativeResolve":   // conditional Byte[][] nativeResolve(String name)
                 {
-                String sName = ((StringHandle) ahArg[0]).getStringValue();
-                try
-                    {
-                    // TODO GG: immediately return a future, and use the executor pool to finish the work async
-                    InetAddress[] aAddr = InetAddress.getAllByName(sName);
-                    if (aAddr != null && aAddr.length > 0)
-                        {
-                        // construct an array of byte arrays
-                        int            c  = aAddr.length;
-                        ObjectHandle[] ah = new ObjectHandle[c];
-                        for (int i = 0; i < c; ++i)
-                            {
-                            ah[i] = xArray.makeByteArrayHandle(aAddr[i].getAddress(), xArray.Mutability.Constant);
-                            }
+                Container container = frame.f_context.f_container;
+                String    sName     = ((StringHandle) ahArg[0]).getStringValue();
 
-                        TypeComposition clz = ensureByteArrayArrayComposition(frame.f_context.f_container);
-                        return frame.assignValues(aiReturn, xBoolean.TRUE, xArray.createImmutableArray(clz, ah));
-                        }
-                    }
-                catch (Exception ignore)
+                Callable<InetAddress[]> task = () -> InetAddress.getAllByName(sName);
+
+                CompletableFuture<InetAddress[]> cfResolve = container.scheduleIO(task);
+                Frame.Continuation continuation = frameCaller ->
                     {
-                    // REVIEW CP: do we want to report the reason somehow?
-                    // return frame.raiseException(xException.makeHandle(frame, e.getMessage()));
-                    }
-                return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+                    try
+                        {
+                        InetAddress[] aAddr = cfResolve.get();
+                        if (aAddr != null && aAddr.length > 0)
+                            {
+                            // construct an array of byte arrays
+                            int            c  = aAddr.length;
+                            ObjectHandle[] ah = new ObjectHandle[c];
+                            for (int i = 0; i < c; ++i)
+                                {
+                                ah[i] = xArray.makeByteArrayHandle(
+                                            aAddr[i].getAddress(), Mutability.Constant);
+                                }
+
+                            TypeComposition clz = ensureByteArrayArrayComposition(container);
+                            return frameCaller.assignValues(aiReturn,
+                                    xBoolean.TRUE, xArray.createImmutableArray(clz, ah));
+                            }
+                        }
+                    catch (Throwable ignore)
+                        {
+                        // REVIEW CP: do we want to report the reason somehow?
+                        // return frame.raiseException(xException.makeHandle(frame, e.getMessage()));
+                        }
+                    return frameCaller.assignValue(aiReturn[0], xBoolean.FALSE);
+                    };
+
+                return frame.waitForIO(cfResolve, continuation);
                 }
 
             case "nativeLookup":    // conditional String nativeLookup(Byte[] addressBytes)
                 {
                 byte[] abIP = xByteArray.getBytes((ArrayHandle) ahArg[0]);
-                try
+
+                Callable<InetAddress> task = () -> InetAddress.getByAddress(abIP);
+
+                CompletableFuture<InetAddress> cfLookup = frame.f_context.f_container.scheduleIO(task);
+                Frame.Continuation continuation = frameCaller ->
                     {
-                    // TODO GG: immediately return a future, and use the executor pool to finish the work async
-                    InetAddress inetaddr = InetAddress.getByAddress(abIP);
-                    String      sName    = inetaddr.getHostName();
-                    String      sNotName = inetaddr.getHostAddress();
-                    if (sName != null && sName.length() > 0 && !sName.equals(sNotName))
+                    try
                         {
-                        return frame.assignValues(aiReturn, xBoolean.TRUE, xString.makeHandle(sName));
+                        InetAddress addr     = cfLookup.get();
+                        String      sName    = addr.getHostName();
+                        String      sNotName = addr.getHostAddress();
+                        if (sName != null && sName.length() > 0 && !sName.equals(sNotName))
+                            {
+                            return frameCaller.assignValues(aiReturn,
+                                    xBoolean.TRUE, xString.makeHandle(sName));
+                            }
                         }
-                    }
-                catch (Exception ignore)
-                    {
-                    // REVIEW CP: do we want to report the reason somehow?
-                    // return frame.raiseException(xException.makeHandle(frame, e.getMessage()));
-                    }
-                return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+                    catch (Exception ignore)
+                        {
+                        // REVIEW CP: do we want to report the reason somehow?
+                        // return frame.raiseException(xException.makeHandle(frame, e.getMessage()));
+                        }
+                    return frameCaller.assignValue(aiReturn[0], xBoolean.FALSE);
+                    };
+
+                return frame.waitForIO(cfLookup, continuation);
                 }
             }
 

@@ -2,6 +2,7 @@ package org.xvm.runtime.template._native.net;
 
 
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -45,8 +46,8 @@ public class xRTNetworkInterface
         {
         markNativeProperty("running");
 
-        markNativeMethod("nativeConnect"     , null, null);
-        markNativeMethod("nativeListen"      , null, null);
+        markNativeMethod("nativeConnect", null, null);
+        markNativeMethod("nativeListen" , null, null);
 
         getCanonicalType().invalidateTypeInfo();
         }
@@ -57,7 +58,7 @@ public class xRTNetworkInterface
         TypeConstant type = m_typeCanonical;
         if (type == null)
             {
-            var pool = f_container.getConstantPool();
+            ConstantPool pool = f_container.getConstantPool();
             m_typeCanonical = type = pool.ensureTerminalTypeConstant(pool.ensureClassConstant(
                     pool.ensureModuleConstant("net.xtclang.org"), "NetworkInterface"));
             }

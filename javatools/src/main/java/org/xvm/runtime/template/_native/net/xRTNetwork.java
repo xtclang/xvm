@@ -107,16 +107,9 @@ public class xRTNetwork
 
         switch (method.getName())
             {
-            case "instantiateNameService":    // NameService instantiateNameService()
+            case "instantiateNameService":
                 {
-                try
-                    {
-                    return frame.assignValue(iReturn, instantiateNameService(frame, hService, iReturn));
-                    }
-                catch (Exception e)
-                    {
-                    return frame.raiseException(xException.makeHandle(frame, e.getMessage()));
-                    }
+                return instantiateNameService(frame, hService, iReturn);
                 }
             }
 
@@ -257,47 +250,34 @@ public class xRTNetwork
         }
 
     /**
-     * TODO
+     * Implementation of "NameService instantiateNameService()" method;
      *
-     * @param frame
-     * @param hNetwork
-     * @param iReturn
-     *
-     * @return
+     * @return one of Op.R_NEXT, Op.R_CALL or Op.R_EXCEPTION values
      */
-    protected ObjectHandle instantiateNameService(Frame frame, ServiceHandle hNetwork, int iReturn)
+    protected int instantiateNameService(Frame frame, ServiceHandle hNetwork, int iReturn)
         {
-        ObjectHandle     hNameSvc        = null;
-        ClassTemplate    templateNameSvc = xRTNameService.INSTANCE;
-        ClassComposition clzMask         = templateNameSvc.getCanonicalClass();
-        MethodStructure  constructor     = templateNameSvc.getStructure().findConstructor(getCanonicalType());
-        ObjectHandle[]   ahParams        = new ObjectHandle[] {hNetwork};
+        ClassTemplate    templateSvc  = xRTNameService.INSTANCE;
+        ClassComposition clz          = templateSvc.getCanonicalClass();
+        MethodStructure  constructor  = templateSvc.getStructure().findConstructor(getCanonicalType());
+        ObjectHandle[]   ahParams     = new ObjectHandle[constructor.getMaxVars()];
+        ahParams[0] = hNetwork;
 
-        switch (templateNameSvc.construct(frame, constructor, clzMask, null, ahParams, Op.A_STACK))
+        switch (templateSvc.construct(frame, constructor, clz, null, ahParams, Op.A_STACK))
             {
             case Op.R_NEXT:
-                hNameSvc = frame.popStack();
-                break;
+                return frame.assignValue(iReturn, frame.popStack());
 
             case Op.R_EXCEPTION:
-                break;
+                return Op.R_EXCEPTION;
 
             case Op.R_CALL:
-                {
-                Frame frameNext = frame.m_frameNext;
-                frameNext.addContinuation(frameCaller ->
-                    {
-                    // TODO GG: frameCaller.peekStack();
-                    return Op.R_NEXT;
-                    });
-                return new ObjectHandle.DeferredCallHandle(frameNext);
-                }
+                frame.m_frameNext.addContinuation(frameCaller ->
+                    frameCaller.assignValue(iReturn, frameCaller.popStack()));
+                return Op.R_CALL;
 
             default:
                 throw new IllegalStateException();
             }
-
-        return hNameSvc;
         }
 
 

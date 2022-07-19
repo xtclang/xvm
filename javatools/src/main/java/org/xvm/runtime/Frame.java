@@ -507,12 +507,12 @@ public class Frame
         for (int iGuard = deferredAction.getGuardIndex(); iGuard >= 0; iGuard--)
             {
             Guard guard = aGuard[iGuard];
-            if (guard instanceof AllGuard)
+            if (guard instanceof AllGuard allGuard)
                 {
                 deferredAction.setGuardIndex(iGuard - 1);
                 m_deferred = deferredAction;
 
-                return ((AllGuard) guard).handleJump(this, iGuard);
+                return allGuard.handleJump(this, iGuard);
                 }
             }
 
@@ -1106,8 +1106,8 @@ public class Frame
                         {
                         // dynamic -> regular [singular] Tuple
                         RefHandle hRef    = (RefHandle) hValue;
-                        int       iResult = hRef instanceof FutureHandle
-                            ? ((FutureHandle) hRef).waitAndAssign(framePrev, Op.A_STACK)
+                        int       iResult = hRef instanceof FutureHandle hFuture
+                            ? hFuture.waitAndAssign(framePrev, Op.A_STACK)
                             : hRef.getVarSupport().getReferent(framePrev, hRef, Op.A_STACK);
 
                         switch (iResult)
@@ -1175,8 +1175,8 @@ public class Frame
                 // dynamic -> regular
                 RefHandle hRef = (RefHandle) hValue;
 
-                iResult = hRef instanceof FutureHandle
-                        ? ((FutureHandle) hRef).waitAndAssign(framePrev, iReturn)
+                iResult = hRef instanceof FutureHandle hFuture
+                        ? hFuture.waitAndAssign(framePrev, iReturn)
                         : hRef.getVarSupport().getReferent(framePrev, hRef, iReturn);
                 }
             }

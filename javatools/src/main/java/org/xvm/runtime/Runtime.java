@@ -49,7 +49,7 @@ public class Runtime
             return thread;
             };
 
-        f_executorIO = new ThreadPoolExecutor(1, 1024, 0, TimeUnit.SECONDS,
+        f_executorIO = new ThreadPoolExecutor(parallelism, 1024, 0, TimeUnit.SECONDS,
                 new LinkedBlockingQueue<>(), factoryIO);
         }
 
