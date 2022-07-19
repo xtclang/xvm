@@ -1,17 +1,10 @@
 - move ecstasy.mgmt package to a separate module
 
-- file ops (contents.get/set, truncate, append) to use NIO (ask Mark to take a look)
-
 - MapMapping doesn't work for properties that declared as Map classes, e.g.
     const Test(Map<Int, String> map)     - json serialization works
     const Test(HashMap<Int, String> map) - json serialization DOESN'T WORK
 
 - need to implement "persistent" mutators for HasherMap
-
-- the XTC compiler disregards "resources" changes if nothing else changed and "-force" option
-  is not specified
-
-- add "-version" option to xec command
 
 - improve error description for
     "service S extends Closeable" (extends vs. implements)
@@ -33,6 +26,11 @@
 - debugger stops on exceptions even if that breakpoint is disabled
 
 - debugger should print an exception stack for natural exceptions thrown by "toString()"
+
+- the XTC compiler disregards "resources" changes if nothing else changed and "-force" option
+  is not specified
+
+- add "-version" option to xec command
 
 - add a periodic re-schedule to Timer API
 
