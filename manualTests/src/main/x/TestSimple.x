@@ -1,49 +1,67 @@
 module TestSimple
     {
-    package net import net.xtclang.org;
-    import net.*;
-
     @Inject Console console;
-    @Inject Network network;
-    @Inject Network insecureNetwork;
-    @Inject Network secureNetwork;
-
-    @Inject Timer timer;
 
     void run()
         {
-        NameService ns = network.nameService;
-        Lookup svc = new Lookup(ns);
+        new Runner().run();
 
-        String[] names = ["yahoo.com", "google.com", "oracle.com", "what.the.sh.it"];
-        for (String name : names)
+        @Inject Timer timer;
+        timer.schedule(Duration:3s, () ->
             {
-            svc.report^(name);
+            console.println("done");
+            });
+        }
+
+    service Runner
+        {
+        void run()
+            {
+            console.println("Hello");
+
+            Test test = new Test();
+
+            @Future Tuple<Boolean, String> r1 = test.foo^();
+            &r1.passTo(t ->
+                {
+                console.println(t);
+                });
+
+            @Future Tuple<Boolean, String> r2 = test.bar^();
+            &r2.passTo(t ->
+                {
+                if (t[0])
+                    {
+                    console.println(t[1]);
+                    }
+                });
             }
         }
 
-    @Concurrent
-    service Lookup(NameService ns)
+    service Test
         {
-        void report(String name)
+        (Boolean, String) foo()
             {
-            @Future Tuple<Boolean, IPAddress[]> resolve = ns.resolve^(name);
-
-            &resolve.whenComplete((r, x) ->
+            @Inject Timer timer;
+            @Future String result;
+            timer.schedule(Duration:1s, () ->
                 {
-                console.println($"{timer.elapsed.milliseconds}: {name}={r}");
-                if (r?[0])
-                    {
-                    @Future Tuple<Boolean, String> lookup = ns.reverseLookup^(r[1][0]);
-                    &lookup.whenComplete((r2, x2) ->
-                        {
-                        if (r2?[0])
-                            {
-                            console.println($"{timer.elapsed.milliseconds}: {name}={r2[1]}");
-                            }
-                        });
-                    }
+                result = "42";
                 });
+
+            return True, result;
+            }
+
+        conditional String bar()
+            {
+            @Inject Timer timer;
+            @Future String result;
+            timer.schedule(Duration:1s, () ->
+                {
+                result = "42";
+                });
+
+            return True, result;
             }
         }
     }

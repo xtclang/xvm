@@ -235,14 +235,27 @@ public class Frame
      */
     public Frame createWaitFrame(CompletableFuture<ObjectHandle> cfResult, int iReturn)
         {
-        ObjectHandle[] ahFuture = new ObjectHandle[]{xFutureVar.makeHandle(cfResult)};
+        return createWaitFrame(xFutureVar.makeHandle(cfResult), iReturn);
+        }
+
+    /**
+     * Create a new pseudo frame that will wait on the specified future handle.
+     *
+     * @param hFuture  the FutureHandle to wait for
+     * @param iReturn  the return register for the result
+     *
+     * @return a new frame
+     */
+    public Frame createWaitFrame(FutureHandle hFuture, int iReturn)
+        {
+        ObjectHandle[] ahFuture = new ObjectHandle[]{hFuture};
 
         Frame frameNext = createNativeFrame(WAIT_FOR_FUTURE, ahFuture, iReturn, null);
 
         frameNext.f_aInfo[0] = new VarInfo(xFutureVar.TYPE, VAR_DYNAMIC_REF);
 
         // add a wait completion notification; the service is responsible for timing out
-        cfResult.whenComplete((r, x) -> f_fiber.onResponse());
+        hFuture.getFuture().whenComplete((r, x) -> f_fiber.onResponse());
 
         return frameNext;
         }

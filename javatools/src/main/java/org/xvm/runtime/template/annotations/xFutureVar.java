@@ -149,12 +149,10 @@ public class xFutureVar
         switch (method.getName())
             {
             case "complete":
-                hThis.assign(hArg, null);
-                return Op.R_NEXT;
+                return hThis.complete(hArg, null);
 
             case "completeExceptionally":
-                hThis.assign(null, ((ExceptionHandle) hArg));
-                return Op.R_NEXT;
+                return hThis.complete(null, (ExceptionHandle) hArg);
 
             case "thenDo":
                 return invokeThenDo(frame, hThis, (FunctionHandle) hArg, iReturn);
@@ -259,11 +257,11 @@ public class xFutureVar
                             frame.f_context.postRequest(frame, hRun, Utils.OBJECTS_NONE, 0);
 
                     cfThen.whenComplete((hVoid, exThen) ->
-                            hThen.assign(hR, Utils.translate(exThen)));
+                            hThen.complete(hR, Utils.translate(exThen)));
                     }
                 else
                     {
-                    hThen.assign(null, Utils.translate(ex));
+                    hThen.complete(null, Utils.translate(ex));
                     }
                 });
             return frame.assignValue(iReturn, hThen);
@@ -318,11 +316,11 @@ public class xFutureVar
                             frame.f_context.postRequest(frame, hConsume, new ObjectHandle[] {hR}, 0);
 
                     cfPass.whenComplete((hVoid, exPass) ->
-                            hPass.assign(hR, Utils.translate(exPass)));
+                            hPass.complete(hR, Utils.translate(exPass)));
                     }
                 else
                     {
-                    hPass.assign(null, Utils.translate(ex));
+                    hPass.complete(null, Utils.translate(ex));
                     }
                 });
             return frame.assignValue(iReturn, hPass);
@@ -380,11 +378,11 @@ public class xFutureVar
                             frame.f_context.postRequest(frame, hConvert, new ObjectHandle[] {hR}, 1);
 
                     cfTrans.whenComplete((hNew, exTrans) ->
-                            hTrans.assign(hNew, Utils.translate(exTrans)));
+                            hTrans.complete(hNew, Utils.translate(exTrans)));
                     }
                 else
                     {
-                    hTrans.assign(null, Utils.translate(ex));
+                    hTrans.complete(null, Utils.translate(ex));
                     }
                 });
             return frame.assignValue(iReturn, hTrans);
@@ -439,7 +437,7 @@ public class xFutureVar
                 {
                 if (ex == null)
                     {
-                    hHandle.assign(hR, null);
+                    hHandle.complete(hR, null);
                     }
                 else
                     {
@@ -448,7 +446,7 @@ public class xFutureVar
                             frame.f_context.postRequest(frame, hConvert, new ObjectHandle[] {hEx}, 1);
 
                     cfTrans.whenComplete((hNew, exTrans) ->
-                            hHandle.assign(hNew, Utils.translate(exTrans)));
+                            hHandle.complete(hNew, Utils.translate(exTrans)));
                     }
                 });
             return frame.assignValue(iReturn, hHandle);
@@ -498,7 +496,7 @@ public class xFutureVar
                         frame.f_context.postRequest(frame, hConvert, combineResult(hR, ex), 1);
 
                 cfTrans.whenComplete((hNew, exTrans) ->
-                        hTrans.assign(hNew, Utils.translate(exTrans)));
+                        hTrans.complete(hNew, Utils.translate(exTrans)));
                 });
             return frame.assignValue(iReturn, hTrans);
             }
@@ -575,11 +573,11 @@ public class xFutureVar
                             frame.f_context.postRequest(frame, hCombine, ahArg, 1);
 
                     cfAnd.whenComplete((hNew, exTrans) ->
-                            hAnd.assign(hNew, Utils.translate(exTrans)));
+                            hAnd.complete(hNew, Utils.translate(exTrans)));
                     }
                 else
                     {
-                    hAnd.assign(null, Utils.translate(ex));
+                    hAnd.complete(null, Utils.translate(ex));
                     }
                 });
             return frame.assignValue(iReturn, hAnd);
@@ -651,11 +649,11 @@ public class xFutureVar
                     {
                     if (exWhen == null && ex == null)
                         {
-                        hWhen.assign(hR, null);
+                        hWhen.complete(hR, null);
                         }
                     else
                         {
-                        hWhen.assign(null, Utils.translate(exWhen == null ? ex : exWhen));
+                        hWhen.complete(null, Utils.translate(exWhen == null ? ex : exWhen));
                         }
                     });
                 });
@@ -744,13 +742,7 @@ public class xFutureVar
                 }
             }
 
-        CompletableFuture<ObjectHandle> cf = ((FutureHandle) hRef).getFuture();
-
-        return cf.isDone()
-            ? assignDone(frame, cf, iReturn)
-
-            // wait for the assignment/completion; the service is responsible for timing out
-            : frame.wait(cf, iReturn);
+        return ((FutureHandle) hRef).waitAndAssign(frame, iReturn);
         }
 
     @Override
@@ -813,34 +805,6 @@ public class xFutureVar
         }
 
     /**
-     * Helper method to assign a value of a completed future to a frame's register.
-     *
-     * @param frame    the current frame
-     * @param cf       a future
-     * @param iReturn  the register id to place the result to
-     *
-     * @return one of R_NEXT, R_CALL or R_EXCEPTION
-     */
-    public static int assignDone(Frame frame, CompletableFuture<ObjectHandle> cf, int iReturn)
-        {
-        assert cf.isDone();
-
-        try
-            {
-            // services may replace "null" elements of a negative conditional return
-            // with the DEFAULT values (see ServiceContext.sendResponse)
-            ObjectHandle hValue = cf.get();
-            return hValue == ObjectHandle.DEFAULT
-                ? Op.R_NEXT
-                : frame.assignValue(iReturn, hValue);
-            }
-        catch (Throwable e)
-            {
-            return frame.raiseException(Utils.translate(e));
-            }
-        }
-
-    /**
      * @return a TypeComposition for a FutureVar of a given referent type
      */
     private TypeComposition ensureComposition(Container container, TypeConstant typeReferent)
@@ -848,7 +812,18 @@ public class xFutureVar
         return ensureClass(container, typeReferent.getConstantPool().ensureFutureVar(typeReferent));
         }
 
+
     // ----- ObjectHandle --------------------------------------------------------------------------
+
+    public static FutureHandle makeHandle(CompletableFuture<ObjectHandle> future)
+        {
+        return makeHandle(INSTANCE.getCanonicalClass(), future);
+        }
+
+    public static FutureHandle makeHandle(TypeComposition clz, CompletableFuture<ObjectHandle> future)
+        {
+        return new FutureHandle(clz, null, future);
+        }
 
     public static class FutureHandle
             extends RefHandle
@@ -859,14 +834,13 @@ public class xFutureVar
             {
             super(clazz, sName);
 
-            assert future != null;
             f_future = future;
             }
 
         @Override
         public boolean isAssigned(Frame frame)
             {
-            return f_future.isDone();
+            return getFuture().isDone();
             }
 
         @Override
@@ -886,11 +860,12 @@ public class xFutureVar
          */
         public ExceptionHandle getException()
             {
-            if (f_future.isCompletedExceptionally())
+            CompletableFuture future = getFuture();
+            if (future.isCompletedExceptionally())
                 {
                 try
                     {
-                    f_future.get();
+                    future.get();
                     throw new IllegalStateException(); // cannot happen
                     }
                 catch (Exception e)
@@ -901,23 +876,31 @@ public class xFutureVar
             return null;
             }
 
-        public int assign(ObjectHandle hValue, ExceptionHandle hEx)
+        /**
+         * Complete the underlying future.
+         *
+         * @param hValue      the value (null if hException is not null)
+         * @param hException  the exception (null if hValue is not null)
+         *
+         * @return one of R_NEXT or R_EXCEPTION values
+         */
+        public int complete(ObjectHandle hValue, ExceptionHandle hException)
             {
-            CompletableFuture<ObjectHandle> cf = f_future;
+            CompletableFuture<ObjectHandle> cf = getFuture();
 
             if (cf.isDone())
                 {
                 return Op.R_NEXT;
                 }
 
-            if (hEx == null)
+            if (hException == null)
                 {
                 assert hValue != null;
                 cf.complete(hValue);
                 return Op.R_NEXT;
                 }
 
-            cf.completeExceptionally(hEx.getException());
+            cf.completeExceptionally(hException.getException());
             return Op.R_EXCEPTION;
             }
 
@@ -931,41 +914,58 @@ public class xFutureVar
          */
         public int waitAndAssign(Frame frame, int iReturn)
             {
-            CompletableFuture<ObjectHandle> cf = f_future;
-            return cf.isDone()
-                    ? assignDone(frame, cf, iReturn)
-                    : frame.wait(cf, iReturn);
+            // if the future is not assigned yet, the service is responsible for timing out
+            return isAssigned(frame)
+                    ? assign(frame, iReturn)
+                    : frame.call(frame.createWaitFrame(this, iReturn));
+            }
+
+        /**
+         * Assign a value of a completed future to a frame's register.
+         *
+         * @param frame    the current frame
+         * @param iReturn  the register id to place the result to
+         *
+         * @return one of R_NEXT, R_CALL or R_EXCEPTION
+         */
+        protected int assign(Frame frame, int iReturn)
+            {
+            CompletableFuture<ObjectHandle> cf = getFuture();
+            assert cf.isDone();
+
+            try
+                {
+                // services may replace "null" elements of a negative conditional return
+                // with the DEFAULT values (see ServiceContext.sendResponse)
+                ObjectHandle hValue = cf.get();
+                return hValue == ObjectHandle.DEFAULT
+                        ? Op.R_NEXT
+                        : frame.assignValue(iReturn, hValue);
+                }
+            catch (Throwable e)
+                {
+                return frame.raiseException(Utils.translate(e));
+                }
             }
 
         @Override
         public String toString()
             {
             return "(" + m_clazz + ") " + (
-                    f_future.isDone() ? "Completed: "  + toSafeString():
-                                        "Not completed"
+                    getFuture().isDone() ? "Completed: " + toSafeString(): "Not completed"
                     );
             }
 
-        private String toSafeString()
+        protected String toSafeString()
             {
             try
                 {
-                return String.valueOf(f_future.get());
+                return String.valueOf(getFuture().get());
                 }
             catch (Throwable e)
                 {
                 return Utils.translate(e).toString();
                 }
             }
-        }
-
-    public static FutureHandle makeHandle(CompletableFuture<ObjectHandle> future)
-        {
-        return makeHandle(INSTANCE.getCanonicalClass(), future);
-        }
-
-    public static FutureHandle makeHandle(TypeComposition clz, CompletableFuture<ObjectHandle> future)
-        {
-        return new FutureHandle(clz, null, future);
         }
     }
