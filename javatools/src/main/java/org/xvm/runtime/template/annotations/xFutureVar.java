@@ -1,10 +1,7 @@
 package org.xvm.runtime.template.annotations;
 
 
-import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
-import java.util.concurrent.ExecutionException;
 
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
@@ -20,14 +17,12 @@ import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
-import org.xvm.runtime.ObjectHandle.ExceptionHandle.WrapperException;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xEnum.EnumHandle;
-import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xService.ServiceHandle;
 
@@ -158,7 +153,7 @@ public class xFutureVar
                 return Op.R_NEXT;
 
             case "completeExceptionally":
-                hThis.assign(null, ((ExceptionHandle) hArg).getException());
+                hThis.assign(null, ((ExceptionHandle) hArg));
                 return Op.R_NEXT;
 
             case "thenDo":
@@ -264,11 +259,11 @@ public class xFutureVar
                             frame.f_context.postRequest(frame, hRun, Utils.OBJECTS_NONE, 0);
 
                     cfThen.whenComplete((hVoid, exThen) ->
-                            hThen.assign(hR, translate(exThen)));
+                            hThen.assign(hR, Utils.translate(exThen)));
                     }
                 else
                     {
-                    hThen.assign(null, translate(ex));
+                    hThen.assign(null, Utils.translate(ex));
                     }
                 });
             return frame.assignValue(iReturn, hThen);
@@ -323,11 +318,11 @@ public class xFutureVar
                             frame.f_context.postRequest(frame, hConsume, new ObjectHandle[] {hR}, 0);
 
                     cfPass.whenComplete((hVoid, exPass) ->
-                            hPass.assign(hR, translate(exPass)));
+                            hPass.assign(hR, Utils.translate(exPass)));
                     }
                 else
                     {
-                    hPass.assign(null, translate(ex));
+                    hPass.assign(null, Utils.translate(ex));
                     }
                 });
             return frame.assignValue(iReturn, hPass);
@@ -385,11 +380,11 @@ public class xFutureVar
                             frame.f_context.postRequest(frame, hConvert, new ObjectHandle[] {hR}, 1);
 
                     cfTrans.whenComplete((hNew, exTrans) ->
-                            hTrans.assign(hNew, translate(exTrans)));
+                            hTrans.assign(hNew, Utils.translate(exTrans)));
                     }
                 else
                     {
-                    hTrans.assign(null, translate(ex));
+                    hTrans.assign(null, Utils.translate(ex));
                     }
                 });
             return frame.assignValue(iReturn, hTrans);
@@ -448,12 +443,12 @@ public class xFutureVar
                     }
                 else
                     {
-                    ExceptionHandle hEx = translate(ex).getExceptionHandle();
+                    ExceptionHandle hEx = Utils.translate(ex);
                     CompletableFuture<ObjectHandle> cfTrans =
                             frame.f_context.postRequest(frame, hConvert, new ObjectHandle[] {hEx}, 1);
 
                     cfTrans.whenComplete((hNew, exTrans) ->
-                            hHandle.assign(hNew, translate(exTrans)));
+                            hHandle.assign(hNew, Utils.translate(exTrans)));
                     }
                 });
             return frame.assignValue(iReturn, hHandle);
@@ -503,7 +498,7 @@ public class xFutureVar
                         frame.f_context.postRequest(frame, hConvert, combineResult(hR, ex), 1);
 
                 cfTrans.whenComplete((hNew, exTrans) ->
-                        hTrans.assign(hNew, translate(exTrans)));
+                        hTrans.assign(hNew, Utils.translate(exTrans)));
                 });
             return frame.assignValue(iReturn, hTrans);
             }
@@ -580,11 +575,11 @@ public class xFutureVar
                             frame.f_context.postRequest(frame, hCombine, ahArg, 1);
 
                     cfAnd.whenComplete((hNew, exTrans) ->
-                            hAnd.assign(hNew, translate(exTrans)));
+                            hAnd.assign(hNew, Utils.translate(exTrans)));
                     }
                 else
                     {
-                    hAnd.assign(null, translate(ex));
+                    hAnd.assign(null, Utils.translate(ex));
                     }
                 });
             return frame.assignValue(iReturn, hAnd);
@@ -660,7 +655,7 @@ public class xFutureVar
                         }
                     else
                         {
-                        hWhen.assign(null, translate(exWhen == null ? ex : exWhen));
+                        hWhen.assign(null, Utils.translate(exWhen == null ? ex : exWhen));
                         }
                     });
                 });
@@ -687,7 +682,7 @@ public class xFutureVar
         catch (Throwable e)
             {
             ahR[0] = xNullable.NULL;
-            ahR[1] = translate(e).getExceptionHandle();
+            ahR[1] = Utils.translate(e);
             }
         return ahR;
         }
@@ -708,7 +703,7 @@ public class xFutureVar
                 : hResult;
         ahArg[1] = exception == null
                 ? xNullable.NULL
-                : translate(exception).getExceptionHandle();
+                : Utils.translate(exception);
         return ahArg;
         }
 
@@ -841,7 +836,7 @@ public class xFutureVar
             }
         catch (Throwable e)
             {
-            return frame.raiseException(translate(e));
+            return frame.raiseException(Utils.translate(e));
             }
         }
 
@@ -851,36 +846,6 @@ public class xFutureVar
     private TypeComposition ensureComposition(Container container, TypeConstant typeReferent)
         {
         return ensureClass(container, typeReferent.getConstantPool().ensureFutureVar(typeReferent));
-        }
-
-    /**
-     * Translate a Throwable into a WrapperException.
-     */
-    private static WrapperException translate(Throwable e)
-        {
-        if (e == null)
-            {
-            return null;
-            }
-        if (e instanceof WrapperException)
-            {
-            return (WrapperException) e;
-            }
-        if (e instanceof ExecutionException ||
-            e instanceof CompletionException)
-            {
-            return translate(e.getCause());
-            }
-        if (e instanceof CancellationException)
-            {
-            return xException.makeHandle(null, "cancelled").getException();
-            }
-        if (e instanceof InterruptedException)
-            {
-            return xException.makeHandle(null, "interrupted").getException();
-            }
-
-        throw new UnsupportedOperationException("Unexpected exception", e);
         }
 
     // ----- ObjectHandle --------------------------------------------------------------------------
@@ -930,13 +895,13 @@ public class xFutureVar
                     }
                 catch (Exception e)
                     {
-                    return translate(e).getExceptionHandle();
+                    return Utils.translate(e);
                     }
                 }
             return null;
             }
 
-        public int assign(ObjectHandle hValue, WrapperException ex)
+        public int assign(ObjectHandle hValue, ExceptionHandle hEx)
             {
             CompletableFuture<ObjectHandle> cf = f_future;
 
@@ -945,14 +910,14 @@ public class xFutureVar
                 return Op.R_NEXT;
                 }
 
-            if (ex == null)
+            if (hEx == null)
                 {
                 assert hValue != null;
                 cf.complete(hValue);
                 return Op.R_NEXT;
                 }
 
-            cf.completeExceptionally(ex);
+            cf.completeExceptionally(hEx.getException());
             return Op.R_EXCEPTION;
             }
 
@@ -989,11 +954,7 @@ public class xFutureVar
                 }
             catch (Throwable e)
                 {
-                if (e instanceof ExecutionException)
-                    {
-                    e = e.getCause();
-                    }
-                return e.toString();
+                return Utils.translate(e).toString();
                 }
             }
         }

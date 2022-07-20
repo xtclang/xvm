@@ -5,7 +5,10 @@ import java.sql.Timestamp;
 
 import java.util.List;
 
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
 
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
@@ -25,11 +28,14 @@ import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
+import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+import org.xvm.runtime.ObjectHandle.ExceptionHandle.WrapperException;
 import org.xvm.runtime.ServiceContext.Synchronicity;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xEnum.EnumHandle;
+import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xOrdered;
 
@@ -571,6 +577,36 @@ public abstract class Utils
     // ----- various run-time support --------------------------------------------------------------
 
     /**
+     * Translate a Throwable thrown by {@link CompletableFuture#get} to an ExceptionHandle.
+     */
+    public static ExceptionHandle translate(Throwable e)
+        {
+        if (e == null)
+            {
+            return null;
+            }
+        if (e instanceof WrapperException we)
+            {
+            return we.getExceptionHandle();
+            }
+        if (e instanceof ExecutionException ||
+            e instanceof CompletionException)
+            {
+            return translate(e.getCause());
+            }
+        if (e instanceof CancellationException)
+            {
+            return xException.makeHandle(null, "cancelled");
+            }
+        if (e instanceof InterruptedException)
+            {
+            return xException.makeHandle(null, "interrupted");
+            }
+
+        return xException.makeHandle(null, "Unexpected native exception: " + e.getMessage());
+        }
+
+    /**
      * Ensure that all SingletonConstants in the specified list are initialized and proceed
      * with the specified continuation.
      *
@@ -620,7 +656,7 @@ public abstract class Utils
                             ctxCurr.setSynchronicity(null, Synchronicity.Concurrent));
                         }
 
-                    return frame.wait(cfResult, continuation, Op.A_IGNORE);
+                    return frame.wait(cfResult, Op.A_IGNORE, continuation);
                     }
                 }
 

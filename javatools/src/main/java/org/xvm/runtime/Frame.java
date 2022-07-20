@@ -444,7 +444,7 @@ public class Frame
         }
 
     // a convenience method
-    public int wait(CompletableFuture<ObjectHandle> cf, Continuation continuation, int iReturn)
+    public int wait(CompletableFuture<ObjectHandle> cf, int iReturn, Continuation continuation)
         {
         assert continuation != null;
 
