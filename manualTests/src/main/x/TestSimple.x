@@ -4,38 +4,24 @@ module TestSimple
 
     void run()
         {
-        new Runner().run();
+        console.println("Hello");
 
-        @Inject Timer timer;
-        timer.schedule(Duration:3s, () ->
+        Test test = new Test();
+
+        @Future Tuple<Boolean, String> r1 = test.foo^();
+        &r1.passTo(t ->
             {
-            console.println("done");
+            console.println(t);
             });
-        }
 
-    service Runner
-        {
-        void run()
+        @Future Tuple<Boolean, Int> r2 = test.bar^();
+        &r2.passTo(t ->
             {
-            console.println("Hello");
-
-            Test test = new Test();
-
-            @Future Tuple<Boolean, String> r1 = test.foo^();
-            &r1.passTo(t ->
+            if (t[0])
                 {
-                console.println(t);
-                });
-
-            @Future Tuple<Boolean, String> r2 = test.bar^();
-            &r2.passTo(t ->
-                {
-                if (t[0])
-                    {
-                    console.println(t[1]);
-                    }
-                });
-            }
+                console.println(t[1]);
+                }
+            });
         }
 
     service Test
@@ -49,19 +35,19 @@ module TestSimple
                 result = "42";
                 });
 
-            return True, result;
+            return True, result; // this used to throw a run-time exception
             }
 
-        conditional String bar()
+        conditional Int bar()
             {
             @Inject Timer timer;
-            @Future String result;
+            @Future Int result;
             timer.schedule(Duration:1s, () ->
                 {
-                result = "42";
+                result = 42;
                 });
 
-            return True, result;
+            return True, result; // this used to throw a run-time exception
             }
         }
     }

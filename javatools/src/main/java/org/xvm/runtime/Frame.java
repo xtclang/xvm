@@ -38,6 +38,7 @@ import org.xvm.runtime.template.xNullable;
 
 import org.xvm.runtime.template.annotations.xFutureVar;
 import org.xvm.runtime.template.annotations.xFutureVar.FutureHandle;
+import org.xvm.runtime.template.annotations.xFutureVar.FutureTupleHandle;
 
 import org.xvm.runtime.template.collections.xTuple;
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
@@ -1243,23 +1244,27 @@ public class Frame
                 return new Utils.ReturnValues(f_aiReturn, ahValue, afDynamic).proceed(this);
 
             case Op.A_TUPLE:
+                {
+                Frame        framePrev = f_framePrev;
+                int          iReturn   = f_aiReturn[0];
+                TypeConstant typeRet   = iReturn < 0
+                        ? poolContext().typeTuple()
+                        : framePrev.isNative()
+                            ? f_function.getIdentityConstant().getReturnsAsTuple()
+                            : framePrev.getRegisterType(iReturn);
+
+                assert typeRet.isTuple();
+
                 if (afDynamic == null)
                     {
-                    Frame        framePrev = f_framePrev;
-                    int          iReturn   = f_aiReturn[0];
-                    TypeConstant type      = iReturn < 0
-                            ? poolContext().typeTuple()
-                            : framePrev.isNative()
-                                ? f_function.getIdentityConstant().getReturnsAsTuple()
-                                : framePrev.getRegisterType(iReturn);
                     return returnValue(iReturn,
-                        xTuple.makeHandle(type.ensureClass(this), ahValue), false);
+                        xTuple.makeHandle(typeRet.ensureClass(this), ahValue), false);
                     }
-                else
-                    {
-                    // TODO: dynamic -> tuple
-                    throw new UnsupportedOperationException();
-                    }
+
+                TypeConstant typeFuture = poolContext().ensureFutureVar(typeRet);
+                FutureHandle hFuture    = new FutureTupleHandle(typeFuture.ensureClass(this), ahValue);
+                return returnValue(iReturn, hFuture, true);
+                }
 
             default:
                 throw new IllegalArgumentException("iReturn=" + f_iReturn);

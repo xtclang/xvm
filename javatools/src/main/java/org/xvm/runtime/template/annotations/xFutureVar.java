@@ -26,6 +26,8 @@ import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xService.ServiceHandle;
 
+import org.xvm.runtime.template.collections.xTuple;
+
 import org.xvm.runtime.template.reflect.xVar;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
@@ -825,6 +827,9 @@ public class xFutureVar
         return new FutureHandle(clz, null, future);
         }
 
+    /**
+     * Represents a future ObjectHandle.
+     */
     public static class FutureHandle
             extends RefHandle
         {
@@ -966,6 +971,66 @@ public class xFutureVar
                 {
                 return Utils.translate(e).toString();
                 }
+            }
+        }
+
+    /**
+     * Represents a future TupleHandle.
+     */
+    public static class FutureTupleHandle
+            extends FutureHandle
+        {
+        private final ObjectHandle[] f_ahValue;
+
+        public FutureTupleHandle(TypeComposition clazz, ObjectHandle[] ahValue)
+            {
+            super(clazz, null, null);
+
+            f_ahValue = ahValue;
+            }
+
+        @Override
+        public CompletableFuture<ObjectHandle> getFuture()
+            {
+            CompletableFuture<ObjectHandle> cfLast = null;
+            for (ObjectHandle hValue : f_ahValue)
+                {
+                if (hValue instanceof FutureHandle hFuture)
+                    {
+                    cfLast = hFuture.getFuture();
+                    if (!cfLast.isDone())
+                        {
+                        break;
+                        }
+                    }
+                }
+            return cfLast;
+            }
+
+        @Override
+        protected int assign(Frame frame, int iReturn)
+            {
+            for (int i = 0, c = f_ahValue.length; i < c; i++)
+                {
+                ObjectHandle hValue = f_ahValue[i];
+
+                if (hValue instanceof FutureHandle hFuture)
+                    {
+                    assert hFuture.isAssigned(frame);
+
+                    try
+                        {
+                        f_ahValue[i] = hFuture.getFuture().get();
+                        }
+                    catch (Throwable e)
+                        {
+                        return frame.raiseException(Utils.translate(e));
+                        }
+                    }
+                }
+
+            TypeComposition clzTuple = getType().getParamType(0).ensureClass(frame);
+            return frame.assignValue(iReturn, xTuple.makeHandle(clzTuple, f_ahValue));
             }
         }
     }

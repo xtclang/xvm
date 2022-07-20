@@ -29,7 +29,6 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
-import org.xvm.runtime.ObjectHandle.ExceptionHandle.WrapperException;
 import org.xvm.runtime.ServiceContext.Synchronicity;
 
 import org.xvm.runtime.template.xBoolean;
@@ -585,7 +584,7 @@ public abstract class Utils
             {
             return null;
             }
-        if (e instanceof WrapperException we)
+        if (e instanceof ExceptionHandle.WrapperException we)
             {
             return we.getExceptionHandle();
             }
