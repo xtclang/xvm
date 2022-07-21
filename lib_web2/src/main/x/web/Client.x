@@ -45,7 +45,7 @@ interface Client
      */
     Response get(String | URI uri)
         {
-        return send(createRequest(uri.is(String) ? new URI(uri) : uri, HttpMethod.GET));   // TODO GG why is "HttpMethod." required here?
+        return send(createRequest(uri.is(String) ? new URI(uri) : uri, GET));
         }
 
     /**
@@ -59,7 +59,7 @@ interface Client
      */
     Response put(String | URI uri, Byte[] bytes, MediaType mediaType=Json)
         {
-        return send(createRequest(uri.is(String) ? new URI(uri) : uri, HttpMethod.PUT));
+        return send(createRequest(uri.is(String) ? new URI(uri) : uri, PUT));
         }
 
     /**
@@ -74,7 +74,7 @@ interface Client
      */
     Response post(String | URI uri, Byte[] bytes, MediaType mediaType=Json)
         {
-        Request request = createRequest(uri.is(String) ? new URI(uri) : uri, HttpMethod.POST);
+        Request request = createRequest(uri.is(String) ? new URI(uri) : uri, POST);
         Body body = request.ensureBody();
         body.mediaType = mediaType;
         body.bytes     = bytes;
@@ -90,7 +90,7 @@ interface Client
      */
     Response delete(String | URI uri)
         {
-        return send(createRequest(uri.is(String) ? new URI(uri) : uri, HttpMethod.DELETE));
+        return send(createRequest(uri.is(String) ? new URI(uri) : uri, DELETE));
         }
 
 
