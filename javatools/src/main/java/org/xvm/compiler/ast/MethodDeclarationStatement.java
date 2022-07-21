@@ -254,9 +254,9 @@ public class MethodDeclarationStatement
             }
 
         Statement stmtFirst = list.get(0);
-        if (stmtFirst instanceof ReturnStatement && ((ReturnStatement) stmtFirst).exprs.size() == 1)
+        if (stmtFirst instanceof ReturnStatement stmtRet && stmtRet.exprs.size() == 1)
             {
-            return ((ReturnStatement) stmtFirst).exprs.get(0);
+            return stmtRet.exprs.get(0);
             }
 
         return null;

@@ -196,7 +196,7 @@ public class NameResolver
                         IdentityConstant idClz = id.getClassIdentity();
                         if (idOuter == null)
                             {
-                            idOuter = idClz instanceof ClassConstant ? ((ClassConstant) idClz).getOutermost() : idClz;
+                            idOuter = idClz instanceof ClassConstant clz ? clz.getOutermost() : idClz;
                             }
 
                         // ask the component to resolve the name
@@ -420,9 +420,9 @@ public class NameResolver
                         return component;
                         }
 
-                    if (component instanceof CompositeComponent)
+                    if (component instanceof CompositeComponent composite)
                         {
-                        List<Component>   listProps = ((CompositeComponent) component).components();
+                        List<Component>   listProps = composite.components();
                         PropertyStructure prop0     = (PropertyStructure) listProps.get(0);
                         TypeConstant      type0     = prop0.getType();
                         for (int i = 1, c = listProps.size(); i < c; ++i)
@@ -445,13 +445,13 @@ public class NameResolver
                         }
 
                 case Typedef:
-                    if (component instanceof TypedefStructure)
+                    if (component instanceof TypedefStructure typedef)
                         {
-                        type = ((TypedefStructure) component).getType();
+                        type = typedef.getType();
                         }
-                    else if (component instanceof CompositeComponent)
+                    else if (component instanceof CompositeComponent composite)
                         {
-                        List<Component> listTypedefs = ((CompositeComponent) component).components();
+                        List<Component> listTypedefs = composite.components();
                         type = ((TypedefStructure) listTypedefs.get(0)).getType();
                         for (int i = 1, c = listTypedefs.size(); i < c; ++i)
                             {
@@ -507,8 +507,8 @@ public class NameResolver
             TypeConstant typeParam = type.getParamType(0);
             if (typeParam.isSingleDefiningConstant())
                 {
-                id        = typeParam.getDefiningConstant();
-                component = id instanceof IdentityConstant ? ((IdentityConstant) id).getComponent() : null;
+                id = typeParam.getDefiningConstant();
+                component = id instanceof IdentityConstant constId ? constId.getComponent() : null;
                 }
             else
                 {
@@ -568,10 +568,10 @@ public class NameResolver
             // try to use the constraint type
             // (e.g. CompileType.Key where CompileType is known to be a Map)
             Constant id         = typeConstraint.getDefiningConstant();
-            Component component = id instanceof IdentityConstant
-                    ? ((IdentityConstant) id).getComponent()
-                    : id instanceof PseudoConstant
-                        ? ((PseudoConstant) id).getDeclarationLevelClass().getComponent()
+            Component component = id instanceof IdentityConstant constId
+                    ? constId.getComponent()
+                    : id instanceof PseudoConstant constPseudo
+                        ? constPseudo.getDeclarationLevelClass().getComponent()
                         : null;
             if (component != null)
                 {
@@ -667,7 +667,7 @@ public class NameResolver
         {
         // it is possible that the name "resolved to" an ambiguous component, which is an error
         IdentityConstant id = component.getIdentityConstant();
-        if (component instanceof CompositeComponent && ((CompositeComponent) component).isAmbiguous())
+        if (component instanceof CompositeComponent composite && composite.isAmbiguous())
             {
             m_node.log(m_errs, Severity.ERROR, Compiler.NAME_AMBIGUOUS, m_sName);
             m_stage = Stage.ERROR;
@@ -789,9 +789,9 @@ public class NameResolver
             return ResolutionResult.UNKNOWN;
             }
 
-        if (constant instanceof IdentityConstant)
+        if (constant instanceof IdentityConstant id)
             {
-            Component component = ((IdentityConstant) constant).getComponent();
+            Component component = id.getComponent();
             if (component != null)
                 {
                 return resolvedComponent(component);
