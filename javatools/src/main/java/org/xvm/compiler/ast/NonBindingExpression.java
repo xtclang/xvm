@@ -66,11 +66,11 @@ public class NonBindingExpression
         }
 
     @Override
-    public TypeFit testFit(Context ctx, TypeConstant typeRequired, ErrorListener errs)
+    public TypeFit testFit(Context ctx, TypeConstant typeRequired, boolean fExhaustive, ErrorListener errs)
         {
         return type == null || typeRequired == null
                 ? TypeFit.Fit
-                : type.testFit(ctx, typeRequired.getType(), errs);
+                : type.testFit(ctx, typeRequired.getType(), fExhaustive, errs);
         }
 
     @Override

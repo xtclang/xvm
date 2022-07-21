@@ -317,7 +317,7 @@ public class RelOpExpression
         }
 
     @Override
-    public TypeFit testFit(Context ctx, TypeConstant typeRequired, ErrorListener errs)
+    public TypeFit testFit(Context ctx, TypeConstant typeRequired, boolean fExhaustive, ErrorListener errs)
         {
         // testing the fit of a particular type for the expression involves starting with an
         // implicit type, and determining if it:
@@ -330,7 +330,7 @@ public class RelOpExpression
 
         if (typeRequired != null && typeRequired.isTypeOfType())
             {
-            TypeFit fit = toTypeExpression().testFit(ctx, typeRequired, ErrorListener.BLACKHOLE);
+            TypeFit fit = toTypeExpression().testFit(ctx, typeRequired, fExhaustive, ErrorListener.BLACKHOLE);
             if (fit.isFit())
                 {
                 return fit;
@@ -398,11 +398,11 @@ public class RelOpExpression
         }
 
     @Override
-    public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
+    public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired, boolean fExhaustive, ErrorListener errs)
         {
         if (operator.getId() != Id.DIVREM || atypeRequired.length < 2)
             {
-            return super.testFitMulti(ctx, atypeRequired, errs);
+            return super.testFitMulti(ctx, atypeRequired, fExhaustive, errs);
             }
 
         TypeConstant typeLeft = expr1.getImplicitType(ctx);
@@ -698,12 +698,12 @@ public class RelOpExpression
 
         String sMethod = getDefaultMethodName();
         String sOp     = getOperatorString();
-        if (expr1.testFit(ctx, typeRequired, null).isFit())
+        if (expr1.testFit(ctx, typeRequired, false, null).isFit())
             {
             Set<MethodConstant> setOps = typeRequired.ensureTypeInfo().findOpMethods(sMethod, sOp, 1);
             for (MethodConstant idMethod : setOps)
                 {
-                if (expr2.testFit(ctx, idMethod.getRawParams()[0], null).isFit()
+                if (expr2.testFit(ctx, idMethod.getRawParams()[0], false, null).isFit()
                         && isAssignable(ctx, idMethod.getRawReturns()[0], typeRequired))
                     {
                     // TODO find best, not just the first
@@ -716,12 +716,12 @@ public class RelOpExpression
             {
             for (TypeConstant typeParam : typeRequired.getParamTypesArray())
                 {
-                if (expr1.testFit(ctx, typeParam, null).isFit())
+                if (expr1.testFit(ctx, typeParam, false, null).isFit())
                     {
                     Set<MethodConstant> setOps = typeParam.ensureTypeInfo().findOpMethods(sMethod, sOp, 1);
                     for (MethodConstant idMethod : setOps)
                         {
-                        if (expr2.testFit(ctx, idMethod.getRawParams()[0], null).isFit()
+                        if (expr2.testFit(ctx, idMethod.getRawParams()[0], false, null).isFit()
                                 && isAssignable(ctx, idMethod.getRawReturns()[0], typeRequired))
                             {
                             // TODO find best, not just the first
@@ -757,7 +757,7 @@ public class RelOpExpression
                 getDefaultMethodName(), getOperatorString(), 1);
         for (MethodConstant idMethod : setOps)
             {
-            if (expr2.testFit(ctx, idMethod.getRawParams()[0], null).isFit()
+            if (expr2.testFit(ctx, idMethod.getRawParams()[0], false, null).isFit()
                     && (typeRequired == null ||
                         isAssignable(ctx, idMethod.getRawReturns()[0], typeRequired)))
                 {

@@ -493,13 +493,13 @@ public class AssignmentStatement
                 // contributions
                 Context ctxInfer = ctxRValue.enterInferring(atypeLeft[0]);
 
-                TypeFit fit = rvalue.testFitMulti(ctxInfer, atypeTest, null);
+                TypeFit fit = rvalue.testFitMulti(ctxInfer, atypeTest, false, null);
 
                 if (!fit.isFit() && cLeft > 1)
                     {
                     Expression exprUnpack = new UnpackExpression(rvalue, null);
 
-                    fit = exprUnpack.testFitMulti(ctxInfer, atypeTest, null);
+                    fit = exprUnpack.testFitMulti(ctxInfer, atypeTest, false, null);
                     if (fit.isFit())
                         {
                         rvalue = exprUnpack;
@@ -553,7 +553,7 @@ public class AssignmentStatement
                         {
                         // test for a future assignment first
                         TypeConstant typeFuture = pool.ensureFutureVar(typeLeft);
-                        if (exprRight.testFit(ctxRValue, typeFuture, null).isFit())
+                        if (exprRight.testFit(ctxRValue, typeFuture, false, null).isFit())
                             {
                             typeLeft = typeFuture;
                             }

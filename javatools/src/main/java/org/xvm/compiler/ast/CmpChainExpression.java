@@ -603,7 +603,7 @@ public class CmpChainExpression
 
         for (Expression expr : expressions)
             {
-            if (!expr.testFit(ctx, type, null).isFit())
+            if (!expr.testFit(ctx, type, false, null).isFit())
                 {
                 return false;
                 }

@@ -131,14 +131,15 @@ public class MapExpression
         }
 
     @Override
-    public TypeFit testFit(Context ctx, TypeConstant typeRequired, ErrorListener errs)
+    public TypeFit testFit(Context ctx, TypeConstant typeRequired, boolean fExhaustive, ErrorListener errs)
         {
         CheckEntries:
         if (typeRequired != null)
             {
             TypeConstant typeMap = pool().typeMap();
 
-            if (!typeRequired.isA(typeMap) || !type.testFit(ctx, typeMap.getType(), null).isFit())
+            if (!typeRequired.isA(typeMap) ||
+                    !type.testFit(ctx, typeMap.getType(), fExhaustive, null).isFit())
                 {
                 break CheckEntries;
                 }
@@ -153,7 +154,7 @@ public class MapExpression
             TypeFit fit = TypeFit.Fit;
             for (Expression key : keys)
                 {
-                TypeFit fitKey = key.testFit(ctx, typeKey, null);
+                TypeFit fitKey = key.testFit(ctx, typeKey, fExhaustive, null);
                 if (!fitKey.isFit())
                     {
                     break CheckEntries;
@@ -163,7 +164,7 @@ public class MapExpression
 
             for (Expression val : values)
                 {
-                TypeFit fitVal = val.testFit(ctx, typeVal, null);
+                TypeFit fitVal = val.testFit(ctx, typeVal, fExhaustive, null);
                 if (!fitVal.isFit())
                     {
                     break CheckEntries;
@@ -173,7 +174,7 @@ public class MapExpression
             return fit;
             }
 
-        return super.testFit(ctx, typeRequired, errs);
+        return super.testFit(ctx, typeRequired, fExhaustive, errs);
         }
 
     @Override

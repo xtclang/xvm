@@ -426,7 +426,7 @@ public class ForEachStatement
                     case ITERABLE -> pool.typeIterable();
                     };
 
-                if (exprRVal.testFit(ctx, typeRVal, null).isFit())
+                if (exprRVal.testFit(ctx, typeRVal, false, null).isFit())
                     {
                     fFoundFit = true;
                     break;

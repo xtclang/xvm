@@ -124,13 +124,13 @@ public class ThrowExpression
         }
 
     @Override
-    public TypeFit testFit(Context ctx, TypeConstant typeRequired, ErrorListener errs)
+    public TypeFit testFit(Context ctx, TypeConstant typeRequired, boolean fExhaustive, ErrorListener errs)
         {
         return TypeFit.Fit;
         }
 
     @Override
-    public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
+    public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired, boolean fExhaustive, ErrorListener errs)
         {
         return TypeFit.Fit;
         }

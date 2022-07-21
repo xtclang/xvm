@@ -99,14 +99,15 @@ public class SwitchExpression
         }
 
     @Override
-    public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
+    public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired, boolean fExhaustive,
+                                ErrorListener errs)
         {
         TypeFit fit = TypeFit.Fit;
         for (AstNode node : contents)
             {
             if (node instanceof Expression expr)
                 {
-                fit = fit.combineWith(expr.testFitMulti(ctx, atypeRequired, errs));
+                fit = fit.combineWith(expr.testFitMulti(ctx, atypeRequired, fExhaustive, errs));
                 if (!fit.isFit())
                     {
                     return fit;

@@ -53,15 +53,17 @@ public abstract class DelegatingExpression
         }
 
     @Override
-    public TypeFit testFit(Context ctx, TypeConstant typeRequired, ErrorListener errs)
+    public TypeFit testFit(Context ctx, TypeConstant typeRequired, boolean fExhaustive,
+                           ErrorListener errs)
         {
-        return expr.testFit(ctx, typeRequired, errs);
+        return expr.testFit(ctx, typeRequired, fExhaustive, errs);
         }
 
     @Override
-    public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
+    public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired, boolean fExhaustive,
+                                ErrorListener errs)
         {
-        return expr.testFitMulti(ctx, atypeRequired, errs);
+        return expr.testFitMulti(ctx, atypeRequired, fExhaustive, errs);
         }
 
     @Override

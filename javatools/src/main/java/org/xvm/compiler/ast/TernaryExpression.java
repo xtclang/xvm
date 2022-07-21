@@ -101,20 +101,39 @@ public class TernaryExpression
         }
 
     @Override
-    public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
+    public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired, boolean fExhaustive,
+                                ErrorListener errs)
         {
-        return switch (generatePlan(ctx))
+        switch (generatePlan(ctx, fExhaustive))
             {
-            case ThenIsFalse ->
-                exprElse.testFitMulti(ctx, atypeRequired, errs);
+            case ThenIsFalse:
+                return exprElse.testFitMulti(ctx, atypeRequired, fExhaustive, errs);
 
-            case ElseIsFalse ->
-                exprThen.testFitMulti(ctx, atypeRequired, errs);
+            case ElseIsFalse:
+                return exprThen.testFitMulti(ctx, atypeRequired, fExhaustive, errs);
 
-            case Symmetrical ->
-                exprThen.testFitMulti(ctx, atypeRequired, errs).combineWith(
-                exprElse.testFitMulti(ctx, atypeRequired, errs));
-            };
+            case Symmetrical:
+                {
+                TypeFit fitThen = exprThen.testFitMulti(ctx, atypeRequired, fExhaustive, errs);
+                TypeFit fitElse = exprElse.testFitMulti(ctx, atypeRequired, fExhaustive, errs);
+                if (fitThen.isFit() && fitElse.isFit())
+                    {
+                    return fitThen.combineWith(fitElse);
+                    }
+
+                if ((fitThen.isFit() || fitElse.isFit()) && fExhaustive)
+                    {
+                    // only one of the branches fits; there's a possibility that a type inference
+                    // introduced by the condition expression will make both fit; since the caller
+                    // relies on an "exhaustive" check, let's spare no effort
+                    return testFitMultiExhaustive(ctx, atypeRequired, errs);
+                    }
+                return TypeFit.NoFit;
+                }
+
+            default:
+                throw new IllegalStateException();
+            }
         }
 
     @Override
@@ -139,7 +158,7 @@ public class TernaryExpression
         TypeConstant[] atypeThen, atypeElse;
         Usage          use = null;
         Plan           plan;
-        switch (plan = generatePlan(ctx))
+        switch (plan = generatePlan(ctx, false))
             {
             case ThenIsFalse:
                 atypeThen = new TypeConstant[] {pool.typeFalse()};
@@ -174,11 +193,11 @@ public class TernaryExpression
 
                     // try to figure out which side is more flexible
                     TypeFit fitThen = cElse > 0
-                            ? exprThen.testFitMulti(ctxThen, atypeElse, null)
+                            ? exprThen.testFitMulti(ctxThen, atypeElse, false, null)
                             : TypeFit.NoFit;
 
                     TypeFit fitElse = cThen > 0
-                            ? exprElse.testFitMulti(ctxElse, atypeThen, null)
+                            ? exprElse.testFitMulti(ctxElse, atypeThen, false, null)
                             : TypeFit.NoFit;
 
                     use = computeUsage(fitThen, fitElse);
@@ -192,12 +211,12 @@ public class TernaryExpression
                     TypeConstant[] atypeElseR = resolveConstraints(atypeElse);
                     if (atypeElseR != null)
                         {
-                        fitThen = exprThen.testFitMulti(ctxThen, atypeElseR, null);
+                        fitThen = exprThen.testFitMulti(ctxThen, atypeElseR, false, null);
                         }
 
                     if (atypeThenR != null)
                         {
-                        fitElse = exprElse.testFitMulti(ctxElse, atypeThenR, null);
+                        fitElse = exprElse.testFitMulti(ctxElse, atypeThenR, false, null);
                         }
 
                     use = computeUsage(fitThen, fitElse);
@@ -231,8 +250,8 @@ public class TernaryExpression
                     if (atypeThenR != null && atypeElseR != null)
                         {
                         TypeConstant[] atypeCommonR = selectCommonTypes(atypeThenR, atypeElseR);
-                        if (exprThen.testFitMulti(ctxThen, atypeCommonR, null).isFit() &&
-                            exprElse.testFitMulti(ctxElse, atypeCommonR, null).isFit() )
+                        if (exprThen.testFitMulti(ctxThen, atypeCommonR, false, null).isFit() &&
+                            exprElse.testFitMulti(ctxElse, atypeCommonR, false, null).isFit() )
                             {
                             atypeThen = atypeElse = atypeCommonR;
                             break;
@@ -622,20 +641,20 @@ public class TernaryExpression
         return atypeR;
         }
 
-    private Plan generatePlan(Context ctx)
+    private Plan generatePlan(Context ctx, boolean fExhaustive)
         {
         if (m_fConditional)
             {
             TypeConstant typeFalse = pool().typeFalse();
 
             // test "? (true, result) : false" first
-            if (exprElse.testFit(ctx, typeFalse, null).isFit())
+            if (exprElse.testFit(ctx, typeFalse, fExhaustive, null).isFit())
                 {
                 return m_plan = Plan.ElseIsFalse;
                 }
 
             // test "? false : (true, result)" next
-            if (exprThen.testFit(ctx, typeFalse, null).isFit())
+            if (exprThen.testFit(ctx, typeFalse, fExhaustive, null).isFit())
                 {
                 return m_plan = Plan.ThenIsFalse;
                 }

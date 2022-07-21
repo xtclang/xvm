@@ -133,7 +133,7 @@ public class ListExpression
         }
 
     @Override
-    public TypeFit testFit(Context ctx, TypeConstant typeRequired, ErrorListener errs)
+    public TypeFit testFit(Context ctx, TypeConstant typeRequired, boolean fExhaustive, ErrorListener errs)
         {
         ConstantPool pool = pool();
 
@@ -173,7 +173,7 @@ public class ListExpression
             TypeFit fit = TypeFit.Fit;
             for (int i = 0, cElements = exprs.size(); i < cElements; ++i)
                 {
-                fit = fit.combineWith(exprs.get(i).testFit(ctx, typeElement, errs));
+                fit = fit.combineWith(exprs.get(i).testFit(ctx, typeElement, fExhaustive, errs));
                 if (!fit.isFit())
                     {
                     break;
@@ -181,7 +181,7 @@ public class ListExpression
                 }
             return fit;
             }
-        return super.testFit(ctx, typeRequired, errs);
+        return super.testFit(ctx, typeRequired, fExhaustive, errs);
         }
 
     @Override

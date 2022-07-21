@@ -70,7 +70,7 @@ public class AsExpression
 
         TypeConstant type = exprType.ensureTypeConstant(ctx, errs).resolveAutoNarrowingBase();
 
-        if (!exprType.isDynamic() && expr1.testFit(ctx, type, null).isFit())
+        if (!exprType.isDynamic() && expr1.testFit(ctx, type, false, null).isFit())
             {
             typeRequest     = type;
             m_fCastRequired = false;

@@ -311,18 +311,19 @@ public class InvocationExpression
     @Override
     public TypeConstant[] getImplicitTypes(Context ctx)
         {
-        return resolveReturnTypes(ctx, null, ErrorListener.BLACKHOLE);
+        return resolveReturnTypes(ctx, null, false, ErrorListener.BLACKHOLE);
         }
 
     @Override
-    public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
+    public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired, boolean fExhaustive,
+                                ErrorListener errs)
         {
         if (atypeRequired == null || atypeRequired.length == 0)
             {
             return TypeFit.Fit;
             }
 
-        TypeConstant[] atype = resolveReturnTypes(ctx, atypeRequired,
+        TypeConstant[] atype = resolveReturnTypes(ctx, atypeRequired, fExhaustive,
                                     errs == null ? ErrorListener.BLACKHOLE : errs);
 
         return calcFitMulti(ctx, atype, atypeRequired);
@@ -341,7 +342,7 @@ public class InvocationExpression
      *         is void (or if its type cannot be determined)
      */
     protected TypeConstant[] resolveReturnTypes(Context ctx, TypeConstant[] atypeRequired,
-                                                ErrorListener errs)
+                                                boolean fExhaustive, ErrorListener errs)
         {
         ConstantPool pool = pool();
 
@@ -356,7 +357,7 @@ public class InvocationExpression
                     {
                     // the fact that getImplicitType() returned null may mean that the "left" name
                     // is not resolvable; try to produce a proper error message in that case
-                    exprLeft.testFit(ctx, pool.typeObject(), errs);
+                    exprLeft.testFit(ctx, pool.typeObject(), fExhaustive, errs);
                     return TypeConstant.NO_TYPES;
                     }
                 }
@@ -2872,7 +2873,7 @@ public class InvocationExpression
             Expression   exprArg   = listArgs.get(i);
 
             ctx = ctx.enterInferring(typeParam);
-            if (!exprArg.testFit(ctx, typeParam, errs).isFit())
+            if (!exprArg.testFit(ctx, typeParam, false, errs).isFit())
                 {
                 if (!errs.hasSeriousErrors())
                     {

@@ -60,11 +60,12 @@ public class UnpackExpression
         }
 
     @Override
-    public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
+    public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired, boolean fExhaustive,
+                                ErrorListener errs)
         {
         TypeConstant typeTuple = pool().ensureTupleType(atypeRequired);
 
-        return expr.testFit(ctx, typeTuple, errs);
+        return expr.testFit(ctx, typeTuple, fExhaustive, errs);
         }
 
     @Override

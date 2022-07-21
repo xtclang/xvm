@@ -226,12 +226,16 @@ public abstract class Expression
      *
      * @param ctx           the compilation context for the statement
      * @param typeRequired  the type that the expression is being asked if it can provide
+     * @param fExhaustive   if false, the caller will tolerate a false negative and will re-validate
+     *                      this expression anyway; otherwise an exhaustive test is expected, since
+     *                      a negative response will not be re-checked and will most likely impact
+     *                      the caller's processing
      * @param errs          (optional) the error listener to log to
      *
      * @return a TypeFit value describing the expression's capability (or lack thereof) to produce
      *         the required type
      */
-    public TypeFit testFit(Context ctx, TypeConstant typeRequired, ErrorListener errs)
+    public TypeFit testFit(Context ctx, TypeConstant typeRequired, boolean fExhaustive, ErrorListener errs)
         {
         if (typeRequired == null)
             {
@@ -247,7 +251,7 @@ public abstract class Expression
         if (hasMultiValueImpl())
             {
             return testFitMulti(ctx, typeRequired == null ? TypeConstant.NO_TYPES
-                                                          : new TypeConstant[] {typeRequired}, errs);
+                                                          : new TypeConstant[] {typeRequired}, fExhaustive, errs);
             }
 
         throw notImplemented();
@@ -261,12 +265,17 @@ public abstract class Expression
      *
      * @param ctx            the compilation context for the statement
      * @param atypeRequired  the types that the expression is being asked if it can provide
+     * @param fExhaustive    if false, the caller will tolerate a false negative and will re-validate
+     *                       this expression anyway; otherwise an exhaustive test is expected, since
+     *                       a negative response will not be re-checked and will most likely impact
+     *                       the caller's processing
      * @param errs           (optional) the error listener to log to
      *
      * @return a TypeFit value describing the expression's capability (or lack thereof) to produce
      *         the required type(s)
      */
-    public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
+    public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired, boolean fExhaustive,
+                                ErrorListener errs)
         {
         switch (atypeRequired.length)
             {
@@ -277,7 +286,7 @@ public abstract class Expression
             case 1:
                 if (hasSingleValueImpl())
                     {
-                    return testFit(ctx, atypeRequired[0], errs);
+                    return testFit(ctx, atypeRequired[0], fExhaustive, errs);
                     }
                 // fall through
 
@@ -289,6 +298,24 @@ public abstract class Expression
                         ? calcFitMulti(ctx, getImplicitTypes(ctx), atypeRequired)
                         : TypeFit.NoFit;
             }
+        }
+
+    /**
+     * An implementation of the "tesFit" API via the validation of the cloned expression.
+     *
+     * This implementation could be computationally expensive and should be used sparingly.
+     */
+    protected TypeFit testFitMultiExhaustive(Context ctx, TypeConstant[] atypeRequired,
+                                             ErrorListener errs)
+        {
+        Expression exprTemp = (Expression) clone();
+        Context    ctxTemp  = ctx.enter();
+        Expression exprNew  = exprTemp.validateMulti(ctxTemp, atypeRequired,
+                                        errs == null ? ErrorListener.BLACKHOLE : errs);
+        exprTemp.discard(true);
+        ctxTemp.discard();
+
+        return exprNew == null ? TypeFit.NoFit : TypeFit.Fit;
         }
 
     /**

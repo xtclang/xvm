@@ -1306,7 +1306,7 @@ public abstract class AstNode
                 else
                     {
                     // if *all* tests fail, report the errors from the first unsuccessful attempt
-                    fit = exprArg.testFit(ctx, typeParam, errsTemp);
+                    fit = exprArg.testFit(ctx, typeParam, true, errsTemp);
                     }
                 if (fit.isFit())
                     {

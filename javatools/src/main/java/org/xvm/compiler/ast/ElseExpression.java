@@ -75,12 +75,13 @@ public class ElseExpression
         }
 
     @Override
-    public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
+    public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired, boolean fExhaustive,
+                                ErrorListener errs)
         {
-        TypeFit fit = expr1.testFitMulti(ctx, atypeRequired, errs);
+        TypeFit fit = expr1.testFitMulti(ctx, atypeRequired, fExhaustive, errs);
         if (fit.isFit() && expr2.isCompletable())
             {
-            fit = fit.combineWith(expr2.testFitMulti(ctx, atypeRequired, errs));
+            fit = fit.combineWith(expr2.testFitMulti(ctx, atypeRequired, fExhaustive, errs));
             }
         return fit;
         }
@@ -105,7 +106,7 @@ public class ElseExpression
         TypeConstant[] atype2Req = selectCommonTypes(atype1, new TypeConstant[atype1.length]);
 
         if (atypeRequired != null && atypeRequired.length > 0 &&
-                (atype2Req == null || !expr2.testFitMulti(ctx, atype2Req, null).isFit()))
+                (atype2Req == null || !expr2.testFitMulti(ctx, atype2Req, false, null).isFit()))
             {
             atype2Req = atypeRequired;
             }

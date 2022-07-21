@@ -237,14 +237,14 @@ public class ReturnStatement
             do
                 {
                 // - most likely the expression matches the return types for the method
-                if (cRets < 0 || exprOld.testFitMulti(ctx, aRetTypes, null).isFit())
+                if (cRets < 0 || exprOld.testFitMulti(ctx, aRetTypes, false, null).isFit())
                     {
                     exprNew = exprOld.validateMulti(ctx, aRetTypes, errs);
                     break;
                     }
 
                 // - it could be a conditional false
-                if (fConditional && exprOld.testFit(ctx, pool.typeFalse(), null).isFit())
+                if (fConditional && exprOld.testFit(ctx, pool.typeFalse(), false, null).isFit())
                     {
                     exprNew = exprOld.validate(ctx, pool.typeFalse(), errs);
                     if (exprNew != null && (!exprNew.isConstant() || !exprNew.toConstant().equals(pool.valFalse())))
@@ -260,7 +260,7 @@ public class ReturnStatement
                 if (cRets == 1)
                     {
                     TypeConstant typeFuture = pool.ensureFutureVar(aRetTypes[0]);
-                    if (exprOld.testFit(ctx, typeFuture, null).isFit())
+                    if (exprOld.testFit(ctx, typeFuture, false, null).isFit())
                         {
                         exprNew = exprOld.validate(ctx, typeFuture, errs);
                         m_fFutureReturn = true;
@@ -270,7 +270,7 @@ public class ReturnStatement
 
                 // - it could be a tuple return
                 TypeConstant typeTuple = pool.ensureTupleType(aRetTypes);
-                if (exprOld.testFit(ctx, typeTuple, null).isFit())
+                if (exprOld.testFit(ctx, typeTuple, false, null).isFit())
                     {
                     exprNew = exprOld.validate(ctx, typeTuple, errs);
                     m_fTupleReturn = true;

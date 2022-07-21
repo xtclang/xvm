@@ -468,10 +468,10 @@ public class CaseManager<CookieType>
                         {
                         lIgnore |= 1L << i;
                         }
-                    else if (!exprField.testFit(ctx, m_atypeCond[i], null).isFit())
+                    else if (!exprField.testFit(ctx, m_atypeCond[i], false, null).isFit())
                         {
                         TypeConstant typeRange = pool.ensureRangeType(m_atypeCond[i]);
-                        if (exprField.testFit(ctx, typeRange, null).isFit())
+                        if (exprField.testFit(ctx, typeRange, false, null).isFit())
                             {
                             lRange |= 1L << i;
 
@@ -490,10 +490,10 @@ public class CaseManager<CookieType>
                     {
                     lIgnore = 1;
                     }
-                else if (!exprCase.testFit(ctx, m_typeCase, null).isFit())
+                else if (!exprCase.testFit(ctx, m_typeCase, false, null).isFit())
                     {
                     TypeConstant typeRange = pool.ensureRangeType(m_typeCase);
-                    if (exprCase.testFit(ctx, typeRange, null).isFit())
+                    if (exprCase.testFit(ctx, typeRange, false, null).isFit())
                         {
                         lRange    = 1;
                         typeMatch = typeRange;

@@ -372,7 +372,8 @@ public class MultipleLValueStatement
             }
 
         @Override
-        public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs)
+        public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired, boolean fExhaustive,
+                                    ErrorListener errs)
             {
             int              cReq      = atypeRequired == null ? 0 : atypeRequired.length;
             List<Expression> listExprs = ensureExpressions();
@@ -385,7 +386,7 @@ public class MultipleLValueStatement
             TypeFit fit = TypeFit.Fit;
             for (int i = 0; i < cReq; ++i)
                 {
-                TypeFit fitSingle = listExprs.get(i).testFit(ctx, atypeRequired[i], errs);
+                TypeFit fitSingle = listExprs.get(i).testFit(ctx, atypeRequired[i], fExhaustive, errs);
                 if (!fitSingle.isFit())
                     {
                     return TypeFit.NoFit;

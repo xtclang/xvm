@@ -55,7 +55,7 @@ public class UnaryComplementExpression
             typeRight = pool().typeBoolean();
             fBoolean  = true;
             }
-        else if (typeRequired != null && exprRight.testFit(ctx, typeRequired, null).isFit()
+        else if (typeRequired != null && exprRight.testFit(ctx, typeRequired, false, null).isFit()
                 && !typeRequired.ensureTypeInfo(errs).findOpMethods("not", "~", 0).isEmpty())
             {
             typeRight = typeRequired;

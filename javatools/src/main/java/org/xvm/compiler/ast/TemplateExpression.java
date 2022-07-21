@@ -108,11 +108,11 @@ public class TemplateExpression
             {
             Expression     exprOld = exprs.get(i);
             TypeConstant[] atypeExpr;
-            if (exprOld.testFit(ctx, T_STRING, null).isFit())
+            if (exprOld.testFit(ctx, T_STRING, false, null).isFit())
                 {
                 atypeExpr = A_STRING;
                 }
-            else if (exprOld.testFit(ctx, T_OBJECT, null).isFit())
+            else if (exprOld.testFit(ctx, T_OBJECT, false, null).isFit())
                 {
                 atypeExpr = A_OBJECT;
                 }

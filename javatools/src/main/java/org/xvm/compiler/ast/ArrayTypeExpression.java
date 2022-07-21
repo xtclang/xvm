@@ -85,12 +85,12 @@ public class ArrayTypeExpression
     // ----- compile phases ------------------------------------------------------------------------
 
     @Override
-    public TypeFit testFit(Context ctx, TypeConstant typeRequired, ErrorListener errs)
+    public TypeFit testFit(Context ctx, TypeConstant typeRequired, boolean fExhaustive, ErrorListener errs)
         {
         TypeConstant typeEl = type.ensureTypeConstant(ctx, errs);
         return typeEl.containsUnresolved()
                 ? TypeFit.NoFit
-                : super.testFit(ctx, typeRequired, errs);
+                : super.testFit(ctx, typeRequired, fExhaustive, errs);
         }
 
     @Override
