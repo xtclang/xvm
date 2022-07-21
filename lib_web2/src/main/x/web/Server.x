@@ -1,6 +1,3 @@
-import routing.UriTemplate;
-
-
 /**
  * A representation of an HTTP server.
  */
@@ -12,7 +9,8 @@ interface Server
     typedef function Response(Request) as Handler;
 
     /**
-     * A means to produce multiple Handlers.
+     * A means to produce multiple Handlers, so that the server can concurrently execute handlers
+     * for multiple incoming requests.
      */
     typedef function Handler() as HandlerFactory;
 
@@ -22,7 +20,7 @@ interface Server
      * @param route    the URI template that indicates the requests that can be handled
      * @param factory  the means to produce handlers that can respond to the specified URI
      */
-    void addRoute(UriTemplate route, HandlerFactory factory);
+    void addRoute(/* TODO UriTemplate */ String route, HandlerFactory factory);
 
     /**
      * Register the specified `HandlerFactory` for all unhandled URIs.
@@ -30,41 +28,55 @@ interface Server
      * @param factory  the means to produce handlers that can respond to any URI not handled by a
      *                 route registered via [addRoute]
      */
-    void defaultRoute(HandlerFactory factory);
+    void routeDefault(HandlerFactory factory);
 
-//    /**
-//     * A function that is given the request to pre-process is called a `Pre`.
-//     */
-//    typedef function void(Request) as Pre;
-//
-//    /**
-//     * A means to produce multiple Pre handlers.
-//     */
-//    typedef function Pre() as PreFactory;
-//
-//    /**
-//     * A function that is given the request to pre-process is called a `Post`.
-//     */
-//    typedef function (Request, Response)(Request, Response) as Post;
-//
-//    /**
-//     * A means to produce multiple Post handlers.
-//     */
-//    typedef function Post() as PostFactory;
-//
-//    /**
-//     * Register the specified `HandlerFactory` for the specified URI template.
-//     *
-//     * @param route    the URI template that indicates the requests that can be handled
-//     * @param factory  the means to produce handlers that can respond to the specified URI
-//     */
-//    void addPre(PreFactory factory); // TODO order?
-//
-//    /**
-//     * Register the specified `PostFactory` for the specified URI template.
-//     *
-//     * @param route    the URI template that indicates the requests that can be handled
-//     * @param factory  the means to produce handlers that can respond to the specified URI
-//     */
-//    void addPost(PostFactory factory); // TODO order
+    /**
+     * A function that is called with each incoming request is called a `Pre`. Despite the name,
+     * the `Pre` operations are not guaranteed to be run before the [Handler] and/or any [Post]s
+     * for the request.
+     *
+     * The `Pre` capability is useful for implementing simple capabilities, such as logging each
+     * request, but the functionality is limited, and the `Pre` cannot change the Request or alter
+     * the request processing control flow. For purposes of request processing, exceptions from the
+     * `Pre` are ignored, including [RequestAborted].
+     */
+    typedef function void(Request) as Pre;
+
+    /**
+     * A means to produce multiple [Pre] handlers, to allow the server to increase concurrent
+     * request handling execution.
+     */
+    typedef function Pre() as PreFactory;
+
+    /**
+     * Instruct the server to perform some operation on each incoming request. The order in which
+     * [Pre]s are added is not significant, and the `Pre` operations are not guaranteed to run in
+     * any specific order. Furthermore, and despite the name, the `Pre` operations are not even
+     * guaranteed to be run before the [Handler] and any [Post]s for the request.
+     *
+     * @param factory  the means to produce [Pre] handlers that will perform the operation
+     */
+    void addPre(PreFactory factory);
+
+    /**
+     * A function that is given the request to both pre- **and** post-process is called a `Post`.
+     */
+    typedef function Response(Handler, Request) as Post;
+
+    /**
+     * A means to produce multiple [Post] handlers, to allow the server to increase concurrent
+     * request handling execution.
+     */
+    typedef function Post() as PostFactory;
+
+    /**
+     * Instruct the server to delegate each incoming request to the specified operation. The order
+     * in which [Post]s are added to the server is significant: The most recently added `Post` will
+     * be executed first for subsequent incoming requests.
+     *
+     * Each implementation of TODO
+     *
+     * @param factory  the means to produce [Post] handlers that will perform the operation
+     */
+    void addPost(PostFactory factory);
     }

@@ -1,4 +1,4 @@
-import ecstasy.net.IPAddress;
+import net.IPAddress;
 
 
 /**
@@ -187,6 +187,7 @@ import ecstasy.net.IPAddress;
  * exist for the application to place custom code on.
  *
  * TODO
+ *   - doc how to get a session passed to an end point
  *   - cookie: two flags available to protect cookies included in an HTTP response:
  *     (1) "Secure" implies HTTPS only, and
  *     (2) "HttpOnly" protects the cookie from client-side JavaScript

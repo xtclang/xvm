@@ -16,7 +16,7 @@ const QueryParameterBinder
             String name = "";
             if (parameter.is(ParameterBinding))
                 {
-                name = parameter.templateParameter;
+                name ?= parameter.templateParameter;
                 }
             if (name == "")
                 {

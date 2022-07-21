@@ -73,7 +73,7 @@ interface Body
      *
      * @return the BinaryOutput to write the bytes of the body to
      */
-    BinaryOutput bodyWriter(Int knownSize=0);
+    BinaryOutput bodyWriter(Int? knownSize=Null);
 
     /**
      * In order to _provide_ the body as a stream of bytes, the caller can use this method, passing

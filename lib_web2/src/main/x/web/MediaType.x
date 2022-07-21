@@ -11,6 +11,59 @@ import collections.LRUCache;
  */
 const MediaType
     {
+    // ----- standard and/or common predefined media types -----------------------------------------
+
+    static MediaType JavaScript  = predefine("application/javascript",                   "js");
+    static MediaType Json        = predefine("application/json",                         "json");
+    static MediaType JsonLD      = predefine("application/ld+json",                      "jsonld");
+    static MediaType JsonPatch   = predefine("application/json-patch+json");
+    static MediaType PDF         = predefine("application/pdf",                          "pdf");
+    static MediaType SQL         = predefine("application/sql",                          "sql");
+    static MediaType JsonAPI     = predefine("application/vnd.api+json");
+    static MediaType Word        = predefine("application/msword",                       "doc");
+    static MediaType WordX       = predefine("application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                                                                                         "docx");
+    static MediaType Excel       = predefine("application/vnd.ms-excel",                 "xls");
+    static MediaType ExcelX      = predefine("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                                                                         "xlsx");
+    static MediaType PowerPoint  = predefine("application/vnd.ms-powerpoint",            "ppt");
+    static MediaType PowerPointX = predefine("application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                                                                                         "pptx");
+    static MediaType OpenOffice  = predefine("application/vnd.oasis.opendocument.text",  "odt");
+    static MediaType FormURL     = predefine("application/x-www-form-urlencoded");
+    static MediaType XML         = predefine(["application/xml", "text/xml"],            "xml");
+    static MediaType XHTML       = predefine("application/xhtml+xml",                    "xhtml");
+    static MediaType Zip         = predefine("application/zip",                          "zip");
+    static MediaType ZStd        = predefine("application/zstd",                         "zst");
+    static MediaType CDAudio     = predefine("application/x-cdf",                        "cda");
+    static MediaType AACAudio    = predefine("audio/aac",                                "aac");
+    static MediaType MpegAudio   = predefine(["audio/mpeg", "audio/MPA", "audio/mpa-robust"],
+                                                                                         "mp3");
+    static MediaType OGG         = predefine("audio/ogg",                                "ogg");
+    static MediaType Opus        = predefine("audio/opus",                               "opus");
+    static MediaType WAV         = predefine("audio/wav",                                "wav");
+    static MediaType WEBMAudio   = predefine("audio/webm",                               "weba");
+    static MediaType MIDI        = predefine(["audio/midi", "audio/x-midi"],             ["mid", "midi"]);
+    static MediaType AVIF        = predefine("image/avif",                               "avif");
+    static MediaType JPEG        = predefine("image/jpeg",                               ["jpg", "jpeg", "jfif", "pjpeg", "pjp"]);
+    static MediaType PNG         = predefine("image/png",                                "png");
+    static MediaType SVG         = predefine("image/svg+xml",                            "svg");
+    static MediaType WebP        = predefine("image/webp",                               "webp");
+    static MediaType FormData    = predefine("multipart/form-data");
+    static MediaType CSS         = predefine("text/css",                                 "css");
+    static MediaType CSV         = predefine("text/csv",                                 "csv");
+    static MediaType HTML        = predefine("text/html",                                ["htm", "html"]);
+    static MediaType Text        = predefine("text/plain",                               "txt");
+
+    /**
+     * All of the pre-defined media types.
+     */
+    static MediaType[] Predefined = [JavaScript, Json, JsonLD, JsonPatch, PDF, SQL, JsonAPI,
+            Word, WordX, Excel, ExcelX, PowerPoint, PowerPointX, OpenOffice, FormURL, XML, XHTML,
+            Zip, ZStd, CDAudio, AACAudio, MpegAudio, OGG, Opus, WAV, WEBMAudio, MIDI,
+            AVIF, JPEG, PNG, SVG, WebP, FormData, CSS, CSV, HTML, Text, ];
+
+
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -53,19 +106,26 @@ const MediaType
     /**
      * Internal constructor for a MediaType parsed from a string.
      *
-     * @param text        the text that the MediaType was parsed from
-     * @param type        the type, such as "text" in `text/html`
-     * @param subtype     the sub-type, such as "html" in `text/html`
-     * @param params      (optional) MediaType parameters, which are almost never present
-     * @param extensions  (optional) file extensions that the MediaType maps to
+     * @param text          the text that the MediaType was parsed from
+     * @param type          the type, such as "text" in `text/html`
+     * @param subtype       the sub-type, such as "html" in `text/html`
+     * @param params        (optional) MediaType parameters, which are almost never present
+     * @param extensions    (optional) file extensions that the MediaType maps to
+     * @param alternatives  (optional) alternative MediaTypes
      */
-    private construct(String text, String type, String subtype, Map<String, String> params, String[] extensions=[])
+    private construct(String              text,
+                      String              type,
+                      String              subtype,
+                      Map<String, String> params,
+                      String[]            extensions   = [],
+                      MediaType[]         alternatives = [])
         {
-        this.text       = text;
-        this.type       = type;
-        this.subtype    = subtype;
-        this.params     = params;
-        this.extensions = extensions;
+        this.text         = text;
+        this.type         = type;
+        this.subtype      = subtype;
+        this.params       = params;
+        this.extensions   = extensions;
+        this.alternatives = alternatives;
         }
 
     /**
@@ -144,7 +204,7 @@ const MediaType
     private static LRUCache<String, Marker|MediaType> cache = new LRUCache(1000);
 
 
-    // ----- TODO ------------------------------------------------------------------
+    // ----- Object methods ------------------------------------------------------------------------
 
     @Override
     String toString()
@@ -153,80 +213,35 @@ const MediaType
         }
 
 
-    // ----- standard media types ------------------------------------------------------------------
-
-    // TODO GG remove the various "Array<String>:"
-    enum Std
-            extends MediaType
-        {
-        JavaScript  ("application/javascript",                                                    "js"),
-        Json        ("application/json",                                                          "json"),
-        JsonLD      ("application/ld+json",                                                       "jsonld"),
-        PDF         ("application/pdf",                                                           "pdf"),
-        SQL         ("application/sql",                                                           "sql"),
-        JsonAPI     ("application/vnd.api+json",                                                  Array<String>:[]),
-        OpenOffice  ("application/vnd.oasis.opendocument.text",                                   "odt"),
-        Word        ("application/msword",                                                        "doc"),
-        WordX       ("application/vnd.openxmlformats-officedocument.wordprocessingml.document",   "docx"),
-        Excel       ("application/vnd.ms-excel",                                                  "xls"),
-        ExcelX      ("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",         "xlsx"),
-        PowerPoint  ("application/vnd.ms-powerpoint",                                             "ppt"),
-        PowerPointX ("application/vnd.openxmlformats-officedocument.presentationml.presentation", "pptx"),
-        FormURL     ("application/x-www-form-urlencoded",                                         Array<String>:[]),
-        XML         (Array<String>:["application/xml", "text/xml"],                               "xml"),
-        XHTML       ("application/xhtml+xml",                                                     "xhtml"),
-        Zip         ("application/zip",                                                           "zip"),
-        ZStd        ("application/zstd",                                                          "zst"),
-        CDAudio     ("application/x-cdf",                                                         "cda"),
-        MpegAudio   (Array<String>:["audio/mpeg", "audio/MPA", "audio/mpa-robust"],               "mp3"),
-        AACAudio    ("audio/aac",                                                                 "aac"),
-        OGG         ("audio/ogg",                                                                 "ogg"),
-        Opus        ("audio/opus",                                                                "opus"),
-        WAV         ("audio/wav",                                                                 "wav"),
-        WEBMAudio   ("audio/webm",                                                                "weba"),
-        MIDI        (Array<String>:["audio/midi", "audio/x-midi"],                                Array<String>:["mid", "midi"]),
-        AVIF        ("image/avif",                                                                "avif"),
-        JPEG        ("image/jpeg",                                                                Array<String>:["jpg", "jpeg", "jfif", "pjpeg", "pjp"]),
-        PNG         ("image/png",                                                                 "png"),
-        SVG         ("image/svg+xml",                                                             "svg"),
-        WebP        ("image/webp",                                                                "webp"),
-        FormData    ("multipart/form-data",                                                       Array<String>:[]),
-        CSS         ("text/css",                                                                  "css"),
-        CSV         ("text/csv",                                                                  "csv"),
-        HTML        ("text/html",                                                                 Array<String>:["htm", "html"]),
-        Text        ("text/plain",                                                                "txt"),
-        ;
-
-        /**
-         * Construct one of the pre-defined (aka "standard") media types.
-         *
-         * @param name       one or more media type strings in the form "type/subtype"
-         * @param extension  one or more file extensions to associate with the media type
-         */
-        construct(String|String[] name, String|String[] extension)
-            {
-            if (name.is(String[]))
-                {
-                alternatives = new MediaType[];
-                for (Int index = 1, Int count = name.size; index < count; ++index)
-                    {
-                    assert MediaType altType := MediaType.of(name[index]);
-                    alternatives.add(altType);
-                    }
-                name = name[0];
-                }
-
-            text = name;
-            assert (type, subtype, params) := parseMediaType(name);
-
-            extensions = extension.is(String[])
-                    ? extension
-                    : [extension];
-            }
-        }
-
-
     // ----- helpers -------------------------------------------------------------------------------
+
+    /**
+     * Construct one of the pre-defined (aka "standard") media types.
+     *
+     * @param name       one or more media type strings in the form "type/subtype"
+     * @param extension  one or more file extensions to associate with the media type
+     */
+    private static MediaType predefine(String|String[] name, String|String[] extension = [])
+        {
+        MediaType[] alternatives = [];
+        if (name.is(String[]))
+            {
+            alternatives = new MediaType[];
+            for (Int index = 1, Int count = name.size; index < count; ++index)
+                {
+                assert MediaType altType := MediaType.of(name[index]);
+                alternatives.add(altType);
+                }
+            name = name[0];
+            }
+
+        assert (String type, String subtype, Map<String, String> params) := parseMediaType(name);
+        String[] extensions = extension.is(String[])
+                ? extension
+                : [extension];
+
+        return new MediaType(name, type, subtype, params, extensions, alternatives);
+        }
 
     /**
      * Given the passed text containing MediaType information, validate that the text is correctly

@@ -1,24 +1,19 @@
 /**
- * The Web Server API.
+ * Web client and server APIs.
+ *
+ * TODO pre and post examples, and how to configure
+ * TODO auth and auth, and examples
  */
 module web.xtclang.org
     {
     package collections import collections.xtclang.org;
-    package json import json.xtclang.org;
+    package crypto      import crypto.xtclang.org;
+    package json        import json.xtclang.org;
+    package net         import net.xtclang.org;
 
     import ecstasy.reflect.Parameter;
 
-// TODO temporary stuff to move or remove (See Server#Pre and Server#Post)
-    interface PreProcessor
-        {
-        void process(Request request);
-        }
-
-    interface PostProcessor
-        {
-        void process(Request request, Response response);
-        }
-// end TODO
+    // ----- fill in name here ------------------------------------------------------------
 
     /**
      * A mixin that represents a set of endpoints for a specific URI path.
@@ -43,7 +38,44 @@ module web.xtclang.org
      *         }
      */
     mixin WebService(String path = "/")
-            into service;
+            into service
+        {
+        Request?  request;
+        Response? response;
+        Session?  session;
+
+// TODO can this take the chain and do the work?
+// Response process(...)
+        void begin(Request request, Response response, Session? session)
+            {
+            this.request  = request;
+            this.response = response;
+            this.session  = session;
+            }
+
+        void end()
+            {
+            this.request  = Null;
+            this.response = Null;
+            this.session  = Null;
+            }
+        }
+
+    /**
+     * A generic HTTP endpoint.
+     *
+     * Example:
+     *
+     *     @Endpoint(GET, "/{id}")
+     *
+     * @param httpMethod  the name of the HTTP method
+     * @param path        the optional path to reach this endpoint
+     */
+    mixin Endpoint(HttpMethod httpMethod, String path = "")
+            into Method;
+
+
+    // ----- fill in name here ------------------------------------------------------------
 
     /**
      * `TrustLevel` is an enumeration that approximates a point-in-time level of trust associated
@@ -51,6 +83,39 @@ module web.xtclang.org
      * operation.
      */
     enum TrustLevel {None, Normal, High, Highest}
+
+
+    // ----- fill in name here ------------------------------------------------------------
+
+    /**
+     * A mixin to indicate the media-types produced by a particular component.
+     *
+     * The String `mediaType` value must **not** include wild-cards.
+     *
+     * TODO CP explain why this can be used on a web service and not just on end points
+     *
+     * Example:
+     *
+     *     @Get("/{id}")
+     *     @Produces(Json)
+     *     conditional Cart getCart(@PathParam("id") String id) {...}
+     */
+    mixin Produces(MediaType|MediaType[] mediaType)
+            into WebService | Endpoint;
+
+    /**
+     * A mixin to indicate the media-types consumed by a particular component.
+     *
+     * The String `mediaType` value may include wild-cards, as allowed in an "Accept" header.
+     *
+     * Example:
+     *
+     *     @Patch("/{id}/items")
+     *     @Consumes(Json)
+     *     HttpStatus updateItem(@PathParam String id, @Body Item item) {...}
+     */
+    mixin Consumes(MediaType|MediaType[] mediaType)
+            into WebService | Endpoint;
 
     /**
      * This annotation, `@LoginRequired`, is used to mark a web service call -- or any containing
@@ -80,7 +145,7 @@ module web.xtclang.org
      *                  web service
      */
     mixin LoginRequired(TrustLevel security=Normal)
-            into service | Method;
+            into WebService | Endpoint;
 
     /**
      * This annotation, `@LoginOptional`, is used to mark a web service call -- or any containing
@@ -91,7 +156,7 @@ module web.xtclang.org
      * annotation.
      */
     mixin LoginOptional
-            into service | Method;
+            into WebService | Endpoint;
 
     /**
      * This annotation, `@HttpsRequired`, is used to mark a web service call -- or any containing
@@ -119,7 +184,7 @@ module web.xtclang.org
      * TLS", or vice versa.
      */
     mixin HttpsRequired
-            into service | Method;
+            into WebService | Endpoint;
 
     /**
      * This annotation, `@HttpsOptional`, is used to mark a web service call -- or any containing
@@ -130,7 +195,7 @@ module web.xtclang.org
      * annotation.
      */
     mixin HttpsOptional
-            into service | Method;
+            into WebService | Endpoint;
 
     /**
      * This annotation, `@StreamingRequest`, is used to mark a web service call -- or any containing
@@ -140,7 +205,7 @@ module web.xtclang.org
      * (or while) processing the request.
      */
     mixin StreamingRequest
-            into service | Method;
+            into WebService | Endpoint;
 
     /**
      * This annotation, `@StreamingResponse`, is used to mark a web service call -- or any
@@ -150,21 +215,10 @@ module web.xtclang.org
      * memory before starting to send it back to the client.
      */
     mixin StreamingResponse
-            into service | Method;
+            into WebService | Endpoint;
 
 
     // ----- handler method annotations ------------------------------------------------------------
-
-    /**
-     * A generic HTTP endpoint.
-     *
-     * TODO example
-     *
-     * @param httpMethod     the name of the HTTP method
-     * @param path       the optional path to reach this endpoint
-     */
-    mixin Endpoint(HttpMethod httpMethod, String path = "")
-            into Method;
 
     /**
      * An HTTP `GET` method.
@@ -172,8 +226,7 @@ module web.xtclang.org
      * @param path  the optional path to reach this endpoint
      */
     mixin Get(String path = "")
-            extends Endpoint(GET, path)
-            into Method;
+            extends Endpoint(GET, path);
 
     /**
      * An HTTP `POST` method.
@@ -181,8 +234,7 @@ module web.xtclang.org
      * @param path  the optional path to reach this endpoint
      */
     mixin Post(String path = "")
-            extends Endpoint(POST, path)
-            into Method;
+            extends Endpoint(POST, path);
 
     /**
      * An HTTP `PATCH` method.
@@ -190,8 +242,7 @@ module web.xtclang.org
      * @param path  the optional path to reach this endpoint
      */
     mixin Patch(String path = "")
-            extends Endpoint(PATCH, path)
-            into Method;
+            extends Endpoint(PATCH, path);
 
     /**
      * An HTTP `PUT` method.
@@ -199,8 +250,7 @@ module web.xtclang.org
      * @param path  the optional path to reach this endpoint
      */
     mixin Put(String path = "")
-            extends Endpoint(PUT, path)
-            into Method;
+            extends Endpoint(PUT, path);
 
     /**
      * An HTTP `DELETE` method.
@@ -208,28 +258,7 @@ module web.xtclang.org
      * @param path  the optional path to reach this endpoint
      */
     mixin Delete(String path = "")
-            extends Endpoint(DELETE, path)
-            into Method;
-
-    /**
-     * A mixin to indicate the media-types produced by a particular component.
-     *
-     * The String `mediaType` value must **not** include wild-cards.
-     *
-     * TODO example
-     */
-    mixin Produces(String|MediaType|MediaType[] mediaType)
-            into Method;
-
-    /**
-     * A mixin to indicate the media-types consumed by a particular component.
-     *
-     * The String `mediaType` value may include wild-cards, as allowed in an "Accept" header.
-     *
-     * TODO example
-     */
-    mixin Consumes(String|MediaType|MediaType[] mediaType)
-            into Method;
+            extends Endpoint(DELETE, path);
 
 
     // ----- parameter annotations -----------------------------------------------------------------
@@ -237,40 +266,58 @@ module web.xtclang.org
     /**
      * A mixin to indicate that a Parameter is bound to a request value.
      */
-    @Abstract mixin ParameterBinding(String templateParameter = "")
+    @Abstract mixin ParameterBinding(String? templateParameter = Null)
             into Parameter;
 
     /**
      * A mixin to indicate that a Parameter is bound to a request URI path segment.
      *
-     * TODO example
+     * Example:
+     *
+     *     @Delete("/{id}")
+     *     HttpStatus deleteCart(@PathParam("id") String id) {...}
      */
-    mixin PathParam(String templateParameter = "")
+    mixin PathParam(String? templateParameter = Null)
             extends ParameterBinding(templateParameter);
 
     /**
      * A mixin to indicate that a Parameter is bound to a request URI query parameter.
      *
-     * TODO example
+     * Example:
+     *
+     *     @Get("/")
+     *     @Produces(Json)
+     *     Collection<Item> getItems(@QueryParam("tags")  String? tags     = Null,
+     *                               @QueryParam("order") String  order    = "price",
+     *                               @QueryParam("page")  Int     pageNum  = 1,
+     *                               @QueryParam("size")  Int     pageSize = 10)
+     *         {...}
      */
-    mixin QueryParam(String templateParameter = "")
+    mixin QueryParam(String? templateParameter = Null)
             extends ParameterBinding(templateParameter);
 
     /**
      * A mixin to indicate that a Parameter is bound to a request header value.
      *
-     * TODO example
+     * Example:
+     *
+     *     @Get("login")
+     *     @Produces("application/json")
+     *     HttpStatus login(@HeaderParam("Authorization") String auth) {...}
      */
-    mixin HeaderParam(String templateParameter = "")
+    mixin HeaderParam(String? templateParameter = Null)
             extends ParameterBinding(templateParameter);
 
     /**
      * A mixin to indicate that a value is bound to a request or response body.
      *
-     * TODO example
+     *     @Post("/{id}/items")
+     *     @Consumes(Json)
+     *     @Produces(Json)
+     *     (Item, HttpStatus) addItem(@PathParam String id, @BodyParam Item item) {...}
      */
     mixin BodyParam
-            into Parameter;
+            extends ParameterBinding;
 
 
     // ----- exceptions ----------------------------------------------------------------------------
@@ -279,9 +326,9 @@ module web.xtclang.org
      * An exception used to abort request processing and return a specific HTTP error status to the
      * client that issued the request.
      *
-     * Generally, request processing should return a [Response] object; throwing a RequestAborted
-     * exception is more expensive, but it allows request processing to immediately and abruptly
-     * abort, without having to proceed through a method's (or a call stack's) normal termination.
+     * Generally, request processing should complete normally, even when the result of the
+     * processing is an error. This exception allows that normal completion to be bypassed, but its
+     * general use is discouraged.
      */
     const RequestAborted(HttpStatus status, String? text = Null, Exception? cause = Null)
             extends Exception(text, cause);

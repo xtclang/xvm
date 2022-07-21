@@ -10,7 +10,7 @@ const TextPlainCodec
         {
         HashSet<MediaType> mediaTypes = new HashSet();
         mediaTypes.addAll(additionalTypes);
-        mediaTypes.add(Std.Text);
+        mediaTypes.add(Text);
         types = mediaTypes.freeze(True);
         }
 

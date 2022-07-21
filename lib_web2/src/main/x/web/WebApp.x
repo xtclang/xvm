@@ -1,16 +1,15 @@
 /**
- * The `@WebModule` annotation is used to mark a module as being a web-application module. It can
+ * The `@WebApp` annotation is used to mark a module as being a web-application module. It can
  * contain any number of discoverable HTTP endpoints.
  *
- * Within an `@WebModule`-annotated module, a number of `@Inject` injections are assumed to be
+ * Within an `@WebApp`-annotated module, a number of `@Inject` injections are assumed to be
  * supported by the container:
  *
  * |    Type      |    Name    | Description                        |
  * |--------------|------------|------------------------------------|
- * | Request  |   _(any)_  | The current request object         |
- * | Response |   _(any)_  | The current response object        |
+ * | Server       |
  */
-mixin WebModule
+mixin WebApp
         into Module
     {
     // TODO HandlerFactory configureRunningWebApp()
