@@ -390,11 +390,11 @@ public class ListExpression
      */
     private TypeConstant resolveElementType(TypeConstant typeRequired)
         {
-        TypeConstant typeElement = typeRequired.resolveGenericType("Element");
-        if (typeElement == null && typeRequired instanceof UnionTypeConstant typeUnion)
+        if (typeRequired instanceof UnionTypeConstant typeUnion)
             {
             // try to calculate an element type that would probably accommodate the required type
-            Set<TypeConstant> setSeqType = typeUnion.collectMatching(pool().typeList(), null);
+            TypeConstant      typeElement = null;
+            Set<TypeConstant> setSeqType  = typeUnion.collectMatching(pool().typeList(), null);
             if (!setSeqType.isEmpty())
                 {
                 for (TypeConstant typeSeq : setSeqType)
@@ -418,8 +418,12 @@ public class ListExpression
                         }
                     }
                 }
+            if (typeElement != null)
+                {
+                return typeElement;
+                }
             }
-        return typeElement;
+        return typeRequired.resolveGenericType("Element");
         }
 
     /**

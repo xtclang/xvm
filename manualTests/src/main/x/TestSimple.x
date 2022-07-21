@@ -2,9 +2,10 @@ module TestSimple
     {
     @Inject Console console;
 
-    void run(String[] args=[])
+    void run()
         {
-        }
+        String|String[] extension = []; // this used to fail to compile
 
-    void foo(); // this used to be allowed to compile
+        console.println(extension);
+        }
     }
