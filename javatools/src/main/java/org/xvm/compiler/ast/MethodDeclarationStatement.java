@@ -421,11 +421,18 @@ public class MethodDeclarationStatement
                     }
                 else
                     {
-                    if (fFunction && body == null &&
-                            container.getFormat() != Component.Format.INTERFACE)
+                    if (body == null)
                         {
-                        log(errs, Severity.ERROR, Compiler.FUNCTION_BODY_MISSING, sName);
-                        return;
+                        if (fFunction && container.getFormat() != Component.Format.INTERFACE)
+                            {
+                            log(errs, Severity.ERROR, Compiler.FUNCTION_BODY_MISSING, sName);
+                            return;
+                            }
+                        if (!fFunction && container instanceof ClassStructure clz && clz.isSingleton())
+                            {
+                            log(errs, Severity.ERROR, Compiler.METHOD_BODY_MISSING, sName);
+                            return;
+                            }
                         }
 
                     if (fConstructor && container.getFormat() == Component.Format.INTERFACE &&

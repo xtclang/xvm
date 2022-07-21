@@ -1307,6 +1307,10 @@ public class Compiler
      */
     public static final String SWITCH_OVERFLOW                     = "COMPILER-181";
     /**
+     * Method on a singleton class cannot be abstract: {0}.
+     */
+    public static final String METHOD_BODY_MISSING                 = "COMPILER-182";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                     = "COMPILER-NI";
