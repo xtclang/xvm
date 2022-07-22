@@ -1,3 +1,5 @@
+- implement timeout for IO operations (interrupt IO executor threads)
+
 - move ecstasy.mgmt package to a separate module
 
 - MapMapping doesn't work for properties that declared as Map classes, e.g.
