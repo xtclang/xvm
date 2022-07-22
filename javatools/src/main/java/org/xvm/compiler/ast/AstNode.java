@@ -20,6 +20,7 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 
 import org.xvm.asm.Component;
+import org.xvm.asm.ComponentResolver;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
@@ -257,9 +258,8 @@ public abstract class AstNode
                     }
                 else if (oVal instanceof List list)
                     {
-                    List<AstNode>      listOld = list;
                     ArrayList<AstNode> listNew = new ArrayList<>();
-                    for (AstNode node : listOld)
+                    for (AstNode node : (List<AstNode>) list)
                         {
                         listNew.add(node.clone());
                         }
@@ -392,6 +392,16 @@ public abstract class AstNode
         return parent == null
                 ? null
                 : parent.getComponent();
+        }
+
+    /**
+     * Obtain the ComponentResolver for this AstNode, if any.
+     *
+     * @return the ComponentResolver for this AstNode
+     */
+    public ComponentResolver getComponentResolver()
+        {
+        return getComponent();
         }
 
     /**

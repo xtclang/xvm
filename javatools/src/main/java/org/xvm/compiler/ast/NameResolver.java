@@ -7,8 +7,9 @@ import java.util.List;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
-import org.xvm.asm.Component.ResolutionCollector;
-import org.xvm.asm.Component.ResolutionResult;
+import org.xvm.asm.ComponentResolver;
+import org.xvm.asm.ComponentResolver.ResolutionCollector;
+import org.xvm.asm.ComponentResolver.ResolutionResult;
 import org.xvm.asm.CompositeComponent;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -179,24 +180,11 @@ public class NameResolver
                             return Result.DEFERRED;
                             }
 
-                        Component componentResolver = node.getComponent();
+                        ComponentResolver componentResolver = node.getComponentResolver();
                         if (componentResolver == null)
                             {
                             // corresponding component isn't available (yet?)
                             return Result.DEFERRED;
-                            }
-
-                        // the identity of the component corresponding to the current node as
-                        // we "WalkUpToTheRoot"
-                        IdentityConstant id = componentResolver.getIdentityConstant();
-
-                        // first time through, figure out the "outermost" class, which is the
-                        // boundary where we will transition from looking at all (including
-                        // private) members, to looking at only public members
-                        IdentityConstant idClz = id.getClassIdentity();
-                        if (idOuter == null)
-                            {
-                            idOuter = idClz instanceof ClassConstant clz ? clz.getOutermost() : idClz;
                             }
 
                         // ask the component to resolve the name
@@ -233,13 +221,29 @@ public class NameResolver
                                 throw new IllegalStateException();
                             }
 
-                        // see if this was the last step on the "WalkUpToTheRoot" that had
-                        // private access to all members
-                        if (id == idOuter)
+                        if (componentResolver instanceof Component component)
                             {
-                            // in the top-most-class down, there is private access
-                            // above the top-most-class, there is public access
-                            access = Access.PUBLIC;
+                            // the identity of the component corresponding to the current node as
+                            // we "WalkUpToTheRoot"
+                            IdentityConstant id = component.getIdentityConstant();
+
+                            // first time through, figure out the "outermost" class, which is the
+                            // boundary where we will transition from looking at all (including
+                            // private) members, to looking at only public members
+                            IdentityConstant idClz = id.getClassIdentity();
+                            if (idOuter == null)
+                                {
+                                idOuter = idClz instanceof ClassConstant clz ? clz.getOutermost() : idClz;
+                                }
+
+                            // see if this was the last step on the "WalkUpToTheRoot" that had
+                            // private access to all members
+                            if (id == idOuter)
+                                {
+                                // in the top-most-class down, there is private access
+                                // above the top-most-class, there is public access
+                                access = Access.PUBLIC;
+                                }
                             }
                         }
 

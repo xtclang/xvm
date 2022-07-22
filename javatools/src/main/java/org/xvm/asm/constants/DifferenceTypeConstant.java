@@ -12,9 +12,9 @@ import java.util.Map;
 import java.util.Set;
 
 import org.xvm.asm.Annotation;
-import org.xvm.asm.Component.ResolutionCollector;
-import org.xvm.asm.Component.ResolutionResult;
 import org.xvm.asm.Component.SimpleCollector;
+import org.xvm.asm.ComponentResolver.ResolutionResult;
+import org.xvm.asm.ComponentResolver.ResolutionCollector;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 

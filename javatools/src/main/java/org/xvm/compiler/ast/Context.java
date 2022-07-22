@@ -14,7 +14,7 @@ import org.xvm.asm.Argument;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Component.SimpleCollector;
-import org.xvm.asm.Component.ResolutionResult;
+import org.xvm.asm.ComponentResolver.ResolutionResult;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;

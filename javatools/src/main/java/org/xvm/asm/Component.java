@@ -43,8 +43,6 @@ import org.xvm.compiler.Constants;
 import org.xvm.compiler.Parser;
 import org.xvm.compiler.Source;
 
-import org.xvm.compiler.ast.AstNode;
-
 import org.xvm.util.Handy;
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
@@ -103,7 +101,7 @@ import static org.xvm.util.Handy.writePackedLong;
  */
 public abstract class Component
         extends XvmStructure
-        implements Documentable, Cloneable
+        implements Documentable, Cloneable, ComponentResolver
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -1728,20 +1726,6 @@ public abstract class Component
         return matches == null ? Collections.EMPTY_LIST : matches;
         }
 
-    /**
-     * Request that the component determine what the specified name is referring to.
-     *
-     * @param sName      the name to resolve
-     * @param access     the accessibility to this component
-     * @param collector  the collector to which the potential name matches will be reported
-     *
-     * @return the resolution result
-     */
-    public ResolutionResult resolveName(String sName, Access access, ResolutionCollector collector)
-        {
-        return resolveContributedName(sName, access, collector, true);
-        }
-
     protected boolean canBeSeen(Access access)
         {
         return access.canSee(getAccess());
@@ -2249,6 +2233,15 @@ public abstract class Component
      */
     public void collectInjections(Set<InjectionKey> setInjections)
         {
+        }
+
+
+    // ----- ComponentResolver methods -------------------------------------------------------------
+
+    @Override
+    public ResolutionResult resolveName(String sName, Access access, ResolutionCollector collector)
+        {
+        return resolveContributedName(sName, access, collector, true);
         }
 
 
@@ -3600,64 +3593,6 @@ public abstract class Component
 
 
     // ----- interface: ResolutionCollector --------------------------------------------------------
-
-    public enum ResolutionResult
-        {
-        UNKNOWN, RESOLVED, POSSIBLE, ERROR;
-
-        /**
-         * Combine this result with the specified one to produce better information.
-         *
-         * @param that  another result
-         *
-         * @return a combined result
-         */
-        public ResolutionResult combine(ResolutionResult that)
-            {
-            return switch (this)
-                {
-                case POSSIBLE, ERROR -> this;
-                default              -> that;
-                };
-            }
-        }
-
-    /**
-     * A callback interface used by the name resolution functionality of the Component.
-     */
-    public interface ResolutionCollector
-        {
-        /**
-         * Invoked when a name resolves to a child component.
-         *
-         * @param component  the child component (which may be a composite)
-         */
-        ResolutionResult resolvedComponent(Component component);
-
-        /**
-         * Invoked when a name resolves to something that is a constant, such as a property
-         * constant of a parameterized type or of a method.
-         *
-         * @param constant  either a PropertyConstant or a TypeParameterConstant
-         */
-        ResolutionResult resolvedConstant(Constant constant);
-
-        /**
-         * Provide an AstNode to report resolution issues for.
-         */
-        default AstNode getNode()
-            {
-            return null;
-            }
-
-        /**
-         * Provide an ErrorListener to report resolution issues to.
-         */
-        default ErrorListener getErrorListener()
-            {
-            return ErrorListener.BLACKHOLE;
-            }
-        }
 
     /**
      * A simple ResolutionCollector implementation.

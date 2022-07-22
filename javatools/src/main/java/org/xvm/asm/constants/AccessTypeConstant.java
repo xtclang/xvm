@@ -9,8 +9,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
 
-import org.xvm.asm.Component.ResolutionCollector;
-import org.xvm.asm.Component.ResolutionResult;
+import org.xvm.asm.ComponentResolver.ResolutionCollector;
+import org.xvm.asm.ComponentResolver.ResolutionResult;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;

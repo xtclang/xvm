@@ -6,8 +6,8 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 
-import org.xvm.asm.Component.ResolutionCollector;
-import org.xvm.asm.Component.ResolutionResult;
+import org.xvm.asm.ComponentResolver.ResolutionCollector;
+import org.xvm.asm.ComponentResolver.ResolutionResult;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
