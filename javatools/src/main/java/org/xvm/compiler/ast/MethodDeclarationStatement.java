@@ -34,6 +34,8 @@ import org.xvm.compiler.Constants;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
+import org.xvm.compiler.ast.StatementBlock.RootContext;
+
 import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.appendString;
@@ -801,8 +803,8 @@ public class MethodDeclarationStatement
             {
             StatementBlock block = adopt(new StatementBlock(Collections.EMPTY_LIST));
 
-            StatementBlock.RootContext ctxMethod = block.new RootContext(method);
-            Context                    ctx       = ctxMethod.validatingContext();
+            RootContext ctxMethod = new RootContext(block, method);
+            Context     ctx       = ctxMethod.validatingContext();
 
             int cParamExprs = params.size();
             int cTypeParams = method.getTypeParamCount();

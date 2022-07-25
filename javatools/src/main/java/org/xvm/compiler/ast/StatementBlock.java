@@ -324,7 +324,7 @@ public class StatementBlock
      */
     public boolean compileMethod(Code code, ErrorListener errs)
         {
-        RootContext ctx = new RootContext(code.getMethodStructure());
+        RootContext ctx = new RootContext(this, code.getMethodStructure());
 
         ErrorListener errsValidation = errs.branch(this);
 
@@ -587,12 +587,13 @@ public class StatementBlock
      * with the method body that is being compiled, and represents the parameters to the method and
      * the global names visible to the method.
      */
-    public class RootContext
+    public static class RootContext
             extends Context
         {
-        public RootContext(MethodStructure method)
+        public RootContext(StatementBlock stmt, MethodStructure method)
             {
             super(null, false);
+            f_stmt   = stmt;
             f_method = method;
             }
 
@@ -604,7 +605,7 @@ public class StatementBlock
 
         public StatementBlock getStatementBlock()
             {
-            return StatementBlock.this;
+            return f_stmt;
             }
 
         /**
@@ -808,7 +809,7 @@ public class StatementBlock
         @Override
         public void requireThis(long lPos, ErrorListener errs)
             {
-            AstNode parent   = getParent();
+            AstNode parent   = f_stmt.getParent();
             boolean fHasThis = parent instanceof LambdaExpression exprLambda
                     ? exprLambda.isRequiredThis()
                     : !isFunction();
@@ -900,7 +901,7 @@ public class StatementBlock
             // start with the current node, and one by one walk up to the root, asking at
             // each level for the node to resolve the name
             ConstantPool     pool      = pool();
-            AstNode          node      = StatementBlock.this;
+            AstNode          node      = f_stmt;
             boolean          fSameFile = true;
             boolean          fHasThis  = isMethod() || isConstructor();
             TypeConstant     typeThis  = fHasThis ? ctxFrom.getThisType() : null;
@@ -1176,7 +1177,7 @@ public class StatementBlock
             errsTemp.merge(); // report any TypeInfo related errors we might have collected
             if (name == null)
                 {
-                log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, sName);
+                f_stmt.log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, sName);
                 }
             else
                 {
@@ -1562,6 +1563,7 @@ public class StatementBlock
             return map;
             }
 
+        private final StatementBlock  f_stmt;
         private final MethodStructure f_method;
         private       Context         m_ctxValidating;
         private       boolean         m_fEmitting;

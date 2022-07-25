@@ -2532,7 +2532,7 @@ public class TypeCompositionStatement
             {
             blockBody = adopt(new StatementBlock(Collections.EMPTY_LIST));
             }
-        return blockBody.new RootContext(constructor);
+        return new RootContext(blockBody, constructor);
         }
 
     /**
