@@ -31,6 +31,7 @@ import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.reflect.xRef.RefHandle;
 
 import org.xvm.runtime.template.text.xChar;
+import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.util.Handy;
 
@@ -697,6 +698,16 @@ public abstract class ObjectHandle
         public WrapperException getException()
             {
             return new WrapperException();
+            }
+
+        @Override
+        public String toString()
+            {
+            ObjectHandle hText = getField(null, "text");
+            return super.toString() +
+                (hText instanceof StringHandle hString
+                    ? Handy.quotedString(hString.getStringValue())
+                    : "");
             }
 
         public class WrapperException
