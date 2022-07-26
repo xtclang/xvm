@@ -84,6 +84,8 @@ const TimeOfDay(Int picos)
         Int sec  = 0;
         Int pico = 0;
 
+        static Int[] SCALE_10 = [1T, 100G, 10G, 1G, 100M, 10M, 1M, 100K, 10K, 1K, 100, 10, 1];
+
         if (secs != "")
             {
             if (Int dot := secs.indexOf('.'))
@@ -113,12 +115,6 @@ const TimeOfDay(Int picos)
 
         construct TimeOfDay(hour, min, sec, pico);
         }
-
-    private static Int[] SCALE_10 = [           1_000_000_000_000,
-            100_000_000_000,    10_000_000_000,     1_000_000_000,
-                100_000_000,        10_000_000,         1_000_000,
-                    100_000,            10_000,             1_000,
-                        100,                10,                 1 ];
 
     /**
      * The hour of the day, in the range 0..23.
