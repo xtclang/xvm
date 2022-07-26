@@ -698,7 +698,7 @@ public abstract class ClassTemplate
 
                         case Op.R_CALL:
                             frame.m_frameNext.addContinuation(frameCaller ->
-                                frameCaller.assignTuple(iReturn, xTuple.H_VOID));
+                                frameCaller.assignValue(iReturn, xTuple.H_VOID));
                             return Op.R_CALL;
 
                         case Op.R_EXCEPTION:
