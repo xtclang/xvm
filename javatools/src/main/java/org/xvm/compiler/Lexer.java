@@ -1995,16 +1995,24 @@ public class Lexer
                             cDigits = 0;
                             do
                                 {
-                                ++cDigits;
-                                nPicos = nPicos * 10 + (nextChar() - '0');
+                                char ch = nextChar();
+                                if (++cDigits <= 12)
+                                    {
+                                    nPicos = nPicos * 10 + (ch - '0');
+                                    }
                                 }
                             while (isNextCharDigit(10));
 
                             // scale the integer value up to picos (trillionths)
-                            for (int i = cDigits; i < 12; ++i)
+                            while (++cDigits <= 12)
                                 {
                                 nPicos *= 10;
                                 }
+                            }
+                        else
+                            {
+                            // the dot isn't part of the time-of-day
+                            m_source.rewind();
                             }
                         }
                     }
@@ -2019,9 +2027,7 @@ public class Lexer
         String sTime = source.toString(lStart, lEnd);
         if (nHour >= 0 && nMin >= 0 && nSec >= 0)
             {
-            if (!((nHour >= 0 && nHour <= 23 || nHour == 24 && nMin == 0 && nSec == 0)
-                    && (nMin >= 0 && nMin <= 59)
-                    && (nSec >= 0 && nSec <= 59 || nMin == 59 && nSec == 60)))
+            if (nHour > 23 || nMin > 59 || nSec > 59 && !(nHour == 23 && nMin == 59 && nSec == 60))
                 {
                 log(Severity.ERROR, BAD_TIME_OF_DAY, new Object[] {sTime}, lStart, lEnd);
                 }
