@@ -139,8 +139,8 @@ import net.IPAddress;
  * The use of custom mix-ins allows an application (or framework, etc.) to enhance a session by
  * adding state and functionality to the session that is created and managed automatically by the
  * server. For example, if an application needs to hold onto some resource in the session, and
- * release the resource if the user logs out (or the session is destroyed), then it can place all of that
- * capability into a session mix-in:
+ * release the resource if the user logs out (or the session is destroyed), then it can place all of
+ * that capability into a session mix-in:
  *
  *     mixin AppSession
  *             into Session
@@ -186,13 +186,29 @@ import net.IPAddress;
  * information associated with the user. This is why session events like [sessionAuthenticated]
  * exist for the application to place custom code on.
  *
- * TODO
- *   - doc how to get a session passed to an end point
- *   - cookie: two flags available to protect cookies included in an HTTP response:
- *     (1) "Secure" implies HTTPS only, and
- *     (2) "HttpOnly" protects the cookie from client-side JavaScript
- *   - SameSite cookie attribute in an HTTP response: Strict, Lax or None
- *   - secure impersonation: how to have one session impersonate another e.g. for customer service
+ * To obtain the session for use in an [Endpoint], the endpoint method should include a parameter of
+ * type session:
+ *
+ *     @Post("/{id}/items")
+ *     Item addItem(Session session, @PathParam String id, @BodyParam Item item) {...}
+ *
+ * It is expected that user agent cookies will be used to manage the session identity. For any such
+ * implementation, the cookie(s) should specify the "Secure" option to avoid session identity
+ * hijacking attacks, unless sessions without TLS are desired, in which case it is advisable to bind
+ * the session identity to the client address and to hide the session identity inside the cookie
+ * using cryptographically secure encryption (which is always a good idea). Additionally, the
+ * "HttpOnly" option should be used, if possible, to prevent any session information from being
+ * exposed to client side JavaScript. Lastly, the "SameSite" cookie attribute should be specified;
+ * its potential values are: `Strict`, `Lax`, or `None`.
+ *
+ * It is also desirable in many systems to allow a customer service representative view the same
+ * page and data that a user (who has given explicit permission) is viewing. While the full
+ * implementation of such a feature is beyond the scope of this documentation, it is clear that the
+ * capability would require involvement of (and access to) the end user's session object. Instead of
+ * maintaining a central and accessible registry of sessions keyed by their user identities, the
+ * proposed model is to provide the means, within the application, for the end user to access a
+ * "please help me" endpoint, which may require re-authentication and should require explicit
+ * approval for the user's session to be accessed by a customer service representative.
  */
 interface Session
         extends service
@@ -206,8 +222,6 @@ interface Session
      * instead of using this generic dictionary structure, having this built in to the `Session`
      * interface simplifies the task of building reusable components and frameworks. Specifically,
      * they can rely on this built-in storage for their session-related information.
-     *
-     * REVIEW is this still necessary?
      */
     @RO Map<String, Shareable> attributes;
 
@@ -219,6 +233,12 @@ interface Session
      * started the app today", or "when the user logged on".
      */
     @RO Time created;
+
+    /**
+     * This is the date/time that the session was destroyed. This property has the value `Null`
+     * until the session is destroyed.
+     */
+    @RO Time? destroyed;
 
     /**
      * The total number of requests that have been received that were associated with this session.
@@ -355,12 +375,16 @@ interface Session
     /**
      * This event is invoked when the session is created. It allows the application to set up the
      * initial state of the session.
+     *
+     * When implementing this method, remember to invoke the `super` function.
      */
     void sessionCreated();
 
     /**
      * This event is invoked when the session is destroyed. It allows the application to clean up
      * anything that the session is holding onto.
+     *
+     * When implementing this method, remember to invoke the `super` function.
      */
     void sessionDestroyed();
 
@@ -370,12 +394,18 @@ interface Session
      *
      * Note: If a different `userId` was previously authenticated, then the [sessionDeauthenticated]
      * event will be invoked before this event.
+     *
+     * When implementing this method, remember to invoke the `super` function.
+     *
+     * @param user  the user that was is now authenticated
      */
     void sessionAuthenticated(String user);
 
     /**
      * This event is invoked when a previously authenticated user is "logged out". It allows the
      * application to clean up any information related to the user in the session.
+     *
+     * When implementing this method, remember to invoke the `super` function.
      *
      * @param user  the user that was previously authenticated but is being logged out
      */
@@ -392,6 +422,8 @@ interface Session
      * expected to hold a TLS connection open for a long period of time, typically as long as
      * possible.
      *
+     * When implementing this method, remember to invoke the `super` function.
+     *
      * @return the suggested new `TrustLevel` for the session, based on the TLS interruption
      */
     TrustLevel tlsChanged()
@@ -406,6 +438,8 @@ interface Session
      * occur for any of a number of reasons. In a cookie stealing attack, for example, one would
      * expect the IP address to differ.
      *
+     * When implementing this method, remember to invoke the `super` function.
+     *
      * @param oldAddress  the previously known IP address
      * @param newAddress  the newly observed IP address
      *
@@ -419,6 +453,8 @@ interface Session
 
     /**
      * This event is invoked when the user's `User-Agent` changes.
+     *
+     * When implementing this method, remember to invoke the `super` function.
      *
      * @param oldAgent  the previously known `User-Agent` value
      * @param newAgent  the newly observed `User-Agent` value
@@ -457,6 +493,8 @@ interface Session
      * information, which is a worthwhile goal. It is a careful decision to expose the fact that the
      * fingerprint associated with the session has changed, but to hide any details of the
      * fingerprint information itself, including how the change was detected.
+     *
+     * When implementing this method, remember to invoke the `super` function.
      *
      * @return the suggested new `TrustLevel` for the session, based on the user agent fingerprint
      *         change
