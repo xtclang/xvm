@@ -2,11 +2,22 @@
  * A TimeZone contains the necessary information to convert a UTC Time value into a localized
  * Date and TimeOfDay value.
  *
- * There are four categories of TimeZones:
- * * UTC - Raw, unadjusted, universally-coordinated Time information. This is the internal form
- *   of the information held by Time, such that all Time conversions are performed starting
- *   from UTC data, and all Time values with a legitimate TimeZone can be trivially converted to
- *   UTC data (or to any other TimeZone).
+ * There are five categories of TimeZones:
+ * * International Atomic Time (TAI) - Raw, unadjusted time information. This would logically be an
+ *   ideal internal form of the information held by `Time`, but instead the `Time` implementation
+ *   uses the UTC timezone and the POSIX model for time (see
+ *   [A.4.15 Seconds Since the Epoch](https://pubs.opengroup.org/onlinepubs/9699919799.2008edition/))
+ * * UTC - Raw, adjusted for leap second, universally-coordinated Time information. The internal
+ *   information held by `Time` is considered to be in the UTC timezone, which is the International
+ *   Atomic Time (TAI), but adjusted for leap seconds. However, following the POSIX model, the leap
+ *   seconds are not actually applied (i.e. every day is assumed to be exactly 86400 seconds);
+ *   as a result, the 27 leap seconds since the start of the epoch (through 2022) as well as the 10
+ *   previously assumed leap seconds (from 1958 to the start of epoch) are _missing_. Any strict
+ *   interpretation of the `Time` data, and conversion to  TAI will need to take this historical
+ *   anomaly into consideration. Almost all TimeZone conversions are performed starting from UTC
+ *   data, and almost all Time values with a legitimate TimeZone can be trivially converted to UTC
+ *   data (or to any other TimeZone). (Fortunately, it is likely that leap seconds [will be done
+ *   away with](https://www.cnet.com/tech/computing/tech-giants-try-banishing-the-leap-second-to-stop-internet-crashes/)).
  * * Fixed - an offset from UTC measured in terms of picoseconds, but generally measured in terms of
  *   hour, half-hour, or quarter-hour increments, and optionally associated with a timezone name.
  * * Rule-Based - Represents a complex timezone in which more than one fixed offset has been or will
