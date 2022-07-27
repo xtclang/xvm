@@ -547,7 +547,7 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
         @Override
         String toString()
             {
-            return $|{this:class.name}:\{dboId={dboId}, pid={pid}, created={created},
+            return $|{this:class.name}:\{dboId={dboId}, pid={pid}, created={created},\
                     | scheduled={scheduled}, pending={pending}}
                     ;
             }

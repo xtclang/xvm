@@ -584,23 +584,23 @@ service JsonValueStore<Value extends immutable Const>
                             Boolean valid = True;
                             if (!isReadTx(txId))
                                 {
-                                log($|During deepScan() of DBValue "{info.path}", encountered the \
-                                     |illegal transaction ID {txId}
+                                log($|During deepScan() of DBValue "{info.path}", encountered the\
+                                     | illegal transaction ID {txId}
                                      );
                                 valid = False;
                                 }
                             // verify that the id is unique
                             else if (byTx.contains(txId))
                                 {
-                                log($|During deepScan() of DBValue "{info.path}", encountered a \
-                                     |duplicate transaction ID {txId}
+                                log($|During deepScan() of DBValue "{info.path}", encountered a\
+                                     | duplicate transaction ID {txId}
                                      );
                                 }
                             // verify that the id occurs in ascending order
                             else if (txId <= prevId)
                                 {
-                                log($|During deepScan() of DBValue "{info.path}", encountered an \
-                                     |out-of-order transaction ID {txId}
+                                log($|During deepScan() of DBValue "{info.path}", encountered an\
+                                     | out-of-order transaction ID {txId}
                                      );
                                 }
                             else

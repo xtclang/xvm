@@ -356,7 +356,7 @@ service Catalog<Schema extends RootSchema>
     @Concurrent
     String toString()
         {
-        return $|{this:class.name}:\{dir={dir}, version={version}, status={status},
+        return $|{this:class.name}:\{dir={dir}, version={version}, status={status},\
                 | readOnly={readOnly}, unique-id={timestamp}}
                 ;
         }

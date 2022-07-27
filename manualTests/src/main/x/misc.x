@@ -106,9 +106,9 @@ module TestMisc
                 dec = $"\'{value}\'";
                 }
 
-            console.println($|char {ch.toSourceString()}, unicode={ch.unicode}, cat={ch.category}, \
-                             |lower={ch.lowercase.toSourceString()}, upper={ch.uppercase.toSourceString()}, \
-                             |title={ch.titlecase.toSourceString()}, dec={dec}, num={ch.numericValue}
+            console.println($|char {ch.toSourceString()}, unicode={ch.unicode}, cat={ch.category},\
+                             | lower={ch.lowercase.toSourceString()}, upper={ch.uppercase.toSourceString()},\
+                             | title={ch.titlecase.toSourceString()}, dec={dec}, num={ch.numericValue}
                              );
             }
 

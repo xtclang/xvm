@@ -1002,7 +1002,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 }
             catch (Exception e)
                 {
-                log($|Exception occurred while rolling back transaction {rec.idString}
+                log($|Exception occurred while rolling back transaction {rec.idString}\
                      | after it failed to {ok ? "commit" : "prepare"}: {e}
                     );
                 }

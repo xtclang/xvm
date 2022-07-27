@@ -301,9 +301,9 @@ module TestReflection
                 {
                 console.println($"method={method}");
                 // TODO CP - splitting the multi-line before the "invoke" breaks the parser
-                console.println($|method.invoke()=
-                              + $|{method.as(Method<Point<Int>, Tuple<>, Tuple<Int>>).invoke(p, Tuple:())[0]}
-                                 );
+                console.println($|method.invoke()=\
+                                 |{method.as(Method<Point<Int>, Tuple<>, Tuple<Int>>).invoke(p, Tuple:())[0]}
+                                );
                 }
             }
 

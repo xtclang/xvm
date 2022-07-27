@@ -12,8 +12,8 @@ const Char(UInt32 codepoint)
         {
         assert codepoint <= 0x10FFFF as $"Character code-point ({codepoint}) out of Unicode range";
 
-        assert !(0xD7FF < codepoint < 0xE000) as $|Character code-point ({codepoint}) is a surrogate; \
-                                                  |surrogates are not valid Unicode characters
+        assert !(0xD7FF < codepoint < 0xE000) as $|Character code-point ({codepoint}) is a surrogate;\
+                                                  | surrogates are not valid Unicode characters
                                                  ;
         }
 

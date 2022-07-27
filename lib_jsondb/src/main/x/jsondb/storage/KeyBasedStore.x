@@ -144,7 +144,7 @@ mixin KeyBasedStore<Key extends Hashable>
                 if (lastInFile > lastSeal)
                     {
                     // something is really wrong; we should never be ahead of the txlog
-                    catalog.log($|File {fileName} contains transaction {lastInFile},
+                    catalog.log($|File {fileName} contains transaction {lastInFile},\
                                  | which is beyond the latest recovered transaction {lastSeal}
                                );
                     return False;
@@ -158,8 +158,8 @@ mixin KeyBasedStore<Key extends Hashable>
 
                 if (corrupted && lastInFile < firstSeal)
                     {
-                    catalog.log($|File {fileName} is corrupted beyond transaction {lastInFile} and
-                                 | may contain transaction data preceeding the earliest recovered
+                    catalog.log($|File {fileName} is corrupted beyond transaction {lastInFile} and\
+                                 | may contain transaction data preceeding the earliest recovered\
                                  | transaction {firstSeal}
                                );
                     return False;

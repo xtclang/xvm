@@ -109,18 +109,18 @@ module TestFiles
             @Override
             Boolean onEvent(Event event, Directory dir)
                 {
-                console.println($|[{this:service}]: Directory event: \"{event}\" {dir.name}
-                              + $| after {timer.elapsed.seconds} sec
-                                 );
+                console.println($|[{this:service}]: Directory event: \"{event}\" {dir.name}\
+                                 | after {timer.elapsed.seconds} sec
+                                );
                 return False;
                 }
 
             @Override
             Boolean onEvent(Event event, File file)
                 {
-                console.println($|[{this:service}]: File event: \"{event}\" {file.name}
-                              + $| after {timer.elapsed.seconds} sec
-                                 );
+                console.println($|[{this:service}]: File event: \"{event}\" {file.name}\
+                                 | after {timer.elapsed.seconds} sec
+                                );
                 return False;
                 }
             };
@@ -138,9 +138,9 @@ module TestFiles
         Int wait = 1;
         timer.schedule(Duration.ofSeconds(wait), () ->
             {
-            console.println($|[{this:service}]: deleting {file.name}
-                          + $| after {timer.elapsed.seconds} sec
-                             );
+            console.println($|[{this:service}]: deleting {file.name}\
+                             | after {timer.elapsed.seconds} sec
+                            );
 
             file.delete();
             assert !file.exists;

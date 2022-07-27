@@ -92,8 +92,8 @@ const IntLiteral(String text)
                 }
             else if (ch == '_')
                 {
-                assert:arg digits > 0 as $|Illegal initial underscore character at the beginning \
-                                          |of the integer literal {text.quoted()}
+                assert:arg digits > 0 as $|Illegal initial underscore character at the beginning\
+                                          | of the integer literal {text.quoted()}
                                          ;
                 }
             else
@@ -175,12 +175,12 @@ const IntLiteral(String text)
             magnitude *= factors[factorIndex].factor;
             }
 
-        assert:arg offset == length as $|Illegal character {text[offset].toSourceString()} at offset \
-                                        |{offset} in radix {radix}} integer literal {text.quoted()}
+        assert:arg offset == length as $|Illegal character {text[offset].toSourceString()} at offset\
+                                        | {offset} in radix {radix}} integer literal {text.quoted()}
                                        ;
 
-        assert:arg digits > 0 as $|Illegal radix {radix} integer literal; literal contains \
-                                  |no valid digits: {text.quoted()}
+        assert:arg digits > 0 as $|Illegal radix {radix} integer literal; literal contains\
+                                  | no valid digits: {text.quoted()}
                                  ;
 
         this.magnitude = magnitude;

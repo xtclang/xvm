@@ -900,7 +900,8 @@ FPTypeName:
     "FloatN"
 
 StringLiteral
-    "$"-opt NoWhitespace '"' CharacterString-opt '"'
+    '"' CharacterString-opt '"'
+    '$"' CharacterString-opt '"'
     "\|" FreeformLiteral
     "$|" FreeformLiteral
     "$" NoWhitespace File                                       # value is String contents of file
