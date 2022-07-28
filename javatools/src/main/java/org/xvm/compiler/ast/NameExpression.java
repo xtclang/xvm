@@ -35,6 +35,8 @@ import org.xvm.compiler.Token.Id;
 import org.xvm.compiler.ast.LabeledStatement.LabelVar;
 import org.xvm.compiler.ast.StatementBlock.TargetInfo;
 
+import org.xvm.runtime.Utils;
+
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
@@ -1136,6 +1138,14 @@ public class NameExpression
                         }
                     return;
                     }
+
+                case BjarneLambda:
+                    {
+                    MethodConstant idHandler =
+                            createBjarneLambda(ctx.getThisClass(), (MethodConstant) argRaw);
+                    code.add(new Move(idHandler, argLVal));
+                    return;
+                    }
                 }
             }
 
@@ -1427,9 +1437,170 @@ public class NameExpression
                 return regFn;
                 }
 
+            case BjarneLambda:
+                return createBjarneLambda(ctx.getThisClass(), (MethodConstant) argRaw);
+
             default:
                 throw new IllegalStateException("arg=" + argRaw);
             }
+        }
+
+    /**
+     * Create a {@link MethodConstant#getBjarneLambdaType Bjarne lambda} for the specified method.
+     *
+     * Note, that for every occurrence of an expression in the form of "T.m(a)" that requires
+     * production of a function that takes an argument "t" of the target type "T" at index zero,
+     * this method creates a new lambda performing the following transformation:
+     *      (t, a, ...) -> t.m(a, ...)
+     * REVIEW: how to avoid duplicates?
+     *
+     * @param clz       the containing class
+     * @param idMethod  the underlying method
+     *
+     * @return the BjarneLambda id
+     */
+    private MethodConstant createBjarneLambda(ClassStructure clz, MethodConstant idMethod)
+        {
+        ConstantPool         pool        = pool();
+        MultiMethodStructure mms         = clz.ensureMultiMethodStructure("->");
+        TypeConstant         typeLambda  = idMethod.getBjarneLambdaType();
+        TypeConstant[]       atypeParam  = pool.extractFunctionParams(typeLambda);
+        TypeConstant[]       atypeReturn = pool.extractFunctionReturns(typeLambda);
+
+        int cParams  = atypeParam.length;
+        int cReturns = atypeReturn.length;
+
+        assert cParams > 0;
+
+        org.xvm.asm.Parameter[] aparamParam = new org.xvm.asm.Parameter[cParams];
+        for (int i = 0; i < cParams; i++)
+            {
+            aparamParam[i] = new org.xvm.asm.Parameter(pool, atypeParam[i], "p"+i, null, false, i, false);
+            }
+
+        org.xvm.asm.Parameter[] aparamReturn = new org.xvm.asm.Parameter[cReturns];
+        for (int i = 0; i < cReturns; i++)
+            {
+            aparamReturn[i] = new org.xvm.asm.Parameter(pool, atypeReturn[i], null, null, true, i, false);
+            }
+
+        MethodStructure lambda = mms.createLambda(TypeConstant.NO_TYPES, Utils.NO_NAMES);
+
+        lambda.configureLambda(aparamParam, 0, aparamReturn);
+        lambda.setStatic(true);
+        lambda.getIdentityConstant().setSignature(
+                pool.ensureSignatureConstant("->", atypeParam, atypeReturn));
+
+        Code     code      = lambda.createCode();
+        Register regTarget = new Register(atypeParam[0], 0);
+        switch (cParams-1)
+            {
+            case 0:
+                {
+                switch (cReturns)
+                    {
+                    case 0:
+                        code.add(new Invoke_00(regTarget, idMethod));
+                        code.add(Return_0.INSTANCE);
+                        break;
+
+                    case 1:
+                        {
+                        Register regRet = new Register(atypeReturn[0], Op.A_STACK);
+                        code.add(new Invoke_01(regTarget, idMethod, regRet));
+                        code.add(new Return_1(regRet));
+                        break;
+                        }
+
+                    default:
+                        {
+                        Register[] aregRet = new Register[cReturns];
+                        for (int i = 0; i < cReturns; i++)
+                            {
+                            aregRet[i] = new Register(atypeReturn[i], Op.A_STACK);
+                            }
+                        code.add(new Invoke_0N(regTarget, idMethod, aregRet));
+                        code.add(new Return_N(aregRet));
+                        break;
+                        }
+                    }
+                break;
+                }
+
+            case 1:
+                {
+                Register regParam = new Register(atypeParam[1], 1);
+                switch (cReturns)
+                    {
+                    case 0:
+                        code.add(new Invoke_10(regTarget, idMethod, regParam));
+                        code.add(Return_0.INSTANCE);
+                        break;
+
+                    case 1:
+                        {
+                        Register regRet = new Register(atypeReturn[0], Op.A_STACK);
+                        code.add(new Invoke_11(regTarget, idMethod, regParam, regRet));
+                        code.add(new Return_1(regRet));
+                        break;
+                        }
+
+                    default:
+                        {
+                        Register[] aregRet = new Register[cReturns];
+                        for (int i = 0; i < cReturns; i++)
+                            {
+                            aregRet[i] = new Register(atypeReturn[i], Op.A_STACK);
+                            }
+                        code.add(new Invoke_1N(regTarget, idMethod, regParam, aregRet));
+                        code.add(new Return_N(aregRet));
+                        break;
+                        }
+                    }
+                break;
+                }
+
+            default:
+                {
+                Register[] aregParam = new Register[cParams];
+                for (int i = 1; i < cParams; i++)
+                    {
+                    aregParam[i] = new Register(atypeParam[i], i);
+                    }
+                switch (cReturns)
+                    {
+                    case 0:
+                        code.add(new Invoke_N0(regTarget, idMethod, aregParam));
+                        code.add(Return_0.INSTANCE);
+                        break;
+
+                    case 1:
+                        {
+                        Register regRet = new Register(atypeReturn[0], Op.A_STACK);
+                        code.add(new Invoke_N1(regTarget, idMethod, aregParam, regRet));
+                        code.add(new Return_1(regRet));
+                        break;
+                        }
+
+                    default:
+                        {
+                        Register[] aregRet = new Register[cReturns];
+                        for (int i = 0; i < cReturns; i++)
+                            {
+                            aregRet[i] = new Register(atypeReturn[i], Op.A_STACK);
+                            }
+                        code.add(new Invoke_NN(regTarget, idMethod, aregParam, aregRet));
+                        code.add(new Return_N(aregRet));
+                        break;
+                        }
+                    }
+                break;
+                }
+            }
+
+        code.registerConstants(pool);
+
+        return lambda.getIdentityConstant();
         }
 
     /**
@@ -2560,9 +2731,19 @@ public class NameExpression
                         return idMethod.getType();
                         }
 
-                    // "bind" the method into a function
-                    m_plan = Plan.BindTarget;
-                    typeFn = idMethod.getSignature().asFunctionType();
+                    if (left instanceof NameExpression exprName &&
+                                exprName.getMeaning() == Meaning.Class)
+                        {
+                        // turn a method into a "method handle" function
+                        m_plan = Plan.BjarneLambda;
+                        typeFn = idMethod.getBjarneLambdaType();
+                        }
+                    else
+                        {
+                        // "bind" the method into a function
+                        m_plan = Plan.BindTarget;
+                        typeFn = idMethod.getSignature().asFunctionType();
+                        }
                     }
 
                 if (typeDesired != null)
@@ -3134,7 +3315,7 @@ public class NameExpression
      * assignment.
      */
     enum Plan {None, OuterThis, OuterRef, RegisterRef, PropertyDeref, PropertyRef, PropertySelf,
-               TypeOfClass, TypeOfTypedef, Singleton, TypeOfFormalChild, BindTarget}
+               TypeOfClass, TypeOfTypedef, Singleton, TypeOfFormalChild, BindTarget, BjarneLambda}
 
     /**
      * If the plan is None or BindTarget, and this expression represents a method or function,

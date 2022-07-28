@@ -302,8 +302,7 @@ interface Header
                       text[26] == 'G' &&
                       text[27] == 'M' &&
                       text[28] == 'T' &&
-                      // TODO GG text.substring(29).chars.all(Char.isWhitespace)))
-                      text.substring(29).chars.all(ch -> ch.isWhitespace())))
+                      text.substring(29).chars.all(Char.isWhitespace)))
                     {
                     return False;
                     }

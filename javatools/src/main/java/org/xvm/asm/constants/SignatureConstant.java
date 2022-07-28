@@ -471,6 +471,22 @@ public class SignatureConstant
         }
 
     /**
+     * @return the type of the function that corresponds to this SignatureConstant with a first
+     *         (at index zero) parameter accepting the specified target type
+     */
+    public TypeConstant asBjarneLambdaType(ConstantPool pool, TypeConstant typeTarget)
+        {
+        TypeConstant[] aconstParamsOld = m_aconstParams;
+        int            cParams         = aconstParamsOld.length;
+        TypeConstant[] aconstParamsNew = new TypeConstant[cParams + 1];
+
+        aconstParamsNew[0] = typeTarget;
+        System.arraycopy(aconstParamsOld, 0, aconstParamsNew, 1, cParams);
+
+        return pool.buildFunctionType(aconstParamsNew, m_aconstReturns);
+        }
+
+    /**
      * @return the type of the method that corresponds to this SignatureConstant for the specified
      *         target type
      */

@@ -4,18 +4,16 @@ module TestSimple
 
     void run()
         {
-        TimeOfDay t = TimeOfDay:23:09:12.99999999999999999999999;
-        console.println(t);
+        test("     ");
+        }
 
-        console.println(TimeOfDay:23:59:60.toString());
+    void test(String text)
+        {
+        function Boolean(Char) fn = Char.isWhitespace;
 
-        console.println(TimeOfDay:23:59:59.123-TimeOfDay:23:59:59.456);
-        console.println(TimeOfDay:23:59:60.123-TimeOfDay:23:59:60.456);
-        console.println(TimeOfDay:23:59:60.123-TimeOfDay:23:59:59.456);
-        console.println(TimeOfDay:23:59:59.123-TimeOfDay:23:59:60.456);
+        Boolean white = fn(text[0]);
+        console.println(white);
 
-        console.println(TimeOfDay:23:59:59.123+Duration:1s);
-        console.println(TimeOfDay:23:59:60.123+Duration:0.1s);
-        console.println(TimeOfDay:23:59:60.123+Duration:1s);
+        assert text.chars.all(Char.isWhitespace);
         }
     }

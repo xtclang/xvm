@@ -263,6 +263,20 @@ public class MethodConstant
         return getParentConstant().getParentConstant().isClass();
         }
 
+    /**
+     * Bjarne Lambda is a function that performs the following transformation:
+     *      (t, a1, a2) -> t.m(a1, a2)
+     * where "m" is this method and "t" is a target argument of the {@link #getNamespace host} type.
+     * (In Java, this is known as a "method handle".)
+     *
+     * @return the TypeConstant that represents a Bjarne lambda for this method
+     */
+    public TypeConstant getBjarneLambdaType()
+        {
+        assert !isFunction();
+        return m_constSig.asBjarneLambdaType(getConstantPool(), getNamespace().getType());
+        }
+
 
     // ----- IdentityConstant methods --------------------------------------------------------------
 
