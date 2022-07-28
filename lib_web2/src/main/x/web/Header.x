@@ -31,8 +31,8 @@ interface Header
     @RO List<String> names.get()
         {
         List<Entry> entries = this.entries;
-        // TODO GG
-        return TODO entries.map(e -> e[0], new String[](entries.size));
+
+        return entries.map(e -> e[0], new String[](entries.size)).as(List<String>);
         }
 
     /**
@@ -58,8 +58,7 @@ interface Header
         {
         // TODO CP case insens name
         // TODO CP expandCommas
-        // TODO GG
-        return TODO entries.iterator().filter(e -> e[0] == name).map(e -> e[1]);
+        return entries.iterator().filter(e -> e[0] == name).map(e -> e[1]);
         }
 
     /**
