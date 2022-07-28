@@ -302,7 +302,7 @@ interface Header
                       text[26] == 'G' &&
                       text[27] == 'M' &&
                       text[28] == 'T' &&
-                      // TODO GG text.substring(29).chars.all(isWhitespace)))
+                      // TODO GG text.substring(29).chars.all(Char.isWhitespace)))
                       text.substring(29).chars.all(ch -> ch.isWhitespace())))
                     {
                     return False;
@@ -316,7 +316,11 @@ interface Header
         }
 
     /**
-     * TODO
+     * Render a [Time] as an "IMF fix date".
+     *
+     * @param time  the time value
+     *
+     * @return an IMF fix date string
      */
     static String formatImfFixDate(Time time)
         {
@@ -371,7 +375,12 @@ interface Header
         }
 
     /**
-     * TODO doc
+     * Test the specified header name against the rules of the HTTP specification.
+     *
+     * @param name  a header name
+     *
+     * @return True iff the name does not meet the rules of the HTTP specification
+     * @return (conditional) an explanation of what is wrong with the passed name
      */
     static conditional String isInvalidHeaderName(String name)
         {
