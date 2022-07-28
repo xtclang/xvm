@@ -422,12 +422,9 @@ const AcceptList
                 }
             }
 
-        // TODO GG:
-        // return bestAlt == Null
-        //     ? False
-        //     : True, bestAlt, altMatched;
-        return True, bestAlt?, altMatched?;
-        return False;
+        return bestAlt == Null || altMatched == Null
+                ? False
+                : (True, bestAlt, altMatched);
         }
 
     /**
