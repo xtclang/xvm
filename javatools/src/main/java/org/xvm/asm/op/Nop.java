@@ -113,9 +113,8 @@ public class Nop extends Op
         for (int iOp = getAddress() + 1, cOps = aop.length; iOp < cOps; ++iOp)
             {
             Op op = aop[iOp].ensureOp();
-            if (op instanceof Nop)
+            if (op instanceof Nop nop)
                 {
-                Nop nop = (Nop) op;
                 m_cLines    += nop.m_cLines;
                 m_nOp        = nopForLines(m_cLines);
                 nop.m_cLines = 0;
