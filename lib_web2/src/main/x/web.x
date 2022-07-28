@@ -15,51 +15,6 @@ module web.xtclang.org
 
     // ----- fill in name here ------------------------------------------------------------
 
-    /**
-     * A mixin that represents a set of endpoints for a specific URI path.
-     *
-     * Example:
-     *
-     *     @web.WebModule
-     *     module HelloWorld
-     *         {
-     *         package web import web.xtclang.org;
-     *
-     *         @web.WebService("/")
-     *         service Hello
-     *             {
-     *             @web.Get("hello")
-     *             @web.Produces("text/plain")
-     *             String sayHello()
-     *                 {
-     *                 return "Hello World";
-     *                 }
-     *             }
-     *         }
-     */
-    mixin WebService(String path = "/")
-            into service
-        {
-        Request?  request;
-        Response? response;
-        Session?  session;
-
-// TODO can this take the chain and do the work?
-// Response process(...)
-        void begin(Request request, Response response, Session? session)
-            {
-            this.request  = request;
-            this.response = response;
-            this.session  = session;
-            }
-
-        void end()
-            {
-            this.request  = Null;
-            this.response = Null;
-            this.session  = Null;
-            }
-        }
 
     /**
      * A generic HTTP endpoint.
@@ -71,7 +26,7 @@ module web.xtclang.org
      * @param httpMethod  the name of the HTTP method
      * @param path        the optional path to reach this endpoint
      */
-    mixin Endpoint(HttpMethod httpMethod, String path = "")
+    mixin Endpoint(HttpMethod? httpMethod, String path = "")
             into Method;
 
 
@@ -98,10 +53,10 @@ module web.xtclang.org
      *
      *     @Get("/{id}")
      *     @Produces(Json)
-     *     conditional Cart getCart(@PathParam("id") String id) {...}
+     *     conditional Cart getCart(@PathParam("id") String id, Session session) {...}
      */
     mixin Produces(MediaType|MediaType[] mediaType)
-            into WebService | Endpoint;
+            into WebApp | WebService | Endpoint;
 
     /**
      * A mixin to indicate the media-types consumed by a particular component.
@@ -115,7 +70,7 @@ module web.xtclang.org
      *     HttpStatus updateItem(@PathParam String id, @Body Item item) {...}
      */
     mixin Consumes(MediaType|MediaType[] mediaType)
-            into WebService | Endpoint;
+            into WebApp | WebService | Endpoint;
 
     /**
      * This annotation, `@LoginRequired`, is used to mark a web service call -- or any containing
@@ -145,7 +100,7 @@ module web.xtclang.org
      *                  web service
      */
     mixin LoginRequired(TrustLevel security=Normal)
-            into WebService | Endpoint;
+            into WebApp | WebService | Endpoint;
 
     /**
      * This annotation, `@LoginOptional`, is used to mark a web service call -- or any containing
@@ -156,7 +111,17 @@ module web.xtclang.org
      * annotation.
      */
     mixin LoginOptional
-            into WebService | Endpoint;
+            into WebApp | WebService | Endpoint;
+
+    /**
+     * TODO
+     * @Restrict("admin")
+     * @Restrict(["admin"])
+     * @Restrict(["admin", "manager"])
+     */
+    // LimitAccessTo AllowOnly Permit AccessRequired SecurityCheck
+    mixin Restrict(String|String[] subject)
+            into WebApp | WebService | Endpoint;
 
     /**
      * This annotation, `@HttpsRequired`, is used to mark a web service call -- or any containing
@@ -184,7 +149,7 @@ module web.xtclang.org
      * TLS", or vice versa.
      */
     mixin HttpsRequired
-            into WebService | Endpoint;
+            into WebApp | WebService | Endpoint;
 
     /**
      * This annotation, `@HttpsOptional`, is used to mark a web service call -- or any containing
@@ -195,17 +160,17 @@ module web.xtclang.org
      * annotation.
      */
     mixin HttpsOptional
-            into WebService | Endpoint;
+            into WebApp | WebService | Endpoint;
 
     /**
      * This annotation, `@StreamingRequest`, is used to mark a web service call -- or any containing
      * class thereof, up to the level of the web module itself -- as **not** requiring the content
-     * of the incoming HTTP request to be fully buffered. This allows the web server implementation
-     * to save memory by streaming the content, instead of reading it entirely into memory before
-     * (or while) processing the request.
+     * of the incoming HTTP request to be fully buffered. This may allow the web server to save
+     * memory by streaming the content, instead of reading it entirely into memory before (or while)
+     * processing the request.
      */
     mixin StreamingRequest
-            into WebService | Endpoint;
+            into WebApp | WebService | Endpoint;
 
     /**
      * This annotation, `@StreamingResponse`, is used to mark a web service call -- or any
@@ -215,7 +180,7 @@ module web.xtclang.org
      * memory before starting to send it back to the client.
      */
     mixin StreamingResponse
-            into WebService | Endpoint;
+            into WebApp | WebService | Endpoint;
 
 
     // ----- handler method annotations ------------------------------------------------------------

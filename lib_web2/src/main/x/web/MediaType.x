@@ -201,7 +201,7 @@ const MediaType
     /**
      * A cache of MediaType objects keyed by the text used to create the MediaType.
      */
-    private static LRUCache<String, Marker|MediaType> cache = new LRUCache(1000);
+    private static LRUCache<String, Marker|MediaType> cache = new LRUCache(1K);
 
 
     // ----- Object methods ------------------------------------------------------------------------

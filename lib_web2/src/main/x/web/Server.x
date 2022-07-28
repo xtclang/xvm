@@ -14,6 +14,7 @@ interface Server
      */
     typedef function Handler() as HandlerFactory;
 
+// REVIEW CP - service vs. endpoint factory
     /**
      * Register the specified `HandlerFactory` for the specified URI template.
      *
@@ -30,33 +31,36 @@ interface Server
      */
     void routeDefault(HandlerFactory factory);
 
+    void routeErrors(HandlerFactory factory);
+
+// Watcher? Logger?
     /**
-     * A function that is called with each incoming request is called a `Pre`. Despite the name,
-     * the `Pre` operations are not guaranteed to be run before the [Handler] and/or any [Post]s
+     * A function that is called with each incoming request is called an `Observer`. Despite the name,
+     * the `Observer` operations are not guaranteed to be run before the [Handler] and/or any [Post]s
      * for the request.
      *
-     * The `Pre` capability is useful for implementing simple capabilities, such as logging each
-     * request, but the functionality is limited, and the `Pre` cannot change the Request or alter
+     * The `Observer` capability is useful for implementing simple capabilities, such as logging each
+     * request, but the functionality is limited, and the `Observer` cannot change the Request or alter
      * the request processing control flow. For purposes of request processing, exceptions from the
-     * `Pre` are ignored, including [RequestAborted].
+     * `Observer` are ignored, including [RequestAborted].
      */
-    typedef function void(Request) as Pre;
+    typedef function void(Request) as Observer;
 
     /**
-     * A means to produce multiple [Pre] handlers, to allow the server to increase concurrent
+     * A means to produce multiple [Observer] handlers, to allow the server to increase concurrent
      * request handling execution.
      */
-    typedef function Pre() as PreFactory;
+    typedef function Observer() as ObserverFactory;
 
     /**
      * Instruct the server to perform some operation on each incoming request. The order in which
-     * [Pre]s are added is not significant, and the `Pre` operations are not guaranteed to run in
-     * any specific order. Furthermore, and despite the name, the `Pre` operations are not even
+     * [Observer]s are added is not significant, and the `Observer` operations are not guaranteed to run in
+     * any specific order. Furthermore, and despite the name, the `Observer` operations are not even
      * guaranteed to be run before the [Handler] and any [Post]s for the request.
      *
-     * @param factory  the means to produce [Pre] handlers that will perform the operation
+     * @param factory  the means to produce [Observer] handlers that will perform the operation
      */
-    void addPre(PreFactory factory);
+    void addObserver(ObserverFactory factory);
 
     /**
      * A function that is given the request to both pre- **and** post-process is called a `Post`.

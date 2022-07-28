@@ -149,7 +149,7 @@ const AcceptList
     /**
      * A cache of AcceptList objects keyed by the text used to create the AcceptList.
      */
-    private static LRUCache<String, Marker|AcceptList> cache = new LRUCache(1000);
+    private static LRUCache<String, Marker|AcceptList> cache = new LRUCache(1K);
 
 
     // ----- individual AcceptType -----------------------------------------------------------------

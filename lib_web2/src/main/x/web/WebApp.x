@@ -44,5 +44,29 @@ mixin WebApp
 
         return roots.makeImmutable();
         }
-    }
 
+    /**
+     * Create a session object.
+     * TODO
+     *
+     * @return the new `Session` object
+     */
+    Session createSession()
+        {
+        TODO
+        }
+
+    /**
+     * Handle an exception that occurred during [Request] processing within this `WebApp`, and
+     * produce a [Response] that is appropriate to the exception that was raised.
+     *
+     * @param e  the Exception that occurred during the processing of a [Request]
+     *
+     * @return the [Response] to send back to the caller
+     */
+    Response handleException(Exception e)
+        {
+        // the exception needs to be logged
+        return TODO new responses.SimpleResponse(e.is(RequestAborted) ? e.status : InternalServerError);
+        }
+    }
