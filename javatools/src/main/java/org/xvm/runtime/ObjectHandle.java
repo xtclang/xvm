@@ -855,8 +855,7 @@ public abstract class ObjectHandle
                 return frameCaller.call(frameNext);
                 }
 
-            frameCaller.m_hException = f_hException;
-            return Op.R_EXCEPTION;
+            return frameCaller.raiseException(f_hException);
             }
 
         public void addContinuation(Frame.Continuation continuation)

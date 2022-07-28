@@ -758,6 +758,14 @@ public class ServiceContext
                                     // unwind the exception without stopping in the debugger
                                     fDebugger = false;
                                     break;
+
+                                default:
+                                    assert iPC >= 0 && frame.m_hException == null;
+
+                                    // the debugger has handled (reported) the exception
+                                    frame = m_frameCurrent = frame.f_framePrev;
+                                    aOp   = frame.f_aOp;
+                                    continue nextOp;
                                 }
                             }
 

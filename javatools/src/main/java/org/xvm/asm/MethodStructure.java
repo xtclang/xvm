@@ -2513,7 +2513,7 @@ public class MethodStructure
          * Address and simulate ops, eliminate dead code and after that register the ops with a
          * method constant registry.
          */
-        protected void registerConstants(ConstantPool pool)
+        public void registerConstants(ConstantPool pool)
             {
             if (f_method.m_abOps == null)
                 {

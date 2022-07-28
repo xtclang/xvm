@@ -1307,6 +1307,18 @@ public class Frame
         }
 
     /**
+     * Clear this frame's exception.
+     *
+     * @return the cleared exception handler
+     */
+    public ExceptionHandle clearException()
+        {
+        ExceptionHandle hException = m_hException;
+        m_hException = null;
+        return hException;
+        }
+
+    /**
      * @return an array of function's local constants
      */
     public Constant[] localConstants()
@@ -1743,6 +1755,14 @@ public class Frame
             info.setName(param.getName());
             }
         return info;
+        }
+
+    /**
+     * @return the number of variables visible in the current scope
+     */
+    public int getCurrentVarCount()
+        {
+        return f_anNextVar == null ? 0 : f_anNextVar[m_iScope];
         }
 
     // construct-finally support

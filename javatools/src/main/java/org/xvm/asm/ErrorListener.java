@@ -275,14 +275,23 @@ public interface ErrorListener
             }
 
         /**
-         * Produce a localized message based on the error code and related
-         * parameters.
+         * Produce a localized message based on the error code and related parameters.
          *
-         * @return a formatted message for display
+         * @return a formatted message for display that includes the error code
          */
         public String getMessage()
             {
-            return getCode() + ": " + MessageFormat.format(RESOURCES.getString(getCode()), getParams());
+            return getCode() + ": " + getMessageText();
+            }
+
+        /**
+         * Produce a localized message based on the error code and related parameters.
+         *
+         * @return a formatted message for display that doesn't include the error code
+         */
+        public String getMessageText()
+            {
+            return MessageFormat.format(RESOURCES.getString(getCode()), getParams());
             }
 
         /**

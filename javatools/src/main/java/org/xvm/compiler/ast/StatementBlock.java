@@ -324,8 +324,20 @@ public class StatementBlock
      */
     public boolean compileMethod(Code code, ErrorListener errs)
         {
-        RootContext ctx = new RootContext(this, code.getMethodStructure());
+        return compileMethod(new RootContext(this, code.getMethodStructure()), code, errs);
+        }
 
+    /**
+     * Generate assembly code for a method and the specified context.
+     *
+     * @param ctx   the RootContext to use
+     * @param code  the code object to which the assembly is added
+     * @param errs  the error listener to log to
+     *
+     * @return true if nothing occurred during the compilation that should stop further progress
+     */
+    public boolean compileMethod(RootContext ctx, Code code, ErrorListener errs)
+        {
         ErrorListener errsValidation = errs.branch(this);
 
         Statement that = this.validate(ctx.validatingContext(), errsValidation);

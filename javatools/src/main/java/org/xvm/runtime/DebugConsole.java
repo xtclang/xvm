@@ -18,10 +18,13 @@ import java.util.TreeSet;
 
 import java.util.prefs.Preferences;
 
+import org.xvm.asm.ErrorListener.ErrorInfo;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.IdentityConstant;
+
+import org.xvm.compiler.EvalCompiler;
 
 import org.xvm.runtime.Fiber.FiberStatus;
 import org.xvm.runtime.Frame.VarInfo;
@@ -29,9 +32,9 @@ import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 
 import org.xvm.runtime.template.collections.xArray;
-import org.xvm.runtime.template.text.xString.StringHandle;
-
 import org.xvm.runtime.template.collections.xArray.ArrayHandle;
+
+import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.runtime.template._native.xTerminalConsole;
 
@@ -70,32 +73,41 @@ public class DebugConsole
     @Override
     public synchronized int checkBreakPoint(Frame frame, int iPC)
         {
-        boolean fDebug = switch (m_stepMode)
+        boolean fDebug  = false;
+        boolean fRender = true;
+
+        switch (m_stepMode)
             {
-            case NaturalCall ->
-                false;
+            case NaturalReturn:
+                fDebug  = true;
+                fRender = false;
+                break;
 
-            case StepOver ->
-                frame == m_frame;
+            case StepOut: // handled by onReturn()
+            case NaturalCall:
+                break;
 
-            case StepOut ->
-                // handled by onReturn()
-                false;
+            case StepOver:
+                fDebug = frame == m_frame;
+                break;
 
-            case StepInto ->
-                m_frame.f_fiber.isAssociated(  frame.f_fiber) ||
-                  frame.f_fiber.isAssociated(m_frame.f_fiber);
+            case StepInto:
+               fDebug = m_frame.f_fiber.isAssociated(  frame.f_fiber) ||
+                        frame.f_fiber.isAssociated(m_frame.f_fiber);
+               break;
 
-            case StepLine ->
-                frame == m_frame && iPC == m_iPC;
+            case StepLine:
+                fDebug = frame == m_frame && iPC == m_iPC;
+                break;
 
-            case None ->
-                m_setLineBreaks != null &&
-                m_setLineBreaks.stream().anyMatch(bp -> bp.matches(frame, iPC));
-            };
+            case None:
+                fDebug = m_setLineBreaks != null &&
+                         m_setLineBreaks.stream().anyMatch(bp -> bp.matches(frame, iPC));
+                break;
+            }
 
         return fDebug
-                ? enterCommand(frame, iPC, true)
+                ? enterCommand(frame, iPC, fRender)
                 : iPC + 1;
         }
 
@@ -104,13 +116,12 @@ public class DebugConsole
         {
         if (m_stepMode == StepMode.NaturalCall)
             {
-            // exception by the natural code called from the debugger
-            if (frame == m_frame)
+            // exception by the natural code called from the debugger ("EVAL" or "DS")
+            if (frame.f_framePrev == m_frame)
                 {
-                xTerminalConsole.CONSOLE_OUT.println("Call \"toString()\" threw an exception " + hEx);
-                frame.m_hException = null;
-                return enterCommand(frame, m_iPC, false);
+                return frame.m_continuation.proceed(frame);
                 }
+
             // keep following the exception
             return Op.R_NEXT;
             }
@@ -550,10 +561,41 @@ public class DebugConsole
                         writer.println("View format has not been implemented.");
                         continue NextCommand;
 
-                    case "E":
-                        // TODO eval <expr>
-                        writer.println("Eval has not been implemented.");
+                    case "E", "EVAL":
+                        {
+                        if (cArgs < 1)
+                            {
+                            break;
+                            }
+
+                        if (m_frameFocus != frame)
+                            {
+                            writer.println("The \"eval\" command is only supported at the top frame.");
+                            continue NextCommand;
+                            }
+
+                        StringBuilder sb = new StringBuilder("{\nreturn");
+                        for (int i = 1; i < cArgs + 1; i++)
+                            {
+                            sb.append(' ').append(asParts[i]);
+                            }
+                        sb.append(";\n}");
+
+                        EvalCompiler    compiler = new EvalCompiler(frame, sb.toString());
+                        MethodStructure lambda   = compiler.createLambda();
+                        if (lambda == null)
+                            {
+                            for (ErrorInfo err : compiler.getErrors())
+                                {
+                                writer.println(err.getMessageText());
+                                }
+                            }
+                        else
+                            {
+                            return resolveEvalArgs(frame, lambda, compiler.getArgs(), writer);
+                            }
                         continue NextCommand;
+                        }
 
                     case "WE":
                         // TODO watch eval <expr>
@@ -773,7 +815,7 @@ public class DebugConsole
                                     {
                                     writer.println("<unassigned>");
                                     }
-                                else if (callToString(frame, hVar, writer))
+                                else if (callToString(frame, hVar, writer) == Op.R_CALL)
                                     {
                                     return Op.R_CALL;
                                     }
@@ -798,25 +840,96 @@ public class DebugConsole
         }
 
     /**
-     * Call toString() helper.
+     * Process the "eval" command.
      */
-    private boolean callToString(Frame frame, ObjectHandle hVar, PrintWriter writer)
+    private int resolveEvalArgs(Frame frame, MethodStructure lambda, ObjectHandle[] ahArg, PrintWriter writer)
+        {
+        if (Op.anyDeferred(ahArg))
+            {
+            Frame.Continuation stepNext =
+                    frameCaller -> callEval(frameCaller, lambda, ahArg, writer);
+
+            return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
+            }
+
+        return callEval(frame, lambda, ahArg, writer);
+        }
+
+    /**
+     * Complete the "eval" command.
+     */
+    private int callEval(Frame frame, MethodStructure lambda, ObjectHandle[] ahArg, PrintWriter writer)
+        {
+        ObjectHandle hThis = frame.f_function.isFunction() ? null : frame.getThis();
+        switch (frame.call1(lambda, hThis, ahArg, Op.A_STACK))
+            {
+            case Op.R_NEXT:
+                lambda.getParent().removeChild(lambda);
+                return callToString(frame, frame.popStack(), writer);
+
+            case Op.R_CALL:
+                m_stepMode = StepMode.NaturalCall;
+                frame.m_frameNext.addContinuation(frameCaller ->
+                    {
+                    lambda.getParent().removeChild(lambda);
+                    ExceptionHandle hEx = frameCaller.clearException();
+                    if (hEx == null)
+                        {
+                        if (callToString(frameCaller, frameCaller.popStack(), writer) == Op.R_CALL)
+                            {
+                            return Op.R_CALL;
+                            }
+                        }
+                    else
+                        {
+                        writer.println("\"Eval\" threw an exception " + hEx);
+                        writer.println(frameCaller.getStackTrace());
+                        }
+                    m_stepMode = StepMode.NaturalReturn;
+                    return m_iPC;
+                    });
+                return Op.R_CALL;
+
+            default:
+                throw new IllegalStateException();
+            }
+        }
+
+    /**
+     * Process natural "toString()" call.
+     */
+    private int callToString(Frame frame, ObjectHandle hVar, PrintWriter writer)
         {
         switch (Utils.callToString(frame, hVar))
             {
             case Op.R_NEXT:
-                writer.println(((StringHandle) frame.popStack()).getStringValue());
                 m_stepMode = StepMode.None;
-                return false;
+                writer.println(((StringHandle) frame.popStack()).getStringValue());
+                return Op.R_NEXT;
 
             case Op.R_CALL:
+                m_stepMode = StepMode.NaturalCall;
                 frame.m_frameNext.addContinuation(frameCaller ->
                     {
-                    writer.println(((StringHandle) frameCaller.popStack()).getStringValue());
-                    return enterCommand(frameCaller, m_iPC, false);
+                    ExceptionHandle hEx = frameCaller.clearException();
+                    if (hEx == null)
+                        {
+                        writer.println(((StringHandle) frameCaller.popStack()).getStringValue());
+                        }
+                    else
+                        {
+                        writer.println("Call \"toString()\" threw an exception " + hEx);
+                        writer.println(frameCaller.getStackTrace());
+                        }
+                    m_stepMode = StepMode.NaturalReturn;
+                    return m_iPC;
                     });
-                m_stepMode = StepMode.NaturalCall;
-                return true;
+                return Op.R_CALL;
+
+            case Op.R_EXCEPTION:
+                m_stepMode = StepMode.None;
+                writer.println("Call \"toString()\" threw an exception " + frame.clearException());
+                return Op.R_NEXT;
 
             default:
                 throw new IllegalStateException();
@@ -1385,7 +1498,7 @@ public class DebugConsole
                 }
             }
 
-        int cVars = frame.f_anNextVar == null ? 0 : frame.f_anNextVar[frame.m_iScope];
+        int cVars = frame.getCurrentVarCount();
         for (int i = 0; i < cVars; i++)
             {
             VarInfo info = frame.getVarInfo(i);
@@ -2225,6 +2338,6 @@ public class DebugConsole
     /**
      * The current step operation.
      */
-    enum StepMode {None, StepOver, StepInto, StepOut, StepLine, NaturalCall}
+    enum StepMode {None, StepOver, StepInto, StepOut, StepLine, NaturalCall, NaturalReturn}
     private StepMode m_stepMode = StepMode.None;
     }

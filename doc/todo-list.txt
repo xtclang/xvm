@@ -25,10 +25,6 @@
 
 - entering debugger should stop time
 
-- debugger stops on exceptions even if that breakpoint is disabled
-
-- debugger should print an exception stack for natural exceptions thrown by "toString()"
-
 - the XTC compiler disregards "resources" changes if nothing else changed and "-force" option
   is not specified
 

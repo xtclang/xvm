@@ -113,6 +113,24 @@ public class MethodDeclarationStatement
         adopt(body);
         }
 
+    /**
+     * Create a MethodDeclarationStatement that turns a statement block into a MethodStructure.
+     * This is used by the "eval" compiler.
+     *
+     * @param struct  the MethodStructure that this MethodDeclarationStatement is intended to
+     *                compile into
+     * @param body    the StatementBlock that the resulting method must use
+     */
+    public MethodDeclarationStatement(MethodStructure struct, StatementBlock body)
+        {
+        super(body.getStartPosition(), body.getEndPosition());
+
+        this.body = body;
+
+        setComponent(struct);
+        adopt(body);
+        }
+
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -841,6 +859,11 @@ public class MethodDeclarationStatement
                 }
             }
 
+        compileBody(mgr, method, errs);
+        }
+
+    protected void compileBody(StageMgr mgr, MethodStructure method, ErrorListener errs)
+        {
         if (body != null && !body.compileMethod(method.createCode(), errs))
             {
             // the compilation has failed; no further progress is possible
