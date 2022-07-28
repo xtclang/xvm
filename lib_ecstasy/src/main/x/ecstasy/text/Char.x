@@ -711,6 +711,48 @@ const Char(UInt32 codepoint)
             };
         }
 
+    /**
+     * Determine if the character is an ASCII letter, one of the values 'A'..'Z' or 'a'..'z'.
+     *
+     * @return True iff the character is an ASCII letter
+     * @return (conditional) this letter
+     */
+    conditional Char asciiLetter()
+        {
+        return switch (this)
+            {
+            case 'A'..'Z': (True, this);
+            case 'a'..'z': (True, this);
+            default      : False;
+            };
+        }
+
+    /**
+     * Determine if the character is an ASCII uppercase letter, one of the values 'A'..'Z'.
+     *
+     * @return True iff the character is an ASCII uppercase letter
+     * @return (conditional) this uppercase letter
+     */
+    conditional Char asciiUppercase()
+        {
+        return 'A' <= this <= 'Z'
+                ? (True, this)
+                : False;
+        }
+
+    /**
+     * Determine if the character is an ASCII lowercase letter, one of the values 'a'..'z'.
+     *
+     * @return True iff the character is an ASCII lowercase letter
+     * @return (conditional) this lowercase letter
+     */
+    conditional Char asciiLowercase()
+        {
+        return 'a' <= this <= 'z'
+                ? (True, this)
+                : False;
+        }
+
 
     // ----- numeric conversion support ------------------------------------------------------------
 
