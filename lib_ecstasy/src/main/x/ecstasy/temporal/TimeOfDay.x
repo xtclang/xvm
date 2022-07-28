@@ -33,8 +33,8 @@ const TimeOfDay(Int picos)
      *
      * @param hour    the number of hours, in the range `0..23`
      * @param minute  the number of minutes, in the range `0..59`
-     * @param second  the number of seconds, in the range `0..59`; the leap second `23:59:60` is also
-     *                supported
+     * @param second  the number of seconds, in the range `0..59`; the leap second `23:59:60` is
+     *                also supported
      * @param picos   the number of picoseconds, in the range `0..999999999999`
      */
     construct(Int hour, Int minute, Int second=0, Int picos=0)
@@ -119,6 +119,26 @@ const TimeOfDay(Int picos)
             }
 
         construct TimeOfDay(hour, min, sec, pico);
+        }
+
+    /**
+     * Validate the hours, minutes, seconds, and picoseconds components of a `TimeOfDay`.
+     *
+     * @param hour    the number of hours, in the range `0..23`
+     * @param minute  the number of minutes, in the range `0..59`
+     * @param second  the number of seconds, in the range `0..59`; the leap second `23:59:60` is
+     *                also allowed
+     * @param picos   the number of picoseconds, in the range `0..999999999999`
+     *
+     * @return True iff the passed values are in their allowed ranges
+     */
+    static Boolean validate(Int hour, Int minute, Int second=0, Int picos=0)
+        {
+        return 0 <= hour   < 24
+            && 0 <= minute < 60
+            && (0 <= second < 60
+                || hour == 23 && minute == 59 && second == 60)  // allow for a leap-second
+            && 0 <= picos  < PICOS_PER_SECOND;
         }
 
     /**
