@@ -2759,7 +2759,7 @@ public class NameExpression
                         if (infoMethod == null)
                             {
                             log(errs, Severity.ERROR, Compiler.METHOD_INACCESSIBLE,
-                                    idMethod.getValueString(), typeLeft.getValueString());
+                                    idMethod.getValueString(), infoLeft.getType().getValueString());
                             return null;
                             }
                         method = infoMethod.getTopmostMethodStructure(infoLeft);
