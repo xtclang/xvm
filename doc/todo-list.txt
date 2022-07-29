@@ -23,6 +23,8 @@
 
 - enum ClassCompositions without type parameters could be made into CanonicalCompositions
 
+- add eval command history for the debugger
+
 - entering debugger should stop time
 
 - the XTC compiler disregards "resources" changes if nothing else changed and "-force" option
