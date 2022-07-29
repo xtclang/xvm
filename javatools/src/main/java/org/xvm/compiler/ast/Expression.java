@@ -305,6 +305,16 @@ public abstract class Expression
      *
      * This implementation could be computationally expensive and should be used sparingly.
      */
+    protected TypeFit testFitExhaustive(Context ctx, TypeConstant typeRequired, ErrorListener errs)
+        {
+        return testFitMultiExhaustive(ctx, new TypeConstant[] {typeRequired}, errs);
+        }
+
+    /**
+     * An implementation of the "tesFit" API via the validation of the cloned expression.
+     *
+     * This implementation could be computationally expensive and should be used sparingly.
+     */
     protected TypeFit testFitMultiExhaustive(Context ctx, TypeConstant[] atypeRequired,
                                              ErrorListener errs)
         {

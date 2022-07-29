@@ -745,7 +745,8 @@ public class RelOpExpression
      *
      * @return the type to request from the right expression, or null
      */
-    private TypeConstant selectRightType(Context ctx, TypeConstant typeRequired, TypeConstant typeLeft)
+    private TypeConstant selectRightType(Context ctx, TypeConstant typeRequired,
+                                         TypeConstant typeLeft)
         {
         if (typeLeft == null)
             {
@@ -753,16 +754,22 @@ public class RelOpExpression
             return null;
             }
 
+        // TODO find best, not just the first
         Set<MethodConstant> setOps = typeLeft.ensureTypeInfo().findOpMethods(
                 getDefaultMethodName(), getOperatorString(), 1);
         for (MethodConstant idMethod : setOps)
             {
-            if (expr2.testFit(ctx, idMethod.getRawParams()[0], false, null).isFit()
-                    && (typeRequired == null ||
-                        isAssignable(ctx, idMethod.getRawReturns()[0], typeRequired)))
+            if (typeRequired != null &&
+                    !isAssignable(ctx, idMethod.getRawReturns()[0], typeRequired))
                 {
-                // TODO find best, not just the first
-                return idMethod.getRawParams()[0];
+                continue;
+                }
+
+            TypeConstant typeParam = idMethod.getRawParams()[0];
+            if (expr2.testFit(ctx, typeParam, /*fExhaustive*/ false, null).isFit() ||
+                expr2.testFitExhaustive(ctx, typeParam, null).isFit())
+                {
+                return typeParam;
                 }
             }
 

@@ -11,7 +11,7 @@ const Annotation(Class mixinClass, Argument[] arguments = [])
         {
         return 1 + mixinClass.displayName.size + (arguments.size == 0 ? 0 : 2 * arguments.size)
                  + arguments.map(a -> a.estimateStringLength())
-                            .reduce(Int:0, (n1, n2) -> n1 + n2); // TODO GG: remove "Int:"
+                            .reduce(0, (n1, n2) -> n1 + n2);
         }
 
     @Override
