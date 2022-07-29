@@ -54,98 +54,64 @@ interface Server
 
     /**
      * A function that is called when an exception occurs (or an internal error represented by a
-     * `String` description) is called an `ErrorHandler`.
+     * `String` description) is called an `ErrorHandler`. A Response may or may not already be known
+     * at the point that the error occurs.
      */
     typedef function Response(Request, Response?, Exception|String) as ErrorHandler;
-
-
-    // ----- factory (concurrency) support ---------------------------------------------------------
-
-    /**
-     * A means to produce multiple WebService instances, so that the server can concurrently execute
-     * handlers for multiple incoming requests.
-     */
-    typedef function WebService() as WebServiceFactory;
-
-    /**
-     * A means to produce Handlers tied to specific WebService instances.
-     */
-    typedef function Handler(WebService) as HandlerFactory;
-
-    /**
-     * A means to produce multiple [Interceptor] handlers, to allow the server to increase concurrent
-     * request handling execution.
-     */
-    typedef function Interceptor(WebService) as InterceptorFactory;
-
-    /**
-     * A means to produce multiple [Observer] handlers, to allow the server to increase concurrent
-     * request handling execution.
-     */
-    typedef function Observer(WebService) as ObserverFactory;
-
-    /**
-     * A factory for one of the three routing types.
-     */
-    typedef HandlerFactory | InterceptorFactory | ObserverFactory as RoutingFactory;
 
 
     // ----- route registration --------------------------------------------------------------------
 
     /**
-     * Registers the specified `RoutingFactory` for the specified `Route`.
+     * Register the specified `Handler` for the specified `Route`.
      *
-     * * If registering a `HandlerFactory` for an `Endpoint`, in cases of conflict, the last
-     *   registered handler wins.
+     * In cases of conflict, the last registered handler wins.
      *
-     * * If registering an `InterceptorFactory`, the server will delegate each matching incoming
-     *   request to the interceptor, with the order of registration being significant, with the most
-     *   recently added `Interceptor` executed first.
-     *
-     * * If registering an `ObserverFactory`, the server will dispatch each matching incoming
-     *   request, but: (1) The order in which [Observer]s are added is not significant, and the
-     *   `Observer` operations are not guaranteed to run in any specific order, and may be executed
-     *   before, during (concurrently), or even after the actual request processing.
-     *
-     * @param webServiceFactory  the means to produce a new instance of a WebService; the identity
-     *                           of this factory function is assumed to identify the WebService
-     *                           class (from a uniqueness point of view)
-     * @param route              the URI template that indicates the requests that can be handled
-     * @param routingFactory     the means to produce handlers, interceptors, or observers that can
-     *                           handle, intercept, or observe URIs that match the specified URI
-     *                           template
+     * @param handler  a method on a [WebService] to invoke to handle the specified URI route
      */
-    void route(WebServiceFactory webServiceFactory,
-               Route             route,
-               RoutingFactory    routingFactory);
+    void route(Route route, Method<WebService, <Request>, <Response>> handler);
 
     /**
-     * Register the specified `HandlerFactory` for all unhandled URIs. If no `Handler` is provided
-     * as a default handler, then one will be provided. If more than one `Handler` is provided as a
-     * default handler, then the last one registered will be used.
+     * Register the specified `Interceptor` for the specified `Route`.
      *
-     * @param webServiceFactory  the means to produce a new instance of a WebService; the identity
-     *                           of this factory function is assumed to identify the WebService
-     *                           class (from a uniqueness point of view)
-     * @param routingFactory     the means to produce handlers, interceptors, or observers that can
-     *                           respond to any URI not handled by a route registered via
-     *                           [addEndpoint]
+     * The server will delegate each matching incoming request to the interceptor, with the order of
+     * registration being significant, with the most recently added `Interceptor` executed first.
+     *
+     * @param handler  a method on a [WebService] to invoke to intercept the specified URI route
      */
-    void routeDefault(WebServiceFactory webServiceFactory,
-                      RoutingFactory    routingFactory);
+    void intercept(Route route, Method<WebService, <Handler, Request>, <Response>> interceptor);
 
     /**
-     * Register the specified `HandlerFactory` for all unhandled URIs. If no `ErrorHandler` is
-     * provided, then one will be provided. More than one `ErrorHandler` can be registered, with the
-     * last one registered being the last to execute.
+     * Register the specified `Handler` for the specified `Route`.
      *
-     * @param webServiceFactory  the means to produce a new instance of a WebService; the identity
-     *                           of this factory function is assumed to identify the WebService
-     *                           class (from a uniqueness point of view)
-     * @param handlerFactory     the means to produce error handlers that can respond to any request
-     *                           whose processing has failed and resulted in an exception or other
-     *                           error
+     * The server will dispatch each matching incoming request to the observer, but:
+     *
+     * * The order in which [Observer]s are added is not significant; and
+     * * `Observer` operations are not guaranteed to run in any specific order, and may be executed
+     *   before, during (i.e. concurrently with), or even after the actual request processing.
+     *
+     * @param handler  a method on a [WebService] to invoke to observe the specified URI route
      */
-    void routeErrors(WebServiceFactory webServiceFactory,
-                     ErrorHandler      handlerFactory);
+    void observe(Route route, Method<WebService, <Request>, <>> observer);
+
+    /**
+     * Register a handler for all unhandled (unregistered route) URIs. If no `Handler` is provided
+     * as a default handler, then one will be provided, responding with
+     * [404 - NotFound](HttpStatus.NotFound). If more than one `Handler` is registered,  then the
+     * last one registered will be used.
+     *
+     * @param handler  a method on a [WebService] to invoke to handle any unknown-route requests
+     */
+    void routeDefault(Method<WebService, <Request>, <Response>> handler);
+
+    /**
+     * Register the specified method to handle all errors, either `Exception` or otherwise. If no
+     * `ErrorHandler` gets registered, then a default error handler that produces a status of server
+     * failure [500 - InternalServerError](HttpStatus.InternalServerError) will be provided. More
+     * than one `ErrorHandler` can be registered, with the last one registered being the last to
+     * execute (and thus the one that determines the final `Response`.)
+     *
+     * @param handler  a method on a [WebService] to invoke to handle any failed requests
+     */
+    void routeErrors(Method<WebService, <Request, Response?, Exception|String>, <Response>> handler);
     }

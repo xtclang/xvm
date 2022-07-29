@@ -25,6 +25,7 @@ import Server.Handler;
 @Concurrent
 mixin WebService(String path = "/")
         into service
+        implements Replicable
     {
     Request? request;
     Session? session;
@@ -74,6 +75,6 @@ mixin WebService(String path = "/")
      */
     Response handleException(Exception e)
         {
-        return this:service.as(WebApp).handleException(e);
+        return this:module.as(WebApp).handleException(e);
         }
     }
