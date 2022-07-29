@@ -4,6 +4,7 @@
  * Note: HTTP header keys are case-**in**sensitive.
  */
 interface Header
+        extends Freezable
     {
     /**
      * `True` if this `Header` is for a [Request]; `False` if it is for a [Response].

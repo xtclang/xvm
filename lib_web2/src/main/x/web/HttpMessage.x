@@ -2,6 +2,7 @@
  * The base class for HTTP requests and responses.
  */
 interface HttpMessage
+        extends Freezable
     {
     /**
      * The header of this message.

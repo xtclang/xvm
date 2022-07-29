@@ -2,6 +2,7 @@
  * A representation of the body of an HTTP message.
  */
 interface Body
+        extends Freezable
     {
     /**
      * The headers for this body and -- if available -- for the message containing this body.
