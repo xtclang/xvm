@@ -4,9 +4,9 @@
 interface Body
     {
     /**
-     * The headers for this message.
+     * The headers for this body and -- if available -- for the message containing this body.
      */
-    @RO Header headers;
+    @RO Header header;
 
     /**
      * The media type (aka MIME type) of the body.
@@ -24,7 +24,12 @@ interface Body
      * @return True iff the size of the body is known
      * @return (conditional) the size in bytes of the body
      */
-    conditional Int knownSize();
+    conditional Int knownSize()
+        {
+        // this should be overridden by any Body implementation that may not have the contents
+        // stored in the `bytes` property
+        return bytes.knownSize();
+        }
 
     /**
      * The bytes of the body.
@@ -40,6 +45,15 @@ interface Body
     Byte[] bytes;
 
     /**
+     * Fill in the body's content from the specified object content.
+     *
+     * @param content  an object that can be mapped to this body's [mediaType] via a codec
+     *
+     * @return the Body
+     */
+    Body from(Object content);
+
+    /**
      * In order to _consume_ the body as a stream of bytes, the caller can use this method to obtain
      * a stream that the bytes can be read from.
      *
@@ -48,7 +62,10 @@ interface Body
      *
      * @return a BinaryInput that provides the body as a stream
      */
-    BinaryInput bodyReader();
+    BinaryInput bodyReader()
+        {
+        return new ecstasy.io.ByteArrayInputStream(bytes);
+        }
 
     /**
      * In order to _consume_ the body as a stream of bytes, the caller can use this method to
@@ -59,21 +76,10 @@ interface Body
      *
      * @param receiver  the BinaryOutput stream that the bytes of the body will written to
      */
-    void streamBodyTo(BinaryOutput receiver);
-
-    /**
-     * In order to _provide_ the body as a stream of bytes, the caller can use this method to obtain
-     * a stream that the body's bytes can be written to.
-     *
-     * By using this method, it may be possible for the body to be streamed without having to buffer
-     * the entire body in memory.
-     *
-     * @param knownSize  (optional) if the number of bytes is known at this point, then the caller
-     *                   should provide it so that the information can be included in the header
-     *
-     * @return the BinaryOutput to write the bytes of the body to
-     */
-    BinaryOutput bodyWriter(Int? knownSize=Null);
+    void streamBodyTo(BinaryOutput receiver)
+        {
+        receiver.writeBytes(bytes);
+        }
 
     /**
      * In order to _provide_ the body as a stream of bytes, the caller can use this method, passing
@@ -84,5 +90,8 @@ interface Body
      *
      * @param source  the InputStream that provides the bytes of the body
      */
-    void streamBodyFrom(InputStream source);
+    void streamBodyFrom(InputStream source)
+        {
+        bytes = source.readBytes(source.size);
+        }
     }

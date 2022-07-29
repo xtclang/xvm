@@ -66,89 +66,34 @@ interface Request
     Map<String, List<String>> parameters;
 
 
-// TODO ignore:
-//    /**
-//     * The accepted media types.
-//     *
-//     * @return the accepted media types.
-//     */
-//    MediaType[] accepts.get()
-//        {
-//        List<MediaType> accepts = new Array();
-//        if (List<String> list := getAll("Accept"))
-//            {
-//            for (String mt : list)
-//                {
-//                for (String s : mt.split(','))
-//                    {
-//                    accepts.add(new MediaType(s));
-//                    }
-//                }
-//            }
-//        return accepts.toArray();
-//        }
-//
-//    /**
-//     * The request or response content type.
-//     *
-//     * @return the content type
-//     */
-//    MediaType? getContentType()
-//        {
-//        if (String ct := get("Content-Type"))
-//            {
-//            return new MediaType(ct);
-//            }
-//        return Null;
-//        }
-//
-//    /**
-//     * Set the request or response content type.
-//     *
-//     * @param mediaType  the content type
-//     */
-//    void setContentType(MediaType? mediaType)
-//        {
-//        if (mediaType != Null)
-//            {
-//            set("Content-Type", mediaType.name);
-//            }
-//        else
-//            {
-//            headers.remove("Content-Type");
-//            }
-//        }
-//
-//    /**
-//     * Set the request or response content type.
-//     *
-//     * @param mediaType  the content type
-//     */
-//    void setContentType(String? mediaType)
-//        {
-//        if (mediaType != Null)
-//            {
-//            set("Content-Type", mediaType);
-//            }
-//        else
-//            {
-//            headers.remove("Content-Type");
-//            }
-//        }
-//
-//    /**
-//     * The request or response content length.
-//     *
-//     * @return a True iff the content length header is present
-//     * @return the content type
-//     */
-//    Int? contentLength.get()
-//        {
-//        if (String len := get("Content-Length"))
-//            {
-//            return new IntLiteral(len).toInt64();
-//            }
-//        return Null;
-//        }
+    // ----- cookie support ------------------------------------------------------------------------
 
+    /**
+     * Obtain the value of the specified cookie, if it is included in the request.
+     *
+     * @return True iff the specified cookie name is in the header
+     * @return (conditional) the specified cookie
+     */
+    conditional String getCookie(String name)
+        {
+        for (String value : header.valuesOf("Cookie"))
+            {
+            // TODO parse ';' delimited list of key=value pairs
+            }
+        return False;
+        }
+
+    /**
+     * Add the specified cookie information to the request; if the cookie of the same name already
+     * exists in the request, then it is replaced with the new value.
+     *
+     * @param name   the cookie name to include in the request
+     * @param value  the cookie value
+     */
+    void setCookie(String name, String value)
+        {
+        // TODO remove any existing entry for this cookie name (or replace its value)
+        // TODO validation of cookie name, validation of value
+        header.add("Cookie", $"{name}={value}");
+        }
     }

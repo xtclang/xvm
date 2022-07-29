@@ -29,7 +29,7 @@ interface Client
     Client restrictTo(URI baseURI);
 
     /**
-     * Each request sent will include these headers.
+     * Each request created will include these headers.
      */
     @RO Header defaultHeaders;
 
@@ -75,9 +75,8 @@ interface Client
     Response post(String | URI uri, Byte[] bytes, MediaType mediaType=Json)
         {
         Request request = createRequest(uri.is(String) ? new URI(uri) : uri, POST);
-        Body body = request.ensureBody();
-        body.mediaType = mediaType;
-        body.bytes     = bytes;
+        Body body  = request.ensureBody(mediaType);
+        body.bytes = bytes;
         return send(request);
         }
 

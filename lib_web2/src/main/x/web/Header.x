@@ -139,46 +139,6 @@ interface Header
         }
 
 
-    // ----- type-specific helpers -----------------------------------------------------------------
-
-    static const Cookie {}
-
-    /**
-     * TODO
-     */
-    @RO String cookieHeaderName.get()
-        {
-        return isRequest
-                ? "cookie"
-                : "set-cookie";
-        }
-
-
-    /**
-     * Obtain the specified cookie from the header.
-     *
-     * @return True iff the specified cookie name is in the header
-     * @return (conditional) the specified cookie
-     */
-    conditional Cookie getCookie(String name)
-        {
-        // TODO
-        TODO
-        }
-
-    /**
-     * Place the provided cookie information in the header; if the cookie of the same name already
-     * exists in the header, then it is replaced.
-     *
-     * @param cookie  the cookie to include in the header
-     *
-     */
-    void setCookie(Cookie cookie)
-        {
-        // TODO
-        }
-
-
     // ----- helper methods ------------------------------------------------------------------------
 
     /**

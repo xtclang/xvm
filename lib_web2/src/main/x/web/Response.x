@@ -6,85 +6,189 @@ import ecstasy.io.ByteArrayOutputStream;
 interface Response
         extends HttpMessage
     {
+    /**
+     * This is the reference to the `Request`, iff this `Response` is being created in response to
+     * a `Request` and that `Request` object is available.
+     */
+    Request? request;
+
     HttpStatus status;
 
-//
-//    /**
-//     * Process the `Tuple` returned from a request handler into a `Response`.
-//     *
-//     * @param tuple      the `Tuple` of return values from the endpoint method execution
-//     * @param method     the HTTP request method (i.e. GET, POST, etc)
-//     * @param mediaType  the media type of the response body
-//     *
-//     * @return a Response
-//     */
-//    static Response encodeResponse(Tuple tuple, Int index, HttpMethod method, MediaType mediaType)
-//        {
-//        if (index > 0 && tuple[index].is(Response))
-//            {
-//            // the endpoint returned a Response so use that as the response
-//            return tuple[index].as(Response);
-//            }
-//
-//        Response response = new Response();
-//
-//        if (tuple.size <= index)
-//            {
-//            // method had a void return type so there is no response body
-//            if (method.permitsRequestBody)
-//                {
-//                // method allows a body so set the length to zero
-//                response.headers.add("Content-Length", "0");
-//                }
-//            }
-//        else
-//            {
-//            // Iterate over the return values from the endpoint assigning them to the
-//            // relevant parts of the request
-//            for (Int i : [index..tuple.size))
-//                {
-//                Object o = tuple[i];
-//                if (o.is(HttpStatus))
-//                    {
-//                    response.status = o;
-//                    }
-//                else if (o.is(MediaType))
-//                    {
-//                    mediaType = o;
-//                    }
-//                else if (o != Null)
-//                    {
-//                    response.body = o;
-//                    }
-//                }
-//            }
-//
-//        response.headers.add("Content-Type", mediaType.name);
-//
-//        return response;
-//        }
-//
-//    Tuple<Int, String[], String[][], Byte[]> asTuple()
-//        {
-//        (String[] names, String[][] values) = headers.toArrays();
-//
-//        return (status.code, names, values, createBody(body));
-//        }
-//
-//    Byte[] createBody(Object? body)
-//        {
-//        ByteArrayOutputStream out = new ByteArrayOutputStream();
-//        if (body.is(Iterable<Char>))
-//            {
-//            for (Char c : body)
-//                {
-//                out.writeBytes(c.utf8());
-//                }
-//            }
-//        else if (body.is(Byte[]))
-//            {
-//            out.writeBytes(body);
-//            }
-//        return out.bytes;
-//        }
+
+    // ----- cookie support ------------------------------------------------------------------------
+
+    /**
+     * A cookie is a piece of information (along with some optional configuration parameters) that
+     * a server can send as part of a `Response` to a user agent, and which that user agent will
+     * subsequently send back to the server with each `Request`, subject to a number of rules.
+     *
+     * Generally, server applications should not use cookies directly, and should instead rely on
+     * some combination of the session functionality and/or a database to manage information on
+     * behalf of the user. However, there are specific use cases that require cookies, and these
+     * include examples of Javascript code running on the user agent accessing information in the
+     * cookie.
+     *
+     * @param name        the name of the cookie. Cookie names prefixed with `__Secure-` or
+     *                    `__Host-` can be used only if they are set with the secure attribute from
+     *                    a secure (HTTPS) origin. In addition, cookies with the `__Host-` prefix
+     *                    must have a path of `/` (meaning any path at the host) and must not have
+     *                    a Domain attribute.
+     * @param value       the value associated with the cookie. This is the cookie's content.
+     * @param expires     the expiration for the cookie. A cookie with an expiration is unironically
+     *                    referred to as a "permanent cookie", and one without an expiration is
+     *                    referred to as a "temporary cookie", also known as a "session cookie" (but
+     *                    with the use of the term "session" unrelated to the [Session] concept).
+     * @param path        the path that must exist in the requested URL for the user agent to send
+     *                    the `Cookie` as part of the `Request`
+     * @param domain      the host to which the cookie will be sent. If omitted, this attribute
+     *                    defaults to the host of the current document URL, not including
+     *                    subdomains. Contrary to earlier HTTP specifications, leading dots in
+     *                    domain names (.example.com) are ignored. Multiple host/domain values are
+     *                    not allowed, but if a domain is specified, then subdomains are always
+     *                    included.
+     * @param sameSite    controls whether or not a cookie is sent with cross-site requests,
+     *                    providing some protection against cross-site request forgery attacks
+     *                    (CSRF). While the specified HTTP default is [Lax], this implementation
+     *                    defaults to [Strict].
+     * @param exposeToJS  `True` indicates that the user agent should allow client side Javascript
+     *                    to detect and access this cookie
+     * @param requireTLS  `True` indicates that this cookie should not be sent to a user agent
+     *                    unless the connection is protected by TLS
+     */
+    static const Cookie(String           name,
+                        String           value,
+                        (Time|Duration)? expires    = Null,
+                        String?          path       = Null,
+                        String?          domain     = Null,
+                        SameSite         sameSite   = Strict,
+                        Boolean          exposeToJS = False,
+                        Boolean          requireTLS = True,
+                       )
+        {
+        enum SameSite {Strict, Lax, None}
+
+        // ----- constructors --------------------------------------------------------------------------
+
+        assert()
+            {
+            // TODO validate properties
+            }
+
+        /**
+         * Copy this Cookie to make a new Cookie, with only the specified changes.
+         *
+         * @param name        the name of the cookie
+         * @param value       the value associated with the cookie
+         * @param expires     the expiration for the cookie
+         * @param path        the path that must exist in the requested URL for the user agent to
+         *                    send the `Cookie` as part of a `Request`
+         * @param domain      the host to which the cookie will be sent
+         * @param sameSite    controls whether or not a cookie is sent with cross-site requests
+         * @param exposeToJS  `True` indicates that the user agent should allow client side
+         *                    Javascript to detect and access this cookie
+         * @param requireTLS  `True` indicates that this cookie should not be sent to a user agent
+         *                    unless the connection is protected by TLS
+         *
+         * @return the new Cookie
+         */
+        Cookie with(String?          name       = Null,
+                    String?          value      = Null,
+                    (Time|Duration)? expires    = Null,
+                    String?          path       = Null,
+                    String?          domain     = Null,
+                    SameSite?        sameSite   = Null,
+                    Boolean?         exposeToJS = Null,
+                    Boolean?         requireTLS = Null,
+                   )
+            {
+            return new Cookie(name       ?: this.name,
+                              value      ?: this.value,
+                              expires    ?: this.expires,
+                              path       ?: this.path,
+                              domain     ?: this.domain,
+                              sameSite   ?: this.sameSite,
+                              exposeToJS ?: this.exposeToJS,
+                              requireTLS ?: this.requireTLS,
+                             );
+            }
+
+        @Override
+        String toString()
+            {
+            StringBuffer buf = new StringBuffer();
+
+            name.appendTo(buf);
+            buf.append('=');
+            value.appendTo(buf);
+
+            if (Time time := expires.is(Time))
+                {
+                "; Expires=".appendTo(buf);
+                Header.formatImfFixDate(time).appendTo(buf);
+                }
+            else if (Duration duration := expires.is(Duration))
+                {
+                "; Max-Age=".appendTo(buf);
+                duration.seconds.appendTo(buf);
+                }
+
+            if (String path ?= path)
+                {
+                "; Path=".appendTo(buf);
+                path.appendTo(buf);
+                }
+
+            if (String domain ?= domain)
+                {
+                "; Domain=".appendTo(buf);
+                domain.appendTo(buf);
+                }
+
+            "; SameSite=".appendTo(buf);
+            sameSite.appendTo(buf);
+
+            if (!exposeToJS)
+                {
+                "; HttpOnly".appendTo(buf);
+                }
+
+            if (requireTLS)
+                {
+                "; Secure".appendTo(buf);
+                }
+
+            return buf.toString();
+            }
+        }
+
+    /**
+     * Obtain the value of the specified cookie, if it is included in the request.
+     *
+     * @return True iff the specified cookie name is present
+     * @return (conditional) the value associated with the specified cookie
+     */
+    conditional Cookie getCookie(String name)
+        {
+        for (String value : header.valuesOf("Set-Cookie"))
+            {
+            // TODO parse name, and if it matches, build the Cookie object
+            }
+        return False;
+        }
+
+    /**
+     * Add the provided cookie value to the response, associated with the specified name; if a
+     * value for the cookie of the same name already exists on the response, then it will be
+     * replaced with the value specified here.
+     *
+     * @param cookie  the cookie
+     */
+    void addCookie(Cookie cookie)
+        {
+        for (String value : header.valuesOf("Set-Cookie"))
+            {
+            // TODO parse name, and if it matches, delete the Cookie object
+            }
+        header.add("Set-Cookie", cookie.toString());
+        }
     }
