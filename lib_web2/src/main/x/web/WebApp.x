@@ -69,4 +69,15 @@ mixin WebApp
         // the exception needs to be logged
         return TODO new responses.SimpleResponse(e.is(RequestAborted) ? e.status : InternalServerError);
         }
+
+    /**
+     * TODO
+     */
+    Server.ErrorHandler allocateErrorHandler(Request          request,
+                                             Session?         session,
+                                             Response?        response,
+                                            )
+        {
+        TODO
+        }
     }

@@ -100,11 +100,12 @@ module web.xtclang.org
      *                  web service
      */
     mixin LoginRequired(TrustLevel security=Normal)
-            into WebApp | WebService | Endpoint;
+            into WebApp | WebService | Endpoint
+            extends HttpsRequired;
 
     /**
-     * This annotation, `@LoginOptional`, is used to mark a web service call -- or any containing
-     * class thereof, up to the level of the web module itself -- as **not** requiring
+     * This annotation, `@LoginOptional`, is used to mark a web service endpoint, or the web service
+     * that contains it, up to the level of the web module itself -- as **not** requiring
      * authentication.
      *
      * For more information, see the detailed description of the [@LoginRequired](LoginRequired)
@@ -114,14 +115,21 @@ module web.xtclang.org
             into WebApp | WebService | Endpoint;
 
     /**
-     * TODO
-     * @Restrict("admin")
-     * @Restrict(["admin"])
-     * @Restrict(["admin", "manager"])
+     * This annotation, `@Restrict`, is used to mark a web service endpoint, or the web service
+     * that contains it, up to the level of the web module itself -- as requiring a user to be
+     * logged in, and for that user to meet the role requirements specified by the annotation.
+     *
+     * Example:
+     *
+     *     @Restrict("admin")
+     *     (Item, HttpStatus) addItem(@PathParam String id, @BodyParam Item item) {...} // TODO better examples
+     *
+     *     @Restrict(["admin", "manager"])
+     *     (Item, HttpStatus) addItem(@PathParam String id, @BodyParam Item item) {...}
      */
-    // LimitAccessTo AllowOnly Permit AccessRequired SecurityCheck
     mixin Restrict(String|String[] subject)
-            into WebApp | WebService | Endpoint;
+            into WebApp | WebService | Endpoint
+            extends LoginRequired;
 
     /**
      * This annotation, `@HttpsRequired`, is used to mark a web service call -- or any containing
