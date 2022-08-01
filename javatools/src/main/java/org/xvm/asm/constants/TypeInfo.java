@@ -614,15 +614,16 @@ public class TypeInfo
         {
         if (isVirtualChildClass())
             {
-            return !isExplicitlyAbstract();
+            if (isExplicitlyAbstract())
+                {
+                return false;
+                }
             }
-
-        if (isAbstract() || isSingleton() || !isClass())
+        else if (isAbstract() || isSingleton() || !isClass())
             {
             return false;
             }
-
-        if (!m_fChildrenChecked && !f_mapChildren.isEmpty())
+        else if (!m_fChildrenChecked && !f_mapChildren.isEmpty())
             {
             ConstantPool pool = pool();
 
@@ -647,9 +648,13 @@ public class TypeInfo
                         }
                     }
                 }
+            m_fChildrenChecked = true;
             }
-        m_fChildrenChecked = true;
-        return true;
+
+        // make sure the struct is buildable
+        TypeConstant typeStruct = pool().ensureAccessTypeConstant(f_type, Access.STRUCT);
+        typeStruct.ensureTypeInfo(errs);
+        return !errs.hasSeriousErrors();
         }
 
     /**
