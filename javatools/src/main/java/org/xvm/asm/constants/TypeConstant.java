@@ -6685,11 +6685,17 @@ public abstract class TypeConstant
             }
 
         // this type is a common [compile time] type that should be used for the comparison
+        TypeComposition clz1 = hValue1.getComposition();
+        TypeComposition clz2 = hValue2.getComposition();
         TypeComposition clz =
-                hValue1.getComposition().getType().equals(this) ? hValue1.getComposition() :
-                hValue2.getComposition().getType().equals(this) ? hValue2.getComposition() :
-                                                                  ensureClass(frame);
-        return clz.getTemplate().callEquals(frame, clz, hValue1, hValue2, iReturn);
+                clz1.getType().equals(this) ? clz1 :
+                clz2.getType().equals(this) ? clz2 :
+                                              ensureClass(frame);
+        return clz == null
+                ? frame.raiseException("Unknown common type for " +
+                    clz1.getType().getValueString() + " and " +
+                    clz2.getType().getValueString())
+                : clz.getTemplate().callEquals(frame, clz, hValue1, hValue2, iReturn);
         }
 
     /**
@@ -6710,11 +6716,17 @@ public abstract class TypeConstant
             }
 
         // this type is a common [compile time] type that should be used for the comparison
+        TypeComposition clz1 = hValue1.getComposition();
+        TypeComposition clz2 = hValue2.getComposition();
         TypeComposition clz =
-                hValue1.getComposition().getType().equals(this) ? hValue1.getComposition() :
-                hValue2.getComposition().getType().equals(this) ? hValue2.getComposition() :
-                                                                  ensureClass(frame);
-        return clz.getTemplate().callCompare(frame, clz, hValue1, hValue2, iReturn);
+                clz1.getType().equals(this) ? clz1 :
+                clz2.getType().equals(this) ? clz2 :
+                                              ensureClass(frame);
+        return clz == null
+                ? frame.raiseException("Unknown common type for " +
+                    clz1.getType().getValueString() + " and " +
+                    clz2.getType().getValueString())
+                : clz.getTemplate().callCompare(frame, clz, hValue1, hValue2, iReturn);
         }
 
     /**
