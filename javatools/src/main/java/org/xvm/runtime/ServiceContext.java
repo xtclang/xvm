@@ -353,20 +353,6 @@ public class ServiceContext
                     }
                 catch (Throwable e)
                     {
-                    // TODO: RTError
-                    frame = getCurrentFrame();
-                    if (frame != null)
-                        {
-                        MethodStructure function = frame.f_function;
-                        int nLine = 0;
-                        if (function != null)
-                            {
-                            nLine = function.calculateLineNumber(frame.m_iPC);
-                            }
-
-                        Utils.log(frame, "\nUnhandled exception at " + frame
-                            + (nLine > 0 ? "; line=" + nLine : "; iPC=" + frame.m_iPC));
-                        }
                     e.printStackTrace(System.err);
                     System.exit(-1);
                     }
@@ -635,7 +621,15 @@ public class ServiceContext
                     return frame;
                     }
 
-                iPC = aOp[iPC].process(frame, iPCLast = iPC);
+                try
+                    {
+                    iPC = aOp[iPC].process(frame, iPCLast = iPC);
+                    }
+                catch (Throwable e)
+                    {
+                    e.printStackTrace(System.err);
+                    iPC = frame.raiseException("Run-time error: " + e);
+                    }
 
                 if (iPC == Op.R_NEXT)
                     {
