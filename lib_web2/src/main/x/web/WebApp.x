@@ -19,6 +19,9 @@ mixin WebApp
      */
     immutable Map<String, WebService> collectRoots_()
         {
+        // TODO walk through all top level classes (and go into imported modules) to find all of the
+        //      WebService classes. remember to set the `webApp` property on each one to this WebApp
+
         import ecstasy.reflect.Annotation;
 
         Map<String, WebService> roots = new HashMap();

@@ -15,7 +15,7 @@ interface Server
      * A function that can process an incoming request corresponding to a `Route` is called an
      * `Endpoint Handler`.
      */
-    typedef function Response(Request) as Handler;
+    typedef function Response(Session, Request) as Handler;
 
     /**
      * A function that is able to both pre- **and** post-process a request is called an
@@ -38,7 +38,7 @@ interface Server
      *         return response;
      *         }
      */
-    typedef function Response(Handler, Request) as Interceptor;
+    typedef function Response(Session, Request, Handler) as Interceptor;
 
     /**
      * A function that is called with each incoming request is called an `Observer`. Despite the
@@ -50,14 +50,14 @@ interface Server
      * or alter the request processing control flow. For purposes of request processing, exceptions
      * from the `Observer` are ignored, including if the `Observer` throws a [RequestAborted].
      */
-    typedef function void(Request) as Observer;
+    typedef function void(Session, Request) as Observer;
 
     /**
      * A function that is called when an exception occurs (or an internal error represented by a
      * `String` description) is called an `ErrorHandler`. A Response may or may not already be known
      * at the point that the error occurs.
      */
-    typedef function Response(Request, Response?, Exception|String) as ErrorHandler;
+    typedef function Response(Session, Request, Exception|String, Response?) as ErrorHandler;
 
 
     // ----- route registration --------------------------------------------------------------------
@@ -69,7 +69,7 @@ interface Server
      *
      * @param handler  a method on a [WebService] to invoke to handle the specified URI route
      */
-    void route(Route route, Method<WebService, <Request>, <Response>> handler);
+    void route(Route route, Method<WebService, <Session, Request>, <Response>> handler);
 
     /**
      * Register the specified `Interceptor` for the specified `Route`.
@@ -79,7 +79,7 @@ interface Server
      *
      * @param handler  a method on a [WebService] to invoke to intercept the specified URI route
      */
-    void intercept(Route route, Method<WebService, <Handler, Request>, <Response>> interceptor);
+    void intercept(Route route, Method<WebService, <Session, Request, Handler>, <Response>> interceptor);
 
     /**
      * Register the specified `Handler` for the specified `Route`.
@@ -92,7 +92,7 @@ interface Server
      *
      * @param handler  a method on a [WebService] to invoke to observe the specified URI route
      */
-    void observe(Route route, Method<WebService, <Request>, <>> observer);
+    void observe(Route route, Method<WebService, <Session, Request>, <>> observer);
 
     /**
      * Register a handler for all unhandled (unregistered route) URIs. If no `Handler` is provided
@@ -102,7 +102,7 @@ interface Server
      *
      * @param handler  a method on a [WebService] to invoke to handle any unknown-route requests
      */
-    void routeDefault(Method<WebService, <Request>, <Response>> handler);
+    void routeDefault(Method<WebService, <Session, Request>, <Response>> handler);
 
     /**
      * Register the specified method to handle all errors, either `Exception` or otherwise. If no
@@ -113,5 +113,5 @@ interface Server
      *
      * @param handler  a method on a [WebService] to invoke to handle any failed requests
      */
-    void routeErrors(Method<WebService, <Request, Response?, Exception|String>, <Response>> handler);
+    void routeErrors(Method<WebService, <Session, Request, Exception|String, Response?>, <Response>> handler);
     }
