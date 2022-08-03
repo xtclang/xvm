@@ -78,9 +78,10 @@ public class CallChain
 
     public int getMaxVars()
         {
-        return f_aMethods.length == 0
+        MethodStructure method = getTop();
+        return method == null
                 ? 0
-                : f_aMethods[0].getMethodStructure().getMaxVars();
+                : method.getMaxVars();
         }
 
     public MethodStructure getSuper(Frame frame)
@@ -122,7 +123,7 @@ public class CallChain
                 invokeNativeN(frame, getTop(), hTarget, Utils.OBJECTS_NONE, iReturn);
             }
 
-        ObjectHandle[] ahVar = new ObjectHandle[getTop().getMaxVars()];
+        ObjectHandle[] ahVar = new ObjectHandle[getMaxVars()];
 
         return hTarget.getTemplate().invoke1(frame, this, hTarget, ahVar, iReturn);
         }
@@ -138,7 +139,7 @@ public class CallChain
                 invokeNative1(frame, getTop(), hTarget, hArg, iReturn);
             }
 
-        ObjectHandle[] ahVar = new ObjectHandle[Math.max(getTop().getMaxVars(), 1)];
+        ObjectHandle[] ahVar = new ObjectHandle[Math.max(getMaxVars(), 1)];
         ahVar[0] = hArg;
 
         return hTarget.getTemplate().invoke1(frame, this, hTarget, ahVar, iReturn);
@@ -155,7 +156,7 @@ public class CallChain
                 invokeNativeNN(frame, getTop(), hTarget, new ObjectHandle[]{hArg}, aiReturn);
             }
 
-        ObjectHandle[] ahVar = new ObjectHandle[Math.max(getTop().getMaxVars(), 1)];
+        ObjectHandle[] ahVar = new ObjectHandle[Math.max(getMaxVars(), 1)];
         ahVar[0] = hArg;
 
         return hTarget.getTemplate().invokeN(frame, this, hTarget, ahVar, aiReturn);
@@ -174,7 +175,7 @@ public class CallChain
                     : template.invokeNativeN(frame, getTop(), hTarget, ahArg, iReturn);
             }
 
-        ObjectHandle[] ahVar = Utils.ensureSize(ahArg, getTop().getMaxVars());
+        ObjectHandle[] ahVar = Utils.ensureSize(ahArg, getMaxVars());
 
         return hTarget.getTemplate().invoke1(frame, this, hTarget, ahVar, iReturn);
         }
@@ -190,7 +191,7 @@ public class CallChain
                 invokeNativeNN(frame, getTop(), hTarget, ahArg, aiReturn);
             }
 
-        ObjectHandle[] ahVar = Utils.ensureSize(ahArg, getTop().getMaxVars());
+        ObjectHandle[] ahVar = Utils.ensureSize(ahArg, getMaxVars());
 
         return hTarget.getTemplate().invokeN(frame, this, hTarget, ahVar, aiReturn);
         }
@@ -206,7 +207,7 @@ public class CallChain
                 invokeNativeT(frame, getTop(), hTarget, new ObjectHandle[] {hArg}, iReturn);
             }
 
-        ObjectHandle[] ahVar = new ObjectHandle[Math.max(getTop().getMaxVars(), 1)];
+        ObjectHandle[] ahVar = new ObjectHandle[Math.max(getMaxVars(), 1)];
         ahVar[0] = hArg;
 
         return hTarget.getTemplate().invokeT(frame, this, hTarget, ahVar, iReturn);
@@ -222,7 +223,7 @@ public class CallChain
             return hTarget.getTemplate().invokeNativeT(frame, getTop(), hTarget, ahArg, iReturn);
             }
 
-        ObjectHandle[] ahVar = Utils.ensureSize(ahArg, getTop().getMaxVars());
+        ObjectHandle[] ahVar = Utils.ensureSize(ahArg, getMaxVars());
 
         return hTarget.getTemplate().invokeT(frame, this, hTarget, ahVar, iReturn);
         }
@@ -394,6 +395,15 @@ public class CallChain
             {
             return hTarget.getTemplate().getFieldValue(frame, hTarget,
                 f_aMethods[0].getPropertyConstant(), iReturn);
+            }
+
+        @Override
+        public int invoke(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+            {
+            assert iReturn == Op.A_IGNORE;
+
+            return hTarget.getTemplate().setFieldValue(frame, hTarget,
+                f_aMethods[0].getPropertyConstant(), hArg);
             }
 
         @Override
