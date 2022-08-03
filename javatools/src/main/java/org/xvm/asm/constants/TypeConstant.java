@@ -3002,7 +3002,10 @@ public abstract class TypeConstant
 
                 int nBaseRank = mapProps.size();
 
-                collectSelfTypeParameters(struct, mapTypeParams, mapContribProps, nBaseRank, errs);
+                if (!collectSelfTypeParameters(struct, mapTypeParams, mapContribProps, nBaseRank, errs))
+                    {
+                    fIncomplete = true;
+                    }
 
                 ArrayList<PropertyConstant> listExplode = new ArrayList<>();
                 boolean                     fInterface  = struct.getFormat() == Component.Format.INTERFACE;
@@ -4432,38 +4435,48 @@ public abstract class TypeConstant
      * @param mapTypeParams  the map of type parameters
      * @param mapProps       the properties of the class
      * @param nBaseRank      the base rank for any properties added by "this" class
+     *
+     * @return true iff the processing was able to obtain all of its dependencies
      */
-    private void collectSelfTypeParameters(
+    private boolean collectSelfTypeParameters(
             ClassStructure                      struct,
             Map<Object, ParamInfo>              mapTypeParams,
             Map<PropertyConstant, PropertyInfo> mapProps,
             int                                 nBaseRank,
             ErrorListener                       errs)
         {
+        boolean fComplete = true;
+
         if (isVirtualChild())
             {
             // virtual child has access to the parent's type parameters
-            TypeInfo infoParent = getParentType().ensureTypeInfo(errs);
-
-            for (ParamInfo param : infoParent.getTypeParams().values())
+            TypeInfo infoParent = getParentType().ensureTypeInfoInternal(errs);
+            if (isComplete(infoParent))
                 {
-                if (!(param.getNestedIdentity() instanceof NestedIdentity))
+                for (ParamInfo param : infoParent.getTypeParams().values())
                     {
-                    String sParam = param.getName();
-
-                    mapTypeParams.put(sParam, param);
-
-                    PropertyInfo infoProp = infoParent.findProperty(sParam);
-                    if (infoProp == null)
+                    if (!(param.getNestedIdentity() instanceof NestedIdentity))
                         {
-                        log(errs, Severity.ERROR, VE_TYPE_PARAM_PROPERTY_MISSING,
-                                getParentType().getValueString(), sParam);
-                        }
-                    else
-                        {
-                        mapProps.put(infoProp.getIdentity(), infoProp);
+                        String sParam = param.getName();
+
+                        mapTypeParams.put(sParam, param);
+
+                        PropertyInfo infoProp = infoParent.findProperty(sParam);
+                        if (infoProp == null)
+                            {
+                            log(errs, Severity.ERROR, VE_TYPE_PARAM_PROPERTY_MISSING,
+                                    getParentType().getValueString(), sParam);
+                            }
+                        else
+                            {
+                            mapProps.put(infoProp.getIdentity(), infoProp);
+                            }
                         }
                     }
+                }
+            else
+                {
+                fComplete = false;
                 }
             }
 
@@ -4481,6 +4494,7 @@ public abstract class TypeConstant
                     }
                 }
             }
+        return fComplete;
         }
 
     /**

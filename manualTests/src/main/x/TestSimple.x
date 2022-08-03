@@ -2,18 +2,16 @@ module TestSimple
     {
     @Inject Console console;
 
-    void run()
+    void run( )
         {
-        test("     ");
         }
 
-    void test(String text)
+    class Test
         {
-        function Boolean(Char) fn = Char.isWhitespace;
+        @Stub Int value2;
 
-        Boolean white = fn(text[0]);
-        console.println(white);
-
-        assert text.chars.all(Char.isWhitespace);
+        mixin Stub<Referent> into Var<Referent> // this used to cause an infinite recursion
+            {
+            }
         }
     }
