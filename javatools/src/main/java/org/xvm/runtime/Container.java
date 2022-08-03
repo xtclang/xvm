@@ -415,7 +415,7 @@ public abstract class Container
             clz = f_mapCompositions.computeIfAbsent(typeInception, (type) ->
                 {
                 ClassTemplate templateReal = type.isAnnotated() && type.isIntoVariableType()
-                        ? type.getTemplate(template.f_container)
+                        ? type.getTemplate(this)
                         : template;
 
                 return new ClassComposition(this, templateReal, type);
