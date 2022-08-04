@@ -18,6 +18,7 @@ module TestSimple
             return True;
             }
 
+        @Stub
         Int value1
             {
             @Override
@@ -47,8 +48,17 @@ module TestSimple
             Boolean checkInside()
                 {
                 console.println("inside");
-                return True;
+                return checkSuper(); // this used to blow up at run-time
                 }
+            }
+        }
+
+    mixin Stub into Var
+        {
+        protected Boolean checkSuper()
+            {
+            console.println("super");
+            return True;
             }
         }
     }

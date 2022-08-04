@@ -2046,6 +2046,10 @@ public class TypeInfo
                             mapMethods.put(sKey, setMethods = new HashSet<>(1));
                             }
                         MethodConstant idMethod = resolveMethodConstant(info);
+                        if (idMethod.getNestedDepth() < cReqDepth)
+                            {
+                            idMethod = idMethod.ensureNestedIdentity(pool(), idContainer);
+                            }
                         setMethods.add(idMethod);
                         }
                     }
