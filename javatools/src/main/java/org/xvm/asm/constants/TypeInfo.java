@@ -1912,11 +1912,9 @@ public class TypeInfo
             }
 
         // a naked name is a key for "any method of that name"
-        String sKey = cParams == -1 ? sName : sName + ';' + cParams;
-        if (kind != MethodKind.Any)
-            {
-            sKey += kind.key;
-            }
+        boolean fAny  = cParams == -1;
+        String  sKind = kind == MethodKind.Any ? "" : kind.key;
+        String  sKey  = (fAny ? sName : sName + ';' + cParams) + sKind;
 
         Set<MethodConstant> setMethods = mapMethods.get(sKey);
         if (setMethods == null)
@@ -1958,11 +1956,11 @@ public class TypeInfo
                 int cDefaults   = method.getDefaultParamCount();
                 int cRequired   = cAllParams - cTypeParams - cDefaults;
 
-                if (cParams == -1 || cRequired <= cParams && cParams <= cAllParams)
+                if (fAny || cRequired <= cParams && cParams <= cAllParams)
                     {
                     if (setMethods == null)
                         {
-                        setMethods = new HashSet<>(1);
+                        mapMethods.put(sKey, setMethods = new HashSet<>(1));
                         }
 
                     MethodConstant idMethod = method.isFunction()
@@ -1972,12 +1970,18 @@ public class TypeInfo
                     }
                 }
 
-            // cache the result
+            // cache the miss
             if (setMethods == null)
                 {
-                setMethods = Collections.EMPTY_SET;
+                mapMethods.put(sKey, setMethods = Collections.EMPTY_SET);
                 }
-            mapMethods.put(sKey, setMethods);
+            else if (fAny && setMethods.size() == 1)
+                {
+                // cache the result for the specific key for max parameter count; if more than one,
+                // or if cParams is less than cAllParams, we'd need to se-scan
+                int cAllParams = setMethods.iterator().next().getSignature().getParamCount();
+                mapMethods.putIfAbsent(sName + ';' + cAllParams + sKind, setMethods);
+                }
             }
         return setMethods;
         }
@@ -1992,7 +1996,8 @@ public class TypeInfo
      *
      * @return a set of zero or more method constants
      */
-    public synchronized Set<MethodConstant> findNestedMethods(IdentityConstant idContainer, String sName, int cParams)
+    public synchronized Set<MethodConstant> findNestedMethods(IdentityConstant idContainer,
+                                                              String sName, int cParams)
         {
         Map<String, Set<MethodConstant>> mapMethods = m_mapMethodsByName;
         if (mapMethods == null)
@@ -2015,8 +2020,7 @@ public class TypeInfo
                 // any number of parameters goes
                 cParams = Integer.MAX_VALUE;
                 }
-            int     cReqDepth = idContainer.getNestedDepth() + 2;
-            boolean fFound    = false;
+            int cReqDepth = idContainer.getNestedDepth() + 2;
             for (Map.Entry<MethodConstant, MethodInfo> entry : f_mapMethods.entrySet())
                 {
                 MethodConstant idTest = entry.getKey();
@@ -2037,29 +2041,27 @@ public class TypeInfo
 
                     if (cParams >= cRequired)
                         {
-                        fFound = true;
                         if (setMethods == null)
                             {
-                            setMethods = new HashSet<>(1);
-                            mapMethods.put(sKey, setMethods);
+                            mapMethods.put(sKey, setMethods = new HashSet<>(1));
                             }
                         MethodConstant idMethod = resolveMethodConstant(info);
                         setMethods.add(idMethod);
-                        if (fAny)
-                            {
-                            // cache the result for the specific key for max parameter count
-                            // if cRequired is less than cAllParams we'd need to se-scan
-                            mapMethods.computeIfAbsent(sKey + ';' + cAllParams,
-                                    k -> new HashSet<>()).add(idMethod);
-                            }
                         }
                     }
                 }
 
-            if (!fFound)
+            if (setMethods == null)
                 {
                 // cache the miss
                 mapMethods.put(sKey, setMethods = Collections.EMPTY_SET);
+                }
+            else if (fAny && setMethods.size() == 1)
+                {
+                // cache the result for the specific key for max parameter count; if more than one,
+                // or if cParams is less than cAllParams, we'd need to se-scan
+                int cAllParams = setMethods.iterator().next().getSignature().getParamCount();
+                mapMethods.putIfAbsent(sPath + ';' + cAllParams, setMethods);
                 }
             }
         return setMethods;
@@ -2348,11 +2350,8 @@ public class TypeInfo
             return;
             }
 
-        Map<MethodConstant, MethodInfo> cacheById  = f_cacheById;
-        Map<Object, MethodInfo>         cacheByNid = f_cacheByNid;
-
         // use the cache for synchronization since it's shared across formal type parameters info
-        synchronized (cacheById)
+        synchronized (f_cacheById)
             {
             if (m_fCacheReady)
                 {
@@ -2364,7 +2363,7 @@ public class TypeInfo
                 {
                 MethodInfo info = entry.getValue();
 
-                info.populateCache(entry.getKey(), cacheById, cacheByNid);
+                info.populateCache(entry.getKey(), f_cacheById, f_cacheByNid);
 
                 if (info.isAbstract())
                     {
