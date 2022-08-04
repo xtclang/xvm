@@ -509,8 +509,8 @@ public class TypeInfo
     public IdentityConstant getIdentity()
         {
         // this info may represent a property
-        return f_type instanceof PropertyClassTypeConstant
-            ? ((PropertyClassTypeConstant) f_type).getProperty()
+        return f_type instanceof PropertyClassTypeConstant typeProp
+            ? typeProp.getProperty()
             : f_struct == null
                     ? null
                     : f_struct.getIdentityConstant();
@@ -1190,9 +1190,9 @@ public class TypeInfo
      */
     public PropertyInfo findPropertyByNid(Object nid)
         {
-        if (nid instanceof String)
+        if (nid instanceof String sName)
             {
-            return findProperty((String) nid);
+            return findProperty(sName);
             }
 
         NestedIdentity nidThis = (NestedIdentity) nid;
@@ -1487,9 +1487,9 @@ public class TypeInfo
             return info;
             }
 
-        if (nid instanceof SignatureConstant)
+        if (nid instanceof SignatureConstant sig)
             {
-            info = getMethodBySignature((SignatureConstant) nid);
+            info = getMethodBySignature(sig);
             if (info != null)
                 {
                 f_cacheByNid.put(nid, info);
@@ -2001,20 +2001,22 @@ public class TypeInfo
             }
 
         Object nid   = idContainer.getNestedIdentity();
-        String sPath = (nid instanceof SignatureConstant
-                ? ((SignatureConstant) nid).getValueString()
+        String sPath = (nid instanceof SignatureConstant sig
+                ? sig.getValueString()
                 : nid.toString()) + '#' + sName;
-        String sKey  = cParams == -1 ? sPath : sPath + ';' + cParams;
+        boolean fAny = cParams == -1;
+        String  sKey = fAny ? sPath : sPath + ';' + cParams;
 
         Set<MethodConstant> setMethods = mapMethods.get(sKey);
         if (setMethods == null)
             {
-            if (cParams == -1)
+            if (fAny)
                 {
                 // any number of parameters goes
                 cParams = Integer.MAX_VALUE;
                 }
-            int cReqDepth = idContainer.getNestedDepth() + 2;
+            int     cReqDepth = idContainer.getNestedDepth() + 2;
+            boolean fFound    = false;
             for (Map.Entry<MethodConstant, MethodInfo> entry : f_mapMethods.entrySet())
                 {
                 MethodConstant idTest = entry.getKey();
@@ -2035,21 +2037,30 @@ public class TypeInfo
 
                     if (cParams >= cRequired)
                         {
+                        fFound = true;
                         if (setMethods == null)
                             {
                             setMethods = new HashSet<>(1);
+                            mapMethods.put(sKey, setMethods);
                             }
-                        setMethods.add(resolveMethodConstant(info));
+                        MethodConstant idMethod = resolveMethodConstant(info);
+                        setMethods.add(idMethod);
+                        if (fAny)
+                            {
+                            // cache the result for the specific key for max parameter count
+                            // if cRequired is less than cAllParams we'd need to se-scan
+                            mapMethods.computeIfAbsent(sKey + ';' + cAllParams,
+                                    k -> new HashSet<>()).add(idMethod);
+                            }
                         }
                     }
                 }
 
-            // cache the result
-            if (setMethods == null)
+            if (!fFound)
                 {
-                setMethods = Collections.EMPTY_SET;
+                // cache the miss
+                mapMethods.put(sKey, setMethods = Collections.EMPTY_SET);
                 }
-            mapMethods.put(sKey, setMethods);
             }
         return setMethods;
         }
