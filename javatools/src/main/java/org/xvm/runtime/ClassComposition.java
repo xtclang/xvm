@@ -359,9 +359,7 @@ public class ClassComposition
         CallChain chain = f_mapGetters.get(idProp);
         return chain == null
                 ? ensureGetterChain(idProp)
-                : chain == NIL_CHAIN
-                    ? null
-                    : chain;
+                : chain == NIL_CHAIN ? null : chain;
         }
 
     /**
@@ -378,14 +376,15 @@ public class ClassComposition
             {
             idProp = (PropertyConstant) pool.register(idProp);
             }
-        return f_mapGetters.computeIfAbsent(idProp,
+        CallChain chain = f_mapGetters.computeIfAbsent(idProp,
             id ->
                 {
-                MethodBody[] chain = f_typeInception.ensureTypeInfo().getOptimizedGetChain(id);
-                return chain == null
+                MethodBody[] aBody = f_typeInception.ensureTypeInfo().getOptimizedGetChain(id);
+                return aBody == null
                         ? NIL_CHAIN
-                        : CallChain.createPropertyCallChain(chain);
+                        : CallChain.createPropertyCallChain(aBody);
                 });
+        return chain == NIL_CHAIN ? null : chain;
         }
 
     @Override
@@ -394,9 +393,7 @@ public class ClassComposition
         CallChain chain = f_mapSetters.get(idProp);
         return chain == null
                 ? ensurePropertySetterChain(idProp)
-                : chain == NIL_CHAIN
-                    ? null
-                    : chain;
+                : chain == NIL_CHAIN ? null : chain;
         }
 
     /**
@@ -413,14 +410,15 @@ public class ClassComposition
             {
             idProp = (PropertyConstant) pool.register(idProp);
             }
-        return f_mapSetters.computeIfAbsent(idProp,
+        CallChain chain = f_mapSetters.computeIfAbsent(idProp,
             id ->
                 {
-                MethodBody[] chain = f_typeInception.ensureTypeInfo().getOptimizedSetChain(id);
-                return chain == null
+                MethodBody[] aBody = f_typeInception.ensureTypeInfo().getOptimizedSetChain(id);
+                return aBody == null
                         ? NIL_CHAIN
-                        : CallChain.createPropertyCallChain(chain);
+                        : CallChain.createPropertyCallChain(aBody);
                 });
+        return chain == NIL_CHAIN ? null : chain;
         }
 
     @Override
