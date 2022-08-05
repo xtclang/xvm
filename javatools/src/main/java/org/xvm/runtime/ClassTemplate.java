@@ -1543,8 +1543,26 @@ public abstract class ClassTemplate
     public int createPropertyRef(Frame frame, ObjectHandle hTarget,
                                  PropertyConstant idProp, boolean fRO, int iReturn)
         {
-        GenericHandle    hThis   = (GenericHandle) hTarget;
-        ClassComposition clzThis = (ClassComposition) hThis.getComposition();
+        TypeComposition  clzTarget = hTarget.getComposition();
+        ClassComposition clzThis;
+        GenericHandle    hThis;
+
+        if (clzTarget instanceof ClassComposition clz)
+            {
+            clzThis = clz;
+            hThis   = (GenericHandle) hTarget;
+            }
+        else if (clzTarget instanceof PropertyComposition clzProp &&
+                 hTarget instanceof RefHandle hRef)
+            {
+            clzThis = clzProp.getParentComposition();
+            hThis   = (GenericHandle) hRef.getReferentHolder();
+            }
+        else
+            {
+            return frame.raiseException(
+                    "Invalid Ref for " + idProp.getName() + " at " + hTarget.getType());
+            }
 
         if (!hThis.containsField(idProp) &&
                 clzThis.getPropertyGetterChain(idProp) == null)

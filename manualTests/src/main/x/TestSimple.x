@@ -2,10 +2,11 @@ module TestSimple
     {
     @Inject Console console;
 
-    void run()
+    void run( )
         {
         Test t = new Test();
         console.println(t.value1);
+        console.println(t.&value1.checkInside(False));
         }
 
     class Test
@@ -18,7 +19,6 @@ module TestSimple
             return True;
             }
 
-        @Stub
         Int value1
             {
             @Override
@@ -27,7 +27,7 @@ module TestSimple
                 if (value0 == 0)
                     {
                     console.println("set 1");
-                    set(1); // this used to blow up
+                    set(1);
                     }
 
                 if (checkOutside())
@@ -36,7 +36,7 @@ module TestSimple
                     set(2);
                     }
 
-                if (checkInside())
+                if (checkInside(True))
                     {
                     console.println("set 3");
                     set(3);
@@ -45,20 +45,19 @@ module TestSimple
                 return super();
                 }
 
-            Boolean checkInside()
+            Boolean checkInside(Boolean fromInside)
                 {
-                console.println("inside");
-                return checkSuper(); // this used to blow up at run-time
+                if (fromInside)
+                    {
+                    console.println("inside from inside");
+                    return True;
+                    }
+                else
+                    {
+                    console.println("inside from outside");
+                    return &value0.assigned; // this used to blow up
+                    }
                 }
-            }
-        }
-
-    mixin Stub into Var
-        {
-        protected Boolean checkSuper()
-            {
-            console.println("super");
-            return True;
             }
         }
     }
