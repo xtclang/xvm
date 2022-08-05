@@ -113,7 +113,7 @@ public class CanonicalizedTypeComposition
     public CallChain getMethodCallChain(Object nidMethod)
         {
         CallChain chain = super.getMethodCallChain(nidMethod);
-        if (chain.getDepth() == 0 && nidMethod instanceof SignatureConstant sig)
+        if (chain.isEmpty() && nidMethod instanceof SignatureConstant sig)
             {
             // we assume that the information on the canonical TypeInfo is sufficient
             ClassComposition    clzCanonical  = getCanonicalComposition();

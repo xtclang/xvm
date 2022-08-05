@@ -433,7 +433,7 @@ public class xRTMethod
                         resolveGenericTypes(frame.poolContext(), frame.getGenericsResolver(true));
 
                 chain = clazz.getMethodCallChain(sig);
-                if (chain.getDepth() == 0)
+                if (chain.isEmpty())
                     {
                     return new CallChain.ExceptionChain(xException.makeHandle(frame,
                             "Missing method \"" + sig.getValueString() +

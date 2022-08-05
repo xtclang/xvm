@@ -168,7 +168,7 @@ public abstract class OpInvocable extends Op
                     : clazz.getPropertySetterChain(idProp);
             }
 
-        if (chain.getDepth() == 0)
+        if (chain.isEmpty())
             {
             return new CallChain.ExceptionChain(xException.makeHandle(frame,
                 "Missing method \"" + idMethod.getValueString() +

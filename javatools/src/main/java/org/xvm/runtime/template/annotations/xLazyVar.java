@@ -93,7 +93,7 @@ public class xLazyVar
             if (hValue.getType().isA(frame.poolContext().typeFreezable()))
                 {
                 CallChain chain = hValue.getComposition().getMethodCallChain(SIG_FREEZE);
-                if (chain.getDepth() > 0)
+                if (!chain.isEmpty())
                     {
                     switch (chain.invoke(frame, hValue, Op.A_STACK))
                         {

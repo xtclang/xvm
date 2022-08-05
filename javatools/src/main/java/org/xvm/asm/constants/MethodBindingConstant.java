@@ -113,7 +113,7 @@ public class MethodBindingConstant
                 }
             }
 
-        if (chain.getDepth() == 0)
+        if (chain.isEmpty())
             {
             return new DeferredCallHandle(xException.makeHandle(frame,
                     "Missing method \"" + idMethod.getValueString() +

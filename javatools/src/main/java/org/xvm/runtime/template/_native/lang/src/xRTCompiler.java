@@ -219,7 +219,7 @@ public class xRTCompiler
 
         TypeComposition clazz = hRepo.getComposition();
         CallChain       chain = clazz.getMethodCallChain(nid);
-        if (chain.getDepth() == 0)
+        if (chain.isEmpty())
             {
             return new CallChain.ExceptionChain(xException.makeHandle(frame,
                 "Missing method \"" + GET_MODULE_ID +

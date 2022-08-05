@@ -20,10 +20,9 @@ import org.xvm.runtime.template._native.reflect.xRTFunction;
  */
 public class CallChain
     {
-    // an array of method bodies
-    protected final MethodBody[] f_aMethods;
-
-    // Construct the CallChain
+    /**
+     * Construct a CallChain for an array of method bodies.
+     */
     public CallChain(MethodBody[] aMethods)
         {
         f_aMethods = aMethods == null
@@ -31,15 +30,28 @@ public class CallChain
                 : aMethods;
         }
 
-    // Construct a CallChain for a lambda or a private method
+    /**
+     * Construct a CallChain for a lambda or a private method.
+     */
     public CallChain(MethodStructure method)
         {
         f_aMethods = new MethodBody[] {new MethodBody(method)};
         }
 
+    /**
+     * @return the chain depth
+     */
     public int getDepth()
         {
         return f_aMethods.length;
+        }
+
+    /**
+     * @return true iff the chain is empty
+     */
+    public boolean isEmpty()
+        {
+        return f_aMethods.length == 0;
         }
 
     /**
@@ -62,6 +74,9 @@ public class CallChain
         return m_FAtomic = Boolean.FALSE;
         }
 
+    /**
+     * @return the method at the specified depth
+     */
     public MethodStructure getMethod(int nDepth)
         {
         return nDepth < f_aMethods.length
@@ -69,6 +84,9 @@ public class CallChain
                 : null;
         }
 
+    /**
+     * @return the top method
+     */
     public MethodStructure getTop()
         {
         return f_aMethods.length == 0
@@ -76,6 +94,9 @@ public class CallChain
                 : f_aMethods[0].getMethodStructure();
         }
 
+    /**
+     * @return the max var count for the top method
+     */
     public int getMaxVars()
         {
         MethodStructure method = getTop();
@@ -84,29 +105,44 @@ public class CallChain
                 : method.getMaxVars();
         }
 
+    /**
+     * @return the super method for the specified frame (on this chain)
+     */
     public MethodStructure getSuper(Frame frame)
         {
         return getMethod(frame.m_nChainDepth + 1);
         }
 
+    /**
+     * @return true iff the chain is native
+     */
     public boolean isNative()
         {
         return f_aMethods.length == 0 ||
                f_aMethods[0].getImplementation() == Implementation.Native;
         }
 
+    /**
+     * @return true iff the chain represents a field
+     */
     public boolean isField()
         {
         return f_aMethods.length > 0 &&
                f_aMethods[0].getImplementation() == Implementation.Field;
         }
 
+    /**
+     * @return true iff the chain represents an explicit implementation
+     */
     public boolean isExplicit()
         {
         return f_aMethods.length > 0 &&
                f_aMethods[0].getImplementation() == Implementation.Explicit;
         }
 
+    /**
+     * @return the property this chain represents access to
+     */
     public PropertyStructure getProperty()
         {
         return (PropertyStructure) f_aMethods[0].getIdentity().getNamespace().getComponent();
@@ -501,6 +537,11 @@ public class CallChain
 
 
     // ----- data fields ---------------------------------------------------------------------------
+
+    /**
+     * An array of method bodies.
+     */
+    protected final MethodBody[] f_aMethods;
 
     /**
      * Cached response for "isAtomic()" API.
