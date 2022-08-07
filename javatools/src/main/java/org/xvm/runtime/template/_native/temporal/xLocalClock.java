@@ -141,7 +141,7 @@ public class xLocalClock
         TypeComposition clzTime = ensureTimeClass();
         GenericHandle   hTime   = new GenericHandle(clzTime);
 
-        LongLong llNow = new LongLong(System.currentTimeMillis()).mul(PICOS_PER_MILLI_LL);
+        LongLong llNow = new LongLong(System.currentTimeMillis()).mul(xNanosTimer.PICOS_PER_MILLI_LL);
         hTime.setField(frame, "epochPicos", xUInt128.INSTANCE.makeLongLong(llNow));
         hTime.setField(frame, "timezone", timezone(frame));
         hTime.makeImmutable();
@@ -202,7 +202,7 @@ public class xLocalClock
             LongLongHandle llEpoch = (LongLongHandle) hWakeup.getField(null, "epochPicos");
 
             long  ldtNow    = System.currentTimeMillis();
-            long  ldtWakeup = llEpoch.getValue().divUnsigned(PICOS_PER_MILLI).getLowValue();
+            long  ldtWakeup = llEpoch.getValue().divUnsigned(xNanosTimer.PICOS_PER_MILLI).getLowValue();
             long  cDelay    = Math.max(0, ldtWakeup - ldtNow);
 
             f_context.registerNotification();
@@ -241,9 +241,6 @@ public class xLocalClock
     // ----- constants and fields ------------------------------------------------------------------
 
     public static Timer TIMER = new Timer("ecstasy:LocalClock", true);
-
-    protected static final long     PICOS_PER_MILLI    = xNanosTimer.PICOS_PER_MILLI;
-    protected static final LongLong PICOS_PER_MILLI_LL = xNanosTimer.PICOS_PER_MILLI_LL;
 
     /**
      * Cached Time class.
