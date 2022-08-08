@@ -857,7 +857,7 @@ class HasherMap<Key, Value>
         HasherMap<Key, Value> that = this.new(hasher);
         for ((Key key, Value value) : this)
             {
-            (key, value) = transform(key, value); // TODO GG: inline
+            (key, value) = transform(key, value);
             that = that.put(key, value);
             }
         return that;
