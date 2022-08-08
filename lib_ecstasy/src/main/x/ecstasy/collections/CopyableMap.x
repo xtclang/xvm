@@ -39,7 +39,7 @@ interface CopyableMap<Key, Value>
             ReplicableCopier<Key, Value> that = this.new();
             for ((Key key, Value value) : this)
                 {
-                (key, value) = transform(key, value); // TODO GG: inline
+                (key, value) = transform(key, value);
                 that = that.put(key, value);
                 }
             return that;
