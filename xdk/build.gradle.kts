@@ -2,6 +2,8 @@
  * Build files for the XDK.
  */
 
+import java.nio.file.Paths
+
 val javatools     = project(":javatools")
 val launcher      = project(":javatools_launcher")
 val turtle        = project(":javatools_turtle")
@@ -465,13 +467,7 @@ tasks.register("dist-local") {
 
         val xecLink = output.toString().trim()
         if (xecLink.length > 0) {
-            output.reset()
-            project.exec {
-                commandLine("readlink", "-f", xecLink)
-                standardOutput = output
-            }
-
-            val xecFile    = output.toString().trim();
+            val xecFile    = Paths.get(xecLink).toRealPath()
             val libexecDir = file("$xecFile/../..")
             var updated    = false;
 
