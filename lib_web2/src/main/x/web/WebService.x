@@ -13,7 +13,7 @@ import Server.Observer;
  *         {
  *         package web import web.xtclang.org;
  *
- *         @web.WebService("/")
+ *         @web.WebService(Path:/)
  *         service Hello
  *             {
  *             @web.Get("hello")
@@ -25,7 +25,7 @@ import Server.Observer;
  *             }
  *         }
  */
-mixin WebService(String path = "/")
+mixin WebService(Path path)
         into service
         implements Replicable
     {
@@ -195,13 +195,13 @@ mixin WebService(String path = "/")
                         ErrorHandler     handle,
                        )
         {
-        Request?  prevRequest  = this.request;
         Session?  prevSession  = this.session;
+        Request?  prevRequest  = this.request;
         Response? prevResponse = this.response;
 
         // store the request and session for the duration of the request processing
-        this.request  = request;
         this.session  = session;
+        this.request  = request;
         this.response = response;
 
         try
@@ -214,8 +214,8 @@ mixin WebService(String path = "/")
             }
         finally
             {
-            this.request  = prevRequest;
             this.session  = prevSession;
+            this.request  = prevRequest;
             this.response = prevResponse;
             }
         }
