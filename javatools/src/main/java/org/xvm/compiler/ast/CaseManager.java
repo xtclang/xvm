@@ -1022,9 +1022,9 @@ public class CaseManager<CookieType>
                 cmpThatHi = cmpOops;
                 }
 
-            // ranges *do not* intersect if thisHi < thatLo || thisLo > thatHi
-            return cmpThisHi.compareTo(cmpThatLo) >= 0 &&
-                   cmpThisLo.compareTo(cmpThatHi) <= 0;
+            // this range covers that range if this lo <= that lo and this hi >= that hi
+            return cmpThisLo.compareTo(cmpThatLo) <= 0 &&
+                   cmpThisHi.compareTo(cmpThatHi) >= 0;
             }
         catch (Exception e)
             {
