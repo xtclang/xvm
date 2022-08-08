@@ -2,62 +2,25 @@ module TestSimple
     {
     @Inject Console console;
 
-    void run( )
+    void run()
         {
-        Test t = new Test();
-        console.println(t.value1);
-        console.println(t.&value1.checkInside(False));
+        test("hello");
         }
 
-    class Test
+    void test(String | Map value)
         {
-        Int value0;
-
-        Boolean checkOutside()
+        switch (value.is(_))
             {
-            console.println("outside");
-            return True;
-            }
+            case String:
+                console.println(value[0..2)); // this used to assert the compiler
+                break;
 
-        Int value1
-            {
-            @Override
-            Int get()
-                {
-                if (value0 == 0)
+            case Map<String, String>:
+                for ((String key, String val) : value)
                     {
-                    console.println("set 1");
-                    set(1);
+                    console.println(value);
                     }
-
-                if (checkOutside())
-                    {
-                    console.println("set 2");
-                    set(2);
-                    }
-
-                if (checkInside(True))
-                    {
-                    console.println("set 3");
-                    set(3);
-                    }
-
-                return super();
-                }
-
-            Boolean checkInside(Boolean fromInside)
-                {
-                if (fromInside)
-                    {
-                    console.println("inside from inside");
-                    return True;
-                    }
-                else
-                    {
-                    console.println("inside from outside");
-                    return &value0.assigned; // this used to blow up
-                    }
-                }
+                break;
             }
         }
     }

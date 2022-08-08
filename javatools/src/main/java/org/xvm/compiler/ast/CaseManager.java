@@ -631,6 +631,10 @@ public class CaseManager<CookieType>
                 NameExpression exprType = (NameExpression) m_listCond.get(0);
                 assert typeCase.isTypeOfType();
 
+                if ((m_afIsSwitch & 1L) == 1)
+                    {
+                    typeCase = typeCase.getParamType(0);
+                    }
                 exprType.narrowType(ctx, Branch.Always, typeCase);
                 }
             }
@@ -639,12 +643,17 @@ public class CaseManager<CookieType>
             Constant[] aConstCase = constArray.getValue();
             for (int i = 0, c = 64 - Long.numberOfLeadingZeros(m_lTypeExpr); i < c; i++)
                 {
-                if ((m_lTypeExpr & (1L << i)) != 0)
+                long lPos = 1L << i;
+                if ((m_lTypeExpr & lPos) != 0)
                     {
                     NameExpression exprType = (NameExpression) m_listCond.get(i);
                     TypeConstant   typeCase = (TypeConstant) aConstCase[i];
                     assert typeCase.isTypeOfType();
 
+                    if ((m_afIsSwitch & lPos) == 1)
+                        {
+                        typeCase = typeCase.getParamType(0);
+                        }
                     exprType.narrowType(ctx, Branch.Always, typeCase);
                     }
                 }
