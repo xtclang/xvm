@@ -77,6 +77,11 @@
 
 - override of @Lazy property with a different @Lazy blows
 
+- consider adding a V_GET opcode that would combine the functionality of L_GET and MOVE_THIS for
+  dynamically inflated (via & ref) or non-inflated properties; it would eliminated the need for
+  corresponding compensation in ClassTemlpate.getPropertyValue() and OpInvocable.getCallChain()
+  (submission "Fix Ref handling for non-inflated properties" of 8/9/2022)
+
 - TypeInfo is failing to compute (see NumberArray.asBitArray():
   Var<Bit> v = new Object()
         {

@@ -21,6 +21,8 @@ import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xException;
 
+import org.xvm.runtime.template.reflect.xRef.RefHandle;
+
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
 
@@ -160,6 +162,12 @@ public abstract class OpInvocable extends Op
                             frame.poolContext(), frame.getGenericsResolver(true));
 
             chain = clazz.getMethodCallChain(nid);
+            if (chain.isEmpty() && hTarget instanceof RefHandle hRef && hRef.isProperty())
+                {
+                // this is likely an invocation on a dynamically created Ref for a non-inflated
+                // property; try to call the referent itself
+                chain = hRef.getReferentHolder().getComposition().getMethodCallChain(nid);
+                }
             }
         else
             {

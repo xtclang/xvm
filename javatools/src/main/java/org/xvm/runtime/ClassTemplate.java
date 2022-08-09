@@ -809,8 +809,58 @@ public abstract class ClassTemplate
         TypeComposition clzTarget = hTarget.getComposition();
         CallChain       chain     = clzTarget.getPropertyGetterChain(idProp);
 
+        UnknownProperty:
         if (chain == null)
             {
+            if (hTarget instanceof RefHandle hRef)
+                {
+                if (hRef.isProperty() && clzTarget instanceof PropertyComposition clzProp)
+                    {
+                    // this is likely a property access from a dynamically created Ref for a
+                    // non-inflated property; ask the parent instead
+                    clzTarget = clzProp.getParentComposition();
+                    chain     = clzTarget.getPropertyGetterChain(idProp);
+                    if (chain != null)
+                        {
+                        hTarget = hRef.getReferentHolder();
+                        break UnknownProperty;
+                        }
+                    }
+                }
+            else
+                {
+                Component container = frame.f_function.getParent().getParent();
+                if (container instanceof PropertyStructure prop)
+                    {
+                    // this is a Ref property access from a non-inflated property;
+                    // create a Ref on the stack to access the property (e.g. "assigned")
+                    switch (createPropertyRef(frame, hTarget, prop.getIdentityConstant(),
+                                !prop.isVarAccessible(Access.PUBLIC), Op.A_STACK))
+                        {
+                        case Op.R_NEXT:
+                            {
+                            RefHandle hRef = (RefHandle) frame.popStack();
+                            return hRef.getTemplate().getPropertyValue(frame, hRef, idProp, iReturn);
+                            }
+
+                        case Op.R_CALL:
+                            frame.m_frameNext.addContinuation(frameCaller ->
+                                {
+                                RefHandle hRef = (RefHandle) frameCaller.popStack();
+                                return hRef.getTemplate().
+                                        getPropertyValue(frameCaller, hRef, idProp, iReturn);
+                                });
+                            return Op.R_CALL;
+
+                        case Op.R_EXCEPTION:
+                            return Op.R_EXCEPTION;
+
+                        default:
+                            throw new IllegalStateException();
+                        }
+                    }
+                }
+
             return frame.raiseException(
                 xException.unknownProperty(frame, idProp.getName(), hTarget.getType()));
             }
@@ -834,12 +884,13 @@ public abstract class ClassTemplate
             GenericHandle hThis = (GenericHandle) hTarget;
             RefHandle     hRef  = (RefHandle) (field.isTransient()
                     ? hThis.getTransientField(frame, field)
-                    : (RefHandle) hThis.getField(field.getIndex()));
+                    : hThis.getField(field.getIndex()));
 
             if (hRef.getComposition().isStruct())
                 {
+                final CallChain chain0 = chain;
                 Frame.Continuation stepNext = frameCaller ->
-                    frameCaller.invoke1(chain, 0, frameCaller.popStack(), ahVar, iReturn);
+                    frameCaller.invoke1(chain0, 0, frameCaller.popStack(), ahVar, iReturn);
 
                 return finishRefConstruction(frame, hRef, hThis, idProp, stepNext);
                 }

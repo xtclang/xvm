@@ -4,23 +4,65 @@ module TestSimple
 
     void run()
         {
-        test("hello");
+        Test t = new Test();
+        console.println(t.value1);
+        console.println(t.&value1.get()); // this used to blow up
+        console.println(t.&value1.checkInside(False));
+
+        Timeout timeout = new Timeout(Duration.MINUTE);
+        console.println(timeout.remainingTime);
+        console.println(timeout.&remainingTime.get()); // this used to blow up
         }
 
-    void test(String | Map value)
+    class Test
         {
-        switch (value.is(_))
-            {
-            case String:
-                console.println(value[0..2)); // this used to assert the compiler
-                break;
+        Int value0;
 
-            case Map<String, String>:
-                for ((String key, String val) : value)
+        Boolean checkOutside()
+            {
+            console.println("outside");
+            return True;
+            }
+
+        Int value1
+            {
+            @Override
+            Int get()
+                {
+                if (value0 == 0 || !assigned)
                     {
-                    console.println(value);
+                    console.println("set 1");
+                    set(1);
                     }
-                break;
+
+                if (checkOutside())
+                    {
+                    console.println("set 2");
+                    set(2);
+                    }
+
+                if (checkInside(True))
+                    {
+                    console.println("set 3");
+                    set(3);
+                    }
+
+                return super();
+                }
+
+            Boolean checkInside(Boolean fromInside)
+                {
+                if (fromInside)
+                    {
+                    console.println("inside from inside");
+                    return assigned;
+                    }
+                else
+                    {
+                    console.println("inside from outside");
+                    return &value0.assigned;
+                    }
+                }
             }
         }
     }
