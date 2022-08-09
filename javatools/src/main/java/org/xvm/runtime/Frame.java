@@ -335,7 +335,9 @@ public class Frame
      */
     protected int ensureInitialized(Frame frameNext)
         {
-        return frameNext.f_function.ensureInitialized(this, frameNext);
+        return frameNext.f_nDepth > 128
+                ? raiseException("Stack overflow")
+                : frameNext.f_function.ensureInitialized(this, frameNext);
         }
 
     /**

@@ -612,11 +612,6 @@ public class ServiceContext
 
                 if (++cOps > 1_000_000)
                     {
-                    if (frame.f_nDepth > 100)
-                        {
-                        iPC = frame.raiseException("Stack overflow");
-                        break;
-                        }
                     fiber.setStatus(FiberStatus.Paused, cOps);
                     return frame;
                     }
