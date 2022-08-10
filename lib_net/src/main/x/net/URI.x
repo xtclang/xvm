@@ -5,6 +5,8 @@
  */
 const URI
     {
+    // ----- constructors --------------------------------------------------------------------------
+
     /**
      * Construct a URI from a String.
      *
@@ -12,22 +14,22 @@ const URI
      */
     construct(String text)
         {
-        originalForm = text;
-
-        (Boolean success,
-         this.scheme,
-         this.authority,
-         this.user,
-         this.host,
-         this.ip,
-         this.port,
-         this.path,
-         this.query,
-         this.opaque,
-         this.fragment,
-         String? error) = parse(text);
+        (Boolean    success,
+         String?    scheme,
+         String?    authority,
+         String?    user,
+         String?    host,
+         IPAddress? ip,
+         UInt16?    port,
+         Path?      path,
+         String?    query,
+         String?    opaque,
+         String?    fragment,
+         String?    error) = parse(text);
 
         assert:arg success as error ?: $"Illegal URI: {text.quoted()}";
+
+        construct URI(text, scheme, authority, user, host, ip, port, path, query, opaque, fragment);
         }
 
     /**
@@ -153,6 +155,12 @@ const URI
                                                 | does not match the passed port {port}
                                                ;
                 }
+
+            if (host != Null || ip != Null)
+                {
+                // re-build the authority string from its constituent pieces
+                authority = renderAuthority(new StringBuffer(), user, host, ip, port).toString();
+                }
             }
         else
             {
@@ -180,17 +188,55 @@ const URI
         assert:arg scheme != Null || authority != Null || path != Null || fragment != Null
                 as "the URI requires at least one of: scheme, authority, path, or fragment";
 
-        this.scheme     = scheme;
-        this.authority  = authority;
-        this.user       = user;
-        this.host       = host;
-        this.ip         = ip;
-        this.port       = port;
-        this.path       = path;
-        this.query      = query;
-        this.opaque     = opaque;
-        this.fragment   = fragment;
+        construct URI(Null, scheme, authority, user, host, ip, port, path, query, opaque, fragment);
         }
+
+    /**
+     * Construct a URI from its parts.
+     *
+     * If any of `user`, `host`, `ip`, or `port` are passed, then `authority` should be passed as
+     * `Null`. Similarly, either optionally pass the `host` or the `ip`, but not both.
+     *
+     * @param originalForm  the original URI string, or Null if none
+     * @param scheme        the scheme name, or Null if none
+     * @param authority     the entire authority string, which can be empty, or Null if none
+     * @param user          the user name, or Null if none
+     * @param host          the host string, or Null if none
+     * @param ip            the IP address, otherwise Null
+     * @param port          the port number, or Null if none
+     * @param path          the '/' path portion, or Null if none
+     * @param query         the '?' query portion, or Null if none
+     * @param opaque        the opaque portion, if the URI is not of the hierarchical form
+     * @param fragment      the '#' fragment portion, which may be blank, or Null if none
+     */
+    private construct(String?    originalForm,
+                      String?    scheme,
+                      String?    authority,
+                      String?    user,
+                      String?    host,
+                      IPAddress? ip,
+                      UInt16?    port,
+                      Path?      path,
+                      String?    query,
+                      String?    opaque,
+                      String?    fragment,
+                     )
+        {
+        this.originalForm = originalForm;
+        this.scheme       = scheme;
+        this.authority    = authority;
+        this.user         = user;
+        this.host         = host;
+        this.ip           = ip;
+        this.port         = port;
+        this.path         = path;
+        this.query        = query;
+        this.opaque       = opaque;
+        this.fragment     = fragment;
+        }
+
+
+    // ----- properties ----------------------------------------------------------------------------
 
     /**
      * The optional scheme.
@@ -239,6 +285,280 @@ const URI
      */
     String? originalForm;
 
+
+    // ----- searching -----------------------------------------------------------------------------
+
+    /**
+     * The URI is divided into sections.
+     */
+    enum Section
+        {
+        Scheme, Authority, Path, Query, Fragment;
+
+        @Lazy Position start.calc()
+            {
+            return new Position(this, 0);
+            }
+        }
+
+    /**
+     * Describes a position within the URI. This data structure is directly related to the manner in
+     * which this URI implementation stores its internal data, which may differ from how the URI is
+     * rendered canonically.
+     */
+    static const Position(Section section, Int offset)
+        {
+        /**
+         * A pre-defined Position for the beginning of a URI.
+         */
+        static Position START = new Position(Scheme, 0);
+        }
+
+    /**
+     * Attempt to find the specified literal in this URI.
+     *
+     * @param literal  the literal to search for
+     * @param from     (optional) the position to begin searching from
+     * @param to       (optional) the position to not search beyond
+     *
+     * @return `True` iff the literal is found
+     * @return (conditional) the position within the URI that the literal is located
+     * @return (conditional) the position within the URI that immediately follows the literal
+     */
+    conditional (Position found, Position next) find(String literal, Position? from=Null, Position? to=Null)
+        {
+        // start at the beginning if no "start from" specified
+        from ?:= START;
+
+        Int literalLength = literal.size;
+        if (literalLength == 0)
+            {
+            return True, from, from;
+            }
+
+        Char start = literal[0];
+
+        @Lazy(() -> scheme ?: "")                              String cachedScheme;
+        @Lazy(() -> authority == Null ? "" : $"//{authority}") String cachedAuthority;
+        @Lazy(() -> path == Null ? "" : path.toString())       String cachedPath;
+        @Lazy(() -> query == Null ? "" : $"?{query}")          String cachedQuery;
+        @Lazy(() -> fragment == Null ? "" : $"#{fragment}")    String cachedFragment;
+
+        function String(Section) partFor = section -> switch (section)
+            {
+            case Scheme:    cachedScheme;
+            case Authority: cachedAuthority;
+            case Path:      cachedPath;
+            case Query:     cachedQuery;
+            case Fragment:  cachedFragment;
+            };
+
+        Section section = from.section;
+        Int     offset  = from.offset;
+        String  part    = partFor(section);
+        while (True)
+            {
+            // check if we need to stop looking for the literal before reaching the end of the part
+            Int partLength = part.size;
+            if (section == to?.section)
+                {
+                partLength = partLength.minOf(to.offset - literalLength);
+                }
+
+            // scan for the first character of the literal
+            while (offset < partLength)
+                {
+                if (Int nextOffset := matchCharacter(start, part, offset))
+                    {
+                    if (Position afterLiteral := matchRemainder(
+                            literal, 1, literalLength, section, nextOffset, partFor))
+                        {
+                        // we found it, but before returning, make sure that we did not pass the
+                        // end of the region that we were allowed to match within
+                        if (afterLiteral > to?)
+                            {
+                            return False;
+                            }
+
+                        return True, new Position(section, offset), afterLiteral;
+                        }
+
+                    offset = nextOffset;
+                    }
+                else
+                    {
+                    ++offset;
+                    }
+                }
+
+            // check if we have reached the end of the area to match within
+            if (section >= to?.section)
+                {
+                return False;
+                }
+
+            // load the next section
+// TODO GG - this code is wrong, but it produces an exception instead of a compiler error:
+//          if (section := section.next().as(Section))
+// Exception in thread "main" java.lang.AssertionError
+//	at org.xvm.compiler.ast.Expression.generateAssignments(Expression.java:1571)
+            if (val temp := section.next(), section := temp.is(Section))
+                {
+                part   = partFor(section);
+                offset = 0;
+                }
+            else
+                {
+                // "We're all out of roofs!" (The Tick vs. The Idea Men)
+                return False;
+                }
+            }
+        }
+
+    /**
+     * Attempt to match the specified literal at the specified position within this URI.
+     *
+     * @param literal  the literal to match
+     * @param from     the exactly position that the literal must be located at
+     *
+     * @return `True` iff the literal is matched
+     * @return (conditional) the position within the URI that immediately follows the literal
+     */
+    conditional (Position next) matches(String literal, Position from)
+        {
+        Int literalLength = literal.size;
+        if (literalLength == 0)
+            {
+            return True, from;
+            }
+
+        @Lazy(() -> scheme ?: "")                              String cachedScheme;
+        @Lazy(() -> authority == Null ? "" : $"//{authority}") String cachedAuthority;
+        @Lazy(() -> path == Null ? "" : path.toString())       String cachedPath;
+        @Lazy(() -> query == Null ? "" : $"?{query}")          String cachedQuery;
+        @Lazy(() -> fragment == Null ? "" : $"#{fragment}")    String cachedFragment;
+
+        function String(Section) partFor = section -> switch (section)
+            {
+            case Scheme:    cachedScheme;
+            case Authority: cachedAuthority;
+            case Path:      cachedPath;
+            case Query:     cachedQuery;
+            case Fragment:  cachedFragment;
+            };
+
+        return matchRemainder(literal, 0, literalLength, from.section, from.offset, partFor);
+        }
+
+    /**
+     * Match a single character.
+     *
+     * @param ch      the single character to match, which may be a UCS character
+     * @param part    the String to match the character within, which may contain `pct-encoded` data
+     * @param offset  the offset within the String at which to begin the matching
+     *
+     * @return `True` iff the character matches
+     * @return (conditional) the offset of the character following the matched character
+     */
+    protected static conditional (Int offset) matchCharacter(Char ch, String part, Int offset)
+        {
+        if (ch == part[offset])
+            {
+            return True, offset+1;
+            }
+
+        // it's possible that the character needs to be UTF-8 encoded, or the URI is pct-encoded
+        if (!ch.ascii || part[offset] == '%')
+            {
+            // get the UTF8 bytes for the character and then try every possible encoding
+            Int length = part.size;
+            for (Byte byte : ch.utf8())
+                {
+                if (offset >= length)
+                    {
+                    return False;
+                    }
+
+                if (byte.toChar() == part[offset])
+                    {
+                    ++offset;
+                    }
+                else if (part[offset] == '%' && offset+2 < length
+                        && part[offset+1] == byte.highNibble.toChar()
+                        && part[offset+2] == byte.lowNibble.toChar())
+                    {
+                    offset += 3;
+                    }
+                else
+                    {
+                    return False;
+                    }
+                }
+            return True, offset;
+            }
+
+        return False;
+        }
+
+    /**
+     * Match the remaining portion of a literal string value.
+     *
+     * @param literal        the literal string value
+     * @param literalOffset  the offset within the literal string value continue matching from
+     * @param literalLength  the effective length of the literal string value (if the entire value
+     *                       is not being matched)
+     * @param section        the current section of the URI being matched
+     * @param offset         the offset into the current section of the URI that must match the next
+     *                       character ofo the literal string value
+     * @param partFor        the function to use to load subsequent sections of the URI
+     */
+    protected static conditional (Position next) matchRemainder(
+            String                   literal,
+            Int                      literalOffset,
+            Int                      literalLength,
+            Section                  section,
+            Int                      offset,
+            function String(Section) partFor,
+           )
+        {
+        if (literalOffset >= literalLength)
+            {
+            return True, new Position(section, offset);
+            }
+
+        while (True)
+            {
+            String part       = partFor(section);
+            Int    partLength = part.size;
+            while (offset < partLength)
+                {
+                if (literalOffset >= literalLength)
+                    {
+                    return True, new Position(section, offset);
+                    }
+
+                if (!(offset := matchCharacter(literal[literalOffset++], part, offset)))
+                    {
+                    return False;
+                    }
+                }
+
+            // load the next section
+            if (val temp := section.next(), section := temp.is(Section))
+                {
+                part   = partFor(section);
+                offset = 0;
+                }
+            else
+                {
+                return False;
+                }
+            }
+        }
+
+
+    // ----- formatting ----------------------------------------------------------------------------
+
     /**
      * The URI in the String format selected by this implementation.
      */
@@ -261,7 +581,7 @@ const URI
             if (authority != Null)
                 {
                 "//".appendTo(buf);
-                renderAuthority(buf, user, host, ip, port);
+                authority.appendTo(buf);
                 }
 
             if (path != Null)
@@ -281,6 +601,142 @@ const URI
             {
             buf.add('#');
             escape(fragment, uricValid).appendTo(buf);
+            }
+
+        return buf.toString();
+        }
+
+    /**
+     * Obtain a portion of the URI's canonical form starting from the specified [Position] and
+     * ending immediately before the `next` [Position].
+     *
+     * @param
+     *
+     * @return the specified slice of the URI in the URI's canonical format
+     */
+    String canonicalSlice(Position start, Position next)
+        {
+        Section startSection = start.section;
+        Int     startOffset  = start.offset;
+        Section nextSection  = next.section;
+        Int     nextOffset   = next.offset;
+        if (startSection > nextSection || startSection == nextSection && startOffset >= nextOffset)
+            {
+            return "";
+            }
+
+        StringBuffer buf = new StringBuffer();
+
+        switch (startSection)
+            {
+            case Scheme:
+                Boolean last = nextSection == Scheme;
+                if (String scheme ?= scheme)
+                    {
+                    Boolean truncate = last && nextOffset < scheme.size;
+                    scheme = truncate ? scheme[startOffset..nextOffset)
+                                      : scheme.substring(startOffset);
+
+                    escape(scheme, schemeValid).appendTo(buf);
+                    if (!truncate)
+                        {
+                        buf.add(':');
+                        }
+                    }
+
+                if (last || nextSection == Authority && nextOffset == 0)
+                    {
+                    break;
+                    }
+
+                startOffset = 0;
+                continue;
+
+            case Authority:
+                assert opaque == Null;
+                Boolean last = nextSection == Authority;
+                if (String authority ?= authority)
+                    {
+                    Boolean truncate = last && nextOffset < authority.size;
+                    authority = truncate ? authority[startOffset..nextOffset)
+                                         : authority.substring(startOffset);
+
+                    if (startOffset == 0)
+                        {
+                        "//".appendTo(buf);
+                        }
+                    authority.appendTo(buf);
+                    }
+
+                if (last || nextSection == Path && nextOffset == 0)
+                    {
+                    break;
+                    }
+
+                startOffset = 0;
+                continue;
+
+            case Path:
+                assert opaque == Null;
+                Boolean last = nextSection == Path;
+                if (Path path ?= path)
+                    {
+                    String  pathString = path.toString();
+                    Boolean truncate   = last && nextOffset < pathString.size;
+                    pathString = truncate ? pathString[startOffset..nextOffset)
+                                          : pathString.substring(startOffset);
+
+                    // TODO escape
+                    pathString.appendTo(buf);
+                    }
+
+                if (last || nextSection == Query && nextOffset == 0)
+                    {
+                    break;
+                    }
+
+                startOffset = 0;
+                continue;
+
+            case Query:
+                assert opaque == Null;
+                Boolean last = nextSection == Query;
+                if (String query ?= query)
+                    {
+                    Boolean truncate = last && nextOffset < query.size;
+                    query = truncate ? query[startOffset..nextOffset)
+                                     : query.substring(startOffset);
+
+                    if (startOffset == 0)
+                        {
+                        buf.add('?');
+                        }
+                    escape(query, uricValid).appendTo(buf);
+                    }
+
+                if (last || nextSection == Fragment && nextOffset == 0)
+                    {
+                    break;
+                    }
+
+                startOffset = 0;
+                continue;
+
+            case Fragment:
+                if (String fragment ?= fragment)
+                    {
+                    Boolean truncate = nextOffset < fragment.size;
+                    fragment = truncate ? fragment[startOffset..nextOffset)
+                                        : fragment.substring(startOffset);
+
+                    if (startOffset == 0)
+                        {
+                        buf.add('#');
+                        }
+                    escape(fragment, uricValid).appendTo(buf);
+                    }
+
+                break;
             }
 
         return buf.toString();
@@ -343,6 +799,36 @@ const URI
     String toString()
         {
         return originalForm ?: canonicalForm;
+        }
+
+
+    // ----- parsing -------------------------------------------------------------------------------
+
+    /**
+     * Create a `URI` from the passed `String`, iff the `String` contains a valid URI.
+     *
+     * @param text  the text containing a URI
+     *
+     * @return True if the text was successfully parsed into a URI
+     * @return (conditional) the URI
+     */
+    static conditional URI fromString(String text)
+        {
+        if ((String?    scheme,
+             String?    authority,
+             String?    user,
+             String?    host,
+             IPAddress? ip,
+             UInt16?    port,
+             Path?      path,
+             String?    query,
+             String?    opaque,
+             String?    fragment) := parse(text))
+            {
+            return True, new URI(text, scheme, authority, user, host, ip, port, path, query, opaque, fragment);
+            }
+
+        return False;
         }
 
     /**
