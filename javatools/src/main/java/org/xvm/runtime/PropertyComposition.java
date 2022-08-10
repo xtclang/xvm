@@ -1,8 +1,6 @@
 package org.xvm.runtime;
 
-import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -182,21 +180,15 @@ public class PropertyComposition
         }
 
     @Override
-    public FieldInfo getFieldInfo(Object nid)
+    public FieldInfo getFieldInfo(Object id)
         {
-        return f_clzRef.getFieldInfo(nid);
+        return f_clzRef.getFieldInfo(id);
         }
 
     @Override
     public boolean makeStructureImmutable(ObjectHandle[] ahField)
         {
         return f_clzRef.makeStructureImmutable(ahField);
-        }
-
-    @Override
-    public Set<Object> getFieldNids()
-        {
-        return f_clzRef.getFieldNids();
         }
 
     @Override
@@ -308,17 +300,17 @@ public class PropertyComposition
         }
 
     @Override
-    public List<String> getFieldNames()
+    public Map<Object, FieldInfo> getFieldLayout()
         {
         // strictly speaking, the list should include the non-top-level fields that are kept in
         // the parent's structure, but those are NestedIdentities, not Strings
-        return f_clzRef.getFieldNames();
+        return f_clzRef.getFieldLayout();
         }
 
     @Override
     public StringHandle[] getFieldNameArray()
         {
-        return f_clzRef.getFieldNameArray();
+        return Utils.STRINGS_NONE;
         }
 
     @Override

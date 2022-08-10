@@ -1,11 +1,9 @@
 package org.xvm.runtime;
 
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -100,6 +98,7 @@ public class ClassComposition
         f_mapSetters      = f_clzInception.f_mapSetters;
 
         m_mapFields       = f_clzInception.m_mapFields;
+        m_cRegularFields  = f_clzInception.m_cRegularFields;
         m_fHasOuter       = f_clzInception.m_fHasOuter;
         m_fHasSpecial     = f_clzInception.m_fHasSpecial;
         m_methodInit      = f_clzInception.m_methodInit;
@@ -422,38 +421,9 @@ public class ClassComposition
         }
 
     @Override
-    public List<String> getFieldNames()
+    public Map<Object, FieldInfo> getFieldLayout()
         {
-        List<String> listNames = m_listNames;
-        if (listNames == null)
-            {
-            Map<Object, FieldInfo> mapFields = m_mapFields;
-            if (mapFields.isEmpty())
-                {
-                listNames = Collections.EMPTY_LIST;
-                }
-            else
-                {
-                listNames = new ArrayList<>(mapFields.size());
-                for (Map.Entry<Object, FieldInfo> entry : mapFields.entrySet())
-                    {
-                    Object nid = entry.getKey();
-
-                    // disregard nested (private) and synthetic properties
-                    if (nid instanceof String sName)
-                        {
-                        FieldInfo field = entry.getValue();
-                        if (sName.charAt(0) != '$' && field.isRegular())
-                            {
-                            listNames.add(sName);
-                            }
-                        }
-                    }
-                }
-            m_listNames = listNames;
-            }
-
-        return listNames;
+        return m_mapFields;
         }
 
     @Override
@@ -462,15 +432,21 @@ public class ClassComposition
         StringHandle[] ashNames = m_ashFieldNames;
         if (ashNames == null)
             {
-            List<String> listNames = getFieldNames();
-
-            ashNames = new StringHandle[listNames.size()];
+            ashNames = new StringHandle[m_cRegularFields];
 
             int i = 0;
-            for (String sName : listNames)
+            for (Map.Entry<Object, FieldInfo> entry : getFieldLayout().entrySet())
                 {
-                ashNames[i++] = xString.makeHandle(sName);
+                Object    enid  = entry.getKey();
+                FieldInfo field = entry.getValue();
+
+                if (!(enid instanceof NestedIdentity) && field.isRegular())
+                    {
+                    ashNames[i++] = xString.makeHandle(field.getName());
+                    }
                 }
+            assert i == m_cRegularFields;
+
             m_ashFieldNames = ashNames;
             }
         return ashNames;
@@ -479,28 +455,34 @@ public class ClassComposition
     @Override
     public ObjectHandle[] getFieldValueArray(GenericHandle hValue)
         {
-        List<String> listNames = getFieldNames();
-        if (listNames.isEmpty())
+        Map<Object, FieldInfo> mapLayout = getFieldLayout();
+        if (mapLayout.isEmpty())
             {
             return Utils.OBJECTS_NONE;
             }
 
-        ObjectHandle[] ahFields = new ObjectHandle[listNames.size()];
+        ObjectHandle[] ahFields = new ObjectHandle[m_cRegularFields];
 
         int i = 0;
-        for (String sName : listNames)
+        for (Map.Entry<Object, FieldInfo> entry : mapLayout.entrySet())
             {
-            ahFields[i++] = hValue.getField(null, sName);
-            }
+            Object    enid  = entry.getKey();
+            FieldInfo field = entry.getValue();
 
+            if (!(enid instanceof NestedIdentity) && field.isRegular())
+                {
+                ahFields[i++] = hValue.getField(null, field.getName());
+                }
+            }
+        assert i == m_cRegularFields;
         return ahFields;
         }
 
     @Override
     public ObjectHandle[] initializeStructure()
         {
-        Map<Object, FieldInfo> mapCached = m_mapFields;
-        int                    cSize     = mapCached.size();
+        Map<Object, FieldInfo> mapFields = m_mapFields;
+        int                    cSize     = mapFields.size();
 
         if (cSize == 0)
             {
@@ -510,7 +492,7 @@ public class ClassComposition
         ObjectHandle[] aFields = new ObjectHandle[cSize];
         if (m_fHasSpecial)
             {
-            for (FieldInfo field : mapCached.values())
+            for (FieldInfo field : mapFields.values())
                 {
                 if (field.isTransient())
                     {
@@ -527,15 +509,14 @@ public class ClassComposition
         }
 
     @Override
-    public FieldInfo getFieldInfo(Object nid)
+    public FieldInfo getFieldInfo(Object id)
         {
-        return m_mapFields.get(nid);
-        }
-
-    @Override
-    public Set<Object> getFieldNids()
-        {
-        return m_mapFields.keySet();
+        if (id instanceof PropertyConstant idProp &&
+                idProp.getComponent().getAccess() != Access.PRIVATE)
+            {
+            id = idProp.getNestedIdentity();
+            }
+        return m_mapFields.get(id);
         }
 
     @Override
@@ -625,7 +606,8 @@ public class ClassComposition
             Arrays.sort(aEntry, PropertyInfo.RANKER);
             }
 
-        int nIndex = 0;
+        int cRegular = 0;
+        int nIndex   = 0;
 
         // create storage for implicits
         for (String sField : f_template.getImplicitFields())
@@ -707,17 +689,26 @@ public class ClassComposition
             if (fField)
                 {
                 boolean fTransient = infoProp.isTransient();
+                boolean fPrivate   = infoProp.getRefAccess() == Access.PRIVATE;
 
-                Object nid = idProp.getNestedIdentity();
+                Object enid = fPrivate ? idProp : idProp.getNestedIdentity();
 
-                assert infoStruct.findPropertyByNid(nid) != null;
-                assert !mapFields.containsKey(nid);
+                assert fPrivate
+                        ? idProp.getComponent() != null
+                        : infoStruct.findPropertyByNid(enid) != null;
+                assert !mapFields.containsKey(enid);
 
-                mapFields.put(nid, new FieldInfo(nid.toString(), nIndex++, clzRef,
+                FieldInfo field = new FieldInfo(enid, nIndex++, clzRef,
                         infoProp.isInjected(), fTransient,
-                        infoProp.isSimpleUnassigned(), infoProp.isLazy()));
+                        infoProp.isSimpleUnassigned(), infoProp.isLazy());
+                mapFields.put(enid, field);
 
                 m_fHasSpecial |= fTransient | clzRef != null;
+
+                if (!(enid instanceof NestedIdentity) && field.isRegular())
+                    {
+                    cRegular++;
+                    }
                 }
             else
                 {
@@ -730,15 +721,19 @@ public class ClassComposition
                 : mapFields.size() > 8
                     ? new LinkedHashMap<>(mapFields)
                     : mapFields;
+        m_cRegularFields = cRegular;
         }
 
     /**
-     * @return the compile-time type for a given property name
+     * @return the compile-time type for a given property name or identity (never nested identity)
      */
-    public TypeConstant getFieldType(String sProp)
+    public TypeConstant getFieldType(Object enid)
         {
         TypeConstant typeParent = getInceptionType();
-        PropertyInfo info       = typeParent.ensureTypeInfo().findProperty(sProp);
+        TypeInfo     infoType   = typeParent.ensureTypeInfo();
+        PropertyInfo info       = enid instanceof PropertyConstant idProp
+                ? infoType.findProperty(idProp)
+                : infoType.findProperty((String) enid);
         return info == null ? null : info.inferImmutable(typeParent);
         }
 
@@ -749,7 +744,6 @@ public class ClassComposition
         {
         return getInceptionType().ensureTypeInfo().findProperty(idProp);
         }
-
 
     @Override
     public int hashCode()
@@ -778,14 +772,15 @@ public class ClassComposition
         /**
          * Construct a {@link FieldInfo}.
          *
+         * @param enid        the field's name, property id or nested identity
          * @param nIndex      the field's storage index
          * @param clzRef      (optional) the TypeComposition for inflated fields
          * @param fSynthetic  true iff the field is synthetic (e.g. implicit or injected)
          */
-        protected FieldInfo(String sName, int nIndex, TypeComposition clzRef, boolean fSynthetic,
+        protected FieldInfo(Object enid, int nIndex, TypeComposition clzRef, boolean fSynthetic,
                             boolean fTransient, boolean fUnassigned, boolean fLazy)
             {
-            f_sName       = sName;
+            f_enid        = enid;
             f_nIndex      = nIndex;
             f_clzRef      = clzRef;
             f_fSynthetic  = fSynthetic;
@@ -799,7 +794,9 @@ public class ClassComposition
          */
         public String getName()
             {
-            return f_sName;
+            return f_enid instanceof PropertyConstant idProp
+                    ? idProp.getPathString()
+                    : f_enid.toString();
             }
 
         /**
@@ -879,7 +876,7 @@ public class ClassComposition
          */
         public RefHandle createRefHandle(Frame frame)
             {
-            return ((VarSupport) f_clzRef.getSupport()).createRefHandle(frame, f_clzRef, f_sName);
+            return ((VarSupport) f_clzRef.getSupport()).createRefHandle(frame, f_clzRef, getName());
             }
 
         @Override
@@ -909,7 +906,7 @@ public class ClassComposition
 
         // ----- fields ----------------------------------------------------------------------------
 
-        private final String          f_sName;
+        private final Object          f_enid; // String | PropertyConstant | NestedIdentity
         private final int             f_nIndex;
         private final TypeComposition f_clzRef;
         private final boolean         f_fSynthetic;
@@ -959,9 +956,14 @@ public class ClassComposition
     private final boolean f_fStruct;
 
     /**
-     * {@link FieldInfo}s for class fields keyed by nids.
+     * {@link FieldInfo}s for class fields keyed by extended nids.
      */
     private Map<Object, FieldInfo> m_mapFields;
+
+    /**
+     * The count of non-nested regular fields used for native Stringable methods on a const class.
+     */
+    private int m_cRegularFields;
 
     /**
      * True iff this class contains an OUTER field.
@@ -1005,9 +1007,6 @@ public class ClassComposition
 
     // cached property setter call chain by property id (the top-most method first)
     private final Map<PropertyConstant, CallChain> f_mapSetters;
-
-    // cached list of field names
-    private List<String> m_listNames;
 
     // cached array of field name handles
     private StringHandle[] m_ashFieldNames;

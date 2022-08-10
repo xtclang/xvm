@@ -1,8 +1,7 @@
 package org.xvm.runtime;
 
 
-import java.util.List;
-import java.util.Set;
+import java.util.Map;
 
 import org.xvm.asm.MethodStructure;
 
@@ -92,9 +91,9 @@ abstract public class DelegatingComposition
         }
 
     @Override
-    public List<String> getFieldNames()
+    public Map<Object, FieldInfo> getFieldLayout()
         {
-        return f_clzOrigin.getFieldNames();
+        return f_clzOrigin.getFieldLayout();
         }
 
     @Override
@@ -116,21 +115,15 @@ abstract public class DelegatingComposition
         }
 
     @Override
-    public FieldInfo getFieldInfo(Object nid)
+    public FieldInfo getFieldInfo(Object id)
         {
-        return f_clzOrigin.getFieldInfo(nid);
+        return f_clzOrigin.getFieldInfo(id);
         }
 
     @Override
     public boolean makeStructureImmutable(ObjectHandle[] ahField)
         {
         return f_clzOrigin.makeStructureImmutable(ahField);
-        }
-
-    @Override
-    public Set<Object> getFieldNids()
-        {
-        return f_clzOrigin.getFieldNids();
         }
 
     @Override

@@ -192,10 +192,10 @@ module TestProps
                 void report()
                     {
                     super();
-                    console.println($"Method foo() was called {++count1} times");
+                    console.println($"Method report() was called {++count} times");
                     }
 
-                private Int count1; // TODO GG: using the same name (count) asserts at RT
+                private Int count;
                 }
 
             @Override

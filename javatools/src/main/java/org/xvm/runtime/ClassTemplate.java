@@ -877,7 +877,7 @@ public abstract class ClassTemplate
 
         MethodStructure method = chain.getTop();
         ObjectHandle[]  ahVar  = new ObjectHandle[method.getMaxVars()];
-        FieldInfo       field  = clzTarget.getFieldInfo(idProp.getNestedIdentity());
+        FieldInfo       field  = clzTarget.getFieldInfo(idProp);
 
         if (field != null && field.isInflated())
             {
@@ -1126,7 +1126,7 @@ public abstract class ClassTemplate
         ObjectHandle[]  ahVar  = new ObjectHandle[method.getMaxVars()];
         ahVar[0] = hValue;
 
-        FieldInfo field = clzTarget.getFieldInfo(idProp.getNestedIdentity());
+        FieldInfo field = clzTarget.getFieldInfo(idProp);
         if (field != null && field.isInflated())
             {
             GenericHandle hThis = (GenericHandle) hTarget;

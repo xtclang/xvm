@@ -100,6 +100,8 @@ public class xRTType
 
         TYPE_ARRAY_TYPE  = pool.ensureArrayType(pool.typeType());
         EMPTY_TYPE_ARRAY = pool.ensureArrayConstant(TYPE_ARRAY_TYPE, Constant.NO_CONSTS);
+        PROP_CALCULATE   = (PropertyConstant) pool.clzLazy().getComponent().getChild("calculate").getIdentityConstant();
+        PROP_HASHER      = (PropertyConstant) f_struct.getChild("hasher").getIdentityConstant();
 
         markNativeProperty("childTypes");
         markNativeProperty("constants");
@@ -1676,15 +1678,15 @@ public class xRTType
 
         GenericHandle hMulti = (GenericHandle) hType.getField(null, "multimethods");
         hMulti.setField(null, GenericHandle.OUTER, hType);
-        hMulti.setField(null, "calculate",  xNullable.NULL);
+        hMulti.setField(null, PROP_CALCULATE,  xNullable.NULL);
 
-        GenericHandle hHasher = (GenericHandle) hType.getField(null, "hasher");
+        GenericHandle hHasher = (GenericHandle) hType.getField(null, PROP_HASHER);
         hHasher.setField(null, GenericHandle.OUTER, hType);
-        hHasher.setField(null, "calculate",  xNullable.NULL);
+        hHasher.setField(null, PROP_CALCULATE,  xNullable.NULL);
 
         GenericHandle hIter = (GenericHandle) hType.getField(null, "emptyIterator");
         hIter.setField(null, GenericHandle.OUTER, hType);
-        hIter.setField(null, "calculate",  xNullable.NULL);
+        hIter.setField(null, PROP_CALCULATE,  xNullable.NULL);
 
         return hType;
         }
@@ -1827,4 +1829,7 @@ public class xRTType
 
     private static TypeComposition REGISTER_CLZCOMP;
     private static MethodStructure REGISTER_CONSTRUCT;
+
+    private static PropertyConstant PROP_CALCULATE;
+    private static PropertyConstant PROP_HASHER;
     }

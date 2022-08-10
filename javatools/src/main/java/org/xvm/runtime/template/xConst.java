@@ -3,8 +3,8 @@ package org.xvm.runtime.template;
 
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.xvm.asm.ClassStructure;
@@ -14,6 +14,8 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.RangeConstant;
 import org.xvm.asm.constants.LiteralConstant;
 import org.xvm.asm.constants.SignatureConstant;
@@ -21,6 +23,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.ByteConstant;
 
 import org.xvm.runtime.ClassComposition;
+import org.xvm.runtime.ClassComposition.FieldInfo;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
@@ -229,97 +232,101 @@ public class xConst
             GenericHandle hConst = (GenericHandle) hStruct;
             if (hConst.containsMutableFields())
                 {
-                TypeComposition clz      = hStruct.getComposition();
-                ObjectHandle[]  ahFields = clz.getFieldValueArray(hConst);
-                int             cFields  = ahFields.length;
-                if (cFields > 0)
+                TypeComposition clz = hStruct.getComposition();
+
+                // remove all immutable and proxied (services and services' children);
+                // collect all freezable into a "freezable" list along with their names and types
+                List<ObjectHandle> listFreezable = null;
+                List<FieldInfo>    listInfo      = null;
+                List<TypeConstant> listTypes     = null;
+
+                for (FieldInfo field : clz.getFieldLayout().values())
                     {
-                    List<String> listFieldNames = clz.getFieldNames();
-                    assert listFieldNames.size() == cFields;
-
-                    // remove all immutable and proxied (services and services' children);
-                    // collect all freezable into a "freezable" list along with their indexes
-                    List<ObjectHandle> listFreezable = null;
-                    List<String>       listName      = null;
-
-                    for (int i = 0; i < cFields; i++)
+                    if (field.isTransient() || field.isSynthetic() || field.isLazy())
                         {
-                        ObjectHandle hField = ahFields[i];
-                        if (hField.isPassThrough(null))
-                            {
-                            continue;
-                            }
-
-                        String sField = listFieldNames.get(i);
-                        if (hField.getType().isA(frame.poolContext().typeFreezable()))
-                            {
-                            if (listFreezable == null)
-                                {
-                                listFreezable = new ArrayList<>();
-                                listName      = new ArrayList<>();
-                                }
-                            listFreezable.add(hField);
-                            listName.add(sField);
-                            }
-                        else
-                            {
-                            return frame.raiseException(
-                                xException.notFreezableProperty(frame, sField, hConst.getType()));
-                            }
+                        continue;
                         }
 
-                    if (listFreezable != null)
+                    ObjectHandle hField = hConst.getField(field.getIndex());
+                    if (hField == null || hField.isPassThrough(null))
                         {
-                        ObjectHandle[] ahFreezable = listFreezable.toArray(Utils.OBJECTS_NONE);
-                        String[]       asName      = listName.toArray(Utils.NO_NAMES);
-                        ArrayHandle    haValues    =
-                            xArray.makeObjectArrayHandle(ahFreezable, Mutability.Fixed);
-
-                        ObjectHandle[] ahVars = new ObjectHandle[FN_FREEZE.getMaxVars()];
-                        ahVars[0] = haValues;
-
-                        Frame frameFreeze = frame.createFrame1(FN_FREEZE, null, ahVars, Op.A_IGNORE);
-                        frameFreeze.addContinuation(frameCaller ->
-                            {
-                            ObjectHandle[] ahValueNew;
-                            try
-                                {
-                                ahValueNew = haValues.getTemplate().toArray(frameCaller, haValues);
-                                }
-                            catch (ExceptionHandle.WrapperException e)
-                                {
-                                return frameCaller.raiseException(e);
-                                }
-
-                            for (int i = 0, c = asName.length; i < c; i++)
-                                {
-                                // verify that "freeze" didn't widen the type
-                                String       sField  = asName[i];
-                                ObjectHandle hNew    = ahValueNew[i];
-                                TypeConstant typeOld = hConst.getField(frameCaller, sField).getType();
-                                TypeConstant typeNew = hNew.getType();
-                                if (typeNew.isA(typeOld))
-                                    {
-                                    hConst.setField(frame, sField, hNew);
-                                    }
-                                else
-                                    {
-                                    TypeConstant typeExpected = frameCaller.poolContext().
-                                        ensureImmutableTypeConstant(typeOld);
-                                    return frameCaller.raiseException(
-                                        "The freeze() result type for the \"" + sField +
-                                        "\" field was illegally changed; \"" +
-                                        typeExpected.getValueString() + "\" expected, \"" +
-                                        typeNew.getValueString() + "\" returned");
-                                    }
-                                }
-
-                            hConst.makeImmutable();
-                            return Op.R_NEXT;
-                            });
-
-                        return frame.callInitialized(frameFreeze);
+                        // we already checked that it's allowed to be unassigned in
+                        // GenericHandle.validateFields()
+                        continue;
                         }
+
+                    String sName = field.getName();
+                    if (hField.getType().isA(frame.poolContext().typeFreezable()))
+                        {
+                        if (listFreezable == null)
+                            {
+                            listFreezable = new ArrayList<>();
+                            listInfo      = new ArrayList<>();
+                            listTypes     = new ArrayList<>();
+                            }
+                        listFreezable.add(hField);
+                        listInfo.add(field);
+                        listTypes.add(hField.getType());
+                        }
+                    else
+                        {
+                        return frame.raiseException(xException.notFreezableProperty(frame,
+                                sName, hConst.getType()));
+                        }
+                    }
+
+                if (listFreezable != null)
+                    {
+                    ObjectHandle[] ahFreezable = listFreezable.toArray(Utils.OBJECTS_NONE);
+                    FieldInfo[]    aFieldInfo  = listInfo.toArray(NO_FIELDS);
+                    TypeConstant[] atype       = listTypes.toArray(TypeConstant.NO_TYPES);
+                    ArrayHandle    haValues    =
+                        xArray.makeObjectArrayHandle(ahFreezable, Mutability.Fixed);
+
+                    ObjectHandle[] ahVars = new ObjectHandle[FN_FREEZE.getMaxVars()];
+                    ahVars[0] = haValues;
+
+                    Frame frameFreeze = frame.createFrame1(FN_FREEZE, null, ahVars, Op.A_IGNORE);
+                    frameFreeze.addContinuation(frameCaller ->
+                        {
+                        ObjectHandle[] ahValueNew;
+                        try
+                            {
+                            ahValueNew = haValues.getTemplate().toArray(frameCaller, haValues);
+                            }
+                        catch (ExceptionHandle.WrapperException e)
+                            {
+                            return frameCaller.raiseException(e);
+                            }
+
+                        for (int i = 0, c = aFieldInfo.length; i < c; i++)
+                            {
+                            // verify that "freeze" didn't widen the type
+                            FieldInfo    field   = aFieldInfo[i];
+                            ObjectHandle hNew    = ahValueNew[i];
+                            TypeConstant typeOld = atype[i];
+                            TypeConstant typeNew = hNew.getType();
+                            if (typeNew.isA(typeOld))
+                                {
+                                hConst.setField(field.getIndex(), hNew);
+                                }
+                            else
+                                {
+                                TypeConstant typeExpected = frameCaller.poolContext().
+                                    ensureImmutableTypeConstant(typeOld);
+                                return frameCaller.raiseException(
+                                    "The freeze() result type for the \"" + field.getName() +
+                                    "\" field was illegally changed; \"" +
+                                    typeExpected.getValueString() + "\" expected, \"" +
+                                    typeNew.getValueString() + "\" returned");
+                                }
+                            }
+
+                        hConst.makeImmutable();
+                        return Op.R_NEXT;
+                        });
+
+                    return frame.callInitialized(frameFreeze);
                     }
                 }
             hConst.makeImmutable();
@@ -399,7 +406,7 @@ public class xConst
         {
         // Note: the actual types could be subclasses of the specified class
         return new Equals((GenericHandle) hValue1, (GenericHandle) hValue2,
-            clazz.getFieldNames().iterator(), iReturn).doNext(frame);
+                    (ClassComposition) clazz, iReturn).doNext(frame);
         }
 
     @Override
@@ -408,7 +415,7 @@ public class xConst
         {
         // Note: the actual types could be subclasses of the specified class
         return new Compare((GenericHandle) hValue1, (GenericHandle) hValue2,
-            clazz.getFieldNames().iterator(), iReturn).doNext(frame);
+                    (ClassComposition) clazz, iReturn).doNext(frame);
         }
 
     // build the hashValue and assign it to the specified register
@@ -428,7 +435,7 @@ public class xConst
                 }
             }
 
-        return new HashCode(hConst, clazz.getFieldNames().iterator(), fCache, iReturn).doNext(frame);
+        return new HashCode(hConst, (ClassComposition) clazz, fCache, iReturn).doNext(frame);
         }
 
     /**
@@ -504,17 +511,17 @@ public class xConst
     protected static class Equals
             implements Frame.Continuation
         {
-        final private GenericHandle hValue1;
-        final private GenericHandle hValue2;
-        final private Iterator<String> iterFields;
-        final private int iReturn;
+        final private GenericHandle    hValue1;
+        final private GenericHandle    hValue2;
+        final private ClassComposition clzBase;
+        final private int              iReturn;
 
         public Equals(GenericHandle hValue1, GenericHandle hValue2,
-                      Iterator<String> iterFields, int iReturn)
+                      ClassComposition clzBase, int iReturn)
             {
             this.hValue1 = hValue1;
             this.hValue2 = hValue2;
-            this.iterFields = iterFields;
+            this.clzBase = clzBase;
             this.iReturn = iReturn;
             }
 
@@ -531,26 +538,37 @@ public class xConst
 
         public int doNext(Frame frameCaller)
             {
-            ConstantPool     pool = frameCaller.poolContext();
-            ClassComposition clz  = (ClassComposition) hValue1.getComposition();
-            while (iterFields.hasNext())
-                {
-                String sProp = iterFields.next();
+            ConstantPool    pool = frameCaller.poolContext();
+            TypeComposition clz1 = hValue1.getComposition();
+            TypeComposition clz2 = hValue2.getComposition();
 
-                if (!clz.isRegular(sProp))
+            for (Map.Entry<Object, FieldInfo> entry : clzBase.getFieldLayout().entrySet())
+                {
+                Object    enid  = entry.getKey();
+                FieldInfo field = entry.getValue();
+
+                if (enid instanceof NestedIdentity || !field.isRegular())
                     {
                     continue;
                     }
 
-                ObjectHandle h1 = hValue1.getField(frameCaller, sProp);
-                ObjectHandle h2 = hValue2.getField(frameCaller, sProp);
+                ObjectHandle h1 = clz1 == clzBase
+                        ? hValue1.getField(field.getIndex())
+                        : enid instanceof PropertyConstant idProp
+                            ? hValue1.getField(frameCaller, idProp)
+                            : hValue1.getField(frameCaller, enid.toString());
+                ObjectHandle h2 = clz2 == clzBase
+                        ? hValue2.getField(field.getIndex())
+                        : enid instanceof PropertyConstant idProp
+                            ? hValue2.getField(frameCaller, idProp)
+                            : hValue2.getField(frameCaller, enid.toString());
 
                 if (h1 == null || h2 == null)
                     {
-                    return frameCaller.raiseException("Unassigned property \"" + sProp +'"');
+                    return frameCaller.raiseException("Unassigned property \"" + field.getName() +'"');
                     }
 
-                TypeConstant typeProp = clz.getFieldType(sProp);
+                TypeConstant typeProp = clzBase.getFieldType(enid);
 
                 typeProp = typeProp.resolveGenerics(pool,
                             frameCaller.getGenericsResolver(typeProp.containsDynamicType(null)));
@@ -586,17 +604,17 @@ public class xConst
     protected static class Compare
             implements Frame.Continuation
         {
-        final private GenericHandle hValue1;
-        final private GenericHandle hValue2;
-        final private Iterator<String> iterFields;
-        final private int iReturn;
+        final private GenericHandle    hValue1;
+        final private GenericHandle    hValue2;
+        final private ClassComposition clzBase;
+        final private int              iReturn;
 
         public Compare(GenericHandle hValue1, GenericHandle hValue2,
-                       Iterator<String> iterFields, int iReturn)
+                       ClassComposition clzBase, int iReturn)
             {
             this.hValue1 = hValue1;
             this.hValue2 = hValue2;
-            this.iterFields = iterFields;
+            this.clzBase = clzBase;
             this.iReturn = iReturn;
             }
 
@@ -613,34 +631,44 @@ public class xConst
 
         public int doNext(Frame frameCaller)
             {
-            ConstantPool     pool = frameCaller.poolContext();
-            ClassComposition clz  = (ClassComposition) hValue1.getComposition();
-            while (iterFields.hasNext())
-                {
-                String sProp = iterFields.next();
+            ConstantPool    pool = frameCaller.poolContext();
+            TypeComposition clz1 = hValue1.getComposition();
+            TypeComposition clz2 = hValue2.getComposition();
 
-                if (!clz.isRegular(sProp))
+            for (Map.Entry<Object, FieldInfo> entry : clzBase.getFieldLayout().entrySet())
+                {
+                Object    enid  = entry.getKey();
+                FieldInfo field = entry.getValue();
+
+                if (enid instanceof NestedIdentity || !field.isRegular())
                     {
                     continue;
                     }
 
-                ObjectHandle h1 = hValue1.getField(frameCaller, sProp);
-                ObjectHandle h2 = hValue2.getField(frameCaller, sProp);
+                ObjectHandle h1 = clz1 == clzBase
+                        ? hValue1.getField(field.getIndex())
+                        : enid instanceof PropertyConstant idProp
+                            ? hValue1.getField(frameCaller, idProp)
+                            : hValue1.getField(frameCaller, enid.toString());
+                ObjectHandle h2 = clz2 == clzBase
+                        ? hValue2.getField(field.getIndex())
+                        : enid instanceof PropertyConstant idProp
+                            ? hValue2.getField(frameCaller, idProp)
+                            : hValue2.getField(frameCaller, enid.toString());
 
                 if (h1 == null || h2 == null)
                     {
-                    return frameCaller.raiseException("Unassigned property \"" + sProp +'"');
+                    return frameCaller.raiseException("Unassigned property \"" + field.getName() +'"');
                     }
 
-                TypeConstant typeProp = clz.getFieldType(sProp);
+                TypeConstant typeProp = clzBase.getFieldType(enid);
 
-                typeProp = typeProp.resolveGenerics(pool,
-                            frameCaller.getGenericsResolver(typeProp.containsDynamicType(null)));
 
                 // this check is only to provide a better exception description
                 if (typeProp.findCallable(pool.sigCompare()) == null)
                     {
-                    return frameCaller.raiseException("Property \"" + sProp + "\" is not Orderable");
+                    return frameCaller.raiseException("Property \"" + field.getName() +
+                            "\" is not Orderable");
                     }
 
                 switch (typeProp.callCompare(frameCaller, h1, h2, Op.A_STACK))
@@ -675,17 +703,17 @@ public class xConst
             implements Frame.Continuation
         {
         final private GenericHandle    hConst;
-        final private Iterator<String> iterFields;
+        final private ClassComposition clzBase;
         final private boolean          fCache;
         final private int              iReturn;
         private       long             lResult;
 
-        public HashCode(GenericHandle hConst, Iterator<String> iterFields, boolean fCache, int iReturn)
+        public HashCode(GenericHandle hConst, ClassComposition clzBase, boolean fCache, int iReturn)
             {
-            this.hConst     = hConst;
-            this.iterFields = iterFields;
-            this.fCache     = fCache;
-            this.iReturn    = iReturn;
+            this.hConst  = hConst;
+            this.clzBase = clzBase;
+            this.fCache  = fCache;
+            this.iReturn = iReturn;
             }
 
         @Override
@@ -703,25 +731,32 @@ public class xConst
 
         protected int doNext(Frame frameCaller)
             {
-            Container        container = frameCaller.f_context.f_container;
-            ConstantPool     pool      = frameCaller.poolContext();
-            ClassComposition clz       = (ClassComposition) hConst.getComposition();
-            while (iterFields.hasNext())
-                {
-                String sProp = iterFields.next();
+            Container       container = frameCaller.f_context.f_container;
+            ConstantPool    pool      = frameCaller.poolContext();
+            TypeComposition clz       = hConst.getComposition();
 
-                if (!clz.isRegular(sProp))
+            for (Map.Entry<Object, FieldInfo> entry : clzBase.getFieldLayout().entrySet())
+                {
+                Object    enid  = entry.getKey();
+                FieldInfo field = entry.getValue();
+
+                if (enid instanceof NestedIdentity || !field.isRegular())
                     {
                     continue;
                     }
 
-                ObjectHandle hProp = hConst.getField(frameCaller, sProp);
+                ObjectHandle hProp = clz == clzBase
+                        ? hConst.getField(field.getIndex())
+                        : enid instanceof PropertyConstant idProp
+                            ? hConst.getField(frameCaller, idProp)
+                            : hConst.getField(frameCaller, enid.toString());
+
                 if (hProp == null)
                     {
-                    return frameCaller.raiseException("Unassigned property: \"" + sProp + '"');
+                    return frameCaller.raiseException("Unassigned property: \"" + field.getName() + '"');
                     }
 
-                TypeConstant typeProp = clz.getFieldType(sProp);
+                TypeConstant typeProp = clzBase.getFieldType(enid);
 
                 typeProp = typeProp.resolveGenerics(pool,
                             frameCaller.getGenericsResolver(typeProp.containsDynamicType(null)));
@@ -778,7 +813,8 @@ public class xConst
     // ----- constants -----------------------------------------------------------------------------
 
     // name of the synthetic property for cached hash value
-    private static final String PROP_HASH = "@hash";
+    private static final String      PROP_HASH = "@hash";
+    private static final FieldInfo[] NO_FIELDS = new FieldInfo[0];
 
     private static MethodStructure FN_ESTIMATE_LENGTH;
     private static MethodStructure FN_APPEND_TO;

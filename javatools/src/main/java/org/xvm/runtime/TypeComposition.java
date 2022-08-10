@@ -1,15 +1,13 @@
 package org.xvm.runtime;
 
 
-import java.util.List;
-import java.util.Set;
+import java.util.Map;
 
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
-import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -125,11 +123,11 @@ public interface TypeComposition
     /**
      * Return the specified field's attributes.
      *
-     * @param nid  the field nid
+     * @param id  the PropertyConstant or name
      *
      * @return the field's attributes; -1 if not present
      */
-    ClassComposition.FieldInfo getFieldInfo(Object nid);
+    ClassComposition.FieldInfo getFieldInfo(Object id);
 
     /**
      * Make all the fields of the specified structure immutable.
@@ -141,38 +139,9 @@ public interface TypeComposition
     boolean makeStructureImmutable(ObjectHandle[] ahField);
 
     /**
-     * @return the set of field nids for instances of this type.
-     */
-    Set<Object> getFieldNids();
-
-    /**
      * @return true iff this composition contains the {@link GenericHandle#OUTER} field
      */
     boolean hasOuter();
-
-    /**
-     * Check whether the property referred by the specified nid is a "regular" one, meaning that
-     * it's neither nested nor synthetic nor lazy.
-     *
-     * @param nid  the property nid
-     *
-     * @return true iff the property is "regular"
-     */
-    default boolean isRegular(Object nid)
-        {
-        if (nid instanceof NestedIdentity)
-            {
-            return false;
-            }
-
-        String sName = (String) nid;
-        if (sName.charAt(0) == '$')
-            {
-            return false;
-            }
-
-        return getFieldInfo(sName).isRegular();
-        }
 
     /**
      * @return true if the specified property is injected
@@ -240,15 +209,15 @@ public interface TypeComposition
     /**
      * @return a list of field names (excluding potentially unassigned, lazy and transient)
      */
-    List<String> getFieldNames();
+    Map<Object, ClassComposition.FieldInfo> getFieldLayout();
 
     /**
-     * @return an array of field name handles (excluding potentially unassigned, lazy and transient)
+     * @return an array of field name handles to use for native Stringable methods on a const
      */
     StringHandle[] getFieldNameArray();
 
     /**
-     * @return an array of field value handles (excluding potentially unassigned, lazy and transient)
+     * @return an array of field value handles to use for native Stringable methods on a const
      */
     ObjectHandle[] getFieldValueArray(GenericHandle hValue);
 

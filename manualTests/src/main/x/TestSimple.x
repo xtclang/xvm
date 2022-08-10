@@ -4,65 +4,32 @@ module TestSimple
 
     void run()
         {
-        Test t = new Test();
-        console.println(t.value1);
-        console.println(t.&value1.get()); // this used to blow up
-        console.println(t.&value1.checkInside(False));
-
-        Timeout timeout = new Timeout(Duration.MINUTE);
-        console.println(timeout.remainingTime);
-        console.println(timeout.&remainingTime.get()); // this used to blow up
+        Derived d = new Derived();
+        d.report();
+        d.report();
         }
 
-    class Test
+    class Base
         {
-        Int value0;
-
-        Boolean checkOutside()
+        private Int value  = 1;
+        private Int valueB = 11;
+        void report()
             {
-            console.println("outside");
-            return True;
+            console.println($"Base {value++} {valueB++}");
             }
+        }
 
-        Int value1
+    class Derived
+            extends Base
+        {
+        private Int value = 2;
+        public Int valueD = 21;
+
+        @Override
+        void report()
             {
-            @Override
-            Int get()
-                {
-                if (value0 == 0 || !assigned)
-                    {
-                    console.println("set 1");
-                    set(1);
-                    }
-
-                if (checkOutside())
-                    {
-                    console.println("set 2");
-                    set(2);
-                    }
-
-                if (checkInside(True))
-                    {
-                    console.println("set 3");
-                    set(3);
-                    }
-
-                return super();
-                }
-
-            Boolean checkInside(Boolean fromInside)
-                {
-                if (fromInside)
-                    {
-                    console.println("inside from inside");
-                    return assigned;
-                    }
-                else
-                    {
-                    console.println("inside from outside");
-                    return &value0.assigned;
-                    }
-                }
+            console.println($"Derived {value++} {valueD++}");
+            super();
             }
         }
     }

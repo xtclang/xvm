@@ -23,9 +23,12 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
 
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.compiler.EvalCompiler;
 
+import org.xvm.runtime.ClassComposition.FieldInfo;
 import org.xvm.runtime.Fiber.FiberStatus;
 import org.xvm.runtime.Frame.VarInfo;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
@@ -37,6 +40,7 @@ import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.runtime.template._native.xTerminalConsole;
+import org.xvm.util.ListMap;
 
 import static org.xvm.util.Handy.dup;
 import static org.xvm.util.Handy.parseDelimitedString;
@@ -1526,14 +1530,15 @@ public class DebugConsole
         boolean      fCanExpand = false;
         boolean      fArray     = false;
         long         cElements  = 0;
-        List<String> listFields = Collections.EMPTY_LIST;
+
+        ListMap<String, FieldInfo> mapLayout = null;
         if (hVar != null)
             {
             TypeComposition composition = hVar.getComposition();
             if (composition != null && !(composition instanceof ProxyComposition))
                 {
-                listFields = getFieldNames(composition);
-                if (!listFields.isEmpty())
+                mapLayout = getFieldLayout(composition);
+                if (!mapLayout.isEmpty())
                     {
                     fCanExpand = true;
                     }
@@ -1581,12 +1586,14 @@ public class DebugConsole
                     addVar(cIndent+1, sPath+sElement, sElement, hElement, listVars, mapExpand);
                     }
                 }
-            else if (hVar instanceof GenericHandle hGeneric)
+            else if (hVar instanceof GenericHandle hGeneric && mapLayout != null)
                 {
-                for (String sField : listFields)
+                for (Map.Entry<String, FieldInfo> entry : mapLayout.entrySet())
                     {
-                    ObjectHandle hField = hGeneric.getField(m_frame, sField);
-                    addVar(cIndent+1, sPath+'.'+sField, sField, hField, listVars, mapExpand);
+                    String sName = entry.getKey();
+
+                    ObjectHandle hField = hGeneric.getField(entry.getValue().getIndex());
+                    addVar(cIndent+1, sPath+'.'+sName, sName, hField, listVars, mapExpand);
                     }
                 }
             }
@@ -1607,11 +1614,11 @@ public class DebugConsole
             }
 
         // composition could be null for deferred values (e.g. <default>)
-        TypeComposition composition = hVal.getComposition();
-        List<String>    listNames   = composition == null
-                ? Collections.EMPTY_LIST
-                : getFieldNames(composition);
-        if (listNames.isEmpty())
+        TypeComposition            composition = hVal.getComposition();
+        ListMap<String, FieldInfo> mapLayout   = composition == null
+                ? null
+                : getFieldLayout(composition);
+        if (mapLayout != null || mapLayout.isEmpty())
             {
             if (fField)
                 {
@@ -1632,30 +1639,73 @@ public class DebugConsole
                 }
             sb.append(hVal.getType().getValueString());
 
-            for (String sField : listNames)
+            for (Map.Entry<String, FieldInfo> entry : mapLayout.entrySet())
                 {
-                ObjectHandle hField = ((GenericHandle) hVal).getField(m_frame, sField);
+                ObjectHandle hField = ((GenericHandle) hVal).getField(entry.getValue().getIndex());
 
                 sb.append('\n')
                   .append(sTab)
-                  .append(sField);
+                  .append(entry.getKey());
                 renderVar(hField, true, sb, sTab + "   ");
                 }
             }
         }
 
-    private List<String> getFieldNames(TypeComposition composition)
+    /**
+     * Obtain fields to display for the specified composition. The keys are visualized names
+     * (simple or composite in the case of collision).
+     */
+    private ListMap<String, FieldInfo> getFieldLayout(TypeComposition clz)
         {
-        List<String> list = new ArrayList<>();
-        for (Object nid : composition.getFieldNids())
+        // first, split colliding and non-colliding simple names
+        Set<String> setSimple    = new HashSet<>();
+        Set<String> setColliding = null;
+
+        for (Object enid : clz.getFieldLayout().keySet())
             {
-            if (nid instanceof String s &&
-                    !composition.getFieldInfo(s).isSynthetic())
+            if (enid instanceof NestedIdentity)
                 {
-                list.add(s);
+                continue;
+                }
+
+            String sSimple = enid instanceof PropertyConstant idProp
+                    ? idProp.getName()
+                    : (String) enid;
+            if (setColliding != null && setColliding.contains(sSimple))
+                {
+                continue;
+                }
+            if (!setSimple.add(sSimple))
+                {
+                setSimple.remove(sSimple);
+                if (setColliding == null)
+                    {
+                    setColliding = new HashSet<>(1);
+                    }
+                setColliding.add(sSimple);
                 }
             }
-        return list;
+
+        ListMap<String, FieldInfo> mapLayout = new ListMap<>();
+        for (Map.Entry<Object, FieldInfo> entry : clz.getFieldLayout().entrySet())
+            {
+            Object    enid  = entry.getKey();
+            FieldInfo field = entry.getValue();
+
+            if (enid instanceof NestedIdentity || field.isSynthetic())
+                {
+                continue;
+                }
+
+            String sName = enid instanceof PropertyConstant idProp
+                    ? setColliding.contains(idProp.getName())
+                        ? idProp.getPathString()
+                        : idProp.getName()
+                    : (String) enid;
+
+            mapLayout.put(sName, field);
+            }
+        return mapLayout;
         }
 
     private int longestOf(String[] as)

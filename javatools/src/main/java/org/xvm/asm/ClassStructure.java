@@ -3187,7 +3187,9 @@ public class ClassStructure
         for (Map.Entry<Object, FieldInfo> entry : mapFields.entrySet())
             {
             Object       nid      = entry.getKey();
-            PropertyInfo infoProp = infoType.findPropertyByNid(nid);
+            PropertyInfo infoProp = nid instanceof PropertyConstant idProp
+                    ? infoType.findProperty(idProp)
+                    : infoType.findPropertyByNid(nid);
 
             if (infoProp == null || infoProp.isInjected())
                 {

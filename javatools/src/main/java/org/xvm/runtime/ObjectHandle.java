@@ -177,7 +177,7 @@ public abstract class ObjectHandle
      */
     public boolean isInflated(PropertyConstant idProp)
         {
-        FieldInfo field = getComposition().getFieldInfo(idProp.getNestedIdentity());
+        FieldInfo field = getComposition().getFieldInfo(idProp);
         return field != null && field.isInflated();
         }
 
@@ -392,12 +392,12 @@ public abstract class ObjectHandle
 
         public boolean containsField(PropertyConstant idProp)
             {
-            return getComposition().getFieldInfo(idProp.getNestedIdentity()) != null;
+            return getComposition().getFieldInfo(idProp) != null;
             }
 
         public ObjectHandle getField(Frame frame, PropertyConstant idProp)
             {
-            FieldInfo field = getComposition().getFieldInfo(idProp.getNestedIdentity());
+            FieldInfo field = getComposition().getFieldInfo(idProp);
             return field.isTransient()
                     ? getTransientField(frame, field)
                     : m_aFields[field.getIndex()];
@@ -413,7 +413,7 @@ public abstract class ObjectHandle
 
         public void setField(Frame frame, PropertyConstant idProp, ObjectHandle hValue)
             {
-            FieldInfo field = getComposition().getFieldInfo(idProp.getNestedIdentity());
+            FieldInfo field = getComposition().getFieldInfo(idProp);
             if (field.isTransient())
                 {
                 setTransientField(frame, field.getIndex(), hValue);
@@ -439,7 +439,7 @@ public abstract class ObjectHandle
 
         public FieldInfo getFieldInfo(PropertyConstant idProp)
             {
-            return getComposition().getFieldInfo(idProp.getNestedIdentity());
+            return getComposition().getFieldInfo(idProp);
             }
 
         // ----- index-based field access ----------------------------------------------------------
@@ -486,9 +486,9 @@ public abstract class ObjectHandle
 
         public boolean containsMutableFields()
             {
-            for (ObjectHandle field : m_aFields)
+            for (ObjectHandle hField : m_aFields)
                 {
-                if (field != null && field.isMutable())
+                if (hField != null && hField.isMutable())
                     {
                     return true;
                     }
@@ -530,9 +530,8 @@ public abstract class ObjectHandle
 
             if (fUpdateOuter && aFields != null)
                 {
-                for (Object nid : clazz.getFieldNids())
+                for (FieldInfo field : clazz.getFieldLayout().values())
                     {
-                    FieldInfo field = clazz.getFieldInfo(nid);
                     if (field.isInflated() && !field.isTransient())
                         {
                         RefHandle    hValue = (RefHandle) aFields[field.getIndex()];
@@ -555,9 +554,8 @@ public abstract class ObjectHandle
             if (aFields != null)
                 {
                 TypeComposition clazz = getComposition();
-                for (Object idProp : clazz.getFieldNids())
+                for (FieldInfo field : clazz.getFieldLayout().values())
                     {
-                    FieldInfo    field  = clazz.getFieldInfo(idProp);
                     ObjectHandle hValue = aFields[field.getIndex()];
                     if (hValue == null)
                         {
@@ -567,7 +565,7 @@ public abstract class ObjectHandle
                                 {
                                 listUnassigned = new ArrayList<>();
                                 }
-                            listUnassigned.add(idProp.toString());
+                            listUnassigned.add(field.getName());
                             }
                         }
                     // no need to recurse to a field; it would throw during its own construction

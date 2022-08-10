@@ -6,6 +6,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Container;
@@ -48,6 +49,7 @@ public class xRTNibbleDelegate
         ClassStructure structNibble = (ClassStructure) pool.
                 typeNibble().getSingleUnderlyingClass(false).getComponent();
         FN_OF_INT = structNibble.findMethod("of", 1, pool.typeCInt64());
+        PROP_BITS = (PropertyConstant) structNibble.getChild("bits").getIdentityConstant();
         }
 
     @Override
@@ -229,7 +231,7 @@ public class xRTNibbleDelegate
      */
     public static int getValue(GenericHandle hNibble)
         {
-        ArrayHandle    haBits    = (ArrayHandle) hNibble.getField(null, "bits");
+        ArrayHandle    haBits    = (ArrayHandle) hNibble.getField(null, PROP_BITS);
         BitArrayHandle hDelegate = (BitArrayHandle) haBits.m_hDelegate;
         return (hDelegate.m_abValue[0] & 0xF0) >>> 4;
         }
@@ -359,6 +361,7 @@ public class xRTNibbleDelegate
     // ----- constants -----------------------------------------------------------------------------
 
     private static MethodStructure FN_OF_INT;
+    private static PropertyConstant PROP_BITS;
 
     /**
      * Caches Nibble handles.
