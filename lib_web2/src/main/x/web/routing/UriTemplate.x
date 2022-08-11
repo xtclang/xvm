@@ -7,7 +7,7 @@ import net.URI.Section;
  *
  * @see https://tools.ietf.org/html/rfc6570
  */
-const UriTemplate(String template)
+const UriTemplate
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -89,7 +89,15 @@ const UriTemplate(String template)
                 case Lesser:
                     // the current part is an Expression; match it
                     assert Expression expression := parts[next].is(Expression);
-                    if ((position, bindings) := expression.matches(uri, position, foundLiteral, bindings))
+
+                    Char? nextPrefix = Null;
+                    if (next+1 < count, Expression nextExpression := parts[next].is(Expression))
+                        {
+                        nextPrefix = nextExpression.prefix;
+                        }
+
+                    if ((position, bindings) := expression.matches(
+                            uri, position, foundLiteral, nextPrefix, bindings))
                         {
                         ++next;
                         }
@@ -238,8 +246,8 @@ const UriTemplate(String template)
 
         @Abstract StringBuffer expand(StringBuffer buf, Lookup values);
 
-        @Abstract conditional (Position after, Map<String, Value> bindings)
-                matches(URI uri, Position from, Position? to, Map<String, Value> bindings);
+        @Abstract conditional (Position after, Map<String, Value> bindings) matches(URI uri,
+                Position from, Position? to, Char? nextPrefix, Map<String, Value> bindings);
 
         @Override
         Int estimateStringLength()
@@ -327,10 +335,42 @@ const UriTemplate(String template)
             }
 
         @Override
-        conditional (Position after, Map<String, Value> bindings)
-                matches(URI uri, Position from, Position? to, Map<String, Value> bindings)
+        conditional (Position after, Map<String, Value> bindings) matches(URI uri,
+                Position from, Position? to, Char? nextPrefix, Map<String, Value> bindings)
             {
-            TODO
+            if (nextPrefix? != prefix)
+                {
+                to := uri.find(nextPrefix.toString(), from, to);
+                }
+            to ?:= uri.endPosition;
+
+            String text = uri.canonicalSlice(from, to);
+            if (vars.size == 1 && !vars[0].explode)
+                {
+                String name = vars[0].name;
+                Value? prev = bindings[name];
+                if (text.size == 0)
+                    {
+                    if (prev != Null)
+                        {
+                        return False;
+                        }
+                    }
+                else if (prev == Null)
+                    {
+                    bindings = (bindings.empty ? new HashMap<String, Value>() : bindings).put(name, text);
+                    }
+                else if (!(prev.is(String) && prev == text))
+                    {
+                    return False;
+                    }
+
+                return True, to, bindings;
+                }
+            else
+                {
+                TODO("delineation of non-delineated data");
+                }
             }
         }
 

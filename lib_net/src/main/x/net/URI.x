@@ -315,11 +315,40 @@ const URI
         }
 
     /**
+     * The "at the start" (inclusive) position for this URI.
+     */
+    @RO Position beginPosition.get()
+        {
+        return scheme    != Null ? Section.Scheme   .start
+             : opaque    != Null ? assert
+             : authority != Null ? Section.Authority.start
+             : path      != Null ? Section.Path     .start
+             : query     != Null ? Section.Query    .start
+             : fragment  != Null ? Section.Fragment .start
+             : assert;
+        }
+
+    /**
+     * The "after the end" (exclusive) position for this URI.
+     */
+    @RO Position endPosition.get()
+        {
+        return fragment  != Null ? new Position(Fragment , fragment       .size)
+             : opaque    != Null ? assert
+             : query     != Null ? new Position(Query    , query          .size)
+             : path      != Null ? new Position(Path     , path.toString().size)
+             : authority != Null ? new Position(Authority, authority      .size)
+             : scheme    != Null ? new Position(Scheme   , scheme         .size)
+             : assert;
+        }
+
+
+    /**
      * Attempt to find the specified literal in this URI.
      *
      * @param literal  the literal to search for
-     * @param from     (optional) the position to begin searching from
-     * @param to       (optional) the position to not search beyond
+     * @param from     (optional) the position (inclusive) to begin searching from
+     * @param to       (optional) the position (exclusive) to not search at or beyond
      *
      * @return `True` iff the literal is found
      * @return (conditional) the position within the URI that the literal is located
@@ -614,8 +643,11 @@ const URI
      *
      * @return the specified slice of the URI in the URI's canonical format
      */
-    String canonicalSlice(Position start, Position next)
+    String canonicalSlice(Position start, Position? next=Null)
         {
+        static Position WayBeyondTheEnd = new Position(Fragment, 1TB);
+        next ?:= WayBeyondTheEnd;
+
         Section startSection = start.section;
         Int     startOffset  = start.offset;
         Section nextSection  = next.section;
@@ -2001,16 +2033,16 @@ const URI
     @Override
     static <CompileType extends URI> Int hashCode(CompileType value)
         {
-        return value.scheme?   .hashCode()
-            ^^ value.authority?.hashCode()
-            ^^ value.user?     .hashCode()
-            ^^ value.host?     .hashCode()
-            ^^ value.ip?       .hashCode()
-            ^^ value.port?     .hashCode()
-            ^^ value.path?     .hashCode()
-            ^^ value.query?    .hashCode()
-            ^^ value.opaque?   .hashCode()
-            ^^ value.fragment? .hashCode() : 0;
+        return (value.scheme?   .hashCode() : 0)
+            ^^ (value.authority?.hashCode() : 0)
+            ^^ (value.user?     .hashCode() : 0)
+            ^^ (value.host?     .hashCode() : 0)
+            ^^ (value.ip?       .hashCode() : 0)
+            ^^ (value.port?     .hashCode() : 0)
+            ^^ (value.path?     .hashCode() : 0)
+            ^^ (value.query?    .hashCode() : 0)
+            ^^ (value.opaque?   .hashCode() : 0)
+            ^^ (value.fragment? .hashCode() : 0);
         }
 
     @Override

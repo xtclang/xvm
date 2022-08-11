@@ -2,34 +2,24 @@ module TestSimple
     {
     @Inject Console console;
 
+    package net import net.xtclang.org;
+    package web import web.xtclang.org;
+
+    import net.URI;
+    import web.routing.UriTemplate;
+
     void run()
         {
-        Derived d = new Derived();
-        d.report();
-        d.report();
-        }
-
-    class Base
-        {
-        private Int value  = 1;
-        private Int valueB = 11;
-        void report()
+        val uri      = new URI("/sock/41685/17");
+        val template = new UriTemplate("/sock/{id}/{size}");
+        console.println($"template={template}, uri={uri}");
+        if (val result := template.matches(uri))
             {
-            console.println($"Base {value++} {valueB++}");
+            console.println($"match: {result}");
             }
-        }
-
-    class Derived
-            extends Base
-        {
-        private Int value = 2;
-        public Int valueD = 21;
-
-        @Override
-        void report()
+        else
             {
-            console.println($"Derived {value++} {valueD++}");
-            super();
+            console.println($"no match");
             }
         }
     }
