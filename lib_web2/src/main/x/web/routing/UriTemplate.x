@@ -241,33 +241,40 @@ const UriTemplate
     static @Abstract const Expression(Variable[] vars)
         {
         /**
-         * TODO
+         * This is the character (`+`, `#`, `.`, `/`, `;`, ;;?`, `&`) that indicates the form of the
+         * expression, or `Null` in the case of a simple string expression.
          */
         @RO Char? prefix;
 
         /**
-         * TODO
+         * Given the specified value lookup for the variables in the expression, expand the
+         * expression following the rules defined in the URI Template specification.
+         *
+         * @param buf     the buffer to append the expanded expression to
+         * @param values  the means of looking up the values for variables within the expression
+         *
+         * @return the buffer
          */
-        @RO Section? implicitSection;
+        @Abstract Appender<Char> expand(Appender<Char> buf, Lookup values);
 
         /**
-         * TODO
-         */
-        @Abstract StringBuffer expand(StringBuffer buf, Lookup values);
-
-        /**
-         * TODO
+         * Match this expression against the specified range within the URI.
+         *
+         * @param uri         the URI to match against
+         * @param from        the starting position (inclusive) within the URI which this expression
+         *                    is permitted to match against
+         * @param to          the ending position (exclusive) within the URI which this expression
+         *                    is permitted to match against
+         * @param nextPrefix  the character that begins the next expression (if this expression is
+         *                    followed by another expression)
+         * @param bindings    the previously bound variables (from matching preceding expressions)
+         *
+         * @return `True` iff the expression successfully matched against the URI
+         * @return (conditional) the position immediately following the matched region of the URI
+         * @return (conditional) the potentially updated map of variable bindings
          */
         @Abstract conditional (Position after, Map<String, Value> bindings) matches(URI uri,
                 Position from, Position? to, Char? nextPrefix, Map<String, Value> bindings);
-
-        /**
-         * TODO
-         */
-        protected String trim(String value)
-            {
-            return value;
-            }
 
         @Override
         Int estimateStringLength()
@@ -302,7 +309,7 @@ const UriTemplate
             }
 
         @Override
-        StringBuffer expand(StringBuffer buf, Lookup values)
+        Appender<Char> expand(Appender<Char> buf, Lookup values)
             {
             Boolean first = True;
             function void() checkComma = () ->
@@ -674,19 +681,19 @@ const UriTemplate
     /**
      * Render the passed string into the passed buffer.
      *
-     * @param buf            the StringBuffer
+     * @param buf            the buffer
      * @param value          the string value to render into the buffer
      * @param allowReserved  pass `False` to only allow `unreserved` characters (the rest will
      *                       be percent encoded); pass `True` to also allow `reserved` and
      *                       `pct-encoded` characters (i.e. do not percent encode them)
      *
-     * @return the StringBuffer
+     * @return the buffer
      */
-    static StringBuffer render(StringBuffer buf, String? value, Boolean allowReserved=False)
+    static Appender<Char> render(Appender<Char> buf, String? value, Boolean allowReserved=False)
         {
         if (value?.size > 0)
             {
-            function void(StringBuffer, Char) emit = allowReserved
+            function void(Appender<Char>, Char) emit = allowReserved
                     ? emitReserved
                     : emitUnreserved;
 
@@ -713,12 +720,12 @@ const UriTemplate
     /**
      * Render the passed character into the passed buffer, escaping everything but `unreserved`.
      *
-     * @param buf   the StringBuffer
+     * @param buf   the buffer
      * @param char  the character value to render into the buffer
      *
-     * @return the StringBuffer
+     * @return the buffer
      */
-    static StringBuffer emitUnreserved(StringBuffer buf, Char char)
+    static Appender<Char> emitUnreserved(Appender<Char> buf, Char char)
         {
         switch (char)
             {
@@ -749,12 +756,12 @@ const UriTemplate
      * `reserved`, and `pct-encoded`. Note: Since this only sees one character, it assumes that
      * the caller handles the `%` character encoding for cases that are not already `pct-encoded`.
      *
-     * @param buf   the StringBuffer
+     * @param buf   the buffer
      * @param char  the character value to render into the buffer
      *
-     * @return the StringBuffer
+     * @return the buffer
      */
-    static StringBuffer emitReserved(StringBuffer buf, Char char)
+    static Appender<Char> emitReserved(Appender<Char> buf, Char char)
         {
         switch (char)
             {
@@ -787,12 +794,12 @@ const UriTemplate
     /**
      * Render the passed character into the passed buffer, by percent encoding.
      *
-     * @param buf   the StringBuffer
+     * @param buf   the buffer
      * @param char  the character value in the range `[0..255]` to render into the buffer
      *
-     * @return the StringBuffer
+     * @return the buffer
      */
-    static StringBuffer pctEncode(StringBuffer buf, Char char)
+    static Appender<Char> pctEncode(Appender<Char> buf, Char char)
         {
         Byte byte = char.toByte();
         return buf.add('%')

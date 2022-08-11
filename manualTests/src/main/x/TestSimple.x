@@ -16,6 +16,7 @@ module TestSimple
         if (val result := template.matches(uri))
             {
             console.println($"match: {result}");
+            console.println($"expanded: {template.format(result)}");
             }
         else
             {
