@@ -1990,11 +1990,6 @@ public class NameExpression
                     idChild           = idClzChild;
                     m_fClassAttribute = idChild != null;
                     }
-                else if (idClzChild != null && !idClzChild.equals(idChild))
-                    {
-                    log(errs, Severity.ERROR, Compiler.NAME_AMBIGUOUS, sName);
-                    return null;
-                    }
 
                 if (idChild != null)
                     {

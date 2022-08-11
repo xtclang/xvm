@@ -245,8 +245,7 @@ const UriTemplate(String template)
         Int estimateStringLength()
             {
             return 2 + (prefix==Null ? 0 : 1) + vars.size - 1
-// TODO GG          + vars.map(Var.estimateStringLength).reduce(0, (s1, s2) -> s1 + s2);
-                    + vars.map(v -> v.estimateStringLength()).reduce(0, (s1, s2) -> s1 + s2);
+                     + vars.map(Variable.estimateStringLength).reduce(0, (s1, s2) -> s1 + s2);
             }
 
         @Override
@@ -741,4 +740,3 @@ const UriTemplate(String template)
                   .add(byte.lowNibble.toChar());
         }
     }
-
