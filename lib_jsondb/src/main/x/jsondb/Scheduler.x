@@ -144,9 +144,8 @@ service Scheduler<Schema extends RootSchema>(Catalog<Schema> catalog)
      * This is the schedule. It contains all of the scheduled items, organized first by priority,
      * and within a priority, by Time.
      */
-    protected/private SkiplistMap<Time, Process>[] byPriority
-            // TODO GG this doesn't work if Priority is a typedef
-            = new SkiplistMap[Priority.count](_ -> new SkiplistMap());
+    protected/private SkiplistMap<Time, Process>[] byPriority =
+            new SkiplistMap[Priority.count](_ -> new SkiplistMap());
 
     /**
      * This is the lookup of all of the schedule items, by PID.
