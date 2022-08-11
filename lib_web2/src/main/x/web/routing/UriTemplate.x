@@ -240,14 +240,34 @@ const UriTemplate
      */
     static @Abstract const Expression(Variable[] vars)
         {
+        /**
+         * TODO
+         */
         @RO Char? prefix;
 
+        /**
+         * TODO
+         */
         @RO Section? implicitSection;
 
+        /**
+         * TODO
+         */
         @Abstract StringBuffer expand(StringBuffer buf, Lookup values);
 
+        /**
+         * TODO
+         */
         @Abstract conditional (Position after, Map<String, Value> bindings) matches(URI uri,
                 Position from, Position? to, Char? nextPrefix, Map<String, Value> bindings);
+
+        /**
+         * TODO
+         */
+        protected String trim(String value)
+            {
+            return value;
+            }
 
         @Override
         Int estimateStringLength()
@@ -778,5 +798,18 @@ const UriTemplate
         return buf.add('%')
                   .add(byte.highNibble.toChar())
                   .add(byte.lowNibble.toChar());
+        }
+
+    @Override
+    Int estimateStringLength()
+        {
+        return parts.map(Stringable.estimateStringLength).reduce(0, (s1, s2) -> s1 + s2);
+        }
+
+    @Override
+    Appender<Char> appendTo(Appender<Char> buf)
+        {
+        parts.forEach(p -> p.appendTo(buf));
+        return buf;
         }
     }

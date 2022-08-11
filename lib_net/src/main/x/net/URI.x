@@ -2033,30 +2033,35 @@ const URI
     @Override
     static <CompileType extends URI> Int hashCode(CompileType value)
         {
-        return (value.scheme?   .hashCode() : 0)
-            ^^ (value.authority?.hashCode() : 0)
-            ^^ (value.user?     .hashCode() : 0)
-            ^^ (value.host?     .hashCode() : 0)
-            ^^ (value.ip?       .hashCode() : 0)
-            ^^ (value.port?     .hashCode() : 0)
-            ^^ (value.path?     .hashCode() : 0)
-            ^^ (value.query?    .hashCode() : 0)
-            ^^ (value.opaque?   .hashCode() : 0)
-            ^^ (value.fragment? .hashCode() : 0);
+        return value.hashCache;
+        }
+
+    private @Lazy Int hashCache.calc()
+        {
+        return (scheme?   .hashCode() : 481667)
+            ^^ (authority?.hashCode() : 240073)
+            ^^ (user?     .hashCode() : 778777)
+            ^^ (host?     .hashCode() : 174263)
+            ^^ (ip?       .hashCode() : 425857)
+            ^^ (port?     .hashCode() : 855391)
+            ^^ (path?     .hashCode() : 380447)
+            ^^ (query?    .hashCode() : 273323)
+            ^^ (opaque?   .hashCode() : 444487)
+            ^^ (fragment? .hashCode() : 277373);
         }
 
     @Override
     static <CompileType extends URI> Boolean equals(CompileType value1, CompileType value2)
         {
-        return value1.scheme             == value2.scheme
-            && value1.authority          == value2.authority
-            && value1.user               == value2.user
-            && value1.host               == value2.host
-            && value1.ip                 == value2.ip
-            && value1.port               == value2.port
-            && value1.path               == value2.path
-            && value1.query              == value2.query
-            && value1.opaque             == value2.opaque
-            && value1.fragment           == value2.fragment;
+        return value1.scheme    == value2.scheme
+            && value1.authority == value2.authority
+            && value1.user      == value2.user
+            && value1.host      == value2.host
+            && value1.ip        == value2.ip
+            && value1.port      == value2.port
+            && value1.path      == value2.path
+            && value1.query     == value2.query
+            && value1.opaque    == value2.opaque
+            && value1.fragment  == value2.fragment;
         }
     }
