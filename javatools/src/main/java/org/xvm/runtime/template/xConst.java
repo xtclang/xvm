@@ -3,6 +3,7 @@ package org.xvm.runtime.template;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -515,6 +516,7 @@ public class xConst
         final private GenericHandle    hValue2;
         final private ClassComposition clzBase;
         final private int              iReturn;
+        final private Iterator<Map.Entry<Object, FieldInfo>> iterFields;
 
         public Equals(GenericHandle hValue1, GenericHandle hValue2,
                       ClassComposition clzBase, int iReturn)
@@ -523,6 +525,8 @@ public class xConst
             this.hValue2 = hValue2;
             this.clzBase = clzBase;
             this.iReturn = iReturn;
+
+            iterFields = clzBase.getFieldLayout().entrySet().iterator();
             }
 
         @Override
@@ -542,8 +546,10 @@ public class xConst
             TypeComposition clz1 = hValue1.getComposition();
             TypeComposition clz2 = hValue2.getComposition();
 
-            for (Map.Entry<Object, FieldInfo> entry : clzBase.getFieldLayout().entrySet())
+            while (iterFields.hasNext())
                 {
+                Map.Entry<Object, FieldInfo> entry = iterFields.next();
+
                 Object    enid  = entry.getKey();
                 FieldInfo field = entry.getValue();
 
@@ -608,6 +614,7 @@ public class xConst
         final private GenericHandle    hValue2;
         final private ClassComposition clzBase;
         final private int              iReturn;
+        final private Iterator<Map.Entry<Object, FieldInfo>> iterFields;
 
         public Compare(GenericHandle hValue1, GenericHandle hValue2,
                        ClassComposition clzBase, int iReturn)
@@ -616,6 +623,8 @@ public class xConst
             this.hValue2 = hValue2;
             this.clzBase = clzBase;
             this.iReturn = iReturn;
+
+            iterFields = clzBase.getFieldLayout().entrySet().iterator();
             }
 
         @Override
@@ -635,8 +644,10 @@ public class xConst
             TypeComposition clz1 = hValue1.getComposition();
             TypeComposition clz2 = hValue2.getComposition();
 
-            for (Map.Entry<Object, FieldInfo> entry : clzBase.getFieldLayout().entrySet())
+            while (iterFields.hasNext())
                 {
+                Map.Entry<Object, FieldInfo> entry = iterFields.next();
+
                 Object    enid  = entry.getKey();
                 FieldInfo field = entry.getValue();
 
@@ -707,6 +718,7 @@ public class xConst
         final private boolean          fCache;
         final private int              iReturn;
         private       long             lResult;
+        final private Iterator<Map.Entry<Object, FieldInfo>> iterFields;
 
         public HashCode(GenericHandle hConst, ClassComposition clzBase, boolean fCache, int iReturn)
             {
@@ -714,6 +726,8 @@ public class xConst
             this.clzBase = clzBase;
             this.fCache  = fCache;
             this.iReturn = iReturn;
+
+            iterFields = clzBase.getFieldLayout().entrySet().iterator();
             }
 
         @Override
@@ -735,8 +749,10 @@ public class xConst
             ConstantPool    pool      = frameCaller.poolContext();
             TypeComposition clz       = hConst.getComposition();
 
-            for (Map.Entry<Object, FieldInfo> entry : clzBase.getFieldLayout().entrySet())
+            while (iterFields.hasNext())
                 {
+                Map.Entry<Object, FieldInfo> entry = iterFields.next();
+
                 Object    enid  = entry.getKey();
                 FieldInfo field = entry.getValue();
 
