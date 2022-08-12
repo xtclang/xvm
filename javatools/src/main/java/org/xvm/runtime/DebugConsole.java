@@ -1698,7 +1698,7 @@ public class DebugConsole
                 }
 
             String sName = enid instanceof PropertyConstant idProp
-                    ? setColliding.contains(idProp.getName())
+                    ? setColliding != null && setColliding.contains(idProp.getName())
                         ? idProp.getPathString()
                         : idProp.getName()
                     : (String) enid;
