@@ -1,3 +1,5 @@
+import web.HttpServer.Handler;
+
 /**
  * A web server.
  */
@@ -100,15 +102,6 @@ service WebServer(HttpServer httpServer)
                     }
                 });
             }
-        }
-
-    static interface Handler
-        {
-        /**
-         * Handle an HTTP request.
-         */
-        void handle(Object context, String uri, String method,
-                    String[] headerNames, String[][] headerValues, Byte[] body);
         }
 
     @Override
