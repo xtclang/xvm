@@ -243,6 +243,19 @@ public class PropertyConstant
         }
 
     /**
+     * Bjarne Lambda is a function that performs the following transformation:
+     *      t -> t.p
+     * where "p" is this property and "t" is a target argument of the {@link #getNamespace host} type.
+     *
+     * @return the TypeConstant that represents a Bjarne lambda for this property
+     */
+    public TypeConstant getBjarneLambdaType()
+        {
+        return getConstantPool().buildFunctionType(
+            new TypeConstant[] {getNamespace().getType()}, getType());
+        }
+
+    /**
      * @return true iff this property is nested directly inside of a class
      */
     public boolean isTopLevel()

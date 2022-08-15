@@ -1141,8 +1141,9 @@ public class NameExpression
 
                 case BjarneLambda:
                     {
-                    MethodConstant idHandler =
-                            createBjarneLambda(ctx.getThisClass(), (MethodConstant) argRaw);
+                    MethodConstant idHandler = argRaw instanceof MethodConstant idMethod
+                            ? createBjarneLambda(ctx.getThisClass(), idMethod)
+                            : createBjarneLambda(ctx.getThisClass(), (PropertyConstant) argRaw);
                     code.add(new Move(idHandler, argLVal));
                     return;
                     }
@@ -1438,7 +1439,9 @@ public class NameExpression
                 }
 
             case BjarneLambda:
-                return createBjarneLambda(ctx.getThisClass(), (MethodConstant) argRaw);
+                return argRaw instanceof MethodConstant idMethod
+                        ? createBjarneLambda(ctx.getThisClass(), idMethod)
+                        : createBjarneLambda(ctx.getThisClass(), (PropertyConstant) argRaw);
 
             default:
                 throw new IllegalStateException("arg=" + argRaw);
@@ -1598,6 +1601,53 @@ public class NameExpression
                 }
             }
 
+        code.registerConstants(pool);
+
+        return lambda.getIdentityConstant();
+        }
+
+    /**
+     * Create a {@link MethodConstant#getBjarneLambdaType Bjarne lambda} for the specified property
+     * getter.
+     *
+     * Note, that for every occurrence of an expression in the form of "T.p" that requires
+     * production of a function that takes an argument "t" of the target type "T" at index zero,
+     * this method creates a new lambda performing the following transformation:
+     *      t -> t.p
+     * REVIEW: how to avoid duplicates?
+     *
+     * @param clz       the containing class
+     * @param idProp  the underlying property
+     *
+     * @return the BjarneLambda id
+     */
+    private MethodConstant createBjarneLambda(ClassStructure clz, PropertyConstant idProp)
+        {
+        ConstantPool         pool       = pool();
+        MultiMethodStructure mms        = clz.ensureMultiMethodStructure("->");
+        TypeConstant         typeParam  = idProp.getNamespace().getType();
+        TypeConstant         typeReturn = idProp.getType();
+
+        org.xvm.asm.Parameter[] aparamParam = new org.xvm.asm.Parameter[]
+            {new org.xvm.asm.Parameter(pool, typeParam, "p", null, false, 0, false)};
+
+        org.xvm.asm.Parameter[] aparamReturn = new org.xvm.asm.Parameter[]
+            {new org.xvm.asm.Parameter(pool, typeReturn, null, null, true, 0, false)};
+
+        MethodStructure lambda = mms.createLambda(TypeConstant.NO_TYPES, Utils.NO_NAMES);
+
+        lambda.configureLambda(aparamParam, 0, aparamReturn);
+        lambda.setStatic(true);
+        lambda.getIdentityConstant().setSignature(
+                pool.ensureSignatureConstant("->",
+                    new TypeConstant[]{typeParam}, new TypeConstant[]{typeReturn}));
+
+        Code     code      = lambda.createCode();
+        Register regTarget = new Register(typeParam, 0);
+        Register regRet    = new Register(typeReturn, Op.A_STACK);
+
+        code.add(new P_Get(idProp, regTarget, regRet));
+        code.add(new Return_1(regRet));
         code.registerConstants(pool);
 
         return lambda.getIdentityConstant();
@@ -2564,15 +2614,27 @@ public class NameExpression
                             {
                             typeLeft = typeLeft.getParamType(0);
                             }
-                        if (getTypeInfo(ctx, typeLeft, errs).findProperty(idProp) == null)
+                        infoProp = getTypeInfo(ctx, typeLeft, errs).findProperty(idProp);
+                        if (infoProp == null)
                             {
                             log(errs, Severity.ERROR, Compiler.PROPERTY_INACCESSIBLE,
                                     prop.getName(), typeLeft.getValueString());
                             return null;
                             }
 
-                        m_plan = Plan.None;
-                        return idProp.getValueType(pool, typeLeft);
+                        TypeConstant typeProp = infoProp.getType();
+                        if (typeDesired != null && typeDesired.isA(pool.typeFunction()) &&
+                                !typeProp.isA(pool.typeFunction()))
+                            {
+                            // turn the property into a lambda
+                            m_plan = Plan.BjarneLambda;
+                            return idProp.getBjarneLambdaType();
+                            }
+                        else
+                            {
+                            m_plan = Plan.None;
+                            return idProp.getValueType(pool, typeLeft);
+                            }
                         }
 
                     // TODO GG (see innerouter.x)
