@@ -63,13 +63,23 @@ interface Server
     // ----- route registration --------------------------------------------------------------------
 
     /**
-     * Register the specified `Handler` for the specified `Route`.
+     * Register the specified `WebService` method to handle the specified `Route`. It is expected
+     * that an implementation of `Server` will instantiate one or more instances of the `WebService`
+     * as necessary to handle the incoming requests.
      *
-     * In cases of conflict, the last registered handler wins.
+     * Note that the handler being registered does not have a predefined set of parameters and
+     * return values. It is the server's job to create the necessary wiring to the method, based on
+     * the routing rules and capabilities defined by this web API, and utilizing any available
+     * codecs as necessary.
      *
-     * @param handler  a method on a [WebService] to invoke to handle the specified URI route
+     * In case of registration overlap or conflict, the last registered handler wins.
+     *
+     * @param httpMethod  one of `GET`, `POST`, `PUT`, `DELETE`, etc.
+     * @param path        a fixed path; for example, the path that maps to the web service
+     * @param route       a URI Template to evaluate against the remaining portion of the path
+     * @param handler     a method on a [WebService] to invoke to handle the specified URI route
      */
-    void route(Route route, Method<WebService, <Session, Request>, <Response>> handler);
+    void route(HttpMethod httpMethod, Path path, Route? route, Method<WebService> handler);
 
     /**
      * Register the specified `Interceptor` for the specified `Route`.
@@ -77,9 +87,9 @@ interface Server
      * The server will delegate each matching incoming request to the interceptor, with the order of
      * registration being significant, with the most recently added `Interceptor` executed first.
      *
-     * @param handler  a method on a [WebService] to invoke to intercept the specified URI route
+     * @param interceptor  a method on a [WebService] to invoke to intercept incoming requests
      */
-    void intercept(Route route, Method<WebService, <Session, Request, Handler>, <Response>> interceptor);
+    void intercept(Method<WebService, <Session, Request, Handler>, <Response>> interceptor);
 
     /**
      * Register the specified `Handler` for the specified `Route`.
@@ -90,9 +100,9 @@ interface Server
      * * `Observer` operations are not guaranteed to run in any specific order, and may be executed
      *   before, during (i.e. concurrently with), or even after the actual request processing.
      *
-     * @param handler  a method on a [WebService] to invoke to observe the specified URI route
+     * @param observer  a method on a [WebService] to invoke to observe incoming requests
      */
-    void observe(Route route, Method<WebService, <Session, Request>, <>> observer);
+    void observe(Method<WebService, <Session, Request>, <>> observer);
 
     /**
      * Register a handler for all unhandled (unregistered route) URIs. If no `Handler` is provided
