@@ -47,7 +47,11 @@ module web.xtclang.org
      *
      * The String `mediaType` value must **not** include wild-cards.
      *
-     * TODO CP explain why this can be used on a web service and not just on end points
+     * Specifying this annotation on a `WebApp` or `WebService` is a convenient way of specifying a
+     * default, so that the default does not need to be specified on each `EndPoint`. When walking
+     * up from an `EndPoint` to its containing `WebService` and ultimately the `WebApp` module, the
+     * first `@Produces` annotation encountered is the one used. In the absence of any `@Produces`
+     * annotation, the default is `Json`.
      *
      * Example:
      *
@@ -62,6 +66,12 @@ module web.xtclang.org
      * A mixin to indicate the media-types consumed by a particular component.
      *
      * The String `mediaType` value may include wild-cards, as allowed in an "Accept" header.
+     *
+     * Specifying this annotation on a `WebApp` or `WebService` is a convenient way of specifying a
+     * default, so that the default does not need to be specified on each `EndPoint`. When walking
+     * up from an `EndPoint` to its containing `WebService` and ultimately the `WebApp` module, the
+     * first `@Consumes` annotation encountered is the one used. In the absence of any `@Consumes`
+     * annotation, the default is `Json`.
      *
      * Example:
      *
@@ -122,10 +132,10 @@ module web.xtclang.org
      * Example:
      *
      *     @Restrict("admin")
-     *     (Item, HttpStatus) addItem(@PathParam String id, @BodyParam Item item) {...} // TODO better examples
+     *     void shutdown() {...}
      *
      *     @Restrict(["admin", "manager"])
-     *     (Item, HttpStatus) addItem(@PathParam String id, @BodyParam Item item) {...}
+     *     conditional User createUser(@PathParam String id) {...}
      */
     mixin Restrict(String|String[] subject)
             into WebApp | WebService | Endpoint
