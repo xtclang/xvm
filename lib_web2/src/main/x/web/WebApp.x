@@ -12,75 +12,23 @@
 mixin WebApp
         into Module
     {
-    // TODO HandlerFactory configureRunningWebApp()
-
     /**
-     * Collect all roots declared by this Module and instantiate corresponding WebServices.
-     */
-    immutable Map<Path, WebService> collectRoots_()
-        {
-        // TODO walk through all top level classes (and go into imported modules) to find all of the
-        //      WebService classes. remember to set the `webApp` property on each one to this WebApp
-
-        import ecstasy.reflect.Annotation;
-
-        Map<Path, WebService> roots = new HashMap();
-
-        Module webModule = this;
-        for (Class child : webModule.classes)
-            {
-            if (child.implements(WebService), Struct structure := child.allocate())
-                {
-                WebService webService = child.instantiate(structure).as(WebService);
-
-                Path path = webService.path;
-                if (roots.contains(path))
-                    {
-                    // TODO: how to report a duplicate path?
-                    }
-                else
-                    {
-                    roots.put(path, &webService.maskAs(WebService));
-                    }
-                }
-            }
-
-        return roots.makeImmutable();
-        }
-
-    /**
-     * Create a session object.
-     * TODO
+     * Handle an otherwise-unhandled exception or other error that occurred during [Request]
+     * processing within this `WebApp`, and produce a [Response] that is appropriate to the
+     * exception or other error that was raised.
      *
-     * @return the new `Session` object
-     */
-    Session createSession()
-        {
-        TODO
-        }
-
-    /**
-     * Handle an exception that occurred during [Request] processing within this `WebApp`, and
-     * produce a [Response] that is appropriate to the exception that was raised.
-     *
-     * @param e  the Exception that occurred during the processing of a [Request]
+     * @param session   the session (usually non-`Null`) within which the request is being
+     *                  processed; the session can be `Null` if the error occurred before or during
+     *                  the instantiation of the session
+     * @param request   the request being processed
+     * @param error     the exception thrown, or the error description
+     * @param response  the response, iff a response is known at the time that the error occurred
      *
      * @return the [Response] to send back to the caller
      */
-    Response handleException(Exception e)
+    Response handleUnhandledError(Session? session, Request request, Exception|String error, Response? response)
         {
         // the exception needs to be logged
-        return TODO new responses.SimpleResponse(e.is(RequestAborted) ? e.status : InternalServerError);
-        }
-
-    /**
-     * TODO
-     */
-    Server.ErrorHandler allocateErrorHandler(Request          request,
-                                             Session?         session,
-                                             Response?        response,
-                                            )
-        {
-        TODO
+        return new responses.SimpleResponse(error.is(RequestAborted) ? error.status : InternalServerError);
         }
     }

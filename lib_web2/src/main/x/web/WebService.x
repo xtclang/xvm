@@ -65,6 +65,12 @@ mixin WebService(Path path)
         }
 
     /**
+     * The error handler within this `WebService`, or `Null` if there is none or none has been
+     * configured.
+     */
+    ErrorHandler? errorHandler;
+
+    /**
      * The session related to the currently executing handler within this service.
      */
     Session? session;
@@ -83,62 +89,8 @@ mixin WebService(Path path)
     // ----- processing ----------------------------------------------------------------------------
 
     /**
-     * Bind the specified method as necessary in order to create a [Handler] that will invoke the
-     * method.
-     *
-     * @param method  the method on this WebService to invoke to handle a request
-     *
-     * @return a Handler
-     */
-    Handler createHandler(Method<WebService> method)
-        {
-        TODO
-        }
-
-    /**
-     * Bind the specified method as necessary in order to create an [Interceptor] that will invoke
-     * the method.
-     *
-     * @param method  the method on this WebService to invoke to intercept a request
-     *
-     * @return an Interceptor
-     */
-    Interceptor createInterceptor(Method<WebService> method)
-        {
-        TODO
-        }
-
-    /**
-     * Bind the specified method as necessary in order to create an [Observer] that will invoke the
-     * method.
-     *
-     * @param method  the method on this WebService to invoke to observe a request
-     *
-     * @return an Observer
-     */
-    Observer createObserver(Method<WebService> method)
-        {
-        TODO
-        }
-
-    /**
-     * Bind the specified method as necessary in order to create an [ErrorHandler] that will invoke
-     * the method.
-     *
-     * @param method  the method on this WebService to invoke to handle an error
-     *
-     * @return an ErrorHandler
-     */
-    ErrorHandler createErrorHandler(Method<WebService> method)
-        {
-        TODO
-        }
-
-
-    // ----- processing ----------------------------------------------------------------------------
-
-    /**
-     * Process a received [Request].
+     * Process a received [Request]. This is invoked by the server in order to transfer control to
+     * an "EndPoint Handler".
      *
      * This method is called from the previous step in the routing chain, in order to transfer
      * control into this web service. For the duration of the processing inside this web service,
@@ -167,7 +119,7 @@ mixin WebService(Path path)
             }
         catch (Exception e)
             {
-            return handleException(e);
+            return reportError(e);
             }
         finally
             {
@@ -178,79 +130,18 @@ mixin WebService(Path path)
         }
 
     /**
-     * Process an error.
+     * Allow user code on the web service to handle an error condition during [Request] processing.
      *
-     * @param handle    the error handler to delegate to
-     * @param request   the request that failed
-     * @param session   the session related to the request that failed
-     * @param response  the response, if one is already known by this point, otherwise null
-     * @param error     the exception or string description of an internal error
+     * @param error  the `Exception` or description of an error that occurred during the processing
+     *               of a [Request]
      *
      * @return the [Response] to send back to the caller
      */
-    Response routeError(Session          session,
-                        Request          request,
-                        Response?        response,
-                        Exception|String error,
-                        ErrorHandler     handle,
-                       )
+    Response reportError(String|Exception error)
         {
-        Session?  prevSession  = this.session;
-        Request?  prevRequest  = this.request;
-        Response? prevResponse = this.response;
-
-        // store the request and session for the duration of the request processing
-        this.session  = session;
-        this.request  = request;
-        this.response = response;
-
-        try
-            {
-            return handle(session, request, error, response);
-            }
-        catch (Exception e)
-            {
-            return unhandledException(e);
-            }
-        finally
-            {
-            this.session  = prevSession;
-            this.request  = prevRequest;
-            this.response = prevResponse;
-            }
-        }
-
-
-    // ----- processing ----------------------------------------------------------------------------
-
-    /**
-     * Handle an exception that occurred during [Request] processing within this `WebService`, and
-     * produce a [Response] that is appropriate to the exception that was raised.
-     *
-     * @param e  the Exception that occurred during the processing of a [Request]
-     *
-     * @return the [Response] to send back to the caller
-     */
-    protected Response handleException(Exception e)
-        {
-        Session      session = this.session ?: assert;
-        Request      request = this.request ?: assert;
-        ErrorHandler handle  = this:module.as(WebApp).allocateErrorHandler(request, session, response);
-        return handle^(session, request, e, Null);
-        }
-
-    /**
-     * Handle an exception that occurred during the handling of an error. Since we're already
-     * supposed to be dealing with an error, an exception at this point should be considered
-     * unrecoverable; the processing should to be minimal and safe, and the result should clearly
-     * indicate to the user agent that an internal server error has occurred.
-     *
-     * @param e  the Exception that occurred during the (mis-)handling of an error
-     *
-     * @return the [Response] to send back to the caller
-     */
-    protected Response unhandledException(Exception e)
-        {
-        return new responses.SimpleResponse(InternalServerError);
+        Session session = this.session ?: assert;
+        Request request = this.request ?: assert;
+        return errorHandler?(session, request, error, response)
+                : webApp.handleUnhandledError(session, request, error, response);
         }
     }

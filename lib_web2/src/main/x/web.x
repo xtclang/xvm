@@ -15,22 +15,18 @@ module web.xtclang.org
 
     // ----- fill in name here ------------------------------------------------------------
 
+    /**
+     * A function that can process an incoming request corresponding to a `Route` is called an
+     * `Endpoint Handler`.
+     */
+    typedef function Response(Session, Request) as Handler;
 
     /**
-     * A generic HTTP endpoint.
-     *
-     * Example:
-     *
-     *     @Endpoint(GET, "/{id}")
-     *
-     * @param httpMethod  the name of the HTTP method
-     * @param path        the optional path to reach this endpoint
+     * A function that is called when an exception occurs (or an internal error represented by a
+     * `String` description) is called an `ErrorHandler`. A Response may or may not already be known
+     * at the point that the error occurs.
      */
-    mixin Endpoint(HttpMethod? httpMethod, String path = "")
-            into Method;
-
-
-    // ----- fill in name here ------------------------------------------------------------
+    typedef function Response(Session, Request, Exception|String, Response?) as ErrorHandler;
 
     /**
      * `TrustLevel` is an enumeration that approximates a point-in-time level of trust associated
@@ -204,6 +200,19 @@ module web.xtclang.org
     // ----- handler method annotations ------------------------------------------------------------
 
     /**
+     * A generic HTTP endpoint.
+     *
+     * Example:
+     *
+     *     @Endpoint(GET, "/{id}")
+     *
+     * @param httpMethod  the name of the HTTP method
+     * @param path        the optional path to reach this endpoint
+     */
+    mixin Endpoint(HttpMethod? httpMethod, String path = "")
+            into Method; // TODO GG: <WebService>;
+
+    /**
      * An HTTP `GET` method.
      *
      * @param path  the optional path to reach this endpoint
@@ -242,6 +251,56 @@ module web.xtclang.org
      */
     mixin Delete(String path = "")
             extends Endpoint(DELETE, path);
+
+    /**
+     * Default route on a WebService, if no other route could be found.
+     *
+     * Example:
+     *
+     *     @Default @Get
+     *     Response handleMiss() {...}
+     */
+    mixin Default
+            into Endpoint;
+
+    /**
+     * Interceptor for all requests of a certain HttpMethod on (or under) a WebService.
+     *
+     * Example:
+     *
+     *     @Intercept(GET)
+     *     Response interceptGet(Session session, Request request, Handler handle) {...}
+     */
+    mixin Intercept(HttpMethod? httpMethod=Null)
+            into Method<WebService, <Session, Request, Handler>, <Response>>;
+
+    /**
+     * Request observer (possibly asynchronous to the request processing itself) for all requests on
+     * (or under) a WebService.
+     *
+     * Example:
+     *
+     *     @Observe
+     *     void logAllRequests(Session session, Request request) {...}
+     *
+     * And/or:
+     *
+     *     @Observe(DELETE)
+     *     void logDeleteRequests(Session session, Request request) {...}
+     */
+    mixin Observe(HttpMethod? httpMethod=Null)
+            into Method<WebService, <Session, Request>, <>>;
+
+    /**
+     * Specify a method as handling all errors on (or under) the WebService.
+     *
+     * Example:
+     *
+     *     @OnError
+     *     void handleErrors(Session session, Request request, Exception|String, Response?) {...}
+     */
+    mixin OnError
+            into Method<WebService, <Session, Request, Exception|String, Response?>, <Response>>;
 
 
     // ----- parameter annotations -----------------------------------------------------------------
