@@ -2,7 +2,6 @@ import net.URI;
 
 import web.Catalog;
 import web.Header;
-import web.HttpServer;
 import web.HttpStatus;
 import web.Request;
 import web.Response;
@@ -80,8 +79,7 @@ service Dispatcher
                             String[]   argNames  = TODO;
                             String[][] argValues = TODO;
 
-                            // TODO GG shouldn't compile; needs "?: []" at the end
-                            httpServer.send(context, r.status.code, argNames, argValues, r.body?.bytes);
+                            httpServer.send(context, r.status.code, argNames, argValues, r.body?.bytes : []);
                             }
                         });
                     return;
