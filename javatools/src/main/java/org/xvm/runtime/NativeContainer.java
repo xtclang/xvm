@@ -735,10 +735,17 @@ public class NativeContainer
     public ObjectHandle getInjectable(Frame frame, String sName, TypeConstant type, ObjectHandle hOpts)
         {
         InjectionKey key = f_mapResourceNames.get(sName);
+        if (key == null)
+            {
+            return null;
+            }
 
-        return key == null || !key.f_type.isA(type)
-                ? null
-                : maskInjection(frame, f_mapResources.get(key), type, hOpts);
+        // check for equality first, but allow "congruency" or "duck type" equality as well
+        TypeConstant typeResource = key.f_type;
+        return typeResource.equals(type) ||
+                    (typeResource.isA(type) && type.isA(typeResource))
+                ? f_mapResources.get(key).supply(frame, hOpts)
+                : null;
         }
 
     @Override

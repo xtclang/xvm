@@ -27,7 +27,11 @@ public class MainContainer
     @Override
     public ObjectHandle getInjectable(Frame frame, String sName, TypeConstant type, ObjectHandle hOpts)
         {
-        return f_parent.getInjectable(frame, sName, type, hOpts);
+        ObjectHandle hResource = f_parent.getInjectable(frame, sName, type, hOpts);
+
+        return hResource == null
+                ? null
+                : maskInjection(hResource, type);
         }
 
     @Override

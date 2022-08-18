@@ -117,7 +117,10 @@ public class NestedContainer
     @Override
     public ObjectHandle getInjectable(Frame frame, String sName, TypeConstant type, ObjectHandle hOpts)
         {
-        return maskInjection(frame, f_mapResources.get(new InjectionKey(sName, type)), type, hOpts);
+        InjectionSupplier supplier = f_mapResources.get(new InjectionKey(sName, type));
+        return supplier == null
+                ? null
+                : maskInjection(supplier.supply(frame, hOpts), type);
         }
 
     @Override

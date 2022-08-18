@@ -594,45 +594,34 @@ public abstract class Container
         }
 
     /**
-     * Retrieve the injection from the supplier and mask it if necessary.
+     * Mask the resource if necessary.
      *
-     * @param frame     the current frame
-     * @param supplier  the resource supplier
-     * @param type      the desired type
-     * @param hOpts     (optional) the options handle
+     * @param hResource  the resource handle
+     * @param type       the desired type
      *
      * @return the injected resource of the specified type
      */
-    protected ObjectHandle maskInjection(Frame frame, InjectionSupplier supplier, TypeConstant type,
-                                         ObjectHandle hOpts)
+    protected ObjectHandle maskInjection(ObjectHandle hResource, TypeConstant type)
         {
-        if (supplier == null)
+        if (hResource instanceof DeferredCallHandle hDeferred)
             {
-            return null;
+            hDeferred.addContinuation(frameCaller ->
+                frameCaller.pushStack(completeMasking(frameCaller.popStack(), type)));
+            return hResource;
             }
+        return completeMasking(hResource, type);
+        }
 
-        ObjectHandle hResource = supplier.supply(frame, hOpts);
-        if (hResource != null)
+    private ObjectHandle completeMasking(ObjectHandle hResource, TypeConstant type)
+        {
+        TypeConstant typeResource = hResource.getComposition().getType();
+        if (typeResource.isShared(getConstantPool()))
             {
-            if (hResource instanceof DeferredCallHandle hDeferred)
-                {
-                hDeferred.addContinuation(frameCaller ->
-                    {
-                    ObjectHandle hR = frameCaller.peekStack();
-                    if (!hR.getComposition().getType().equals(type))
-                        {
-                        frameCaller.popStack();
-                        frameCaller.pushStack(hR.maskAs(this, type));
-                        }
-                    return Op.R_NEXT;
-                    });
-                }
-            else if (!hResource.getComposition().getType().equals(type))
-                {
-                hResource = hResource.maskAs(this, type);
-                }
+            return typeResource.equals(type)
+                    ? hResource
+                    : hResource.maskAs(this, type);
             }
-        return hResource;
+        throw new UnsupportedOperationException("Pure type injecttion");
         }
 
 
