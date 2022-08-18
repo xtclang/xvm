@@ -23,11 +23,6 @@ service OSStorage
     @Unassigned
     OSFileStore fileStore;
 
-    Directory rootDir.get()
-        {
-        return fileStore.root;
-        }
-
     FileStore.Cancellable watchFile(Path filePath, FileWatcher watcher)
         {
         if (Directory|File parentDir := find(fileStore, filePath.parent.toString()))
@@ -148,6 +143,18 @@ service OSStorage
 
     private Map<String, FileWatcher?[]> allWatchers = new HashMap();
 
+
+    // ----- used by the native injection logic ----------------------------------------------------
+
+    FileStore store.get()
+        {
+        return fileStore;
+        }
+
+    Directory rootDir.get()
+        {
+        return fileStore.root;
+        }
 
     // ----- native --------------------------------------------------------------------------------
 

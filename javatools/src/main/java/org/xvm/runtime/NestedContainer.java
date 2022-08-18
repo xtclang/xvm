@@ -7,8 +7,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import java.util.function.BiFunction;
-
 import org.xvm.asm.InjectionKey;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Op;
@@ -119,10 +117,7 @@ public class NestedContainer
     @Override
     public ObjectHandle getInjectable(Frame frame, String sName, TypeConstant type, ObjectHandle hOpts)
         {
-        BiFunction<Frame, ObjectHandle, ObjectHandle> fnResource =
-            f_mapResources.get(new InjectionKey(sName, type));
-
-        return fnResource == null ? null : fnResource.apply(frame, hOpts);
+        return maskInjection(frame, f_mapResources.get(new InjectionKey(sName, type)), type, hOpts);
         }
 
     @Override
@@ -145,6 +140,5 @@ public class NestedContainer
      *
      * (See annotations.InjectRef and mgmt.ResourceProvider.DynamicResource natural sources.)
      */
-    private final Map<InjectionKey, BiFunction<Frame, ObjectHandle, ObjectHandle>>
-            f_mapResources = new HashMap<>();
+    private final Map<InjectionKey, InjectionSupplier> f_mapResources = new HashMap<>();
     }

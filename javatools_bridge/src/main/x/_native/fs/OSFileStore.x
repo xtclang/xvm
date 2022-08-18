@@ -66,7 +66,8 @@ class OSFileStore
             return this;
             }
 
-        return new OSFileStore(storage, True);
+        FileStore store = new OSFileStore(storage, True);
+        return &store.maskAs(FileStore);
         }
 
     @Override

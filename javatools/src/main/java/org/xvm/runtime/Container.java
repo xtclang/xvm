@@ -33,6 +33,8 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.VersionConstant;
 
+import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
+
 import org.xvm.runtime.template.Child;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
@@ -589,6 +591,48 @@ public abstract class Container
         // TODO: this information will be supplied by the Linker;
         // for now assume that only the Ecstasy module is shared
         return idModule.getName().equals(ModuleStructure.ECSTASY_MODULE);
+        }
+
+    /**
+     * Retrieve the injection from the supplier and mask it if necessary.
+     *
+     * @param frame     the current frame
+     * @param supplier  the resource supplier
+     * @param type      the desired type
+     * @param hOpts     (optional) the options handle
+     *
+     * @return the injected resource of the specified type
+     */
+    protected ObjectHandle maskInjection(Frame frame, InjectionSupplier supplier, TypeConstant type,
+                                         ObjectHandle hOpts)
+        {
+        if (supplier == null)
+            {
+            return null;
+            }
+
+        ObjectHandle hResource = supplier.supply(frame, hOpts);
+        if (hResource != null)
+            {
+            if (hResource instanceof DeferredCallHandle hDeferred)
+                {
+                hDeferred.addContinuation(frameCaller ->
+                    {
+                    ObjectHandle hR = frameCaller.peekStack();
+                    if (!hR.getComposition().getType().equals(type))
+                        {
+                        frameCaller.popStack();
+                        frameCaller.pushStack(hR.maskAs(this, type));
+                        }
+                    return Op.R_NEXT;
+                    });
+                }
+            else if (!hResource.getComposition().getType().equals(type))
+                {
+                hResource = hResource.maskAs(this, type);
+                }
+            }
+        return hResource;
         }
 
 

@@ -17,7 +17,6 @@ import java.util.Set;
 
 import java.util.concurrent.ConcurrentHashMap;
 
-import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
 import java.util.jar.JarFile;
@@ -377,14 +376,14 @@ public class NativeContainer
     /**
      * Add a native resource supplier for an injection.
      *
-     * @param key  the injection key
-     * @param fn   the resource supplier bi-function
+     * @param key       the injection key
+     * @param supplier  the resource supplier
      */
-    private void addResourceSupplier(InjectionKey key, BiFunction<Frame, ObjectHandle, ObjectHandle> fn)
+    private void addResourceSupplier(InjectionKey key, InjectionSupplier supplier)
         {
         assert !f_mapResources.containsKey(key);
 
-        f_mapResources.put(key, fn);
+        f_mapResources.put(key, supplier);
         f_mapResourceNames.put(key.f_sName, key);
         }
 
@@ -438,7 +437,7 @@ public class NativeContainer
                 {
                 ClassTemplate    template = getTemplate("_native.fs.OSStorage");
                 PropertyConstant idProp   = template.getCanonicalType().
-                        ensureTypeInfo().findProperty("fileStore").getIdentity();
+                        ensureTypeInfo().findProperty("store").getIdentity();
 
                 return getProperty(frame, hOSStorage, idProp, h -> m_hFileStore = h);
                 }
@@ -545,16 +544,18 @@ public class NativeContainer
             ObjectHandle haKeys   = xArray.makeStringArrayHandle(listKeys.toArray(Utils.STRINGS_NONE));
             ObjectHandle haValues = xArray.makeStringArrayHandle(listVals.toArray(Utils.STRINGS_NONE));
 
-            ConstantPool pool    = getConstantPool();
-            TypeConstant typeMap = pool.ensureParameterizedTypeConstant(
-                                    pool.ensureEcstasyTypeConstant("collections.ListMap"),
+            ConstantPool pool       = getConstantPool();
+            TypeConstant typeReveal = pool.ensureParameterizedTypeConstant(pool.typeMap(),
+                                        pool.typeString(), pool.typeString());
+            TypeConstant typeActual = pool.ensureParameterizedTypeConstant(
+                                        pool.ensureEcstasyTypeConstant("collections.ListMap"),
                                         pool.typeString(), pool.typeString());
 
             switch (Utils.constructListMap(frame,
-                            resolveClass(typeMap), haKeys, haValues, Op.A_STACK))
+                            resolveClass(typeActual), haKeys, haValues, Op.A_STACK))
                 {
                 case Op.R_NEXT:
-                    hProps = frame.popStack();
+                    hProps = frame.popStack().maskAs(this, typeReveal);
                     break;
 
                 case Op.R_EXCEPTION:
@@ -564,10 +565,8 @@ public class NativeContainer
                     {
                     Frame frameNext = frame.m_frameNext;
                     frameNext.addContinuation(frameCaller ->
-                        {
-                        m_hProperties = frameCaller.peekStack();
-                        return Op.R_NEXT;
-                        });
+                        frameCaller.pushStack(
+                            m_hProperties = frameCaller.peekStack().maskAs(this, typeReveal)));
                     return new DeferredCallHandle(frameNext);
                     }
 
@@ -737,9 +736,9 @@ public class NativeContainer
         {
         InjectionKey key = f_mapResourceNames.get(sName);
 
-        return key != null && key.f_type.isA(type)
-                ? f_mapResources.get(key).apply(frame, hOpts)
-                : null;
+        return key == null || !key.f_type.isA(type)
+                ? null
+                : maskInjection(frame, f_mapResources.get(key), type, hOpts);
         }
 
     @Override
@@ -949,6 +948,5 @@ public class NativeContainer
     /**
      * Map of resources that are injectable from this container, keyed by their InjectionKey.
      */
-    private final Map<InjectionKey, BiFunction<Frame, ObjectHandle, ObjectHandle>>
-            f_mapResources = new HashMap<>();
+    private final Map<InjectionKey, InjectionSupplier> f_mapResources = new HashMap<>();
     }
