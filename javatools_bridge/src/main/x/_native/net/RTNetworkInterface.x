@@ -52,6 +52,12 @@ service RTNetworkInterface(String name, immutable IPAddress[] addresses)
         return nativeListen(localAddress[0].bytes, localAddress[1]);
         }
 
+    @Override
+    String toString()
+        {
+        return "NetworkInterface";
+        }
+
 
     // ----- internal ------------------------------------------------------------------------------
 

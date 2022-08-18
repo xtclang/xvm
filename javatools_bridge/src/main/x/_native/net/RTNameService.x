@@ -25,6 +25,12 @@ service RTNameService(Network network)
         return nativeLookup(address.bytes);
         }
 
+    @Override
+    String toString()
+        {
+        return "NameService";
+        }
+
 
     // ----- internal ------------------------------------------------------------------------------
 

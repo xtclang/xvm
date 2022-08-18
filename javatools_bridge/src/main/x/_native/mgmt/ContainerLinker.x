@@ -52,6 +52,12 @@ service ContainerLinker
             sharedModules, additionalModules, namedConditions);
         }
 
+    @Override
+    String toString()
+        {
+        return "Linker";
+        }
+
     /**
      * Native implementation.
      */

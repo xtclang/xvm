@@ -24,4 +24,10 @@ service LocalClock
 
     @Override
     Cancellable schedule(Time when, Alarm alarm);
+
+    @Override
+    String toString()
+        {
+        return "Clock";
+        }
     }

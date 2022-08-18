@@ -14,4 +14,10 @@ service RTRandom
     @Override UInt uint()             {TODO("native");}
     @Override Dec dec()               {TODO("native");}
     @Override Float64 float()         {TODO("native");}
+
+    @Override
+    String toString()
+        {
+        return "Random";
+        }
     }

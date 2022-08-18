@@ -36,6 +36,12 @@ service RTServerSocket(SocketAddress localAddress)
     void close(Exception? cause = Null)
         {TODO("Native");}
 
+    @Override
+    String toString()
+        {
+        return "ServerSocket";
+        }
+
 
     // ----- internal ------------------------------------------------------------------------------
 

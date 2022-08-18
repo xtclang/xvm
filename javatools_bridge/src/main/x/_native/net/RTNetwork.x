@@ -52,6 +52,12 @@ service RTNetwork(Boolean secure)
         return nativeListen(localAddress[0].bytes, localAddress[1]);
         }
 
+    @Override
+    String toString()
+        {
+        return "Network";
+        }
+
 
     // ----- internal ------------------------------------------------------------------------------
 

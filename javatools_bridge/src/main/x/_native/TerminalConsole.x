@@ -15,4 +15,10 @@ service TerminalConsole
 
     @Override
     Boolean echo(Boolean flag);
+
+    @Override
+    String toString()
+        {
+        return "Console";
+        }
     }

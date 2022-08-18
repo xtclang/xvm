@@ -123,6 +123,12 @@ service RTSocket(SocketAddress localAddress, SocketAddress remoteAddress)
     void close(Exception? cause = Null)
         {TODO("Native");}
 
+    @Override
+    String toString()
+        {
+        return "Socket";
+        }
+
 
     // ----- SocketChannel class -------------------------------------------------------------------
 

@@ -143,6 +143,11 @@ service OSStorage
 
     private Map<String, FileWatcher?[]> allWatchers = new HashMap();
 
+    @Override
+    String toString()
+        {
+        return "Storage";
+        }
 
     // ----- used by the native injection logic ----------------------------------------------------
 

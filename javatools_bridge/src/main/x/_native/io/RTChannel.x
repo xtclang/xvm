@@ -460,6 +460,11 @@ service RTChannel(RawChannel rawChannel)
             }
         }
 
+    @Override
+    String toString()
+        {
+        return "Channel";
+        }
 
     // ----- internal ------------------------------------------------------------------------------
 

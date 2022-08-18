@@ -24,4 +24,10 @@ service NanosTimer
         {
         return Duration.NANOSEC;
         }
+
+    @Override
+    String toString()
+        {
+        return "Timer";
+        }
     }

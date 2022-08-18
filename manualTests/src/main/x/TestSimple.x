@@ -5,7 +5,6 @@ module TestSimple
 
     void run()
         {
-        console.println(clock);
-        console.println(console); // used to blow up at run-time
+        console.println(clock); // used to produce a "_native" name
         }
     }

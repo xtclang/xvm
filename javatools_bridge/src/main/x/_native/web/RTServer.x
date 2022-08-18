@@ -25,4 +25,10 @@ service RTServer
         {
         TODO("Native");
         }
+
+    @Override
+    String toString()
+        {
+        return "HtpServer";
+        }
     }

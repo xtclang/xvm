@@ -23,4 +23,10 @@ service OSFileChannel(RawChannel rawChannel)
     @Override
     void flush()
         {TODO("native");}
+
+    @Override
+    String toString()
+        {
+        return "FileChannel";
+        }
     }
