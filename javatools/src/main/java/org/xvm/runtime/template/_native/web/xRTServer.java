@@ -96,7 +96,13 @@ public class xRTServer
      */
     public ObjectHandle ensureServer(Frame frame, ObjectHandle hOpts)
         {
-        String sAddress = ((StringHandle) hOpts).getStringValue();
+        if (!(hOpts instanceof StringHandle hAddress))
+            {
+            return new DeferredCallHandle(xException.illegalArgument(frame,
+                    "Injection must specify a server address"));
+            }
+
+        String sAddress = hAddress.getStringValue();
         int    ofPort   = sAddress.indexOf(':');
         String sHost    = sAddress;
         int    nPort    = 8080;
