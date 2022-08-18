@@ -1,7 +1,7 @@
 /**
  * Simple timer (stop-watch) using Java's nanosecond-resolution "System" clock.
  */
-class NanosTimer
+service NanosTimer
         implements Timer
     {
     @Override

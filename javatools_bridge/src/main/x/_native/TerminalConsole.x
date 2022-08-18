@@ -1,7 +1,7 @@
 /**
  * Simple console.
  */
-class TerminalConsole
+service TerminalConsole
         implements Console
     {
     @Override
