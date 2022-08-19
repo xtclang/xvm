@@ -291,9 +291,9 @@ interface Session
     @RO Boolean exclusiveAgent;
 
     /**
-     * `True` indicates that explicit cookie consent has been provided to store session cookies.
+     * Information about the explicit cookie consent for this session.
      */
-    @RO Boolean explicitConsent;
+    CookieConsent cookieConsent;
 
     /**
      * This is a `String` representation of the authenticated user identity (aka "subject");
@@ -336,14 +336,6 @@ interface Session
 
 
     // ----- session control -----------------------------------------------------------------------
-
-    /**
-     * Indicate that cookie consent for the session cookie has been received.
-     *
-     * @param consentProvided  pass `True` if the consent has been provided, or False if the consent
-     *                         has been explicitly denied or revoked
-     */
-    void recordConsent(Boolean consentProvided);
 
     /**
      * This method allows an application to explicitly configure the authentication information for
