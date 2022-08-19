@@ -1,5 +1,5 @@
 import ecstasy.collections.HasherMap;
-import ecstasy.collections.CaseInsensitiveHasher;
+import ecstasy.collections.CaseInsensitive;
 
 /**
  * A representation of the headers for an HTTP request or response.
@@ -24,7 +24,7 @@ class HttpHeaders
     /**
      * The map of headers.
      */
-    private HasherMap<String, String[]> headers = new HasherMap(CaseInsensitiveHasher);
+    private HasherMap<String, String[]> headers = new HasherMap(CaseInsensitive);
 
     /**
      * Add the specified header value.
