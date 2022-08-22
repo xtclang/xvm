@@ -302,7 +302,7 @@ interface Collection<Element>
             {
             if (match(e))
                 {
-                dest.add(e);
+                dest = dest.add(e);
                 }
             }
         return dest;
@@ -370,7 +370,7 @@ interface Collection<Element>
 
         for (Element e : iter)
             {
-            dest.add(transform(e));
+            dest = dest.add(transform(e));
             }
         return dest;
         }
