@@ -857,6 +857,48 @@ const String
         return this;
         }
 
+    /**
+     * Convert this `String` to its all-upper-case form.
+     *
+     * @return the upper-case form of this `String`
+     */
+    String! toUppercase()
+        {
+        Each: for (Char char : chars)
+            {
+            if (char != char.uppercase)
+                {
+                Int checked = Each.count;
+                Char[] upperChars = new Char[size](offset ->
+                        offset < checked ? chars[offset] : chars[offset].uppercase);
+                return new String(upperChars.makeImmutable());
+                }
+            }
+
+        return this;
+        }
+
+    /**
+     * Convert this `String` to its all-lower-case form.
+     *
+     * @return the lower-case form of this `String`
+     */
+    String! toLowercase()
+        {
+        Each: for (Char char : chars)
+            {
+            if (char != char.lowercase)
+                {
+                Int checked = Each.count;
+                Char[] lowerChars = new Char[size](offset ->
+                        offset < checked ? chars[offset] : chars[offset].lowercase);
+                return new String(lowerChars.makeImmutable());
+                }
+            }
+
+        return this;
+        }
+
 
     // ----- helper methods ------------------------------------------------------------------------
 

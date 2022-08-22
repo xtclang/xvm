@@ -60,4 +60,71 @@ static const CaseInsensitive
 
         return len1 <=> len2;
         }
+
+    /**
+     * Test if a specified `String` begins with another specified `String`, but using
+     * case-insensitive comparison.
+     *
+     * @param text    the full text
+     * @param prefix  this is the snippet that the `text` may or may not start with
+     *
+     * @return True iff the case-insensitive `text` starts with the case-insensitive `prefix`
+     */
+    static Boolean stringStartsWith(String text, String prefix)
+        {
+        if (text.startsWith(prefix))
+            {
+            return True;
+            }
+
+        Int length = prefix.size;
+        if (text.size <= length)
+            {
+            return False;
+            }
+
+        for (Int offset = 0; offset < length; ++offset)
+            {
+            if (text[offset].lowercase != prefix[offset].lowercase)
+                {
+                return False;
+                }
+            }
+
+        return True;
+        }
+
+    /**
+     * Test if a specified `String` ends with another specified `String`, but using case-insensitive
+     * comparison.
+     *
+     * @param text    the full text
+     * @param suffix  this is the snippet that the `text` may or may not end with
+     *
+     * @return True iff the case-insensitive `text` ends with the case-insensitive `suffix`
+     */
+    static Boolean stringEndsWith(String text, String suffix)
+        {
+        if (text.endsWith(suffix))
+            {
+            return True;
+            }
+
+        Int length = text.size;
+        Int offset = length - suffix.size;
+        if (offset < 0)
+            {
+            return False;
+            }
+
+        for ( ; offset < length; ++offset)
+            {
+            if (text[offset].lowercase != suffix[offset].lowercase)
+                {
+                return False;
+                }
+            }
+
+        return True;
+        }
     }

@@ -4,35 +4,16 @@ module TestSimple
 
     void run()
         {
-        @Inject("console") MyConsole myc;
-
-        console.println(myc);
-        myc.println(console);
-
-        @Inject("server", "localhost:8080") MyHttpServer httpServer;
-        console.println(httpServer);
-        httpServer.close();
-        }
-
-    interface MyConsole
-        {
-        void print(Object o);
-        void println(Object o = "");
-        String readLine();
-        Boolean echo(Boolean flag);
-        }
-
-    interface MyHttpServer
-            extends Closeable
-        {
-        void attachHandler(Handler handler);
-
-        void send(Object context, Int status, String[] headerNames, String[][] headerValues, Byte[] body);
-
-        static interface Handler
+        for (String s : ["test", "Hello", "World!", "r1785909fhIFDSY6gp@9y8"])
             {
-            void handle(Object context, String uri, String method,
-                        String[] headerNames, String[][] headerValues, Byte[] body);
+            console.println($"orig={s}, lower={s.toLowercase()}, upper={s.toUppercase()}");
             }
+
+// TODO GG
+//        import ecstasy.collections.CaseInsensitive;
+//        assert CaseInsensitive.stringStartsWith("This is a test", "this");
+//        assert !CaseInsensitive.stringStartsWith("Blah is a test", "this");
+//        assert CaseInsensitive.stringEndsWith("This is a test", "TEST");
+//        assert !CaseInsensitive.stringEndsWith("Blah is a test", "BLAH");
         }
     }
