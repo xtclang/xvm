@@ -10,28 +10,61 @@ const Catalog(WebServiceInfo[] services)
      */
     WebServiceInfo[] services;
 
+    /**
+     * The total number of WebServices.
+     */
+    Int serviceCount.get()
+        {
+        return services.size;
+        }
+
+    /**
+     * The total number of endpoints.
+     */
+    @Lazy Int endpointCount.calc()
+        {
+        return services.map(WebServiceInfo.endpointCount).reduce(new aggregate.Sum<Int>());
+        }
+
     typedef function WebService() as ServiceConstructor;
 
-    static const WebServiceInfo(Type<WebService>   serviceType,
-                                Int                id,
-                                String             path,
-                                ServiceConstructor constructor,
-                                EndpointInfo[]     endpoints,
-                                EndpointInfo?      errorEndpoint,
-                                EndpointInfo?      defaultEndpoint
-                                );
+    static const WebServiceInfo<ServiceType extends WebService>(
+                                Int                   id,
+                                String                path,
+                                ServiceConstructor    constructor,
+                                EndpointInfo[]        endpoints,
+                                EndpointInfo?         errorEndpoint,
+                                EndpointInfo?         defaultEndpoint,
+                                Method<ServiceType>[] interceptors,
+                                Method<ServiceType>[] observers,
+                                Method<ServiceType>?  onError
+                                )
+        {
+        Int endpointCount.get()
+            {
+            return endpoints.size;
+            }
+        }
 
     static const EndpointInfo
         {
-        construct(Method<WebService> endpoint, Int id, Int wsId)
+        construct(Method<WebService> method, Int id, Int sId)
             {
+            assert method.is(Endpoint);
+
+            this.endpoint  = method;
+            this.id        = id;
+            this.sid       = sid;
+            this.template  = new UriTemplate(method.path);
+
+
             TODO
             }
 
         /**
          * The endpoint Method.
          */
-        Method<WebService> endpoint;
+        Method<WebService>+Endpoint endpoint;
 
         /**
          * The endpoint id.
@@ -46,7 +79,10 @@ const Catalog(WebServiceInfo[] services)
         /**
          * The HTTP Method.
          */
-        HttpMethod httpMethod;
+        HttpMethod httpMethod.get()
+            {
+            return endpoint.httpMethod;
+            }
 
         /**
          * The URI template.

@@ -6,6 +6,7 @@
  */
 module web.xtclang.org
     {
+    package aggregate   import aggregate.xtclang.org;
     package collections import collections.xtclang.org;
     package crypto      import crypto.xtclang.org;
     package json        import json.xtclang.org;
@@ -209,7 +210,7 @@ module web.xtclang.org
      * @param httpMethod  the name of the HTTP method
      * @param path        the optional path to reach this endpoint
      */
-    mixin Endpoint(HttpMethod? httpMethod, String path = "")
+    mixin Endpoint(HttpMethod httpMethod, String path = "")
             into Method; // TODO GG: <WebService>;
 
     /**
