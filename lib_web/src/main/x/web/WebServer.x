@@ -1,5 +1,3 @@
-import web.HttpServer.Handler;
-
 /**
  * A web server.
  */
@@ -108,5 +106,17 @@ service WebServer(HttpServer httpServer)
     String toString()
         {
         return httpServer.toString();
+        }
+
+    /**
+     * The handler interface used via duck-typing by the native HTTP server.
+     */
+    static interface Handler
+        {
+        /**
+         * Handle an HTTP request.
+         */
+        void handle(Object context, String uri, String method,
+                    String[] headerNames, String[][] headerValues, Byte[] body);
         }
     }

@@ -476,7 +476,7 @@ public abstract class ObjectHandle
 
         public Container getOwner()
             {
-            return m_owner;
+            return m_owner == null ? getComposition().getContainer() : m_owner;
             }
 
         public void setOwner(Container owner)
@@ -605,7 +605,24 @@ public abstract class ObjectHandle
                     }
                 }
 
-            TypeComposition clzAs = getComposition().maskAs(typeAs);
+            Container       ownerOrig = getOwner();
+            TypeComposition clzAs;
+            if (owner == ownerOrig || typeAs.isShared(ownerOrig.getConstantPool()))
+                {
+                clzAs = getComposition().maskAs(typeAs);
+                }
+            else
+                {
+                // the ownership is moved to a different container that is not shared with the
+                // current owner's container; ensure the class composition at the new owner
+                ClassComposition clz           = (ClassComposition) getComposition();
+                TypeConstant     typeInception = clz.getInceptionType().removeAccess();
+                assert typeInception.isShared(owner.getConstantPool());
+
+                typeInception = (TypeConstant) owner.getConstantPool().register(typeInception);
+                clzAs = owner.ensureClassComposition(typeInception, clz.getTemplate()).maskAs(typeAs);
+                }
+
             if (clzAs != null)
                 {
                 GenericHandle hClone = (GenericHandle) cloneAs(clzAs);

@@ -84,9 +84,7 @@ public class xRTServer
         TypeConstant type = m_typeCanonical;
         if (type == null)
             {
-            var pool = f_container.getConstantPool();
-            m_typeCanonical = type = pool.ensureTerminalTypeConstant(pool.ensureClassConstant(
-                    pool.ensureModuleConstant("web.xtclang.org"), "HttpServer"));
+            m_typeCanonical = type = f_struct.getChild("HttpServer").getIdentityConstant().getType();
             }
         return type;
         }
