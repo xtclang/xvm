@@ -3490,7 +3490,8 @@ public abstract class TypeConstant
                 if (paramContrib.isActualTypeSpecified() != paramCurr.isActualTypeSpecified())
                     {
                     if (paramContrib.isFormalType() &&
-                        paramContrib.getFormalTypeName().equals(paramCurr.getName()))
+                            paramContrib.getFormalTypeName().equals(paramCurr.getName())
+                        || paramContrib.isFormalTypeSequence())
                         {
                         // TODO both the current and contributed parameters have a constraint type;
                         //      if those types are different, then keep the narrower of the two; if

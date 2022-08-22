@@ -211,7 +211,7 @@ module web.xtclang.org
      * @param path        the optional path to reach this endpoint
      */
     mixin Endpoint(HttpMethod httpMethod, String path = "")
-            into Method; // TODO GG: <WebService>;
+            into Method<WebService>;
 
     /**
      * An HTTP `GET` method.

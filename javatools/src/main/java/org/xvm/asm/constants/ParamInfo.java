@@ -41,10 +41,10 @@ public class ParamInfo
         assert sName != null;
         assert typeConstraint != null;
 
-        m_nid            = nid;
-        m_sName          = sName;
-        m_typeConstraint = typeConstraint;
-        m_typeActual     = typeActual;
+        f_nid            = nid;
+        f_sName          = sName;
+        f_typeConstraint = typeConstraint;
+        f_typeActual     = typeActual;
         }
 
     /**
@@ -52,7 +52,7 @@ public class ParamInfo
      */
     public String getName()
         {
-        return m_sName;
+        return f_sName;
         }
 
     /**
@@ -60,7 +60,7 @@ public class ParamInfo
      */
     public TypeConstant getConstraintType()
         {
-        return m_typeConstraint;
+        return f_typeConstraint;
         }
 
     /**
@@ -68,7 +68,7 @@ public class ParamInfo
      */
     public TypeConstant getActualType()
         {
-        return m_typeActual == null ? m_typeConstraint : m_typeActual;
+        return f_typeActual == null ? f_typeConstraint : f_typeActual;
         }
 
     /**
@@ -76,28 +76,41 @@ public class ParamInfo
      */
     public boolean isActualTypeSpecified()
         {
-        return m_typeActual != null;
+        return f_typeActual != null;
         }
 
     public Object getNestedIdentity()
         {
-        return m_nid;
+        return f_nid;
         }
 
+    /**
+     * @return true iff the type parameter's actual is a formal type
+     */
     public boolean isFormalType()
         {
-        TypeConstant typeActual = m_typeActual;
+        TypeConstant typeActual = f_typeActual;
         return typeActual != null
                 && typeActual.isSingleDefiningConstant()
                 && typeActual.getDefiningConstant().getFormat() == Format.Property;
         }
 
+    /**
+     * @return the type parameter's formal type name
+     */
     public String getFormalTypeName()
         {
         assert isFormalType();
 
-        TypeConstant typeActual = m_typeActual;
-        return ((PropertyConstant) typeActual.getDefiningConstant()).getName();
+        return ((PropertyConstant) f_typeActual.getDefiningConstant()).getName();
+        }
+
+    /**
+     * @return true iff the type parameter represents a formal type sequence
+     */
+    public boolean isFormalTypeSequence()
+        {
+        return f_typeConstraint.isFormalTypeSequence();
         }
 
 
@@ -112,7 +125,8 @@ public class ParamInfo
           .append(isActualTypeSpecified() ? getActualType().getValueString() : getName());
 
         TypeConstant typeConstraint = getConstraintType();
-        if (!typeConstraint.isEcstasy("Object") && !typeConstraint.isTuple())
+        if (!typeConstraint.equals(typeConstraint.getConstantPool().typeObject()) &&
+            !typeConstraint.isTuple())
             {
             sb.append(" extends ")
               .append(typeConstraint.getValueString());
@@ -129,22 +143,22 @@ public class ParamInfo
     /**
      * The nested identity of the type parameter's property.
      */
-    private final Object m_nid;
+    private final Object f_nid;
 
     /**
      * The name of the type parameter.
      */
-    private final String m_sName;
+    private final String f_sName;
 
     /**
      * The constraint type for the type parameter, which is both the type that constrains what the
      * actual type can be, and provides the default if an actual type is not specified.
      */
-    private final TypeConstant m_typeConstraint;
+    private final TypeConstant f_typeConstraint;
 
     /**
      * The actual type of te type parameter, which may be null to indicate that an actual type was
      * not specified.
      */
-    private final TypeConstant m_typeActual;
+    private final TypeConstant f_typeActual;
     }
