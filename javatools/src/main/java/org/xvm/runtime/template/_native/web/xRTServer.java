@@ -217,12 +217,16 @@ public class xRTServer
             // we need to compensate for a bug in com.sun.net.httpserver.HttpServer that doesn't
             // properly close the server socket that hasn't been established
             httpServer.start();
+            httpServer.stop(0);
             }
-        httpServer.removeContext("/");
-        httpServer.stop(0);
-        ((ExecutorService) httpServer.getExecutor()).shutdown();
+        else
+            {
+            httpServer.removeContext("/");
+            httpServer.stop(0);
+            ((ExecutorService) httpServer.getExecutor()).shutdown();
+            hServer.f_context.f_container.getServiceContext().unregisterNotification();
+            }
         hServer.m_httpHandler = null;
-        hServer.f_context.f_container.getServiceContext().unregisterNotification();
 
         return Op.R_NEXT;
         }
