@@ -1,6 +1,8 @@
 import net.SocketAddress;
 import net.URI;
 
+import web.routing.UriTemplate;
+
 /**
  * A representation of an HTTP request.
  *
@@ -64,6 +66,11 @@ interface Request
      * REVIEW what about parameters located in the body?
      */
     Map<String, List<String>> parameters;
+
+    /**
+     * The result of matching a UriTemplate against this request.
+     */
+    UriTemplate.UriParameters matchResult;
 
 
     // ----- cookie support ------------------------------------------------------------------------

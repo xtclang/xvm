@@ -1,8 +1,3 @@
-import Server.Handler;
-import Server.ErrorHandler;
-import Server.Interceptor;
-import Server.Observer;
-
 /**
  * A mixin that represents a set of endpoints for a specific URI path.
  *

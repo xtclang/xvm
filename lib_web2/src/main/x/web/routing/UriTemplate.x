@@ -9,6 +9,12 @@ import net.URI.Section;
  */
 const UriTemplate
     {
+    /**
+     * A map containing the result of matching a UriTemplate against a request's URI.
+     */
+    typedef immutable Map<String, Value> as UriParameters;
+
+
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -50,7 +56,7 @@ const UriTemplate
      *
      * @return a map from variable name to value
      */
-    conditional Map<String, Value> matches(URI|String uri)
+    conditional UriParameters matches(URI|String uri)
         {
         // convert a String URI to a real URI object if necessary
         if (uri.is(String), !(uri := URI.fromString(uri)))
@@ -153,7 +159,7 @@ const UriTemplate
 
         // REVIEW CP what to do with anything left over at the end of the URI?
 
-        return True, bindings;
+        return True, bindings.makeImmutable();
         }
 
     /**

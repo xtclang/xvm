@@ -29,15 +29,15 @@ const Catalog(WebServiceInfo[] services)
     typedef function WebService() as ServiceConstructor;
 
     static const WebServiceInfo<ServiceType extends WebService>(
-                                Int                   id,
-                                String                path,
-                                ServiceConstructor    constructor,
-                                EndpointInfo[]        endpoints,
-                                EndpointInfo?         errorEndpoint,
-                                EndpointInfo?         defaultEndpoint,
-                                Method<ServiceType>[] interceptors,
-                                Method<ServiceType>[] observers,
-                                Method<ServiceType>?  onError
+                                Int                id,
+                                String             path,
+                                ServiceConstructor constructor,
+                                EndpointInfo[]     endpoints,
+                                EndpointInfo?      errorEndpoint,
+                                EndpointInfo?      defaultEndpoint,
+                                MethodInfo[]       interceptors,
+                                MethodInfo[]       observers,
+                                MethodInfo?        onError
                                 )
         {
         Int endpointCount.get()
@@ -46,17 +46,35 @@ const Catalog(WebServiceInfo[] services)
             }
         }
 
-    static const EndpointInfo
+
+    /**
+     * The method info for a given service id.
+     */
+    static const MethodInfo(Method<WebService> method, Int sid)
         {
-        construct(Method<WebService> method, Int id, Int sId)
+        /**
+         * The HTTP Method.
+         */
+        HttpMethod? httpMethod.get()
+            {
+            return method.is(Observe|Intercept)
+                    ? method.httpMethod
+                    : Null;
+            }
+
+        }
+
+    static const EndpointInfo
+            extends MethodInfo
+        {
+        construct(Method<WebService> method, Int id, Int sid)
             {
             assert method.is(Endpoint);
 
-            this.endpoint  = method;
-            this.id        = id;
-            this.sid       = sid;
-            this.template  = new UriTemplate(method.path);
+            construct MethodInfo(method, sid);
 
+            this.id        = id;
+            this.template  = new UriTemplate(method.path);
 
             TODO
             }
@@ -64,21 +82,17 @@ const Catalog(WebServiceInfo[] services)
         /**
          * The endpoint Method.
          */
-        Method<WebService>+Endpoint endpoint;
+        Method<WebService>+Endpoint endpoint.get()
+            {
+            return method.as(Endpoint);
+            }
 
         /**
          * The endpoint id.
          */
         Int id;
 
-        /**
-         * The endpoint service id.
-         */
-        Int sid;
-
-        /**
-         * The HTTP Method.
-         */
+        @Override
         HttpMethod httpMethod.get()
             {
             return endpoint.httpMethod;
