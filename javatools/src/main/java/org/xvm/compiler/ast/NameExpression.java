@@ -2071,7 +2071,7 @@ public class NameExpression
                 {
                 // the name can refer to either a property or a typedef
                 TypeConstant typeLeft = left.getImplicitType(ctx);
-                if (typeLeft == null)
+                if (typeLeft == null || typeLeft.containsUnresolved())
                     {
                     return null;
                     }
