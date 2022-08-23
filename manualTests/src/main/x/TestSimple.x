@@ -9,11 +9,10 @@ module TestSimple
             console.println($"orig={s}, lower={s.toLowercase()}, upper={s.toUppercase()}");
             }
 
-// TODO GG
-//        import ecstasy.collections.CaseInsensitive;
-//        assert CaseInsensitive.stringStartsWith("This is a test", "this");
-//        assert !CaseInsensitive.stringStartsWith("Blah is a test", "this");
-//        assert CaseInsensitive.stringEndsWith("This is a test", "TEST");
-//        assert !CaseInsensitive.stringEndsWith("Blah is a test", "BLAH");
+        import ecstasy.collections.CaseInsensitive;
+        assert CaseInsensitive.stringStartsWith("This is a test", "this");
+        assert !CaseInsensitive.stringStartsWith("Blah is a test", "this");
+        assert CaseInsensitive.stringEndsWith("This is a test", "TEST");
+        assert !CaseInsensitive.stringEndsWith("Blah is a test", "BLAH");
         }
     }

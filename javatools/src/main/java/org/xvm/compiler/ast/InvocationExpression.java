@@ -2059,6 +2059,7 @@ public class InvocationExpression
         Token          tokName    = exprName.getNameToken();
         String         sName      = exprName.getName();
         boolean        fConstruct = sName.equals("construct");
+        boolean        fSingleton = false;
         Expression     exprLeft   = exprName.left;
         if (exprLeft == null)
             {
@@ -2426,10 +2427,11 @@ public class InvocationExpression
                         infoLeft = idLeft.ensureTypeInfo(access, errs);
                         }
                     }
-                boolean    fSingleton = infoLeft.isSingleton();
-                MethodKind kind       = fConstruct                        ? MethodKind.Constructor :
-                                        fNoFBind && fNoCall || fSingleton ? MethodKind.Any :
-                                                                            MethodKind.Function;
+                fSingleton = infoLeft.isSingleton();
+
+                MethodKind kind = fConstruct                        ? MethodKind.Constructor :
+                                  fNoFBind && fNoCall || fSingleton ? MethodKind.Any :
+                                                                      MethodKind.Function;
 
                 ErrorListener errsTemp = errs.branch(this);
                 Argument      arg      = findCallable(ctx, infoLeft.getType(), infoLeft, sName,
@@ -2471,6 +2473,10 @@ public class InvocationExpression
 
             switch (nameLeft.getMeaning())
                 {
+                case Class:
+                    fSingleton = typeLeft.ensureTypeInfo(errs).isSingleton();
+                    break;
+
                 case Property:
                     {
                     PropertyConstant idProp = (PropertyConstant) nameLeft.resolveRawArgument(ctx, false, errs);
@@ -2546,7 +2552,9 @@ public class InvocationExpression
         // - functions are NOT included because the left is NOT identity-mode
         TypeInfo      infoLeft = getTypeInfo(ctx, typeLeft, errs);
         ErrorListener errsMain = errs.branch(this);
-        MethodKind    kind     = fConstruct ? MethodKind.Constructor : MethodKind.Method;
+        MethodKind    kind     = fConstruct ? MethodKind.Constructor :
+                                 fSingleton ? MethodKind.Any :
+                                              MethodKind.Method;
 
         Argument arg = findCallable(ctx, typeLeft, infoLeft, sName, kind, false, atypeReturn, errsMain);
         if (arg != null)
@@ -2555,7 +2563,7 @@ public class InvocationExpression
                 {
                 m_argMethod   = arg;
                 m_method      = getMethod(infoLeft, arg);
-                m_fBindTarget = m_method != null;
+                m_fBindTarget = m_method != null && !m_method.isFunction();
                 }
             else
                 {
