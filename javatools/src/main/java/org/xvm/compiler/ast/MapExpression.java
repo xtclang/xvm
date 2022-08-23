@@ -334,8 +334,11 @@ public class MapExpression
 
             if (fConstVals)
                 {
-                typeActual = pool.ensureImmutableTypeConstant(typeActual);
-                constVal   = pool.ensureMapConstant(typeActual, map);
+                if (!typeActual.isImmutabilitySpecified())
+                    {
+                    typeActual = pool.ensureImmutableTypeConstant(typeActual);
+                    }
+                constVal = pool.ensureMapConstant(typeActual, map);
                 }
             }
 
