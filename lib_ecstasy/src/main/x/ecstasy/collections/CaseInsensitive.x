@@ -110,16 +110,16 @@ static const CaseInsensitive
             return True;
             }
 
-        Int length = text.size;
-        Int offset = length - suffix.size;
-        if (offset < 0)
+        Int length     = suffix.size;
+        Int textOffset = text.size - length;
+        if (textOffset < 0)
             {
             return False;
             }
 
-        for ( ; offset < length; ++offset)
+        for (Int offset = 0; offset < length; ++offset)
             {
-            if (text[offset].lowercase != suffix[offset].lowercase)
+            if (text[textOffset + offset].lowercase != suffix[offset].lowercase)
                 {
                 return False;
                 }
