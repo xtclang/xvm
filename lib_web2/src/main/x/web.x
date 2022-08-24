@@ -56,7 +56,7 @@ module web.xtclang.org
      *     @Produces(Json)
      *     conditional Cart getCart(@PathParam("id") String id, Session session) {...}
      */
-    mixin Produces(MediaType|MediaType[] mediaType)
+    mixin Produces(MediaType|MediaType[] produces)
             into WebApp | WebService | Endpoint;
 
     /**
@@ -76,7 +76,7 @@ module web.xtclang.org
      *     @Consumes(Json)
      *     HttpStatus updateItem(@PathParam String id, @Body Item item) {...}
      */
-    mixin Consumes(MediaType|MediaType[] mediaType)
+    mixin Consumes(MediaType|MediaType[] consumes)
             into WebApp | WebService | Endpoint;
 
     /**

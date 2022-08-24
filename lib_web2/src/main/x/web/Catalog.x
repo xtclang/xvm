@@ -71,11 +71,16 @@ const Catalog(WebServiceInfo[] services)
             {
             assert method.is(Endpoint);
 
+            this.id = id;
             construct MethodInfo(method, sid);
 
-            this.id        = id;
-            this.template  = new UriTemplate(method.path);
-
+            template = new UriTemplate(method.path);
+            produces = method.is(Produces)
+                        ? method.produces
+                        : [];
+            consumes = method.is(Consumes)
+                        ? method.consumes
+                        : [];
             TODO
             }
 
@@ -104,8 +109,26 @@ const Catalog(WebServiceInfo[] services)
         UriTemplate template;
 
         /**
-         * The media type(s).
+         * The media type(s) this endpoint consumes.
          */
-        MediaType|MediaType[] mediaType;
+        MediaType|MediaType[] consumes;
+
+        /**
+         * The media type(s) this endpoint produces.
+         */
+        MediaType|MediaType[] produces;
+
+        /**
+         * Indicates if the endpoint return value is a _conditional return_.
+         */
+        Boolean conditionalResult.get()
+            {
+            return method.conditionalResult;
+            }
+
+        MediaType resolveResponseContentType(MediaType[] accepts)
+            {
+            TODO
+            }
         }
     }
