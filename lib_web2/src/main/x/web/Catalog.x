@@ -84,10 +84,16 @@ const Catalog(WebServiceInfo[] services)
             TODO
             }
 
+        @Override
+        HttpMethod httpMethod.get()
+            {
+            return endpoint.httpMethod;
+            }
+
         /**
          * The endpoint Method.
          */
-        Method<WebService>+Endpoint endpoint.get()
+        Endpoint endpoint.get()
             {
             return method.as(Endpoint);
             }
@@ -96,12 +102,6 @@ const Catalog(WebServiceInfo[] services)
          * The endpoint id.
          */
         Int id;
-
-        @Override
-        HttpMethod httpMethod.get()
-            {
-            return endpoint.httpMethod;
-            }
 
         /**
          * The URI template.

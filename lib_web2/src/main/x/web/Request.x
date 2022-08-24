@@ -76,7 +76,12 @@ interface Request
     /**
      * The HTTP parameters contained with the URI query string.
      */
-    Map<String, String|List<String>> uriParams;
+    Map<String, String|List<String>> queryParams;
+
+    /**
+     * The result of matching a UriTemplate against this request.
+     */
+    UriTemplate.UriParameters matchResult;
 
     /**
      * The accepted media types.
