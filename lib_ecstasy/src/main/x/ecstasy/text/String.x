@@ -197,6 +197,51 @@ const String
         }
 
     /**
+     * Extract the value at the specified index of a delimited String, and returning an empty string
+     * for an index beyond the range of indexes in the delimited String. The behavior is the same as
+     * if the following code were executed:
+     *
+     *     try
+     *         {
+     *         return split(separator)[index];
+     *         }
+     *     catch (OutOfBounds exception)
+     *         {
+     *         return "";
+     *         }
+     *
+     * @param separator  the character that separates the items in the String
+     * @param index      specifies the _n_-th item in the delimited String
+     *
+     * @return the specified item from the delimited String, or the empty String `""` if the index
+     *         is out of bounds
+     */
+    String extract(Char separator, Int index)
+        {
+        if (size == 0 || index < 0)
+            {
+            return "";
+            }
+
+        Int start = 0;
+        Int count = 0;
+        while (Int next := indexOf(separator, start))
+            {
+            if (count == index)
+                {
+                return start == next ? "" : this[start..next);
+                }
+
+            start = next + 1;
+            ++count;
+            }
+
+        return count == index
+                ? substring(start)
+                : "";
+        }
+
+    /**
      * Split the String into an map of String keys and String values, by finding each occurrence of
      * the specified entry separator character within the String, and collecting the array of
      * Strings demarcated by that character.
