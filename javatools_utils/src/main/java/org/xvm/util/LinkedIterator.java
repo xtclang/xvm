@@ -20,7 +20,7 @@ public class LinkedIterator<E>
      *
      * @param aIter  the Iterators containing the elements to iterate over
      */
-    public LinkedIterator(final Iterator<E>... aIter)
+    public LinkedIterator(Iterator<E>... aIter)
         {
         f_aIter = aIter == null ? new Iterator[0] : aIter;
         }

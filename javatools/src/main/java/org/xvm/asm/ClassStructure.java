@@ -35,6 +35,7 @@ import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.template.reflect.xRef.RefHandle;
 
 import org.xvm.util.Handy;
+import org.xvm.util.LinkedIterator;
 import org.xvm.util.ListMap;
 
 import static org.xvm.util.Handy.readIndex;
@@ -3775,6 +3776,20 @@ public class ClassStructure
         // write out the type parameters
         assembleTypeParams(m_mapParams, out);
         writePackedLong(out, Constant.indexOf(m_constPath));
+        }
+
+    @Override
+    public Iterator<? extends XvmStructure> getContained()
+        {
+        Annotation[] aAnnoMixin = collectAnnotations(false);
+        Annotation[] aAnnoClass = collectAnnotations(true);
+
+        return aAnnoMixin.length == 0 && aAnnoClass.length == 0
+                ? super.getContained()
+                : new LinkedIterator(
+                    super.getContained(),
+                    Arrays.stream(aAnnoMixin).iterator(),
+                    Arrays.stream(aAnnoClass).iterator());
         }
 
     @Override

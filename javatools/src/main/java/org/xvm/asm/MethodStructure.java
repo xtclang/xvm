@@ -13,6 +13,7 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.IdentityHashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -45,6 +46,7 @@ import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.Utils;
 
+import org.xvm.util.LinkedIterator;
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
@@ -1958,6 +1960,16 @@ public class MethodStructure
             }
 
         (m_source == null ? new Source() : m_source).assemble(out);
+        }
+
+    @Override
+    public Iterator<? extends XvmStructure> getContained()
+        {
+        return getAnnotationCount() == 0
+                ? super.getContained()
+                : new LinkedIterator(
+                    super.getContained(),
+                    Arrays.stream(m_aAnnotations).iterator());
         }
 
     @Override

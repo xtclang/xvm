@@ -6,6 +6,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
@@ -21,6 +22,8 @@ import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.MethodStructure.ConcurrencySafety;
+
+import org.xvm.util.LinkedIterator;
 
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.writePackedLong;
@@ -793,6 +796,20 @@ public class PropertyStructure
         out.writeByte(m_accessVar == null ? -1 : m_accessVar.ordinal());
         writePackedLong(out, m_type.getPosition());
         writePackedLong(out, Constant.indexOf(m_constVal));
+        }
+
+    @Override
+    public Iterator<? extends XvmStructure> getContained()
+        {
+        Annotation[] aPropAnno = getPropertyAnnotations();
+        Annotation[] aRefAnno  = getRefAnnotations();
+
+        return aPropAnno.length == 0 && aRefAnno.length == 0
+                ? super.getContained()
+                : new LinkedIterator(
+                        super.getContained(),
+                        Arrays.stream(m_aPropAnno).iterator(),
+                        Arrays.stream(m_aRefAnno).iterator());
         }
 
     @Override
