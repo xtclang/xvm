@@ -684,24 +684,48 @@ public class MethodDeclarationStatement
             }
 
         // check for invalid method annotations
-        Annotation[] aAnnos = method.getAnnotations();
-        if (aAnnos.length > 0)
+        Annotation[] aAnno = method.getAnnotations();
+        if (aAnno.length > 0)
             {
-            for (Annotation anno : aAnnos)
+            for (int i = 0, c = aAnno.length; i < c; i++)
                 {
+                Annotation   anno      = aAnno[i];
                 TypeConstant typeMixin = anno.getAnnotationType();
                 if (typeMixin.getExplicitClassFormat() != Component.Format.MIXIN)
                     {
                     // no need to do anything; an error will be reported later
-                    log(errs, Severity.ERROR, Constants.VE_ANNOTATION_NOT_MIXIN, anno.getValueString());
+                    findAnnotationExpression(anno, annotations).
+                        log(errs, Severity.ERROR, Constants.VE_ANNOTATION_NOT_MIXIN,
+                            anno.getValueString());
                     return;
                     }
 
                 if (!typeMixin.getExplicitClassInto().isIntoMethodType())
                     {
-                    log(errs, Severity.ERROR, Compiler.ANNOTATION_NOT_APPLICABLE,
+                    findAnnotationExpression(anno, annotations).
+                        log(errs, Severity.ERROR, Compiler.ANNOTATION_NOT_APPLICABLE,
                             anno.getValueString());
                     return;
+                    }
+
+                for (int j = i+1; j < c; j++)
+                    {
+                    Annotation   anno2      = aAnno[j];
+                    TypeConstant typeMixin2 = anno2.getAnnotationType();
+                    if (typeMixin2.isA(typeMixin))
+                        {
+                        findAnnotationExpression(anno, annotations).
+                            log(errs, Severity.ERROR, Constants.VE_ANNOTATION_REDUNDANT,
+                                anno.getValueString());
+                        return;
+                        }
+                    if (typeMixin.isA(typeMixin2))
+                        {
+                        findAnnotationExpression(anno, annotations).
+                            log(errs, Severity.ERROR, Constants.VE_ANNOTATION_REDUNDANT,
+                                anno2.getValueString());
+                        return;
+                        }
                     }
 
                 if (method.isStatic())
@@ -719,7 +743,8 @@ public class MethodDeclarationStatement
                         {
                         continue;
                         }
-                    log(errs, Severity.ERROR, Compiler.ANNOTATION_NOT_APPLICABLE,
+                    findAnnotationExpression(anno, annotations).
+                        log(errs, Severity.ERROR, Compiler.ANNOTATION_NOT_APPLICABLE,
                             anno.getValueString());
                     return;
                     }

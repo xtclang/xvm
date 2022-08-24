@@ -3,6 +3,7 @@ package org.xvm.compiler.ast;
 
 import java.util.List;
 
+import org.xvm.asm.Annotation;
 import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
@@ -75,6 +76,32 @@ public abstract class ComponentStatement
 
 
     // ----- helpers -------------------------------------------------------------------------------
+
+    /**
+     * A helper method that find a matching annotation expression. This method is used for error
+     * reporting only.
+     *
+     * @param anno      the annotation
+     * @param listAnno  the annotation expression list
+     *
+     * @return an annotation expression matching the annotation
+     */
+    protected AnnotationExpression findAnnotationExpression(Annotation anno,
+                                                            List<AnnotationExpression> listAnno)
+        {
+        if (listAnno.size() > 1)
+            {
+            for (AnnotationExpression exprAnno : listAnno)
+                {
+                if (exprAnno.ensureAnnotation(pool()).equals(anno))
+                    {
+                    return exprAnno;
+                    }
+                }
+            }
+        return listAnno.get(0);
+        }
+
 
     public static boolean isStatic(List<Token> modifiers)
         {

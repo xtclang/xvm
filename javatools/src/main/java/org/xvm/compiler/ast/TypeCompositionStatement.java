@@ -14,6 +14,7 @@ import java.util.Map;
 
 import java.util.stream.Collectors;
 
+import org.xvm.asm.Annotation;
 import org.xvm.asm.Argument;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
@@ -2365,10 +2366,74 @@ public class TypeCompositionStatement
                 }
             }
 
-        if (component.isParameterized())
+        TypeConstant typeThis = component.getFormalType();
+        if (validateAnnotations(component.collectAnnotations(false), typeThis, errs) &&
+            validateAnnotations(component.collectAnnotations(true),  typeThis, errs))
             {
-            resolveAnnotationTypes(component, errs);
+            if (component.isParameterized())
+                {
+                resolveAnnotationTypes(component, errs);
+                }
             }
+        }
+
+    /**
+     * Validate the specified annotations.
+     *
+     * @param aAnno     the annotations
+     * @param typeThis  this class type
+     * @param errs      the error listener
+     *
+     * @return false iff there is a validation error
+     */
+    private boolean validateAnnotations(Annotation[] aAnno, TypeConstant typeThis, ErrorListener errs)
+        {
+        for (int i = 0, c = aAnno.length; i < c; i++)
+            {
+            Annotation   anno      = aAnno[i];
+            TypeConstant typeMixin = anno.getAnnotationType();
+            if (typeMixin.getExplicitClassFormat() != Component.Format.MIXIN)
+                {
+                // no need to do anything; an error will be reported later
+                findAnnotationExpression(anno, annotations).
+                    log(errs, Severity.ERROR, org.xvm.compiler.Constants.VE_ANNOTATION_NOT_MIXIN,
+                        anno.getValueString());
+                return false;
+                }
+
+            TypeConstant typeInto = typeMixin.getExplicitClassInto(true);
+
+            // the mixin has to be able to apply to the remainder of the type constant chain
+            // or to be "into Class"
+            if (!typeInto.isIntoClassType() && !typeThis.isA(typeInto))
+                {
+                findAnnotationExpression(anno, annotations).
+                    log(errs, Severity.ERROR, org.xvm.compiler.Constants.VE_ANNOTATION_INCOMPATIBLE,
+                        typeThis.getValueString(), typeMixin.getValueString(), typeInto.getValueString());
+                return false;
+                }
+
+            for (int j = i+1; j < c; j++)
+                {
+                Annotation   anno2      = aAnno[j];
+                TypeConstant typeMixin2 = anno2.getAnnotationType();
+                if (typeMixin2.isA(typeMixin))
+                    {
+                    findAnnotationExpression(anno, annotations).
+                        log(errs, Severity.ERROR, org.xvm.compiler.Constants.VE_ANNOTATION_REDUNDANT,
+                            anno.getValueString());
+                    return false;
+                    }
+                if (typeMixin.isA(typeMixin2))
+                    {
+                    findAnnotationExpression(anno2, annotations).
+                        log(errs, Severity.ERROR, org.xvm.compiler.Constants.VE_ANNOTATION_REDUNDANT,
+                            anno2.getValueString());
+                    return false;
+                    }
+                }
+            }
+        return true;
         }
 
     /**

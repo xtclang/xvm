@@ -395,7 +395,7 @@ public class AnnotatedTypeExpression
             if (typeUnderlying.isA(anno.getAnnotationType()))
                 {
                 type = typeUnderlying;
-                log(errs, Severity.WARNING, Constants.VE_ANNOTATION_REDUNDANT,
+                log(errs, Severity.ERROR, Constants.VE_ANNOTATION_REDUNDANT,
                         anno.getAnnotationClass().getValueString());
                 }
             else

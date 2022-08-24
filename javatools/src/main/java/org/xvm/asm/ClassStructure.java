@@ -218,26 +218,40 @@ public class ClassStructure
      */
     public Annotation[] collectAnnotations(boolean fIntoClass)
         {
-        List<Annotation> listAnnos = null;
-        for (Contribution contrib : getContributionsAsList())
+        Annotation[] annos = fIntoClass ? m_aAnnoClass : m_aAnnoMixin;
+        if (annos == null)
             {
-            if (contrib.getComposition() == Composition.Annotation)
-                {
-                Annotation anno = contrib.getAnnotation();
+            List<Annotation> listAnnos = null;
 
-                if (fIntoClass == anno.getAnnotationType().getExplicitClassInto().isIntoClassType())
+            for (Contribution contrib : getContributionsAsList())
+                {
+                if (contrib.getComposition() == Composition.Annotation)
                     {
-                    if (listAnnos == null)
+                    Annotation anno = contrib.getAnnotation();
+
+                    if (fIntoClass == anno.getAnnotationType().getExplicitClassInto().isIntoClassType())
                         {
-                        listAnnos = new ArrayList<>();
+                        if (listAnnos == null)
+                            {
+                            listAnnos = new ArrayList<>();
+                            }
+                        listAnnos.add(anno);
                         }
-                    listAnnos.add(anno);
                     }
                 }
+            annos = listAnnos == null
+                    ? Annotation.NO_ANNOTATIONS
+                    : listAnnos.toArray(Annotation.NO_ANNOTATIONS);
+            if (fIntoClass)
+                {
+                m_aAnnoClass = annos;
+                }
+            else
+                {
+                m_aAnnoMixin = annos;
+                }
             }
-        return listAnnos == null
-                ? Annotation.NO_ANNOTATIONS
-                : listAnnos.toArray(Annotation.NO_ANNOTATIONS);
+        return annos;
         }
 
     /**
@@ -1927,6 +1941,15 @@ public class ClassStructure
         return ix < list.size() ? list.get(ix) : null;
         }
 
+    @Override
+    public void addAnnotation(Annotation annotation)
+        {
+        super.addAnnotation(annotation);
+
+        // clear the cache
+        m_aAnnoMixin = null;
+        m_aAnnoClass = null;
+        }
 
     // ----- type comparison support ---------------------------------------------------------------
 
@@ -4173,4 +4196,14 @@ public class ClassStructure
      * Cached information about this class concurrency.
      */
     private transient ConcurrencySafety m_safety;
+
+    /**
+     * A cached array of the annotations that apply to the class itself.
+     */
+    private transient Annotation[] m_aAnnoClass;
+
+    /**
+     * A cached array of the annotations that represetn mixins.
+     */
+    private transient Annotation[] m_aAnnoMixin;
     }

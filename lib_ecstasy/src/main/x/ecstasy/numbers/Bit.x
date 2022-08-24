@@ -189,7 +189,7 @@ const Bit(IntLiteral literal)
         }
 
     @Op("~")
-    @Op Bit not()
+    Bit not()
         {
         return literal == 1 ? 0 : 1;
         }

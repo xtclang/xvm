@@ -139,7 +139,7 @@ class StringBuffer
 
     @Override
     @Op("[]")
-    @Op Char getElement(Int index)
+    Char getElement(Int index)
         {
         return chars[index];
         }
