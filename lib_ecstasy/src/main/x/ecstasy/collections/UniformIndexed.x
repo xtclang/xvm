@@ -12,6 +12,9 @@ interface UniformIndexed<Index, Element>
      * @param index  the index of the element
      *
      * @return the element value at the specified index
+     *
+     * @throws OutOfBounds if the specified `index` is outside of the range of indexes for which an
+     *                     element exists
      */
     @Op("[]") Element getElement(Index index);
 
@@ -20,6 +23,9 @@ interface UniformIndexed<Index, Element>
      *
      * @param index  the index of the element
      * @param value  the element value to store
+     *
+     * @throws OutOfBounds if the specified `index` is outside of the range of indexes for which an
+     *                     element exists
      */
     @Op("[]=") void setElement(Index index, Element value)
         {
@@ -32,6 +38,9 @@ interface UniformIndexed<Index, Element>
      * @param index  the index of the element
      *
      * @return the Var reference to the element at the specified index
+     *
+     * @throws OutOfBounds if the specified `index` is outside of the range of indexes for which an
+     *                     element exists
      */
     Var<Element> elementAt(Index index)
         {
