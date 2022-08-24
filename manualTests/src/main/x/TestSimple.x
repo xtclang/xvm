@@ -4,15 +4,30 @@ module TestSimple
 
     void run()
         {
-        for (String s : ["test", "Hello", "World!", "r1785909fhIFDSY6gp@9y8"])
-            {
-            console.println($"orig={s}, lower={s.toLowercase()}, upper={s.toUppercase()}");
-            }
+        Method m = Test.f1;
+        console.println(m.as(Produces).produces);
+        }
 
-        import ecstasy.collections.CaseInsensitive;
-        assert CaseInsensitive.stringStartsWith("This is a test", "this");
-        assert !CaseInsensitive.stringStartsWith("Blah is a test", "this");
-        assert CaseInsensitive.stringEndsWith("This is a test", "TEST");
-        assert !CaseInsensitive.stringEndsWith("Blah is a test", "BLAH");
+    mixin Endpoint(String path="")
+        into Method;
+
+
+    mixin Produces(String produces)
+        into Endpoint;
+
+    mixin Consumes(String consumes)
+        into Endpoint;
+
+    mixin Get(String path = "")
+            extends Endpoint(path);
+
+    service Test
+        {
+        @Consumes("c") // this used to fail to compile
+        @Produces("p") // this used to fail to compile
+        @Get("/")
+        void f1()
+            {
+            }
         }
     }

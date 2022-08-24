@@ -1493,13 +1493,13 @@ public class TerminalTypeConstant
     @Override
     public boolean isIntoMethodType()
         {
-        return this.equals(getConstantPool().typeMethod());
+        return this.isA(getConstantPool().typeMethod());
         }
 
     @Override
     public boolean isIntoMethodParameterType()
         {
-        return this.equals(getConstantPool().typeParameter());
+        return this.isA(getConstantPool().typeParameter());
         }
 
     @Override
