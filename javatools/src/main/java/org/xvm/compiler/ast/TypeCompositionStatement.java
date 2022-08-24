@@ -2403,8 +2403,7 @@ public class TypeCompositionStatement
 
             TypeConstant typeInto = typeMixin.getExplicitClassInto(true);
 
-            // the mixin has to be able to apply to the remainder of the type constant chain
-            // or to be "into Class"
+            // the mixin has to be able to apply to the containing class type or to be "into Class"
             if (!typeInto.isIntoClassType() && !typeThis.isA(typeInto))
                 {
                 findAnnotationExpression(anno, annotations).
