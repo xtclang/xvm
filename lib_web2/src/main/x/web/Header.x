@@ -46,20 +46,26 @@ interface Header
     /**
      * Obtain all of the header values for the specified case-insensitive header name.
      *
-     * @param name          the case-insensitive header name
-     * @param expandCommas  pass True to prevent a value from being split into multiple
-     *                                values if it contains one or more commas; some header names
-     *                                will always suppress comma expansion, such as cookies and any
-     *                                header entry that can contain a date string
+     * @param name         the case-insensitive header name
+     * @param expandDelim  pass a character delimiter, such as `','`, to indicate that a single
+     *                     header entry may be expanded to multiple values, if that delimiter occurs
+     *                     within the associated value
      *
      * @return True iff the specified name is found at least once
      * @return (conditional) all of the corresponding values from the HTTP header
      */
-    Iterator<String> valuesOf(String name, Boolean? expandCommas=Null)
+    Iterator<String> valuesOf(String name, Char? expandDelim=Null)
         {
-        // TODO CP case insens name
-        // TODO CP expandCommas
-        return entries.iterator().filter(e -> e[0] == name).map(e -> e[1]);
+        import ecstasy.collections.CaseInsensitive; // TODO GG comment this line out and re-compile :-o
+        Iterator<String> iter = entries.iterator().filter(e -> CaseInsensitive.areEqual(e[0], name))
+                                                  .map(e -> e[1]);
+
+        if (expandDelim != Null)
+            {
+            iter = iter.flatMap(s -> s.split(expandDelim).iterator());
+            }
+
+        return iter.map(s -> s.trim());
         }
 
     /**
@@ -67,14 +73,17 @@ interface Header
      * name. If the header name occurs multiple times within the HTTP header, then only the first
      * instance is returned.
      *
-     * @param name  the case-insensitive header name
+     * @param name         the case-insensitive header name
+     * @param expandDelim  pass a character delimiter, such as `','`, to indicate that a single
+     *                     header entry may be expanded to multiple values, if that delimiter occurs
+     *                     within the associated value
      *
      * @return True iff the specified name is found
      * @return (conditional) the corresponding value from the HTTP header
      */
-    conditional String firstOf(String name)
+    conditional String firstOf(String name, Char? expandDelim=Null)
         {
-        return valuesOf(name).next();
+        return valuesOf(name, expandDelim).next();
         }
 
     /**
@@ -82,23 +91,17 @@ interface Header
      * name. If the header name occurs multiple times within the HTTP header, then only the last
      * instance is returned.
      *
-     * @param name  the case-insensitive header name
+     * @param name         the case-insensitive header name
+     * @param expandDelim  pass a character delimiter, such as `','`, to indicate that a single
+     *                     header entry may be expanded to multiple values, if that delimiter occurs
+     *                     within the associated value
      *
      * @return True iff the specified name is found
      * @return (conditional) the corresponding value from the HTTP header
      */
-    conditional String lastOf(String name)
+    conditional String lastOf(String name, Char? expandDelim=Null)
         {
-        Iterator<String> values = valuesOf(name);
-        if (String value := values.next())
-            {
-            while (value := values.next())
-                {
-                }
-            return True, value;
-            }
-
-        return False;
+        return valuesOf(name, expandDelim).reversed().next();
         }
 
     /**

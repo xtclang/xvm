@@ -1,16 +1,48 @@
+import ecstasy.collections.CaseInsensitive;
+
 import net.SocketAddress;
 import net.URI;
 
 import web.routing.UriTemplate;
 
+
 /**
  * A representation of an HTTP request.
+ *
+ * The four fundamental parts of an HTTP request are:
+ *
+ * * Method
+ * * Scheme
+ * * Authority
+ * * Path
  *
  * TODO doc how to get a request passed to an end point
  */
 interface Request
         extends HttpMessage
     {
+    /**
+     * The HTTP method ("GET", "POST", etc.)
+     */
+    HttpMethod method;
+
+    /**
+     * Corresponds to the ":scheme" pseudo-header field in HTTP/2.
+     */
+    Scheme scheme;
+
+    /**
+     * Corresponds to the ":authority" pseudo-header field in HTTP/2. This includes the authority
+     * portion of the target URI.
+     */
+    String authority;
+
+    /**
+     * Corresponds to the ":path" pseudo-header field in HTTP/2. This includes the path and query
+     * parts of the target URI.
+     */
+    String path;
+
     /**
      * The request line. For HTTP v1, the request line is directly in the message; for HTTP v2 and
      * HTTP v3, this information is spread across a number of synthetic header entries, so the
@@ -19,12 +51,9 @@ interface Request
     @RO String requestLine;
 
     /**
-     * The protocol over which the request was received, if it is known.
-     *
-     * For an out-going request, the protocol is the requested protocol to use to send the request;
-     * a client implementation may choose to use a different protocol if necessary.
+     * The URI of the request.
      */
-    @RO Protocol? protocol;
+    URI uri;
 
     /**
      * The IP address and port number used by the client to issue the request, if it is known.
@@ -37,43 +66,40 @@ interface Request
     @RO SocketAddress? server;
 
     /**
-     * TODO
+     * The protocol over which the request was received, if the protocol is known.
+     *
+     * For an out-going request, the protocol is the requested protocol to use to send the request;
+     * a client implementation may choose to use a different protocol if necessary.
      */
-    @RO String authority;
+    Protocol? protocol;
 
     /**
-     * TODO
+     * The HTTP parameters contained with the URI query string.
      */
-    @RO String path;
-
-    /**
-     * The URI of the request.
-     */
-    URI uri;
-
-    /**
-     * The HTTP method ("GET", "POST", etc.)
-     */
-    HttpMethod method;
+    Map<String, String|List<String>> uriParams;
 
     /**
      * The accepted media types.
      */
-    MediaType[] accepts;
+    AcceptList accepts;
 
     /**
-     * The HTTP parameters contained with the URI query string.
-     * REVIEW what about parameters located in the body?
+     * @return an `Iterator` of all cookie names in the request
      */
-    Map<String, List<String>> parameters;
+    Iterator<String> cookieNames()
+        {
+        return header.valuesOf("cookie", ';')
+                     .map(kv -> kv.extract('=', 0, "???").trim());
+        }
 
     /**
-     * The result of matching a UriTemplate against this request.
+     * @return an iterator of all cookie names and values in the request
      */
-    UriTemplate.UriParameters matchResult;
-
-
-    // ----- cookie support ------------------------------------------------------------------------
+    Iterator<Tuple<String, String>> cookies()
+        {
+        return header.valuesOf("cookie", ';')
+                     .map(kv -> (kv.extract('=', 0, "???").trim(), kv.extract('=', 1).trim()));
+        }
 
     /**
      * Obtain the value of the specified cookie, if it is included in the request.
@@ -83,9 +109,12 @@ interface Request
      */
     conditional String getCookie(String name)
         {
-        for (String value : header.valuesOf("Cookie"))
+        for (String value : header.valuesOf("Cookie", ';'))
             {
-            // TODO parse ';' delimited list of key=value pairs
+            if (name == value.extract('=', 0, "???"))
+                {
+                return True, value.extract('=', 1);
+                }
             }
         return False;
         }

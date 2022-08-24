@@ -209,6 +209,8 @@ import net.IPAddress;
  * proposed model is to provide the means, within the application, for the end user to access a
  * "please help me" endpoint, which may require re-authentication and should require explicit
  * approval for the user's session to be accessed by a customer service representative.
+ *
+ * TODO specify how sessions are persisted to storage; define events (e.g. "loaded") for the same
  */
 interface Session
         extends service
@@ -222,6 +224,8 @@ interface Session
      * instead of using this generic dictionary structure, having this built in to the `Session`
      * interface simplifies the task of building reusable components and frameworks. Specifically,
      * they can rely on this built-in storage for their session-related information.
+     *
+     * The contents of this property may be modified by the application.
      */
     @RO Map<String, Shareable> attributes;
 
@@ -288,10 +292,12 @@ interface Session
      *
      * This property may be modified by the application.
      */
-    @RO Boolean exclusiveAgent;
+    Boolean exclusiveAgent;
 
     /**
      * Information about the explicit cookie consent for this session.
+     *
+     * This property may be modified by the application.
      */
     CookieConsent cookieConsent;
 

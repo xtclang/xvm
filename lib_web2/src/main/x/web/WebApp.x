@@ -95,6 +95,6 @@ mixin WebApp
     Response handleUnhandledError(Session? session, Request request, Exception|String error, Response? response)
         {
         // the exception needs to be logged
-        return new responses.SimpleResponse(error.is(RequestAborted) ? error.status : InternalServerError);
+        return TODO new responses.SimpleResponse(error.is(RequestAborted) ? error.status : InternalServerError);
         }
     }
