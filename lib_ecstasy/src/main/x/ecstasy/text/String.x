@@ -210,17 +210,18 @@ const String
      *         return "";
      *         }
      *
-     * @param separator  the character that separates the items in the String
-     * @param index      specifies the _n_-th item in the delimited String
+     * @param separator     the character that separates the items in the String
+     * @param index         specifies the _n_-th item in the delimited String
+     * @param defaultValue  (optional) the value to return if the index is out of bounds
      *
-     * @return the specified item from the delimited String, or the empty String `""` if the index
+     * @return the specified item from the delimited String, or the `defaultValue` if the index
      *         is out of bounds
      */
-    String extract(Char separator, Int index)
+    String extract(Char separator, Int index, String defaultValue="")
         {
         if (size == 0 || index < 0)
             {
-            return "";
+            return size == index ? "" : defaultValue;
             }
 
         Int start = 0;
@@ -238,7 +239,7 @@ const String
 
         return count == index
                 ? substring(start)
-                : "";
+                : defaultValue;
         }
 
     /**
