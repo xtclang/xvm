@@ -136,9 +136,9 @@ class ChainBundle(Catalog catalog)
             if (wsidNext != wsid)
                 {
                 // call to a different service; need to generate a WebService.route() "preamble"
+                handle     = (session, request) -> webService.route(session, request, handle);
                 webService = ensureWebService(wsidNext);
                 wsidNext   = wsid;
-                handle     = (session, request) -> webService.route(session, request, handle);
                 }
             Interceptor        interceptor  = methodNext.bindTarget(webService);
             Parameter<Handler> handlerParam = interceptor.params[2].as(Parameter<Handler>);
@@ -146,26 +146,18 @@ class ChainBundle(Catalog catalog)
             handle = interceptor.bind(handlerParam, handle).as(Handler);
             }
 
-        Observer[] observers = [];
-        for (MethodInfo methodInfo : observerInfos)
+        Int observerCount = observerInfos.size;
+        if (observerCount > 0)
             {
-            ObserverMethod methodNext = methodInfo.method.as(ObserverMethod);
-            Int            wsidNext   = methodInfo.wsid;
-            if (wsidNext != wsid)
-                {
-                // call to a different service; need to generate a WebService.route() "preamble"
-                webService = ensureWebService(wsidNext);
-                wsidNext   = wsid;
-                handle     = (session, request) -> webService.route(session, request, handle);
-                }
+            Observer[] observers = new Observer[observerCount] (i ->
+                    {
+                    MethodInfo info = observerInfos[i];
+                    return info.method.as(ObserverMethod).bindTarget(ensureWebService(info.wsid));
+                    });
 
-            observers = observers.add(methodNext.bindTarget(webService));
-            }
-
-        if (observers.size > 0)
-            {
             handle = (session, request) ->
                 {
+                // observers are not handlers and call asynchronously
                 for (Observer observe : observers)
                     {
                     observe^(session, request);
@@ -173,6 +165,7 @@ class ChainBundle(Catalog catalog)
                 return handle(session, request);
                 };
             }
+
         // the chain always starts with a WebService.route() "preamble"
         return (session, request) -> webService.route(session, request, handle);
         }
