@@ -35,7 +35,7 @@ const ConstOrdinalList
      */
     construct(Int[] values, Int fastAccess = 0)
         {
-        assert:arg fastAccess >= 0 && fastAccess <= values.size;
+        assert:arg 0 <= fastAccess <= values.size;
 
         @PackedDataOutput ByteArrayOutputStream out = new @PackedDataOutput ByteArrayOutputStream();
 
@@ -49,7 +49,7 @@ const ConstOrdinalList
 
             // calculate bits per value
             Int bitsPerVal = highest.leftmostBit.trailingZeroCount + 1 & 0x3F;
-            assert bitsPerVal > 0 && bitsPerVal <= 63;
+            assert 0 < bitsPerVal <= 63;
             out.writeInt64(bitsPerVal);
 
             // calculate a minimum run length based on expected node sizes (assume 6 byte overhead)
@@ -119,7 +119,7 @@ const ConstOrdinalList
     @Override
     @Op("[]") Int getElement(Int index)
         {
-        assert:bounds index >= 0 && index < size;
+        assert:bounds 0 <= index < size;
 
         Int indexCurrent = firstIndex;
         if (index < indexCurrent)
@@ -488,7 +488,7 @@ const ConstOrdinalList
             // the last `runLen` values form a run, so we will create an RLE node for it, but
             // first we need to create an array node in front of it if there were any values
             // that appeared before the run that we did not previously capture in a node
-            if (firstNumIndex >= 0 && firstNumIndex < runIndex)
+            if (0 <= firstNumIndex < runIndex)
                 {
                 // only take numbers up to the beginning of the run (and don't keep any trailing
                 // default values)
