@@ -78,6 +78,11 @@ const AcceptList
      */
     conditional AcceptList of(String text)
         {
+        if (text == "")
+            {
+            return True, Nothing;
+            }
+
         if (Marker|AcceptList result := cache.get(text))
             {
             return result.is(AcceptList)
@@ -120,6 +125,11 @@ const AcceptList
 
 
     // ----- properties ----------------------------------------------------------------------------
+
+    /**
+     * An empty AcceptList.
+     */
+    static AcceptList Nothing = new AcceptList([]);
 
     /**
      * The textual form of the AcceptList, as it would appear in an "Accept:" header.
