@@ -3804,15 +3804,26 @@ public class ClassStructure
     @Override
     public Iterator<? extends XvmStructure> getContained()
         {
-        Annotation[] aAnnoMixin = collectAnnotations(false);
-        Annotation[] aAnnoClass = collectAnnotations(true);
+        // we cannot use the "collectAnnotations" API at this time, since our module may not yet
+        // be linked
+        List<Annotation> listAnno = null;
+        for (Contribution contrib : getContributionsAsList())
+            {
+            if (contrib.getComposition() == Composition.Annotation)
+                {
+                if (listAnno == null)
+                    {
+                    listAnno = new ArrayList<>();
+                    }
+                listAnno.add(contrib.getAnnotation());
+                }
+            }
 
-        return aAnnoMixin.length == 0 && aAnnoClass.length == 0
+        return listAnno == null
                 ? super.getContained()
                 : new LinkedIterator(
-                    super.getContained(),
-                    Arrays.stream(aAnnoMixin).iterator(),
-                    Arrays.stream(aAnnoClass).iterator());
+                        super.getContained(),
+                        listAnno.iterator());
         }
 
     @Override

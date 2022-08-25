@@ -801,15 +801,26 @@ public class PropertyStructure
     @Override
     public Iterator<? extends XvmStructure> getContained()
         {
-        Annotation[] aPropAnno = getPropertyAnnotations();
-        Annotation[] aRefAnno  = getRefAnnotations();
+        // we cannot use the "getPropertyAnnotation" API at this time, since our module may not yet
+        // be linked
+        List<Annotation> listAnno = null;
+        for (Contribution contrib : getContributionsAsList())
+            {
+            if (contrib.getComposition() == Composition.Annotation)
+                {
+                if (listAnno == null)
+                    {
+                    listAnno = new ArrayList<>();
+                    }
+                listAnno.add(contrib.getAnnotation());
+                }
+            }
 
-        return aPropAnno.length == 0 && aRefAnno.length == 0
+        return listAnno == null
                 ? super.getContained()
                 : new LinkedIterator(
                         super.getContained(),
-                        Arrays.stream(m_aPropAnno).iterator(),
-                        Arrays.stream(m_aRefAnno).iterator());
+                        listAnno.iterator());
         }
 
     @Override
