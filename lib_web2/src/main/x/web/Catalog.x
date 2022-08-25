@@ -6,7 +6,7 @@ import routing.UriTemplate;
 const Catalog(WebServiceInfo[] services)
     {
     /**
-     * The list of web service info.
+     * The list of WebService info.
      */
     WebServiceInfo[] services;
 
@@ -46,11 +46,10 @@ const Catalog(WebServiceInfo[] services)
             }
         }
 
-
     /**
-     * The method info for a given service id.
+     * The method info for a given WebService id.
      */
-    static const MethodInfo(Method<WebService> method, Int sid)
+    static const MethodInfo(Method<WebService> method, Int wsid)
         {
         /**
          * The HTTP Method.
@@ -64,15 +63,18 @@ const Catalog(WebServiceInfo[] services)
 
         }
 
+    /**
+     * The endpoint info for a given WebService id.
+     */
     static const EndpointInfo
             extends MethodInfo
         {
-        construct(Method<WebService> method, Int id, Int sid)
+        construct(Method<WebService> method, Int id, Int wsid)
             {
             assert method.is(Endpoint);
 
             this.id = id;
-            construct MethodInfo(method, sid);
+            construct MethodInfo(method, wsid);
 
             template = new UriTemplate(method.path);
             produces = method.is(Produces)
@@ -126,7 +128,7 @@ const Catalog(WebServiceInfo[] services)
             return method.conditionalResult;
             }
 
-        MediaType resolveResponseContentType(MediaType[] accepts)
+        MediaType resolveResponseContentType(AcceptList accepts)
             {
             TODO
             }
