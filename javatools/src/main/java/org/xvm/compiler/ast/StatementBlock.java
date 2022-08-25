@@ -438,7 +438,7 @@ public class StatementBlock
 
             if (hasScope())
                 {
-                ctx = ctx.exit();
+                ctx.exit();
                 }
             }
 
@@ -914,7 +914,6 @@ public class StatementBlock
             // each level for the node to resolve the name
             ConstantPool     pool      = pool();
             AstNode          node      = f_stmt;
-            boolean          fSameFile = true;
             boolean          fHasThis  = isMethod() || isConstructor();
             TypeConstant     typeThis  = fHasThis ? ctxFrom.getThisType() : null;
             int              cSteps    = 0;
@@ -1147,7 +1146,7 @@ public class StatementBlock
                         }
                     }
 
-                if (fSameFile && node instanceof StatementBlock block)
+                if (node instanceof StatementBlock block)
                     {
                     // the name may specify an import
                     ImportStatement stmtImport = block.getImport(sName, errs);
@@ -1164,13 +1163,6 @@ public class StatementBlock
                                 ? ((IdentityConstant) constant).getComponent().
                                         getChild(sName).getIdentityConstant()
                                 : constant;
-                        }
-
-                    // see if we're crossing a source file boundary (because imports are only used
-                    // when they are local to the file in which they occur)
-                    if (block.isFileBoundary())
-                        {
-                        fSameFile = false;
                         }
                     }
 
