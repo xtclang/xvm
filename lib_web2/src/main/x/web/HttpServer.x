@@ -1,3 +1,6 @@
+/**
+ * TODO GG: move this to lib Xenia?
+ */
 interface HttpServer
         extends Closeable
     {
