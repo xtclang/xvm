@@ -1,12 +1,11 @@
 import net.URI;
 
-import web.Catalog;
-import web.Header;
+import web.Catalog.EndpointInfo;
+import web.Catalog.WebServiceInfo;
 import web.HttpStatus;
-import web.Request;
-import web.Response;
 
-import web.routing.UriTemplate;
+import web.routing.UriTemplate.UriParameters;
+
 
 /**
  * Dispatcher is responsible for finding an endpoint and creating a call chain for a request.
@@ -15,14 +14,24 @@ service Dispatcher
     {
     construct(Catalog catalog)
         {
-        this.catalog = catalog;
-
+        this.catalog     = catalog;
+        this.bundleBySid = new ChainBundle?[catalog.serviceCount];
         }
 
     /**
      * The catalog.
      */
-    protected Catalog catalog;
+    private Catalog catalog;
+
+    /**
+     * The pool of call chain bundles.
+     */
+    private ChainBundle[] bundles = new ChainBundle[];
+
+    /**
+     * The cache of bundles for WebServices indexed by the service id.
+     */
+    private ChainBundle?[] bundleBySid;
 
     /**
      * Pending request counter.
@@ -35,9 +44,6 @@ service Dispatcher
     void dispatch(HttpServer httpServer, Object context, String uriString, String methodName,
                 String[] headerNames, String[][] headerValues, Byte[] body)
         {
-        import Catalog.WebServiceInfo;
-        import Catalog.EndpointInfo;
-
         WebServiceInfo? serviceInfo = Null;
         for (WebServiceInfo info : catalog.services)
             {
@@ -56,15 +62,16 @@ service Dispatcher
             for (EndpointInfo endpoint : serviceInfo.endpoints)
                 {
                 if (endpoint.httpMethod.name == methodName,
-                        Map<String, UriTemplate.Value> values := endpoint.template.matches(uri))
+                        UriParameters uriParams := endpoint.template.matches(uri))
                     {
                     pendingRequests--;
 
-                    Request request = TODO createRequest(uriString, methodName, headerNames, headerValues, body);
+                    Session session = TODO
+                    Request request = TODO createRequest(uriString, methodName, headerNames, headerValues, uriParams, body);
 
-                    ChainBundle chain = TODO ensureCallChain(endpoint);
+                    Handler handle = ensureCallChain(endpoint);
 
-                    @Future Response response = TODO chain?.webService.route^(session, request, chain?.handler) : assert;
+                    @Future Response response = handle^(session, request);
 
                     &response.whenComplete((r, e) ->
                         {
@@ -89,14 +96,30 @@ service Dispatcher
         httpServer.send(context, HttpStatus.NotFound.code, [], [], []);
         }
 
+    /**
+     * TODO
+     */
+    private Handler ensureCallChain(EndpointInfo endpoint)
+        {
+        ChainBundle? bundle = bundleBySid[endpoint.wsid];
+        if (bundle != Null && !bundle.isBusy)
+            {
+            bundle.isBusy = True;
+            return bundle.ensureCallChain(endpoint);
+            }
+
+        TODO look up
+
+        if (bundle == Null)
+            {
+            ChainBundle newBundle = new ChainBundle(catalog);
+            bundle = newBundle;
+            }
+
+        return bundle.ensureCallChain(endpoint);
+        }
+
 
     // ----- helper classes ------------------------------------------------------------------------
 
-    /**
-     * The chain bundle represents a set of lazily created call chain collections.
-     */
-    static class ChainBundle
-        {
-
-        }
     }

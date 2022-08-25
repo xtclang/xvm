@@ -3,17 +3,17 @@ import net.URI;
 import web.Catalog;
 import web.Catalog.EndpointInfo;
 import web.Catalog.WebServiceInfo;
-import web.HttpServer.Handler;
 import web.HttpStatus;
 
 import web.routing.UriTemplate;
+
 
 /**
  * An HTTP request entry point.
  */
 @Concurrent
 service HttpHandler
-        implements Handler
+        implements HttpServer.Handler
     {
     construct(HttpServer httpServer, Catalog catalog)
         {
@@ -122,7 +122,7 @@ service HttpHandler
      *
      * @return a dispatcher index
      */
-    Int ensureDispatcher()
+    private Int ensureDispatcher()
         {
         private Int lastIndex = -1;
 
