@@ -1,5 +1,5 @@
 /**
- * TODO GG: move this to lib Xenia?
+ * An injectable server.
  */
 interface HttpServer
         extends Closeable
