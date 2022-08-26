@@ -246,9 +246,9 @@ const Http1Request(RequestInfo info, UriParameters matchResult)
         }
 
     @Override
-    @Lazy List<Entry> entries.calc()
+    @Lazy List<Header.Entry> entries.calc()
         {
-        return new List<Entry>()
+        return new List<Header.Entry>()
             {
             @Override
             Int size.get()
@@ -257,7 +257,7 @@ const Http1Request(RequestInfo info, UriParameters matchResult)
                 }
 
             @Override
-            @Op("[]") Entry getElement(Int index)
+            @Op("[]") Header.Entry getElement(Int index)
                 {
                 assert:bounds 0 <= index < size;
                 return info.getHeader(index);
@@ -268,9 +268,8 @@ const Http1Request(RequestInfo info, UriParameters matchResult)
     @Override
     Iterator<String> valuesOf(String name, Char? expandDelim=Null)
         {
-        import ecstasy.collections.CaseInsensitive; // TODO GG comment this line out and re-compile :-o
-        Iterator<String> iter = entries.iterator().filter(e -> CaseInsensitive.areEqual(e[0], name))
-                                                  .map(e -> e[1]);
+        Iterator<String> iter = entries.iterator().filter(kv -> CaseInsensitive.areEqual(kv[0], name))
+                                                  .map(kv -> kv[1]);
 
         if (expandDelim != Null)
             {
