@@ -3,7 +3,7 @@
  */
 @Concurrent
 service RTServer2
-        implements HttpServer
+        implements HttpServer2
     {
     typedef immutable Object as RequestContext;
 
@@ -16,47 +16,47 @@ service RTServer2
         {TODO("Native");}
 
     @Override
-    UInt16 getClientPort(RequestContext context);
+    UInt16 getClientPort(RequestContext context)
         {TODO("Native");}
 
     @Override
-    Byte[] getServerAddressBytes(RequestContext context);
+    Byte[] getServerAddressBytes(RequestContext context)
         {TODO("Native");}
 
     @Override
-    UInt16 getServerPort(RequestContext context);
+    UInt16 getServerPort(RequestContext context)
         {TODO("Native");}
 
     @Override
-    String getMethodString(RequestContext context);
+    String getMethodString(RequestContext context)
         {TODO("Native");}
 
     @Override
-    String getUriString(RequestContext context);
+    String getUriString(RequestContext context)
         {TODO("Native");}
 
     @Override
-    String getProtocolString(RequestContext context);
+    String getProtocolString(RequestContext context)
         {TODO("Native");}
 
     @Override
-    Int getHeaderCount(RequestContext context);
+    Int getHeaderCount(RequestContext context)
         {TODO("Native");}
 
     @Override
-    (String name, String value) getHeader(RequestContext context, Int index);
+    (String name, String value) getHeader(RequestContext context, Int index)
         {TODO("Native");}
 
     @Override
-    conditional String[] getHeaderValuesForName(RequestContext context, String name);
+    conditional String[] getHeaderValuesForName(RequestContext context, String name)
         {TODO("Native");}
 
     @Override
-    conditional Byte[] getBodyBytes(RequestContext context);
+    conditional Byte[] getBodyBytes(RequestContext context)
         {TODO("Native");}
 
     @Override
-    conditional RequestContext[] containsNestedBodies(RequestContext context);
+    conditional RequestContext[] containsNestedBodies(RequestContext context)
         {TODO("Native");}
 
     @Override
@@ -70,13 +70,13 @@ service RTServer2
     @Override
     String toString()
         {
-        return "HtpServer";
+        return "HttpServer";
         }
 
     /**
      * Injectable server.
      */
-    static interface HttpServer
+    static interface HttpServer2
             extends Closeable
         {
         /**
@@ -208,7 +208,7 @@ service RTServer2
         /**
          * Send a response.
          */
-        void send(Object context, Int status, String[] headerNames, String[] headerValues, Byte[] body);
+        void send(RequestContext context, Int status, String[] headerNames, String[] headerValues, Byte[] body);
         }
 
     /**

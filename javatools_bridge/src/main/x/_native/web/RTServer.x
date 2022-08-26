@@ -26,7 +26,7 @@ service RTServer
     @Override
     String toString()
         {
-        return "HtpServer";
+        return "HttpServer";
         }
 
     /**
