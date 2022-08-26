@@ -23,7 +23,34 @@ import web.routing.UriTemplate.UriParameters;
 const Http1Request(RequestInfo info, UriParameters matchResult)
         implements Request
         implements Header
+        implements Body
     {
+    assert()
+        {
+        // TODO handle non-simple bodies e.g. multi-part, streaming
+        assert !info.containsNestedBodies();
+        if (Byte[] bytes := info.getBodyBytes())
+            {
+            this.hasBody = True;
+            this.bytes   = bytes;
+
+            assert String[] contentTypes := info.getHeaderValuesForName("ContentType");
+            assert mediaType := MediaType.of(contentTypes[0]);
+            }
+        else
+            {
+            this.hasBody   = False;
+            this.bytes     = [];
+            this.mediaType = Text;  // whatever
+            }
+        }
+
+    /**
+     * Internal.
+     */
+    protected Boolean hasBody;
+
+
     // ----- RequestInfo interface -----------------------------------------------------------------
 
     static interface RequestInfo
@@ -134,10 +161,19 @@ const Http1Request(RequestInfo info, UriParameters matchResult)
         }
 
     @Override
-    @Lazy Body? body.calc()
+    Body? body
         {
-        // TODO
-        return TODO;
+        @Override
+        Body? get()
+            {
+            return hasBody ? this : Null;
+            }
+
+        @Override
+        void set(Body? body)
+            {
+            throw new ReadOnly();
+            }
         }
 
     @Override
@@ -160,11 +196,13 @@ const Http1Request(RequestInfo info, UriParameters matchResult)
     @Override
     HttpMethod method
         {
+        @Override
         HttpMethod get()
             {
             return info.getMethod();
             }
 
+        @Override
         void set(HttpMethod method)
             {
             throw new ReadOnly();
@@ -174,11 +212,13 @@ const Http1Request(RequestInfo info, UriParameters matchResult)
     @Override
     Scheme scheme
         {
+        @Override
         Scheme get()
             {
             return Scheme.byName.getOrNull(uri.scheme?)? : assert;
             }
 
+        @Override
         void set(Scheme scheme)
             {
             throw new ReadOnly();
@@ -188,11 +228,13 @@ const Http1Request(RequestInfo info, UriParameters matchResult)
     @Override
     String authority
         {
+        @Override
         String get()
             {
             return uri.authority ?: assert;
             }
 
+        @Override
         void set(String authority)
             {
             throw new ReadOnly();
@@ -202,11 +244,13 @@ const Http1Request(RequestInfo info, UriParameters matchResult)
     @Override
     String path
         {
+        @Override
         String get()
             {
             return uri.path?.toString() : assert;
             }
 
+        @Override
         void set(String path)
             {
             throw new ReadOnly();
@@ -371,6 +415,21 @@ const Http1Request(RequestInfo info, UriParameters matchResult)
 
     @Override
     void removeAll(String name)
+        {
+        throw new ReadOnly();
+        }
+
+
+    // ----- Body interface ------------------------------------------------------------------------
+
+    @Override
+    MediaType mediaType;
+
+    @Override
+    Byte[] bytes;
+
+    @Override
+    Body from(Object content)
         {
         throw new ReadOnly();
         }
