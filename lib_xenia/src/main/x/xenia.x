@@ -60,7 +60,8 @@ module xenia.xtclang.org
     typedef function Response(Session, Request, Exception|String, Response?) as ErrorHandler;
 
     /**
-     * TODO (session, request, values)
+     * TODO a function that adds a parameter value to the passed-in tuple of values
+     *      (session, request, values)
      */
     typedef function Tuple(Session, Request, Tuple) as ParameterBinder;
 
@@ -68,6 +69,11 @@ module xenia.xtclang.org
      * TODO (results)
      */
     typedef function Response(Request, Tuple) as Responder;
+
+    /**
+     * An opaque native immutable object that represents an http request.
+     */
+    typedef immutable Object as RequestContext;
 
     /**
      * TODO

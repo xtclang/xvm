@@ -67,7 +67,7 @@ service HttpHandler
     // ----- Handler API ---------------------------------------------------------------------------
 
     @Override
-    void handle(immutable Object context, String uriString, String methodName,
+    void handle(RequestContext context, String uriString, String methodName,
                 String[] headerNames, String[][] headerValues, Byte[] body)
         {
         if (closing)

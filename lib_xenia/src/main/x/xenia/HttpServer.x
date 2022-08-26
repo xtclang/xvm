@@ -8,8 +8,6 @@ import web.HttpMethod;
  * An injectable server.
  */
 interface HttpServer
-// TODO GG: Error: /Users/cameron/Development/xvm/xdk/../lib_xenia/src/main/x/xenia/HttpServer.x (HttpServer.x:152) [152:5..289:10] COMPILER-16: Inner const class must be declared static if its outer class is not a const or a service. ("const RequestInfo(immutable Object context)\n        {\n        /**\n         * ...")
-//        extends service
         extends Closeable
     {
     /**
@@ -17,7 +15,7 @@ interface HttpServer
      */
     static interface Handler
         {
-        void handle(immutable Object context, String uri, String method,
+        void handle(RequestContext context, String uri, String method,
                     String[] headerNames, String[][] headerValues, Byte[] body);
         }
 
@@ -29,7 +27,7 @@ interface HttpServer
     /**
      * Send a response.
      */
-    void send(immutable Object context, Int status, String[] headerNames, String[][] headerValues, Byte[] body);
+    void send(RequestContext context, Int status, String[] headerNames, String[][] headerValues, Byte[] body);
 
 
     // ----- context attributes --------------------------------------------------------------------
@@ -41,7 +39,7 @@ interface HttpServer
      *
      * @return the bytes of the client IP address, in either v4 or v6 form
      */
-    Byte[] getClientAddressBytes(immutable Object context);
+    Byte[] getClientAddressBytes(RequestContext context);
 
     /**
      * Obtain the port number on the client that the request was sent from
@@ -50,7 +48,7 @@ interface HttpServer
      *
      * @return the client port number
      */
-    UInt16 getClientPort(immutable Object context);
+    UInt16 getClientPort(RequestContext context);
 
     /**
      * Obtain the IP address that the request was received on.
@@ -59,7 +57,7 @@ interface HttpServer
      *
      * @return the bytes of the server IP address, in either v4 or v6 form
      */
-    Byte[] getServerAddressBytes(immutable Object context);
+    Byte[] getServerAddressBytes(RequestContext context);
 
     /**
      * Obtain the port number on the server that the request was received on
@@ -68,7 +66,7 @@ interface HttpServer
      *
      * @return the server port number
      */
-    UInt16 getServerPort(immutable Object context);
+    UInt16 getServerPort(RequestContext context);
 
     /**
      * Obtain the HTTP method name (such as "GET" or "PUT") that is indicated by the request.
@@ -77,7 +75,7 @@ interface HttpServer
      *
      * @return the HTTP method name
      */
-    String getMethodString(immutable Object context);
+    String getMethodString(RequestContext context);
 
     /**
      * Obtain the HTTP URI that is indicated by the request.
@@ -87,7 +85,7 @@ interface HttpServer
      *
      * @return the HTTP URI string
      */
-    String getUriString(immutable Object context);
+    String getUriString(RequestContext context);
 
     /**
      * Obtain the HTTP protocol name (such as "HTTP/1.1") that is indicated by the request. In HTTP
@@ -97,7 +95,7 @@ interface HttpServer
      *
      * @return the HTTP protocol name
      */
-    String getProtocolString(immutable Object context);
+    String getProtocolString(RequestContext context);
 
     /**
      * Obtain the number of header name/value pairs
@@ -106,7 +104,7 @@ interface HttpServer
      *
      * @return the the number of header name/value pairs
      */
-    Int getHeaderCount(immutable Object context);
+    Int getHeaderCount(RequestContext context);
 
     /**
      * Obtain the specified header name and value.
@@ -116,7 +114,7 @@ interface HttpServer
      *
      * @return the name and value of the specified header
      */
-    (String name, String value) getHeader(immutable Object context, Int index);
+    (String name, String value) getHeader(RequestContext context, Int index);
 
     /**
      * Obtain all of the values for the specified header name.
@@ -127,7 +125,7 @@ interface HttpServer
      * @return True if there is at least one header for the specified name
      * @return (conditional) an array of one or more values associated with the specified name
      */
-    conditional String[] getHeaderValuesForName(immutable Object context, String name);
+    conditional String[] getHeaderValuesForName(RequestContext context, String name);
 
     /**
      * Obtain all of the bytes in the request body.
@@ -137,7 +135,7 @@ interface HttpServer
      * @return True if there is a body
      * @return (conditional) an array of `Byte` representing the body content
      */
-    conditional Byte[] getBodyBytes(immutable Object context);
+    conditional Byte[] getBodyBytes(RequestContext context);
 
     /**
      * Determine if the body contains nested information (e.g. mult-part) with its own headers, etc.
@@ -148,16 +146,15 @@ interface HttpServer
      * @return True if there is one or more nested bodies
      * @return (conditional) an array of `context` objects, each representing the one nested body
      */
-    conditional immutable Object[] containsNestedBodies(immutable Object context);
+    conditional RequestContext[] containsNestedBodies(RequestContext context);
 
 
     // ----- RequestInfo ---------------------------------------------------------------------------
 
     /**
      * An object that provides access to information about a request.
-     * TODO GG I tried to make this non-static, had no "server" passed in, and instead used "outer."
      */
-    static const RequestInfo(HttpServer server, immutable Object context)
+    static const RequestInfo(HttpServer server, RequestContext context)
         {
         /**
          * Obtain the IP address that the request was sent from.
@@ -287,7 +284,7 @@ interface HttpServer
          */
         conditional RequestInfo[] containsNestedBodies()
             {
-            if (immutable Object[] contexts := server.containsNestedBodies(context))
+            if (RequestContext[] contexts := server.containsNestedBodies(context))
                 {
                 return True, new RequestInfo[contexts.size](ctx -> new RequestInfo(server, ctx));
                 }

@@ -88,13 +88,13 @@ class ChainBundle(Catalog catalog)
                 continue;
                 }
 
-            if (name == "session" && param.ParamType == Session)
+            if (param.ParamType == Session)
                 {
                 binders += (session, request, values) -> values.add(session);
                 continue;
                 }
 
-            if (name == "request" && param.ParamType == Request)
+            if (param.ParamType == Request)
                 {
                 binders += (session, request, values) -> values.add(request);
                 continue;
@@ -167,7 +167,9 @@ class ChainBundle(Catalog catalog)
             }
 
         // the chain always starts with a WebService.route() "preamble"
-        return (session, request) -> webService.route(session, request, handle);
+        handle = (session, request) -> webService.route(session, request, handle);
+        chains[endpoint.id] = handle;
+        return handle;
         }
 
     /**

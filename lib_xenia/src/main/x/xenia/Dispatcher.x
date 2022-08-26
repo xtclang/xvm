@@ -6,6 +6,8 @@ import web.HttpStatus;
 
 import web.routing.UriTemplate.UriParameters;
 
+import HttpServer.RequestInfo;
+
 
 /**
  * Dispatcher is responsible for finding an endpoint and creating a call chain for a request.
@@ -41,7 +43,7 @@ service Dispatcher
     /**
      * Dispatch the "raw" request.
      */
-    void dispatch(HttpServer httpServer, immutable Object context, String uriString, String methodName,
+    void dispatch(HttpServer httpServer, RequestContext context, String uriString, String methodName,
                 String[] headerNames, String[][] headerValues, Byte[] body)
         {
         WebServiceInfo? serviceInfo = Null;
@@ -67,9 +69,10 @@ service Dispatcher
                     pendingRequests--;
 
                     Session session = TODO
-                    Request request = TODO createRequest(uriString, methodName, headerNames, headerValues, uriParams, body);
 
-                    Handler handle = ensureCallChain(endpoint);
+                    Request request = new Http1Request(new RequestInfo(httpServer, context), uriParams);
+
+                    Handler handle  = ensureCallChain(endpoint);
 
                     @Future Response response = handle^(session, request);
 
