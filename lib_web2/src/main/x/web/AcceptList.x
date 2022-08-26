@@ -76,7 +76,7 @@ const AcceptList
      * @return True if the AcceptList could be successfully parsed
      * @return (conditional) the parsed AcceptList of AcceptTypes
      */
-    conditional AcceptList of(String text)
+    static conditional AcceptList of(String text)
         {
         if (text == "")
             {
