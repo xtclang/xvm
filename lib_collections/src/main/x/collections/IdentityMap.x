@@ -1,4 +1,6 @@
 
+import ecstasy.collections.CopyableMap;
+
 import ecstasy.collections.maps.EntryKeys;
 import ecstasy.collections.maps.EntryValues;
 
@@ -12,6 +14,8 @@ import ecstasy.reflect.Ref.Identity;
  */
 class IdentityMap<Key, Value>
         implements Map<Key, Value>
+        implements Replicable
+        incorporates CopyableMap.ReplicableCopier<Key, Value>
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -20,6 +24,7 @@ class IdentityMap<Key, Value>
      *
      * @param initCapacity  the number of expected entries
      */
+    @Override
     construct(Int initCapacity = 0)
         {
         storage = new HashMap<Identity, Tuple<Key, Value>>(initCapacity);
@@ -30,15 +35,20 @@ class IdentityMap<Key, Value>
      *
      * @param map  the map to use to store the underlying identity information
      */
-    construct(Map<Identity, Tuple<Key, Value>> map)
+    construct(Replicable + Duplicable + Map<Identity, Tuple<Key, Value>> map)
         {
         storage = map;
         }
 
+    @Override
+    construct(IdentityMap that)
+        {
+        this.storage = that.storage.duplicate();
+        }
 
     // ----- properties ----------------------------------------------------------------------------
 
-    private Map<Identity, Tuple<Key, Value>> storage;
+    private Replicable + Duplicable + Map<Identity, Tuple<Key, Value>> storage;
 
 
     // ----- Map interface -------------------------------------------------------------------------
