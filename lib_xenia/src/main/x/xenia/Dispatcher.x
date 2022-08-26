@@ -41,7 +41,7 @@ service Dispatcher
     /**
      * Dispatch the "raw" request.
      */
-    void dispatch(HttpServer httpServer, Object context, String uriString, String methodName,
+    void dispatch(HttpServer httpServer, immutable Object context, String uriString, String methodName,
                 String[] headerNames, String[][] headerValues, Byte[] body)
         {
         WebServiceInfo? serviceInfo = Null;
