@@ -44,7 +44,7 @@ service Dispatcher
      * Dispatch the "raw" request.
      */
     void dispatch(HttpServer httpServer, RequestContext context, String uriString, String methodName,
-                String[] headerNames, String[][] headerValues, Byte[] body)
+                String[] headerNames, String[] headerValues, Byte[] body)
         {
         WebServiceInfo? serviceInfo = Null;
         for (WebServiceInfo info : catalog.services)
@@ -86,8 +86,8 @@ service Dispatcher
                             }
                         else
                             {
-                            String[]   argNames  = TODO;
-                            String[][] argValues = TODO;
+                            String[] argNames  = TODO;
+                            String[] argValues = TODO;
 
                             httpServer.send(context, r.status.code, argNames, argValues, r.body?.bytes : []);
                             }

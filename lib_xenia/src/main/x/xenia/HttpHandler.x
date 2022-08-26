@@ -68,7 +68,7 @@ service HttpHandler
 
     @Override
     void handle(RequestContext context, String uriString, String methodName,
-                String[] headerNames, String[][] headerValues, Byte[] body)
+                String[] headerNames, String[] headerValues, Byte[] body)
         {
         if (closing)
             {

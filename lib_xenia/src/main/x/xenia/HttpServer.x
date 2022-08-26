@@ -16,7 +16,7 @@ interface HttpServer
     static interface Handler
         {
         void handle(RequestContext context, String uri, String method,
-                    String[] headerNames, String[][] headerValues, Byte[] body);
+                    String[] headerNames, String[] headerValues, Byte[] body);
         }
 
     /**
@@ -27,7 +27,7 @@ interface HttpServer
     /**
      * Send a response.
      */
-    void send(RequestContext context, Int status, String[] headerNames, String[][] headerValues, Byte[] body);
+    void send(RequestContext context, Int status, String[] headerNames, String[] headerValues, Byte[] body);
 
 
     // ----- context attributes --------------------------------------------------------------------
@@ -138,8 +138,7 @@ interface HttpServer
     conditional Byte[] getBodyBytes(RequestContext context);
 
     /**
-     * Determine if the body contains nested information (e.g. mult-part) with its own headers, etc.
-     * REVIEW GG
+     * Determine if the body contains nested information (e.g. multi-part) with its own headers, etc.
      *
      * @param context  the context that was passed to a `Handler` for a request
      *
@@ -275,7 +274,7 @@ interface HttpServer
             }
 
         /**
-         * Determine if the body contains nested information (e.g. mult-part) with its own headers,
+         * Determine if the body contains nested information (e.g. multi-part) with its own headers,
          * etc.
          *
          * @return True if there is one or more nested bodies
