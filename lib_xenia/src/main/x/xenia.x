@@ -3,10 +3,11 @@
  */
 module xenia.xtclang.org
     {
-    package aggregate import aggregate.xtclang.org;
-
-    package net import net.xtclang.org;
-    package web import web.xtclang.org;
+    // external module dependencies
+    package aggregate   import aggregate.xtclang.org;
+    package collections import collections.xtclang.org;
+    package net         import net.xtclang.org;
+    package web         import web.xtclang.org;
 
     import web.Catalog;
     import web.Handler;
