@@ -21,7 +21,7 @@ mixin WebApp
     /**
      * Collect all endpoints declared by this Module and assemble them into a Catalog.
      */
-    Catalog createCatalog_()
+    @Lazy Catalog catalog_.calc()
         {
         // TODO walk through all top level classes (and go into imported modules) to find all of the
         //      WebService classes. remember to set the `webApp` property on each one to this WebApp

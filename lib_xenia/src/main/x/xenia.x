@@ -19,6 +19,11 @@ module xenia.xtclang.org
     import web.routing.UriTemplate;
 
     /**
+     * The clock used within this module.
+     */
+    @Inject Clock clock;
+
+    /**
      * A function that is able to both pre- **and** post-process a request is called an
      * `Interceptor`. Conceptually, its form is something like:
      *
@@ -83,7 +88,7 @@ module xenia.xtclang.org
         {
         @Inject(opts=address) HttpServer server;
 
-        Catalog     catalog = app.createCatalog_();
+        Catalog     catalog = app.catalog_;
         HttpHandler handler = new HttpHandler(server, catalog);
 
         TODO what else?

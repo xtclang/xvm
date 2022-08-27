@@ -3,12 +3,18 @@ import routing.UriTemplate;
 /**
  * The catalog of WebApp endpoints.
  */
-const Catalog(WebServiceInfo[] services)
+const Catalog(WebServiceInfo[] services, Class[] sessionMixins)
     {
     /**
-     * The list of WebService info.
+     * The list of [WebServiceInfo] objects describing the [WebService] classes discovered within
+     * the application.
      */
     WebServiceInfo[] services;
+
+    /**
+     * The list of [Session] mixin classes discovered within the application.
+     */
+    Class[] sessionMixins;
 
     /**
      * The total number of WebServices.
