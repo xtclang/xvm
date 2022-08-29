@@ -1,6 +1,7 @@
 import net.URI;
 
 import web.Catalog.EndpointInfo;
+import web.Catalog.MethodInfo;
 import web.Catalog.WebServiceInfo;
 import web.HttpStatus;
 
@@ -43,8 +44,7 @@ service Dispatcher
     /**
      * Dispatch the "raw" request.
      */
-    void dispatch(HttpServer httpServer, RequestContext context, String uriString, String methodName,
-                String[] headerNames, String[] headerValues, Byte[] body)
+    void dispatch(HttpServer httpServer, RequestContext context, String uriString, String methodName)
         {
         WebServiceInfo? serviceInfo = Null;
         for (WebServiceInfo info : catalog.services)
@@ -57,8 +57,31 @@ service Dispatcher
                 }
             }
 
-        if (serviceInfo != Null)
+        @Future Response response;
+        ComputeResponse: do
             {
+            if (serviceInfo == Null)
+                {
+                Request  request = new Http1Request(new RequestInfo(httpServer, context), []);
+                Session? session = TODO getSessionOrNull();
+
+                response = catalog.webApp.handleUnhandledError^(session, request, HttpStatus.NotFound);
+                break;
+                }
+
+            if (serviceInfo.id == -1)
+                {
+                // this is a redirect call; validate the info and respond accordingly
+                return;
+                }
+
+            (Session session, Boolean redirect) = TODO
+            if (redirect)
+                {
+                TODO httpServer.send(context, HttpStatus.TemporaryRedirect.code, ...);
+                return;
+                }
+
             URI uri = new URI(uriString);
 
             for (EndpointInfo endpoint : serviceInfo.endpoints)
@@ -66,43 +89,50 @@ service Dispatcher
                 if (endpoint.httpMethod.name == methodName,
                         UriParameters uriParams := endpoint.template.matches(uri))
                     {
-                    pendingRequests--;
-
-                    Session session = TODO
-
                     Request request = new Http1Request(new RequestInfo(httpServer, context), uriParams);
 
                     Handler handle  = ensureCallChain(endpoint);
 
-                    @Future Response response = handle^(session, request);
-
-                    &response.whenComplete((r, e) ->
-                        {
-                        pendingRequests--;
-
-                        if (r == Null)
-                            {
-                            httpServer.send(context, HttpStatus.InternalServerError.code, [], [], []);
-                            }
-                        else
-                            {
-                            String[] argNames  = TODO;
-                            String[] argValues = TODO;
-
-                            httpServer.send(context, r.status.code, argNames, argValues, r.body?.bytes : []);
-                            }
-                        });
-                    return;
+                    response = handle^(session, request);
+                    break ComputeResponse;
                     }
                 }
-            }
 
-        // TODO GG if there is a "/" WebService error handler, use that, otherwise use WebApp unhandled
-        httpServer.send(context, HttpStatus.NotFound.code, [], [], []);
+            MethodInfo? onErrorInfo = catalog.findOnError(serviceInfo.id);
+            if (onErrorInfo == Null)
+                {
+                Request request = new Http1Request(new RequestInfo(httpServer, context), []);
+                response = catalog.webApp.handleUnhandledError^(session, request, HttpStatus.NotFound);
+                }
+            else
+                {
+                response = TODO
+                }
+            }
+        while (False);
+
+        pendingRequests++;
+
+        &response.whenComplete((r, e) ->
+            {
+            pendingRequests--;
+
+            if (r == Null)
+                {
+                httpServer.send(context, HttpStatus.InternalServerError.code, [], [], []);
+                }
+            else
+                {
+                String[] argNames  = TODO;
+                String[] argValues = TODO;
+
+                httpServer.send(context, r.status.code, argNames, argValues, r.body?.bytes : []);
+                }
+            });
         }
 
     /**
-     * TODO
+     * Ensure a call chain for the specified endpoint.
      */
     private Handler ensureCallChain(EndpointInfo endpoint)
         {

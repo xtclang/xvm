@@ -297,10 +297,10 @@ module web.xtclang.org
      * Example:
      *
      *     @OnError
-     *     void handleErrors(Session session, Request request, Exception|String, Response?) {...}
+     *     void handleErrors(Session session, Request request, Exception|String) {...}
      */
     mixin OnError
-            into Method<WebService, <Session, Request, Exception|String|HttpStatus, Response?>, <Response>>;
+            into Method<WebService, <Session?, Request, Exception|String|HttpStatus>, <Response>>;
 
 
     // ----- parameter annotations -----------------------------------------------------------------

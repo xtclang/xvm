@@ -87,12 +87,11 @@ mixin WebApp
      *                  processed; the session can be `Null` if the error occurred before or during
      *                  the instantiation of the session
      * @param request   the request being processed
-     * @param error     the exception thrown, or the error description
-     * @param response  the response, iff a response is known at the time that the error occurred
+     * @param error     the exception thrown, the error description, or an HttpStatus code
      *
      * @return the [Response] to send back to the caller
      */
-    Response handleUnhandledError(Session? session, Request request, Exception|String|HttpStatus error, Response? response)
+    Response handleUnhandledError(Session? session, Request request, Exception|String|HttpStatus error)
         {
         // the exception needs to be logged
         return TODO new responses.SimpleResponse(error.is(RequestAborted) ? error.status : InternalServerError);

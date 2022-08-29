@@ -3,7 +3,7 @@ import routing.UriTemplate;
 /**
  * The catalog of WebApp endpoints.
  */
-const Catalog(WebServiceInfo[] services, Class[] sessionMixins)
+const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins)
     {
     /**
      * The list of [WebServiceInfo] objects describing the [WebService] classes discovered within
@@ -30,6 +30,26 @@ const Catalog(WebServiceInfo[] services, Class[] sessionMixins)
     @Lazy Int endpointCount.calc()
         {
         return services.map(WebServiceInfo.endpointCount).reduce(new aggregate.Sum<Int>());
+        }
+
+    /**
+     * Find the most specific "onError" MethodInfo for the specified service.
+     */
+    MethodInfo? findOnError(Int wsid)
+        {
+        WebServiceInfo[] services = this.services;
+        String           path     = services[wsid].path;
+
+        // the most specific route has the priority
+        for (Int id : wsid..0)
+            {
+            WebServiceInfo svc = services[id];
+            if (path.startsWith(svc.path), MethodInfo onError ?= svc.onError)
+                {
+                return onError;
+                }
+            }
+        return Null;
         }
 
     typedef function WebService() as ServiceConstructor;
