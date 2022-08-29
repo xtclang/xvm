@@ -141,8 +141,9 @@ class ChainBundle(Catalog catalog)
                 webService  = ensureWebService(wsidNext);
                 wsidNext    = wsid;
 
-                handle = (session, request) ->
-                    webService.route(session, request, handle, makeErrorHandler(wsid, webService));
+                ErrorHandler? onError = makeErrorHandler(wsid, webService);
+
+                handle = (session, request) -> webService.route(session, request, handle, onError);
                 }
 
             if (methodNext.is(InterceptorMethod))
@@ -175,8 +176,9 @@ class ChainBundle(Catalog catalog)
             }
 
         // the chain always starts with a WebService.route() "preamble"
-        handle = (session, request) ->
-                    webService.route(session, request, handle, makeErrorHandler(wsid, webService));
+        ErrorHandler? onError = makeErrorHandler(wsid, webService);
+
+        handle = (session, request) -> webService.route(session, request, handle, onError);
 
         chains[endpoint.id] = handle;
         return handle;
@@ -184,7 +186,7 @@ class ChainBundle(Catalog catalog)
 
     /**
      * Collect interceptors for the specified service. Note, that if a service in the path doesn't
-     * have any interceptors, but has an explicitely defined "route" method or an error handler,
+     * have any interceptors, but has an explicitly defined "route" method or an error handler,
      * we still need to include it in the list.
      */
     MethodInfo[] collectInterceptors(Int wsid, HttpMethod httpMethod)
@@ -195,10 +197,24 @@ class ChainBundle(Catalog catalog)
         MethodInfo[] interceptors = [];
         for (Int id : 0..wsid)
             {
-            WebServiceInfo svc = services[id];
-            if (path.startsWith(svc.path))
+            WebServiceInfo serviceInfo = services[id];
+            if (path.startsWith(serviceInfo.path))
                 {
-                svc.interceptors.filter(m -> m.httpMethod == httpMethod, interceptors);
+                if (serviceInfo.interceptors.empty)
+                    {
+                    if (MethodInfo onErrorInfo ?= serviceInfo.onError)
+                        {
+                        interceptors.add(onErrorInfo);
+                        }
+                    if (MethodInfo routeInfo ?= serviceInfo.route)
+                        {
+                        interceptors.add(routeInfo);
+                        }
+                    }
+                else
+                    {
+                    serviceInfo.interceptors.filter(m -> m.httpMethod == httpMethod, interceptors);
+                    }
                 }
             }
         return interceptors.makeImmutable();
@@ -215,10 +231,10 @@ class ChainBundle(Catalog catalog)
         MethodInfo[] observers = [];
         for (Int id : 0..wsid)
             {
-            WebServiceInfo svc = services[id];
-            if (path.startsWith(svc.path))
+            WebServiceInfo serviceInfo = services[id];
+            if (path.startsWith(serviceInfo.path))
                 {
-                svc.observers.filter(m -> m.httpMethod == httpMethod, observers);
+                serviceInfo.observers.filter(m -> m.httpMethod == httpMethod, observers);
                 }
             }
         return observers.makeImmutable();
@@ -241,7 +257,7 @@ class ChainBundle(Catalog catalog)
     /**
      * Extract the path value from the Request and append it to the values Tuple.
      */
-    private Tuple extractPathValue(Request request, String path, Parameter param, Tuple values)
+    private static Tuple extractPathValue(Request request, String path, Parameter param, Tuple values)
         {
         Object paramValue;
         if (UriTemplate.Value value := request.matchResult.get(path))
@@ -263,7 +279,7 @@ class ChainBundle(Catalog catalog)
     /**
      * Extract the query value from the Request and append it to the values Tuple.
      */
-    private Tuple extractQueryValue(Request request, String name, Parameter param, Tuple values)
+    private static Tuple extractQueryValue(Request request, String name, Parameter param, Tuple values)
         {
         Object paramValue;
         if (UriTemplate.Value value := request.queryParams.get(name))
