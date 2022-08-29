@@ -3,6 +3,7 @@ import net.URI;
 import web.Catalog.EndpointInfo;
 import web.Catalog.MethodInfo;
 import web.Catalog.WebServiceInfo;
+import web.ErrorHandler;
 import web.HttpStatus;
 
 import web.routing.UriTemplate.UriParameters;
@@ -57,6 +58,7 @@ service Dispatcher
                 }
             }
 
+        ChainBundle?     bundle;
         @Future Response response;
         ComputeResponse: do
             {
@@ -91,23 +93,27 @@ service Dispatcher
                     {
                     Request request = new Http1Request(new RequestInfo(httpServer, context), uriParams);
 
-                    Handler handle  = ensureCallChain(endpoint);
+                    (bundle, Handler handle) = ensureCallChain(endpoint);
 
                     response = handle^(session, request);
                     break ComputeResponse;
                     }
                 }
 
+            Request     request     = new Http1Request(new RequestInfo(httpServer, context), []);
             MethodInfo? onErrorInfo = catalog.findOnError(serviceInfo.id);
-            if (onErrorInfo == Null)
+            if (onErrorInfo != Null)
                 {
-                Request request = new Http1Request(new RequestInfo(httpServer, context), []);
-                response = catalog.webApp.handleUnhandledError^(session, request, HttpStatus.NotFound);
+                (bundle, ErrorHandler? onError) = ensureErrorHandler(onErrorInfo.wsid);
+                if (onError != Null)
+                    {
+                    response = onError^(session, request, HttpStatus.NotFound);
+                    break ComputeResponse;
+                    }
                 }
-            else
-                {
-                response = TODO
-                }
+
+            bundle   = Null;
+            response = catalog.webApp.handleUnhandledError^(session, request, HttpStatus.NotFound);
             }
         while (False);
 
@@ -116,6 +122,7 @@ service Dispatcher
         &response.whenComplete((r, e) ->
             {
             pendingRequests--;
+            bundle?.isBusy = False;
 
             if (r == Null)
                 {
@@ -134,13 +141,13 @@ service Dispatcher
     /**
      * Ensure a call chain for the specified endpoint.
      */
-    private Handler ensureCallChain(EndpointInfo endpoint)
+    private (ChainBundle, Handler) ensureCallChain(EndpointInfo endpoint)
         {
         ChainBundle? bundle = bundleBySid[endpoint.wsid];
         if (bundle != Null && !bundle.isBusy)
             {
             bundle.isBusy = True;
-            return bundle.ensureCallChain(endpoint);
+            return bundle, bundle.ensureCallChain(endpoint);
             }
 
         TODO look up
@@ -151,10 +158,30 @@ service Dispatcher
             bundle = newBundle;
             }
 
-        return bundle.ensureCallChain(endpoint);
+        bundle.isBusy = True;
+        return bundle, bundle.ensureCallChain(endpoint);
         }
 
+    /**
+     * Ensure an ErrorHandler on the specified service.
+     */
+    private (ChainBundle, ErrorHandler?) ensureErrorHandler(Int wsid)
+        {
+        ChainBundle? bundle = bundleBySid[wsid];
+        if (bundle != Null && !bundle.isBusy)
+            {
+            bundle.isBusy = True;
+            return bundle, bundle.ensureErrorHandler(wsid);
+            }
 
-    // ----- helper classes ------------------------------------------------------------------------
+        TODO look up
 
+        if (bundle == Null)
+            {
+            ChainBundle newBundle = new ChainBundle(catalog);
+            bundle = newBundle;
+            }
+
+        return bundle, bundle.ensureErrorHandler(wsid);
+        }
     }

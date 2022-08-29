@@ -19,15 +19,29 @@ import web.responses.SimpleResponse;
 /**
  * The chain bundle represents a set of lazily created call chain collections.
  */
-class ChainBundle(Catalog catalog)
+class ChainBundle
     {
+    construct(Catalog catalog)
+        {
+        this.catalog = catalog;
+
+        services      = new WebService?[catalog.serviceCount];
+        chains        = new Handler?[catalog.endpointCount];
+        errorHandlers = new ErrorHandler?[catalog.serviceCount];
+        }
+
+    /**
+     * The Catalog.
+     */
+    Catalog catalog;
+
     /**
      * The busy indicator.
      */
     Boolean isBusy;
 
     /**
-     * The WebServices indexed by the service id.
+     * The WebServices indexed by the WebService id.
      */
     WebService?[] services;
 
@@ -35,6 +49,11 @@ class ChainBundle(Catalog catalog)
      * The CallChains indexed by the endpoint id.
      */
     Handler?[] chains;
+
+    /**
+     * The ErrorHandlers indexed by the WebService id.
+     */
+    ErrorHandler?[] errorHandlers;
 
     /**
      * Obtain a call chain for the specified endpoint.
@@ -136,14 +155,14 @@ class ChainBundle(Catalog catalog)
             if (wsidNext != wsid)
                 {
                 // call to a different service; need to generate a WebService.route() "preamble"
-                // even if the service doesn't have any interceptors (it that case it must have an
-                // error handler or an explicitly defined "route()" method)
-                webService  = ensureWebService(wsidNext);
-                wsidNext    = wsid;
-
-                ErrorHandler? onError = makeErrorHandler(wsid, webService);
+                // even if the WebService doesn't have any interceptors (it that case it must have
+                // an error handler or an explicitly defined "route()" method)
+                ErrorHandler? onError = ensureErrorHandler(wsid);
 
                 handle = (session, request) -> webService.route(session, request, handle, onError);
+
+                webService = ensureWebService(wsidNext);
+                wsid       = wsidNext;
                 }
 
             if (methodNext.is(InterceptorMethod))
@@ -176,7 +195,7 @@ class ChainBundle(Catalog catalog)
             }
 
         // the chain always starts with a WebService.route() "preamble"
-        ErrorHandler? onError = makeErrorHandler(wsid, webService);
+        ErrorHandler? onError = ensureErrorHandler(wsid);
 
         handle = (session, request) -> webService.route(session, request, handle, onError);
 
@@ -185,19 +204,19 @@ class ChainBundle(Catalog catalog)
         }
 
     /**
-     * Collect interceptors for the specified service. Note, that if a service in the path doesn't
-     * have any interceptors, but has an explicitly defined "route" method or an error handler,
-     * we still need to include it in the list.
+     * Collect interceptors for the specified service. Note, that if a WebService in the path
+     * doesn't have any interceptors, but has an explicitly defined "route" method or an error
+     * handler, we still need to include it in the list.
      */
     MethodInfo[] collectInterceptors(Int wsid, HttpMethod httpMethod)
         {
-        WebServiceInfo[] services = catalog.services;
-        String           path     = services[wsid].path;
+        WebServiceInfo[] serviceInfos = catalog.services;
+        String           path         = serviceInfos[wsid].path;
 
         MethodInfo[] interceptors = [];
         for (Int id : 0..wsid)
             {
-            WebServiceInfo serviceInfo = services[id];
+            WebServiceInfo serviceInfo = serviceInfos[id];
             if (path.startsWith(serviceInfo.path))
                 {
                 if (serviceInfo.interceptors.empty)
@@ -225,13 +244,13 @@ class ChainBundle(Catalog catalog)
      */
     MethodInfo[] collectObservers(Int wsid, HttpMethod httpMethod)
         {
-        WebServiceInfo[] services = catalog.services;
-        String           path     = services[wsid].path;
+        WebServiceInfo[] serviceInfos = catalog.services;
+        String           path         = serviceInfos[wsid].path;
 
         MethodInfo[] observers = [];
         for (Int id : 0..wsid)
             {
-            WebServiceInfo serviceInfo = services[id];
+            WebServiceInfo serviceInfo = serviceInfos[id];
             if (path.startsWith(serviceInfo.path))
                 {
                 serviceInfo.observers.filter(m -> m.httpMethod == httpMethod, observers);
@@ -243,15 +262,25 @@ class ChainBundle(Catalog catalog)
     /**
      * Create an error handler for the specified WebService.
      */
-     ErrorHandler? makeErrorHandler(Int wsid, WebService webService)
+     ErrorHandler? ensureErrorHandler(Int wsid)
         {
         typedef Method<WebService, <Session, Request, Exception|String|HttpStatus>, <Response>>
-            as ErrorMethod;
+                as ErrorMethod;
+
+        if (ErrorHandler onError ?= errorHandlers[wsid])
+            {
+            return onError;
+            }
 
         MethodInfo? onErrorInfo = catalog.services[wsid].onError;
-        return  onErrorInfo == Null
-                ? Null
-                : onErrorInfo.method.as(ErrorMethod).bindTarget(webService);
+        if (onErrorInfo == Null)
+            {
+            return Null;
+            }
+
+        ErrorHandler onError = onErrorInfo.method.as(ErrorMethod).bindTarget(ensureWebService(wsid));
+        errorHandlers[wsid] = onError;
+        return onError;
         }
 
     /**

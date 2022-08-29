@@ -43,8 +43,8 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins)
         // the most specific route has the priority
         for (Int id : wsid..0)
             {
-            WebServiceInfo svc = services[id];
-            if (path.startsWith(svc.path), MethodInfo onError ?= svc.onError)
+            WebServiceInfo serviceInto = services[id];
+            if (path.startsWith(serviceInto.path), MethodInfo onError ?= serviceInto.onError)
                 {
                 return onError;
                 }
