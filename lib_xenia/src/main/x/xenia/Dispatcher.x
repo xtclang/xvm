@@ -96,6 +96,8 @@ service Dispatcher
                     }
                 }
             }
+
+        // TODO shouldn't this be routed via the app's error handler
         httpServer.send(context, HttpStatus.NotFound.code, [], [], []);
         }
 
