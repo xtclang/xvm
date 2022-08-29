@@ -2,6 +2,7 @@ import web.AcceptList;
 import web.Catalog.EndpointInfo;
 import web.Catalog.MethodInfo;
 import web.Catalog.WebServiceInfo;
+import web.ErrorHandler;
 import web.HttpMethod;
 import web.HttpStatus;
 import web.MediaType;
@@ -36,7 +37,7 @@ class ChainBundle(Catalog catalog)
     Handler?[] chains;
 
     /**
-     * TODO
+     * Obtain a call chain for the specified endpoint.
      */
     Handler ensureCallChain(EndpointInfo endpoint)
         {
@@ -50,7 +51,6 @@ class ChainBundle(Catalog catalog)
         HttpMethod   httpMethod       = endpoint.httpMethod;
         MethodInfo[] interceptorInfos = collectInterceptors(wsid, httpMethod);
         MethodInfo[] observerInfos    = collectObservers(wsid, httpMethod);
-        MethodInfo?  onErrorInfo      = findOnError(wsid);
 
         Method<WebService> method  = endpoint.method;
         ParameterBinder[]  binders = new ParameterBinder[];
@@ -106,7 +106,7 @@ class ChainBundle(Catalog catalog)
                 continue;
                 }
 
-            throw new IllegalState($"Unresolved parameter: {name.quoted()}");
+            throw new IllegalState($"Unresolved parameter: {name.quoted()} for method {method}");
             }
 
         typedef Method<WebService, <Session, Request, Handler>, <Response>> as InterceptorMethod;
@@ -129,21 +129,29 @@ class ChainBundle(Catalog catalog)
                 return respond(request, boundMethod.invoke(values));
                 });
 
-        for (MethodInfo methodInfo : interceptorInfos)
+        for (MethodInfo info : interceptorInfos)
             {
-            InterceptorMethod methodNext = methodInfo.method.as(InterceptorMethod);
-            Int               wsidNext   = methodInfo.wsid;
+            Method methodNext = info.method;
+            Int    wsidNext   = info.wsid;
             if (wsidNext != wsid)
                 {
                 // call to a different service; need to generate a WebService.route() "preamble"
-                handle     = (session, request) -> webService.route(session, request, handle);
-                webService = ensureWebService(wsidNext);
-                wsidNext   = wsid;
-                }
-            Interceptor        interceptor  = methodNext.bindTarget(webService);
-            Parameter<Handler> handlerParam = interceptor.params[2].as(Parameter<Handler>);
+                // even if the service doesn't have any interceptors (it that case it must have an
+                // error handler or an explicitly defined "route()" method)
+                webService  = ensureWebService(wsidNext);
+                wsidNext    = wsid;
 
-            handle = interceptor.bind(handlerParam, handle).as(Handler);
+                handle = (session, request) ->
+                    webService.route(session, request, handle, getErrorHandler(wsid, webService));
+                }
+
+            if (methodNext.is(InterceptorMethod))
+                {
+                Interceptor        interceptor  = methodNext.bindTarget(webService);
+                Parameter<Handler> handlerParam = interceptor.params[2].as(Parameter<Handler>);
+
+                handle = interceptor.bind(handlerParam, handle).as(Handler);
+                }
             }
 
         Int observerCount = observerInfos.size;
@@ -167,13 +175,17 @@ class ChainBundle(Catalog catalog)
             }
 
         // the chain always starts with a WebService.route() "preamble"
-        handle = (session, request) -> webService.route(session, request, handle);
+        handle = (session, request) ->
+                    webService.route(session, request, handle, getErrorHandler(wsid, webService));
+
         chains[endpoint.id] = handle;
         return handle;
         }
 
     /**
-     * Collect interceptors for the specified service.
+     * Collect interceptors for the specified service. Note, that if a service in the path doesn't
+     * have any interceptors, but has an explicitely defined "route" method or an error handler,
+     * we still need to include it in the list.
      */
     MethodInfo[] collectInterceptors(Int wsid, HttpMethod httpMethod)
         {
@@ -193,7 +205,7 @@ class ChainBundle(Catalog catalog)
         }
 
     /**
-     * Collect observers for the specified service.
+     * Collect observers for the specified WebService.
      */
     MethodInfo[] collectObservers(Int wsid, HttpMethod httpMethod)
         {
@@ -213,29 +225,25 @@ class ChainBundle(Catalog catalog)
         }
 
     /**
-     * Find onError method for the specified service.
+     * Obtain the error handler for the specified WebService.
      */
-    MethodInfo? findOnError(Int wsid)
+     ErrorHandler? getErrorHandler(Int wsid, WebService webService)
         {
-        WebServiceInfo[] services = catalog.services;
-        String           path     = services[wsid].path;
+        typedef Method<WebService, <Session, Request, Exception|String|HttpStatus>, <Response>> as ErrorMethod;
 
-        // the most specific route has the priority
-        for (Int id : wsid..0)
-            {
-            WebServiceInfo svc = services[id];
-            if (path.startsWith(svc.path), MethodInfo onError ?= svc.onError)
-                {
-                return onError;
-                }
-            }
-        return Null;
+        MethodInfo? onErrorInfo = catalog.services[wsid].onError;
+        return  onErrorInfo == Null
+                ? Null
+                : onErrorInfo.method.as(ErrorMethod).bindTarget(webService);
         }
 
-    private Tuple extractPathValue(Request request, String name, Parameter param, Tuple values)
+    /**
+     * Extract the path value from the Request and append it to the values Tuple.
+     */
+    private Tuple extractPathValue(Request request, String path, Parameter param, Tuple values)
         {
         Object paramValue;
-        if (UriTemplate.Value value := request.matchResult.get(name))
+        if (UriTemplate.Value value := request.matchResult.get(path))
             {
             // TODO: convert
             paramValue = value;
@@ -246,11 +254,14 @@ class ChainBundle(Catalog catalog)
             }
         else
             {
-            throw new IllegalState($"Missing path parameter: {name.quoted()}");
+            throw new IllegalState($"Missing path parameter: {path.quoted()}");
             }
         return values.add(paramValue.as(param.ParamType));
         }
 
+    /**
+     * Extract the query value from the Request and append it to the values Tuple.
+     */
     private Tuple extractQueryValue(Request request, String name, Parameter param, Tuple values)
         {
         Object paramValue;
@@ -270,18 +281,32 @@ class ChainBundle(Catalog catalog)
         return values.add(paramValue.as(param.ParamType));
         }
 
+    /**
+     * Ensure a WebService instance for the specified id.
+     */
     private WebService ensureWebService(Int wsid)
         {
-        TODO
+        WebService? svc = services[wsid];
+        if (svc != Null)
+            {
+            return svc;
+            }
+
+        svc = catalog.services[wsid].constructor();
+        services[wsid] = svc;
+        return svc;
         }
 
+    /**
+     * Generate a response handler for the specified endpoint.
+     */
     private Responder generateResponder(EndpointInfo endpoint)
         {
         if (endpoint.conditionalResult)
             {
             // the method executed is a conditional method that has returned False as the
             // first element of the Tuple
-            // TODO: should be handled by "OnError" handler if exists
+            // TODO GG: "False" should be handled by "OnError" handler if exists
             return (request, result) -> result[0].as(Boolean)
                        ? createSimpleResponse(endpoint, request, result[1])
                        : TODO new SimpleResponse(HttpStatus.NotFound);
@@ -290,6 +315,9 @@ class ChainBundle(Catalog catalog)
         return (request, result) -> createSimpleResponse(endpoint, request, result[0]);
         }
 
+    /**
+     * Create an HTTP response.
+     */
     Response createSimpleResponse(EndpointInfo endpoint, Request request, Object result)
         {
         AcceptList accepts   = request.accepts;

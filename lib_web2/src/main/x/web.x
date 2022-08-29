@@ -24,10 +24,9 @@ module web.xtclang.org
 
     /**
      * A function that is called when an exception occurs (or an internal error represented by a
-     * `String` description) is called an `ErrorHandler`. A Response may or may not already be known
-     * at the point that the error occurs.
+     * `String` description or an HttpsStatus code) is called an `ErrorHandler`.
      */
-    typedef function Response(Session, Request, Exception|String|HttpStatus, Response?) as ErrorHandler;
+    typedef function Response(Session, Request, Exception|String|HttpStatus) as ErrorHandler;
 
     /**
      * `TrustLevel` is an enumeration that approximates a point-in-time level of trust associated

@@ -59,13 +59,6 @@ module xenia.xtclang.org
     typedef function void(Session, Request) as Observer;
 
     /**
-     * A function that is called when an exception occurs (or an internal error represented by a
-     * `String` description) is called an `ErrorHandler`. A Response may or may not already be known
-     * at the point that the error occurs.
-     */
-    typedef function Response(Session, Request, Exception|String, Response?) as ErrorHandler;
-
-    /**
      * TODO a function that adds a parameter value to the passed-in tuple of values
      *      (session, request, values)
      */

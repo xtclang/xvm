@@ -43,6 +43,7 @@ const Catalog(WebServiceInfo[] services, Class[] sessionMixins)
                                 EndpointInfo?      defaultEndpoint,
                                 MethodInfo[]       interceptors,
                                 MethodInfo[]       observers,
+                                MethodInfo?        route,
                                 MethodInfo?        onError
                                 )
         {

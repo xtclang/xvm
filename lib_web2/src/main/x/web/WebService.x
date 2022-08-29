@@ -90,6 +90,7 @@ mixin WebService(Path path)
      * @param request  the [Request] to hold onto (so that it's available for the duration of the
      *                 request processing)
      * @param handler  the handler to delegate the processing to
+     * @param onError  (optional) the error handler to delegate the error processing to
      *
      * @return the [Response] to send back to the caller
      */
