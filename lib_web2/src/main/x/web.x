@@ -301,7 +301,7 @@ module web.xtclang.org
      *     void handleErrors(Session session, Request request, Exception|String, Response?) {...}
      */
     mixin OnError
-            into Method<WebService, <Session, Request, Exception|String, Response?>, <Response>>;
+            into Method<WebService, <Session, Request, Exception|String|HttpStatus, Response?>, <Response>>;
 
 
     // ----- parameter annotations -----------------------------------------------------------------

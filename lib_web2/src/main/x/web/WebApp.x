@@ -92,7 +92,7 @@ mixin WebApp
      *
      * @return the [Response] to send back to the caller
      */
-    Response handleUnhandledError(Session? session, Request request, Exception|String error, Response? response)
+    Response handleUnhandledError(Session? session, Request request, Exception|String|HttpStatus error, Response? response)
         {
         // the exception needs to be logged
         return TODO new responses.SimpleResponse(error.is(RequestAborted) ? error.status : InternalServerError);

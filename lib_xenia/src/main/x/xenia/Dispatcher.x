@@ -97,7 +97,7 @@ service Dispatcher
                 }
             }
 
-        // TODO shouldn't this be routed via the app's error handler
+        // TODO GG if there is a "/" WebService error handler, use that, otherwise use WebApp unhandled
         httpServer.send(context, HttpStatus.NotFound.code, [], [], []);
         }
 

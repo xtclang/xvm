@@ -60,12 +60,6 @@ mixin WebService(Path path)
         }
 
     /**
-     * The error handler within this `WebService`, or `Null` if there is none or none has been
-     * configured.
-     */
-    ErrorHandler? errorHandler;
-
-    /**
      * The session related to the currently executing handler within this service.
      */
     Session? session;
@@ -112,31 +106,11 @@ mixin WebService(Path path)
             {
             return handle(session, request);
             }
-        catch (Exception e)
-            {
-            return reportError(e);
-            }
         finally
             {
             this.request  = Null;
             this.session  = Null;
             this.response = Null;
             }
-        }
-
-    /**
-     * Allow user code on the web service to handle an error condition during [Request] processing.
-     *
-     * @param error  the `Exception` or description of an error that occurred during the processing
-     *               of a [Request]
-     *
-     * @return the [Response] to send back to the caller
-     */
-    Response reportError(String|Exception error)
-        {
-        Session session = this.session ?: assert;
-        Request request = this.request ?: assert;
-        return errorHandler?(session, request, error, response)
-                : webApp.handleUnhandledError(session, request, error, response);
         }
     }
