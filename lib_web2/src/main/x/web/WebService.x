@@ -93,7 +93,7 @@ mixin WebService(Path path)
      *
      * @return the [Response] to send back to the caller
      */
-    Response route(Session session, Request request, Handler handle)
+    Response route(Session session, Request request, Handler handle, ErrorHandler? onError)
         {
         assert this.request == Null;
 
@@ -105,6 +105,17 @@ mixin WebService(Path path)
         try
             {
             return handle(session, request);
+            }
+        catch (Exception e)
+            {
+            if (onError == Null)
+                {
+                throw e;
+                }
+            else
+                {
+                return onError(session, request, e);
+                }
             }
         finally
             {

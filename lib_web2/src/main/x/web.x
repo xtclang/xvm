@@ -27,7 +27,7 @@ module web.xtclang.org
      * `String` description) is called an `ErrorHandler`. A Response may or may not already be known
      * at the point that the error occurs.
      */
-    typedef function Response(Session, Request, Exception|String, Response?) as ErrorHandler;
+    typedef function Response(Session, Request, Exception|String|HttpStatus, Response?) as ErrorHandler;
 
     /**
      * `TrustLevel` is an enumeration that approximates a point-in-time level of trust associated
