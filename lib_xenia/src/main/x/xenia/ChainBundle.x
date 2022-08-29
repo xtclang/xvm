@@ -142,7 +142,7 @@ class ChainBundle(Catalog catalog)
                 wsidNext    = wsid;
 
                 handle = (session, request) ->
-                    webService.route(session, request, handle, getErrorHandler(wsid, webService));
+                    webService.route(session, request, handle, makeErrorHandler(wsid, webService));
                 }
 
             if (methodNext.is(InterceptorMethod))
@@ -176,7 +176,7 @@ class ChainBundle(Catalog catalog)
 
         // the chain always starts with a WebService.route() "preamble"
         handle = (session, request) ->
-                    webService.route(session, request, handle, getErrorHandler(wsid, webService));
+                    webService.route(session, request, handle, makeErrorHandler(wsid, webService));
 
         chains[endpoint.id] = handle;
         return handle;
@@ -225,11 +225,12 @@ class ChainBundle(Catalog catalog)
         }
 
     /**
-     * Obtain the error handler for the specified WebService.
+     * Create an error handler for the specified WebService.
      */
-     ErrorHandler? getErrorHandler(Int wsid, WebService webService)
+     ErrorHandler? makeErrorHandler(Int wsid, WebService webService)
         {
-        typedef Method<WebService, <Session, Request, Exception|String|HttpStatus>, <Response>> as ErrorMethod;
+        typedef Method<WebService, <Session, Request, Exception|String|HttpStatus>, <Response>>
+            as ErrorMethod;
 
         MethodInfo? onErrorInfo = catalog.services[wsid].onError;
         return  onErrorInfo == Null
@@ -306,10 +307,9 @@ class ChainBundle(Catalog catalog)
             {
             // the method executed is a conditional method that has returned False as the
             // first element of the Tuple
-            // TODO GG: "False" should be handled by "OnError" handler if exists
             return (request, result) -> result[0].as(Boolean)
-                       ? createSimpleResponse(endpoint, request, result[1])
-                       : TODO new SimpleResponse(HttpStatus.NotFound);
+                   ? createSimpleResponse(endpoint, request, result[1])
+                   : TODO new SimpleResponse(HttpStatus.NotFound);
             }
 
         return (request, result) -> createSimpleResponse(endpoint, request, result[0]);
