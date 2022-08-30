@@ -19,6 +19,7 @@ service HttpHandler
         {
         this.httpServer = httpServer;
         this.catalog    = catalog;
+        this.bundlePool = new BundlePool(catalog);
         }
     finally
         {
@@ -36,14 +37,19 @@ service HttpHandler
     protected Catalog catalog;
 
     /**
-     * Closing flag.
-     */
-    Boolean closing;
-
-    /**
      * The dispatchers.
      */
     protected Dispatcher[] dispatchers = new Dispatcher[];
+
+    /**
+     * The ChainBundle pool.
+     */
+    protected BundlePool bundlePool;
+
+    /**
+     * Closing flag.
+     */
+    Boolean closing;
 
     /**
      * The dispatchers state.
@@ -128,7 +134,7 @@ service HttpHandler
         Int          count       = dispatchers.size;
         if (count == 0)
             {
-            dispatchers.add(new Dispatcher(catalog));
+            dispatchers.add(new Dispatcher(catalog, bundlePool));
             busy.add(True);
             lastIndex = 0;
             return 0;
@@ -148,7 +154,7 @@ service HttpHandler
 
         if (count < maxCount)
             {
-            dispatchers.add(new Dispatcher(catalog));
+            dispatchers.add(new Dispatcher(catalog, bundlePool));
             busy.add(True);
             return count; // don't change the lastIndex to retain some fairness
             }

@@ -12,30 +12,26 @@ import HttpServer.RequestInfo;
 
 
 /**
- * Dispatcher is responsible for finding an endpoint and creating a call chain for a request.
+ * Dispatcher is responsible for finding an endpoint, creating a call chain for an HTTP request and
+ * invoking it on a corresponding WebService.
  */
 service Dispatcher
     {
-    construct(Catalog catalog)
+    construct(Catalog catalog, BundlePool bundlePool)
         {
         this.catalog     = catalog;
-        this.bundleBySid = new ChainBundle?[catalog.serviceCount];
+        this.bundlePool  = bundlePool;
         }
 
     /**
      * The catalog.
      */
-    private Catalog catalog;
+    protected Catalog catalog;
 
     /**
      * The pool of call chain bundles.
      */
-    private ChainBundle[] bundles = new ChainBundle[];
-
-    /**
-     * The cache of bundles for WebServices indexed by the service id.
-     */
-    private ChainBundle?[] bundleBySid;
+    protected BundlePool bundlePool;
 
     /**
      * Pending request counter.
@@ -58,7 +54,7 @@ service Dispatcher
                 }
             }
 
-        ChainBundle?     bundle;
+        ChainBundle?     bundle = Null;
         @Future Response response;
         ComputeResponse: do
             {
@@ -71,13 +67,14 @@ service Dispatcher
                 break;
                 }
 
-            if (serviceInfo.id == -1)
+            Int wsid = serviceInfo.id;
+            if (wsid == -1)
                 {
                 // this is a redirect call; validate the info and respond accordingly
                 return;
                 }
 
-            (Session session, Boolean redirect) = TODO
+            (Session session, Boolean redirect) = computeSession();
             if (redirect)
                 {
                 TODO httpServer.send(context, HttpStatus.TemporaryRedirect.code, ...);
@@ -93,7 +90,9 @@ service Dispatcher
                     {
                     Request request = new Http1Request(new RequestInfo(httpServer, context), uriParams);
 
-                    (bundle, Handler handle) = ensureCallChain(endpoint);
+                    bundle = bundlePool.allocateBundle(wsid);
+
+                    Handler handle = bundle.ensureCallChain(endpoint);
 
                     response = handle^(session, request);
                     break ComputeResponse;
@@ -101,10 +100,14 @@ service Dispatcher
                 }
 
             Request     request     = new Http1Request(new RequestInfo(httpServer, context), []);
-            MethodInfo? onErrorInfo = catalog.findOnError(serviceInfo.id);
+            MethodInfo? onErrorInfo = catalog.findOnError(wsid);
             if (onErrorInfo != Null)
                 {
-                (bundle, ErrorHandler? onError) = ensureErrorHandler(onErrorInfo.wsid);
+                Int errorWsid = onErrorInfo.wsid;
+
+                bundle = bundlePool.allocateBundle(errorWsid);
+
+                ErrorHandler? onError = bundle.ensureErrorHandler(errorWsid);
                 if (onError != Null)
                     {
                     response = onError^(session, request, HttpStatus.NotFound);
@@ -112,7 +115,6 @@ service Dispatcher
                     }
                 }
 
-            bundle   = Null;
             response = catalog.webApp.handleUnhandledError^(session, request, HttpStatus.NotFound);
             }
         while (False);
@@ -122,7 +124,7 @@ service Dispatcher
         &response.whenComplete((r, e) ->
             {
             pendingRequests--;
-            bundle?.isBusy = False;
+            bundlePool.releaseBundle(bundle?);
 
             if (r == Null)
                 {
@@ -138,50 +140,8 @@ service Dispatcher
             });
         }
 
-    /**
-     * Ensure a call chain for the specified endpoint.
-     */
-    private (ChainBundle, Handler) ensureCallChain(EndpointInfo endpoint)
+    (Session session, Boolean redirect) computeSession()
         {
-        ChainBundle? bundle = bundleBySid[endpoint.wsid];
-        if (bundle != Null && !bundle.isBusy)
-            {
-            bundle.isBusy = True;
-            return bundle, bundle.ensureCallChain(endpoint);
-            }
-
-        TODO look up
-
-        if (bundle == Null)
-            {
-            ChainBundle newBundle = new ChainBundle(catalog);
-            bundle = newBundle;
-            }
-
-        bundle.isBusy = True;
-        return bundle, bundle.ensureCallChain(endpoint);
-        }
-
-    /**
-     * Ensure an ErrorHandler on the specified service.
-     */
-    private (ChainBundle, ErrorHandler?) ensureErrorHandler(Int wsid)
-        {
-        ChainBundle? bundle = bundleBySid[wsid];
-        if (bundle != Null && !bundle.isBusy)
-            {
-            bundle.isBusy = True;
-            return bundle, bundle.ensureErrorHandler(wsid);
-            }
-
-        TODO look up
-
-        if (bundle == Null)
-            {
-            ChainBundle newBundle = new ChainBundle(catalog);
-            bundle = newBundle;
-            }
-
-        return bundle, bundle.ensureErrorHandler(wsid);
+        TODO
         }
     }

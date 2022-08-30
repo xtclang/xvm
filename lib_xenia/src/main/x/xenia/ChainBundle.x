@@ -19,11 +19,12 @@ import web.responses.SimpleResponse;
 /**
  * The chain bundle represents a set of lazily created call chain collections.
  */
-class ChainBundle
+service ChainBundle
     {
-    construct(Catalog catalog)
+    construct(Catalog catalog, Int index)
         {
         this.catalog = catalog;
+        this.index   = index;
 
         services      = new WebService?[catalog.serviceCount];
         chains        = new Handler?[catalog.endpointCount];
@@ -33,27 +34,27 @@ class ChainBundle
     /**
      * The Catalog.
      */
-    Catalog catalog;
+    public/private Catalog catalog;
 
     /**
-     * The busy indicator.
+     * The index of this bundle in the BundlePool.
      */
-    Boolean isBusy;
+    public/private Int index;
 
     /**
      * The WebServices indexed by the WebService id.
      */
-    WebService?[] services;
+    protected WebService?[] services;
 
     /**
      * The CallChains indexed by the endpoint id.
      */
-    Handler?[] chains;
+    protected Handler?[] chains;
 
     /**
      * The ErrorHandlers indexed by the WebService id.
      */
-    ErrorHandler?[] errorHandlers;
+    protected ErrorHandler?[] errorHandlers;
 
     /**
      * Obtain a call chain for the specified endpoint.
@@ -208,7 +209,7 @@ class ChainBundle
      * doesn't have any interceptors, but has an explicitly defined "route" method or an error
      * handler, we still need to include it in the list.
      */
-    MethodInfo[] collectInterceptors(Int wsid, HttpMethod httpMethod)
+    private MethodInfo[] collectInterceptors(Int wsid, HttpMethod httpMethod)
         {
         WebServiceInfo[] serviceInfos = catalog.services;
         String           path         = serviceInfos[wsid].path;
@@ -242,7 +243,7 @@ class ChainBundle
     /**
      * Collect observers for the specified WebService.
      */
-    MethodInfo[] collectObservers(Int wsid, HttpMethod httpMethod)
+    private MethodInfo[] collectObservers(Int wsid, HttpMethod httpMethod)
         {
         WebServiceInfo[] serviceInfos = catalog.services;
         String           path         = serviceInfos[wsid].path;
@@ -363,7 +364,7 @@ class ChainBundle
     /**
      * Create an HTTP response.
      */
-    Response createSimpleResponse(EndpointInfo endpoint, Request request, Object result)
+    private Response createSimpleResponse(EndpointInfo endpoint, Request request, Object result)
         {
         AcceptList accepts   = request.accepts;
         MediaType  mediaType = endpoint.resolveResponseContentType(accepts);
