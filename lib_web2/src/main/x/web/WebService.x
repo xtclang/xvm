@@ -69,11 +69,6 @@ mixin WebService(Path path)
      */
     Request? request;
 
-    /**
-     * The response (if one is known) for the currently executing handler within this service.
-     */
-    Response? response;
-
 
     // ----- processing ----------------------------------------------------------------------------
 
@@ -101,11 +96,13 @@ mixin WebService(Path path)
         // store the request and session for the duration of the request processing
         this.request  = request;
         this.session  = session;
-        this.response = Null;
 
         try
             {
-            return handle(session, request);
+            Response response = handle(session, request);
+            return response.is(immutable)
+                ? response
+                : response.freeze(True);
             }
         catch (Exception e)
             {
@@ -115,14 +112,13 @@ mixin WebService(Path path)
                 }
             else
                 {
-                return onError(session, request, e);
+                return onError(session, request, e).freeze(True);
                 }
             }
         finally
             {
             this.request  = Null;
             this.session  = Null;
-            this.response = Null;
             }
         }
     }

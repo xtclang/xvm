@@ -16,7 +16,10 @@ interface Header
      * not modifiable, and when sending a request or a response, there is a point at which the
      * headers are no longer modifiable.
      */
-    @RO Boolean modifiable;
+    @RO Boolean modifiable.get()
+        {
+        return !this.is(immutable);
+        }
 
     /**
      * Each `Entry` that appears in the header portion of an [HttpMessage] is simply a `String` name
@@ -111,7 +114,25 @@ interface Header
      *
      * @throws IllegalState  if [headersModifiable] is `False`
      */
-    void removeAll(String name);
+    void removeAll(String name)
+        {
+        List<Entry> entries = this.entries;
+        if (!entries.empty)
+            {
+            val cursor = entries.cursor();
+            while (cursor.exists)
+                {
+                if (cursor.value[0] == name)
+                    {
+                    cursor.delete();
+                    }
+                else
+                    {
+                    cursor.advance();
+                    }
+                }
+            }
+        }
 
     /**
      * Add or replace the value of the specified header name. (Any and all previously existent

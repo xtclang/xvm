@@ -355,7 +355,7 @@ service ChainBundle
             // first element of the Tuple
             return (request, result) -> result[0].as(Boolean)
                    ? createSimpleResponse(endpoint, request, result[1])
-                   : TODO new SimpleResponse(HttpStatus.NotFound);
+                   : new SimpleResponse(HttpStatus.NotFound);
             }
 
         return (request, result) -> createSimpleResponse(endpoint, request, result[0]);

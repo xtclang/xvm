@@ -39,6 +39,6 @@ interface HttpMessage
         {
         // the interface for the message objects are designed to be freezable in-place; sub-classes
         // that cannot do so must override this method
-        return makeImmutable();
+        return this.is(immutable) ? this : makeImmutable();
         }
     }
