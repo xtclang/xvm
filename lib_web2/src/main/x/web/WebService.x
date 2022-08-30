@@ -94,15 +94,12 @@ mixin WebService(Path path)
         assert this.request == Null;
 
         // store the request and session for the duration of the request processing
-        this.request  = request;
-        this.session  = session;
+        this.request = request;
+        this.session = session;
 
         try
             {
-            Response response = handle(session, request);
-            return response.is(immutable)
-                ? response
-                : response.freeze(True);
+            return handle(session, request).freeze(True);
             }
         catch (Exception e)
             {
@@ -117,8 +114,8 @@ mixin WebService(Path path)
             }
         finally
             {
-            this.request  = Null;
-            this.session  = Null;
+            this.request = Null;
+            this.session = Null;
             }
         }
     }
