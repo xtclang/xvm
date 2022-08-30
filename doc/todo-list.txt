@@ -1,5 +1,8 @@
 - implement timeout for IO operations (interrupt IO executor threads)
 
+- implement BitArray's leftmostBit(), rightmostBit(), leadingZeroCount(),
+    trailingZeroCount(), bitCount.get() natively
+
 - move ecstasy.mgmt package to a separate module
 
 - MapMapping doesn't work for properties that declared as Map classes, e.g.
