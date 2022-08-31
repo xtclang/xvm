@@ -342,6 +342,7 @@ service ChainBundle
             }
 
         svc = catalog.services[wsid].constructor();
+        svc.webApp = catalog.webApp;
         services[wsid] = svc;
         return svc;
         }
