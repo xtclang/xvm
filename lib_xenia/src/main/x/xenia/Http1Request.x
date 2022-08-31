@@ -248,24 +248,16 @@ const Http1Request(RequestInfo info, UriParameters matchResult)
     @Override
     @Lazy List<Header.Entry> entries.calc()
         {
-        return new List<Header.Entry>()
+        Header.Entry[] entries = new Header.Entry[];
+        for (String name : names)
             {
-            @Override
-            Int size.get()
+            assert String[] values := info.getHeaderValuesForName(name);
+            for (String value : values)
                 {
-                return names.size;
+                entries += (name, value);
                 }
-
-            @Override
-            @Op("[]") Header.Entry getElement(Int index)
-                {
-                assert:bounds 0 <= index < size;
-
-                String name = names[index];
-                assert String[] values := info.getHeaderValuesForName(name);
-                return (name, values[0]);
-                }
-            };
+            }
+        return entries;
         }
 
     @Override
