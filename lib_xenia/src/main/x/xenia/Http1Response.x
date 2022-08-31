@@ -30,6 +30,8 @@ const Http1Response
             bytes = body.bytes;
             headerNames  += "Content-Type";
             headerValues += body.mediaType.text;
+            headerNames  += "Content-Length";
+            headerValues += bytes.size.toString();
             }
 
         return status, headerNames, headerValues, bytes;
