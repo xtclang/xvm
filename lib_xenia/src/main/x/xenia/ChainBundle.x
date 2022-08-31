@@ -1,7 +1,4 @@
 import web.AcceptList;
-import web.Catalog.EndpointInfo;
-import web.Catalog.MethodInfo;
-import web.Catalog.WebServiceInfo;
 import web.ErrorHandler;
 import web.HttpMethod;
 import web.HttpStatus;
@@ -14,6 +11,10 @@ import web.Session;
 import web.WebService;
 
 import web.responses.SimpleResponse;
+
+import web.routing.Catalog.EndpointInfo;
+import web.routing.Catalog.MethodInfo;
+import web.routing.Catalog.WebServiceInfo;
 
 
 /**

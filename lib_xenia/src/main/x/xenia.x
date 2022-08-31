@@ -9,13 +9,13 @@ module xenia.xtclang.org
     package net         import net.xtclang.org;
     package web         import web.xtclang.org;
 
-    import web.Catalog;
     import web.Handler;
     import web.Response;
     import web.Request;
     import web.Session;
     import web.WebApp;
 
+    import web.routing.Catalog;
     import web.routing.UriTemplate;
 
     /**

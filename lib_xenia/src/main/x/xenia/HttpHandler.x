@@ -1,10 +1,10 @@
 import net.URI;
 
-import web.Catalog;
-import web.Catalog.EndpointInfo;
-import web.Catalog.WebServiceInfo;
 import web.HttpStatus;
 
+import web.routing.Catalog;
+import web.routing.Catalog.EndpointInfo;
+import web.routing.Catalog.WebServiceInfo;
 import web.routing.UriTemplate;
 
 

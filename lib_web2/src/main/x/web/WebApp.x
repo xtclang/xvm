@@ -1,5 +1,6 @@
-import Catalog.EndpointInfo;
-import Catalog.WebServiceInfo;
+import routing.Catalog;
+import routing.Catalog.EndpointInfo;
+import routing.Catalog.WebServiceInfo;
 
 import routing.UriTemplate;
 
