@@ -17,9 +17,10 @@ service HttpHandler
     {
     construct(HttpServer httpServer, Catalog catalog)
         {
-        this.httpServer = httpServer;
-        this.catalog    = catalog;
-        this.bundlePool = new BundlePool(catalog);
+        this.httpServer     = httpServer;
+        this.catalog        = catalog;
+        this.bundlePool     = new BundlePool(catalog);
+        this.sessionManager = createSessionManager(catalog);
         }
     finally
         {
@@ -45,6 +46,11 @@ service HttpHandler
      * The ChainBundle pool.
      */
     protected BundlePool bundlePool;
+
+    /**
+     * The session manager.
+     */
+    protected SessionManager sessionManager;
 
     /**
      * Closing flag.
@@ -134,7 +140,7 @@ service HttpHandler
         Int          count       = dispatchers.size;
         if (count == 0)
             {
-            dispatchers.add(new Dispatcher(catalog, bundlePool));
+            dispatchers.add(new Dispatcher(catalog, bundlePool, sessionManager));
             busy.add(True);
             lastIndex = 0;
             return 0;
@@ -154,7 +160,7 @@ service HttpHandler
 
         if (count < maxCount)
             {
-            dispatchers.add(new Dispatcher(catalog, bundlePool));
+            dispatchers.add(new Dispatcher(catalog, bundlePool, sessionManager));
             busy.add(True);
             return count; // don't change the lastIndex to retain some fairness
             }
@@ -163,5 +169,12 @@ service HttpHandler
 
         // we are at the max; add the overload evenly
         return lastIndex++;
+        }
+
+    static private SessionManager createSessionManager(Catalog catalog)
+        {
+        function SessionImpl(Int) sessionConstructor = TODO
+
+        return new SessionManager(new SessionStore(), sessionConstructor);
         }
     }

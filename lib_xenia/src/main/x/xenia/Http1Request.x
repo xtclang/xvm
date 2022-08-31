@@ -242,7 +242,7 @@ const Http1Request(RequestInfo info, UriParameters matchResult)
     @Override
     @Lazy List<String> names.calc()
         {
-        return new String[info.getHeaderCount()](i->info.getHeader(i)).freeze(inPlace=True);
+        return info.getHeaderNames();
         }
 
     @Override
@@ -260,7 +260,10 @@ const Http1Request(RequestInfo info, UriParameters matchResult)
             @Op("[]") Header.Entry getElement(Int index)
                 {
                 assert:bounds 0 <= index < size;
-                return info.getHeader(index);
+
+                String name = names[index];
+                assert String[] values := info.getHeaderValuesForName(name);
+                return (name, values[0]);
                 }
             };
         }

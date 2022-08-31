@@ -17,10 +17,11 @@ import HttpServer.RequestInfo;
  */
 service Dispatcher
     {
-    construct(Catalog catalog, BundlePool bundlePool)
+    construct(Catalog catalog, BundlePool bundlePool, SessionManager sessionManager)
         {
-        this.catalog     = catalog;
-        this.bundlePool  = bundlePool;
+        this.catalog        = catalog;
+        this.bundlePool     = bundlePool;
+        this.sessionManager = sessionManager;
         }
 
     /**
@@ -32,6 +33,11 @@ service Dispatcher
      * The pool of call chain bundles.
      */
     protected BundlePool bundlePool;
+
+    /**
+     * The session manager.
+     */
+    protected SessionManager sessionManager;
 
     /**
      * Pending request counter.
@@ -74,7 +80,7 @@ service Dispatcher
                 return;
                 }
 
-            (Session session, Boolean redirect) = computeSession();
+            (Session session, Boolean redirect) = computeSession(httpServer, context);
             if (redirect)
                 {
                 TODO httpServer.send(context, HttpStatus.TemporaryRedirect.code, ...);
@@ -140,8 +146,9 @@ service Dispatcher
             });
         }
 
-    (Session session, Boolean redirect) computeSession()
+    (Session session, Boolean redirect) computeSession(HttpServer httpServer, RequestContext context)
         {
-        TODO
+        // TODO
+        return sessionManager.createSession(), False;
         }
     }
