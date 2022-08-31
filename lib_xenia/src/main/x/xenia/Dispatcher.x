@@ -67,7 +67,7 @@ service Dispatcher
             if (serviceInfo == Null)
                 {
                 Request  request = new Http1Request(new RequestInfo(httpServer, context), []);
-                Session? session = TODO getSessionOrNull();
+                Session? session = getSessionOrNull(httpServer, context);
 
                 response = catalog.webApp.handleUnhandledError^(session, request, HttpStatus.NotFound);
                 break;
@@ -138,17 +138,24 @@ service Dispatcher
                 }
             else
                 {
-                String[] argNames  = TODO;
-                String[] argValues = TODO;
+                (Int status, String[] names, String[] values, Byte[] body) =
+                    Http1Response.prepare(r);
 
-                httpServer.send(context, r.status.code, argNames, argValues, r.body?.bytes : []);
+                httpServer.send(context, status, names, values, body);
                 }
             });
         }
 
-    (Session session, Boolean redirect) computeSession(HttpServer httpServer, RequestContext context)
+    private Session? getSessionOrNull(HttpServer httpServer, RequestContext context)
         {
-        // TODO
+        // TODO: use cookies to find an existing session; quick validation - no redirect
+        return Null;
+        }
+
+    private (Session session, Boolean redirect)
+            computeSession(HttpServer httpServer, RequestContext context)
+        {
+        // TODO: use cookies to find an existing session; full validation - redirect if necessary
         return sessionManager.createSession(), False;
         }
     }
