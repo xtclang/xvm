@@ -15,6 +15,7 @@ import web.responses.SimpleResponse;
 import web.routing.Catalog.EndpointInfo;
 import web.routing.Catalog.MethodInfo;
 import web.routing.Catalog.WebServiceInfo;
+import web.routing.UriTemplate;
 
 
 /**

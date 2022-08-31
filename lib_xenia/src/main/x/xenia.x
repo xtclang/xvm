@@ -16,7 +16,6 @@ module xenia.xtclang.org
     import web.WebApp;
 
     import web.routing.Catalog;
-    import web.routing.UriTemplate;
 
     /**
      * The clock used within this module.
@@ -59,13 +58,13 @@ module xenia.xtclang.org
     typedef function void(Session, Request) as Observer;
 
     /**
-     * TODO a function that adds a parameter value to the passed-in tuple of values
-     *      (session, request, values)
+     * A function that adds a parameter value to the passed-in tuple of values. Used to collect
+     * arguments for the endpoint method invocation.
      */
     typedef function Tuple(Session, Request, Tuple) as ParameterBinder;
 
     /**
-     * TODO (results)
+     * A function that converts a result of the endpoint method invocation into a Response object.
      */
     typedef function Response(Request, Tuple) as Responder;
 
@@ -75,7 +74,10 @@ module xenia.xtclang.org
     typedef immutable Object as RequestContext;
 
     /**
-     * TODO
+     * Create and start an HTTP server for the specified web application.
+     *
+     * @param address  the HTTP server address string (e.g. "localhost:8080")
+     * @param app      the WebApp to dispatch the HTTP requests to
      */
     void createServer(String address, WebApp app)
         {
@@ -84,6 +86,6 @@ module xenia.xtclang.org
         Catalog     catalog = app.catalog_;
         HttpHandler handler = new HttpHandler(server, catalog);
 
-        TODO what else?
+        // TODO what else?
         }
     }
