@@ -147,16 +147,7 @@ public class IsExpression
                     typeTarget = pool.ensureAccessTypeConstant(typeTarget, Access.PRIVATE);
                     }
 
-                typeInferred = !typeTest.isTuple() &&
-                        typeTest.isExplicitClassIdentity(true) &&
-                        typeTarget.isExplicitClassIdentity(true)
-                            ? computeInferredType(typeTarget, typeTest)
-                            : typeTest;
-
-                if (typeInferred == typeTest)
-                    {
-                    typeInferred = typeTarget.combine(pool, typeTest);
-                    }
+                typeInferred = computeInferredType(pool, typeTarget, typeTest);
 
                 exprName.narrowType(ctx, Branch.WhenTrue,  typeInferred);
                 exprName.narrowType(ctx, Branch.WhenFalse, typeTarget.andNot(pool, typeTest));
@@ -180,9 +171,17 @@ public class IsExpression
     /**
      * @return an inferred narrowing type based on the original type and "is" type
      */
-    private TypeConstant computeInferredType(TypeConstant typeOriginal, TypeConstant typeNarrowing)
+    public static TypeConstant computeInferredType(ConstantPool pool,
+                                                   TypeConstant typeOriginal,
+                                                   TypeConstant typeNarrowing)
         {
-        ConstantPool   pool         = pool();
+        if (typeNarrowing.isTuple()
+        || !typeNarrowing.isExplicitClassIdentity(true)
+        || !typeOriginal.isExplicitClassIdentity(true))
+            {
+            return typeOriginal.combine(pool, typeNarrowing);
+            }
+
         ClassStructure clzNarrowing = (ClassStructure) typeNarrowing.
                 getSingleUnderlyingClass(true).getComponent();
         ClassStructure clzOriginal  = (ClassStructure) typeOriginal.
@@ -220,7 +219,11 @@ public class IsExpression
             typeInferred = typeNarrowing.adoptParameters(pool, typeInferred.getParamTypesArray());
             }
 
-        if (typeInferred != typeNarrowing)
+        if (typeInferred == typeNarrowing)
+            {
+            typeInferred = typeOriginal.combine(pool, typeNarrowing);
+            }
+        else
             {
             if (typeOriginal.isAccessSpecified() && !typeInferred.isAccessSpecified())
                 {

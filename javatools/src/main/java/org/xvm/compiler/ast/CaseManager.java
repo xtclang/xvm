@@ -604,7 +604,7 @@ public class CaseManager<CookieType>
             }
 
         // exit the inferring context
-        ctx = ctx.exit();
+        ctx.exit();
 
         return fValid;
         }
@@ -623,19 +623,27 @@ public class CaseManager<CookieType>
             return false;
             }
 
-        Constant constCase = m_listsetCase.last();
+        ConstantPool pool      = pool();
+        Constant     constCase = m_listsetCase.last();
         if (getConditionCount() == 1)
             {
             if (constCase instanceof TypeConstant typeCase)
                 {
-                NameExpression exprType = (NameExpression) m_listCond.get(0);
+                NameExpression exprTest = (NameExpression) m_listCond.get(0);
                 assert typeCase.isTypeOfType();
 
                 if ((m_afIsSwitch & 1L) == 1)
                     {
                     typeCase = typeCase.getParamType(0);
+
+                    TypeConstant typeTest = exprTest.getImplicitType(ctx);
+                    if (typeTest != null)
+                        {
+                        typeCase = IsExpression.computeInferredType(pool, typeTest, typeCase);
+                        }
                     }
-                exprType.narrowType(ctx, Branch.Always, typeCase);
+
+                exprTest.narrowType(ctx, Branch.Always, typeCase);
                 }
             }
         else if (constCase instanceof ArrayConstant constArray)
@@ -646,15 +654,21 @@ public class CaseManager<CookieType>
                 long lPos = 1L << i;
                 if ((m_lTypeExpr & lPos) != 0)
                     {
-                    NameExpression exprType = (NameExpression) m_listCond.get(i);
+                    NameExpression exprTest = (NameExpression) m_listCond.get(i);
                     TypeConstant   typeCase = (TypeConstant) aConstCase[i];
                     assert typeCase.isTypeOfType();
 
                     if ((m_afIsSwitch & lPos) == 1)
                         {
                         typeCase = typeCase.getParamType(0);
+
+                        TypeConstant typeTest = exprTest.getImplicitType(ctx);
+                        if (typeTest != null)
+                            {
+                            typeCase = IsExpression.computeInferredType(pool, typeTest, typeCase);
+                            }
                         }
-                    exprType.narrowType(ctx, Branch.Always, typeCase);
+                    exprTest.narrowType(ctx, Branch.Always, typeCase);
                     }
                 }
             }
@@ -1400,7 +1414,7 @@ public class CaseManager<CookieType>
 
     /**
      * "Bit set" (encoded as a long) for each condition expression / tuple field of case statement
-     * that is an "is switch" (an "is a" instead of an equals test).
+     * that is an "is switch" (an ".is()" instead of an equals test).
      */
     private long m_afIsSwitch;
 
