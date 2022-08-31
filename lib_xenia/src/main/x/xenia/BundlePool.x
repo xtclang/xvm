@@ -24,7 +24,7 @@ service BundlePool
     /**
      * Busy flags indexed by the bundle index.
      */
-    private Bit[] busy;
+    private Boolean[] busy;
 
     /**
      * The cache of ChainBundles indexed by the WebService id.
@@ -37,25 +37,35 @@ service BundlePool
     ChainBundle allocateBundle(Int wsid)
         {
         ChainBundle? bundle = bundleBySid[wsid];
-        if (bundle != Null && busy[bundle.index] == 0)
+        if (bundle != Null && !busy[bundle.index])
             {
-            busy[bundle.index] = 1;
+            busy[bundle.index] = True;
             return bundle;
             }
 
         Int lastIndex = bundles.size;
-        Int firstIdle = busy.leadingZeroCount;
+        Int firstIdle = lastIndex;
+
+        loop:
+        for (Boolean b : busy)
+            {
+            if (!b)
+                {
+                firstIdle = loop.count;
+                break;
+                }
+            }
 
         if (firstIdle < lastIndex)
             {
-            busy[firstIdle] = 1;
+            busy[firstIdle] = True;
             return bundles[firstIdle];
             }
 
         ChainBundle newBundle = new ChainBundle(catalog, lastIndex);
 
         bundles[lastIndex] = newBundle;
-        busy   [lastIndex] = 1;
+        busy   [lastIndex] = True;
 
         // this is very naive implementation; need to collect hits into a linked list for more
         // efficient WebService allocations
@@ -71,6 +81,6 @@ service BundlePool
      */
     void releaseBundle(ChainBundle bundle)
         {
-        busy[bundle.index] = 0;
+        busy[bundle.index] = False;
         }
     }
