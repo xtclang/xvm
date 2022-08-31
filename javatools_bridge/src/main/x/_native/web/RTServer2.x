@@ -3,7 +3,7 @@
  */
 @Concurrent
 service RTServer2
-        implements HttpServer2
+        implements HttpServer
     {
     typedef immutable Object as RequestContext;
 
@@ -40,11 +40,7 @@ service RTServer2
         {TODO("Native");}
 
     @Override
-    Int getHeaderCount(RequestContext context)
-        {TODO("Native");}
-
-    @Override
-    (String name, String value) getHeader(RequestContext context, Int index)
+    String[] getHeaderNames(RequestContext context)
         {TODO("Native");}
 
     @Override
@@ -76,7 +72,7 @@ service RTServer2
     /**
      * Injectable server.
      */
-    static interface HttpServer2
+    static interface HttpServer
             extends Closeable
         {
         /**
@@ -153,23 +149,13 @@ service RTServer2
         String getProtocolString(RequestContext context);
 
         /**
-         * Obtain the number of header name/value pairs
+         * Obtain all the header names.
          *
          * @param context  the context that was passed to a `Handler` for a request
          *
-         * @return the the number of header name/value pairs
+         * @return the array of all header names
          */
-        Int getHeaderCount(RequestContext context);
-
-        /**
-         * Obtain the specified header name and value.
-         *
-         * @param context  the context that was passed to a `Handler` for a request
-         * @param index    a value between `0` (inclusive) and `getHeaderCount` (exclusive)
-         *
-         * @return the name and value of the specified header
-         */
-        (String name, String value) getHeader(RequestContext context, Int index);
+        String[] getHeaderNames(RequestContext context);
 
         /**
          * Obtain all of the values for the specified header name.
@@ -216,7 +202,6 @@ service RTServer2
      */
     static interface Handler
         {
-        void handle(Object context, String uri, String method,
-                    String[] headerNames, String[] headerValues, Byte[] body);
+        void handle(Object context, String uri, String method);
         }
     }

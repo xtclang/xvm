@@ -97,23 +97,13 @@ interface HttpServer
     String getProtocolString(RequestContext context);
 
     /**
-     * Obtain the number of header name/value pairs
+     * Obtain all the header names.
      *
      * @param context  the context that was passed to a `Handler` for a request
      *
-     * @return the the number of header name/value pairs
+     * @return the array of all header names
      */
-    Int getHeaderCount(RequestContext context);
-
-    /**
-     * Obtain the specified header name and value.
-     *
-     * @param context  the context that was passed to a `Handler` for a request
-     * @param index    a value between `0` (inclusive) and `getHeaderCount` (exclusive)
-     *
-     * @return the name and value of the specified header
-     */
-    (String name, String value) getHeader(RequestContext context, Int index);
+    String[] getHeaderNames(RequestContext context);
 
     /**
      * Obtain all of the values for the specified header name.
@@ -226,26 +216,13 @@ interface HttpServer
             }
 
         /**
-         * Obtain the number of header name/value pairs
+         * Obtain all the header names.
          *
-         * @return the the number of header name/value pairs
+         * @return the array of all header names
          */
-        Int getHeaderCount()
+        String[] getHeaderNames()
             {
-            return server.getHeaderCount(context);
-            }
-
-        /**
-         * Obtain the specified header name and value.
-         *
-         * @param index  a value between `0` (inclusive) and `getHeaderCount` (exclusive)
-         *
-         * @return the name of the specified header
-         * @return the value of the specified header
-         */
-        (String name, String value) getHeader(Int index)
-            {
-            return server.getHeader(context, index);
+            return server.getHeaderNames(context);
             }
 
         /**
