@@ -36,7 +36,7 @@ const Http1Request(RequestInfo info, UriParameters matchResult)
             this.hasBody = True;
             this.bytes   = bytes;
 
-            assert String[] contentTypes := info.getHeaderValuesForName("ContentType");
+            assert String[] contentTypes := info.getHeaderValuesForName("Content-Type");
             assert mediaType := MediaType.of(contentTypes[0]);
             }
         else
