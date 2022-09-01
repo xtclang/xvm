@@ -84,9 +84,9 @@ public class MoveRef
             {
             ObjectHandle hReferent = switch (m_nFromValue)
                 {
-                case A_THIS, A_TARGET, A_STRUCT -> frame.getThis();
-                case A_STACK                    -> frame.popStack();
-                default                         -> throw new IllegalStateException();
+                case A_THIS, A_TARGET, A_STRUCT, A_STACK
+                        -> frame.getPredefinedArgument(m_nFromValue);
+                default -> throw new IllegalStateException();
                 };
 
             ConstantPool pool = frame.poolContext();

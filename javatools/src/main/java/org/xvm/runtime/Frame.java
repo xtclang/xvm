@@ -544,7 +544,7 @@ public class Frame
      *
      * @return a corresponding handle
      */
-    protected ObjectHandle getPredefinedArgument(int iArgId)
+    public ObjectHandle getPredefinedArgument(int iArgId)
         {
         switch (iArgId)
             {
