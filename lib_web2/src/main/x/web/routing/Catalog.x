@@ -59,7 +59,6 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins)
                                 String             path,
                                 ServiceConstructor constructor,
                                 EndpointInfo[]     endpoints,
-                                EndpointInfo?      errorEndpoint,
                                 EndpointInfo?      defaultEndpoint,
                                 MethodInfo[]       interceptors,
                                 MethodInfo[]       observers,

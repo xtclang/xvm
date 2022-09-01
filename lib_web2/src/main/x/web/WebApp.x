@@ -1,5 +1,6 @@
 import routing.Catalog;
 import routing.Catalog.EndpointInfo;
+import routing.Catalog.MethodInfo;
 import routing.Catalog.WebServiceInfo;
 
 import routing.UriTemplate;
@@ -24,59 +25,107 @@ mixin WebApp
      */
     @Lazy Catalog catalog_.calc()
         {
-        // TODO walk through all top level classes (and go into imported modules) to find all of the
-        //      WebService classes. remember to set the `webApp` property on each one to this WebApp
+        // REVIEW CP: how to report verification errors
 
         import ecstasy.reflect.Annotation;
         import ecstasy.reflect.Argument;
 
-        EndpointInfo[]   endpoints = new EndpointInfo[];
-        WebServiceInfo[] services  = new WebServiceInfo[];
+        WebServiceInfo[] webServices   = new WebServiceInfo[];
+        Class[]          sessionMixins = new Class[];
+        Int              wsid          = 0;
+        Int              epid          = 0;
 
         Module webModule = this;
         for (Class child : webModule.classes)
             {
-            (_, Annotation[] annos) = child.deannotate();
+            (Class baseClass, Annotation[] annos) = child.deannotate();
 
-            Annotation serviceAnno;
-            if (!(serviceAnno := annos.any(anno->anno.mixinClass == WebService)))
+            if (Annotation serviceAnno := annos.any(anno->anno.mixinClass == WebService))
                 {
-                continue;
-                }
-
-            String     root = "";
-            Argument[] args = serviceAnno.arguments;
-            if (!args.empty)
-                {
-                root = args[0].value.as(Path).toString();
-                }
-
-            Type<WebService> serviceType = child.PublicType.as(Type<WebService>);
-
-            Catalog.ServiceConstructor constructor;
-            if (!(constructor := serviceType.defaultConstructor()))
-                {
-                // TODO how to report an absence of a default constructor?
-                continue;
-                }
-
-            Int wsId = services.size;
-
-            for (Method<WebService, Tuple, Tuple> endpoint : serviceType.methods)
-                {
-                if (!endpoint.is(Endpoint))
+                String     path = "";
+                Argument[] args = serviceAnno.arguments;
+                if (!args.empty)
                     {
-                    continue;
+                    path = args[0].value.as(Path).toString();
                     }
 
-                Int epId = endpoints.size;
-                endpoints.add(new EndpointInfo(endpoint, epId, wsId));
-                }
+                Type<WebService> serviceType = child.PublicType.as(Type<WebService>);
 
-            WebServiceInfo wsInfo = TODO;
+                Catalog.ServiceConstructor constructor;
+                if (!(constructor := serviceType.defaultConstructor()))
+                    {
+                    throw new IllegalState("default WebService constructor is missing for {serviceType}");
+                    }
+
+                EndpointInfo[] endpoints       = new EndpointInfo[];
+                EndpointInfo?  defaultEndpoint = Null;
+                MethodInfo[]   interceptors    = new MethodInfo[];
+                MethodInfo[]   observers       = new EndpointInfo[];
+                MethodInfo?    onError         = Null;
+                MethodInfo?    route           = Null;
+
+                for (Method<WebService, Tuple, Tuple> method : serviceType.methods)
+                    {
+                    switch (method.is(_))
+                        {
+                        case Default:
+                            if (defaultEndpoint == Null)
+                                {
+                                defaultEndpoint = new EndpointInfo(method, -1, wsid);
+                                }
+                            else
+                                {
+                                throw new IllegalState("multiple \"Default\" endpoints on {serviceType}");
+                                }
+                            break;
+
+                        case Endpoint:
+                            endpoints.add(new EndpointInfo(method, epid++, wsid));
+                            break;
+
+                        case Intercept, Observe:
+                            interceptors.add(new MethodInfo(method, wsid));
+                            break;
+
+                        case OnError:
+                            if (onError == Null)
+                                {
+                                onError = new MethodInfo(method, wsid);
+                                }
+                            else
+                                {
+                                throw new IllegalState("multiple \"OnError\" handlers on {serviceType}");
+                                }
+                            break;
+
+                        default:
+                            if (method.name == "route" && method.params.size >= 4 &&
+                                    method.params[0].ParamType == Session         &&
+                                    method.params[1].ParamType == Request         &&
+                                    method.params[2].ParamType == Handler         &&
+                                    method.params[3].ParamType == ErrorHandler)
+                                {
+                                assert route == Null;
+                                route = new MethodInfo(method, wsid);
+                                }
+                            break;
+                        }
+                    }
+
+                webServices += new WebServiceInfo(wsid, path, constructor,
+                                                  endpoints, defaultEndpoint,
+                                                  interceptors, observers,
+                                                  onError, route
+                                                  );
+                wsid++;
+                }
+            else if (baseClass.PublicType.isA(Type<Session>))
+                {
+                sessionMixins += baseClass;
+                }
             }
 
-        return TODO;
+        return new Catalog(this, webServices, sessionMixins);
         }
 
     /**
