@@ -137,6 +137,15 @@ public class xRTComponentTemplate
             xBoolean.makeHandle(hTemplate1.getComponent().equals(hTemplate2.getComponent())));
         }
 
+    @Override
+    public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2)
+        {
+        ComponentTemplateHandle hTemplate1 = (ComponentTemplateHandle) hValue1;
+        ComponentTemplateHandle hTemplate2 = (ComponentTemplateHandle) hValue2;
+
+        return hTemplate1.getComponent() == hTemplate2.getComponent();
+        }
+
 
     // ----- property implementations --------------------------------------------------------------
 
