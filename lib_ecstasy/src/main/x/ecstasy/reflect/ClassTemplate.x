@@ -308,6 +308,53 @@ interface ClassTemplate
                     }
                 }
 
+            if (this.is(ClassTemplate))
+                {
+                switch (format)
+                    {
+                    case Const:
+                        // implicitly implements Const
+                        if (Const.composition.implements(composition))
+                            {
+                            return True;
+                            }
+                        break;
+
+                    case Enum:
+                    case EnumValue:
+                        // implicitly implements Enum
+                        if (Enum.composition.implements(composition))
+                            {
+                            return True;
+                            }
+                        break;
+
+                    case Service:
+                        // implicitly implements Service
+                        if (Service.composition.implements(composition))
+                            {
+                            return True;
+                            }
+                        break;
+
+                    case Package:
+                        // implicitly implements Package
+                        if (Package.composition.implements(composition))
+                            {
+                            return True;
+                            }
+                        break;
+
+                    case Module:
+                        // implicitly implements Module
+                        if (Module.composition.implements(composition))
+                            {
+                            return True;
+                            }
+                        break;
+                    }
+                }
+
             return False;
             }
 

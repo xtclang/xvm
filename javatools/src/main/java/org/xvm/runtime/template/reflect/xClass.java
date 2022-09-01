@@ -76,10 +76,6 @@ public class xClass
         markNativeProperty("virtualChild");
 
         markNativeMethod("allocate"    , null, null);
-        markNativeMethod("derivesFrom" , null, null);
-        markNativeMethod("extends"     , null, null);
-        markNativeMethod("implements"  , null, null);
-        markNativeMethod("incorporates", null, null);
         markNativeMethod("isSingleton" , null, null);
         markNativeMethod("defaultValue", null, null);
 
@@ -148,19 +144,6 @@ public class xClass
             }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
-        }
-
-    @Override
-    public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                             ObjectHandle hArg, int iReturn)
-        {
-        switch (method.getName())
-            {
-            case "implements":
-                return invokeImplements(frame, hTarget, hArg, iReturn);
-            }
-
-        return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
         }
 
     @Override
@@ -475,17 +458,6 @@ public class xClass
                     frame.getConstHandle(constDefault));
             }
         return frame.assignValue(aiReturn[0], xBoolean.FALSE);
-        }
-
-    /**
-     * Implementation for: {@code Boolean implements(Class clz)}.
-     */
-    public int invokeImplements(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
-        {
-        TypeConstant typeThis = getClassType(hTarget);
-        TypeConstant typeThat = getClassType(hArg);
-        // TODO GG: not quite right
-        return frame.assignValue(iReturn, xBoolean.makeHandle(typeThis.isA(typeThat)));
         }
 
 
