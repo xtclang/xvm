@@ -4,22 +4,38 @@ module TestSimple
 
     void run()
         {
-        @Unchecked Int x = 5;
+        Class c0 = Test;
+        Class c1 = Test1;
 
-        test(x);
+        assert c0.implements(Runnable);
+        assert val anno := c1.annotatedBy(Named);
+        console.println($"{anno.arguments[0].name}={anno.arguments[0].value}");
         }
 
-    void test(Int o)
+    interface Runnable
         {
-        switch (o.is(_))
-            {
-            case Unchecked:                     // this used to assert the compilation
-                console.println("Unchecked");
-                break;
+        void run();
+        }
 
-            default:
-                console.println("Checked");
-                break;
+    mixin Named(String name)
+            into Runnable
+        {
+        String name;
+        }
+
+    class Test
+        implements Runnable
+        {
+        @Override
+        void run()
+            {
+            TODO
             }
+        }
+
+    @Named("one")
+    class Test1
+           extends Test
+        {
         }
     }

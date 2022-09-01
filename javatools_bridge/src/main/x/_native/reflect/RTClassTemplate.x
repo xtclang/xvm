@@ -59,32 +59,38 @@ class RTClassTemplate
                                     Type              ingredientType,
                                     Object[]?         parameters,
                                     PropertyTemplate? delegatee,
-                                    String[]?         constraintNames,
-                                    Type[]?           constraintTypes)
+                                    String[]?         names,
+                                    Type[]?           types)
         {
         assert Composition         ingredient := ingredientType.template.fromClass();
         Map<String, TypeTemplate>? constraints = Null;
 
-        if (action == AnnotatedBy)
+        switch (action)
             {
-            assert ingredient.is(ClassTemplate) && parameters != Null;
+            case AnnotatedBy:
+                assert ingredient.is(ClassTemplate) && parameters != Null;
 
-            Argument[] arguments = parameters.size == 0
-                    ? []
-                    : new Array(parameters.size, i -> new Argument(parameters[i].as(const)));
+                Argument[] arguments = parameters.size == 0
+                        ? []
+                        : names == Null
+                            ? new Array(parameters.size, i -> new Argument(parameters[i].as(const)))
+                            : new Array(parameters.size, i -> new Argument(parameters[i].as(const), names[i]));
 
-            ingredient = new AnnotatingComposition(new AnnotationTemplate(ingredient, arguments), this);
-            }
+                ingredient = new AnnotatingComposition(new AnnotationTemplate(ingredient, arguments), this);
+                break;
 
-        if (constraintNames != Null && constraintTypes != Null)
-            {
-            Int count = constraintNames.size;
+            case Incorporates:
+                if (names != Null && types != Null)
+                    {
+                    Int count = names.size;
 
-            assert count == constraintTypes.size;
+                    assert count == types.size;
 
-            TypeTemplate[] constraintTemplates =
-                    new Array<TypeTemplate>(count, i -> constraintTypes[i].template);
-            constraints = new ListMap(constraintNames, constraintTemplates);
+                    TypeTemplate[] constraintTemplates =
+                            new Array<TypeTemplate>(count, i -> types[i].template);
+                    constraints = new ListMap(names, constraintTemplates);
+                    }
+                break;
             }
 
         return new Contribution(action, ingredient, delegatee, constraints);

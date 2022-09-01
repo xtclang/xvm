@@ -193,11 +193,11 @@ public class xRTClassTemplate
      */
     public int getPropertyImplicitName(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
         {
-        ClassStructure   clz   = (ClassStructure) hComponent.getComponent();
-        IdentityConstant idClz = clz.getIdentityConstant();
-        if (idClz instanceof ClassConstant)
+        ClassStructure   clz = (ClassStructure) hComponent.getComponent();
+        IdentityConstant id  = clz.getIdentityConstant();
+        if (id instanceof ClassConstant idClz)
             {
-            String sAlias = ((ClassConstant) idClz).getImplicitImportName();
+            String sAlias = idClz.getImplicitImportName();
             if (sAlias != null)
                 {
                 return frame.assignValue(iReturn, xString.makeHandle(sAlias));
@@ -279,11 +279,32 @@ public class xRTClassTemplate
                         }
                     else
                         {
+                        TypeConstant[] atype = new TypeConstant[cParams];
+
                         ahParam = new ObjectHandle[cParams];
                         for (int i = 0; i < cParams; i++)
                             {
-                            ahParam[i] = frame.getConstHandle(aParam[i]);
+                            ObjectHandle hValue = frameCaller.getConstHandle(aParam[i]);
+                            ahParam[i] = hValue;
+                            atype[i]   = hValue.getType();
                             }
+
+                        ClassConstant  idAnno  = (ClassConstant) anno.getAnnotationClass();
+                        ClassStructure clzAnno = (ClassStructure) idAnno.getComponent();
+                        if (clzAnno != null)
+                            {
+                            MethodStructure ctor = clzAnno.findConstructor(atype);
+                            if (ctor != null)
+                                {
+                                StringHandle[] ahNames = new StringHandle[cParams];
+                                for (int i = 0; i < cParams; i++)
+                                    {
+                                    ahNames[i] = xString.makeHandle(ctor.getParam(i).getName());
+                                    }
+                                haNames = xArray.makeStringArrayHandle(ahNames);
+                                }
+                            }
+
                         // TODO GG: handle deferred
                         }
 
@@ -393,9 +414,9 @@ public class xRTClassTemplate
         List<ComponentTemplateHandle> listProps = new ArrayList<>();
         for (Component child : clz.children())
             {
-            if (child instanceof PropertyStructure)
+            if (child instanceof PropertyStructure prop)
                 {
-                listProps.add(xRTPropertyTemplate.makePropertyHandle((PropertyStructure) child));
+                listProps.add(xRTPropertyTemplate.makePropertyHandle(prop));
                 }
             }
 

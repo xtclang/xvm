@@ -176,26 +176,26 @@ const Class<PublicType, ProtectedType extends PublicType,
      * Given a specified TypeSystem, determine the path that identifies this Class within that
      * TypeSystem.
      *
-     * @param a TypeSystem
+     * @param typeSystem  a TypeSystem
      *
      * @return True iff the class exists within the specified TypeSystem
      * @return (optional) the qualified path to the class within the TypeSystem, in a format that
      *         is supported by [TypeSystem.classForName]
      */
-    conditional String pathWithin(TypeSystem typesys)
+    conditional String pathWithin(TypeSystem typeSystem)
         {
         String path       = this.path;
         assert Int colon := path.indexOf(':');
         String moduleName = path[0 .. colon);
-        if (Module _module := typesys.moduleByQualifiedName.get(moduleName))
+        if (Module _module := typeSystem.moduleByQualifiedName.get(moduleName))
             {
-            if (String modPath := typesys.modulePaths.get(_module))
+            if (String modPath := typeSystem.modulePaths.get(_module))
                 {
                 // compute a relative path from the root of the primary module
                 String relPath = path.substring(colon+1);
                 return True, switch (modPath, relPath)
                         {
-                        case ("", ""): typesys.primaryModule.qualifiedName + ':';
+                        case ("", ""): typeSystem.primaryModule.qualifiedName + ':';
                         case ("", _ ): relPath;
                         case (_ , ""): modPath;
                         case (_ , _ ): modPath + '.' + relPath;
@@ -439,19 +439,37 @@ const Class<PublicType, ProtectedType extends PublicType,
     /**
      * Determine if the class of the referent incorporates the specified mixin.
      *
-     * @param clz  the class to test if this class incorporates
+     * @param mix  the mixin class to test if this class incorporates
      *
      * @return True iff this class incorporates the specified class
      */
-    Boolean incorporates(Class!<> clz)
+    Boolean incorporates(Class!<> mix)
         {
         // one can only "incorporate" a mixin
-        if (clz.baseTemplate.format != Mixin)
+        if (mix.baseTemplate.format != Mixin)
             {
             return False;
             }
 
-        return this.PublicType.isA(clz.PublicType) && this.composition.incorporates(clz.composition);
+        return this.PublicType.isA(mix.PublicType) && this.composition.incorporates(mix.composition);
+        }
+
+    /**
+     * Determine if the class of the referent is annotated by the specified mixin.
+     *
+     * @param mix  the mixin class to test if this class is annotated by
+     *
+     * @return True iff this class is annotated by the specified class
+     */
+    conditional AnnotationTemplate annotatedBy(Class!<> mix)
+        {
+        // one can only be annotated by a mixin
+        if (mix.baseTemplate.format != Mixin)
+            {
+            return False;
+            }
+
+        return composition.findAnnotation(mix.displayName);
         }
 
     /**
