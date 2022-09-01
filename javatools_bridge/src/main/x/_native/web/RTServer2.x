@@ -12,6 +12,10 @@ service RTServer2
         {TODO("Native");}
 
     @Override
+    void send(RequestContext context, Int status, String[] headerNames, String[] headerValues, Byte[] body)
+        {TODO("Native");}
+
+    @Override
     Byte[] getClientAddressBytes(RequestContext context)
         {TODO("Native");}
 
@@ -56,10 +60,6 @@ service RTServer2
         {TODO("Native");}
 
     @Override
-    void send(RequestContext context, Int status, String[] headerNames, String[] headerValues, Byte[] body)
-        {TODO("Native");}
-
-    @Override
     void close(Exception? cause = Null)
         {TODO("Native");}
 
@@ -80,6 +80,10 @@ service RTServer2
          */
         void attachHandler(Handler handler);
 
+        /**
+         * Send a response.
+         */
+        void send(RequestContext context, Int status, String[] headerNames, String[] headerValues, Byte[] body);
 
         // ----- request attributes accessors ------------------------------------------------------
 
@@ -187,14 +191,6 @@ service RTServer2
          * @return (conditional) an array of `context` objects, each representing the one nested body
          */
         conditional RequestContext[] containsNestedBodies(RequestContext context);
-
-
-        // ----- response --------------------------------------------------------------------------
-
-        /**
-         * Send a response.
-         */
-        void send(RequestContext context, Int status, String[] headerNames, String[] headerValues, Byte[] body);
         }
 
     /**
@@ -202,6 +198,6 @@ service RTServer2
      */
     static interface Handler
         {
-        void handle(Object context, String uri, String method);
+        void handle(RequestContext context, String uri, String method);
         }
     }
