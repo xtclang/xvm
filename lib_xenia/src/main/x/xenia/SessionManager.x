@@ -1,10 +1,11 @@
 import SessionStore.IOResult;
 
+
 /**
  * A service that keeps track of all of the `Session` objects.
  */
 @Concurrent
-service SessionManager(SessionStore store, function SessionImpl(Int) instantiateSession)
+service SessionManager(SessionStore store, SessionProducer instantiateSession)
     {
     // ----- properties ----------------------------------------------------------------------------
 
@@ -16,7 +17,8 @@ service SessionManager(SessionStore store, function SessionImpl(Int) instantiate
     /**
      * The means to instantiate sessions.
      */
-    protected/private function SessionImpl(Int) instantiateSession;
+    typedef function SessionImpl(SessionManager, Int) as SessionProducer;
+    protected/private SessionProducer instantiateSession;
 
     /**
      * Increment the session identifier "counter" by a large prime number.
@@ -71,7 +73,7 @@ service SessionManager(SessionStore store, function SessionImpl(Int) instantiate
      * [Session] by id, or the [SessionStatus] if the `Session` is not `InMemory` but the status is
      * known.
      */
-    protected/private Map<Int, SessionImpl|SessionStatus> sessions;
+    protected/private Map<Int, SessionImpl|SessionStatus> sessions = new HashMap();
 
     /**
      * The daemon responsible for cleaning up expired session data.
@@ -193,7 +195,7 @@ service SessionManager(SessionStore store, function SessionImpl(Int) instantiate
     SessionImpl createSession()
         {
         Int         id      = generateId();
-        SessionImpl session = instantiateSession(id);
+        SessionImpl session = instantiateSession(this, id);
         sessions.put(id, session);
 
         purger.track^(id);

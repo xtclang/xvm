@@ -22,7 +22,7 @@ service SessionPurger(Duration cycleTime=Duration:1M)
     /**
      * Session ids that have been added since the last scan began.
      */
-    Int[] newIds;
+    Int[] newIds = new Int[];
 
     /**
      * Set to `True` when the `SessionPurger` is supposed to stop its work.

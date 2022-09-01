@@ -8,6 +8,7 @@ import web.routing.Catalog.MethodInfo;
 import web.routing.Catalog.WebServiceInfo;
 import web.routing.UriTemplate.UriParameters;
 
+import HttpServer.RequestContext;
 import HttpServer.RequestInfo;
 
 

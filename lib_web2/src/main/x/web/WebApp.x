@@ -27,8 +27,9 @@ mixin WebApp
         {
         // REVIEW CP: how to report verification errors
 
-        import ecstasy.reflect.Annotation;
+        import ecstasy.reflect.AnnotationTemplate;
         import ecstasy.reflect.Argument;
+        import ecstasy.reflect.ClassTemplate.Composition;
 
         WebServiceInfo[] webServices   = new WebServiceInfo[];
         Class[]          sessionMixins = new Class[];
@@ -38,12 +39,10 @@ mixin WebApp
         Module webModule = this;
         for (Class child : webModule.classes)
             {
-            (Class baseClass, Annotation[] annos) = child.deannotate();
-
-            if (Annotation serviceAnno := annos.any(anno->anno.mixinClass == WebService))
+            if (AnnotationTemplate template := child.annotatedBy(WebService))
                 {
                 String     path = "";
-                Argument[] args = serviceAnno.arguments;
+                Argument[] args = template.arguments;
                 if (!args.empty)
                     {
                     path = args[0].value.as(Path).toString();
@@ -54,7 +53,7 @@ mixin WebApp
                 Catalog.ServiceConstructor constructor;
                 if (!(constructor := serviceType.defaultConstructor()))
                     {
-                    throw new IllegalState("default WebService constructor is missing for {serviceType}");
+                    throw new IllegalState($"default WebService constructor is missing for \"{child}\"");
                     }
 
                 EndpointInfo[] endpoints       = new EndpointInfo[];
@@ -75,7 +74,7 @@ mixin WebApp
                                 }
                             else
                                 {
-                                throw new IllegalState("multiple \"Default\" endpoints on {serviceType}");
+                                throw new IllegalState($"multiple \"Default\" endpoints on \"{child}\"");
                                 }
                             break;
 
@@ -94,7 +93,7 @@ mixin WebApp
                                 }
                             else
                                 {
-                                throw new IllegalState("multiple \"OnError\" handlers on {serviceType}");
+                                throw new IllegalState($"multiple \"OnError\" handlers on \"{child}\"");
                                 }
                             break;
 
@@ -119,9 +118,9 @@ mixin WebApp
                                                   );
                 wsid++;
                 }
-            else if (baseClass.PublicType.isA(Type<Session>))
+            else if (child.implements(Session))
                 {
-                sessionMixins += baseClass;
+                sessionMixins += child;
                 }
             }
 

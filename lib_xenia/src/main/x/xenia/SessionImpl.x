@@ -96,9 +96,10 @@ service SessionImpl
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    construct(SessionManager manager)
+    construct(SessionManager manager, Int sessionId)
         {
         manager_ = manager;
+        // TODO CP: store the sessionId as a String?
         }
 
 

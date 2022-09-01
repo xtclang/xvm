@@ -8,6 +8,7 @@ service BundlePool
         this.catalog = catalog;
 
         bundles     = new ChainBundle[];
+        busy        = new Boolean[];
         bundleBySid = new ChainBundle?[catalog.serviceCount];
         }
 

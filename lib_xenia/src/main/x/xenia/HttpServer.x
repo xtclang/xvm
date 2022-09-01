@@ -11,6 +11,11 @@ interface HttpServer
         extends Closeable
     {
     /**
+     * An opaque native immutable object that represents an http request.
+     */
+    typedef immutable Object as RequestContext;
+
+    /**
      * HttpRequest handler.
      */
     static interface Handler

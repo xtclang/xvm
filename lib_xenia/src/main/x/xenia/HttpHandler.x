@@ -7,18 +7,23 @@ import web.routing.Catalog.EndpointInfo;
 import web.routing.Catalog.WebServiceInfo;
 import web.routing.UriTemplate;
 
+import HttpServer.Handler;
+import HttpServer.RequestContext;
+
 
 /**
  * An HTTP request entry point.
  */
 @Concurrent
 service HttpHandler
-        implements HttpServer.Handler
+        implements Handler
     {
     construct(HttpServer httpServer, Catalog catalog)
         {
         this.httpServer     = httpServer;
         this.catalog        = catalog;
+        this.dispatchers    = new Dispatcher[];
+        this.busy           = new Boolean[];
         this.bundlePool     = new BundlePool(catalog);
         this.sessionManager = createSessionManager(catalog);
         }
@@ -40,7 +45,12 @@ service HttpHandler
     /**
      * The dispatchers.
      */
-    protected Dispatcher[] dispatchers = new Dispatcher[];
+    protected Dispatcher[] dispatchers;
+
+    /**
+     * The dispatchers state.
+     */
+    protected Boolean[] busy;
 
     /**
      * The ChainBundle pool.
@@ -56,11 +66,6 @@ service HttpHandler
      * Closing flag.
      */
     Boolean closing;
-
-    /**
-     * The dispatchers state.
-     */
-    Boolean[] busy;
 
     /**
      * The max number of dispatchers.
@@ -173,8 +178,11 @@ service HttpHandler
 
     static private SessionManager createSessionManager(Catalog catalog)
         {
-        function SessionImpl(Int) sessionConstructor = TODO
+        import SessionManager.SessionProducer;
 
-        return new SessionManager(new SessionStore(), sessionConstructor);
+        // TODO GG: incorporate the SessionMixins
+        SessionProducer sessionProducer = (mgr, id) -> new SessionImpl(mgr, id);
+
+        return new SessionManager(new SessionStore(), sessionProducer);
         }
     }

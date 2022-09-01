@@ -69,11 +69,6 @@ module xenia.xtclang.org
     typedef function Response(Request, Tuple) as Responder;
 
     /**
-     * An opaque native immutable object that represents an http request.
-     */
-    typedef immutable Object as RequestContext;
-
-    /**
      * Create and start an HTTP server for the specified web application.
      *
      * @param address  the HTTP server address string (e.g. "localhost:8080")
@@ -81,7 +76,7 @@ module xenia.xtclang.org
      */
     void createServer(String address, WebApp app)
         {
-        @Inject(opts=address) HttpServer server;
+        @Inject(resourceName="server2", opts=address) HttpServer server;
 
         Catalog     catalog = app.catalog_;
         HttpHandler handler = new HttpHandler(server, catalog);
