@@ -374,8 +374,16 @@ public abstract class Container
      */
     public ClassTemplate getTemplate(Constant constValue)
         {
+        return getTemplate(getType(constValue)); // the type must exist
+        }
+
+    /**
+     * @return a TypeConstant associated with the specified constant
+     */
+    public TypeConstant getType(Constant constValue)
+        {
         // at the moment, compiler only generates constants for native types
-        return getTemplate(getNativeContainer().getConstType(constValue)); // the type must exist
+        return getNativeContainer().getConstType(constValue);
         }
 
     /**

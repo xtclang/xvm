@@ -268,6 +268,8 @@ public class xRTClassTemplate
                 {
                 case Annotation:
                     {
+                    sAction = "AnnotatedBy";
+
                     Annotation anno    = contrib.getAnnotation();
                     Constant[] aParam  = anno.getParams();
                     int        cParams = aParam.length;
@@ -284,9 +286,10 @@ public class xRTClassTemplate
                         ahParam = new ObjectHandle[cParams];
                         for (int i = 0; i < cParams; i++)
                             {
-                            ObjectHandle hValue = frameCaller.getConstHandle(aParam[i]);
-                            ahParam[i] = hValue;
-                            atype[i]   = hValue.getType();
+                            Constant constParam = aParam[i];
+
+                            ahParam[i] = frameCaller.getConstHandle(constParam);
+                            atype[i]   = container.getType(constParam);
                             }
 
                         ClassConstant  idAnno  = (ClassConstant) anno.getAnnotationClass();
@@ -305,11 +308,21 @@ public class xRTClassTemplate
                                 }
                             }
 
-                        // TODO GG: handle deferred
+                        if (Op.anyDeferred(ahParam))
+                            {
+                            ObjectHandle haN = haNames;
+                            ObjectHandle haT = haTypes;
+
+                            Frame.Continuation stepNext = frameCaller2 ->
+                                callCreateContrib(frameCaller2, hComponent, sAction, typeContrib,
+                                    xArray.makeObjectArrayHandle(ahParam, Mutability.Constant),
+                                    hDelegatee, haN, haT);
+
+                            return new Utils.GetArguments(ahParam, stepNext).doNext(frame);
+                            }
                         }
 
                     haParams = xArray.makeObjectArrayHandle(ahParam, Mutability.Constant);
-                    sAction  = "AnnotatedBy";
                     break;
                     }
                 case Extends:
@@ -326,6 +339,8 @@ public class xRTClassTemplate
                     break;
                 case Incorporates:
                     {
+                    sAction = "Incorporates";
+
                     Map<StringConstant, TypeConstant> mapConstraints = contrib.getTypeParams();
                     int cConstraints = mapConstraints == null ? 0 : mapConstraints.size();
                     if (cConstraints > 0)
@@ -346,26 +361,34 @@ public class xRTClassTemplate
                         haTypes = xArray.createImmutableArray(
                                     xRTType.ensureTypeArrayComposition(container), ahTypes);
                         }
-                    sAction = "Incorporates";
                     break;
                     }
                 default:
                     throw new IllegalStateException();
                 }
 
-            ObjectHandle[] ahVar = new ObjectHandle[CREATE_CONTRIB_METHOD.getMaxVars()];
-            ahVar[0] = Utils.ensureInitializedEnum(frameCaller, ACTION_TEMPLATE.getEnumByName(sAction));
-            ahVar[1] = typeContrib.ensureTypeHandle(container);
-            ahVar[2] = haParams;
-            ahVar[3] = hDelegatee;
-            ahVar[4] = haNames;
-            ahVar[5] = haTypes;
-
-            return frameCaller.call1(CREATE_CONTRIB_METHOD, hComponent, ahVar, Op.A_STACK);
+            return callCreateContrib(frameCaller, hComponent, sAction, typeContrib, haParams,
+                    hDelegatee, haNames, haTypes);
             };
 
         return xArray.createAndFill(frame, ensureContribArrayComposition(container),
                 listContrib.size(), supplier, iReturn);
+        }
+
+    static private int callCreateContrib(Frame frame, ComponentTemplateHandle hComponent,
+                                         String sAction, TypeConstant typeContrib,
+                                         ObjectHandle haParams, ObjectHandle hDelegatee,
+                                         ObjectHandle haNames, ObjectHandle haTypes)
+        {
+        ObjectHandle[] ahVar = new ObjectHandle[CREATE_CONTRIB_METHOD.getMaxVars()];
+        ahVar[0] = Utils.ensureInitializedEnum(frame, ACTION_TEMPLATE.getEnumByName(sAction));
+        ahVar[1] = typeContrib.ensureTypeHandle(frame.f_context.f_container);
+        ahVar[2] = haParams;
+        ahVar[3] = hDelegatee;
+        ahVar[4] = haNames;
+        ahVar[5] = haTypes;
+
+        return frame.call1(CREATE_CONTRIB_METHOD, hComponent, ahVar, Op.A_STACK);
         }
 
     /**
