@@ -133,7 +133,8 @@ public class DebugConsole
         if (m_fBreakOnAllThrows ||
                  m_setThrowBreaks != null && m_setThrowBreaks.stream().anyMatch(bp -> bp.matches(hEx)))
             {
-            if (enterCommand(frame, Op.R_EXCEPTION, true) == Op.R_CALL)
+            boolean fRender = m_stepMode != StepMode.NaturalReturn;
+            if (enterCommand(frame, Op.R_EXCEPTION, fRender) == Op.R_CALL)
                 {
                 // natural call by the debugger
                 return Op.R_CALL;
@@ -819,7 +820,7 @@ public class DebugConsole
                                     {
                                     writer.println("<unassigned>");
                                     }
-                                else if (callToString(frame, hVar, writer) == Op.R_CALL)
+                                else if (callToString(frame, frame.clearException(), hVar, writer) == Op.R_CALL)
                                     {
                                     return Op.R_CALL;
                                     }
@@ -864,12 +865,13 @@ public class DebugConsole
      */
     private int callEval(Frame frame, MethodStructure lambda, ObjectHandle[] ahArg, PrintWriter writer)
         {
-        ObjectHandle hThis = frame.f_function.isFunction() ? null : frame.getThis();
+        ObjectHandle    hThis   = frame.f_function.isFunction() ? null : frame.getThis();
+        ExceptionHandle hExPrev = frame.clearException(); // save off the current exception (if any)
         switch (frame.call1(lambda, hThis, ahArg, Op.A_STACK))
             {
             case Op.R_NEXT:
                 lambda.getParent().removeChild(lambda);
-                return callToString(frame, frame.popStack(), writer);
+                return callToString(frame, hExPrev, frame.popStack(), writer);
 
             case Op.R_CALL:
                 m_stepMode = StepMode.NaturalCall;
@@ -879,7 +881,7 @@ public class DebugConsole
                     ExceptionHandle hEx = frameCaller.clearException();
                     if (hEx == null)
                         {
-                        if (callToString(frameCaller, frameCaller.popStack(), writer) == Op.R_CALL)
+                        if (callToString(frameCaller, hExPrev, frameCaller.popStack(), writer) == Op.R_CALL)
                             {
                             return Op.R_CALL;
                             }
@@ -890,6 +892,7 @@ public class DebugConsole
                         writer.println(frameCaller.getStackTrace());
                         }
                     m_stepMode = StepMode.NaturalReturn;
+                    frameCaller.m_hException = hExPrev;
                     return m_iPC;
                     });
                 return Op.R_CALL;
@@ -902,13 +905,14 @@ public class DebugConsole
     /**
      * Process natural "toString()" call.
      */
-    private int callToString(Frame frame, ObjectHandle hVar, PrintWriter writer)
+    private int callToString(Frame frame, ExceptionHandle hExPrev, ObjectHandle hVar, PrintWriter writer)
         {
         switch (Utils.callToString(frame, hVar))
             {
             case Op.R_NEXT:
                 m_stepMode = StepMode.None;
                 writer.println(((StringHandle) frame.popStack()).getStringValue());
+                frame.m_hException = hExPrev;
                 return Op.R_NEXT;
 
             case Op.R_CALL:
@@ -926,6 +930,7 @@ public class DebugConsole
                         writer.println(frameCaller.getStackTrace());
                         }
                     m_stepMode = StepMode.NaturalReturn;
+                    frameCaller.m_hException = hExPrev;
                     return m_iPC;
                     });
                 return Op.R_CALL;
@@ -933,6 +938,7 @@ public class DebugConsole
             case Op.R_EXCEPTION:
                 m_stepMode = StepMode.None;
                 writer.println("Call \"toString()\" threw an exception " + frame.clearException());
+                frame.m_hException = hExPrev;
                 return Op.R_NEXT;
 
             default:
