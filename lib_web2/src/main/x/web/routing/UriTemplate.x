@@ -451,9 +451,9 @@ const UriTemplate
     static conditional ((String|Expression)[] parts, Section?[] implicitSection, String[] vars)
             parse(String template)
         {
-        (String|Expression)[] parts             = new (String|Expression)[];
+        (String|Expression)[] parts           = new (String|Expression)[];
         Section?[]            implicitSection = new Section?[];
-        String[]              vars              = new String[];
+        String[]              vars            = new String[];
 
         Int offset = 0;
         Int length = template.size;
