@@ -104,14 +104,14 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins)
     static const EndpointInfo
             extends MethodInfo
         {
-        construct(Method<WebService> method, Int id, Int wsid, String wsPath)
+        construct(Method<WebService> method, Int id, Int wsid)
             {
             assert method.is(Endpoint);
 
             this.id = id;
             construct MethodInfo(method, wsid);
 
-            this.template = new UriTemplate(wsPath + method.path);
+            this.template = new UriTemplate(method.path);
             this.produces = method.is(Produces)
                         ? method.produces
                         : [];

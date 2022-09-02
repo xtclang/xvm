@@ -70,7 +70,7 @@ mixin WebApp
                         case Default:
                             if (defaultEndpoint == Null)
                                 {
-                                defaultEndpoint = new EndpointInfo(method, -1, wsid, path);
+                                defaultEndpoint = new EndpointInfo(method, -1, wsid);
                                 }
                             else
                                 {
@@ -79,7 +79,7 @@ mixin WebApp
                             break;
 
                         case Endpoint:
-                            endpoints.add(new EndpointInfo(method, epid++, wsid, path));
+                            endpoints.add(new EndpointInfo(method, epid++, wsid));
                             break;
 
                         case Intercept, Observe:
