@@ -48,7 +48,13 @@ mixin WebApp
                     throw new IllegalState($"WebService's \"path\" argument must be specified for \"{child}\"");
                     }
 
-                String             path        = args[0].value.as(Path).toString();
+                String path = args[0].value.as(String);
+                if (path == "")
+                    {
+                    // don't complain; just replace with the root path
+                    path = "/";
+                    }
+
                 Type<WebService>   serviceType = child.PublicType.as(Type<WebService>);
                 ServiceConstructor constructor;
                 if (!(constructor := serviceType.defaultConstructor()))

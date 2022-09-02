@@ -28,6 +28,16 @@ const UriTemplate
                 as $"Failed to parse URI template: {template.quoted()}";
         }
 
+    /**
+     * Construct a trivial "root" URI template.
+     */
+    private construct()
+        {
+        implicitSection = [];
+        vars            = [];
+        parts           = vars;
+        }
+
 
     // ----- properties ----------------------------------------------------------------------------
 
@@ -825,4 +835,6 @@ const UriTemplate
         parts.forEach(p -> p.appendTo(buf));
         return buf;
         }
+
+    static UriTemplate ROOT = new UriTemplate();
     }

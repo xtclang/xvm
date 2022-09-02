@@ -8,7 +8,7 @@
  *         {
  *         package web import web.xtclang.org;
  *
- *         @web.WebService(Path:/)
+ *         @web.WebService("/")
  *         service Hello
  *             {
  *             @web.Get("hello")
@@ -20,7 +20,7 @@
  *             }
  *         }
  */
-mixin WebService(Path path)
+mixin WebService(String path)
         into service
     {
     // ----- properties ----------------------------------------------------------------------------

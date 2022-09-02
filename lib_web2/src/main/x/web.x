@@ -207,50 +207,50 @@ module web.xtclang.org
      *     @Endpoint(GET, "/{id}")
      *
      * @param httpMethod  the name of the HTTP method
-     * @param path        the optional path to reach this endpoint
+     * @param template    an optional URI Template describing a path to reach this endpoint
      */
-    mixin Endpoint(HttpMethod httpMethod, String path = "")
+    mixin Endpoint(HttpMethod httpMethod, String template = "")
             into Method<WebService>;
 
     /**
      * An HTTP `GET` method.
      *
-     * @param path  the optional path to reach this endpoint
+     * @param template  an optional URI Template describing a path to reach this endpoint
      */
-    mixin Get(String path = "")
-            extends Endpoint(GET, path);
+    mixin Get(String template = "")
+            extends Endpoint(GET, template);
 
     /**
      * An HTTP `POST` method.
      *
-     * @param path  the optional path to reach this endpoint
+     * @param template  an optional URI Template describing a path to reach this endpoint
      */
-    mixin Post(String path = "")
-            extends Endpoint(POST, path);
+    mixin Post(String template = "")
+            extends Endpoint(POST, template);
 
     /**
      * An HTTP `PATCH` method.
      *
-     * @param path  the optional path to reach this endpoint
+     * @param template  an optional URI Template describing a path to reach this endpoint
      */
-    mixin Patch(String path = "")
-            extends Endpoint(PATCH, path);
+    mixin Patch(String template = "")
+            extends Endpoint(PATCH, template);
 
     /**
      * An HTTP `PUT` method.
      *
-     * @param path  the optional path to reach this endpoint
+     * @param template  an optional URI Template describing a path to reach this endpoint
      */
-    mixin Put(String path = "")
-            extends Endpoint(PUT, path);
+    mixin Put(String template = "")
+            extends Endpoint(PUT, template);
 
     /**
      * An HTTP `DELETE` method.
      *
-     * @param path  the optional path to reach this endpoint
+     * @param template  an optional URI Template describing a path to reach this endpoint
      */
-    mixin Delete(String path = "")
-            extends Endpoint(DELETE, path);
+    mixin Delete(String template = "")
+            extends Endpoint(DELETE, template);
 
     /**
      * Default route on a WebService, if no other route could be found.

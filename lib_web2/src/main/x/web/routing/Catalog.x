@@ -111,7 +111,12 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins)
             this.id = id;
             construct MethodInfo(method, wsid);
 
-            this.template = new UriTemplate(method.path);
+            String template = method.template;
+
+            this.template = template == "" || template == "/"
+                ? UriTemplate.ROOT
+                : new UriTemplate(template);
+
             this.produces = method.is(Produces)
                         ? method.produces
                         : [];
