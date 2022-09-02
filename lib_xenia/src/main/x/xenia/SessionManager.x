@@ -23,12 +23,12 @@ service SessionManager(SessionStore store, SessionProducer instantiateSession)
     /**
      * Increment the session identifier "counter" by a large prime number.
      */
-    static private Int64 ID_GAP   = 0x0030_8DC2_CBEE_2A75;      // a fun prime: 13666666666666613
+    private static Int64 ID_GAP = 0x0030_8DC2_CBEE_2A75;        // a fun prime: 13666666666666613
 
     /**
      * Wrap the session identifier counter around before it reaches the integer limit.
      */
-    static protected Int64 ID_LIMIT = 0x0FFF_FFFF_FFFF_FFFF;    // don't use the entire 64-bit range
+    protected static Int64 ID_LIMIT = 0x0FFF_FFFF_FFFF_FFFF;    // don't use the entire 64-bit range
 
     /**
      * The most recently generated session id.

@@ -52,8 +52,14 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins)
         return Null;
         }
 
+    /**
+     * The function that represents a default WebService constructor.
+     */
     typedef function WebService() as ServiceConstructor;
 
+    /**
+     * The WebService info.
+     */
     static const WebServiceInfo<ServiceType extends WebService>(
                                 Int                id,
                                 String             path,
@@ -66,6 +72,9 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins)
                                 MethodInfo?        route
                                 )
         {
+        /**
+         * The number of endpoints for this WebService.
+         */
         Int endpointCount.get()
             {
             return endpoints.size;
@@ -95,21 +104,20 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins)
     static const EndpointInfo
             extends MethodInfo
         {
-        construct(Method<WebService> method, Int id, Int wsid)
+        construct(Method<WebService> method, Int id, Int wsid, String wsPath)
             {
             assert method.is(Endpoint);
 
             this.id = id;
             construct MethodInfo(method, wsid);
 
-            template = new UriTemplate(method.path);
-            produces = method.is(Produces)
+            this.template = new UriTemplate(wsPath + method.path);
+            this.produces = method.is(Produces)
                         ? method.produces
                         : [];
-            consumes = method.is(Consumes)
+            this.consumes = method.is(Consumes)
                         ? method.consumes
                         : [];
-            TODO
             }
 
         @Override

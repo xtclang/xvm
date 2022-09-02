@@ -176,7 +176,7 @@ service HttpHandler
         return lastIndex++;
         }
 
-    static private SessionManager createSessionManager(Catalog catalog)
+    private static SessionManager createSessionManager(Catalog catalog)
         {
         import SessionManager.SessionProducer;
 

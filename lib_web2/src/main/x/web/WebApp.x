@@ -1,6 +1,7 @@
 import routing.Catalog;
 import routing.Catalog.EndpointInfo;
 import routing.Catalog.MethodInfo;
+import routing.Catalog.ServiceConstructor;
 import routing.Catalog.WebServiceInfo;
 
 import routing.UriTemplate;
@@ -41,19 +42,18 @@ mixin WebApp
             {
             if (AnnotationTemplate template := child.annotatedBy(WebService))
                 {
-                String     path = "";
                 Argument[] args = template.arguments;
-                if (!args.empty)
+                if (args.empty)
                     {
-                    path = args[0].value.as(Path).toString();
+                    throw new IllegalState($"WebService's \"path\" argument must be specified for \"{child}\"");
                     }
 
-                Type<WebService> serviceType = child.PublicType.as(Type<WebService>);
-
-                Catalog.ServiceConstructor constructor;
+                String             path        = args[0].value.as(Path).toString();
+                Type<WebService>   serviceType = child.PublicType.as(Type<WebService>);
+                ServiceConstructor constructor;
                 if (!(constructor := serviceType.defaultConstructor()))
                     {
-                    throw new IllegalState($"default WebService constructor is missing for \"{child}\"");
+                    throw new IllegalState($"default constructor is missing for \"{child}\"");
                     }
 
                 EndpointInfo[] endpoints       = new EndpointInfo[];
@@ -70,7 +70,7 @@ mixin WebApp
                         case Default:
                             if (defaultEndpoint == Null)
                                 {
-                                defaultEndpoint = new EndpointInfo(method, -1, wsid);
+                                defaultEndpoint = new EndpointInfo(method, -1, wsid, path);
                                 }
                             else
                                 {
@@ -79,7 +79,7 @@ mixin WebApp
                             break;
 
                         case Endpoint:
-                            endpoints.add(new EndpointInfo(method, epid++, wsid));
+                            endpoints.add(new EndpointInfo(method, epid++, wsid, path));
                             break;
 
                         case Intercept, Observe:
@@ -117,6 +117,8 @@ mixin WebApp
                                                   onError, route
                                                   );
                 wsid++;
+
+                // TODO search for session mixins inside of the service
                 }
             else if (child.implements(Session))
                 {
