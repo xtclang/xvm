@@ -407,7 +407,8 @@ public class xRTServer2
      */
     private int invokeContainsBodies(Frame frame, HttpContextHandle hCtx, int[] aiResult)
         {
-        return frame.raiseException(xException.unsupportedOperation(frame, "Not implemented"));
+        // TODO implement
+        return frame.assignValue(aiResult[0], xBoolean.FALSE);
         }
 
     /**
