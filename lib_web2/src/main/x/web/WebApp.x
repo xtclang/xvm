@@ -49,10 +49,16 @@ mixin WebApp
                     }
 
                 String path = args[0].value.as(String);
-                if (path == "")
+                if (!path.endsWith('/'))
                     {
-                    // don't complain; just replace with the root path
-                    path = "/";
+                    // the service path is always a "directory"
+                    path += '/';
+                    }
+
+                if (!path.startsWith('/'))
+                    {
+                    // the service path is always a "root"
+                    path = $"/{path}";
                     }
 
                 Type<WebService>   serviceType = child.PublicType.as(Type<WebService>);
@@ -124,6 +130,7 @@ mixin WebApp
                                                   );
                 wsid++;
 
+                // TODO walk recursively except packages representing imported modules
                 // TODO search for session mixins inside of the service
                 }
             else if (child.implements(Session))
@@ -150,7 +157,10 @@ mixin WebApp
      */
     Response handleUnhandledError(Session? session, Request request, Exception|String|HttpStatus error)
         {
-        // the exception needs to be logged
-        return new responses.SimpleResponse(error.is(RequestAborted) ? error.status : InternalServerError);
+        // TODO CP: does the exception need to be logged?
+        return new responses.SimpleResponse(
+            error.is(RequestAborted) ? error.status :
+            error.is(HttpStatus)     ? error
+                                     : InternalServerError);
         }
     }

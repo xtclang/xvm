@@ -3,6 +3,7 @@ import collections.IdentitySet;
 import net.IPAddress;
 
 import web.CookieConsent;
+import web.Header;
 import web.TrustLevel;
 
 import HttpServer.RequestInfo;
@@ -83,7 +84,7 @@ import HttpServer.RequestInfo;
  *   persistent (and TLS) session ID is used, possibly with a few details lifted from the non-TLS
  *   session before it is discarded, and all three cookies are then re-written.
  *
- * TODO
+ * TODO CP
  * - dispatcher gets a request
  *
  * - assume anonymous user
@@ -104,11 +105,10 @@ service SessionImpl
         this.created       = clock.now;
         this.lastUse       = created;
         this.ipAddress     = requestInfo.getClientAddress();
-        this.userAgent     = ""; // requestInfo.getUserAgent();
+        this.userAgent     = extractUserAgent(requestInfo);
         this.cookieConsent = None;
         this.trustLevel    = None;
-        // TODO CP: store the sessionId as a String?
-        this.sessionId     = sessionId.toString();
+        this.sessionId     = sessionId.toString(); // TODO CP: use Base64?
         }
 
 
@@ -239,5 +239,20 @@ service SessionImpl
     @Override
     void sessionDeauthenticated(String user)
         {
+        }
+
+
+    // ----- helper methods ------------------------------------------------------------------------
+
+    /**
+     * Obtain the user agent string.
+     */
+    static String extractUserAgent(RequestInfo requestInfo)
+        {
+        if (String[] values := requestInfo.getHeaderValuesForName(Header.USER_AGENT))
+            {
+            return values[0];
+            }
+        return "";
         }
     }

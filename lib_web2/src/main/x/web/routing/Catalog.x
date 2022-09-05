@@ -112,6 +112,11 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins)
             construct MethodInfo(method, wsid);
 
             String template = method.template;
+            while (template.startsWith('/'))
+                {
+                // the endpoint path is always relative
+                template = template.substring(1);
+                }
 
             this.template = template == "" || template == "/"
                 ? UriTemplate.ROOT

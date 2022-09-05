@@ -89,7 +89,23 @@ service Dispatcher
                 return;
                 }
 
-            URI uri = new URI(uriString);
+            // split what's left of the URI into a path, a query, and a fragment
+            String? query    = Null;
+            String? fragment = Null;
+            if (Int fragmentOffset := uriString.indexOf('#'))
+                {
+                fragment  = uriString.substring(fragmentOffset+1);
+                uriString = uriString[0..fragmentOffset);
+                }
+
+            if (Int queryOffset := uriString.indexOf('?'))
+                {
+                query     = uriString.substring(queryOffset+1);
+                uriString = uriString[0..queryOffset);
+                }
+
+            // TODO CP: handle the path parsing more robustly
+            URI uri = new URI(path=new Path(uriString), query=query, fragment=fragment);
 
             for (EndpointInfo endpoint : serviceInfo.endpoints)
                 {
