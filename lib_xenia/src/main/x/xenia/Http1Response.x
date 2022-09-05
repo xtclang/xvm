@@ -1,4 +1,5 @@
 import web.Body;
+import web.Header;
 
 /**
  * An implementation of an HTTP/1 (i.e. 0.9, 1.0, 1.1) response, as sent by a server or receivied by
@@ -28,9 +29,9 @@ const Http1Response
         if (Body body ?= response.body)
             {
             bytes = body.bytes;
-            headerNames  += "Content-Type";
+            headerNames  += Header.CONTENT_TYPE;
             headerValues += body.mediaType.text;
-            headerNames  += "Content-Length";
+            headerNames  += Header.CONTENT_LENGTH;
             headerValues += bytes.size.toString();
             }
 

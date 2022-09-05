@@ -93,7 +93,7 @@ interface Request
      */
     Iterator<String> cookieNames()
         {
-        return header.valuesOf("cookie", ';')
+        return header.valuesOf(Header.COOKIE, ';')
                      .map(kv -> kv.extract('=', 0, "???").trim());
         }
 
@@ -102,7 +102,7 @@ interface Request
      */
     Iterator<Tuple<String, String>> cookies()
         {
-        return header.valuesOf("cookie", ';')
+        return header.valuesOf(Header.COOKIE, ';')
                      .map(kv -> (kv.extract('=', 0, "???").trim(), kv.extract('=', 1).trim()));
         }
 
@@ -114,7 +114,7 @@ interface Request
      */
     conditional String getCookie(String name)
         {
-        for (String value : header.valuesOf("Cookie", ';'))
+        for (String value : header.valuesOf(Header.COOKIE, ';'))
             {
             if (name == value.extract('=', 0, "???"))
                 {
@@ -135,6 +135,6 @@ interface Request
         {
         // TODO remove any existing entry for this cookie name (or replace its value)
         // TODO validation of cookie name, validation of value
-        header.add("Cookie", $"{name}={value}");
+        header.add(Header.COOKIE, $"{name}={value}");
         }
     }

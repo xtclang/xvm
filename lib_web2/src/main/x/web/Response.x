@@ -169,7 +169,7 @@ interface Response
      */
     conditional Cookie getCookie(String name)
         {
-        for (String value : header.valuesOf("Set-Cookie"))
+        for (String value : header.valuesOf(Header.SET_COOKIE))
             {
             // TODO parse name, and if it matches, build the Cookie object
             }
@@ -185,10 +185,10 @@ interface Response
      */
     void addCookie(Cookie cookie)
         {
-        for (String value : header.valuesOf("Set-Cookie"))
+        for (String value : header.valuesOf(Header.SET_COOKIE))
             {
             // TODO parse name, and if it matches, delete the Cookie object
             }
-        header.add("Set-Cookie", cookie.toString());
+        header.add(Header.SET_COOKIE, cookie.toString());
         }
     }
