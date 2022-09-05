@@ -181,7 +181,7 @@ service HttpHandler
         import SessionManager.SessionProducer;
 
         // TODO GG: incorporate the SessionMixins
-        SessionProducer sessionProducer = (mgr, id) -> new SessionImpl(mgr, id);
+        SessionProducer sessionProducer = (mgr, id, info) -> new SessionImpl(mgr, id, info);
 
         return new SessionManager(new SessionStore(), sessionProducer);
         }

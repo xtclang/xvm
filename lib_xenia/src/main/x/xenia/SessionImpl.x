@@ -5,6 +5,8 @@ import net.IPAddress;
 import web.CookieConsent;
 import web.TrustLevel;
 
+import HttpServer.RequestInfo;
+
 
 /**
  * An implementation of the `Session` interface.
@@ -96,10 +98,17 @@ service SessionImpl
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    construct(SessionManager manager, Int sessionId)
+    construct(SessionManager manager, Int sessionId, RequestInfo requestInfo)
         {
-        manager_ = manager;
+        this.manager_      = manager;
+        this.created       = clock.now;
+        this.lastUse       = created;
+        this.ipAddress     = requestInfo.getClientAddress();
+        this.userAgent     = ""; // requestInfo.getUserAgent();
+        this.cookieConsent = None;
+        this.trustLevel    = None;
         // TODO CP: store the sessionId as a String?
+        this.sessionId     = sessionId.toString();
         }
 
 

@@ -65,9 +65,10 @@ service Dispatcher
         @Future Response response;
         ComputeResponse: do
             {
+            RequestInfo requestInfo = new RequestInfo(httpServer, context);
             if (serviceInfo == Null)
                 {
-                Request  request = new Http1Request(new RequestInfo(httpServer, context), []);
+                Request  request = new Http1Request(requestInfo, []);
                 Session? session = getSessionOrNull(httpServer, context);
 
                 response = catalog.webApp.handleUnhandledError^(session, request, HttpStatus.NotFound);
@@ -81,7 +82,7 @@ service Dispatcher
                 return;
                 }
 
-            (Session session, Boolean redirect) = computeSession(httpServer, context);
+            (Session session, Boolean redirect) = computeSession(requestInfo);
             if (redirect)
                 {
                 TODO httpServer.send(context, HttpStatus.TemporaryRedirect.code, ...);
@@ -95,7 +96,7 @@ service Dispatcher
                 if (endpoint.httpMethod.name == methodName,
                         UriParameters uriParams := endpoint.template.matches(uri))
                     {
-                    Request request = new Http1Request(new RequestInfo(httpServer, context), uriParams);
+                    Request request = new Http1Request(requestInfo, uriParams);
 
                     bundle = bundlePool.allocateBundle(wsid);
 
@@ -106,7 +107,7 @@ service Dispatcher
                     }
                 }
 
-            Request     request     = new Http1Request(new RequestInfo(httpServer, context), []);
+            Request     request     = new Http1Request(requestInfo, []);
             MethodInfo? onErrorInfo = catalog.findOnError(wsid);
             if (onErrorInfo != Null)
                 {
@@ -154,9 +155,9 @@ service Dispatcher
         }
 
     private (Session session, Boolean redirect)
-            computeSession(HttpServer httpServer, RequestContext context)
+            computeSession(RequestInfo requestInfo)
         {
         // TODO: use cookies to find an existing session; full validation - redirect if necessary
-        return sessionManager.createSession(), False;
+        return sessionManager.createSession(requestInfo), False;
         }
     }

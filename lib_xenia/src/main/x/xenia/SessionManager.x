@@ -1,3 +1,4 @@
+import HttpServer.RequestInfo;
 import SessionStore.IOResult;
 
 
@@ -17,7 +18,7 @@ service SessionManager(SessionStore store, SessionProducer instantiateSession)
     /**
      * The means to instantiate sessions.
      */
-    typedef function SessionImpl(SessionManager, Int) as SessionProducer;
+    typedef function SessionImpl(SessionManager, Int, RequestInfo) as SessionProducer;
     protected/private SessionProducer instantiateSession;
 
     /**
@@ -192,10 +193,10 @@ service SessionManager(SessionStore store, SessionProducer instantiateSession)
      *
      * @return a new [SessionImpl] object, including any mixins declared by the application
      */
-    SessionImpl createSession()
+    SessionImpl createSession(RequestInfo requestInfo)
         {
         Int         id      = generateId();
-        SessionImpl session = instantiateSession(this, id);
+        SessionImpl session = instantiateSession(this, id, requestInfo);
         sessions.put(id, session);
 
         purger.track^(id);
