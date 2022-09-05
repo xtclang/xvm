@@ -1297,7 +1297,7 @@ const URI
                 return False, Null, offset, error;
                 }
 
-            (Path path, offset, error) = parsePath(Null, text, offset+1, error);
+            (Path path, offset, error) = parsePath(Null, text, offset, error);
             return True, path, offset, error;
             }
 
