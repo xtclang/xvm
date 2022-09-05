@@ -408,6 +408,12 @@ abstract public class BaseDecFP
             return f_decValue;
             }
 
+        @Override
+        public String toString()
+            {
+            return super.toString() + f_decValue;
+            }
+
         private final Decimal f_decValue;
         }
     }

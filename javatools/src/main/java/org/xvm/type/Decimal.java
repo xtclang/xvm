@@ -224,15 +224,7 @@ public abstract class Decimal
             return nThis - nThat;
             }
 
-        int nResult = bdecThis.compareTo(bdecThat);
-        if (nResult == 0)
-            {
-            // even though the numeric values may be equal, they might not have the same number of
-            // digits
-            nResult = bdecThis.toString().compareTo(bdecThat.toString());
-            }
-
-        return nResult;
+        return bdecThis.compareTo(bdecThat);
         }
 
 
