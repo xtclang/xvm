@@ -46,7 +46,6 @@ import org.xvm.runtime.template.numbers.xInt64;
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
-import org.xvm.runtime.template._native.collections.arrays.xRTDelegate.GenericArrayDelegate;
 import org.xvm.runtime.template._native.collections.arrays.xRTStringDelegate.StringArrayHandle;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction;
@@ -441,23 +440,20 @@ public class xRTServer2
      */
     private int invokeSend(Frame frame, ObjectHandle[] ahArg)
         {
-        HttpExchange         exchange      = ((HttpContextHandle) ahArg[0]).f_exchange;
-        long                 nStatus       = ((JavaLong) ahArg[1]).getValue();
-        StringArrayHandle    hHeaderNames  = (StringArrayHandle)    ((ArrayHandle) ahArg[2]).m_hDelegate;
-        GenericArrayDelegate hHeaderValues = (GenericArrayDelegate) ((ArrayHandle) ahArg[3]).m_hDelegate;
-        ArrayHandle          hBody         = (ArrayHandle) ahArg[4];
-        byte[]               abBody        = xByteArray.getBytes(hBody);
-        int                  cbBody        = abBody.length;
+        HttpExchange      exchange      = ((HttpContextHandle) ahArg[0]).f_exchange;
+        long              nStatus       = ((JavaLong) ahArg[1]).getValue();
+        StringArrayHandle hHeaderNames  = (StringArrayHandle) ((ArrayHandle) ahArg[2]).m_hDelegate;
+        StringArrayHandle hHeaderValues = (StringArrayHandle) ((ArrayHandle) ahArg[3]).m_hDelegate;
+        ArrayHandle       hBody         = (ArrayHandle) ahArg[4];
+        byte[]            abBody        = xByteArray.getBytes(hBody);
+        int               cbBody        = abBody.length;
 
         try
             {
             Headers headers = exchange.getResponseHeaders();
-
-            for (long n = 0; n < hHeaderNames.m_cSize; n++)
+            for (long i = 0, c = hHeaderNames.m_cSize; i < c; i++)
                 {
-                String            sName   = hHeaderNames.get(n);
-                StringArrayHandle hValues = (StringArrayHandle) ((ArrayHandle) hHeaderValues.get(n)).m_hDelegate;
-                hValues.stream().forEach(hValue -> headers.add(sName, hValue));
+                headers.add(hHeaderNames.get(i), hHeaderValues.get(i));
                 }
 
             exchange.sendResponseHeaders((int) nStatus, cbBody > 0 ? cbBody : -1);
