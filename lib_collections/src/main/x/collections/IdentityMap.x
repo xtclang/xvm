@@ -16,6 +16,7 @@ class IdentityMap<Key, Value>
         implements Map<Key, Value>
         implements Replicable
         incorporates CopyableMap.ReplicableCopier<Key, Value>
+        incorporates conditional IdentityMapFreezer<Key extends Shareable, Value extends Shareable>
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -46,9 +47,19 @@ class IdentityMap<Key, Value>
         this.storage = that.storage.duplicate();
         }
 
+    assert()
+        {
+        if (Key.is(Type<Shareable>) && Value.is(Type<Shareable>))
+            {
+            assert storage.is(Shareable);
+            }
+        }
+
+
     // ----- properties ----------------------------------------------------------------------------
 
-    private Replicable + Duplicable + Map<Identity, Tuple<Key, Value>> storage;
+    // TODO GG: should not be forced to be protected; private should also work with mixins
+    protected Replicable + Duplicable + Map<Identity, Tuple<Key, Value>> storage;
 
 
     // ----- Map interface -------------------------------------------------------------------------
@@ -315,6 +326,44 @@ class IdentityMap<Key, Value>
             CursorEntry entry = new CursorEntry().advance(storageEntry.reify());
             entry.reified = True;
             return entry;
+            }
+        }
+
+    /**
+     * Mixin that makes IdentityMap Freezable if both Key and Value are Shareable.
+     */
+    static mixin IdentityMapFreezer<Key extends Shareable, Value extends Shareable>
+            into IdentityMap<Key, Value>
+            implements Freezable
+        {
+        @Override
+        immutable IdentityMapFreezer freeze(Boolean inPlace = False)
+            {
+            // don't freeze the map if it is already frozen
+            if (this.is(immutable))
+                {
+                return this;
+                }
+
+            // if the only thing not frozen is the map itself, then just make it immutable
+            if (this.as(IdentityMap).storage.is(immutable))
+                {
+                return inPlace
+                        ? makeImmutable()
+                        : duplicate().makeImmutable();
+                }
+
+            // freeze the map in-place by freezing its storage
+            if (inPlace && this.inPlace)
+                {
+                this.storage.as(Freezable).freeze(inPlace=True);
+                return makeImmutable();
+                }
+
+            // otherwise, just duplicate, freezing the storage
+            IdentityMapFreezer that = duplicate();
+            that.storage.as(Freezable).freeze(inPlace=False);
+            return that.makeImmutable();
             }
         }
     }
