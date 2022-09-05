@@ -11,12 +11,8 @@ import routing.UriTemplate;
  * The `@WebApp` annotation is used to mark a module as being a web-application module. It can
  * contain any number of discoverable HTTP endpoints.
  *
- * Within an `@WebApp`-annotated module, a number of `@Inject` injections are assumed to be
- * supported by the container:
- *
- * |    Type      |    Name    | Description                        |
- * |--------------|------------|------------------------------------|
- * | Server       |
+ * TODO how to import a web module explicitly as "it's ok to trust any web services in this module"
+ *      - can the package be annotated as "@Trusted" or something like that?
  */
 mixin WebApp
         into Module
