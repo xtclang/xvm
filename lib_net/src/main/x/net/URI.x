@@ -559,16 +559,24 @@ const URI
             {
             String part       = partFor(section);
             Int    partLength = part.size;
-            while (offset < partLength)
+            if (offset < partLength)
                 {
-                if (literalOffset >= literalLength)
+                while (True)
                     {
-                    return True, new Position(section, offset);
-                    }
+                    if (literalOffset >= literalLength)
+                        {
+                        return True, new Position(section, offset);
+                        }
 
-                if (!(offset := matchCharacter(literal[literalOffset++], part, offset)))
-                    {
-                    return False;
+                    if (offset >= partLength)
+                        {
+                        break;
+                        }
+
+                    if (!(offset := matchCharacter(literal[literalOffset++], part, offset)))
+                        {
+                        return False;
+                        }
                     }
                 }
 

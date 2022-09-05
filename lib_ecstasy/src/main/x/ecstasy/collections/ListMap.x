@@ -909,6 +909,11 @@ class ListMap<Key, Value>
     @Override
     immutable ListMap makeImmutable()
         {
+        if (this.is(immutable))
+            {
+            return this;
+            }
+
         this.inPlace = False;
         return super();
         }
