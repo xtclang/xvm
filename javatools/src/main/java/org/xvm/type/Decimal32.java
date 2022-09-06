@@ -78,7 +78,9 @@ public class Decimal32
             }
 
         m_nBits = toIntBits(dec);
-        m_dec   = toBigDecimal(m_nBits);
+        m_dec   = dec;
+
+        assert dec.equals(toBigDecimal(m_nBits)); // TODO remove this eventually
         }
 
 
@@ -88,6 +90,12 @@ public class Decimal32
     public int getByteLength()
         {
         return 4;
+        }
+
+    @Override
+    public MathContext getMathContext()
+        {
+        return MathContext.DECIMAL32;
         }
 
     @Override
@@ -234,7 +242,7 @@ public class Decimal32
     @Override
     public boolean equals(Object obj)
         {
-        return obj instanceof Decimal32 && m_nBits == ((Decimal32) obj).m_nBits;
+        return obj instanceof Decimal32 that && this.m_nBits == that.m_nBits;
         }
 
 
@@ -353,7 +361,7 @@ public class Decimal32
                       * 1000 + decletToInt(nBits       ))
                       * (((nBits & SIGN_BIT) >> 31) | 1);       // apply sign
 
-        return new BigDecimal(BigInteger.valueOf(nSig), -nExp);
+        return new BigDecimal(BigInteger.valueOf(nSig), -nExp, MathContext.DECIMAL32);
         }
 
 

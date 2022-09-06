@@ -791,8 +791,7 @@ public abstract class ObjectHandle
         @Override
         public boolean equals(Object obj)
             {
-            return obj instanceof JavaLong
-                && m_lValue == ((JavaLong) obj).m_lValue;
+            return obj instanceof JavaLong that && m_lValue == that.m_lValue;
             }
 
         @Override

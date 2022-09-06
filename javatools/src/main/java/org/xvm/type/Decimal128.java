@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.math.MathContext;
 
 
 /**
@@ -110,6 +111,12 @@ public class Decimal128
         }
 
     @Override
+    public MathContext getMathContext()
+        {
+        return MathContext.DECIMAL128;
+        }
+
+    @Override
     public int getByte(int i)
         {
         if ((i & ~0xF) != 0)
@@ -142,7 +149,7 @@ public class Decimal128
         }
 
     /**
-     * @return the significand of the decimal as an Java <tt>BigInteger</tt>
+     * @return the significand of the decimal as a Java <tt>BigInteger</tt>
      */
     public BigInteger getSignificand()
         {
@@ -233,7 +240,7 @@ public class Decimal128
         BigDecimal dec = m_dec;
         if (dec == null && isFinite())
             {
-            dec = new BigDecimal(getSignificand(), -getExponent());
+            dec = new BigDecimal(getSignificand(), -getExponent(), MathContext.DECIMAL128);
             m_dec = dec = isSigned() ? dec.negate() : dec;
             }
         return dec;
@@ -316,13 +323,8 @@ public class Decimal128
     @Override
     public boolean equals(Object obj)
         {
-        if (obj instanceof Decimal128)
-            {
-            Decimal128 that = (Decimal128) obj;
-            return    this.m_nHBits == that.m_nHBits
-                    & that.m_nLBits == that.m_nLBits;
-            }
-        return false;
+        return obj instanceof Decimal128 that &&
+            this.m_nHBits == that.m_nHBits & that.m_nLBits == that.m_nLBits;
         }
 
 

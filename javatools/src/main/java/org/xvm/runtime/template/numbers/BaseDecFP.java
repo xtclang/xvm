@@ -409,6 +409,25 @@ abstract public class BaseDecFP
             }
 
         @Override
+        public int hashCode()
+            {
+            return f_decValue.hashCode();
+            }
+
+        @Override
+        public int compareTo(ObjectHandle that)
+            {
+            return f_decValue.compareForObjectOrder(((DecimalHandle) that).f_decValue);
+            }
+
+        @Override
+        public boolean equals(Object obj)
+            {
+            return obj instanceof DecimalHandle that &&
+                    f_decValue.compareForObjectOrder(that.f_decValue) == 0;
+            }
+
+        @Override
         public String toString()
             {
             return super.toString() + f_decValue;

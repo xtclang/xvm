@@ -59,7 +59,6 @@ public class Decimal64
             throw new IllegalArgumentException("byte count != 8 (actual=" + abValue.length + ")");
             }
 
-
         int MSB = (abValue[0] & 0xFF) << 24
                 | (abValue[1] & 0xFF) << 16
                 | (abValue[2] & 0xFF) <<  8
@@ -86,7 +85,9 @@ public class Decimal64
             }
 
         m_nBits = toLongBits(dec);
-        m_dec   = toBigDecimal(m_nBits);
+        m_dec   = dec;
+
+        assert dec.equals(toBigDecimal(m_nBits)); // TODO remove this eventually
         }
 
 
@@ -96,6 +97,12 @@ public class Decimal64
     public int getByteLength()
         {
         return 8;
+        }
+
+    @Override
+    public MathContext getMathContext()
+        {
+        return MathContext.DECIMAL64;
         }
 
     @Override
@@ -130,7 +137,7 @@ public class Decimal64
         }
 
     /**
-     * @return the significand of the decimal as an Java <tt>long</tt>
+     * @return the significand of the decimal as a Java <tt>long</tt>
      */
     public long getSignificand()
         {
@@ -252,7 +259,7 @@ public class Decimal64
     @Override
     public boolean equals(Object obj)
         {
-        return obj instanceof Decimal64 && m_nBits == ((Decimal64) obj).m_nBits;
+        return obj instanceof Decimal64 that && this.m_nBits == that.m_nBits;
         }
 
 
@@ -387,7 +394,7 @@ public class Decimal64
                          * 1000 + decletToInt((int) (nBits       )))
                          * (((nBits & SIGN_BIT) >> 63) | 1);            // apply sign
 
-        return new BigDecimal(BigInteger.valueOf(nSig), -nExp);
+        return new BigDecimal(BigInteger.valueOf(nSig), -nExp, MathContext.DECIMAL64);
         }
 
 

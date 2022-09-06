@@ -5,6 +5,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import java.math.BigDecimal;
+import java.math.MathContext;
 import java.math.RoundingMode;
 
 
@@ -79,6 +80,11 @@ public abstract class Decimal
      * @return the size of the IEEE-754-2008 formatted decimal, in bytes.
      */
     public abstract int getByteLength();
+
+    /**
+     * @return the MathContext to use for math operations that can utilize it
+     */
+    public abstract MathContext getMathContext();
 
     /**
      * Obtain a byte of the IEEE-754-2008 formatted decimal.
@@ -496,7 +502,7 @@ public abstract class Decimal
             {
             BigDecimal big1 = this.toBigDecimal();
             BigDecimal big2 = that.toBigDecimal();
-            return fromBigDecimal(big1.add(big2));
+            return fromBigDecimal(big1.add(big2, getMathContext()));
             }
         return isFinite()
             ? that
@@ -513,7 +519,7 @@ public abstract class Decimal
             {
             BigDecimal big1 = this.toBigDecimal();
             BigDecimal big2 = that.toBigDecimal();
-            return fromBigDecimal(big1.subtract(big2));
+            return fromBigDecimal(big1.subtract(big2, getMathContext()));
             }
         return isFinite()
             ? infinity(!that.isSigned())
@@ -530,7 +536,7 @@ public abstract class Decimal
             {
             BigDecimal big1 = this.toBigDecimal();
             BigDecimal big2 = that.toBigDecimal();
-            return fromBigDecimal(big1.multiply(big2));
+            return fromBigDecimal(big1.multiply(big2, getMathContext()));
             }
         return infinity(that.isSigned() != this.isSigned());
         }
@@ -541,7 +547,7 @@ public abstract class Decimal
             {
             BigDecimal big1 = this.toBigDecimal();
             BigDecimal big2 = that.toBigDecimal();
-            return fromBigDecimal(big1.divide(big2));
+            return fromBigDecimal(big1.divide(big2, getMathContext()));
             }
         return isFinite() ? zero(this.isSigned() != that.isSigned()) : nan();
         }
@@ -552,7 +558,7 @@ public abstract class Decimal
             {
             BigDecimal big1 = this.toBigDecimal();
             BigDecimal big2 = that.toBigDecimal();
-            BigDecimal bigR = big1.remainder(big2);
+            BigDecimal bigR = big1.remainder(big2, getMathContext());
             return fromBigDecimal(bigR.signum() >= 0 ? bigR : bigR.add(big2));
             }
         return nan();
@@ -566,7 +572,7 @@ public abstract class Decimal
                 {
                 BigDecimal big1 = this.toBigDecimal();
                 BigDecimal big2 = that.toBigDecimal();
-                return fromBigDecimal(big1.pow(big2.intValue()));
+                return fromBigDecimal(big1.pow(big2.intValue(), getMathContext()));
                 }
             return nan();
             }
@@ -578,7 +584,7 @@ public abstract class Decimal
         if (isFinite())
             {
             BigDecimal big1 = toBigDecimal();
-            return fromBigDecimal(big1.pow(nPow));
+            return fromBigDecimal(big1.pow(nPow, getMathContext()));
             }
         return this;
         }

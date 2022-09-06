@@ -2,6 +2,8 @@ package org.xvm.runtime.template.numbers;
 
 
 import java.math.BigDecimal;
+import java.math.MathContext;
+
 import java.util.Arrays;
 
 import org.xvm.asm.ClassStructure;
@@ -38,7 +40,7 @@ public class xDec64
         {
         try
             {
-            return new Decimal64(new BigDecimal(d));
+            return new Decimal64(new BigDecimal(d, MathContext.DECIMAL64));
             }
         catch (Decimal.RangeException e)
             {

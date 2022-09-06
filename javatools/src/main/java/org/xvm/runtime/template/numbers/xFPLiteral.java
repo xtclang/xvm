@@ -22,6 +22,9 @@ import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
+import org.xvm.type.Decimal32;
+import org.xvm.type.Decimal64;
+
 
 /**
  * Native FPLiteral implementation.
@@ -49,14 +52,14 @@ public class xFPLiteral
         markNativeMethod("toString", VOID, STRING);
 
         markNativeMethod("toFloatN"  , VOID, new String[]{"numbers.FloatN"});
-        markNativeMethod("toFloat16"   , VOID, new String[]{"numbers.Float16"});
-        markNativeMethod("toFloat32"   , VOID, new String[]{"numbers.Float32"});
-        markNativeMethod("toFloat64"   , VOID, new String[]{"numbers.Float64"});
-        markNativeMethod("toFloat128"  , VOID, new String[]{"numbers.Float128"});
+        markNativeMethod("toFloat16" , VOID, new String[]{"numbers.Float16"});
+        markNativeMethod("toFloat32" , VOID, new String[]{"numbers.Float32"});
+        markNativeMethod("toFloat64" , VOID, new String[]{"numbers.Float64"});
+        markNativeMethod("toFloat128", VOID, new String[]{"numbers.Float128"});
         markNativeMethod("toDecN"    , VOID, new String[]{"numbers.DecN"});
-        markNativeMethod("toDec32"     , VOID, new String[]{"numbers.Dec32"});
-        markNativeMethod("toDec64"     , VOID, new String[]{"numbers.Dec64"});
-        markNativeMethod("toDec128"    , VOID, new String[]{"numbers.Dec128"});
+        markNativeMethod("toDec32"   , VOID, new String[]{"numbers.Dec32"});
+        markNativeMethod("toDec64"   , VOID, new String[]{"numbers.Dec64"});
+        markNativeMethod("toDec128"  , VOID, new String[]{"numbers.Dec128"});
 
         getCanonicalType().invalidateTypeInfo();
         }
@@ -160,11 +163,11 @@ public class xFPLiteral
 
             case "toDec32":
                 return frame.assignValue(iReturn,
-                        xDec32.INSTANCE.makeHandle(hLiteral.getValue().doubleValue()));
+                        xDec32.INSTANCE.makeHandle(new Decimal32(hLiteral.getValue())));
 
             case "toDec64":
                 return frame.assignValue(iReturn,
-                        xDec64.INSTANCE.makeHandle(hLiteral.getValue().doubleValue()));
+                        xDec64.INSTANCE.makeHandle(new Decimal64(hLiteral.getValue())));
 
             case "toFloat128":
             case "toFloatN":
@@ -193,7 +196,7 @@ public class xFPLiteral
         }
 
     /**
-     * This handle type is used by IntN, UIntN as well as IntLiteral.
+     * This handle type is used by IntN, UIntN as well as IntLiteral. TODO GG is this cut and paste?
      */
     public static class FPNHandle
             extends ObjectHandle
@@ -205,6 +208,7 @@ public class xFPLiteral
             assert decValue != null;
 
             m_decValue = decValue;
+            m_hText    = hText;
             }
 
         public StringHandle getText()
