@@ -321,7 +321,7 @@ public abstract class Decimal
         if (isFinite())
             {
             BigDecimal big = toBigDecimal();
-            return fromBigDecimal(BigDecimal.valueOf(Math.sqrt(big.doubleValue())));
+            return fromBigDecimal(big.sqrt(getMathContext()));
             }
         return isSigned() ? nan() : this;
         }
