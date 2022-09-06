@@ -190,7 +190,7 @@ import net.IPAddress;
  * type session:
  *
  *     @Post("/{id}/items")
- *     Item addItem(Session session, @PathParam String id, @BodyParam Item item) {...}
+ *     Item addItem(Session session, @UriParam String id, @BodyParam Item item) {...}
  *
  * It is expected that user agent cookies will be used to manage the session identity. For any such
  * implementation, the cookie(s) should specify the "Secure" option to avoid session identity

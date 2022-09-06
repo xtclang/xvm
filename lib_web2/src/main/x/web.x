@@ -53,7 +53,7 @@ module web.xtclang.org
      *
      *     @Get("/{id}")
      *     @Produces(Json)
-     *     conditional Cart getCart(@PathParam("id") String id, Session session) {...}
+     *     conditional Cart getCart(@UriParam("id") String id, Session session) {...}
      */
     mixin Produces(MediaType|MediaType[] produces)
             into WebApp | WebService | Endpoint;
@@ -73,7 +73,7 @@ module web.xtclang.org
      *
      *     @Patch("/{id}/items")
      *     @Consumes(Json)
-     *     HttpStatus updateItem(@PathParam String id, @Body Item item) {...}
+     *     HttpStatus updateItem(@UriParam String id, @Body Item item) {...}
      */
     mixin Consumes(MediaType|MediaType[] consumes)
             into WebApp | WebService | Endpoint;
@@ -131,7 +131,7 @@ module web.xtclang.org
      *     void shutdown() {...}
      *
      *     @Restrict(["admin", "manager"])
-     *     conditional User createUser(@PathParam String id) {...}
+     *     conditional User createUser(@UriParam String id) {...}
      */
     mixin Restrict(String|String[] subject)
             into WebApp | WebService | Endpoint
@@ -307,8 +307,12 @@ module web.xtclang.org
 
     /**
      * A mixin to indicate that a Parameter is bound to a request value.
+     *
+     * @param bindName  indicates the source of the value that will be bound to the parameter
+     * @param format    indicates the textual format that the parameter will
      */
-    @Abstract mixin ParameterBinding(String? templateParameter = Null)
+    @Abstract mixin ParameterBinding(String? bindName = Null,
+                                     String? format   = Null)
             into Parameter;
 
     /**
@@ -317,10 +321,21 @@ module web.xtclang.org
      * Example:
      *
      *     @Delete("/{id}")
-     *     HttpStatus deleteCart(@PathParam("id") String id) {...}
+     *     HttpStatus deleteCart(@UriParam("id") String id) {...}
+     *
+     * Since the `bindName` defaults to the parameter name, the above could be simplified
+     * to the following:
+     *
+     *     @Delete("/{id}")
+     *     HttpStatus deleteCart(@UriParam String id) {...}
+     *
+     * @param bindName  indicates the matched `{name}` from the [UriTemplate] matching process
+     * @param format    allows a textual format to be specified if the default format assumption is
+     *                  incorrect, or if the default format cannot be determined
      */
-    mixin PathParam(String? templateParameter = Null)
-            extends ParameterBinding(templateParameter);
+    mixin UriParam(String? bindName = Null,
+                   String? format   = Null)
+            extends ParameterBinding(bindName, format);
 
     /**
      * A mixin to indicate that a Parameter is bound to a request URI query parameter.
@@ -334,9 +349,24 @@ module web.xtclang.org
      *                               @QueryParam("page")  Int     pageNum  = 1,
      *                               @QueryParam("size")  Int     pageSize = 10)
      *         {...}
+     *
+     * Since the `bindName` defaults to the parameter name, and since `Json` is the
+     * implicit production, the above could be simplified to the following:
+     *
+     *     @Get("/")
+     *     Collection<Item> getItems(@QueryParam          String? tags     = Null,
+     *                               @QueryParam          String  order    = "price",
+     *                               @QueryParam("page")  Int     pageNum  = 1,
+     *                               @QueryParam("size")  Int     pageSize = 10)
+     *         {...}
+     *
+     * @param bindName  the query parameter name
+     * @param format    allows a textual format to be specified if the default format assumption is
+     *                  incorrect, or if the default format cannot be determined
      */
-    mixin QueryParam(String? templateParameter = Null)
-            extends ParameterBinding(templateParameter);
+    mixin QueryParam(String? bindName = Null,
+                     String? format   = Null)
+            extends ParameterBinding(bindName, format);
 
     /**
      * A mixin to indicate that a Parameter is bound to a request header value.
@@ -346,9 +376,32 @@ module web.xtclang.org
      *     @Get("login")
      *     @Produces("application/json")
      *     HttpStatus login(@HeaderParam("Authorization") String auth) {...}
+     *
+     * @param bindName  the header entry name
+     * @param format    allows a textual format to be specified if the default format assumption is
+     *                  incorrect, or if the default format cannot be determined
      */
-    mixin HeaderParam(String? templateParameter = Null)
-            extends ParameterBinding(templateParameter);
+    mixin HeaderParam(String? bindName = Null,
+                      String? format   = Null)
+            extends ParameterBinding(bindName, format);
+
+    /**
+     * A mixin to indicate that a Parameter is bound to a named cookie value.
+     *
+     * Example:
+     *
+     *     @Get("/orderDate")
+     *     conditional String getOrderDate(@QueryParam  String id,
+     *                                     @CookieParam String dateFormat="YYYY-MM-DD")
+     *         {...}
+     *
+     * @param bindName  the cookie name
+     * @param format    allows a textual format to be specified if the default format assumption is
+     *                  incorrect, or if the default format cannot be determined
+     */
+    mixin CookieParam(String? bindName = Null,
+                      String? format   = Null)
+            extends ParameterBinding(bindName, format);
 
     /**
      * A mixin to indicate that a value is bound to a request or response body.
@@ -356,10 +409,13 @@ module web.xtclang.org
      *     @Post("/{id}/items")
      *     @Consumes(Json)
      *     @Produces(Json)
-     *     (Item, HttpStatus) addItem(@PathParam String id, @BodyParam Item item) {...}
+     *     (Item, HttpStatus) addItem(@UriParam String id, @BodyParam Item item) {...}
+     *
+     * @param format  allows an explicit text [Format] to be specified for instances when the body
+     *                is a text-based [MediaType] that does not imply the necessary `Format`
      */
-    mixin BodyParam
-            extends ParameterBinding;
+    mixin BodyParam(String? format = Null)
+            extends ParameterBinding(format=format);
 
 
     // ----- exceptions ----------------------------------------------------------------------------

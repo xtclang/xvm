@@ -34,7 +34,7 @@ const StaticContent
         }
 
     @Get("/{name}")
-    conditional Response getResource(@PathParam("name") String name)
+    conditional Response getResource(@UriParam("name") String name)
         {
         FileNode dir = fileNode;
         if (dir.is(Directory))

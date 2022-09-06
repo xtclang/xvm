@@ -4,7 +4,7 @@ import ecstasy.io.UTF8Reader;
  * A codec that handles the `text/plain` MediaType.
  */
 const TextPlainCodec
-        implements MediaTypeCodec
+        implements Codec
     {
     construct (Set<MediaType> additionalTypes = Set:[])
         {

@@ -4,7 +4,7 @@ import web.HttpMethod;
 import web.HttpStatus;
 import web.MediaType;
 import web.ParameterBinding;
-import web.PathParam;
+import web.UriParam;
 import web.QueryParam;
 import web.Response;
 import web.Session;
@@ -84,7 +84,7 @@ service ChainBundle
 
             if (param.is(ParameterBinding))
                 {
-                name ?= param.templateParameter;
+                name ?= param.bindName;
 
                 if (param.is(QueryParam))
                     {
@@ -93,7 +93,7 @@ service ChainBundle
                         extractQueryValue(request, name, param.as(Parameter), values);
                     continue;
                     }
-                if (param.is(PathParam))
+                if (param.is(UriParam))
                     {
                     assert endpoint.template.vars.contains(name);
 

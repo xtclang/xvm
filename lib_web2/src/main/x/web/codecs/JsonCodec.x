@@ -10,7 +10,7 @@ import json.Schema;
  * A codec that handles the `application/json` MediaType.
  */
 const JsonCodec
-        implements MediaTypeCodec
+        implements Codec
     {
     construct (Schema schema = Schema.DEFAULT, Set<MediaType> additionalTypes = Set:[])
         {

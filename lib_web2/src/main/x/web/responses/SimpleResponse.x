@@ -117,6 +117,7 @@ class SimpleResponse
     @Override
     Body from(Object content)
         {
-        TODO
+        TODO use codec to transform content to bytes
+        return this;
         }
     }
