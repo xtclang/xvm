@@ -24,17 +24,22 @@ mixin WebApp
         {
         // REVIEW CP: how to report verification errors
 
+        WebServiceInfo[] webServices   = new WebServiceInfo[];
+        Class[]          sessionMixins = new Class[];
+
+        scanClasses(this.classes, 0, 0, webServices, sessionMixins);
+
+        return new Catalog(this, webServices, sessionMixins);
+        }
+
+    private static (Int, Int) scanClasses(Class[] classes, Int wsid, Int epid,
+                                          WebServiceInfo[] webServices, Class[] sessionMixins)
+        {
         import ecstasy.reflect.AnnotationTemplate;
         import ecstasy.reflect.Argument;
         import ecstasy.reflect.ClassTemplate.Composition;
 
-        WebServiceInfo[] webServices   = new WebServiceInfo[];
-        Class[]          sessionMixins = new Class[];
-        Int              wsid          = 0;
-        Int              epid          = 0;
-
-        Module webModule = this;
-        for (Class child : webModule.classes)
+        for (Class child : classes)
             {
             if (AnnotationTemplate template := child.annotatedBy(WebService))
                 {
@@ -133,9 +138,19 @@ mixin WebApp
                 {
                 sessionMixins += child;
                 }
-            }
+            else if (child.implements(Package), Object pkg := child.isSingleton())
+                {
+                assert pkg.is(Package);
 
-        return new Catalog(this, webServices, sessionMixins);
+                // don't scan imported modules
+                if (!pkg.isModuleImport())
+                    {
+                    (wsid, epid) =
+                        scanClasses(pkg.as(Package).classes, wsid, epid, webServices, sessionMixins);
+                    }
+                }
+            }
+        return wsid, epid;
         }
 
     /**
@@ -154,9 +169,10 @@ mixin WebApp
     Response handleUnhandledError(Session? session, Request request, Exception|String|HttpStatus error)
         {
         // TODO CP: does the exception need to be logged?
-        return new responses.SimpleResponse(
-            error.is(RequestAborted) ? error.status :
-            error.is(HttpStatus)     ? error
-                                     : InternalServerError);
+        HttpStatus status = error.is(RequestAborted) ? error.status :
+                            error.is(HttpStatus)     ? error
+                                                     : InternalServerError;
+assert:debug;
+        return new responses.SimpleResponse(status=status, bytes=error.toString().utf8());
         }
     }

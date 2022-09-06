@@ -18,37 +18,40 @@ module Hello
                         );
         }
 
-    @web.WebService("/")
-    service Simple
+    package inner
         {
-        SimpleData simpleData.get()
+        @web.WebService("/")
+        service Simple
             {
-            return session?.as(SimpleData) : assert;
-            }
+            SimpleData simpleData.get()
+                {
+                return session?.as(SimpleData) : assert;
+                }
 
-        @web.Get("h")
-        String hello()
-            {
-            return "hello";
-            }
+            @web.Get("h")
+            String hello()
+                {
+                return "hello";
+                }
 
-        @web.Get("g")
-        String goodbye()
-            {
-            return $"goodbye {simpleData.counter++}";
-            }
+            @web.Get("g")
+            String goodbye()
+                {
+                return $"goodbye {simpleData.counter++}";
+                }
 
-        @web.Default @web.Get
-        String wtf()
-            {
-            assert:debug;
-            return "what?";
-            }
+            @web.Default @web.Get
+            String wtf()
+                {
+                assert:debug;
+                return "what?";
+                }
 
-        static mixin SimpleData
-                into web.Session
-            {
-            Int counter;
+            static mixin SimpleData
+                    into web.Session
+                {
+                Int counter;
+                }
             }
         }
     }

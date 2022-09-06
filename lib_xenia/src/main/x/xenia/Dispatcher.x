@@ -152,6 +152,9 @@ service Dispatcher
 
             if (r == Null)
                 {
+                @Inject Console console;
+                console.println("Unhandled exception: " + e);
+
                 httpServer.send(context, HttpStatus.InternalServerError.code, [], [], []);
                 }
             else
