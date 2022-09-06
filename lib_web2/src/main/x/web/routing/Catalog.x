@@ -172,9 +172,20 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins)
             return method.conditionalResult;
             }
 
+        /**
+         * Determine the content type for the response.
+         *
+         * @param accepts  the media types accepted by the HTTP request
+         *
+         * @return the MediaType of the response
+         */
         MediaType resolveResponseContentType(AcceptList accepts)
             {
-            TODO
+            if ((MediaType selected, _) := accepts.matches(produces))
+                {
+                return selected;
+                }
+            return Json;
             }
         }
     }

@@ -74,7 +74,8 @@ service ChainBundle
         MethodInfo[] interceptorInfos = collectInterceptors(wsid, httpMethod);
         MethodInfo[] observerInfos    = collectObservers(wsid, httpMethod);
 
-        Method<WebService> method  = endpoint.method;
+        // TODO GG: if we say "Method<WebService> method", it fails at RT
+        Method             method  = endpoint.method;
         ParameterBinder[]  binders = new ParameterBinder[];
 
         for (Parameter param : method.params)
@@ -162,7 +163,8 @@ service ChainBundle
                 // an error handler or an explicitly defined "route()" method)
                 ErrorHandler? onError = ensureErrorHandler(wsid);
 
-                handle = (session, request) -> webService.route(session, request, handle, onError);
+                Handler callNext = handle;
+                handle = (session, request) -> webService.route(session, request, callNext, onError);
 
                 webService = ensureWebService(wsidNext);
                 wsid       = wsidNext;
@@ -186,6 +188,7 @@ service ChainBundle
                     return info.method.as(ObserverMethod).bindTarget(ensureWebService(info.wsid));
                     });
 
+            Handler callNext = handle;
             handle = (session, request) ->
                 {
                 // observers are not handlers and call asynchronously
@@ -193,14 +196,15 @@ service ChainBundle
                     {
                     observe^(session, request);
                     }
-                return handle(session, request);
+                return callNext(session, request);
                 };
             }
 
         // the chain always starts with a WebService.route() "preamble"
         ErrorHandler? onError = ensureErrorHandler(wsid);
 
-        handle = (session, request) -> webService.route(session, request, handle, onError);
+        Handler callNext = handle;
+        handle = (session, request) -> webService.route(session, request, callNext, onError);
 
         chains[endpoint.id] = handle;
         return handle;
@@ -250,16 +254,16 @@ service ChainBundle
         WebServiceInfo[] serviceInfos = catalog.services;
         String           path         = serviceInfos[wsid].path;
 
-        MethodInfo[] observers = [];
+        MethodInfo[] observerInfos = [];
         for (Int id : 0..wsid)
             {
             WebServiceInfo serviceInfo = serviceInfos[id];
             if (path.startsWith(serviceInfo.path))
                 {
-                serviceInfo.observers.filter(m -> m.httpMethod == httpMethod, observers);
+                serviceInfo.observers.filter(m -> m.httpMethod == httpMethod, observerInfos);
                 }
             }
-        return observers.makeImmutable();
+        return observerInfos.makeImmutable();
         }
 
     /**
@@ -284,6 +288,23 @@ service ChainBundle
         ErrorHandler onError = onErrorInfo.method.as(ErrorMethod).bindTarget(ensureWebService(wsid));
         errorHandlers[wsid] = onError;
         return onError;
+        }
+
+    /**
+     * Ensure a WebService instance for the specified id.
+     */
+    private WebService ensureWebService(Int wsid)
+        {
+        WebService? svc = services[wsid];
+        if (svc != Null)
+            {
+            return svc;
+            }
+
+        svc = catalog.services[wsid].constructor();
+        svc.webApp = catalog.webApp;
+        services[wsid] = svc;
+        return svc;
         }
 
     /**
@@ -316,7 +337,9 @@ service ChainBundle
         Object paramValue;
         if (UriTemplate.Value value := request.queryParams.get(name))
             {
-            // TODO: convert
+            // TODO:
+            // Format format ?:= registry.giveMeAFormatByType(paramType)
+            // f = format.convert
             paramValue = value;
             }
         else if (param.ParamType defaultValue := param.defaultValue())
@@ -331,26 +354,9 @@ service ChainBundle
         }
 
     /**
-     * Ensure a WebService instance for the specified id.
-     */
-    private WebService ensureWebService(Int wsid)
-        {
-        WebService? svc = services[wsid];
-        if (svc != Null)
-            {
-            return svc;
-            }
-
-        svc = catalog.services[wsid].constructor();
-        svc.webApp = catalog.webApp;
-        services[wsid] = svc;
-        return svc;
-        }
-
-    /**
      * Generate a response handler for the specified endpoint.
      */
-    private Responder generateResponder(EndpointInfo endpoint)
+    private static Responder generateResponder(EndpointInfo endpoint)
         {
         if (endpoint.conditionalResult)
             {
@@ -367,13 +373,14 @@ service ChainBundle
     /**
      * Create an HTTP response.
      */
-    private Response createSimpleResponse(EndpointInfo endpoint, Request request, Object result)
+    private static Response createSimpleResponse(EndpointInfo endpoint, Request request, Object result)
         {
         AcceptList accepts   = request.accepts;
         MediaType  mediaType = endpoint.resolveResponseContentType(accepts);
 
-        TODO the codec stuff goes here
+        // TODO the codec stuff goes here
 
-        TODO return new Response(result, mediaType, codec);
+        String value = result.toString();
+        return new SimpleResponse(HttpStatus.OK, mediaType, value.utf8());
         }
     }

@@ -67,7 +67,7 @@ mixin WebApp
                 EndpointInfo[] endpoints       = new EndpointInfo[];
                 EndpointInfo?  defaultEndpoint = Null;
                 MethodInfo[]   interceptors    = new MethodInfo[];
-                MethodInfo[]   observers       = new EndpointInfo[];
+                MethodInfo[]   observers       = new MethodInfo[];
                 MethodInfo?    onError         = Null;
                 MethodInfo?    route           = Null;
 

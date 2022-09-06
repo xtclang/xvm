@@ -447,11 +447,12 @@ const AcceptList
      *         the case of an alternative MediaType being selected)
      * @return (conditional) the AcceptType that matched the MediaType
      */
-    conditional (MediaType selected, AcceptType matched) matches(MediaType[] required)
+    conditional (MediaType selected, AcceptType matched) matches(MediaType|MediaType[] required)
         {
         MediaType?  bestMediaType  = Null;
         AcceptType? bestAcceptType = Null;
-        for (MediaType mediaType : required)
+        MediaType[] requiredTypes  = required.is(MediaType[]) ? required : [required];
+        for (MediaType mediaType : requiredTypes)
             {
             if ((MediaType selected, AcceptType matched) := matches(mediaType))
                 {
