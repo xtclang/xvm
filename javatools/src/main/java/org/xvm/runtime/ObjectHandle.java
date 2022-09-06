@@ -577,8 +577,8 @@ public abstract class ObjectHandle
         @Override
         public boolean makeImmutable()
             {
-            return getComposition().makeStructureImmutable(m_aFields) &&
-                   super.makeImmutable();
+            return super.makeImmutable() &&
+                    getComposition().makeStructureImmutable(m_aFields);
             }
 
         @Override
