@@ -116,9 +116,9 @@ public class UnionTypeConstant
 
     private void testMatch(TypeConstant type, TypeConstant typeMatch, Set<TypeConstant> set)
         {
-        if (type instanceof UnionTypeConstant typeInter)
+        if (type instanceof UnionTypeConstant typeUnion)
             {
-            typeInter.collectMatching(typeMatch, set);
+            typeUnion.collectMatching(typeMatch, set);
             }
         else if (type.isA(typeMatch))
             {
