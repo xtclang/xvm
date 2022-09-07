@@ -79,8 +79,6 @@ public class Decimal32
 
         m_nBits = toIntBits(dec);
         m_dec   = dec;
-
-        assert dec.compareTo(toBigDecimal(m_nBits)) == 0; // TODO remove this eventually
         }
 
 
