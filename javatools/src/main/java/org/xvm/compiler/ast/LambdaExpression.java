@@ -396,9 +396,9 @@ public class LambdaExpression
 
         assert typeRequired != null; // the calcFit() above would have returned a "Fit""
 
-        if (typeRequired instanceof UnionTypeConstant typeInter)
+        if (typeRequired instanceof UnionTypeConstant typeUnion)
             {
-            Set<TypeConstant> setFunctions = typeInter.collectMatching(pool.typeFunction(), null);
+            Set<TypeConstant> setFunctions = typeUnion.collectMatching(pool.typeFunction(), null);
             for (TypeConstant typeFunction : setFunctions)
                 {
                 TypeConstant[] atypeReqParams  = pool.extractFunctionParams(typeFunction);
@@ -490,9 +490,9 @@ public class LambdaExpression
         if (typeRequired != null)
             {
             typeReqFn = typeRequired = typeRequired.resolveTypedefs();
-            if (typeRequired instanceof UnionTypeConstant typeInter)
+            if (typeRequired instanceof UnionTypeConstant typeUnion)
                 {
-                Set<TypeConstant> setFunctions = typeInter.collectMatching(pool.typeFunction(), null);
+                Set<TypeConstant> setFunctions = typeUnion.collectMatching(pool.typeFunction(), null);
                 for (TypeConstant typeFunction : setFunctions)
                     {
                     TypeConstant[] atypeTestP = pool.extractFunctionParams(typeFunction);
