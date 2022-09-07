@@ -114,15 +114,15 @@ public class UnionTypeConstant
         return setTypes;
         }
 
-    private void testMatch(TypeConstant type1, TypeConstant typeMatch, Set<TypeConstant> set)
+    private void testMatch(TypeConstant type, TypeConstant typeMatch, Set<TypeConstant> set)
         {
-        if (type1 instanceof UnionTypeConstant typeInter)
+        if (type instanceof UnionTypeConstant typeInter)
             {
             typeInter.collectMatching(typeMatch, set);
             }
-        else if (type1.isA(typeMatch))
+        else if (type.isA(typeMatch))
             {
-            set.add(type1);
+            set.add(type);
             }
         }
 
