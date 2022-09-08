@@ -6,6 +6,8 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.io.PrintWriter;
 
+import java.util.Arrays;
+
 import java.util.function.Consumer;
 
 import org.xvm.asm.constants.ClassConstant;
@@ -162,13 +164,16 @@ public class Annotation
      */
     public void resolveParams(Constant[] aParams)
         {
-        if (getPosition() >= 0)
+        if (!Arrays.equals(aParams, m_aParams))
             {
-            // we must never change the hashCode/equality for already registered constants
-            throw new IllegalStateException("Annotation has already been registered: " + this);
-            }
+            if (getPosition() >= 0)
+                {
+                // we must never change the hashCode/equality for already registered constants
+                throw new IllegalStateException("Annotation has already been registered: " + this);
+                }
 
-        m_aParams = aParams;
+            m_aParams = aParams;
+            }
         }
 
 
