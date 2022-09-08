@@ -4151,7 +4151,8 @@ public class ClassStructure
                 {
                 // there is a possibility that we have not yet had a chance to add implicit
                 // parameters for the underlying mixin; do it now
-                if (typeContrib.getExplicitClassFormat() == Format.MIXIN)
+                if (typeContrib.isSingleUnderlyingClass(false) &&
+                        typeContrib.getExplicitClassFormat() == Format.MIXIN)
                     {
                     ClassStructure clzContrib = (ClassStructure)
                             typeContrib.getSingleUnderlyingClass(false).getComponent();
