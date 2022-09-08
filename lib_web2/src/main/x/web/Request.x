@@ -1,8 +1,5 @@
 import ecstasy.collections.CaseInsensitive;
 
-import net.SocketAddress;
-import net.URI;
-
 import web.routing.UriTemplate;
 
 

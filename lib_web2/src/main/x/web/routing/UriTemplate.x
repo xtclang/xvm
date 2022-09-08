@@ -1,6 +1,5 @@
-import net.URI;
-import net.URI.Position;
-import net.URI.Section;
+import URI.Position;
+import URI.Section;
 
 /**
  * An implementation of the URI Template specification.

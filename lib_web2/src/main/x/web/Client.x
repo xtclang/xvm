@@ -1,6 +1,3 @@
-import net.HostPort;
-import net.URI;
-
 /**
  * A representation of an HTTP client.
  * TODO how to secure? need to be able to restrict which algos can be used

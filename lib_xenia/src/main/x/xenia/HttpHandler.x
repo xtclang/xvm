@@ -1,5 +1,3 @@
-import net.URI;
-
 import web.HttpStatus;
 
 import web.routing.Catalog;

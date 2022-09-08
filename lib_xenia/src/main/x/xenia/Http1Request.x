@@ -1,9 +1,5 @@
 import ecstasy.collections.CaseInsensitive;
 
-import net.IPAddress;
-import net.SocketAddress;
-import net.URI;
-
 import web.AcceptList;
 import web.Body;
 import web.Header;

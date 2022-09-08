@@ -9,6 +9,11 @@ module xenia.xtclang.org
     package net         import net.xtclang.org;
     package web         import web.xtclang.org;
 
+    import net.HostPort;
+    import net.IPAddress;
+    import net.SocketAddress;
+    import net.URI;
+
     import web.Handler;
     import web.Response;
     import web.Request;

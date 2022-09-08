@@ -14,6 +14,11 @@ module web.xtclang.org
 
     import ecstasy.reflect.Parameter;
 
+    import net.HostPort;
+    import net.IPAddress;
+    import net.SocketAddress;
+    import net.URI;
+
     // ----- fill in name here ------------------------------------------------------------
 
     /**

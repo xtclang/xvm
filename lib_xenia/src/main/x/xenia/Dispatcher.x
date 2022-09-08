@@ -1,5 +1,3 @@
-import net.URI;
-
 import web.ErrorHandler;
 import web.HttpStatus;
 

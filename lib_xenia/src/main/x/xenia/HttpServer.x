@@ -1,6 +1,3 @@
-import net.IPAddress;
-import net.URI;
-
 import web.HttpMethod;
 
 
