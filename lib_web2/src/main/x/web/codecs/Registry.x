@@ -3,10 +3,60 @@
  */
 service Registry
     {
-//    findStringCodec(Type)
-//    findBinaryCodec(Type)
+    // ----- constructors --------------------------------------------------------------------------
 
-    // TODO
+    /**
+     * Default constructor.
+     */
+    construct()
+        {
+        formatsByType = new HashMap();
+        for (Format format : DefaultFormats)
+            {
+            formatsByType.put(format.Value, format);
+            }
+        }
+
+
+    // ----- properties ----------------------------------------------------------------------------
+
+    /**
+     * These formats are known to the system and automatically registered.
+     */
+    static Format[] DefaultFormats =
+        [
+        new LambdaFormat<Path>(s -> new Path(s)),   // TODO GG new BasicFormat<Path>(),
+        new LambdaFormat<URI>(s -> new URI(s)),     // TODO GG new BasicFormat<URI>(),
+        new LambdaFormat<Int64 >(s -> new IntLiteral(s).toInt64()),
+        new LambdaFormat<Int128>(s -> new IntLiteral(s).toInt128()),
+        ];
+
+    /**
+     * TODO
+     */
+    private Map<Type, Format> formatsByType;
+
+
+    // ----- Format support ------------------------------------------------------------------------
+
+    /**
+     * TODO
+     */
+    void registerFormat(Format format)
+        {
+        formatsByType.put(format.Value, format);
+        }
+
+    /**
+     * TODO
+     */
+    <Value> Format<Value> findFormat(Type<Value> type)
+        {
+        TODO
+        }
+
+
+    // ----- Codec support -------------------------------------------------------------------------
 
 //    /**
 //     * Construct a Codec Registry.

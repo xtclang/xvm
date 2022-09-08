@@ -41,8 +41,8 @@ const BasicFormat<Value extends FromString>
      * An extension to the `BasicFormat` that takes advantage of the `Stringable` interface when it
      * is available.
      */
-    static mixin StringableFormat<Value extends FromString+Stringable>
-            into BasicFormat<Value>
+    static mixin StringableFormat<Value extends Stringable>
+            into Format<Value>
         {
         @Override
         void write(Value value, Appender<Char> stream)
