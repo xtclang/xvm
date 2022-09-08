@@ -16,6 +16,12 @@ interface Format<Value>
      */
     @RO String name;
 
+    /**
+     * Obtain a derivative `Format` of this `Format` for the specified type, if such a derivative
+     * `Format` is possible.
+     *
+     * @param type  a `Type` for which this `Format` may be able to supply a derivative `Format` for
+     */
     <OtherValue> conditional Format<OtherValue> forType(Type<OtherValue> type)
         {
         // if this format is capable of translating to and from another more specific type, then
@@ -38,7 +44,7 @@ interface Format<Value>
         // default implementation is to suck the contents stream into a String and just delegate
         // to the fromString() method; this will cause a stack overflow if at least one of these
         // two methods is not overridden
-        return fromString(new String(stream.toArray(Constant)));
+        return decode(new String(stream.toArray(Constant)));
         }
 
     /**
@@ -48,7 +54,7 @@ interface Format<Value>
      *
      * @return the resulting value
      */
-    Value fromString(String text)
+    Value decode(String text)
         {
         // default implementation is to turn the string into a stream and just delegate to the
         // fromStream() method; this will cause a stack overflow if at least one of these two
@@ -66,7 +72,7 @@ interface Format<Value>
         {
         // default implementation is to just delegate to the toString() method; this will cause a
         // stack overflow if neither of these two methods is overridden
-        toString(value).appendTo(stream);
+        encode(value).appendTo(stream);
         }
 
     /**
@@ -76,7 +82,7 @@ interface Format<Value>
      *
      * @return the resulting `String`
      */
-    String toString(Value value)
+    String encode(Value value)
         {
         // default implementation is to just delegate to the toStream() method; this will cause a
         // stack overflow if neither of these two methods is overridden
