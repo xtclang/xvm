@@ -1696,7 +1696,7 @@ public class MethodStructure
             {
             if (constant instanceof AnnotatedTypeConstant typeAnno)
                 {
-                IdentityConstant idAnno   = typeAnno.getAnnotationClass();
+                IdentityConstant idAnno = typeAnno.getAnnotationClass();
 
                 if (idAnno.equals(idAnno.getConstantPool().clzInject()))
                     {
