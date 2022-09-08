@@ -270,11 +270,9 @@ public class UnresolvedTypeConstant
         }
 
     @Override
-    public boolean isIntoClassType()
+    public boolean isIntoMetaData(TypeConstant typeTarget, boolean fStrict)
         {
-        return isTypeResolved()
-                ? getResolvedType().isIntoClassType()
-                : m_constId.getName().equals("Class");
+        return isTypeResolved() && getResolvedType().isIntoMetaData(typeTarget, fStrict);
         }
 
     @Override

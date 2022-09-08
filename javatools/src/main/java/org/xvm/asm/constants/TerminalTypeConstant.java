@@ -1458,48 +1458,27 @@ public class TerminalTypeConstant
         }
 
     @Override
-    public boolean isIntoClassType()
-        {
-        return this.equals(getConstantPool().typeClass());
-        }
-
-    @Override
     public boolean isIntoPropertyType()
         {
-        ConstantPool pool = getConstantPool();
-        return this.equals(pool.typeProperty()) || this.isA(pool.typeRef());
+        return this.equals(getConstantPool().typeProperty()) || isIntoVariableType();
         }
 
     @Override
     public TypeConstant getIntoPropertyType()
         {
-        ConstantPool pool = getConstantPool();
+        TypeConstant typeProp = getConstantPool().typeProperty();
 
-        if (this.equals(pool.typeProperty()))
-            {
-            return pool.typeProperty();
-            }
-        if (this.isA(pool.typeVar()))
-            {
-            return pool.typeVar();
-            }
-        if (this.isA(pool.typeRef()))
-            {
-            return pool.typeRef();
-            }
-        return null;
+        return this.equals(typeProp)
+                ? typeProp
+                : getIntoVariableType();
         }
 
     @Override
-    public boolean isIntoMethodType()
+    public boolean isIntoMetaData(TypeConstant typeTarget, boolean fStrict)
         {
-        return this.isA(getConstantPool().typeMethod());
-        }
-
-    @Override
-    public boolean isIntoMethodParameterType()
-        {
-        return this.isA(getConstantPool().typeParameter());
+        return fStrict
+                ? this.equals(typeTarget)
+                : this.isA(typeTarget);
         }
 
     @Override

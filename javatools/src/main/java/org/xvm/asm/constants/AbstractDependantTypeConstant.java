@@ -206,12 +206,6 @@ public abstract class AbstractDependantTypeConstant
         }
 
     @Override
-    public boolean isIntoClassType()
-        {
-        return false;
-        }
-
-    @Override
     public boolean isIntoPropertyType()
         {
         return false;
@@ -224,18 +218,6 @@ public abstract class AbstractDependantTypeConstant
         }
 
     @Override
-    public boolean isIntoMethodType()
-        {
-        return false;
-        }
-
-    @Override
-    public boolean isIntoMethodParameterType()
-        {
-        return false;
-        }
-
-    @Override
     public boolean isIntoVariableType()
         {
         return false;
@@ -245,6 +227,12 @@ public abstract class AbstractDependantTypeConstant
     public TypeConstant getIntoVariableType()
         {
         return null;
+        }
+
+    @Override
+    public boolean isIntoMetaData(TypeConstant typeTarget, boolean fStrict)
+        {
+        return false;
         }
 
     @Override

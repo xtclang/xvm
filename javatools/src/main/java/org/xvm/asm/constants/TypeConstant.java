@@ -6408,7 +6408,41 @@ public abstract class TypeConstant
      */
     public boolean isIntoClassType()
         {
-        return getUnderlyingType().isIntoClassType();
+        return isIntoMetaData(getConstantPool().typeClass(), true);
+        }
+
+    /**
+     * @return true iff this type can be used in an "into" clause for a mixin for a method, which
+     *         means that the mix-in applies to the meta-data of the method
+     */
+    public boolean isIntoMethodType()
+        {
+        return isIntoMetaData(getConstantPool().typeMethod(), false);
+        }
+
+    /**
+     * @return true iff this type can be used in an "into" clause for a mixin for a method parameter,
+     *         which means that the mix-in applies to the meta-data of the parameter
+     */
+    public boolean isIntoMethodParameterType()
+        {
+        return isIntoMetaData(getConstantPool().typeParameter(), false);
+        }
+
+    /**
+     * Check if this type can be used in an "into" clause for a mixin for the specified target
+     * (e.g. class, method or method parameter), which means that the mix-in applies to the
+     * meta-data of the target rather than the target itself.
+     *
+     * @param typeTarget  the target type
+     * @param fStrict     if true, the terminal type of this type must be exactly the target type;
+     *                    otherwise any subclass of the target is allowed
+     *
+     * @return true iff this type can be used in an "into" clause for a mixin for the target type
+     */
+    public boolean isIntoMetaData(TypeConstant typeTarget, boolean fStrict)
+        {
+        return getUnderlyingType().isIntoMetaData(typeTarget, fStrict);
         }
 
     /**
@@ -6427,24 +6461,6 @@ public abstract class TypeConstant
     public TypeConstant getIntoPropertyType()
         {
         return getUnderlyingType().getIntoPropertyType();
-        }
-
-    /**
-     * @return true iff this type can be used in an "into" clause for a mixin for a method, which
-     *         means that the mix-in applies to the meta-data of the method
-     */
-    public boolean isIntoMethodType()
-        {
-        return getUnderlyingType().isIntoMethodType();
-        }
-
-    /**
-     * @return true iff this type can be used in an "into" clause for a mixin for a method parameter,
-     *         which means that the mix-in applies to the meta-data of the parameter
-     */
-    public boolean isIntoMethodParameterType()
-        {
-        return getUnderlyingType().isIntoMethodParameterType();
         }
 
     /**

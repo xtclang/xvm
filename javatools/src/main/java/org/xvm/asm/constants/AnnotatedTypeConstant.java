@@ -153,46 +153,39 @@ public class AnnotatedTypeConstant
             return typeAnno;
             }
 
-        Constant idAnno = getAnnotationClass();
-        if (idAnno instanceof ClassConstant idClz)
+        ClassStructure mixin = (ClassStructure) getAnnotationClass().getComponent();
+        if (!mixin.isParameterizedDeep())
             {
-            ClassStructure mixin = (ClassStructure) idClz.getComponent();
-
-            if (!mixin.isParameterizedDeep())
-                {
-                return mixin.getCanonicalType();
-                }
-
-            // here we assume that the type parameters for the annotation mixin are
-            // structurally and semantically congruent with the type parameters for the
-            // incorporating class the annotation is mixing into (regardless of the parameter name)
-
-            TypeConstant typeFormal = mixin.getFormalType();
-            TypeConstant typeInto   = mixin.getTypeInto();
-            TypeConstant typeActual = m_constType;
-
-            Map<String, TypeConstant> mapResolve = new HashMap<>();
-            for (Map.Entry<StringConstant, TypeConstant> entry : mixin.getTypeParamsAsList())
-                {
-                String       sName = entry.getKey().getValue();
-                TypeConstant type  = typeInto.resolveTypeParameter(typeActual, sName);
-                if (type != null)
-                    {
-                    mapResolve.put(sName, type);
-                    }
-                }
-            return m_typeAnno = typeFormal.resolveGenerics(getConstantPool(), mapResolve::get);
+            return mixin.getCanonicalType();
             }
 
-        return m_typeAnno = m_annotation.getAnnotationType();
+        // here we assume that the type parameters for the annotation mixin are
+        // structurally and semantically congruent with the type parameters for the
+        // incorporating class the annotation is mixing into (regardless of the parameter name)
+
+        TypeConstant typeFormal = mixin.getFormalType();
+        TypeConstant typeInto   = mixin.getTypeInto();
+        TypeConstant typeActual = m_constType;
+
+        Map<String, TypeConstant> mapResolve = new HashMap<>();
+        for (Map.Entry<StringConstant, TypeConstant> entry : mixin.getTypeParamsAsList())
+            {
+            String       sName = entry.getKey().getValue();
+            TypeConstant type  = typeInto.resolveTypeParameter(typeActual, sName);
+            if (type != null)
+                {
+                mapResolve.put(sName, type);
+                }
+            }
+        return m_typeAnno = typeFormal.resolveGenerics(getConstantPool(), mapResolve::get);
         }
 
     /**
      * @return the class of the annotation
      */
-    public IdentityConstant getAnnotationClass()
+    public ClassConstant getAnnotationClass()
         {
-        return (IdentityConstant) m_annotation.getAnnotationClass();
+        return (ClassConstant) m_annotation.getAnnotationClass();
         }
 
     /**

@@ -503,12 +503,6 @@ public abstract class RelationalTypeConstant
         }
 
     @Override
-    public boolean isIntoClassType()
-        {
-        return false;
-        }
-
-    @Override
     public boolean isIntoPropertyType()
         {
         return false;
@@ -518,19 +512,6 @@ public abstract class RelationalTypeConstant
     public TypeConstant getIntoPropertyType()
         {
         return null;
-        }
-
-
-    @Override
-    public boolean isIntoMethodType()
-        {
-        return false;
-        }
-
-    @Override
-    public boolean isIntoMethodParameterType()
-        {
-        return false;
         }
 
     @Override
@@ -543,6 +524,12 @@ public abstract class RelationalTypeConstant
     public TypeConstant getIntoVariableType()
         {
         return null;
+        }
+
+    @Override
+    public boolean isIntoMetaData(TypeConstant typeTarget, boolean fStrict)
+        {
+        return false;
         }
 
     @Override

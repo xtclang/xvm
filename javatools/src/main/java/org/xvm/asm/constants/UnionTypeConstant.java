@@ -96,33 +96,53 @@ public class UnionTypeConstant
         }
 
     /**
-     * Collect all parts of this union type that extend the specified type.
+     * Check if any of the parts of this union type extend the specified type.
      *
      * @param typeMatch  the type to match
-     * @param setTypes   (optional) the set to add matching types to
+     *
+     * @return true iff there is a part of the union that extends the specified type
+     */
+    public boolean isMatching(TypeConstant typeMatch)
+        {
+        TypeConstant type1 = m_constType1;
+        TypeConstant type2 = m_constType2;
+
+        return (type1 instanceof UnionTypeConstant typeUnion
+                    ? typeUnion.isMatching(typeMatch)
+                    : type1.isA(typeMatch))
+            || (type2 instanceof UnionTypeConstant typeUnion
+                    ? typeUnion.isMatching(typeMatch)
+                    : type2.isA(typeMatch));
+        }
+
+    /**
+     * Collect all parts of this union type that extend the specified type.
+     *
+     * @param typeMatch     the type to match
+     * @param setMatching   (optional) the set to add matching types to
      *
      * @return a set containing all matching types
      */
-    public Set<TypeConstant> collectMatching(TypeConstant typeMatch, Set<TypeConstant> setTypes)
+    public Set<TypeConstant> collectMatching(TypeConstant typeMatch, Set<TypeConstant> setMatching)
         {
-        if (setTypes == null)
+        if (setMatching == null)
             {
-            setTypes = new HashSet<>();
+            setMatching = new HashSet<>();
             }
-        testMatch(m_constType1, typeMatch, setTypes);
-        testMatch(m_constType2, typeMatch, setTypes);
-        return setTypes;
+        testMatch(m_constType1, typeMatch, setMatching);
+        testMatch(m_constType2, typeMatch, setMatching);
+        return setMatching;
         }
 
-    private void testMatch(TypeConstant type, TypeConstant typeMatch, Set<TypeConstant> set)
+    private void testMatch(TypeConstant type, TypeConstant typeMatch, Set<TypeConstant> setMatching)
         {
         if (type instanceof UnionTypeConstant typeUnion)
             {
-            typeUnion.collectMatching(typeMatch, set);
+            typeUnion.collectMatching(typeMatch, setMatching);
             }
         else if (type.isA(typeMatch))
             {
-            set.add(type);
+            setMatching.add(type);
             }
         }
 
@@ -339,13 +359,6 @@ public class UnionTypeConstant
         }
 
     @Override
-    public boolean isIntoClassType()
-        {
-        return getUnderlyingType().isIntoClassType()
-            || getUnderlyingType2().isIntoClassType();
-        }
-
-    @Override
     public boolean isIntoPropertyType()
         {
         return getUnderlyingType().isIntoPropertyType()
@@ -372,17 +385,10 @@ public class UnionTypeConstant
         }
 
     @Override
-    public boolean isIntoMethodType()
+    public boolean isIntoMetaData(TypeConstant typeTarget, boolean fStrict)
         {
-        return getUnderlyingType().isIntoMethodType()
-            || getUnderlyingType2().isIntoMethodType();
-        }
-
-    @Override
-    public boolean isIntoMethodParameterType()
-        {
-        return getUnderlyingType().isIntoMethodParameterType()
-            || getUnderlyingType2().isIntoMethodParameterType();
+        return getUnderlyingType().isIntoMetaData(typeTarget, fStrict)
+            || getUnderlyingType2().isIntoMetaData(typeTarget, fStrict);
         }
 
     @Override
@@ -848,8 +854,8 @@ public class UnionTypeConstant
         {
         return type.isTuple()
                 ? type
-                : type instanceof UnionTypeConstant typeInter
-                    ? typeInter.extractTuple()
+                : type instanceof UnionTypeConstant typeUnion
+                    ? typeUnion.extractTuple()
                     : null;
         }
 
