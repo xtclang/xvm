@@ -2057,7 +2057,9 @@ public class TypeCompositionStatement
             // mixins naturally imply formal type parameters from their contributions (most
             // likely the "into" clauses); there is logic in NameTypeExpression that defers the name
             // resolution until the implicit type parameters are added by this method (if any)
-            addImplicitTypeParameters(component, errs);
+            errs = errs.branch(this);
+            component.addImplicitTypeParameters(pool(), errs);
+            errs.merge();
             }
 
         if (format == Format.CONST)
@@ -2148,86 +2150,6 @@ public class TypeCompositionStatement
             for (Map.Entry<String, TypeConstant> entry : mapConstraints.entrySet())
                 {
                 component.updateConstraint(entry.getKey(), entry.getValue());
-                }
-            }
-        }
-
-    /**
-     * If there are any undeclared formal parameters for the "extend", "implement" or "into"
-     * contributions of a mixin, add them to the component's formal parameter list.
-     *
-     * @param component  the ClassStructure we're creating
-     * @param errs       the error listener
-     */
-    private void addImplicitTypeParameters(ClassStructure component, ErrorListener errs)
-        {
-        ListMap<String, TypeConstant> mapTypeParams = null;
-        for (Contribution contrib : component.getContributionsAsList())
-            {
-            switch (contrib.getComposition())
-                {
-                case Extends:
-                case Implements:
-                case Incorporates:
-                case Into:
-                    break;
-
-                default:
-                    // disregard any other contribution
-                    continue;
-                }
-
-            TypeConstant typeContrib = contrib.getTypeConstant();
-            if (typeContrib.isParamsSpecified())
-                {
-                continue;
-                }
-
-            TypeConstant[] atypeGeneric = typeContrib.collectGenericParameters();
-            if (atypeGeneric == null || atypeGeneric.length == 0)
-                {
-                continue;
-                }
-
-            if (mapTypeParams == null)
-                {
-                mapTypeParams = new ListMap<>();
-                }
-
-            // collect the formal types and verify that there are no collisions
-            for (TypeConstant typeParam : atypeGeneric)
-                {
-                assert typeParam.isGenericType();
-
-                PropertyConstant idParam        = (PropertyConstant) typeParam.getDefiningConstant();
-                String           sName          = idParam.getName();
-                TypeConstant     typeConstraint = idParam.getConstraintType();
-
-                TypeConstant typeOld = mapTypeParams.get(sName);
-                if (typeOld == null)
-                    {
-                    mapTypeParams.put(sName, typeConstraint);
-                    }
-                else if (!typeOld.equals(typeConstraint))
-                    {
-                    // {0} type parameter {1} must be of type {2}, but has been specified as {3} by {4}
-                    log(errs, Severity.ERROR, Constants.VE_TYPE_PARAM_INCOMPATIBLE_TYPE,
-                        name.getValueText(), sName, typeOld.getValueString(),
-                        typeConstraint.getValueString(), contrib.getTypeConstant().getValueString());
-                    return;
-                    }
-                }
-
-            // update the contribution
-            contrib.narrowType(typeContrib.adoptParameters(pool(), atypeGeneric));
-            }
-
-        if (mapTypeParams != null)
-            {
-            for (Map.Entry<String, TypeConstant> entry : mapTypeParams.entrySet())
-                {
-                component.addTypeParam(entry.getKey(), entry.getValue())
-                         .setSynthetic(true);
                 }
             }
         }

@@ -37,6 +37,7 @@ import org.xvm.runtime.template.reflect.xRef.RefHandle;
 import org.xvm.util.Handy;
 import org.xvm.util.LinkedIterator;
 import org.xvm.util.ListMap;
+import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.readMagnitude;
@@ -4107,6 +4108,111 @@ public class ClassStructure
             && Handy.equals(this.m_constPath, that.m_constPath);
         }
 
+    /**
+     * If there are any undeclared formal parameters for the "extend", "implement" or "into"
+     * contributions for this mixin, add them to the component's formal parameter list.
+     *
+     * @param pool  the ConstantPool to use
+     * @param errs  the error listener
+     */
+    public void addImplicitTypeParameters(ConstantPool pool, ErrorListener errs)
+        {
+        assert getFormat() == Format.MIXIN;
+
+        ListMap<String, TypeConstant> mapTypeParams = null;
+        for (Contribution contrib : getContributionsAsList())
+            {
+            switch (contrib.getComposition())
+                {
+                case Extends:
+                case Implements:
+                case Incorporates:
+                case Into:
+                    break;
+
+                default:
+                    // disregard any other contribution
+                    continue;
+                }
+
+            TypeConstant typeContrib = contrib.getTypeConstant();
+            if (typeContrib.isParamsSpecified())
+                {
+                continue;
+                }
+
+            TypeConstant[] atypeGeneric = typeContrib.collectGenericParameters();
+            if (atypeGeneric == null)
+                {
+                continue;
+                }
+
+            if (atypeGeneric.length == 0)
+                {
+                // there is a possibility that we have not yet had a chance to add implicit
+                // parameters for the underlying mixin; do it now
+                if (typeContrib.getExplicitClassFormat() == Format.MIXIN)
+                    {
+                    ClassStructure clzContrib = (ClassStructure)
+                            typeContrib.getSingleUnderlyingClass(false).getComponent();
+                    clzContrib.addImplicitTypeParameters(pool, errs);
+
+                    atypeGeneric = typeContrib.collectGenericParameters();
+                    if (atypeGeneric.length == 0)
+                        {
+                        continue;
+                        }
+                    // implicit parameters were added to the contribution type; proceed
+                    }
+                else
+                    {
+                    continue;
+                    }
+                }
+
+            if (mapTypeParams == null)
+                {
+                mapTypeParams = new ListMap<>();
+                }
+
+            // collect the formal types and verify that there are no collisions
+            for (TypeConstant typeParam : atypeGeneric)
+                {
+                assert typeParam.isGenericType();
+
+                PropertyConstant idParam        = (PropertyConstant) typeParam.getDefiningConstant();
+                String           sName          = idParam.getName();
+                TypeConstant     typeConstraint = idParam.getConstraintType();
+
+                TypeConstant typeOld = mapTypeParams.get(sName);
+                if (typeOld == null)
+                    {
+                    mapTypeParams.put(sName, typeConstraint);
+                    }
+                else if (!typeOld.equals(typeConstraint))
+                    {
+                    // {0} type parameter {1} must be of type {2}, but has been specified as {3} by {4}
+                    log(errs, Severity.ERROR, VE_TYPE_PARAM_INCOMPATIBLE_TYPE,
+                        getName(), typeOld.getValueString(),
+                        typeConstraint.getValueString(), contrib.getTypeConstant().getValueString());
+                    return;
+                    }
+                }
+
+            // update the contribution
+            contrib.narrowType(typeContrib.adoptParameters(pool, atypeGeneric));
+            }
+
+        if (mapTypeParams != null)
+            {
+            for (Map.Entry<String, TypeConstant> entry : mapTypeParams.entrySet())
+                {
+                addTypeParam(entry.getKey(), entry.getValue())
+                         .setSynthetic(true);
+                }
+            }
+        }
+
 
     // ----- inner class: SimpleTypeResolver -------------------------------------------------------
 
@@ -4214,7 +4320,7 @@ public class ClassStructure
     private transient Annotation[] m_aAnnoClass;
 
     /**
-     * A cached array of the annotations that represetn mixins.
+     * A cached array of the annotations that represent mixins.
      */
     private transient Annotation[] m_aAnnoMixin;
     }
