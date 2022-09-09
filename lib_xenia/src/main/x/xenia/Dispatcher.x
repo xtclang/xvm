@@ -121,6 +121,21 @@ service Dispatcher
                     }
                 }
 
+            if (EndpointInfo endpoint ?= serviceInfo.defaultEndpoint)
+                {
+                if (endpoint.httpMethod.name == methodName)
+                    {
+                    Request request = new Http1Request(requestInfo, []);
+
+                    bundle = bundlePool.allocateBundle(wsid);
+
+                    Handler handle = bundle.ensureCallChain(endpoint);
+
+                    response = handle^(session, request);
+                    break ComputeResponse;
+                    }
+                }
+
             Request     request     = new Http1Request(requestInfo, []);
             MethodInfo? onErrorInfo = catalog.findOnError(wsid);
             if (onErrorInfo != Null)

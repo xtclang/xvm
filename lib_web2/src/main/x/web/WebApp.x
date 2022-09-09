@@ -83,7 +83,14 @@ mixin WebApp
                         case Default:
                             if (defaultEndpoint == Null)
                                 {
-                                defaultEndpoint = new EndpointInfo(method, -1, wsid);
+                                String uriTemplate = method.template;
+                                if (uriTemplate != "")
+                                    {
+                                    throw new IllegalState($|non-empty uri template for \"Default\"\
+                                                            |endpoint \"{child}\"
+                                                            );
+                                    }
+                                defaultEndpoint = new EndpointInfo(method, epid, wsid);
                                 }
                             else
                                 {
@@ -172,7 +179,7 @@ mixin WebApp
         HttpStatus status = error.is(RequestAborted) ? error.status :
                             error.is(HttpStatus)     ? error
                                                      : InternalServerError;
-assert:debug;
+
         return new responses.SimpleResponse(status=status, bytes=error.toString().utf8());
         }
     }
