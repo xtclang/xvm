@@ -2,34 +2,17 @@ module TestSimple
     {
     @Inject Console console;
 
+    package net import net.xtclang.org;
+    import net.URI;
+
+    package web import web.xtclang.org;
+    import web.routing.UriTemplate;
+
     void run()
         {
-        }
-
-    @Default // this used to compile without the Endpoint
-    void test()
-        {
-        TODO
-        }
-
-    @Default @Get("")
-    void test2()
-        {
-        TODO
-        }
-
-    mixin Get(String template)
-            extends Endpoint(template)
-        {
-        }
-
-    mixin Endpoint(String template)
-            into Method
-        {
-        }
-
-    mixin Default
-            into Endpoint | service
-        {
+        URI uri = new URI("hel/lo");
+        UriTemplate template = new UriTemplate("h");
+//        assert:debug;
+        assert !template.matches(uri);
         }
     }

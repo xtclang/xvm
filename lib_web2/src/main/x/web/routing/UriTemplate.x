@@ -166,9 +166,22 @@ const UriTemplate
                 }
             }
 
-        // REVIEW CP what to do with anything left over at the end of the URI?
+        // do not allow only a portion of the path to be matched
+        switch (position.section)
+            {
+            case Scheme:
+            case Authority:
+                return False;
 
-        return True, bindings.makeImmutable();
+            case Path:
+                if (position.offset < uri.path?.size)
+                    {
+                    return False;
+                    }
+                continue;
+            default:
+                return True, bindings.makeImmutable();
+            }
         }
 
     /**
