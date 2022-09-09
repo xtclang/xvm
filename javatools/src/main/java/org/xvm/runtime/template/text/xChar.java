@@ -1,6 +1,10 @@
 package org.xvm.runtime.template.text;
 
 
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
+import java.io.IOException;
+
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
@@ -17,9 +21,15 @@ import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
+import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xOrdered;
 
+import org.xvm.runtime.template.collections.xArray.ArrayHandle;
+import org.xvm.runtime.template.collections.xByteArray;
+
 import org.xvm.runtime.template.numbers.xUInt32;
+
+import org.xvm.util.Handy;
 
 
 /**
@@ -80,8 +90,29 @@ public class xChar
     public int construct(Frame frame, MethodStructure constructor, TypeComposition clazz,
                          ObjectHandle hParent, ObjectHandle[] ahVar, int iReturn)
         {
-        // all three different constructors take a JavaLong parameter
-        long lCodepoint = ((JavaLong) ahVar[0]).getValue();
+        // there are three constructors take a JavaLong parameter (Byte, UInt32 and Int)
+        // and one takes Byte[]
+        ObjectHandle hArg = ahVar[0];
+        if (hArg instanceof JavaLong hCodepoint)
+            {
+            return constructHandle(frame, hCodepoint.getValue(), iReturn);
+            }
+
+        byte[] ab = xByteArray.getBytes((ArrayHandle) hArg);
+        try
+            {
+            long lCodepoint =
+                Handy.readUtf8Char(new DataInputStream(new ByteArrayInputStream(ab)));
+            return constructHandle(frame, lCodepoint, iReturn);
+            }
+        catch (IOException e)
+            {
+            return frame.raiseException(xException.illegalUTF(frame, e.getMessage()));
+            }
+        }
+
+    protected int constructHandle(Frame frame, long lCodepoint, int iReturn)
+        {
         if (lCodepoint > 0x10FFFFL ||                       // unicode limit
             lCodepoint > 0xD7FFL && lCodepoint < 0xE000L)   // surrogate values are illegal
             {

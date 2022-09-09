@@ -61,6 +61,7 @@ public class xException
             s_clzAccessDeniedException      = f_container.getTemplate("fs.AccessDenied"              ).getCanonicalClass();
             s_clzFileAlreadyExistsException = f_container.getTemplate("fs.FileAlreadyExists"         ).getCanonicalClass();
             s_clzIOException                = f_container.getTemplate("io.IOException"               ).getCanonicalClass();
+            s_clzIOIllegalUTF               = f_container.getTemplate("io.IllegalUTF"                ).getCanonicalClass();
 
             METHOD_FORMAT_EXCEPTION = getStructure().findMethod("formatExceptionString", 2);
 
@@ -255,6 +256,11 @@ public class xException
         return makeHandle(frame, s_clzIOException, sMsg);
         }
 
+    public static ExceptionHandle illegalUTF(Frame frame, String sMsg)
+        {
+        return makeHandle(frame, s_clzIOIllegalUTF, sMsg);
+        }
+
 
     // ---- ObjectHandle helpers -------------------------------------------------------------------
 
@@ -316,6 +322,7 @@ public class xException
     private static ClassComposition s_clzAccessDeniedException;
     private static ClassComposition s_clzFileAlreadyExistsException;
     private static ClassComposition s_clzIOException;
+    private static ClassComposition s_clzIOIllegalUTF;
 
     private static MethodStructure METHOD_FORMAT_EXCEPTION;
     }
