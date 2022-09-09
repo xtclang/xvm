@@ -10,9 +10,9 @@ module TestSimple
 
     void run()
         {
-        URI uri = new URI("hel/lo");
+        URI uri = new URI("hello");
         UriTemplate template = new UriTemplate("h");
 //        assert:debug;
-        assert !template.matches(uri);
+        console.println($"match={template.matches(uri)}");
         }
     }

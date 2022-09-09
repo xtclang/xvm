@@ -174,7 +174,7 @@ const UriTemplate
                 return False;
 
             case Path:
-                if (position.offset < uri.path?.size)
+                if (position.offset < uri.path.toString().size)
                     {
                     return False;
                     }
