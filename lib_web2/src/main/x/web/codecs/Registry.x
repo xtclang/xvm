@@ -28,11 +28,12 @@ service Registry
         new LambdaFormat<URI      >(s -> new URI(s)),       // TODO GG new BasicFormat<URI>(),
         new LambdaFormat<IPAddress>(s -> new IPAddress(s)), // TODO GG new BasicFormat<IPAddress>(),
 
-// Boolean
-// Date
-// Time
-// TimeOfDay
-// Duration
+// TODO?
+// Boolean - "true" and "false" like in JSON? or 0/1? N/Y? n/y? no/yes? non/oui?
+// Date - what format to use?
+// Time - what format to use? HTTP does have a "standard" format
+// TimeOfDay - what format to use?
+// Duration - what format to use?
 
         // TODO CP need a JSON specific implementation that knows how to answer "forType()" method
         new LambdaFormat<json.Doc>(s ->
@@ -90,19 +91,30 @@ service Registry
         ];
 
     /**
-     * TODO
+     * The internal registry-by-type of the Format objects.
      */
-    private Map<Type, Format> formatsByType = new HashMap();
+    private Map<Type, Format?> formatsByType = new HashMap();
+
+    /**
+     * The internal registry-by-name of the Format objects.
+     */
+    private Map<String, Format> formatsByName = new HashMap();
 
 
     // ----- Format support ------------------------------------------------------------------------
 
     /**
-     * TODO
+     * Register the passed `Format`. The `Format` is registered by its `Value` type, which must be
+     * unique, and by its name iff the same name is not already registered.
+     *
+     * @param format  the `Format` to register
      */
     void registerFormat(Format format)
         {
-        assert formatsByType.putIfAbsent(format.Value, format);
+        assert formatsByType.putIfAbsent(format.Value, format)
+            || formatsByType.replace(format.Value, Null, format);
+        formatsByName.putIfAbsent(format.name, format);
+
         if (!Null.is(format.Value))
             {
             registerFormat(new NullableFormat<format.Value>(format));
@@ -110,11 +122,48 @@ service Registry
         }
 
     /**
-     * TODO
+     * Look up a `Format` by the `Type` that it can encode and decode.
+     *
+     * @param type  the `Value` type for the `Format`
+     *
+     * @return `True` iff there exists a `Format` for the specified `Type`
+     * @return (conditional) the `Format` for the `Type`
      */
-    <Value> Format<Value> findFormat(Type<Value> type)
+    <Value> conditional Format<Value> findFormat(Type<Value> type)
         {
-        TODO
+        if (Format? format := formatsByType.get(type))
+            {
+            return format == Null
+                    ? False
+                    : (True, format.as(Format<Value>));
+            }
+
+        for (Format? format : formatsByType.values)
+            {
+            // TODO GG: if (Format<Value> newFormat := format?.forType(type))
+            if (val newFormat := format?.forType(type))
+                {
+                registerFormat(newFormat);
+                return True, newFormat /*TODO GG*/.as(Format<Value>);
+                }
+            }
+
+        formatsByType.put(type, Null); // cache the miss
+        return False;
+        }
+
+    /**
+     * Look up a `Format` by the `Type` that it can encode and decode, and throw an exception if
+     * the format is not found.
+     *
+     * @param type  the `Value` type for the `Format`
+     *
+     * @return the `Format` for the specified `Type`
+     */
+    <Value> Format<Value> requireFormat(Type<Value> type)
+        {
+        assert Format<Value> format := findFormat(type) as $"Unable to find Format for Type {type}";
+        return format;
         }
 
 
