@@ -150,6 +150,15 @@ public class Annotation
         }
 
     /**
+     * @return the formal type of the annotation class
+     */
+    public TypeConstant getFormalType()
+        {
+        ClassConstant idAnno = (ClassConstant) getAnnotationClass();
+        return ((ClassStructure) idAnno.getComponent()).getFormalType();
+        }
+
+    /**
      * @return an array of constants which are the parameters for the annotation
      */
     public Constant[] getParams()

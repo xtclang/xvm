@@ -4,11 +4,32 @@ module TestSimple
 
     void run()
         {
-        test();
         }
 
-    void test(Dec d = 1.0)
+    @Default // this used to compile without the Endpoint
+    void test()
         {
-        assert 0 <= d <= 1; // this used to assert
+        TODO
+        }
+
+    @Default @Get("")
+    void test2()
+        {
+        TODO
+        }
+
+    mixin Get(String template)
+            extends Endpoint(template)
+        {
+        }
+
+    mixin Endpoint(String template)
+            into Method
+        {
+        }
+
+    mixin Default
+            into Endpoint | service
+        {
         }
     }
