@@ -2989,6 +2989,8 @@ public class ClassStructure
 
                     if (method.isVirtualConstructor())
                         {
+                        // a constructor cannot be duck-typed, because even if a base class has it,
+                        // a derived class may not, which would break transitivity of "isA"
                         setMiss.add(sig);
                         }
                     else if (method.isFunction())
