@@ -4,8 +4,26 @@ module TestSimple
 
     void run()
         {
-        console.println(new Char(Int:64));
-        console.println(new Char([64]));
-        console.println(new Char([128, 3, 62]));
+        Method m = Test.doesNotCompile;
+        console.println(m);
+        assert m.is(Foo);
+        console.println(m.bar);
+        }
+
+    const Bar(Int i)
+        {
+        }
+
+    mixin Foo(Bar? bar = Null)
+        into Method;
+
+    static Bar TWO_BAR = new Bar(2);
+
+    class Test
+        {
+        @Foo(TWO_BAR)   // this used to fail to compile
+        void doesNotCompile()
+            {
+            }
         }
     }

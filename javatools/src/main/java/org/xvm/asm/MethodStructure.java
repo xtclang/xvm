@@ -268,6 +268,11 @@ public class MethodStructure
     /**
      * Check if all annotations are resolved; move those that don't apply to the method to the
      * return value type.
+     * <p/>
+     * Important note: this method is called during the "resolve name" compilation phase, so
+     *      while the annotation names must have already bee resolved, the annotation arguments
+     *      may not yet. It dost't present any problem, since the argument values don't affect
+     *      which "bucket" they belong to
      *
      * @return true if the annotations have been resolved; false if this method has to be called
      *         later in order to resolve annotations
@@ -278,7 +283,7 @@ public class MethodStructure
         int     cMove = 0;
         for (Annotation annotation : m_aAnnotations)
             {
-            if (annotation.containsUnresolved())
+            if (annotation.getAnnotationClass().containsUnresolved())
                 {
                 return false;
                 }
