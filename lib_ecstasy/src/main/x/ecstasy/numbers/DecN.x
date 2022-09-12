@@ -11,6 +11,7 @@ const DecN
      * @param bits  an array of bit values that represent this number, ordered from left-to-right,
      *              Most Significant Bit (MSB) to Least Significant Bit (LSB)
      */
+    @Override
     construct(Bit[] bits)
         {
         assert bits.size >= 32 && bits.size.bitCount == 1;
@@ -24,6 +25,7 @@ const DecN
      * @param bytes  an array of byte values that represent this number, ordered from left-to-right,
      *               as they would appear on the wire or in a file
      */
+    @Override
     construct(Byte[] bytes)
         {
         assert bytes.size >= 4 && bytes.size.bitCount == 1;

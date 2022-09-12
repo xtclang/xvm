@@ -58,6 +58,7 @@ class HasherMap<Key, Value>
      * @param hasher        the [Hasher] to use
      * @param initCapacity  the number of expected entries
      */
+    @Override
     construct(Hasher<Key> hasher, Int initCapacity = 0)
         {
         this.hasher = hasher;

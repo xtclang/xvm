@@ -25,6 +25,7 @@ class OrderedMapSet<Element extends Orderable>
      *
      * @param that  the [Duplicable] `MapSet` object to duplicate from
      */
+    @Override
     construct(OrderedMapSet<Element> that)
         {
         super(that);

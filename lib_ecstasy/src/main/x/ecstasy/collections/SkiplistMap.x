@@ -25,6 +25,7 @@ class SkiplistMap<Key extends Orderable, Value>
      * @param initialCapacity  the initial capacity, in terms of the number of expected entries
      * @param orderer          the Orderer for this Map, or `Null` to use natural order
      */
+    @Override
     construct(Int initialCapacity = 0, Orderer? orderer = Null)
         {
         if (orderer == Null)
@@ -43,6 +44,7 @@ class SkiplistMap<Key extends Orderable, Value>
     /**
      * [Duplicable] constructor.
      */
+    @Override
     construct(SkiplistMap<Key, Value> that)
         {
         construct SkiplistMap(that.size, that.compare);

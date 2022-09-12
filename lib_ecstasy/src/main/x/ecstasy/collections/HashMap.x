@@ -19,6 +19,7 @@ class HashMap<Key extends Hashable, Value>
      *
      * @param initCapacity  the number of expected entries
      */
+    @Override
     construct(Int initCapacity = 0)
         {
         assert Hasher<Key> hasher := Key.hashed() as $"Type \"{Key}\" doesn't have a natural hasher";
@@ -49,6 +50,7 @@ class HashMap<Key extends Hashable, Value>
      * @param hasher        the [Hasher] to use
      * @param initCapacity  the number of expected entries
      */
+    @Override
     construct(Hasher<Key> hasher, Int initCapacity = 0)
         {
         super(hasher, initCapacity);

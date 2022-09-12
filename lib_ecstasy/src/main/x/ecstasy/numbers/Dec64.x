@@ -10,6 +10,7 @@ const Dec64
      * @param bits  an array of bit values that represent this number, ordered from left-to-right,
      *              Most Significant Bit (MSB) to Least Significant Bit (LSB)
      */
+    @Override
     construct(Bit[] bits)
         {
         assert:bounds bits.size == 64;
@@ -22,6 +23,7 @@ const Dec64
      * @param bytes  an array of byte values that represent this number, ordered from left-to-right,
      *               as they would appear on the wire or in a file
      */
+    @Override
     construct(Byte[] bytes)
         {
         assert:bounds bytes.size == 8;

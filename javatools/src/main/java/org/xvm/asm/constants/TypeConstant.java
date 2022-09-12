@@ -3784,6 +3784,16 @@ public abstract class TypeConstant
                                         continue;
                                         }
 
+                                    MethodBody bodyHead = methodContrib.getHead();
+                                    if (!bodyHead.isOverride() && !bodyHead.isSynthetic())
+                                        {
+                                        ctor.containsVirtualConstructor();
+                                        idContrib.log(errs, Severity.ERROR, VE_METHOD_OVERRIDE_REQUIRED,
+                                                removeAccess().getValueString(),
+                                                idBase.getSignature().getValueString(),
+                                                ctor.getIdentity().getNamespace().getValueString()
+                                                );
+                                        }
                                     methodContrib = ctor.layerOnVirtualConstructor(methodContrib);
                                     fKeep         = true;
 

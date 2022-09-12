@@ -15,6 +15,7 @@ class SparseIntSet
     {
     // ----- constructors --------------------------------------------------------------------------
 
+    @Override
     construct()
         {
         contents = new SkiplistMap<Int, Int>();
@@ -25,6 +26,7 @@ class SparseIntSet
      *
      * @param that  the SparseIntSet to copy
      */
+    @Override
     construct(SparseIntSet that)
         {
         this.contents = that.contents.duplicate();

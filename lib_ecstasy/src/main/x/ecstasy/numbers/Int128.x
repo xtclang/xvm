@@ -50,6 +50,7 @@ const Int128
      * @param bits  an array of bit values that represent this number, ordered from left-to-right,
      *              Most Significant Bit (MSB) to Least Significant Bit (LSB)
      */
+    @Override
     construct(Bit[] bits)
         {
         assert bits.size == 128;
@@ -62,6 +63,7 @@ const Int128
      * @param bytes  an array of byte values that represent this number, ordered from left-to-right,
      *               as they would appear on the wire or in a file
      */
+    @Override
     construct(Byte[] bytes)
         {
         assert bytes.size == 16;

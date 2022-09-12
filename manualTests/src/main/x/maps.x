@@ -633,6 +633,7 @@ module TestMaps
         /**
          * Replicable constructor.
          */
+        @Override
         construct(Int capacity = 0)
             {
             construct HashMap(capacity);
@@ -641,6 +642,7 @@ module TestMaps
         /**
          * Duplicable constructor.
          */
+        @Override
         construct(SafeHashMap<Key, Value> that)
             {
             construct HashMap(that);
@@ -649,6 +651,7 @@ module TestMaps
         /**
          * [HasherReplicable] virtual constructor.
          */
+        @Override
         construct(Hasher<Key> hasher, Int initCapacity = 0)
             {
             construct HashMap(hasher, initCapacity);

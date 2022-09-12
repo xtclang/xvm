@@ -13,6 +13,7 @@ class ListSet<Element>
      * @param values        (optional) initial values to store in the ListSet
      * @param initCapacity  (optional) initial capacity of the ListSet
      */
+    @Override
     construct(Iterable<Element>? values = Null, Int initCapacity = 0)
         {
         ListMap<Element, Nullable> map = new ListMap(values?.size : initCapacity);
@@ -28,6 +29,7 @@ class ListSet<Element>
      *
      * @param that  the [Duplicable] `MapSet` object to duplicate from
      */
+    @Override
     construct(ListSet<Element> that)
         {
         super(that);

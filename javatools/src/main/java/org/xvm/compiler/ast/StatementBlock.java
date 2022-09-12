@@ -958,6 +958,7 @@ public class StatementBlock
                                 break;
 
                             default:
+                                errsTemp.merge();
                                 return constant;
                             }
                         }

@@ -24,6 +24,7 @@ const ConcurrentHashMap<Key extends immutable Hashable, Value extends Shareable>
      * @param initCapacity  the number of expected entries
      * @param parallelism   the target parallelism to optimize for
      */
+    @Override
     construct(Int initCapacity = 0, Int parallelism = 16)
         {
         assert Hasher<Key> hasher := Key.hashed();
@@ -49,6 +50,7 @@ const ConcurrentHashMap<Key extends immutable Hashable, Value extends Shareable>
      * @param that          the ConcurrentHashMap to duplicate
      * @param parallelism   the target parallelism to optimize for
      */
+    @Override
     construct(ConcurrentHashMap<Key, Value> that, Int parallelism = 16)
         {
         super(that, parallelism);

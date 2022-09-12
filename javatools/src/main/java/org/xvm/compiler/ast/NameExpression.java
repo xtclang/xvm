@@ -1848,17 +1848,12 @@ public class NameExpression
             ErrorListener errsTemp = errs.branch(this);
 
             Argument arg = ctx.resolveName(name, errsTemp);
-            if (arg == null)
+
+            errsTemp.merge();
+            if (arg == null && !errsTemp.hasSeriousErrors())
                 {
-                if (errsTemp.hasSeriousErrors())
-                    {
-                    errsTemp.merge();
-                    }
-                else
-                    {
-                    log(errs, Severity.ERROR, Compiler.NAME_MISSING,
-                            sName, ctx.getMethod().getIdentityConstant().getValueString());
-                    }
+                log(errs, Severity.ERROR, Compiler.NAME_MISSING,
+                        sName, ctx.getMethod().getIdentityConstant().getValueString());
                 return null;
                 }
 

@@ -257,6 +257,15 @@ public class MethodBody
         }
 
     /**
+     * @return true iff this is a synthetic method
+     */
+    public boolean isSynthetic()
+        {
+        MethodStructure structMethod = getMethodStructure();
+        return structMethod != null && structMethod.isSynthetic();
+        }
+
+    /**
      * @return true iff this is a non-virtual method that can be covered (subclassed) by private
      *         methods with compatible signatures
      */

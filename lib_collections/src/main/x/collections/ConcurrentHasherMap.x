@@ -31,6 +31,7 @@ const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
      * @param initCapacity  the number of expected entries
      * @param parallelism   the target parallelism to optimize for
      */
+    @Override
     construct(Hasher<Key> hasher, Int initCapacity = 0, Int parallelism = 16)
         {
         assert:arg parallelism > 0;
@@ -81,6 +82,7 @@ const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
      *                      ConcurrentHasherMap
      * @param parallelism   the target parallelism to optimize for
      */
+    @Override
     construct(Hasher<Key> hasher, Map<Key, Value> that, Int parallelism = 16)
         {
         if (that.is(ConcurrentHasherMap) && hasher == that.hasher)
@@ -467,6 +469,7 @@ const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
          * @param initCapacity    the number of expected entries
          * @param partitionCount  the number of partitions (must be specified)
          */
+        @Override
         construct(Hasher<Key> hasher, Int initCapacity = 0, Int partitionCount = 0)
             {
             assert partitionCount > 0 as "Partition count must be specified";

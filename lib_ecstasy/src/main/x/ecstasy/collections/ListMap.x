@@ -27,6 +27,7 @@ class ListMap<Key, Value>
      * @param initCapacity  an optional suggested capacity for the map, expressed in terms of the
      *                      number of entries
      */
+    @Override
     construct(Int initCapacity = 0)
         {
         this.keyArray = new Array(initCapacity);

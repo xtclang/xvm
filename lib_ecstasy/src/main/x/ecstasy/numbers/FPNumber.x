@@ -43,6 +43,7 @@
      * @param bits  an array of bit values that represent this number, ordered from left-to-right,
      *              Most Significant Bit (MSB) to Least Significant Bit (LSB)
      */
+    @Override
     construct(Bit[] bits)
         {
         super(bits);
@@ -54,6 +55,7 @@
      * @param bytes  an array of byte values that represent this number, ordered from left-to-right,
      *               as they would appear on the wire or in a file
      */
+    @Override
     construct(Byte[] bytes)
         {
         super(bytes);

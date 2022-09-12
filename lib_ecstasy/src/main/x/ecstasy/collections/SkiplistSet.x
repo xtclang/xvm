@@ -18,6 +18,7 @@ class SkiplistSet<Element extends Orderable>
      * @param initialCapacity  the initial capacity, in terms of the number of expected elements
      * @param orderer          the Orderer for this Set, or `Null` to use natural order
      */
+    @Override
     construct(Int initialCapacity = 0, Orderer? orderer = Null)
         {
         super(new SkiplistMap<Element, Nullable>(initialCapacity, orderer));
@@ -28,6 +29,7 @@ class SkiplistSet<Element extends Orderable>
      *
      * @param that  the SkiplistSet to copy from
      */
+    @Override
     construct(SkiplistSet<Element> that)
         {
         super(that);
