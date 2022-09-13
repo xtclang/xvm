@@ -93,7 +93,7 @@ interface Header
      */
     Iterator<String> valuesOf(String name, Char? expandDelim=Null)
         {
-        import ecstasy.collections.CaseInsensitive; // TODO GG comment this line out and re-compile :-o
+        import ecstasy.collections.CaseInsensitive;
         Iterator<String> iter = entries.iterator().filter(e -> CaseInsensitive.areEqual(e[0], name))
                                                   .map(e -> e[1]);
 
