@@ -3787,7 +3787,6 @@ public abstract class TypeConstant
                                     MethodBody bodyHead = methodContrib.getHead();
                                     if (!bodyHead.isOverride() && !bodyHead.isSynthetic())
                                         {
-                                        ctor.containsVirtualConstructor();
                                         idContrib.log(errs, Severity.ERROR, VE_METHOD_OVERRIDE_REQUIRED,
                                                 removeAccess().getValueString(),
                                                 idBase.getSignature().getValueString(),
