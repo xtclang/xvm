@@ -70,6 +70,17 @@ const UInt32
         super(bytes);
         }
 
+    /**
+     * Construct a 32-bit unsigned integer number from its `String` representation.
+     *
+     * @param text  an integer number, in text format
+     */
+    @Override
+    construct(String text)
+        {
+        construct UInt32(new IntLiteral(text).toUInt32().bits);
+        }
+
 
     // ----- properties ----------------------------------------------------------------------------
 

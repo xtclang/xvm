@@ -70,6 +70,17 @@ const Int32
         super(bytes);
         }
 
+    /**
+     * Construct a 32-bit signed integer number from its `String` representation.
+     *
+     * @param text  an integer number, in text format
+     */
+    @Override
+    construct(String text)
+        {
+        construct Int32(new IntLiteral(text).toInt32().bits);
+        }
+
 
     // ----- properties ----------------------------------------------------------------------------
 

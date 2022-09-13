@@ -70,6 +70,17 @@ const Int128
         super(bytes);
         }
 
+    /**
+     * Construct a 128-bit signed integer number from its `String` representation.
+     *
+     * @param text  an integer number, in text format
+     */
+    @Override
+    construct(String text)
+        {
+        construct Int128(new IntLiteral(text).toInt128().bits);
+        }
+
 
     // ----- properties ----------------------------------------------------------------------------
 

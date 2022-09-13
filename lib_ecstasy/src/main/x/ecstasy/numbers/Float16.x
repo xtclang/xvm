@@ -31,6 +31,17 @@ const Float16
         super(bytes);
         }
 
+    /**
+     * Construct a 16-bit binary floating point number from its `String` representation.
+     *
+     * @param text  a floating point number, in text format
+     */
+    @Override
+    construct(String text)
+        {
+        construct Float16(new FPLiteral(text).toFloat16().bits);
+        }
+
 
     // ----- Numeric funky interface ---------------------------------------------------------------
 

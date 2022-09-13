@@ -70,6 +70,17 @@ const UInt64
         super(bytes);
         }
 
+    /**
+     * Construct a 64-bit unsigned integer number from its `String` representation.
+     *
+     * @param text  an integer number, in text format
+     */
+    @Override
+    construct(String text)
+        {
+        construct UInt64(new IntLiteral(text).toUInt64().bits);
+        }
+
 
     // ----- properties ----------------------------------------------------------------------------
 

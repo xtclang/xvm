@@ -70,6 +70,17 @@ const Int64
         super(bytes);
         }
 
+    /**
+     * Construct a 64-bit signed integer number from its `String` representation.
+     *
+     * @param text  an integer number, in text format
+     */
+    @Override
+    construct(String text)
+        {
+        construct Int64(new IntLiteral(text).toInt64().bits);
+        }
+
 
     // ----- properties ----------------------------------------------------------------------------
 

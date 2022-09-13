@@ -73,6 +73,17 @@ const UInt8
         super(bytes);
         }
 
+    /**
+     * Construct an 8-bit unsigned integer number from its `String` representation.
+     *
+     * @param text  an integer number, in text format
+     */
+    @Override
+    construct(String text)
+        {
+        construct UInt8(new IntLiteral(text).toUInt8().bits);
+        }
+
 
     // ----- properties ----------------------------------------------------------------------------
 

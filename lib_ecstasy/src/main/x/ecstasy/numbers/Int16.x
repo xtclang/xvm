@@ -70,6 +70,17 @@ const Int16
         super(bytes);
         }
 
+    /**
+     * Construct a 16-bit signed integer number from its `String` representation.
+     *
+     * @param text  an integer number, in text format
+     */
+    @Override
+    construct(String text)
+        {
+        construct Int16(new IntLiteral(text).toInt16().bits);
+        }
+
 
     // ----- properties ----------------------------------------------------------------------------
 

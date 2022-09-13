@@ -32,6 +32,17 @@ const FloatN
         super(bytes);
         }
 
+    /**
+     * Construct a variable-length binary floating point number from its `String` representation.
+     *
+     * @param text  a floating point number, in text format
+     */
+    @Override
+    construct(String text)
+        {
+        construct FloatN(new FPLiteral(text).toFloatN().bits);
+        }
+
 
     // ----- Numeric funky interface ---------------------------------------------------------------
 

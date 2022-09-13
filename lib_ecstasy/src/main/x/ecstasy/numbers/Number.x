@@ -595,6 +595,7 @@
      * Funky interface for Numbers to expose their metadata without needing an instance.
      */
     static interface Numeric
+            extends Destringable
         {
         /**
          * Construct a number from its bitwise machine representation.

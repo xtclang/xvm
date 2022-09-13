@@ -3,6 +3,7 @@ package org.xvm.runtime.template.numbers;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
+import org.xvm.asm.ErrorList;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
@@ -10,6 +11,10 @@ import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.IntConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.compiler.Lexer;
+import org.xvm.compiler.Source;
+import org.xvm.compiler.Token;
 
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
@@ -29,6 +34,8 @@ import org.xvm.runtime.template.collections.xBitArray;
 import org.xvm.runtime.template.collections.xByteArray;
 
 import org.xvm.runtime.template.text.xChar;
+import org.xvm.runtime.template.text.xString;
+import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.util.PackedInteger;
 
@@ -166,7 +173,46 @@ public abstract class xConstrainedInteger
         SignatureConstant sig = constructor.getIdentityConstant().getSignature();
         if (sig.getParamCount() == 1)
             {
-            if (sig.getRawParams()[0].getParamType(0).equals(pool().typeByte()))
+            TypeConstant typeParam = sig.getRawParams()[0];
+            if (typeParam.equals(pool().typeString()))
+                {
+                StringHandle  hText = (xString.StringHandle) ahVar[0];
+                String        sText = hText.getStringValue();
+                PackedInteger pi;
+                try
+                    {
+                    pi = new PackedInteger(Long.parseLong(sText));
+                    }
+                catch (NumberFormatException e)
+                    {
+                    ErrorList errs   = new ErrorList(5);
+                    Lexer lexer  = new Lexer(new Source(sText), errs);
+                    Token tokLit = lexer.next();
+                    if (errs.hasSeriousErrors() || tokLit.getId() != Token.Id.LIT_INT)
+                        {
+                        return frame.raiseException(
+                            xException.illegalArgument(frame, "Invalid number \"" + sText + "\""));
+                        }
+
+                    pi = (PackedInteger) tokLit.getValue();
+                    }
+
+                if (f_fChecked)
+                    {
+                    int cBytes = f_fSigned ? pi.getSignedByteSize() : pi.getUnsignedByteSize();
+                    if (cBytes * 8 > f_cNumBits)
+                        {
+                        return frame.raiseException(
+                            xException.outOfBounds(frame, "Invalid byte count: " + cBytes));
+                        }
+                    }
+
+                // TODO GG
+                throw new UnsupportedOperationException("TODO GG");
+                }
+
+            TypeConstant typeElement = typeParam.getParamType(0);
+            if (typeElement.equals(pool().typeByte()))
                 {
                 // construct(Byte[] bytes)
                 byte[] abVal = xByteArray.getBytes((ArrayHandle) ahVar[0]);
@@ -178,7 +224,7 @@ public abstract class xConstrainedInteger
                         xException.illegalArgument(frame, "Invalid byte count: " + cBytes));
                 }
 
-            if (sig.getRawParams()[0].getParamType(0).equals(pool().typeBit()))
+            if (typeElement.equals(pool().typeBit()))
                 {
                 // construct(Bit[] bits)
                 ArrayHandle hArray = (ArrayHandle) ahVar[0];

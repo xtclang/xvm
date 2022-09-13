@@ -70,6 +70,17 @@ const UInt16
         super(bytes);
         }
 
+    /**
+     * Construct a 16-bit unsigned integer number from its `String` representation.
+     *
+     * @param text  an integer number, in text format
+     */
+    @Override
+    construct(String text)
+        {
+        construct UInt16(new IntLiteral(text).toUInt16().bits);
+        }
+
 
     // ----- properties ----------------------------------------------------------------------------
 

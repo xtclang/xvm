@@ -32,13 +32,24 @@ const BFloat16
         }
 
     /**
+     * Construct a 16-bit "brain" floating point number from its `String` representation.
+     *
+     * @param text  a floating point number, in text format
+     */
+    @Override
+    construct(String text)
+        {
+        construct BFloat16(new FPLiteral(text).toBFloat16().bits);
+        }
+
+    /**
      * Construct the floating point number from its constituent pieces: A sign bit, a significand,
      * and an exponent.
      *
      * REVIEW GG CP if this approach is good, then replicate (including static properties below) to all FPNumber implementations
      *
      * @param signBit      true if explicitly negative
-     * @param significand  the significand value, in the range `0` to
+     * @param significand  the significand value, in the range `0` to TODO
      * @param exponent     the exponent value, in the range [EMIN] to [EMAX]
      */
     construct(Boolean signBit, Int significand, Int exponent)

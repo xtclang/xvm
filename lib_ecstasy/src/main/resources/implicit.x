@@ -163,6 +163,7 @@ import ecstasy.temporal.Timer;
 import ecstasy.temporal.TimeZone;
 
 import ecstasy.text.Char;
+import ecstasy.text.Destringable;
 import ecstasy.text.String;
 import ecstasy.text.Stringable;
 import ecstasy.text.StringBuffer;

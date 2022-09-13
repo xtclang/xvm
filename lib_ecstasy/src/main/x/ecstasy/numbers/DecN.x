@@ -32,6 +32,17 @@ const DecN
         super(bytes);
         }
 
+    /**
+     * Construct a variable-length decimal floating point number from its `String` representation.
+     *
+     * @param text  a floating point number, in text format
+     */
+    @Override
+    construct(String text)
+        {
+        construct DecN(new FPLiteral(text).toDecN().bits);
+        }
+
 
     // ----- Numeric funky interface ---------------------------------------------------------------
 

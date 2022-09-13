@@ -70,6 +70,17 @@ const Int8
         super(bytes);
         }
 
+    /**
+     * Construct an 8-bit signed integer number from its `String` representation.
+     *
+     * @param text  an integer number, in text format
+     */
+    @Override
+    construct(String text)
+        {
+        construct Int8(new IntLiteral(text).toInt8().bits);
+        }
+
 
     // ----- properties ----------------------------------------------------------------------------
 

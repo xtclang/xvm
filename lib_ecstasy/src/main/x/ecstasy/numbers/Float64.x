@@ -31,6 +31,17 @@ const Float64
         super(bytes);
         }
 
+    /**
+     * Construct a 64-bit binary floating point number from its `String` representation.
+     *
+     * @param text  a floating point number, in text format
+     */
+    @Override
+    construct(String text)
+        {
+        construct Float64(new FPLiteral(text).toFloat64().bits);
+        }
+
 
     // ----- Numeric funky interface ---------------------------------------------------------------
 

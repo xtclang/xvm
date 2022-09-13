@@ -30,6 +30,17 @@ const Dec32
         super(bytes);
         }
 
+    /**
+     * Construct a 32-bit decimal floating point number from its `String` representation.
+     *
+     * @param text  a floating point number, in text format
+     */
+    @Override
+    construct(String text)
+        {
+        construct Dec32(new FPLiteral(text).toDec32().bits);
+        }
+
 
     // ----- Numeric funky interface ---------------------------------------------------------------
 

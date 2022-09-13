@@ -70,6 +70,17 @@ const UInt128
         super(bytes);
         }
 
+    /**
+     * Construct a 128-bit unsigned integer number from its `String` representation.
+     *
+     * @param text  an integer number, in text format
+     */
+    @Override
+    construct(String text)
+        {
+        construct UInt128(new IntLiteral(text).toUInt128().bits);
+        }
+
 
     // ----- properties ----------------------------------------------------------------------------
 

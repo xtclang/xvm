@@ -30,6 +30,17 @@ const Dec64
         super(bytes);
         }
 
+    /**
+     * Construct a 64-bit decimal floating point number from its `String` representation.
+     *
+     * @param text  a floating point number, in text format
+     */
+    @Override
+    construct(String text)
+        {
+        construct Dec64(new FPLiteral(text).toDec64().bits);
+        }
+
 
     // ----- Numeric funky interface ---------------------------------------------------------------
 

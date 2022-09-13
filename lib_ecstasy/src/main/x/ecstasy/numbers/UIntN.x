@@ -33,6 +33,18 @@ const UIntN
         super(bytes);
         }
 
+    /**
+     * Construct a variable-length unsigned integer number from its `String` representation.
+     *
+     * @param text  an integer number, in text format
+     */
+    @Override
+    construct(String text)
+        {
+        construct UIntN(new IntLiteral(text).toUIntN().bits);
+        }
+
+
     // ----- Numeric funky interface ---------------------------------------------------------------
 
     @Override

@@ -33,6 +33,17 @@ const IntN
         super(bytes);
         }
 
+    /**
+     * Construct a variable-sized signed integer number from its `String` representation.
+     *
+     * @param text  an integer number, in text format
+     */
+    @Override
+    construct(String text)
+        {
+        construct IntN(new IntLiteral(text).toIntN().bits);
+        }
+
 
     // ----- Numeric funky interface ---------------------------------------------------------------
 
