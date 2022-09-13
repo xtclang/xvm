@@ -9,7 +9,6 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
-import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -30,12 +29,12 @@ import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 import org.xvm.runtime.template.collections.xArray.Mutability;
 
+import org.xvm.runtime.template.numbers.xInt64;
+
 import org.xvm.runtime.template._native.collections.arrays.xRTCharDelegate;
 import org.xvm.runtime.template._native.collections.arrays.xRTCharDelegate.CharArrayHandle;
 import org.xvm.runtime.template._native.collections.arrays.xRTDelegate.DelegateHandle;
 import org.xvm.runtime.template._native.collections.arrays.xRTSlicingDelegate.SliceHandle;
-
-import org.xvm.runtime.template.numbers.xInt64;
 
 
 /**
@@ -75,7 +74,7 @@ public class xString
         markNativeProperty("chars");
 
         markNativeMethod("construct", new String[]{"collections.Array<text.Char>"}, VOID);
-        markNativeMethod("construct", new String[]{"text.String"}, VOID);
+        markNativeMethod("construct", STRING, VOID);
         markNativeMethod("indexOf", new String[]{"text.Char", "numbers.Int64"},
                                     new String[]{"Boolean", "numbers.Int64"});
         markNativeMethod("substring", INT, STRING);
@@ -109,7 +108,7 @@ public class xString
         {
         if (constructor.getIdentityConstant().getRawParams()[0].equals(frame.poolContext().typeString()))
             {
-            return frame.assignValue(iReturn, (StringHandle) ahVar[0]);
+            return frame.assignValue(iReturn, ahVar[0]);
             }
 
         return frame.assignValue(iReturn,
@@ -576,7 +575,6 @@ public class xString
     public static StringHandle ZERO;
     public static StringHandle ONE;
 
-    private static ArrayHandle EMPTY_STRING_ARRAY;
-
-    protected static MethodStructure METHOD_APPEND_TO;
+    private static ArrayHandle     EMPTY_STRING_ARRAY;
+    private static MethodStructure METHOD_APPEND_TO;
     }
