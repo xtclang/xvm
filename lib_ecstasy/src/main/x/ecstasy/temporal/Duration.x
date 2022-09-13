@@ -2,6 +2,7 @@
  * A Duration represents a magnitude of time, with picosecond resolution.
  */
 const Duration(UInt128 picoseconds)
+        implements Destringable
         default(NONE)
     {
     static IntLiteral PICOS_PER_NANO   = 1000;
@@ -28,6 +29,7 @@ const Duration(UInt128 picoseconds)
      *
      * @param duration  an ISO-8601 format string of the form "PnDTnHnMnS"
      */
+    @Override
     construct(String duration)
         {
         // state machine stages:

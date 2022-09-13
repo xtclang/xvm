@@ -6,6 +6,7 @@
  * The `TimeOfDay` has rudimentary support for representing and dealing with leap seconds.
  */
 const TimeOfDay(Int picos)
+        implements Destringable
     {
     static IntLiteral PICOS_PER_NANO   = 1K;
     static IntLiteral PICOS_PER_MICRO  = 1K * PICOS_PER_NANO;
@@ -50,6 +51,7 @@ const TimeOfDay(Int picos)
     /**
      * Construct a `TimeOfDay` from an ISO-8601 time string.
      */
+    @Override
     construct (String text)
         {
         String   hours;

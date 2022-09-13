@@ -5,6 +5,7 @@
  * The Time _renders_ dates according to the Gregorian calendar, which began on 1582-10-15.
  */
 const Time(Int128 epochPicos, TimeZone timezone = UTC)
+        implements Destringable
     {
     /**
      * Create a new Time based on a Date, a TimeOfDay, and a TimeZone.
@@ -33,6 +34,7 @@ const Time(Int128 epochPicos, TimeZone timezone = UTC)
      * @param dt  the Time value in an ISO-8601 format (or alternatively, in the format
      *            produced by the [toString] method)
      */
+    @Override
     construct(String dt)
         {
         if (Int timeOffset := dt.indexOf('T'))

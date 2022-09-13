@@ -9,6 +9,7 @@
  */
 const Date(Int epochDay)
         implements Sequential
+        implements Destringable
     {
     enum DayOfWeek {Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday}
 
@@ -32,6 +33,7 @@ const Date(Int epochDay)
     /**
      * Construct a Date from an ISO-8601 date string.
      */
+    @Override
     construct (String date)
         {
         Int year;
