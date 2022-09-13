@@ -140,11 +140,10 @@ service Registry
 
         for (Format? format : formatsByType.values)
             {
-            // TODO GG: if (Format<Value> newFormat := format?.forType(type))
-            if (val newFormat := format?.forType(type))
+            if (Format<Value> newFormat := format?.forType(type))
                 {
                 registerFormat(newFormat);
-                return True, newFormat /*TODO GG*/.as(Format<Value>);
+                return True, newFormat;
                 }
             }
 

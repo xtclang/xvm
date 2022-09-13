@@ -22,7 +22,7 @@ interface Format<Value>
      *
      * @param type  a `Type` for which this `Format` may be able to supply a derivative `Format` for
      */
-    <OtherValue> conditional Format<OtherValue> forType(Type<OtherValue> type)
+    <OtherValue> conditional Format!<OtherValue> forType(Type<OtherValue> type)
         {
         // if this format is capable of translating to and from another more specific type, then
         // this method should return a Format instance that can translate to and from the specified
