@@ -173,7 +173,7 @@ const Range<Element extends Orderable>
     /**
      * This range contains that range iff every value within that range is also in this range.
      */
-    Boolean contains(Range that)  // REVIEW this name should be changed to avoid potential collisions
+    Boolean covers(Range that)
         {
         return switch (that.lowerBound <=> this.lowerBound, that.upperBound <=> this.upperBound)
             {
@@ -190,9 +190,9 @@ const Range<Element extends Orderable>
     /**
      * That range contains this range iff every value within this range is also in that range.
      */
-    Boolean isContainedBy(Range that)
+    Boolean isCoveredBy(Range that)
         {
-        return that.contains(this);
+        return that.covers(this);
         }
 
     /**
@@ -348,36 +348,37 @@ const Range<Element extends Orderable>
     @Override
     Int estimateStringLength()
         {
-        Int estimate = 4;
-        if (Element.is(Type<Stringable>))
-            {
-            estimate += lowerBound.estimateStringLength()
-                      + upperBound.estimateStringLength();
-            }
-        else
-            {
-            estimate += lowerBound.is(Stringable) ? lowerBound.estimateStringLength() : 4;
-            estimate += upperBound.is(Stringable) ? upperBound.estimateStringLength() : 4;
-            }
-        return estimate;
+        return firstExclusive.toInt64() + 2 + lastExclusive.toInt64()
+            + (Element.is(Type<Stringable>)
+                ? first.estimateStringLength() + last.estimateStringLength()
+                : (first.is(Stringable) ? first.estimateStringLength() : 8)
+                    + (last.is(Stringable) ? last.estimateStringLength() : 8));
         }
 
     @Override
     Appender<Char> appendTo(Appender<Char> buf)
         {
-        buf.add(lowerExclusive ? '(' : '[');
+        String op = switch (firstExclusive, lastExclusive)
+            {
+            case (False, False): "..";
+            case (False, True ): "..<";
+            case (True , False): ">..";
+            case (True , True ): ">..<";
+            };
+
         if (Element.is(Type<Stringable>))
             {
-            lowerBound.appendTo(buf);
-            "..".appendTo(buf);
-            upperBound.appendTo(buf);
+            first.appendTo(buf);
+            op.appendTo(buf);
+            last.appendTo(buf);
             }
         else
             {
-            (lowerBound.is(Stringable) ? lowerBound : lowerBound.toString()).appendTo(buf);
-            "..".appendTo(buf);
-            (upperBound.is(Stringable) ? upperBound : upperBound.toString()).appendTo(buf);
+            (first.is(Stringable) ? first : first.toString()).appendTo(buf);
+            op.appendTo(buf);
+            (last.is(Stringable) ? last : last.toString()).appendTo(buf);
             }
-        return buf.add(upperExclusive ? ')' : ']');
+
+        return buf;
         }
     }

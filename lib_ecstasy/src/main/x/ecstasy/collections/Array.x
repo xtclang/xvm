@@ -397,7 +397,7 @@ class Array<Element>
         else
             {
             assert interval.effectiveLowerBound >= 0 &&
-                    (entire.contains(interval) || mutability != Fixed && interval.adjoins(entire));
+                    (entire.covers(interval) || mutability != Fixed && interval.adjoins(entire));
             }
 
         if (inPlace)
