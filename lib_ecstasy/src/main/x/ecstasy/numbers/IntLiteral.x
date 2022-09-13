@@ -21,6 +21,7 @@
  */
 const IntLiteral(String text)
         implements Sequential
+        implements Destringable
         default(0)
     {
     /**
@@ -28,6 +29,7 @@ const IntLiteral(String text)
      *
      * @param text  the literal value
      */
+    @Override
     construct(String text)
         {
         assert:arg text.size > 0 as $"Illegal integer literal: The literal is empty";

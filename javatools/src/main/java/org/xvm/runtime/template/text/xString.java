@@ -9,6 +9,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -74,6 +75,7 @@ public class xString
         markNativeProperty("chars");
 
         markNativeMethod("construct", new String[]{"collections.Array<text.Char>"}, VOID);
+        markNativeMethod("construct", new String[]{"text.String"}, VOID);
         markNativeMethod("indexOf", new String[]{"text.Char", "numbers.Int64"},
                                     new String[]{"Boolean", "numbers.Int64"});
         markNativeMethod("substring", INT, STRING);
@@ -105,6 +107,11 @@ public class xString
     public int construct(Frame frame, MethodStructure constructor, TypeComposition clazz,
                          ObjectHandle hParent, ObjectHandle[] ahVar, int iReturn)
         {
+        if (constructor.getIdentityConstant().getRawParams()[0].equals(frame.poolContext().typeString()))
+            {
+            return frame.assignValue(iReturn, (StringHandle) ahVar[0]);
+            }
+
         return frame.assignValue(iReturn,
                 makeHandle(getChars((ArrayHandle) ahVar[0])));
         }

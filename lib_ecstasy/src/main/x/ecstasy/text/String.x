@@ -6,6 +6,7 @@ const String
         implements Iterable<Char>
         implements Sliceable<Int>
         implements Stringable
+        implements Destringable
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -17,6 +18,12 @@ const String
     construct(Char[] chars)
         {
         this.chars = chars.is(immutable Char[]) ? chars : chars.freeze();
+        }
+
+    @Override
+    construct(String! text)
+        {
+        construct String(text.chars.reify(Constant));
         }
 
 
