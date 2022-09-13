@@ -2,28 +2,45 @@ module TestSimple
     {
     @Inject Console console;
 
+    interface FromString
+        {
+        construct(String s);
+        }
+
+    const B(String s)
+            implements FromString
+        {
+        }
+
+    const D(String s) extends B(s + " D")
+        {
+        }
+
     void run()
         {
-        Method m = Test.doesNotCompile;
-        console.println(m);
-        assert m.is(Foo);
-        console.println(m.bar);
+        console.println(foo(B));
+        console.println(foo(D));
+        console.println(bar(B));
+        console.println(bar(D));
+        console.println(new Test<B>().foo());
+        console.println(new Test<D>().foo());
         }
 
-    const Bar(Int i)
+    <Element extends FromString> Element foo(Type<Element> type)
         {
+        return new Element("hello");
         }
 
-    mixin Foo(Bar? bar = Null)
-        into Method;
-
-    static Bar TWO_BAR = new Bar(2);
-
-    class Test
+    Object bar(Type<FromString> type)
         {
-        @Foo(TWO_BAR)   // this used to fail to compile
-        void doesNotCompile()
+        return new type.DataType("hello");
+        }
+
+    class Test<Value extends FromString>
+        {
+        Value foo()
             {
+            return new Value("hello");
             }
         }
     }

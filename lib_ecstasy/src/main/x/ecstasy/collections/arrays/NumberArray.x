@@ -511,7 +511,7 @@ mixin NumberArray<Element extends Number>
                             Int     bitIndex   = index%bitsPerNum;
                             if (bits[bitIndex] != v)
                                 {
-                                nums[numIndex] = NumType.new(bits.replace(bitIndex, v));
+                                nums[numIndex] = new NumType(bits.replace(bitIndex, v));
                                 }
                             }
                         }

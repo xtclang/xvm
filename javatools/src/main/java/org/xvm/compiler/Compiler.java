@@ -1311,6 +1311,10 @@ public class Compiler
      */
     public static final String METHOD_BODY_MISSING                 = "COMPILER-182";
     /**
+     * {0} is a formal type; use "new {0}(...)" instead of "{0}.new(...)".
+     */
+    public static final String NEW_INVALID_FORMAL                  = "COMPILER-183";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                     = "COMPILER-NI";

@@ -27,9 +27,11 @@ import org.xvm.asm.Register;
 import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.ChildInfo;
 import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.DynamicFormalConstant;
 import org.xvm.asm.constants.ExpressionConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -289,9 +291,10 @@ public class NewExpression
 
         // being able to obtain a type for a "new anon inner class" expression requires the
         // inner class to exist (so we create a temporary one)
-        boolean fAnon = body != null;
-        boolean fVirt = isVirtualNew();
-        if (fAnon)
+        boolean fAnonymous = body != null;
+        boolean fVirtual   = isVirtualNew();
+        Plan    plan;
+        if (fAnonymous)
             {
             ErrorListener errsTemp = errs.branch(this);
 
@@ -307,9 +310,11 @@ public class NewExpression
 
         if (left == null)
             {
-            if (fVirt)
+            typeTarget = ctx.getThisType();
+            if (fVirtual)
                 {
-                typeResult = typeTarget = ctx.getThisType();
+                typeResult = typeTarget;
+                plan       = Plan.Virtual;
                 }
             else
                 {
@@ -319,13 +324,52 @@ public class NewExpression
                     if (typeResult instanceof AnnotatedTypeConstant typeAnno)
                         {
                         typeResult     = typeAnno.stripParameters();
+                        plan           = Plan.Regular;
                         m_fDynamicAnno = true;
                         }
                     else
                         {
-                        type.log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, type.toString());
+                        log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, type.toString());
                         return null;
                         }
+                    }
+                else if (typeResult.isFormalType())
+                    {
+                    if (typeResult.isGenericType())
+                        {
+                        m_idFormal = (PropertyConstant) typeResult.getDefiningConstant();
+                        }
+                    else if (typeResult.isTypeParameter())
+                        {
+                        if (type instanceof NamedTypeExpression exprNamed)
+                            {
+                            m_regFormal = (Register) ctx.getVar(exprNamed.getName());
+
+                            assert m_regFormal != null;
+                            }
+                        else
+                            {
+                            log(errs, Severity.ERROR, Compiler.NEW_ABSTRACT_TYPE,
+                                typeResult.getValueString());
+                            return null;
+                            }
+                        }
+                    else if (typeResult.isDynamicType())
+                        {
+                        m_regFormal = ((DynamicFormalConstant) typeResult.
+                                getDefiningConstant()).getRegister();
+                        }
+                    else
+                        {
+                        log(errs, Severity.ERROR, Compiler.NEW_ABSTRACT_TYPE,
+                            typeResult.getValueString());
+                        return null;
+                        }
+                    plan = Plan.Formal;
+                    }
+                else
+                    {
+                    plan = Plan.Regular;
                     }
                 }
             }
@@ -347,16 +391,16 @@ public class NewExpression
 
             TypeConstant typeLeft = exprLeftNew.getType();
 
-            if (fVirt)
+            if (fVirtual)
                 {
+                // left.new(...)
                 if (typeLeft.isFormalTypeType())
                     {
-                    // the Type type doesn't have virtual constructors, so the only allowed
-                    // scenario is a virtual constructor on a formal type, e.g.:
-                    //      NumType num = NumType.new(bytes);
-                    typeLeft = typeLeft.getParamType(0);
+                    log(errs, Severity.ERROR, Compiler.NEW_INVALID_FORMAL, left.toString());
+                    return null;
                     }
                 typeResult = typeTarget = typeLeft;
+                plan       = Plan.Virtual;
                 }
             else
                 {
@@ -379,6 +423,11 @@ public class NewExpression
                         {
                         exprNameType.setTypeConstant(typeResult);
                         }
+                    plan = Plan.Child;
+                    }
+                else
+                    {
+                    plan = Plan.Regular;
                     }
 
                 if (typeResult == null)
@@ -420,7 +469,7 @@ public class NewExpression
                 }
             }
 
-        if (!fVirt)
+        if (!fVirtual)
             {
             if (typeRequired != null)
                 {
@@ -491,7 +540,7 @@ public class NewExpression
                 boolean fNestMate = typeTarget.isNestMateOf(ctx.getThisClass().getIdentityConstant());
 
                 // now we should have enough type information to create the real anon inner class
-                if (fAnon)
+                if (fAnonymous)
                     {
                     ErrorListener errsTemp = errs.branch(this);
 
@@ -535,10 +584,11 @@ public class NewExpression
                     {
                     ClassStructure clzTarget = (ClassStructure)
                             typeTarget.getSingleUnderlyingClass(false).getComponent();
-                    m_fVirtualChild = clzTarget.isVirtualChild();
 
-                    if (m_fVirtualChild)
+                    if (clzTarget.isVirtualChild())
                         {
+                        plan = Plan.Child;
+
                         int nSteps = ctx.getStepsToOuterClass(clzTarget.getVirtualParent());
                         if (nSteps >= 0)
                             {
@@ -600,14 +650,10 @@ public class NewExpression
                         }
                     }
                 }
-            else // left != null
-                {
-                m_fVirtualChild = true;
-                }
             }
 
         ErrorListener errsTemp = errs.branch(this);
-        TypeInfo infoTarget = fAnon
+        TypeInfo infoTarget = fAnonymous
                 ? typeTarget.ensureTypeInfo(errsTemp)
                 : getTypeInfo(ctx, typeTarget, errsTemp);
 
@@ -618,8 +664,9 @@ public class NewExpression
             return null;
             }
 
-        // unless it's a virtual new, the target type must be new-able
-        if (!fVirt && !infoTarget.isNewable(errsTemp))
+        // for a regular or virtual child construction, the target type must be new-able
+        if ((plan == Plan.Regular || plan == Plan.Child) &&
+                !infoTarget.isNewable(errsTemp))
             {
             String sTarget = infoTarget.getType().removeAccess().getValueString();
             reportNotNewable(sTarget, infoTarget, null, errsTemp);
@@ -631,7 +678,7 @@ public class NewExpression
 
         MethodConstant idConstruct = findMethod(ctx, typeTarget, infoTarget, "construct", listArgs,
                         MethodKind.Constructor, true, false, null, errsTemp);
-        if (fAnon)
+        if (fAnonymous)
             {
             // first, see if the constructor that we're looking for is on the anonymous
             // inner class (which -- other than the zero-args case -- will be rare, but it
@@ -742,7 +789,7 @@ public class NewExpression
                 }
             }
 
-        if (fAnon)
+        if (fAnonymous)
             {
             // at this point, we need to create a temporary copy of the anonymous inner class for
             // the purpose of determining which local variables from this context will be "captured"
@@ -780,6 +827,8 @@ public class NewExpression
             m_fInstanceChild = ctxAnon.isInstanceChild();
             m_ctxCapture     = null;
             }
+
+        m_plan = plan;
 
         Expression exprResult = finishValidation(ctx, typeRequired, typeResult, TypeFit.Fit, null, errs);
         clearAnonTypeInfos();
@@ -1018,7 +1067,7 @@ public class NewExpression
                 }
 
             Argument argOuter = null;
-            if (m_fVirtualChild || isVirtualNew())
+            if (m_plan == Plan.Child)
                 {
                 if (left == null)
                     {
@@ -1038,10 +1087,28 @@ public class NewExpression
                     }
                 }
 
-            if (isVirtualNew())
+            if (m_plan == Plan.Virtual || m_plan == Plan.Formal)
                 {
-                Register regType = createRegister(argOuter.getType().getType(), true);
-                code.add(new MoveType(argOuter, regType));
+                Register regType;
+                if (m_plan == Plan.Virtual)
+                    {
+                    Register regThis = new Register(ctx.getThisType(), Op.A_TARGET);
+
+                    regType = createRegister(pool().typeType(), true);
+                    code.add(new MoveType(regThis, regType));
+                    }
+                else
+                    {
+                    if (typeTarget.isGenericType())
+                        {
+                        regType = createRegister(pool().typeType(), true);
+                        code.add(new L_Get(m_idFormal, regType));
+                        }
+                    else
+                        {
+                        regType = m_regFormal;
+                        }
+                    }
                 switch (cParams)
                     {
                     case 0:
@@ -1805,26 +1872,41 @@ public class NewExpression
      * A map from variable name to register, built by the anonymous inner class context.
      */
     private transient Map<String, Register> m_mapRegisters;
+
     /**
-     * True if the class is a virtual child and needs to be constructed using a NEWC_ op-code.
+     * The construction plan:
+     *  - Regular - use NEW_* or NEWG_* op-codes
+     *  - Child   - virtual child; use NEWC_* or NEWCG_* op-codes
+     *  - Virtual - virtual constructor; use MoveType, NEWV_* op-code sequence
+     *  - Formal  - formal type constructor; use NEWV_* op-codes
      */
-    private transient boolean               m_fVirtualChild;
+    enum Plan{Regular, Child, Virtual, Formal}
+    private transient Plan m_plan;
+
     /**
-     * True if the class is a fixed size array to be filled with the corresponding default value.
-     */
-    private transient boolean               m_fFixedSizeArray;
-    /**
-     * In the case of "m_fVirtualChild == true" and "left == null", steps to the child's parent.
+     * In the case of "m_plan == Plan.Child" and "left == null", steps to the child's parent.
      */
     private transient int m_nVirtualParentSteps;
     /**
+     * In the case of "m_plan == Plan.Formal" and the formal type is generic, the formal property id.
+     */
+    private transient PropertyConstant m_idFormal;
+    /**
+     * In the case of "m_plan == Plan.Formal" and the formal type is parameter, the corresponding register.
+     */
+    private transient Register m_regFormal;
+    /**
+     * True if the class is a fixed size array to be filled with the corresponding default value.
+     */
+    private transient boolean m_fFixedSizeArray;
+    /**
      * True if the inner class captures "this" (i.e. not static).
      */
-    private transient boolean               m_fInstanceChild;
+    private transient boolean m_fInstanceChild;
     /**
      * True if the newable type has non-constant annotation parameters.
      */
-    private transient boolean               m_fDynamicAnno;
+    private transient boolean m_fDynamicAnno;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(NewExpression.class, "left", "type", "args", "anon");
     }

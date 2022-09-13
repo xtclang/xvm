@@ -25,8 +25,7 @@ const BasicFormat<Value extends FromString>
     @Override
     Value decode(String text)
         {
-        // TODO GG new Value(text);
-        return Value.new(text);
+        return new Value(text);
         }
 
     @Override
