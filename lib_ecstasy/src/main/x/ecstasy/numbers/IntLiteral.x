@@ -398,6 +398,7 @@ const IntLiteral(String text)
 
     /**
      * Obtain a range beginning with this number and proceeding to the specified number.
+     * REVIEW GG CP this seems wrong
      */
     @Op("..") Range<Int> to(Int n)
         {
@@ -406,6 +407,7 @@ const IntLiteral(String text)
 
     /**
      * Obtain a range beginning with this number and proceeding to the specified number.
+     * REVIEW GG CP this seems wrong
      */
     @Op("..<") Range<Int> toExcluding(Int n)
         {
