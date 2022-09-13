@@ -687,6 +687,7 @@ public class MethodDeclarationStatement
         Annotation[] aAnno = method.getAnnotations();
         if (aAnno.length > 0)
             {
+            TypeConstant typeBase = method.isStatic() ? pool.typeFunction() : pool.typeMethod();
             TypeConstant typeNext = null;
             for (int i = aAnno.length-1; i >= 0; i--)
                 {
@@ -701,7 +702,7 @@ public class MethodDeclarationStatement
                     }
 
                 TypeConstant typeInto = typeMixin.getExplicitClassInto();
-                if (!typeInto.isIntoMetaData(pool.typeMethod(), true))
+                if (!typeInto.isIntoMetaData(typeBase, true))
                     {
                     // the first mixin *must* be strictly into Method, but the following could
                     // apply to the previous ones
@@ -729,27 +730,6 @@ public class MethodDeclarationStatement
                                 anno.getValueString());
                         return;
                         }
-                    }
-
-                if (method.isStatic())
-                    {
-                    // - the only annotation allowed on functions (funky interface methods) is
-                    //   "@Override"
-                    // - the only annotations allowed on constructors are "@Override" (on virtual
-                    //   constructors) and "@Synchronized"
-                    if (anno.getAnnotationClass().equals(pool.clzOverride()))
-                        {
-                        continue;
-                        }
-                    if (method.isConstructor() &&
-                            anno.getAnnotationClass().equals(pool.clzSynchronized()))
-                        {
-                        continue;
-                        }
-                    findAnnotationExpression(anno, annotations).
-                        log(errs, Severity.ERROR, Compiler.ANNOTATION_NOT_APPLICABLE,
-                            anno.getValueString());
-                    return;
                     }
                 }
             }

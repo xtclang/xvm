@@ -128,7 +128,15 @@ public class FBind
                     {
                     return R_EXCEPTION;
                     }
-                hFunction = xRTFunction.makeHandle(frame, function);
+
+                ObjectHandle hFn = xRTFunction.makeHandle(frame, function);
+
+                if (isDeferred(hFn))
+                    {
+                    return hFn.proceed(frame, frameCaller ->
+                        resolveArguments(frameCaller, (FunctionHandle) frameCaller.popStack()));
+                    }
+                hFunction = (FunctionHandle) hFn;
                 }
             else
                 {

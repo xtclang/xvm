@@ -35,7 +35,6 @@ import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
-import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -58,7 +57,6 @@ import org.xvm.runtime.template.xOrdered;
 
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.ArrayHandle;
-import org.xvm.runtime.template.collections.xTuple;
 
 import org.xvm.runtime.template.numbers.xInt64;
 
@@ -67,7 +65,6 @@ import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.runtime.template.reflect.xClass.ClassHandle;
 
-import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 import org.xvm.runtime.template._native.reflect.xRTMethod.MethodHandle;
 import org.xvm.runtime.template._native.reflect.xRTProperty.PropertyHandle;
 
@@ -620,15 +617,15 @@ public class xRTType
             assert !typeParent.equals(pool().typeObject());
             }
 
-        FunctionHandle[] ahFunctions;
+        ObjectHandle[] ahFunctions;
         if (infoTarget.isNewable(ErrorListener.BLACKHOLE))
             {
             ConstantPool    pool       = frame.poolContext();
             TypeConstant    typeStruct = pool.ensureAccessTypeConstant(typeTarget, Access.STRUCT);
             TypeComposition clzTarget  = typeTarget.ensureClass(frame);
 
-            ArrayList<FunctionHandle> listHandles   = new ArrayList<>();
-            boolean                   fStructConstr = false;
+            ArrayList<ObjectHandle> listHandles   = new ArrayList<>();
+            boolean                 fStructConstr = false;
             for (MethodConstant idConstr : infoTarget.findMethods("construct", -1, TypeInfo.MethodKind.Constructor))
                 {
                 MethodInfo      infoMethod  = infoTarget.getMethodById(idConstr);
@@ -669,9 +666,10 @@ public class xRTType
                     aParams     = aParamsNew;
                     }
 
-                TypeConstant typeConstr = pool.buildFunctionType(atypeParams, typeTarget);
-                listHandles.add(
-                        new ConstructorHandle(clzTarget, typeConstr, constructor, aParams, typeParent != null));
+                TypeConstant typeConstructor = pool.buildFunctionType(atypeParams, typeTarget);
+
+                listHandles.add(xRTFunction.makeConstructorHandle(frame, constructor,
+                            typeConstructor, clzTarget, aParams, typeParent != null));
                 }
 
             if (!fStructConstr)
@@ -697,153 +695,29 @@ public class xRTType
                                     };
                     }
 
-                TypeConstant typeConstr = pool.buildFunctionType(atypeParams, typeTarget);
-                listHandles.add(
-                        new ConstructorHandle(clzTarget, typeConstr, null, aParams, typeParent != null));
+                // synthetic constructor is definitely not annotated
+                TypeConstant typeConstructor = pool.buildFunctionType(atypeParams, typeTarget);
+
+                listHandles.add(xRTFunction.makeConstructorHandle(frame, null,
+                            typeConstructor, clzTarget, aParams, typeParent != null));
                 }
 
-            ahFunctions = listHandles.toArray(new FunctionHandle[0]);
+            ahFunctions = listHandles.toArray(Utils.OBJECTS_NONE);
             }
         else
             {
-            ahFunctions = new FunctionHandle[0];
+            ahFunctions = Utils.OBJECTS_NONE;
             }
 
-        ObjectHandle hArray = xArray.createImmutableArray(
-                xRTFunction.ensureConstructorArray(frame, typeTarget, typeParent), ahFunctions);
-        return frame.assignValue(iReturn, hArray);
-        }
-
-    /**
-     * FunctionHandle that represents a constructor function.
-     */
-    public static class ConstructorHandle
-            extends FunctionHandle
-        {
-        public ConstructorHandle(TypeComposition clzTarget, TypeConstant typeConstruct,
-                                 MethodStructure constructor, Parameter[] aParams, boolean fParent)
+        TypeComposition clzArray = xRTFunction.ensureConstructorArray(frame, typeTarget, typeParent);
+        if (Op.anyDeferred(ahFunctions))
             {
-            super(clzTarget.getContainer(), typeConstruct, constructor);
-
-            f_clzTarget   = clzTarget;
-            f_constructor = constructor;
-            f_aParams     = aParams;
-            f_fParent     = fParent;
-            m_fMutable    = false;
+            ObjectHandle hDeferred = new DeferredArrayHandle(clzArray, ahFunctions);
+            return hDeferred.proceed(frame,
+                frameCaller -> frameCaller.assignValue(iReturn, frameCaller.popStack()));
             }
 
-        @Override
-        public int call1(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
-            {
-            // this can only a call from Call_01
-            return callImpl(frame, ahArg, iReturn);
-            }
-
-        @Override
-        public int callT(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
-            {
-            TypeConstant    typeTuple = frame.poolContext().ensureTupleType(f_clzTarget.getType());
-            TypeComposition clzTuple  = xTuple.INSTANCE.ensureClass(frame.f_context.f_container, typeTuple);
-
-            switch (callImpl(frame, ahArg, Op.A_STACK))
-                {
-                case Op.R_NEXT:
-                    return frame.assignValue(iReturn,
-                        xTuple.makeImmutableHandle(clzTuple, frame.popStack()));
-
-                case Op.R_CALL:
-                    frame.m_frameNext.addContinuation(frameCaller ->
-                        frameCaller.assignValue(iReturn,
-                            xTuple.makeImmutableHandle(clzTuple, frameCaller.popStack())));
-                    return Op.R_CALL;
-
-                case Op.R_EXCEPTION:
-                    return Op.R_EXCEPTION;
-
-                default:
-                    throw new IllegalStateException();
-                }
-            }
-
-        /**
-         * Call the constructor.
-         */
-        private int callImpl(Frame frame, ObjectHandle[] ahArg, int iReturn)
-            {
-            ObjectHandle hParent = null;
-            if (f_fParent)
-                {
-                hParent = ahArg[0];
-                System.arraycopy(ahArg, 1, ahArg, 0, ahArg.length-1);
-                }
-
-            TypeComposition clzTarget   = f_clzTarget;
-            ClassTemplate   template    = clzTarget.getTemplate();
-            MethodStructure constructor = f_constructor;
-
-            // constructor could be null for a synthetic run-time structure-based constructor
-            // created above by "getPropertyConstructors" method
-            return constructor == null
-                ? template.proceedConstruction(frame, null, false, ahArg[0], Utils.OBJECTS_NONE, iReturn)
-                : template.construct(frame, constructor, clzTarget, hParent, ahArg, iReturn);
-            }
-
-        @Override
-        protected ObjectHandle[] prepareVars(ObjectHandle[] ahArg)
-            {
-            throw new IllegalStateException();
-            }
-
-        @Override
-        public String getName()
-            {
-            return "construct";
-            }
-
-        @Override
-        public int getParamCount()
-            {
-            return f_aParams.length;
-            }
-
-        @Override
-        public Parameter getParam(int iArg)
-            {
-            return f_aParams[iArg];
-            }
-
-        @Override
-        public int getReturnCount()
-            {
-            return 1;
-            }
-
-        @Override
-        public Parameter getReturn(int iArg)
-            {
-            assert iArg == 0;
-            TypeConstant typeTarget = f_clzTarget.getType();
-            return new Parameter(typeTarget.getConstantPool(), typeTarget, null, null, true, 0, false);
-            }
-
-        @Override
-        public TypeConstant getReturnType(int iArg)
-            {
-            assert iArg == 0;
-            return f_clzTarget.getType();
-            }
-
-        @Override
-        public int getVarCount()
-            {
-            int cVars = super.getVarCount();
-            return Math.max(cVars, f_aParams.length);
-            }
-
-        final private TypeComposition f_clzTarget;
-        final private MethodStructure f_constructor;
-        final protected Parameter[]   f_aParams;
-        final private boolean         f_fParent;
+        return frame.assignValue(iReturn, xArray.createImmutableArray(clzArray, ahFunctions));
         }
 
     /**
@@ -878,20 +752,30 @@ public class xRTType
 
         TypeConstant                    typeTarget  = hType.getDataType();
         Map<MethodConstant, MethodInfo> mapMethods  = typeTarget.ensureTypeInfo().getMethods();
-        ArrayList<FunctionHandle>       listHandles = new ArrayList<>(mapMethods.size());
+        ArrayList<ObjectHandle>         listHandles = new ArrayList<>(mapMethods.size());
+        boolean                         fDeferred   = false;
         for (Map.Entry<MethodConstant, MethodInfo> entry : mapMethods.entrySet())
             {
             MethodConstant id   = entry.getKey();
             MethodInfo     info = entry.getValue();
             if (info.isFunction() && id.isTopLevel())
                 {
-                listHandles.add(xRTFunction.makeHandle(frame, info.getHead().getMethodStructure()));
+                ObjectHandle hFn = xRTFunction.makeHandle(frame, info.getHead().getMethodStructure());
+                fDeferred |= Op.isDeferred(hFn);
+                listHandles.add(hFn);
                 }
             }
-        FunctionHandle[] ahFunctions = listHandles.toArray(new FunctionHandle[0]);
-        ObjectHandle     hArray      = xArray.createImmutableArray(
-                xRTFunction.ensureArrayComposition(container), ahFunctions);
-        return frame.assignValue(iReturn, hArray);
+
+        TypeComposition clzArray    = xRTFunction.ensureArrayComposition(container);
+        ObjectHandle[]  ahFunctions = listHandles.toArray(Utils.OBJECTS_NONE);
+        if (fDeferred)
+            {
+            ObjectHandle hDeferred = new DeferredArrayHandle(clzArray, ahFunctions);
+            return hDeferred.proceed(frame,
+                frameCaller -> frameCaller.assignValue(iReturn, frameCaller.popStack()));
+            }
+
+        return frame.assignValue(iReturn, xArray.createImmutableArray(clzArray, ahFunctions));
         }
 
     /**

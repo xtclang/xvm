@@ -257,7 +257,7 @@ public class xRTServer2
         ClassStructure  clzHandler = hHandler.getTemplate().getStructure();
         MethodStructure method     = clzHandler.findMethodDeep("handle", m -> m.getParamCount() == 3);
         assert method != null;
-        FunctionHandle  hFunction  = xRTFunction.makeHandle(frame, method).bindTarget(frame, hHandler);
+        FunctionHandle  hFunction  = xRTFunction.makeInternalHandle(frame, method).bindTarget(frame, hHandler);
 
         RequestHandler handler = new RequestHandler(hHandler.f_context, hFunction);
         httpServer.createContext("/", handler);

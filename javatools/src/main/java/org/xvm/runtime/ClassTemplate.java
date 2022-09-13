@@ -253,7 +253,7 @@ public abstract class ClassTemplate
 
     /**
      * Produce a TypeComposition using the specified actual type.
-     *
+     * <p/>
      * Note: the passed type should be fully resolved and normalized
      *       (all formal parameters resolved)
      */

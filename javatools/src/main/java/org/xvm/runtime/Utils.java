@@ -120,7 +120,7 @@ public abstract class Utils
 
         return methodFinally == null
             ? null
-            : xRTFunction.makeHandle(frame, methodFinally).bindArguments(ahArg);
+            : xRTFunction.makeInternalHandle(frame, methodFinally).bindArguments(ahArg);
         }
 
     /**

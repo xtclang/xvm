@@ -49,12 +49,6 @@ public class xRTSignature
         }
 
     @Override
-    public boolean isGenericHandle()
-        {
-        return false;
-        }
-
-    @Override
     public void initNative()
         {
         markNativeProperty("name");

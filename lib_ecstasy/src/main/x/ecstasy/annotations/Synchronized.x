@@ -1,6 +1,7 @@
 /**
- * The Synchronized mixin is used to annotate classes, properties, and methods, to indicate that the
- * class, property, or method is **not** safe for concurrent/reentrant execution.
+ * The Synchronized mixin is used to annotate classes, properties, methods, constructors or functions,
+ * to indicate that the class, property, method, constructor or function is **not** safe for
+ * concurrent/reentrant execution.
  *
  * Imagine a demonstrably concurrent-unsafe implementation of a counter:
  *
@@ -40,6 +41,6 @@
  *   `@Synchronized` annotation takes precedence.
  */
 mixin Synchronized
-        into Class | Property | Method
+        into Class | Property | Method | Function
     {
     }

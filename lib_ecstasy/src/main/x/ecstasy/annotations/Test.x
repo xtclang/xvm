@@ -1,12 +1,12 @@
 /**
  * `Test` is a compile-time mixin that has two purposes:
  *
- * * `Test` is a compile-time mixin that marks the class, property, or method as being a link-time
- *    conditional using the name-condition of `test`. Items marked with this annotation will be
- *    available in a unit testing container, but are unlikely to be available if the code is not
- *    running in a testing container. This means that the annotated class, property, or method will
- *    **not** be loaded by default, but will be available when the TypeSystem is created in `test`
- *    mode.
+ * * `Test` is a compile-time mixin that marks the class, property, method, constructor or function
+ *    as being a link-time conditional using the name-condition of `test`. Items marked with this
+ *    annotation will be available in a unit testing container, but are unlikely to be available if
+ *    the code is not running in a testing container. This means that the annotated class, property,
+ *    method or function will **not** be loaded by default, but will be available when the
+ *    TypeSystem is created in `test` mode.
  *
  * * When used to annotate a method or constructor, and if the method or constructor is determined
  *   to be _callable_, this annotation indicates that the method or constructor is a _unit test_
@@ -40,7 +40,7 @@
  * than that specified above may result in a compile-time and/or load/link-time error.
  */
 mixin Test(String group = Unit, Type<Exception>? expectedException = Null)
-        into Class | Property | Method
+        into Class | Property | Method | Function
     {
     /**
      * Use this [group] value to indicate a normal unit test. This is the default test group name.

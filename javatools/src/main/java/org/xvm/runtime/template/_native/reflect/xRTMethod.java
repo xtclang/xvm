@@ -100,12 +100,6 @@ public class xRTMethod
         }
 
     @Override
-    public boolean isGenericHandle()
-        {
-        return true;
-        }
-
-    @Override
     public int createConstHandle(Frame frame, Constant constant)
         {
         if (constant instanceof MethodConstant idMethod)

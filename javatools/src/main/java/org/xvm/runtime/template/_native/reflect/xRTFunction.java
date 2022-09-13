@@ -1,9 +1,11 @@
 package org.xvm.runtime.template._native.reflect;
 
 
+import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Constants;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
@@ -14,15 +16,18 @@ import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.CallChain;
+import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
+import org.xvm.runtime.template.collections.xTuple;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xOrdered;
@@ -89,6 +94,28 @@ public class xRTFunction
         TypeConstant typeP   = pool.typeTuple0();
         TypeConstant typeR   = typeActual.getParamType(1);
         TypeConstant typeClz = pool.ensureParameterizedTypeConstant(pool.typeFunction(), typeP, typeR);
+
+        return super.ensureClass(container, typeClz);
+        }
+
+    /**
+     * @return a TypeComposition for the specified annotated function.
+     */
+    protected TypeComposition ensureClass(Container container, MethodStructure function)
+        {
+        ConstantPool pool = container.getConstantPool();
+
+        TypeConstant[] atypeR = function.getIdentityConstant().getRawReturns();
+
+        TypeConstant typeP   = pool.typeTuple0();
+        TypeConstant typeR   = atypeR.length == 0 ? pool.typeTuple0() : pool.ensureTupleType(atypeR);
+        TypeConstant typeClz = pool.ensureParameterizedTypeConstant(pool.typeFunction(), typeP, typeR);
+
+        Annotation[] aAnno = function.getAnnotations();
+        if (aAnno.length > 0)
+            {
+            typeClz = pool.ensureAnnotatedTypeConstant(typeClz, function.getAnnotations());
+            }
 
         return super.ensureClass(container, typeClz);
         }
@@ -322,7 +349,7 @@ public class xRTFunction
 
             hFunc.addBoundArguments(ahValue);
 
-            // TODO: what if any of the assigns below return R_CALL?
+            // TODO: what if any of the assigns below return a deferred handle?
             frame.assignValue(aiReturn[0], xBoolean.TRUE);
             frame.assignValue(aiReturn[1], xRTMethodTemplate.makeHandle(method));
             frame.assignValue(aiReturn[2], makeHandle(frame, method));
@@ -426,8 +453,17 @@ public class xRTFunction
          */
         protected FunctionHandle(Container container, TypeConstant type, MethodStructure function)
             {
-            super(INSTANCE.ensureClass(container, type),
-                    function == null ? null : function.getIdentityConstant(), function, type);
+            this(INSTANCE.ensureClass(container, type), type, function);
+            }
+
+        /**
+         * Instantiate a mutable FunctionHandle for a method or function.
+         */
+        protected FunctionHandle(TypeComposition clz, TypeConstant type, MethodStructure function)
+            {
+            super(clz, function == null ? null : function.getIdentityConstant(), function, type);
+
+            m_fMutable = clz.isStruct();
             }
 
         @Override
@@ -1388,11 +1424,256 @@ public class xRTFunction
 
     /**
      * Create an immutable FunctionHandle for a given function.
+     *
+     * The returned handle will not carry any annotations
      */
-    public static FunctionHandle makeHandle(Frame frame, MethodStructure function)
+    public static FunctionHandle makeInternalHandle(Frame frame, MethodStructure function)
         {
         Container container = frame == null ? INSTANCE.f_container : frame.f_context.f_container;
         return new FunctionHandle(container, function);
+        }
+
+    /**
+     * Create an immutable FunctionHandle for a given function.
+     *
+     * The returned handle could be deferred.
+     */
+    public static ObjectHandle makeHandle(Frame frame, MethodStructure function)
+        {
+        Container container = frame == null ? INSTANCE.f_container : frame.f_context.f_container;
+
+        Annotation[] aAnno = function.getAnnotations();
+
+        if (aAnno.length > 0)
+            {
+            TypeConstant type = function.getIdentityConstant().getSignature().asFunctionType();
+            type = container.getConstantPool().ensureAnnotatedTypeConstant(type, aAnno);
+
+            TypeComposition clzFunction = INSTANCE.ensureClass(container, function);
+            FunctionHandle  hStruct     = new FunctionHandle(clzFunction.
+                                            ensureAccess(Constants.Access.STRUCT), type, function);
+
+            switch (hStruct.getTemplate().
+                    proceedConstruction(frame, null, true, hStruct, Utils.OBJECTS_NONE, Op.A_STACK))
+                {
+                case Op.R_NEXT:
+                    {
+                    FunctionHandle hF = (FunctionHandle) frame.popStack();
+                    hF.makeImmutable();
+                    return hF;
+                    }
+
+                case Op.R_CALL:
+                    DeferredCallHandle hDeferred = new DeferredCallHandle(frame.m_frameNext);
+                    hDeferred.addContinuation(frameCaller ->
+                        {
+                        frameCaller.peekStack().makeImmutable();
+                        return Op.R_NEXT;
+                        });
+                    return hDeferred;
+
+                case Op.R_EXCEPTION:
+                    return new DeferredCallHandle(frame.m_hException);
+                }
+            }
+
+        return new FunctionHandle(container, function);
+        }
+
+    /**
+     * Create an immutable FunctionHandle for a given constructor. Note, that the constructor
+     * may be null for synthetic constructor function.
+     *
+     * The returned handle could be deferred.
+     */
+    public static ObjectHandle makeConstructorHandle(Frame frame, MethodStructure constructor,
+                                                     TypeConstant typeConstructor,
+                                                     TypeComposition clzTarget,
+                                                     Parameter[] aParams, boolean fParent)
+        {
+        Container       container = frame.f_context.f_container;
+        TypeComposition clzConstruct;
+
+        if (constructor == null)
+            {
+            clzConstruct = INSTANCE.ensureClass(container, typeConstructor);
+            }
+        else
+            {
+            clzConstruct = INSTANCE.ensureClass(container, constructor);
+
+            Annotation[] aAnno = constructor.getAnnotations();
+            if (aAnno.length > 0)
+                {
+                typeConstructor = container.getConstantPool().
+                        ensureAnnotatedTypeConstant(typeConstructor, aAnno);
+
+                TypeComposition clzStruct = INSTANCE.ensureClass(container, constructor).
+                        ensureAccess(Constants.Access.STRUCT);
+
+                ConstructorHandle hStruct = new ConstructorHandle(
+                        clzStruct, clzTarget, typeConstructor, constructor, aParams, fParent);
+
+                switch (hStruct.getTemplate().
+                        proceedConstruction(frame, null, true, hStruct, Utils.OBJECTS_NONE, Op.A_STACK))
+                    {
+                    case Op.R_NEXT:
+                        {
+                        FunctionHandle hF = (FunctionHandle) frame.popStack();
+                        hF.makeImmutable();
+                        return hF;
+                        }
+
+                    case Op.R_CALL:
+                        DeferredCallHandle hDeferred = new DeferredCallHandle(frame.m_frameNext);
+                        hDeferred.addContinuation(frameCaller ->
+                            {
+                            frameCaller.peekStack().makeImmutable();
+                            return Op.R_NEXT;
+                            });
+                        return hDeferred;
+
+                    case Op.R_EXCEPTION:
+                        return new DeferredCallHandle(frame.m_hException);
+                    }
+                }
+            }
+
+        return new ConstructorHandle(
+                clzConstruct, clzTarget, typeConstructor, constructor, aParams, fParent);
+        }
+
+    /**
+     * FunctionHandle that represents a constructor function.
+     */
+    public static class ConstructorHandle
+            extends FunctionHandle
+        {
+        public ConstructorHandle(TypeComposition clzConstruct, TypeComposition clzTarget,
+                                 TypeConstant typeConstruct, MethodStructure constructor,
+                                 Parameter[] aParams, boolean fParent)
+            {
+            super(clzConstruct, typeConstruct, constructor);
+
+            f_clzTarget   = clzTarget;
+            f_constructor = constructor;
+            f_aParams     = aParams;
+            f_fParent     = fParent;
+            m_fMutable    = clzConstruct.isStruct();
+            }
+
+        @Override
+        public int call1(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
+            {
+            // this can only a call from Call_01
+            return callImpl(frame, ahArg, iReturn);
+            }
+
+        @Override
+        public int callT(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
+            {
+            TypeConstant    typeTuple = frame.poolContext().ensureTupleType(f_clzTarget.getType());
+            TypeComposition clzTuple  = xTuple.INSTANCE.ensureClass(frame.f_context.f_container, typeTuple);
+
+            switch (callImpl(frame, ahArg, Op.A_STACK))
+                {
+                case Op.R_NEXT:
+                    return frame.assignValue(iReturn,
+                        xTuple.makeImmutableHandle(clzTuple, frame.popStack()));
+
+                case Op.R_CALL:
+                    frame.m_frameNext.addContinuation(frameCaller ->
+                        frameCaller.assignValue(iReturn,
+                            xTuple.makeImmutableHandle(clzTuple, frameCaller.popStack())));
+                    return Op.R_CALL;
+
+                case Op.R_EXCEPTION:
+                    return Op.R_EXCEPTION;
+
+                default:
+                    throw new IllegalStateException();
+                }
+            }
+
+        /**
+         * Call the constructor.
+         */
+        private int callImpl(Frame frame, ObjectHandle[] ahArg, int iReturn)
+            {
+            ObjectHandle hParent = null;
+            if (f_fParent)
+                {
+                hParent = ahArg[0];
+                System.arraycopy(ahArg, 1, ahArg, 0, ahArg.length-1);
+                }
+
+            TypeComposition clzTarget   = f_clzTarget;
+            ClassTemplate template    = clzTarget.getTemplate();
+            MethodStructure constructor = f_constructor;
+
+            // constructor could be null for a synthetic run-time structure-based constructor
+            // created above by "getPropertyConstructors" method
+            return constructor == null
+                ? template.proceedConstruction(frame, null, false, ahArg[0], Utils.OBJECTS_NONE, iReturn)
+                : template.construct(frame, constructor, clzTarget, hParent, ahArg, iReturn);
+            }
+
+        @Override
+        protected ObjectHandle[] prepareVars(ObjectHandle[] ahArg)
+            {
+            throw new IllegalStateException();
+            }
+
+        @Override
+        public String getName()
+            {
+            return "construct";
+            }
+
+        @Override
+        public int getParamCount()
+            {
+            return f_aParams.length;
+            }
+
+        @Override
+        public Parameter getParam(int iArg)
+            {
+            return f_aParams[iArg];
+            }
+
+        @Override
+        public int getReturnCount()
+            {
+            return 1;
+            }
+
+        @Override
+        public Parameter getReturn(int iArg)
+            {
+            assert iArg == 0;
+            TypeConstant typeTarget = f_clzTarget.getType();
+            return new Parameter(typeTarget.getConstantPool(), typeTarget, null, null, true, 0, false);
+            }
+
+        @Override
+        public TypeConstant getReturnType(int iArg)
+            {
+            assert iArg == 0;
+            return f_clzTarget.getType();
+            }
+
+        @Override
+        public int getVarCount()
+            {
+            int cVars = super.getVarCount();
+            return Math.max(cVars, f_aParams.length);
+            }
+
+        final private TypeComposition f_clzTarget;
+        final private MethodStructure f_constructor;
+        final protected Parameter[]   f_aParams;
+        final private boolean         f_fParent;
         }
 
 
