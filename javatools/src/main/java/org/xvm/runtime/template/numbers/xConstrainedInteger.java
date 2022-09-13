@@ -207,8 +207,7 @@ public abstract class xConstrainedInteger
                         }
                     }
 
-                // TODO GG
-                throw new UnsupportedOperationException("TODO GG");
+                return convertLong(frame, pi.getLong(), iReturn, f_fChecked);
                 }
 
             TypeConstant typeElement = typeParam.getParamType(0);
