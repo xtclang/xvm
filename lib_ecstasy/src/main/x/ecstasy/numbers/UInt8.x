@@ -108,7 +108,7 @@ const UInt8
      */
     Nibble highNibble.get()
         {
-        return bits[0..4).toNibble();
+        return bits[0 ..< 4].toNibble();
         }
 
     /**
@@ -116,7 +116,7 @@ const UInt8
      */
     Nibble lowNibble.get()
         {
-        return bits[4..8).toNibble();
+        return bits[4 ..< 8].toNibble();
         }
 
 
@@ -219,7 +219,7 @@ const UInt8
             return this;
             }
 
-        return new UInt8(bits.fill(0, [0..bitLength-count)));
+        return new UInt8(bits.fill(0, 0 ..< bitLength-count));
         }
 
     @Override
@@ -235,7 +235,7 @@ const UInt8
             return this;
             }
 
-        return new UInt8(bits.fill(0, [count..bitLength)));
+        return new UInt8(bits.fill(0, count ..< bitLength));
         }
 
     @Override

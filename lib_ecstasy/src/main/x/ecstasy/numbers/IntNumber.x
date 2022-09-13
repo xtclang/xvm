@@ -55,7 +55,7 @@
      */
     Int leadingZeroCount.get()
         {
-        for (Int count : [0..bitLength))
+        for (Int count : 0 ..< bitLength)
             {
             if (bits[count] == 1)
                 {
@@ -73,7 +73,7 @@
      */
     Int trailingZeroCount.get()
         {
-        for (Int count : [0..bitLength))
+        for (Int count : 0 ..< bitLength)
             {
             if (bits[bitLength - count - 1] == 1)
                 {

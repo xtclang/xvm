@@ -111,7 +111,7 @@ class UriQueryStringParser
             }
         if (firstEscaped == -1)
             {
-            return s[from..toExcluded);
+            return s[from ..< toExcluded];
             }
 
         // Each encoded byte takes 3 characters (e.g. "%20")
@@ -120,7 +120,7 @@ class UriQueryStringParser
         StringBuffer strBuf          = new StringBuffer();
         Int          bufIdx;
 
-        s[from..firstEscaped).appendTo(strBuf);
+        s[from ..< firstEscaped].appendTo(strBuf);
 
         for (Int i = firstEscaped; i < toExcluded; i++)
             {
@@ -144,7 +144,7 @@ class UriQueryStringParser
                 } while (i < toExcluded && s[i] == '%');
             i--;
 
-            strBuf.addAll(buf[0..bufIdx));
+            strBuf.addAll(buf[0 ..< bufIdx]);
             }
         return strBuf.toString();
         }

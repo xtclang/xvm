@@ -179,7 +179,7 @@ mixin NibbleArray<Element extends Nibble>
                             {
                             assert:bounds assigned;
                             Int offset = index * 2;
-                            return nibbles[offset..offset+2).toByte();
+                            return nibbles[offset ..< offset+2].toByte();
                             }
 
                         @Override
@@ -207,7 +207,7 @@ mixin NibbleArray<Element extends Nibble>
             Translator delete(Int index)
                 {
                 Int offset = index * 2;
-                Nibble[] newNibbles = nibbles.deleteAll([offset..offset+2));
+                Nibble[] newNibbles = nibbles.deleteAll(offset ..< offset+2);
                 return &nibbles == &newNibbles ? this : new Translator(newNibbles);
                 }
 

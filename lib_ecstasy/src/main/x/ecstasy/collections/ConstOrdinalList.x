@@ -68,7 +68,7 @@ const ConstOrdinalList
             if (nodes.size > 0)
                 {
                 // link the nodes' "jump" pointers
-                createSkips(nodes, [0..nodes.size));
+                createSkips(nodes, 0 ..< nodes.size);
 
                 // turn each node into a byte array, and write out the nodes
                 Byte[][] nodesBytes = toBytes(nodes, values, bitsPerVal);
@@ -574,7 +574,7 @@ const ConstOrdinalList
             // drop the extra nodes that we're collapsing into the fast node
             if (span > 1)
                 {
-                nodes.deleteAll([1..span));
+                nodes.deleteAll(1 ..< span);
                 }
 
             // build the fast node and use it in place of the first node
@@ -606,8 +606,8 @@ const ConstOrdinalList
         Int relativeJump = (count-1).leftmostBit;
         node.jumpIndex = nodes[firstIndex + relativeJump].index;
 
-        createSkips(nodes, [firstIndex+1 .. firstIndex+relativeJump));
-        createSkips(nodes, [firstIndex+relativeJump .. lastIndex]);
+        createSkips(nodes, firstIndex+1 ..< firstIndex+relativeJump);
+        createSkips(nodes, firstIndex+relativeJump .. lastIndex);
         }
 
     /**
@@ -619,7 +619,7 @@ const ConstOrdinalList
         Byte[][] nodesBytes = new Byte[][];
 
         Node? nodeNext = Null;
-        for (Int i : [nodes.size-1..0])
+        for (Int i : nodes.size >.. 0)
             {
             Node node = nodes[i];
             assert nodeNext?.index > node.index;

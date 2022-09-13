@@ -49,7 +49,7 @@ class HttpResponse(HttpStatus status = HttpStatus.OK)
             // Iterate over the return values from the endpoint assigning them to the
             // relevant parts of the request (REVIEW CP: report duplicates?)
             Object body = Null;
-            for (Int i : [index..tuple.size))
+            for (Int i : index ..< tuple.size)
                 {
                 Object o = tuple[i];
                 if (o.is(HttpStatus))

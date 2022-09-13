@@ -110,8 +110,17 @@ public class EnumValueConstant
             {
             switch (op)
                 {
-                case DOTDOT:
+                case I_RANGE_I:
                     return pool.ensureRangeConstant(this, that);
+
+                case E_RANGE_I:
+                    return pool.ensureRangeConstant(this, true, that, false);
+
+                case I_RANGE_E:
+                    return pool.ensureRangeConstant(this, false, that, true);
+
+                case E_RANGE_E:
+                    return pool.ensureRangeConstant(this, true, that, true);
 
                 case SUB:
                     return pool.ensureIntConstant(this.getPresumedOrdinal() -

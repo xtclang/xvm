@@ -563,7 +563,7 @@ interface ClassTemplate
         String path = this.path;
         if (Int colon := path.indexOf(':'))
             {
-            String moduleName = path[0..colon);
+            String moduleName = path[0 ..< colon];
             String relPath    = path.substring(colon+1);
 
             ModuleTemplate mainModule = containingFile.mainModule;

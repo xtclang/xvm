@@ -152,9 +152,9 @@ module SockShopUser
                     {
                     return user;
                     }
-                
+
                 User user = new User(id, "", "", "", "");
-                put(id, user);     
+                put(id, user);
                 return user;
                 }
 
@@ -240,7 +240,7 @@ module SockShopUser
                 }
 
             Address[] newAddresses = new Array(Mutable, addresses);
-            for (Int i : [0..addresses.size))
+            for (Int i : 0 ..< addresses.size)
                 {
                 if (addresses[i].addressId == address.addressId)
                     {
@@ -255,7 +255,7 @@ module SockShopUser
 
         conditional Address getAddress(String addressId)
             {
-            for (Int i : [0..addresses.size))
+            for (Int i : 0 ..< addresses.size)
                 {
                 if (addresses[i].addressId == addressId)
                     {
@@ -284,7 +284,7 @@ module SockShopUser
                 }
 
             Card[] newCards = new Array(Mutable, cards);
-            for (Int i : [0..cards.size))
+            for (Int i : 0 ..< cards.size)
                 {
                 if (cards[i].cardId == card.cardId)
                     {
@@ -299,7 +299,7 @@ module SockShopUser
 
         conditional Card getCard(String cardId)
             {
-            for (Int i : [0..cards.size))
+            for (Int i : 0 ..< cards.size)
                 {
                 if (cards[i].cardId == cardId)
                     {

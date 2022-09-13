@@ -64,8 +64,8 @@ const Time(Int128 epochPicos, TimeZone timezone = UTC)
                     tzOffset = dt.size;
                     }
 
-                Date      date      = new Date(dt[0..timeOffset));
-                TimeOfDay timeOfDay = new TimeOfDay(dt[timeOffset+1..tzOffset));
+                Date      date      = new Date(dt[0 ..< timeOffset]);
+                TimeOfDay timeOfDay = new TimeOfDay(dt[timeOffset >..< tzOffset]);
                 construct Time(date, timeOfDay, zone);
                 return;
                 }

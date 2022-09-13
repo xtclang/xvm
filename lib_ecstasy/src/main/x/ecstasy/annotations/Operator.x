@@ -60,8 +60,7 @@
  *   method on the array expression's type that is annotated by `@Op("[]=")`.
  *
  * * When the compiler encounters an array slice expression, it searches for a method on the array
- *   expression's type that is annotated by `@Op("[..]")`, `@Op("[[..]]")` (inclusive slice), or
- *   `@Op("[[..])")` (exclusive slice).
+ *   expression's type that is annotated by `@Op("[..]")`.
  *
  * This annotation should be used with extreme care:
  *

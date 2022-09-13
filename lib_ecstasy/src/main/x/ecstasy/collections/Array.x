@@ -385,7 +385,7 @@ class Array<Element>
      */
     Array fill(Element value, Interval<Int>? interval = Null)
         {
-        Interval<Int> entire = [0..size);
+        Interval<Int> entire = 0 ..< size;
         if (interval == Null)
             {
             if (empty)
@@ -580,8 +580,8 @@ class Array<Element>
         switch (mutability)
             {
             case Mutable:
-                deleteAll([newSize..size));
-                for (Int i : [0..newSize))
+                deleteAll(newSize ..< size);
+                for (Int i : 0 ..< newSize)
                     {
                     this[i] = result[i];
                     }
@@ -751,7 +751,7 @@ class Array<Element>
 
         Int newSize = oldSize + addSize;
         Element[] newDelegate = new Element[](newSize);
-        for (Int from : [0..index))
+        for (Int from : 0 ..< index)
             {
             newDelegate.insert(from, this[from]);
             }
@@ -762,7 +762,7 @@ class Array<Element>
             newDelegate.insert(to++, v);
             }
 
-        for (Int from : [index..oldSize))
+        for (Int from : index ..< oldSize)
             {
             newDelegate.insert(to++, this[from]);
             }
@@ -838,11 +838,11 @@ class Array<Element>
                 val newDelegate = new Element[];
                 if (lo > 0)
                     {
-                    newDelegate += this[0..lo);
+                    newDelegate += this[0 ..< lo];
                     }
                 if (hi+1 < size)
                     {
-                    newDelegate += this[hi+1..size);
+                    newDelegate += this[hi+1 ..< size];
                     }
                 delegate = newDelegate;
                 return this;
@@ -973,7 +973,7 @@ class Array<Element>
             return False;
             }
 
-        for (Int i : [0..size))
+        for (Int i : 0 ..< size)
             {
             if (value1[i] != value2[i])
                 {

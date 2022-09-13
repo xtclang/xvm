@@ -38,7 +38,7 @@ interface DataInput
 
         assert length > 0;
         Char[] chars = new Char[length];
-        for (Int i : [0..length))
+        for (Int i : 0 ..< length)
             {
             chars[i] = readChar();
             }

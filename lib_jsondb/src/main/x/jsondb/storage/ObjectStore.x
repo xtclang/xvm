@@ -118,7 +118,7 @@ service ObjectStore(Catalog catalog, DBObjectInfo info)
         Directory dir = catalog.dir;
         if (path.size > 2)
             {
-            for (Path part : path[1..path.size-1))
+            for (Path part : path[1 ..< path.size-1])
                 {
                 dir = dir.dirFor(part.name);
                 }

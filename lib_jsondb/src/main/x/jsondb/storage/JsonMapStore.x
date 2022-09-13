@@ -746,7 +746,7 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                     FileLayout  fileLayout  = storageLayout.computeIfAbsent(prepareId, () -> new HashMap());
                     EntryLayout entryLayout = fileLayout.computeIfAbsent(fileName, () -> new HashMap());
 
-                    entryLayout.put(key, [startOffset .. fileOffset + buf.size));
+                    entryLayout.put(key, startOffset ..< fileOffset + buf.size);
                     }
 
                 modsByTx.remove(prepareId);
@@ -1046,7 +1046,7 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                         if (changeParser.matchKey("v"))
                             {
                             (Token first, Token last) = changeParser.skipDoc();
-                            valueLoc.put(key, [first.start.offset .. last.end.offset));
+                            valueLoc.put(key, first.start.offset ..< last.end.offset);
                             }
                         else
                             {
@@ -1055,7 +1055,7 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
 
                         Token endToken = changeParser.peek();
                         assert endToken.id == ObjectExit;
-                        entryLoc.put(key, [startOffset .. endToken.end.offset));
+                        entryLoc.put(key, startOffset ..< endToken.end.offset);
                         }
                     }
                 }
@@ -1092,7 +1092,7 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                                .append(jsonStr.slice(entryRange))
                                .add(',');
 
-                            entryRange = [startOffset .. buf.size-1);
+                            entryRange = startOffset ..< buf.size-1;
 
                             FileLayout  fileLayout  = storageLayout.computeIfAbsent(txId, () -> new HashMap());
                             EntryLayout entryLayout = fileLayout.computeIfAbsent(fileName, () -> new HashMap());
@@ -1284,7 +1284,7 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                     buf.add(',').add('\n')
                        .append(jsonStr.slice(entryRange));
 
-                    entryLayout.put(key, [startPos .. buf.size));
+                    entryLayout.put(key, startPos ..< buf.size);
                     }
                 }
             }

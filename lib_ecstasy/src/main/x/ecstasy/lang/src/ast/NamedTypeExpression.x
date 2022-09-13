@@ -105,7 +105,7 @@ const NamedTypeExpression(Token[]?          moduleNames,
         if (params != Null)
             {
             Type[] paramTypes = new Type[];
-            for (Int i : [0..params.size))
+            for (Int i : 0 ..< params.size)
                 {
                 if (Type paramType := params[i].resolveType(typeSystem, hideExceptions))
                     {

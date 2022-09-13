@@ -89,18 +89,6 @@ class OrderedMapSet<Element extends Orderable>
         }
 
     @Override
-    @Op("[[..]]") OrderedSet<Element> sliceInclusive(Range<Element> keys)
-        {
-        return contents.sliceInclusive(keys).keys;
-        }
-
-    @Override
-    @Op("[[..)]") OrderedSet<Element> sliceExclusive(Range<Element> keys)
-        {
-        return contents.sliceExclusive(keys).keys;
-        }
-
-    @Override
     OrderedSet<Element> reify()
         {
         assert Orderer orderer := ordered();

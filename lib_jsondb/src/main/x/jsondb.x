@@ -252,7 +252,7 @@ module jsondb.xtclang.org
                 String name = file.name;
                 if (Int dot := name.lastIndexOf('.'))
                     {
-                    name = name[0..dot);
+                    name = name[0 ..< dot];
                     }
 
                 Directory dir   = file.parent ?: assert;

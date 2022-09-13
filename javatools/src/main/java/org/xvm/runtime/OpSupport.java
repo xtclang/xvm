@@ -168,7 +168,7 @@ public interface OpSupport
     int invokeDivRem(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int[] aiReturn);
 
     /**
-     * Perform a "range" / "interval" operation (inclusive end).
+     * Perform a "range" / "interval" operation (inclusive start and end).
      *
      * @param frame    the current frame
      * @param hTarget  the target handle
@@ -177,7 +177,19 @@ public interface OpSupport
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
-    int invokeDotDot(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn);
+    int invokeIRangeI(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn);
+
+    /**
+     * Perform a "range" / "interval" operation (exclusive start).
+     *
+     * @param frame    the current frame
+     * @param hTarget  the target handle
+     * @param hArg     the argument handle
+     * @param iReturn  the register id to place a result of the operation into
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
+     */
+    int invokeERangeI(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn);
 
     /**
      * Perform a "range" / "interval" operation (exclusive end).
@@ -189,7 +201,19 @@ public interface OpSupport
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
-    int invokeDotDotEx(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn);
+    int invokeIRangeE(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn);
+
+    /**
+     * Perform a "range" / "interval" operation (exclusive start and end).
+     *
+     * @param frame    the current frame
+     * @param hTarget  the target handle
+     * @param hArg     the argument handle
+     * @param iReturn  the register id to place a result of the operation into
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
+     */
+    int invokeERangeE(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn);
 
 
     // ----- built-in unary operations -------------------------------------------------------------

@@ -123,7 +123,7 @@ const UriTemplate(String template, List<PathSegment> segments, Int variableCount
             {
             while (template.endsWith(SLASH_OPERATOR) && template.size > 1)
                 {
-                template = template[0..template.size - 1);
+                template = template[0 ..< template.size - 1];
                 }
 
             Array<PathSegment> segments = new Array();

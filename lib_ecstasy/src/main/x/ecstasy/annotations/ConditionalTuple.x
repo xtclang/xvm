@@ -48,20 +48,6 @@ mixin ConditionalTuple
         }
 
     @Override
-    @Op("[[..]]") Tuple!<> sliceInclusive(Range<Int> indexes)
-        {
-        assert indexes.effectiveUpperBound == 0 || this[0] == True;
-        return super(indexes);
-        }
-
-    @Override
-    @Op("[[..)]") Tuple!<> sliceExclusive(Range<Int> indexes)
-        {
-        assert indexes.effectiveUpperBound == 0 || this[0] == True;
-        return super(indexes);
-        }
-
-    @Override
     Tuple!<> remove(Int index)
         {
         assert this[0];

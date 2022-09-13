@@ -165,7 +165,7 @@ mixin KeyBasedStore<Key extends Hashable>
                     return False;
                     }
 
-                buf.append(jsonStr[0..endOffset)).add(',');
+                buf.append(jsonStr[0 ..< endOffset]).add(',');
                 }
             else
                 {

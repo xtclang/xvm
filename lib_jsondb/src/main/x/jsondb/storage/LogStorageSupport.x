@@ -48,7 +48,7 @@ const LogStorageSupport
         Int prefixSize = canonicalName.size;
         if (name.startsWith(canonicalName) && name[prefixSize] == '_' && name.endsWith(".json"))
             {
-            String timestamp = name[prefixSize+1 .. name.size-5);
+            String timestamp = name[prefixSize >..< name.size-5];
             try
                 {
                 return True, new Time(timestamp);

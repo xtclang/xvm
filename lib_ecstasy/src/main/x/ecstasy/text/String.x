@@ -97,7 +97,7 @@ const String
         return switch ()
             {
             case startAt <= 0:   this;
-            case startAt < size: this[startAt..size);
+            case startAt < size: this[startAt ..< size];
             default: "";
             };
         }
@@ -111,7 +111,7 @@ const String
         {
         return size <= 1
                 ? this
-                : this[size-1..0];
+                : this[size >.. 0];
         }
 
     /**
@@ -141,7 +141,7 @@ const String
 
         return leading == 0 && trailing == 0
                 ? this
-                : this[leading..size-trailing);
+                : this[leading ..< size-trailing];
         }
 
     /**
@@ -185,7 +185,7 @@ const String
         Int start = 0;
         while (Int next := indexOf(separator, start))
             {
-            results += start == next ? "" : this[start..next);
+            results += start == next ? "" : this[start ..< next];
             start    = next + 1;
             }
 
@@ -230,7 +230,7 @@ const String
             {
             if (count == index)
                 {
-                return start == next ? "" : this[start..next);
+                return start == next ? "" : this[start ..< next];
                 }
 
             start = next + 1;
@@ -300,7 +300,7 @@ const String
             {
             if ((Int keyStart, Int sepOffset, Int valueEnd) := find(key))
                 {
-                return True, valueEnd > sepOffset+1 ? data[sepOffset+1..valueEnd) : "";
+                return True, valueEnd > sepOffset+1 ? data[sepOffset >..< valueEnd] : "";
                 }
             return False;
             }
@@ -427,7 +427,7 @@ const String
                             endKey = endEntry;
                             }
 
-                        String key = data[offset..endKey);
+                        String key = data[offset ..< endKey];
                         offset = endEntry + 1;
 
                         return True, key;
@@ -452,7 +452,7 @@ const String
     /**
      * Determine if `this` String _starts-with_ `that` String. A String `this` of at least `n`
      * characters "starts-with" another String `that` of exactly `n` elements iff, for each index
-     * `[0..n)`, the character at the index in `this` String is equal to the character at the same
+     * `0..<n`, the character at the index in `this` String is equal to the character at the same
      * index in `that` String.
      *
      * @param that  a String to look for at the beginning of this String
@@ -480,7 +480,7 @@ const String
     /**
      * Determine if `this` String _ends-with_ `that` String. A String `this` of `m` characters
      * "ends-with" another String `that` of `n` characters iff `n <= m` and, for each index `i`
-     * in the range `[0..n)`, the character at the index `m-n+i` in `this` String is equal to the
+     * in the range `0..<n`, the character at the index `m-n+i` in `this` String is equal to the
      * character at index `i` in `that` String.
      *
      * @param that  a String to look for at the end of this String
@@ -713,7 +713,7 @@ const String
      */
     String! replaceAll(RegEx pattern, String replacement, Int offset = 0)
         {
-        return pattern.replaceAll(this[offset..this.size), replacement);
+        return pattern.replaceAll(this[offset ..< this.size], replacement);
         }
 
     /**
@@ -743,7 +743,7 @@ const String
                 switch (append.sign)
                     {
                     case Negative:
-                        return this[0..length];
+                        return this[0 ..< length];  // REVIEW GG
 
                     case Zero:
                         return this;
@@ -819,7 +819,7 @@ const String
             StringBuffer buffer = new StringBuffer(thisSize - matchSize + replaceSize);
             do
                 {
-                buffer.addAll(chars[startOffset..matchOffset));
+                buffer.addAll(chars[startOffset ..< matchOffset]);
                 if (replaceSize > 0)
                     {
                     buffer.addAll(replace.chars);
@@ -828,7 +828,7 @@ const String
                 }
             while (startOffset < thisSize, matchOffset := indexOf(match, startOffset));
 
-            return buffer.addAll(chars[startOffset..thisSize)).toString();
+            return buffer.addAll(chars[startOffset ..< thisSize]).toString();
             }
         return this;
         }

@@ -177,7 +177,7 @@ interface IntConvertible
         Int    fill  = max - len;
         return new Int16(switch (fill.sign)
             {
-            case Negative: bytes[len-max..len);
+            case Negative: bytes[len-max ..< len];
             case Zero    : bytes;
             case Positive: new Byte[max](i -> i < fill ? bytes[0].signExtend : bytes[i-fill]);
             });
@@ -196,7 +196,7 @@ interface IntConvertible
         Int    fill  = max - len;
         return new Int32(switch (fill.sign)
             {
-            case Negative: bytes[len-max..len);
+            case Negative: bytes[len-max ..< len];
             case Zero    : bytes;
             case Positive: new Byte[max](i -> i < fill ? bytes[0].signExtend : bytes[i-fill]);
             });
@@ -215,7 +215,7 @@ interface IntConvertible
         Int    fill  = max - len;
         return new Int64(switch (fill.sign)
             {
-            case Negative: bytes[len-max..len);
+            case Negative: bytes[len-max ..< len];
             case Zero    : bytes;
             case Positive: new Byte[max](i -> i < fill ? bytes[0].signExtend : bytes[i-fill]);
             });
@@ -234,7 +234,7 @@ interface IntConvertible
         Int    fill  = max - len;
         return new Int128(switch (fill.sign)
             {
-            case Negative: bytes[len-max..len);
+            case Negative: bytes[len-max ..< len];
             case Zero    : bytes;
             case Positive: new Byte[max](i -> i < fill ? bytes[0].signExtend : bytes[i-fill]);
             });
@@ -264,7 +264,7 @@ interface IntConvertible
         Int    fill  = max - len;
         return new UInt16(switch (fill.sign)
             {
-            case Negative: bytes[len-max..len);
+            case Negative: bytes[len-max ..< len];
             case Zero    : bytes;
             case Positive: new Byte[max](i -> i < fill ? 0 : bytes[i-fill]);
             });
@@ -283,7 +283,7 @@ interface IntConvertible
         Int    fill  = max - len;
         return new UInt32(switch (fill.sign)
             {
-            case Negative: bytes[len-max..len);
+            case Negative: bytes[len-max ..< len];
             case Zero    : bytes;
             case Positive: new Byte[max](i -> i < fill ? 0 : bytes[i-fill]);
             });
@@ -302,7 +302,7 @@ interface IntConvertible
         Int    fill  = max - len;
         return new UInt64(switch (fill.sign)
             {
-            case Negative: bytes[len-max..len);
+            case Negative: bytes[len-max ..< len];
             case Zero    : bytes;
             case Positive: new Byte[max](i -> i < fill ? 0 : bytes[i-fill]);
             });
@@ -321,7 +321,7 @@ interface IntConvertible
         Int    fill  = max - len;
         return new UInt128(switch (fill.sign)
             {
-            case Negative: bytes[len-max..len);
+            case Negative: bytes[len-max ..< len];
             case Zero    : bytes;
             case Positive: new Byte[max](i -> i < fill ? 0 : bytes[i-fill]);
             });

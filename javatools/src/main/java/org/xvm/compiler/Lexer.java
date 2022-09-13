@@ -202,13 +202,17 @@ public class Lexer
                         case '.':
                             if (source.hasNext())
                                 {
-                                if (nextChar() == '/')
+                                switch (nextChar())
                                     {
-                                    return new Token(lInitPos, source.getPosition(), Id.DIR_PARENT);
+                                    case '/':
+                                        return new Token(lInitPos, source.getPosition(), Id.DIR_PARENT);
+
+                                    case '<':
+                                        return new Token(lInitPos, source.getPosition(), Id.I_RANGE_E);
                                     }
                                 source.rewind();
                                 }
-                            return new Token(lInitPos, source.getPosition(), Id.DOTDOT);
+                            return new Token(lInitPos, source.getPosition(), Id.I_RANGE_I);
 
                         case '/':
                             return new Token(lInitPos, source.getPosition(), Id.DIR_CUR);
@@ -465,6 +469,25 @@ public class Lexer
                                 source.rewind();
                                 }
                             return new Token(lInitPos, source.getPosition(), Id.SHR);
+
+                        case '.':
+                            if (source.hasNext())
+                                {
+                                if (nextChar() == '.')
+                                    {
+                                    if (source.hasNext())
+                                        {
+                                        if (nextChar() == '<')
+                                            {
+                                            return new Token(lInitPos, source.getPosition(), Id.E_RANGE_E);
+                                            }
+                                        source.rewind();
+                                        }
+                                    return new Token(lInitPos, source.getPosition(), Id.E_RANGE_I);
+                                    }
+                                source.rewind();
+                                }
+                            break;
 
                         case '=':
                             return new Token(lInitPos, source.getPosition(), Id.COMP_GTEQ);

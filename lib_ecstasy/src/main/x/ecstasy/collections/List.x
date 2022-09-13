@@ -139,7 +139,7 @@ interface List<Element>
     /**
      * Determine if `this` list _starts-with_ `that` list. A list `this` of at least `n`
      * elements "starts-with" another list `that` of exactly `n` elements iff, for each index
-     * `[0..n)`, the element at the index in `this` list is equal to the element at the same
+     * `0..<n`, the element at the index in `this` list is equal to the element at the same
      * index in `that` list.
      *
      * @param that  a list to look for at the beginning of this list
@@ -163,7 +163,7 @@ interface List<Element>
 
             if (this.indexed && that.indexed)
                 {
-                for (Int i : [0..thatSize))
+                for (Int i : 0 ..< thatSize)
                     {
                     if (this[i] != that[i])
                         {
@@ -196,7 +196,7 @@ interface List<Element>
     /**
      * Determine if `this` list _ends-with_ `that` list. A list `this` of `m` elements
      * "ends-with" another list `that` of `n` elements iff `n <= m` and, for each index `i`
-     * in the range `[0..n)`, the element at the index `m-n+i` in `this` list is equal to the
+     * in the range `0..<n`, the element at the index `m-n+i` in `this` list is equal to the
      * element at index `i` in `that` list.
      *
      * @param that  a list to look for at the end of this list
@@ -220,7 +220,7 @@ interface List<Element>
         Int offset = thisSize - thatSize;
         if (this.indexed && that.indexed)
             {
-            for (Int i : [0..thatSize))
+            for (Int i : 0 ..< thatSize)
                 {
                 if (this[offset+i] != that[i])
                     {
@@ -232,7 +232,7 @@ interface List<Element>
 
         Iterator<Element> thisIter = this.iterator();
         Iterator<Element> thatIter = that.iterator();
-        for (Int i : [0..offset))
+        for (Int i : 0 ..< offset)
             {
             assert thisIter.next();
             }
@@ -623,7 +623,7 @@ interface List<Element>
         Result[] results = new Result[];
         for (Int i = 0, Int thisSize = this.size; i < thisSize; i += size)
             {
-            results.add(process(this[i..(i+size).minOf(thisSize))));
+            results.add(process(this[i ..< (i+size).minOf(thisSize)]));
             }
         return results;
         }
@@ -651,7 +651,7 @@ interface List<Element>
         Int      stop     = thisSize - (partial ? 1 : size);
         for (Int i = 0; i <= stop; i += step)
             {
-            results.add(process(this[i..(i+size).minOf(thisSize))));
+            results.add(process(this[i ..< (i+size).minOf(thisSize)]));
             }
         return results;
         }
@@ -681,7 +681,7 @@ interface List<Element>
             // already in the right order
             return inPlace
                     ? this
-                    : this[0..size);
+                    : this[0 ..< size];
             }
 
         return this.inPlace && inPlace
@@ -724,7 +724,7 @@ interface List<Element>
                 return this;
                 }
 
-            return this[size-1..0];
+            return this[size >.. 0];
             }
 
         return new Array<Element>(Mutable, this).reversed(True);
@@ -1392,7 +1392,7 @@ interface List<Element>
         @Override
         @Op("[..]") List!<Element> slice(Range<Int> indexes)
             {
-            return this.List.slice(this.indexes[indexes.effectiveFirst]..this.indexes[indexes.effectiveLast]);
+            return this.List.slice(this.indexes[indexes.effectiveFirst] .. this.indexes[indexes.effectiveLast]);
             }
 
         @Override

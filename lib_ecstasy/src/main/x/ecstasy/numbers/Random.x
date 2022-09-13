@@ -54,7 +54,7 @@ interface Random
         }
 
     /**
-     * @return a random 64-bit signed integer value in the range `[0..max)`
+     * @return a random 64-bit signed integer value in the range `0..<max`
      */
     Int int(Int max)
         {
@@ -81,7 +81,7 @@ interface Random
         }
 
     /**
-     * @return a random 64-bit signed integer value in the range `[0..max)`
+     * @return a random 64-bit signed integer value in the range `0..<max`
      */
     UInt uint(UInt max)
         {
@@ -110,7 +110,7 @@ interface Random
         }
 
     /**
-     * @return a random 64-bit binary floating point value in the range `[0..1)`.
+     * @return a random 64-bit binary floating point value in the range `0..<1`.
      */
     Float64 float()
         {

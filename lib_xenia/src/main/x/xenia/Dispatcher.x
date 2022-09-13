@@ -93,13 +93,13 @@ service Dispatcher
             if (Int fragmentOffset := uriString.indexOf('#'))
                 {
                 fragment  = uriString.substring(fragmentOffset+1);
-                uriString = uriString[0..fragmentOffset);
+                uriString = uriString[0 ..< fragmentOffset];
                 }
 
             if (Int queryOffset := uriString.indexOf('?'))
                 {
                 query     = uriString.substring(queryOffset+1);
-                uriString = uriString[0..queryOffset);
+                uriString = uriString[0 ..< queryOffset];
                 }
 
             // TODO CP: handle the path parsing more robustly

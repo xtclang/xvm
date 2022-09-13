@@ -86,7 +86,7 @@ module TestServices
 
         Int responded = 0;
         Int count     = 5;
-        for (Int i : [0..count))
+        for (Int i : 0 ..< count)
             {
             console.println($"{tag()} calling service future-style: {i}");
             @Future Int result = svc.calcSomethingBig(Duration.ofSeconds(i));

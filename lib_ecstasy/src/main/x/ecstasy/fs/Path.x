@@ -86,10 +86,10 @@ const Path
                 String remain = name;
                 while (Int slash := remain.indexOf('/'))
                     {
-                    String part = remain[0..slash);
+                    String part = remain[0 ..< slash];
                     assert:arg part.size > 0 as "Name \"{name}\" contains empty path element";
 
-                    remain = remain[slash+1..remain.size);
+                    remain = remain[slash >..< remain.size];
                     if (remain.size == 0)
                         {
                         // the name ended with '/', so we just accidentally took the last path part
@@ -388,7 +388,7 @@ const Path
             Int start = thisNorm.size;
             Int stop  = thatNorm.size;
             assert stop > start;
-            return that[start..stop);
+            return that[start ..< stop];
             }
         else
             {
@@ -418,7 +418,7 @@ const Path
 
             // for each segment that "that" has beyond the common path, copy the segment from "that"
             // onto the end of the result
-            return result + that[common..thatSize);
+            return result + that[common ..< thatSize];
             }
         }
 
@@ -468,7 +468,7 @@ const Path
         {
         assert that.relative;
         Path result = this;
-        for (Int i : [0..that.size))
+        for (Int i : 0 ..< that.size)
             {
             val segment = that[i];
             result = new Path(result, segment.form, segment.name);
@@ -603,7 +603,7 @@ const Path
         {
         // start with a mutable or fixed size array full of references to "this"
         Path[] parts = mutability == Mutable
-                ? new Path[](size).fill(this, [0..size))
+                ? new Path[](size).fill(this, 0 ..< size)
                 : new Path[size](this);
 
         // now replace all the parts other than the last one (which should be "this")

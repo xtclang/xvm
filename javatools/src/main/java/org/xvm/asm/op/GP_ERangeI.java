@@ -13,19 +13,19 @@ import org.xvm.runtime.ObjectHandle;
 
 
 /**
- * GP_DOTDOT rvalue1, rvalue2, lvalue ; T .. T -> Range<T>
+ * GP_ERANGEI rvalue1, rvalue2, lvalue ; T >.. T -> Range<T>
  */
-public class GP_DotDot
+public class GP_ERangeI
         extends OpGeneral
     {
     /**
-     * Construct a GP_DOTDOT op for the passed arguments.
+     * Construct a GP_ERANGEI op for the passed arguments.
      *
      * @param argTarget  the target Argument
      * @param argValue   the second value Argument
      * @param argReturn  the Argument to store the result into
      */
-    public GP_DotDot(Argument argTarget, Argument argValue, Argument argReturn)
+    public GP_ERangeI(Argument argTarget, Argument argValue, Argument argReturn)
         {
         super(argTarget, argValue, argReturn);
         }
@@ -36,7 +36,7 @@ public class GP_DotDot
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    public GP_DotDot(DataInput in, Constant[] aconst)
+    public GP_ERangeI(DataInput in, Constant[] aconst)
             throws IOException
         {
         super(in, aconst);
@@ -45,11 +45,11 @@ public class GP_DotDot
     @Override
     public int getOpCode()
         {
-        return OP_GP_DOTDOT;
+        return OP_GP_ERANGEI;
         }
 
     protected int completeBinary(Frame frame, ObjectHandle hTarget, ObjectHandle hArg)
         {
-        return hTarget.getOpSupport().invokeDotDot(frame, hTarget, hArg, m_nRetValue);
+        return hTarget.getOpSupport().invokeERangeI(frame, hTarget, hArg, m_nRetValue);
         }
     }

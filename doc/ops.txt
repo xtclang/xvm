@@ -206,8 +206,10 @@
 +GP_OR       rvalue1, rvalue2, lvalue                ; T | T -> T
 +GP_XOR      rvalue1, rvalue2, lvalue                ; T ^ T -> T
 +GP_DIVREM   rvalue1, rvalue2, lvalue-quotient, lvalue-remainder; T /% T -> T, T
-+GP_DOTDOT   rvalue1, rvalue2, lvalue                ; T .. T -> Range<T>   (inclusive end)
-+GP_DOTDOTEX rvalue1, rvalue2, lvalue                ; T .. T -> Range<T>   (exclusive end)
++GP_IRANGEI  rvalue1, rvalue2, lvalue                ; T  ..  T -> Range<T>  (inclusive start & end)
++GP_ERANGEI  rvalue1, rvalue2, lvalue                ; T >..  T -> Range<T>  (exclusive start)
++GP_IRANGEE  rvalue1, rvalue2, lvalue                ; T  ..< T -> Range<T>  (exclusive end)
++GP_ERANGEE  rvalue1, rvalue2, lvalue                ; T >..< T -> Range<T>  (exclusive start & end)
 +GP_NEG      rvalue, lvalue                          ; -T -> T
 +GP_COMPL    rvalue, lvalue                          ; ~T -> T
 

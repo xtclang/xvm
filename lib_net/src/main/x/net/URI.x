@@ -674,7 +674,7 @@ const URI
                 if (String scheme ?= scheme)
                     {
                     Boolean truncate = last && nextOffset < scheme.size;
-                    scheme = truncate ? scheme[startOffset..nextOffset)
+                    scheme = truncate ? scheme[startOffset ..< nextOffset]
                                       : scheme.substring(startOffset);
 
                     escape(scheme, schemeValid).appendTo(buf);
@@ -698,7 +698,7 @@ const URI
                 if (String authority ?= authority)
                     {
                     Boolean truncate = last && nextOffset < authority.size;
-                    authority = truncate ? authority[startOffset..nextOffset)
+                    authority = truncate ? authority[startOffset ..< nextOffset]
                                          : authority.substring(startOffset);
 
                     if (startOffset == 0)
@@ -723,7 +723,7 @@ const URI
                     {
                     String  pathString = path.toString();
                     Boolean truncate   = last && nextOffset < pathString.size;
-                    pathString = truncate ? pathString[startOffset..nextOffset)
+                    pathString = truncate ? pathString[startOffset ..< nextOffset]
                                           : pathString.substring(startOffset);
 
                     // TODO escape
@@ -744,7 +744,7 @@ const URI
                 if (String query ?= query)
                     {
                     Boolean truncate = last && nextOffset < query.size;
-                    query = truncate ? query[startOffset..nextOffset)
+                    query = truncate ? query[startOffset ..< nextOffset]
                                      : query.substring(startOffset);
 
                     if (startOffset == 0)
@@ -766,7 +766,7 @@ const URI
                 if (String fragment ?= fragment)
                     {
                     Boolean truncate = nextOffset < fragment.size;
-                    fragment = truncate ? fragment[startOffset..nextOffset)
+                    fragment = truncate ? fragment[startOffset ..< nextOffset]
                                         : fragment.substring(startOffset);
 
                     if (startOffset == 0)
@@ -984,7 +984,7 @@ const URI
         // verify that the text was consumed
         if (error == Null && offset < length)
             {
-            error = $"Unparsable URI portion: {text[offset..length).quoted()}";
+            error = $"Unparsable URI portion: {text[offset ..< length].quoted()}";
             }
 
         return error==Null, scheme, authority, user, host, ip, port, path, query, fragment, opaque, error;
@@ -1118,7 +1118,7 @@ const URI
 
                     case ':':
                         // this is the separator that terminates the scheme
-                        return True, text[offset..i), i+1, Null;
+                        return True, text[offset ..< i], i+1, Null;
 
                     default:
                         // not a valid scheme character
@@ -1218,7 +1218,7 @@ const URI
                     }
                 }
 
-            authority = text[start..offset);
+            authority = text[start ..< offset];
 
             // test if the authority appears to contain server info
             if (error == Null && atSigns <= 1 && leftSquares <= 1 && rightSquares == leftSquares
@@ -1326,7 +1326,7 @@ const URI
                         break EachChar;
 
                     case '/':
-                        path  = new Path(path, text[start..offset));
+                        path  = new Path(path, text[start ..< offset]);
                         start = offset + 1;
                         break;
 
@@ -1353,7 +1353,7 @@ const URI
 
             if (offset > start)
                 {
-                path = new Path(path, text[start..offset));
+                path = new Path(path, text[start ..< offset]);
                 }
 
             return path ?: assert, offset, error;
@@ -1399,7 +1399,7 @@ const URI
                     }
                 }
 
-            String query = text[start..offset);
+            String query = text[start ..< offset];
             // note that the query cannot be unescaped, because delimiters within the query are
             // unknown in the general URI case; for a particular scheme (like HTTP), the delimiters
             // are known to be '=' and '&', but the URI specification is too open-ended to make any
@@ -1452,7 +1452,7 @@ const URI
                     }
                 }
 
-            String opaque = text[start..offset);
+            String opaque = text[start ..< offset];
             if (escaped && error == Null)
                 {
                 opaque = unescape(opaque);
@@ -1497,7 +1497,7 @@ const URI
                     }
                 }
 
-            String fragment = text[start..offset);
+            String fragment = text[start ..< offset];
             if (escaped && error == Null)
                 {
                 fragment = unescape(fragment);
@@ -1517,7 +1517,7 @@ const URI
                 return False;
                 }
 
-            for (Int i : [0..count))
+            for (Int i : 0 ..< count)
                 {
                 if (text[offset+i] != match[i])
                     {
@@ -1644,14 +1644,14 @@ const URI
         // regname characters are valid user characters, so there is nothing else to check
         if (atSign >= 0)
             {
-            user = unescape(text[0..atSign));
+            user = unescape(text[0 ..< atSign]);
             }
 
         // the host can be an IP address (either IPv4, or IPv6 inside square brackets), or:
         //   hostname = *( domainlabel "." ) toplabel [ "." ]
         //   domainlabel = alphanum | alphanum *( alphanum | "-" ) alphanum
         //   toplabel = alpha | alpha *( alphanum | "-" ) alphanum
-        host = text[(atSign < 0 ? 0 : atSign+1) .. (colon < 0 ? length : colon));
+        host = text[(atSign < 0 ? 0 : atSign+1) ..< (colon < 0 ? length : colon)];
         if (host.size == 0)
             {
             // host string is required for this to be an authority
@@ -1912,7 +1912,7 @@ const URI
                 }
             else
                 {
-                return '?', nextOffset, $"Illegal escape sequence: {text[offset..offset+2]}";
+                return '?', nextOffset, $"Illegal escape sequence: {text[offset ..< offset+2]}";
                 }
             }
 
@@ -1951,7 +1951,7 @@ const URI
         StringBuffer buf = new StringBuffer();
         if (offset > 0)
             {
-            text[0..offset).appendTo(buf);
+            text[0 ..< offset].appendTo(buf);
             }
 
         Int length = text.size;
@@ -2012,7 +2012,7 @@ const URI
         StringBuffer buf = new StringBuffer();
         if (offset > 0)
             {
-            text[0..offset).appendTo(buf);
+            text[0 ..< offset].appendTo(buf);
             }
 
         for (Int length = text.size; offset < length; ++offset)

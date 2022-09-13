@@ -115,7 +115,7 @@
             Int replace = count.minOf(remaining);
 
             // replace those bytes in the underlying array
-            this.bytes.replaceAll(this.offset, bytes[offset..offset+replace));
+            this.bytes.replaceAll(this.offset, bytes[offset ..< offset+replace]);
             this.offset += replace;
 
             // update the portion of the passed bytes that still need to be written (and if nothing
@@ -144,7 +144,7 @@
 
         // append the remaining-data-to-write to the underlying array
         this.bytes.capacity = total;
-        this.bytes.addAll(bytes[offset..offset+count));
+        this.bytes.addAll(bytes[offset ..< offset+count]);
         this.offset += count;
         }
     }

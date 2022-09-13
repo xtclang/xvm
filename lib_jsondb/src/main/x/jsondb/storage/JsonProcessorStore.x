@@ -745,7 +745,7 @@ service JsonProcessorStore<Message extends immutable Const>
                         Int startPos = messageTokens[0].start.offset;
                         Int endPos   = messageTokens[messageTokens.size-1].end.offset;
 
-                        messageLoc.putIfAbsent(message, [startPos..endPos));
+                        messageLoc.putIfAbsent(message, startPos ..< endPos);
                         fileNames.putIfAbsent(message, fileName);
 
                         messagesByTx.process(txId, e ->

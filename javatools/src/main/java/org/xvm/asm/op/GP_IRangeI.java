@@ -13,19 +13,19 @@ import org.xvm.runtime.ObjectHandle;
 
 
 /**
- * GP_DOTDOTEX rvalue1, rvalue2, lvalue ; T .. T -> Range<T>
+ * GP_IRANGEI rvalue1, rvalue2, lvalue ; T .. T -> Range<T>
  */
-public class GP_DotDotEx
-    extends OpGeneral
+public class GP_IRangeI
+        extends OpGeneral
     {
     /**
-     * Construct a GP_DOTDOTEX op for the passed arguments.
+     * Construct a GP_IRANGEI op for the passed arguments.
      *
      * @param argTarget  the target Argument
      * @param argValue   the second value Argument
      * @param argReturn  the Argument to store the result into
      */
-    public GP_DotDotEx(Argument argTarget, Argument argValue, Argument argReturn)
+    public GP_IRangeI(Argument argTarget, Argument argValue, Argument argReturn)
         {
         super(argTarget, argValue, argReturn);
         }
@@ -36,8 +36,8 @@ public class GP_DotDotEx
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    public GP_DotDotEx(DataInput in, Constant[] aconst)
-        throws IOException
+    public GP_IRangeI(DataInput in, Constant[] aconst)
+            throws IOException
         {
         super(in, aconst);
         }
@@ -45,11 +45,11 @@ public class GP_DotDotEx
     @Override
     public int getOpCode()
         {
-        return OP_GP_DOTDOTEX;
+        return OP_GP_IRANGEI;
         }
 
     protected int completeBinary(Frame frame, ObjectHandle hTarget, ObjectHandle hArg)
         {
-        return hTarget.getOpSupport().invokeDotDotEx(frame, hTarget, hArg, m_nRetValue);
+        return hTarget.getOpSupport().invokeIRangeI(frame, hTarget, hArg, m_nRetValue);
         }
     }

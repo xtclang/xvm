@@ -15,7 +15,7 @@ class HttpHeaders
         }
     finally
         {
-        for (Int i : [0..names.size))
+        for (Int i : 0 ..< names.size)
             {
             addAll(names[i], values[i]);
             }

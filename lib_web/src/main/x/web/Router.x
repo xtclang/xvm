@@ -107,7 +107,7 @@ class Router
 
             while (rootPath.endsWith('/') && rootPath.size > 1)
                 {
-                rootPath = rootPath[0..rootPath.size-1);
+                rootPath = rootPath[0 ..< rootPath.size-1];
                 }
             }
 
@@ -147,7 +147,7 @@ class Router
 
         while (path.endsWith('/'))
             {
-            path = path[0..rootPath.size-1);
+            path = path[0 ..< rootPath.size-1];
             }
 
         if (path.startsWith('/'))
@@ -224,7 +224,7 @@ class Router
             Int                 variableCount  = 0;
             Int                 rawLength      = 0;
 
-            for (Int i : [0..matches.size))
+            for (Int i : 0 ..< matches.size)
                 {
                 UriRouteMatch    match    = matches[i];
                 UriMatchTemplate template = match.route.uriMatchTemplate;

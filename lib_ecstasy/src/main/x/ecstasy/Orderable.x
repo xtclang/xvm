@@ -16,13 +16,33 @@ interface Orderable
         }
 
     /**
+     * Create a Range that represents the values from _this_ (**exclusive**) **to** _that_
+     * (inclusive).
+     */
+    @Op(">..") Range<Orderable> exTo(Orderable that)
+        {
+        assert this.is(immutable) && that.is(immutable);
+        return new Range<immutable Orderable>(this, that, firstExclusive=True);
+        }
+
+    /**
      * Create a Range that represents the values from _this_ (inclusive) **to** _that_
      * (**exclusive**).
      */
-    @Op("..<") Range<Orderable> toExcluding(Orderable that)
+    @Op("..<") Range<Orderable> toEx(Orderable that)
         {
         assert this.is(immutable) && that.is(immutable);
         return new Range<immutable Orderable>(this, that, lastExclusive=True);
+        }
+
+    /**
+     * Create a Range that represents the values from _this_ (**exclusive**) **to** _that_
+     * (**exclusive**).
+     */
+    @Op(">..<") Range<Orderable> exToEx(Orderable that)
+        {
+        assert this.is(immutable) && that.is(immutable);
+        return new Range<immutable Orderable>(this, that, firstExclusive=True, lastExclusive=True);
         }
 
     /**

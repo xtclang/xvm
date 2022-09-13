@@ -27,8 +27,10 @@ import org.xvm.asm.op.GP_Add;
 import org.xvm.asm.op.GP_And;
 import org.xvm.asm.op.GP_Div;
 import org.xvm.asm.op.GP_DivRem;
-import org.xvm.asm.op.GP_DotDot;
-import org.xvm.asm.op.GP_DotDotEx;
+import org.xvm.asm.op.GP_IRangeI;
+import org.xvm.asm.op.GP_ERangeI;
+import org.xvm.asm.op.GP_IRangeE;
+import org.xvm.asm.op.GP_ERangeE;
 import org.xvm.asm.op.GP_Mod;
 import org.xvm.asm.op.GP_Mul;
 import org.xvm.asm.op.GP_Or;
@@ -101,7 +103,10 @@ public class RelOpExpression
             case BIT_OR:
             case BIT_XOR:
             case BIT_AND:
-            case DOTDOT:
+            case I_RANGE_I:
+            case E_RANGE_I:
+            case I_RANGE_E:
+            case E_RANGE_E:
             case SHL:
             case SHR:
             case USHR:
@@ -232,7 +237,7 @@ public class RelOpExpression
             }
 
         Set<MethodConstant> setOpsLeft = typeLeft.ensureTypeInfo().findOpMethods(
-                getDefaultMethodName(), getOperatorString(), 1);
+                getDefaultMethodName(), operator.getId().TEXT, 1);
 
         MethodConstant idBestLeft = setOpsLeft.size() == 1 ? setOpsLeft.iterator().next() : null;
 
@@ -254,7 +259,7 @@ public class RelOpExpression
             // the left type's ops didn't give us a match, but left type is convertible to the right;
             // see if we can find something based on the right type ops
             Set<MethodConstant> setOpsRight = typeRight.ensureTypeInfo().findOpMethods(
-                    getDefaultMethodName(), getOperatorString(), 1);
+                    getDefaultMethodName(), operator.getId().TEXT, 1);
             if (!setOpsRight.isEmpty())
                 {
                 idBest = chooseBest(setOpsRight, typeRight, mapBest);
@@ -346,7 +351,7 @@ public class RelOpExpression
         TypeFit             fitVia   = TypeFit.NoFit;
         TypeInfo            infoLeft = typeLeft.ensureTypeInfo();
         String              sMethod  = getDefaultMethodName();
-        String              sOp      = getOperatorString();
+        String              sOp      = operator.getId().TEXT;
         Set<MethodConstant> setOps   = infoLeft.findOpMethods(sMethod, sOp, 1);
         for (MethodConstant idMethod : setOps)
             {
@@ -414,7 +419,7 @@ public class RelOpExpression
         TypeFit             fitVia   = TypeFit.NoFit;
         TypeInfo            infoLeft = typeLeft.ensureTypeInfo();
         String              sMethod  = getDefaultMethodName();
-        String              sOp      = getOperatorString();
+        String              sOp      = operator.getId().TEXT;
         Set<MethodConstant> setOps   = infoLeft.findOpMethods(sMethod, sOp, 1);
         for (MethodConstant idMethod : setOps)
             {
@@ -629,8 +634,7 @@ public class RelOpExpression
             // delegate the operation to the constants
             try
                 {
-                Token.Id op          = isExcluding() ? Id.DOTDOTEX : operator.getId();
-                Constant constResult = expr1New.toConstant().apply(op, expr2New.toConstant());
+                Constant constResult = expr1New.toConstant().apply(operator.getId(), expr2New.toConstant());
                 aconstResult = fMulti
                         ? ((ArrayConstant) constResult).getValue() // divrem result is in a tuple
                         : new Constant[] {constResult};
@@ -697,7 +701,7 @@ public class RelOpExpression
             }
 
         String sMethod = getDefaultMethodName();
-        String sOp     = getOperatorString();
+        String sOp     = operator.getId().TEXT;
         if (expr1.testFit(ctx, typeRequired, false, null).isFit())
             {
             Set<MethodConstant> setOps = typeRequired.ensureTypeInfo().findOpMethods(sMethod, sOp, 1);
@@ -756,7 +760,7 @@ public class RelOpExpression
 
         // TODO find best, not just the first
         Set<MethodConstant> setOps = typeLeft.ensureTypeInfo().findOpMethods(
-                getDefaultMethodName(), getOperatorString(), 1);
+                getDefaultMethodName(), operator.getId().TEXT, 1);
         for (MethodConstant idMethod : setOps)
             {
             if (typeRequired != null &&
@@ -804,7 +808,7 @@ public class RelOpExpression
         Set<MethodConstant> setConvs = null;
         TypeInfo            info1    = type1.ensureTypeInfo(errs);
         String              sMethod  = getDefaultMethodName();
-        String              sOp      = getOperatorString();
+        String              sOp      = operator.getId().TEXT;
         for (MethodConstant method : info1.findOpMethods(sMethod, sOp, 1))
             {
             // determine if this method satisfies the types (param and return)
@@ -987,10 +991,20 @@ public class RelOpExpression
                 code.add(new GP_And(arg1, arg2, argLVal));
                 return;
 
-            case DOTDOT:
-                code.add(isExcluding()
-                        ? new GP_DotDotEx(arg1, arg2, argLVal)
-                        : new GP_DotDot  (arg1, arg2, argLVal));
+            case I_RANGE_I:
+                code.add(new GP_IRangeI(arg1, arg2, argLVal));
+                return;
+
+            case E_RANGE_I:
+                code.add(new GP_ERangeI(arg1, arg2, argLVal));
+                return;
+
+            case I_RANGE_E:
+                code.add(new GP_IRangeE(arg1, arg2, argLVal));
+                return;
+
+            case E_RANGE_E:
+                code.add(new GP_ERangeE(arg1, arg2, argLVal));
                 return;
 
             case SHL:
@@ -1077,11 +1091,19 @@ public class RelOpExpression
     // ----- helpers -------------------------------------------------------------------------------
 
     /**
-     * @return true iff the operator is the "excluding" dot-dot operator
+     * @return true iff the operator is a range operator
      */
-    boolean isExcluding()
+    boolean isRange()
         {
-        return operator.getId() == Id.DOTDOT && f_tokAfter != null && f_tokAfter.getId() == Id.R_PAREN;
+        return switch (operator.getId())
+            {
+            case I_RANGE_I -> true;
+            case E_RANGE_I -> true;
+            case I_RANGE_E -> true;
+            case E_RANGE_E -> true;
+
+            default -> false;
+            };
         }
 
     /**
@@ -1094,7 +1116,10 @@ public class RelOpExpression
             case BIT_AND           -> "and";
             case BIT_OR            -> "or";
             case BIT_XOR, COND_XOR -> "xor";
-            case DOTDOT            -> isExcluding() ? "toExcluding" : "to";
+            case I_RANGE_I         -> "to";
+            case E_RANGE_I         -> "exTo";
+            case I_RANGE_E         -> "toEx";
+            case E_RANGE_E         -> "exToEx";
             case SHL               -> "shiftLeft";
             case SHR               -> "shiftRight";
             case USHR              -> "shiftAllRight";
@@ -1106,16 +1131,6 @@ public class RelOpExpression
             case DIVREM            -> "divrem";
             default                -> throw new IllegalStateException();
             };
-        }
-
-    /**
-     * @return the operator string
-     */
-    public String getOperatorString()
-        {
-        return isExcluding()
-                ? Id.DOTDOTEX.TEXT
-                : operator.getId().TEXT;
         }
 
 

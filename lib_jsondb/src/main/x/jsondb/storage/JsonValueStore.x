@@ -316,7 +316,7 @@ service JsonValueStore<Value extends immutable Const>
                 lastCommitId = prepareId;
 
                 // remember the transaction location
-                storageLayout.put(lastCommitId, [offset+startPos .. offset+endPos));
+                storageLayout.put(lastCommitId, offset+startPos ..< offset+endPos);
                 }
             }
 
@@ -538,7 +538,7 @@ service JsonValueStore<Value extends immutable Const>
             {
             Token first = valueTokens[0];
             Token last  = valueTokens[valueTokens.size-1];
-            txLoc = [first.start.offset .. last.end.offset);
+            txLoc = first.start.offset ..< last.end.offset;
             }
 
         history.put(closest, value);
@@ -610,7 +610,7 @@ service JsonValueStore<Value extends immutable Const>
 
                             objectParser.expectKey("value");
                             (Token first, Token last) = objectParser.skipDoc();
-                            byTx.put(txId, [first.start.offset .. last.end.offset));
+                            byTx.put(txId, first.start.offset ..< last.end.offset);
                             }
                         }
                     }
@@ -694,7 +694,7 @@ service JsonValueStore<Value extends immutable Const>
 
         buf.append("}\n]");
 
-        return buf.toString(), [startPos .. endPos);
+        return buf.toString(), startPos ..< endPos;
         }
 
     /**
@@ -720,7 +720,7 @@ service JsonValueStore<Value extends immutable Const>
 
             buf.append(json[txLoc]);
 
-            newLoc.put(txId, [startPos .. buf.size));
+            newLoc.put(txId, startPos ..< buf.size);
 
             buf.add('}').add(',');
             }

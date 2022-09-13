@@ -155,24 +155,6 @@ const Range<Element extends Orderable>
         }
 
     /**
-     * @return the Range `[first..last]` (ignoring the values of both `this.lowerExclusive` and
-     *         `this.upperExclusive`)
-     */
-    Range! ensureInclusive()
-        {
-        return !firstExclusive & !lastExclusive ? this : [first..last];
-        }
-
-    /**
-     * @return the Range `[first..last)` (ignoring the values of both `this.lowerExclusive` and
-     *         `this.upperExclusive`)
-     */
-    Range! ensureExclusive()
-        {
-        return !firstExclusive & lastExclusive ? this : [first..last);
-        }
-
-    /**
      * Determine if the specified value exists within this range.
      */
     Boolean contains(Element value)

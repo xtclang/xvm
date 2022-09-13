@@ -180,7 +180,7 @@ const UIntN
             return this;
             }
 
-        return new UIntN(bits.fill(0, [0..bitLength-count)));
+        return new UIntN(bits.fill(0, 0 ..< bitLength-count));
         }
 
     @Override
@@ -196,7 +196,7 @@ const UIntN
             return this;
             }
 
-        return new UIntN(bits.fill(0, [count..bitLength)));
+        return new UIntN(bits.fill(0, count ..< bitLength));
         }
 
     @Override
@@ -265,7 +265,7 @@ const UIntN
         assert:bounds this <= Int8.maxvalue;
         return bitLength < 8
                 ? new Int8(new Array<Bit>(8, i -> i < 8-bitLength ? 0 : bits[i]))
-                : new Int8(bits[bitLength-8..bitLength));
+                : new Int8(bits[bitLength-8 ..< bitLength]);
         }
 
     @Override
@@ -274,7 +274,7 @@ const UIntN
         assert:bounds this <= Int16.maxvalue;
         return bitLength < 16
                 ? new Int16(new Array<Bit>(16, i -> i < 16-bitLength ? 0 : bits[i]))
-                : new Int16(bits[bitLength-16..bitLength));
+                : new Int16(bits[bitLength-16 ..< bitLength]);
         }
 
     @Override
@@ -283,7 +283,7 @@ const UIntN
         assert:bounds this <= Int32.maxvalue;
         return bitLength < 32
                 ? new Int32(new Array<Bit>(32, i -> i < 32-bitLength ? 0 : bits[i]))
-                : new Int32(bits[bitLength-32..bitLength));
+                : new Int32(bits[bitLength-32 ..< bitLength]);
         }
 
     @Override
@@ -292,7 +292,7 @@ const UIntN
         assert:bounds this <= Int64.maxvalue;
         return bitLength < 64
                 ? new Int64(new Array<Bit>(64, i -> i < 64-bitLength ? 0 : bits[i]))
-                : new Int64(bits[bitLength-64..bitLength));
+                : new Int64(bits[bitLength-64 ..< bitLength]);
         }
 
     @Override
@@ -301,7 +301,7 @@ const UIntN
         assert:bounds this <= Int128.maxvalue;
         return bitLength < 128
                 ? new Int128(new Array<Bit>(128, i -> i < 128-bitLength ? 0 : bits[i]))
-                : new Int128(bits[bitLength-128..bitLength));
+                : new Int128(bits[bitLength-128 ..< bitLength]);
         }
 
     @Override
@@ -321,7 +321,7 @@ const UIntN
         assert:bounds this <= UInt8.maxvalue;
         return bitLength < 8
                 ? new UInt8(new Array<Bit>(8, i -> i < 8-bitLength ? 0 : bits[i]))
-                : new UInt8(bits[bitLength-8..bitLength));
+                : new UInt8(bits[bitLength-8 ..< bitLength]);
         }
 
     @Override
@@ -330,7 +330,7 @@ const UIntN
         assert:bounds this <= UInt16.maxvalue;
         return bitLength < 16
                 ? new UInt16(new Array<Bit>(16, i -> i < 16-bitLength ? 0 : bits[i]))
-                : new UInt16(bits[bitLength-16..bitLength));
+                : new UInt16(bits[bitLength-16 ..< bitLength]);
         }
 
     @Override
@@ -339,7 +339,7 @@ const UIntN
         assert:bounds this <= UInt32.maxvalue;
         return bitLength < 32
                 ? new UInt32(new Array<Bit>(32, i -> i < 32-bitLength ? 0 : bits[i]))
-                : new UInt32(bits[bitLength-32..bitLength));
+                : new UInt32(bits[bitLength-32 ..< bitLength]);
         }
 
     @Override
@@ -348,7 +348,7 @@ const UIntN
         assert:bounds this <= UInt64.maxvalue;
         return bitLength < 64
                 ? new UInt64(new Array<Bit>(64, i -> i < 64-bitLength ? 0 : bits[i]))
-                : new UInt64(bits[bitLength-64..bitLength));
+                : new UInt64(bits[bitLength-64 ..< bitLength]);
         }
 
     @Override
@@ -357,7 +357,7 @@ const UIntN
         assert:bounds this <= UInt64.maxvalue;
         return bitLength < 128
                 ? new UInt128(new Array<Bit>(128, i -> i < 128-bitLength ? 0 : bits[i]))
-                : new UInt128(bits[bitLength-128..bitLength));
+                : new UInt128(bits[bitLength-128 ..< bitLength]);
         }
 
     @Override

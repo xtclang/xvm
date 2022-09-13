@@ -159,42 +159,6 @@ interface Reader
         return result;
         }
 
-    /**
-     * Returns a portion of this Reader, as a String.
-     *
-     * @param indexes  the range of indexes of this Reader to obtain a slice for, with both the
-     *                  `lowerBound` and the 'upperBound' of the range assumed to be inclusive;
-     *                  note that the `lowerExclusive` and `upperExclusive` properties of the
-     *                  range are ignored
-     *
-     * @return a slice of this Reader corresponding to the specified range of indexes
-     *
-     * @throws IOException  represents the general category of input/output exceptions
-     * @throws OutOfBounds  if the range indicates a slice that would contains illegal indexes
-     */
-    @Op("[[..]]") String sliceInclusive(Range<TextPosition> indexes)
-        {
-        return slice(indexes.ensureInclusive());
-        }
-
-    /**
-     * Returns a portion of this Reader, as a String.
-     *
-     * @param indexes  the range of indexes of this Reader to obtain a slice for, with the
-     *                  `lowerBound` of the range assumed to be inclusive, and the 'upperBound'
-     *                  of the range assumed to be exclusive; note that the `lowerExclusive` and
-     *                  `upperExclusive` properties of the range are ignored
-     *
-     * @return a slice of this Reader corresponding to the specified range of indexes
-     *
-     * @throws IOException  represents the general category of input/output exceptions
-     * @throws OutOfBounds  if the range indicates a slice that would contains illegal indexes
-     */
-    @Op("[[..)]") String sliceExclusive(Range<TextPosition> indexes)
-        {
-        return slice(indexes.ensureExclusive());
-        }
-
 
     // ----- bulk read operations ------------------------------------------------------------------
 

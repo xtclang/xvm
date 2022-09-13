@@ -120,12 +120,12 @@ const RegEx(String pattern, Int flags = 0)
             buffer.append("\\Q");
             do
                 {
-                buffer.append(input[current..slashEIndex)).append("\\E\\\\E\\Q");
+                buffer.append(input[current ..< slashEIndex]).append("\\E\\\\E\\Q");
                 current = slashEIndex + 2;
                 }
             while (slashEIndex := input.indexOf("\\E", current));
 
-            return buffer.append(input[current..input.size))
+            return buffer.append(input[current ..< input.size])
                          .append("\\E")
                          .toString();
             }

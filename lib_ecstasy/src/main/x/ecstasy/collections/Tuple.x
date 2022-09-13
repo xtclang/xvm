@@ -119,46 +119,11 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes>>
      * size, persistent, or const; in all cases, changes to the returned tuple will not affect this
      * tuple.
      *
-     * If the compile-time type of this tuple is known, and if the interval is a compile-time constant
-     * value, then the compile-time type of the returned tuple is known; otherwise, an explicit cast
-     * to a compile-time type is required to regain the compile-time type.
+     * If the compile-time type of this tuple is known, and if the interval is a compile-time
+     * constant value, then the compile-time type of the returned tuple is known; otherwise, an
+     * explicit cast to a compile-time type is required to regain the compile-time type.
      */
     @Op("[..]") Tuple!<> slice(Range<Int> interval);
-
-    /**
-     * Obtain a portion of the tuple as a tuple, using a range that will be treated as inclusive,
-     * in other words as `[..]`.
-     *
-     * The returned tuple is fixed size, persistent, or const based on whether this tuple is fixed
-     * size, persistent, or const; in all cases, changes to the returned tuple will not affect this
-     * tuple.
-     *
-     * If the compile-time type of this tuple is known, and if the interval is a compile-time constant
-     * value, then the compile-time type of the returned tuple is known; otherwise, an explicit cast
-     * to a compile-time type is required to regain the compile-time type.
-     */
-    @Op("[[..]]") Tuple!<> sliceInclusive(Range<Int> indexes)
-        {
-        return slice(indexes.ensureInclusive());
-        }
-
-    /**
-     * Obtain a portion of the tuple as a tuple, using a range that will be treated as inclusive
-     * first value to exclusive last value, in other words as `[..)`.
-     * Obtain a portion of the tuple as a tuple, using a range that will be treated as "[..)".
-     *
-     * The returned tuple is fixed size, persistent, or const based on whether this tuple is fixed
-     * size, persistent, or const; in all cases, changes to the returned tuple will not affect this
-     * tuple.
-     *
-     * If the compile-time type of this tuple is known, and if the interval is a compile-time constant
-     * value, then the compile-time type of the returned tuple is known; otherwise, an explicit cast
-     * to a compile-time type is required to regain the compile-time type.
-     */
-    @Op("[[..)]") Tuple!<> sliceExclusive(Range<Int> indexes)
-        {
-        return slice(indexes.ensureExclusive());
-        }
 
     /**
      * Creates and returns a new tuple that is a copy of this tuple, except with the specified
@@ -182,9 +147,9 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes>>
      * size, persistent, or const; in all cases, changes to the returned tuple will not affect this
      * tuple.
      *
-     * If the compile-time type of this tuple is known, and if the interval is a compile-time constant
-     * value, then the compile-time type of the returned tuple is known; otherwise, an explicit cast
-     * to a compile-time type is required to regain the compile-time type.
+     * If the compile-time type of this tuple is known, and if the interval is a compile-time
+     * constant value, then the compile-time type of the returned tuple is known; otherwise, an
+     * explicit cast to a compile-time type is required to regain the compile-time type.
      */
     Tuple!<> removeAll(Interval<Int> interval);
 
@@ -238,8 +203,8 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes>>
 
     /**
      * Return an `immutable const` tuple of the same element types and values as are present in this
-     * tuple. All mutating calls to a `const` tuple will result in the creation of a new tuple with the
-     * requested changes incorporated.
+     * tuple. All mutating calls to a `const` tuple will result in the creation of a new tuple with
+     * the requested changes incorporated.
      *
      * @throws Exception if any of the values in the tuple are neither immutable nor
      *         {@link Freezable}
@@ -261,7 +226,7 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes>>
         {
         buf.add('(');
 
-        for (Int i : [0..size))
+        for (Int i : 0 ..< size)
             {
             if (i > 0)
                 {
@@ -297,7 +262,7 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes>>
             return False;
             }
 
-        for (Int i : [0..c))
+        for (Int i : 0 ..< c)
             {
             val ref1 = value1.elementAt(i);
             val ref2 = value2.elementAt(i);

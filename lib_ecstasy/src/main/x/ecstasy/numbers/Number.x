@@ -191,8 +191,8 @@
      *
      * @param n  the divisor to divide this number by
      *
-     * @return the resulting modulo, in the range `[0..n)` for a positive divisor, and in the range
-     *         `(n..0]` for a negative divisor
+     * @return the resulting modulo, in the range `0..<n` for a positive divisor, and in the range
+     *         `n>..0` for a negative divisor
      *
      * @throws IllegalMath  if the requested operation cannot be performed for any reason
      */

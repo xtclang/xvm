@@ -286,7 +286,7 @@ mixin ByteArray<Element extends Byte>
                         {
                         assert:bounds index < size;
                         val offset = index * bytesPerNum;
-                        return NumType.new(bytes[offset..offset+bytesPerNum));
+                        return NumType.new(bytes[offset ..< offset+bytesPerNum]);
                         }
 
                     @Override
@@ -296,7 +296,7 @@ mixin ByteArray<Element extends Byte>
                             {
                             Byte[] newBytes = num.toByteArray();
                             Int    offset   = index * bytesPerNum;
-                            for (Int i : [0..bytesPerNum))
+                            for (Int i : 0 ..< bytesPerNum)
                                 {
                                 bytes[offset+i] = newBytes[i];
                                 }
@@ -317,7 +317,7 @@ mixin ByteArray<Element extends Byte>
         Translator delete(Int index)
             {
             Int offset = index * bytesPerNum;
-            Byte[] newBytes = bytes.deleteAll([offset..offset+bytesPerNum));
+            Byte[] newBytes = bytes.deleteAll(offset ..< offset+bytesPerNum);
             return &bytes == &newBytes ? this : new Translator<NumType>(newBytes);
             }
 

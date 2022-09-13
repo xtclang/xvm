@@ -74,7 +74,7 @@ class StringBuffer
             }
 
         assert:bounds 0 <= newSize < size;
-        chars.deleteAll([newSize..size));
+        chars.deleteAll(newSize ..< size);
         return this;
         }
 

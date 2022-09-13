@@ -81,7 +81,7 @@
     private Boolean exponentOnly1s.get()
         {
         Bit[] bitsL2R = toBitArray();
-        for (Bit bit : bitsL2R[1..exponentBitLength])
+        for (Bit bit : bitsL2R[1 .. exponentBitLength])
             {
             if (bit == 0)
                 {
@@ -94,7 +94,7 @@
     private Boolean significandOnly0s.get()
         {
         Bit[] bitsL2R = toBitArray();
-        for (Bit bit : bitsL2R[bitsL2R.size-significandBitLength..bitsL2R.size))
+        for (Bit bit : bitsL2R[bitsL2R.size-significandBitLength ..< bitsL2R.size])
             {
             if (bit == 1)
                 {

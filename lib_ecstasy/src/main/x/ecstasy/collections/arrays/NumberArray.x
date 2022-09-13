@@ -19,7 +19,7 @@ mixin NumberArray<Element extends Number>
         {
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] = -this[i];
                 }
@@ -45,7 +45,7 @@ mixin NumberArray<Element extends Number>
         {
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] += scalar;
                 }
@@ -74,7 +74,7 @@ mixin NumberArray<Element extends Number>
 
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] += that[i];
                 }
@@ -101,7 +101,7 @@ mixin NumberArray<Element extends Number>
         {
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] -= scalar;
                 }
@@ -130,7 +130,7 @@ mixin NumberArray<Element extends Number>
 
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] -= that[i];
                 }
@@ -157,7 +157,7 @@ mixin NumberArray<Element extends Number>
         {
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] *= scalar;
                 }
@@ -186,7 +186,7 @@ mixin NumberArray<Element extends Number>
 
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] *= that[i];
                 }
@@ -213,7 +213,7 @@ mixin NumberArray<Element extends Number>
         {
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] /= scalar;
                 }
@@ -242,7 +242,7 @@ mixin NumberArray<Element extends Number>
 
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] /= that[i];
                 }
@@ -269,7 +269,7 @@ mixin NumberArray<Element extends Number>
         {
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] %= scalar;
                 }
@@ -298,7 +298,7 @@ mixin NumberArray<Element extends Number>
 
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] %= that[i];
                 }
@@ -325,7 +325,7 @@ mixin NumberArray<Element extends Number>
         {
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] %= scalar;
                 }
@@ -354,7 +354,7 @@ mixin NumberArray<Element extends Number>
 
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] = this[i].remainder(that[i]);
                 }
@@ -383,7 +383,7 @@ mixin NumberArray<Element extends Number>
         Element[] quotients  = inPlace && this.inPlace ? this : new Element[size];
         Element[] remainders = new Element[size];
 
-        for (Int i : [0..size))
+        for (Int i : 0 ..< size)
             {
             (quotients[i], remainders[i]) = this[i] /% scalar;
             }
@@ -412,7 +412,7 @@ mixin NumberArray<Element extends Number>
         Element[] quotients  = inPlace && this.inPlace ? this : new Element[size];
         Element[] remainders = new Element[size];
 
-        for (Int i : [0..size))
+        for (Int i : 0 ..< size)
             {
             (quotients[i], remainders[i]) = this[i] /% that[i];
             }

@@ -37,7 +37,7 @@ const UriMatchTemplate(String             template,
         Int length = uri.size;
         if (length > 1 && uri[length - 1] == '/')
             {
-            uri = uri[0..length - 2];
+            uri = uri[0 ..< length - 1];
             }
 
         if (isRoot && (length == 0 || (length == 1 && uri[0] == '/')))
@@ -49,13 +49,13 @@ const UriMatchTemplate(String             template,
         // remove any url parameters before matching
         if (Int parameterIndex := uri.indexOf(UriTemplate.QUERY_OPERATOR))
             {
-            uri = uri[0..parameterIndex);
+            uri = uri[0 ..< parameterIndex];
             }
 
         // remove any trailing /
         if (uri[uri.size - 1] == '/')
             {
-            uri = uri.size > 1 ? uri[0..uri.size - 2] : "";
+            uri = uri.size > 1 ? uri[0 ..< uri.size - 1] : "";
             }
 
         if (Match match := matchRegEx.match(uri))

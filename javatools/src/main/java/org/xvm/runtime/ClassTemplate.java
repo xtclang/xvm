@@ -1855,15 +1855,27 @@ public abstract class ClassTemplate
         }
 
     @Override
-    public int invokeDotDot(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+    public int invokeIRangeI(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
         return getOpChain(frame, hTarget, "to", "..", hArg).invoke(frame, hTarget, hArg, iReturn);
         }
 
     @Override
-    public int invokeDotDotEx(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+    public int invokeERangeI(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
         {
-        return getOpChain(frame, hTarget, "toExcluding", "..<", hArg).invoke(frame, hTarget, hArg, iReturn);
+        return getOpChain(frame, hTarget, "exTo", ">..", hArg).invoke(frame, hTarget, hArg, iReturn);
+        }
+
+    @Override
+    public int invokeIRangeE(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        return getOpChain(frame, hTarget, "toEx", "..<", hArg).invoke(frame, hTarget, hArg, iReturn);
+        }
+
+    @Override
+    public int invokeERangeE(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+        {
+        return getOpChain(frame, hTarget, "exToEx", ">..<", hArg).invoke(frame, hTarget, hArg, iReturn);
         }
 
     @Override

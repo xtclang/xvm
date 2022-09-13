@@ -186,7 +186,7 @@ const Class<PublicType, ProtectedType extends PublicType,
         {
         String path       = this.path;
         assert Int colon := path.indexOf(':');
-        String moduleName = path[0 .. colon);
+        String moduleName = path[0 ..< colon];
         if (Module _module := typeSystem.moduleByQualifiedName.get(moduleName))
             {
             if (String modPath := typeSystem.modulePaths.get(_module))

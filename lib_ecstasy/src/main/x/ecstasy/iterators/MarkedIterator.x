@@ -171,7 +171,7 @@ class MarkedIterator<Element>(Iterator<Element> that)
                 {
                 if (position > 0)
                     {
-                    result = buffer[position..buffer.size).reify(mutability).addAll(additional);
+                    result = buffer[position ..< buffer.size].reify(mutability).addAll(additional);
                     buffer.clear();
                     position = 0;
                     }
@@ -196,7 +196,7 @@ class MarkedIterator<Element>(Iterator<Element> that)
             position = last + 1;
             result = first > last
                     ? []
-                    : buffer[first..last].reify(mutability);
+                    : buffer[first .. last].reify(mutability);
             }
 
         return result.toArray(mutability, True);

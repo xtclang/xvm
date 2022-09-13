@@ -81,7 +81,7 @@ module TestIO
         console.println("\n*** testPacked()");
 
         @PackedDataOutput ByteArrayOutputStream out = new @PackedDataOutput ByteArrayOutputStream();
-        for (Int i : [-150..+150])
+        for (Int i : -150 .. +150)
             {
             out.writeInt64(i);
             }
@@ -104,7 +104,7 @@ module TestIO
 
 
         @PackedDataInput ByteArrayInputStream in = new @PackedDataInput ByteArrayInputStream(out.bytes);
-        for (Int i : [-150..+150])
+        for (Int i : -150 .. +150)
             {
             assert in.readInt64() == i;
             }

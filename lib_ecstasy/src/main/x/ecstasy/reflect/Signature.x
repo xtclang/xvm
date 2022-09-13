@@ -148,7 +148,7 @@ interface Signature<ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tu
                 total += 2 + (count - first - 1) * 2; // parens + comma and space delimiters
                 }
 
-            for (Int i : [first..count))
+            for (Int i : first ..< count)
                 {
                 total += returns[i].estimateStringLength();
                 }
@@ -200,7 +200,7 @@ interface Signature<ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tu
                 buf.add('(');
                 }
 
-            EachReturn: for (Int i : [first..count))
+            EachReturn: for (Int i : first ..< count)
                 {
                 if (!EachReturn.first)
                     {

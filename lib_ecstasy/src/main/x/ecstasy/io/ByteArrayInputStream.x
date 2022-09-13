@@ -75,16 +75,15 @@ class ByteArrayInputStream
                     {
                     // take whatever bytes remain (as if we had read each byte until encountering
                     // an EndOfFile)
-                    bytes.replaceAll(offset, this.bytes[this.offset..size));
+                    bytes.replaceAll(offset, this.bytes[this.offset ..< size]);
                     this.offset = size;
                     }
                 throw new EndOfFile();
                 }
 
-            Int first = this.offset;
-            Int last  = first + count - 1;
-            this.offset = last + 1;
-            bytes.replaceAll(offset, this.bytes[first..last]);
+            Int first   = this.offset;
+            this.offset = first + count;
+            bytes.replaceAll(offset, this.bytes[first ..< this.offset]);
             }
         }
 

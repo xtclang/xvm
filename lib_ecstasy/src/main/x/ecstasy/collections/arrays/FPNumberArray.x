@@ -23,7 +23,7 @@ mixin FPNumberArray<Element extends FPNumber>
         {
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] = this[i].round(direction);
                 }
@@ -46,7 +46,7 @@ mixin FPNumberArray<Element extends FPNumber>
         {
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] = this[i].floor();
                 }
@@ -69,7 +69,7 @@ mixin FPNumberArray<Element extends FPNumber>
         {
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] = this[i].ceil();
                 }
@@ -92,7 +92,7 @@ mixin FPNumberArray<Element extends FPNumber>
         {
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] = this[i].exp();
                 }
@@ -118,7 +118,7 @@ mixin FPNumberArray<Element extends FPNumber>
         {
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] = this[i].scaleByPow(power);
                 }
@@ -146,7 +146,7 @@ mixin FPNumberArray<Element extends FPNumber>
 
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] = this[i].scaleByPow(powers[i]);
                 }
@@ -168,7 +168,7 @@ mixin FPNumberArray<Element extends FPNumber>
         {
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] = this[i].log();
                 }
@@ -190,7 +190,7 @@ mixin FPNumberArray<Element extends FPNumber>
         {
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] = this[i].log2();
                 }
@@ -212,7 +212,7 @@ mixin FPNumberArray<Element extends FPNumber>
         {
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] = this[i].log10();
                 }
@@ -234,7 +234,7 @@ mixin FPNumberArray<Element extends FPNumber>
         {
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] = this[i].sqrt();
                 }
@@ -256,7 +256,7 @@ mixin FPNumberArray<Element extends FPNumber>
         {
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] = this[i].cbrt();
                 }
@@ -278,7 +278,7 @@ mixin FPNumberArray<Element extends FPNumber>
         {
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] = this[i].sin();
                 }
@@ -300,7 +300,7 @@ mixin FPNumberArray<Element extends FPNumber>
         {
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] = this[i].cos();
                 }
@@ -322,7 +322,7 @@ mixin FPNumberArray<Element extends FPNumber>
         {
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] = this[i].tan();
                 }
@@ -344,7 +344,7 @@ mixin FPNumberArray<Element extends FPNumber>
         {
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] = this[i].asin();
                 }
@@ -366,7 +366,7 @@ mixin FPNumberArray<Element extends FPNumber>
         {
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] = this[i].acos();
                 }
@@ -388,7 +388,7 @@ mixin FPNumberArray<Element extends FPNumber>
         {
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] = this[i].atan();
                 }
@@ -414,7 +414,7 @@ mixin FPNumberArray<Element extends FPNumber>
 
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] = this[i].atan2(y[i]);
                 }
@@ -437,7 +437,7 @@ mixin FPNumberArray<Element extends FPNumber>
         {
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] = this[i].sinh();
                 }
@@ -460,7 +460,7 @@ mixin FPNumberArray<Element extends FPNumber>
         {
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] = this[i].cosh();
                 }
@@ -483,7 +483,7 @@ mixin FPNumberArray<Element extends FPNumber>
         {
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] = this[i].tanh();
                 }
@@ -505,7 +505,7 @@ mixin FPNumberArray<Element extends FPNumber>
         {
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] = this[i].asinh();
                 }
@@ -527,7 +527,7 @@ mixin FPNumberArray<Element extends FPNumber>
         {
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] = this[i].acosh();
                 }
@@ -549,7 +549,7 @@ mixin FPNumberArray<Element extends FPNumber>
         {
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] = this[i].atanh();
                 }
@@ -572,7 +572,7 @@ mixin FPNumberArray<Element extends FPNumber>
         {
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] = this[i].deg2rad();
                 }
@@ -595,7 +595,7 @@ mixin FPNumberArray<Element extends FPNumber>
         {
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] = this[i].rad2deg();
                 }

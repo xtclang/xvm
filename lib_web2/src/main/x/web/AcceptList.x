@@ -286,8 +286,8 @@ const AcceptList
             String rest;
             if (Int semi := text.indexOf(';'))
                 {
-                part = text[0..semi);
-                rest = text[semi+1 .. text.size);
+                part = text[0 ..< semi];
+                rest = text[semi >..< text.size];
                 }
             else
                 {
@@ -297,8 +297,8 @@ const AcceptList
 
             if (Int slash := part.indexOf('/'))
                 {
-                type    = part[0..slash).trim();
-                subtype = part[slash+1 .. part.size).trim();
+                type    = part[0 ..< slash].trim();
+                subtype = part[slash >..< part.size].trim();
                 if (!(type == "*" && subtype == "*"
                         || http.validToken(type) && (subtype == "*" || http.validToken(subtype))))
                     {
@@ -314,8 +314,8 @@ const AcceptList
                 {
                 if (Int semi := rest.indexOf(';'))
                     {
-                    part = rest[0..semi);
-                    rest = rest[semi+1 .. rest.size);
+                    part = rest[0 ..< semi];
+                    rest = rest[semi >..< rest.size];
                     }
                 else
                     {
@@ -325,8 +325,8 @@ const AcceptList
 
                 if (Int eq := part.indexOf('='))
                     {
-                    String key = part[0..eq).trim();
-                    String val = part[eq+1 .. part.size).trim();
+                    String key = part[0 ..< eq].trim();
+                    String val = part[eq >..< part.size].trim();
                     if (key.size == 0 || !http.validToken(key))
                         {
                         return False;

@@ -196,7 +196,7 @@ const Version
                         throw new IllegalArgument("version (" + version
                                 + ") must not begin with a version delimiter (" + ch + ")");
                         }
-                    parent = new Version(version[0..of));
+                    parent = new Version(version[0 ..< of]);
                     start  = of+1;
                     break scan;
 

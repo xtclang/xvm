@@ -428,18 +428,6 @@ class SkiplistMap<Key extends Orderable, Value>
         }
 
     @Override
-    @Op("[[..]]") OrderedMap<Key, Value> sliceInclusive(Range<Index> indexes)
-        {
-        return slice(indexes.ensureInclusive());
-        }
-
-    @Override
-    @Op("[[..)]") OrderedMap<Key, Value> sliceExclusive(Range<Index> indexes)
-        {
-        return slice(indexes.ensureExclusive());
-        }
-
-    @Override
     OrderedMap<Key, Value> reify()
         {
         return this;
@@ -914,7 +902,7 @@ class SkiplistMap<Key extends Orderable, Value>
                         // we have found the key, and the lowest level index that points to non-nil
                         // is pointing at the node with the key
                         found = True;
-                        for (level : [0..fromHeight))
+                        for (level : 0 ..< fromHeight)
                             {
                             fromNode = work.getWork(level);
                             if (fromNode != nil)
@@ -943,7 +931,7 @@ class SkiplistMap<Key extends Orderable, Value>
                         // level has a next pointer that points to a node that isn't past the key
                         // that we're finding
                         Int prevNode = -1;
-                        for (level : fromHeight-1..0)
+                        for (level : fromHeight >.. 0)
                             {
                             fromNode = work.getWork(level);
                             assert fromNode != nil;
@@ -1093,7 +1081,7 @@ class SkiplistMap<Key extends Orderable, Value>
     protected void linkWorkTo(Int node, Int height)
         {
         IndexStore nodes = this.nodes;
-        for (Int level : [0..height))
+        for (Int level : 0 ..< height)
             {
             Int fromNode   = nodes.getWork(level);
             Int fromHeight = nodes.heightOf(fromNode);
@@ -1116,7 +1104,7 @@ class SkiplistMap<Key extends Orderable, Value>
     protected void unlinkWork(Int removeNode, Int removeHeight)
         {
         IndexStore nodes = this.nodes;
-        for (Int level : [0..removeHeight))
+        for (Int level : 0 ..< removeHeight)
             {
             Int fromNode   = nodes.getWork(level);
             Int fromHeight = nodes.heightOf(fromNode);
@@ -1225,7 +1213,7 @@ class SkiplistMap<Key extends Orderable, Value>
             newValues.add(newNode, newHeight, val);
 
             // link it to the end of the linked lists (one link for each height of the new node)
-            for (Int level : [0..newHeight))
+            for (Int level : 0 ..< newHeight)
                 {
                 newNodes.setIndex(prevNode[level], prevHeight[level], level, newNode);
                 prevNode  [level] = newNode;
@@ -1237,7 +1225,7 @@ class SkiplistMap<Key extends Orderable, Value>
             }
 
         // terminate the linked lists
-        for (Int level : [0..maxHeight))
+        for (Int level : 0 ..< maxHeight)
             {
             newNodes.setIndex(prevNode[level], prevHeight[level], level, newNil);
             }
@@ -1453,11 +1441,11 @@ class SkiplistMap<Key extends Orderable, Value>
         finally
             {
             // worklist, headnode, and freelist are stored consecutively at the start of the array
-            elements.fill(toIndex(nil), [0..3*maxHeight));
+            elements.fill(toIndex(nil), 0 ..< 3*maxHeight);
 
             // the last index of a node must be negative, and the headnode is treated as a node
             // (except that it has no "values"); the head node is located at
-            // elements[maxHeight..2*maxHeight), i.e. it is the second chunk of the "header"
+            // elements[maxHeight..<2*maxHeight], i.e. it is the second chunk of the "header"
             elements[2*maxHeight-1] = toIndex(-nil);
             }
 
@@ -1546,7 +1534,7 @@ class SkiplistMap<Key extends Orderable, Value>
                     return False;
                     }
 
-                elements.fill(toIndex(nil), [node..node+size));
+                elements.fill(toIndex(nil), node ..< node+size);
                 }
             else
                 {
@@ -1680,7 +1668,7 @@ class SkiplistMap<Key extends Orderable, Value>
 
             Int start = node+height+valueOffset;
             Int end   = start+valueHeight;
-            return elements[start..end).asByteArray();
+            return elements[start ..< end].asByteArray();
             }
 
         @Override
@@ -1869,7 +1857,7 @@ class SkiplistMap<Key extends Orderable, Value>
 
             log.add("     work head free");
             log.add("     ==== ==== ====");
-            for (Int i : [0..maxHeight))
+            for (Int i : 0 ..< maxHeight)
                 {
                 Int work  = getWork(i);
                 Int index = getIndex(headNode, maxHeight, i);
@@ -1891,7 +1879,7 @@ class SkiplistMap<Key extends Orderable, Value>
                 StringBuffer sb = new StringBuffer();
                 sb += $"[{node}] height={height}, indexes=[";
 
-                for (Int i : [0..height))
+                for (Int i : 0 ..< height)
                     {
                     if (i > 0)
                         {
@@ -1902,7 +1890,7 @@ class SkiplistMap<Key extends Orderable, Value>
 
                 sb += "], values=[";
 
-                for (Int i : [0..valueHeight))
+                for (Int i : 0 ..< valueHeight)
                     {
                     if (i > 0)
                         {
@@ -2627,7 +2615,7 @@ class SkiplistMap<Key extends Orderable, Value>
                 return Null.as(Element);
                 }
 
-            return fromBytes(storage[0..bytesPerNum));
+            return fromBytes(storage[0 ..< bytesPerNum]);
             }
 
         @Override

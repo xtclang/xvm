@@ -31,7 +31,7 @@ mixin IntNumberArray<Element extends IntNumber>
         {
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] = this[i].leftmostBit;
                 }
@@ -54,7 +54,7 @@ mixin IntNumberArray<Element extends IntNumber>
         {
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] = this[i].rightmostBit;
                 }
@@ -80,7 +80,7 @@ mixin IntNumberArray<Element extends IntNumber>
         {
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] = toElement(this[i].leadingZeroCount);
                 }
@@ -106,7 +106,7 @@ mixin IntNumberArray<Element extends IntNumber>
         {
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] = toElement(this[i].trailingZeroCount);
                 }
@@ -128,7 +128,7 @@ mixin IntNumberArray<Element extends IntNumber>
         {
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] = toElement(this[i].bitCount);
                 }
@@ -151,7 +151,7 @@ mixin IntNumberArray<Element extends IntNumber>
         {
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] &= scalar;
                 }
@@ -177,7 +177,7 @@ mixin IntNumberArray<Element extends IntNumber>
 
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] &= that[i];
                 }
@@ -200,7 +200,7 @@ mixin IntNumberArray<Element extends IntNumber>
         {
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] |= scalar;
                 }
@@ -226,7 +226,7 @@ mixin IntNumberArray<Element extends IntNumber>
 
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] |= that[i];
                 }
@@ -249,7 +249,7 @@ mixin IntNumberArray<Element extends IntNumber>
         {
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] ^= scalar;
                 }
@@ -275,7 +275,7 @@ mixin IntNumberArray<Element extends IntNumber>
 
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] ^= that[i];
                 }
@@ -297,7 +297,7 @@ mixin IntNumberArray<Element extends IntNumber>
         {
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] = ~this[i];
                 }
@@ -322,7 +322,7 @@ mixin IntNumberArray<Element extends IntNumber>
         {
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] <<= count;
                 }
@@ -347,7 +347,7 @@ mixin IntNumberArray<Element extends IntNumber>
         {
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] >>= count;
                 }
@@ -372,7 +372,7 @@ mixin IntNumberArray<Element extends IntNumber>
         {
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] >>>= count;
                 }
@@ -395,7 +395,7 @@ mixin IntNumberArray<Element extends IntNumber>
         {
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] = this[i].rotateLeft(count);
                 }
@@ -418,7 +418,7 @@ mixin IntNumberArray<Element extends IntNumber>
         {
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] = this[i].rotateRight(count);
                 }

@@ -86,7 +86,7 @@ module TestArray
         list.setElement(0, "uno");
         console.println("list=" + list);
 
-        list = list[1..3);
+        list = list[1 ..< 3];
         console.println("list=" + list);
 
         list = new Array<String>(Fixed, list[0..1]);
@@ -348,7 +348,7 @@ module TestArray
 
         Int[] vals = [1, 2, 3, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 6, 7, 8];
         val col = new ecstasy.collections.ConstOrdinalList(vals);
-        for (Int i : [0..vals.size))
+        for (Int i : 0 ..< vals.size)
             {
             console.println($"col[{i}]={col[i]}");
             }

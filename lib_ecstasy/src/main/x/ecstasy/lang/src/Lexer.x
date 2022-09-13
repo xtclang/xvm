@@ -833,7 +833,7 @@ class Lexer
         if (year < 1582 || month < 1 || month > 12 || day < 1 || day > Date.daysInMonth(year, month))
             {
             TextPosition end  = reader.position;
-            String       date = reader[start..end);
+            String       date = reader[start ..< end];
             log(Error, BadDate, [date], before, end);
             return LitDate, new Date(1970, 1, 1);
             }
@@ -905,7 +905,7 @@ class Lexer
                 && (0 <= seconds <= 59 || minutes == 59 && seconds == 60)))
             {
             TextPosition end       = reader.position;
-            String       timeOfDay = reader[start..end);
+            String       timeOfDay = reader[start ..< end];
             log(Error, BadTimeOfDay, [timeOfDay], before, end);
             return LitTimeOfDay, MIDNIGHT;
             }
@@ -974,7 +974,7 @@ class Lexer
         if (!legit || hour > 16 || minute > 59)
             {
             TextPosition end      = reader.position;
-            String       timezone = reader[start..end);
+            String       timezone = reader[start ..< end];
             log(Error, BadTimezone, [timezone], before, end);
             return LitTimezone, NoTZ;
             }
@@ -1013,7 +1013,7 @@ class Lexer
             }
         else
             {
-            log(Error, BadTime, [reader[before..reader.position).toString()], before, reader.position);
+            log(Error, BadTime, [reader[before ..< reader.position].toString()], before, reader.position);
             }
 
         return LitTime, new Time(date, timeOfDay, timezone);
@@ -1120,7 +1120,7 @@ class Lexer
 
         if (err || !any)
             {
-            log(Error, BadTime, [reader[before..reader.position).toString()], before, reader.position);
+            log(Error, BadTime, [reader[before ..< reader.position].toString()], before, reader.position);
             return LitDuration, NONE;
             }
 
@@ -1274,7 +1274,7 @@ class Lexer
             return LitVersion, new Version("0");
             }
 
-        return LitVersion, new Version(reader[start..reader.position).toString());
+        return LitVersion, new Version(reader[start ..< reader.position].toString());
         }
 
     /**
@@ -1288,7 +1288,7 @@ class Lexer
     protected conditional Int eatDigits(Int digits)
         {
         Int n = 0;
-        for (Int i : 1..digits)
+        for (Int i : 0 ..< digits)
             {
             if (Char ch := nextDigit())
                 {
@@ -1296,11 +1296,10 @@ class Lexer
                 }
             else
                 {
-                Int          actual  = i-1;
                 TextPosition after   = reader.position;
-                rewind(actual);
+                rewind(i);
                 TextPosition before  = reader.position;
-                log(Error, ExpectedDigits, [digits, actual], before, after);
+                log(Error, ExpectedDigits, [digits, i], before, after);
                 reader.position = after;
                 return False;
                 }
@@ -1633,7 +1632,7 @@ class Lexer
             {
             if (trailingSpace > 0)
                 {
-                buf = buf[0..buf.size-trailingSpace);
+                buf = buf[0 ..< buf.size-trailingSpace];
                 }
             comment = buf.toString();
             }
@@ -1671,7 +1670,7 @@ class Lexer
             else if (asterisk && ch == '/')
                 {
                 // remove trailing asterisk, and remove both leading and trailing whitespace
-                String comment = buf.size > 0 ? buf[0..buf.size-1).toString().trim() : "";
+                String comment = buf.size > 0 ? buf[0 ..< buf.size-1].toString().trim() : "";
                 return (doc && comment.size > 0 ? DocComment : EncComment), comment;
                 }
             else
@@ -3033,7 +3032,7 @@ class Lexer
                 {
                 if (Int colon := text.indexOf(':'))
                     {
-                    String prefix = text[0..colon);
+                    String prefix = text[0 ..< colon];
                     if (!map.contains(prefix) && !allKeywords.contains(prefix))
                         {
                         map[text] = id;

@@ -151,7 +151,7 @@ service HttpHandler
 
         Boolean[] busy = this.busy;
         Int       next = lastIndex + 1;
-        for (Int i : [0..count))
+        for (Int i : 0 ..< count)
             {
             Int index = (i + next) % count;
             if (!busy[index])

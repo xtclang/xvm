@@ -39,7 +39,7 @@ mixin BitArray<Element extends Bit>
 
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] &= that[i];
                 }
@@ -66,7 +66,7 @@ mixin BitArray<Element extends Bit>
 
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] |= that[i];
                 }
@@ -93,7 +93,7 @@ mixin BitArray<Element extends Bit>
 
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] ^= that[i];
                 }
@@ -115,7 +115,7 @@ mixin BitArray<Element extends Bit>
         {
         if (inPlace && this.inPlace)
             {
-            for (Int i : [0..size))
+            for (Int i : 0 ..< size)
                 {
                 this[i] = ~this[i];
                 }
@@ -152,13 +152,13 @@ mixin BitArray<Element extends Bit>
                 {
                 if (count < size)
                     {
-                    for (Int i : [0..count))
+                    for (Int i : 0 ..< count)
                         {
                         this[i] = this[i+count];
                         }
                     }
 
-                fill(Zero, [(size-count).maxOf(0) .. size));
+                fill(Zero, (size-count).maxOf(0) ..< size);
                 }
 
             return this;
@@ -194,13 +194,13 @@ mixin BitArray<Element extends Bit>
                 {
                 if (count < size)
                     {
-                    for (Int i : size-1..count)
+                    for (Int i : size >.. count)
                         {
                         this[i] = this[i-count];
                         }
                     }
 
-                fill(this[0], 1..(count.minOf(size-1)));
+                fill(this[0], 1 .. count.minOf(size-1));
                 }
 
             return this;
@@ -237,13 +237,13 @@ mixin BitArray<Element extends Bit>
                 {
                 if (count < size)
                     {
-                    for (Int i : size-1..count)
+                    for (Int i : size >.. count)
                         {
                         this[i] = this[i-count];
                         }
                     }
 
-                fill(Zero, 0..(count.minOf(size-1)));
+                fill(Zero, 0 .. count.minOf(size-1));
                 }
 
             return this;
@@ -284,12 +284,12 @@ mixin BitArray<Element extends Bit>
                 // save off the portion that is going to rotate off of the left side
                 Element[] orig = new Element[count](i -> this[i]);
 
-                for (Int i : [0..cutoff))
+                for (Int i : 0 ..< cutoff)
                     {
                     this[i] = this[i+count];
                     }
 
-                for (Int i : [0..count))
+                for (Int i : 0 ..< count)
                     {
                     this[i+cutoff] = orig[i];
                     }
@@ -333,12 +333,12 @@ mixin BitArray<Element extends Bit>
                 // save off the portion that is going to rotate off of the right side
                 Element[] orig = new Element[count](i -> this[cutoff+i]);
 
-                for (Int i : [size-1..count])
+                for (Int i : size >.. count)
                     {
                     this[i] = this[i-count];
                     }
 
-                for (Int i : [0..count))
+                for (Int i : 0 ..< count)
                     {
                     this[i] = orig[i];
                     }
@@ -380,7 +380,7 @@ mixin BitArray<Element extends Bit>
      */
     conditional Int rightmostBit()
         {
-        for (Int i : size-1..0)
+        for (Int i : size >.. 0)
             {
             if (this[i] == 1)
                 {
@@ -397,7 +397,7 @@ mixin BitArray<Element extends Bit>
      */
     Int leadingZeroCount.get()
         {
-        for (Int count : [0..size))
+        for (Int count : 0 ..< size)
             {
             if (this[count] == 1)
                 {
@@ -416,7 +416,7 @@ mixin BitArray<Element extends Bit>
      */
     Int trailingZeroCount.get()
         {
-        for (Int count : [0..size))
+        for (Int count : 0 ..< size)
             {
             if (this[size - count - 1] == 1)
                 {
@@ -611,7 +611,7 @@ mixin BitArray<Element extends Bit>
                             {
                             assert:bounds assigned;
                             val offset = index * 4;
-                            return bits[offset..offset+4).toNibble();
+                            return bits[offset ..< offset+4].toNibble();
                             }
 
                         @Override
@@ -621,7 +621,7 @@ mixin BitArray<Element extends Bit>
                                 {
                                 Bit[] newBits = v.toBitArray();
                                 Int   offset  = index * 4;
-                                for (Int i : [0..4))
+                                for (Int i : 0 ..< 4)
                                     {
                                     bits[offset+i] = newBits[i];
                                     }
@@ -642,7 +642,7 @@ mixin BitArray<Element extends Bit>
             Translator delete(Int index)
                 {
                 Int offset = index * 4;
-                Bit[] newBits = bits.deleteAll([offset..offset+4));
+                Bit[] newBits = bits.deleteAll(offset ..< offset+4);
                 return &bits == &newBits ? this : new Translator(newBits);
                 }
 
@@ -724,7 +724,7 @@ mixin BitArray<Element extends Bit>
                             {
                             assert:bounds index < size;
                             val offset = index * 8;
-                            return bits[offset..offset+8).toByte();
+                            return bits[offset ..< offset+8].toByte();
                             }
 
                         @Override
@@ -734,7 +734,7 @@ mixin BitArray<Element extends Bit>
                                 {
                                 Bit[] newBits = v.toBitArray();
                                 Int   offset  = index * 8;
-                                for (Int i : [0..8))
+                                for (Int i : 0 ..< 8)
                                     {
                                     bits[offset+i] = newBits[i];
                                     }
@@ -755,7 +755,7 @@ mixin BitArray<Element extends Bit>
             Translator delete(Int index)
                 {
                 Int offset = index * 8;
-                Bit[] newBits = bits.deleteAll([offset..offset+8));
+                Bit[] newBits = bits.deleteAll(offset ..< offset+8);
                 return &bits == &newBits ? this : new Translator(newBits);
                 }
 
@@ -829,8 +829,8 @@ mixin BitArray<Element extends Bit>
                 return new Nibble(this);
 
             case Greater:
-                assert:bounds !this[0..size-4).contains(One);
-                return new Nibble(this[size-4..size));
+                assert:bounds !this[0 ..< size-4].contains(One);
+                return new Nibble(this[size-4 ..< size]);
             }
         }
 
@@ -860,8 +860,8 @@ mixin BitArray<Element extends Bit>
 
             case Greater:
                 // verify that the bit array is sign-extended
-                assert:bounds !this[0..size-8).contains(~this[size-8]);
-                return new Int8(this[size-8..size));
+                assert:bounds !this[0 ..< size-8].contains(~this[size-8]);
+                return new Int8(this[size-8 ..< size]);
             }
         }
 
@@ -884,8 +884,8 @@ mixin BitArray<Element extends Bit>
 
             case Greater:
                 // verify that the bit array is sign-extended
-                assert:bounds !this[0..size-16).contains(~this[size-16]);
-                return new Int16(this[size-16..size));
+                assert:bounds !this[0 ..< size-16].contains(~this[size-16]);
+                return new Int16(this[size-16 ..< size]);
             }
         }
 
@@ -908,8 +908,8 @@ mixin BitArray<Element extends Bit>
 
             case Greater:
                 // verify that the bit array is sign-extended
-                assert:bounds !this[0..size-32).contains(~this[size-32]);
-                return new Int32(this[size-32..size));
+                assert:bounds !this[0 ..< size-32].contains(~this[size-32]);
+                return new Int32(this[size-32 ..< size]);
             }
         }
 
@@ -932,8 +932,8 @@ mixin BitArray<Element extends Bit>
 
             case Greater:
                 // verify that the bit array is sign-extended
-                assert:bounds !this[0..size-64).contains(~this[size-64]);
-                return new Int64(this[size-64..size));
+                assert:bounds !this[0 ..< size-64].contains(~this[size-64]);
+                return new Int64(this[size-64 ..< size]);
             }
         }
 
@@ -956,8 +956,8 @@ mixin BitArray<Element extends Bit>
 
             case Greater:
                 // verify that the bit array is sign-extended
-                assert:bounds !this[0..size-128).contains(~this[size-128]);
-                return new Int128(this[size-128..size));
+                assert:bounds !this[0 ..< size-128].contains(~this[size-128]);
+                return new Int128(this[size-128 ..< size]);
             }
         }
 
@@ -999,8 +999,8 @@ mixin BitArray<Element extends Bit>
                 return new UInt8(this);
 
             case Greater:
-                assert:bounds !this[0..size-8).contains(One);
-                return new UInt8(this[size-8..size));
+                assert:bounds !this[0 ..< size-8].contains(One);
+                return new UInt8(this[size-8 ..< size]);
             }
         }
 
@@ -1021,8 +1021,8 @@ mixin BitArray<Element extends Bit>
                 return new UInt16(this);
 
             case Greater:
-                assert:bounds !this[0..size-16).contains(One);
-                return new UInt16(this[size-16..size));
+                assert:bounds !this[0 ..< size-16].contains(One);
+                return new UInt16(this[size-16 ..< size]);
             }
         }
 
@@ -1043,8 +1043,8 @@ mixin BitArray<Element extends Bit>
                 return new UInt32(this);
 
             case Greater:
-                assert:bounds !this[0..size-32).contains(One);
-                return new UInt32(this[size-32..size));
+                assert:bounds !this[0 ..< size-32].contains(One);
+                return new UInt32(this[size-32 ..< size]);
             }
         }
 
@@ -1065,8 +1065,8 @@ mixin BitArray<Element extends Bit>
                 return new UInt64(this);
 
             case Greater:
-                assert:bounds !this[0..size-64).contains(One);
-                return new UInt64(this[size-64..size));
+                assert:bounds !this[0 ..< size-64].contains(One);
+                return new UInt64(this[size-64 ..< size]);
             }
         }
 
@@ -1087,8 +1087,8 @@ mixin BitArray<Element extends Bit>
                 return new UInt128(this);
 
             case Greater:
-                assert:bounds !this[0..size-128).contains(One);
-                return new UInt128(this[size-128..size));
+                assert:bounds !this[0 ..< size-128].contains(One);
+                return new UInt128(this[size-128 ..< size]);
             }
         }
 

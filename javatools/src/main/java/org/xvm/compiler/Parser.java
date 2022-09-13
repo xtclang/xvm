@@ -3194,11 +3194,21 @@ public class Parser
     Expression parseRangeExpression(boolean fExtended)
         {
         Expression expr = parseBitwiseExpression(fExtended);
-        while (peek(Id.DOTDOT))
+        while (true)
             {
-            expr = new RelOpExpression(expr, current(), parseBitwiseExpression(fExtended));
+            switch (peek().getId())
+                {
+                case I_RANGE_I:
+                case E_RANGE_I:
+                case I_RANGE_E:
+                case E_RANGE_E:
+                    expr = new RelOpExpression(expr, current(), parseBitwiseExpression(fExtended));
+                    break;
+
+                default:
+                    return expr;
+                }
             }
-        return expr;
         }
 
     /**
@@ -3540,12 +3550,7 @@ public class Parser
                         {
                         // "someArray[3]"
                         List<Expression> indexes = parseExpressionList();
-                        Token tokClose = match(Id.R_PAREN);
-                        if (tokClose == null)
-                            {
-                            tokClose = expect(Id.R_SQUARE);
-                            }
-                        expr = new ArrayAccessExpression(expr, indexes, tokClose);
+                        expr = new ArrayAccessExpression(expr, indexes, expect(Id.R_SQUARE));
                         }
                     else
                         {
@@ -4534,21 +4539,6 @@ public class Parser
                                         Collections.singletonList(tokName), null, null, null, ofMap);
                                 return new MapExpression(exprType, keys, values, prev().getEndPosition());
                                 }
-                            // special handling for the possibility that this is a range, not an array
-                            else if (expr instanceof RelOpExpression exprRange
-                                    && ((RelOpExpression) expr).getOperator().getId() == Id.DOTDOT)
-                                {
-                                // it's a range, not an array, so it could have either a closing right
-                                // paren or right square bracket
-                                Token tokClose = match(Id.R_PAREN);
-                                if (tokClose == null)
-                                    {
-                                    tokClose = expect(Id.R_SQUARE);
-                                    }
-
-                                return new RelOpExpression(tokOpen, exprRange.getExpression1(),
-                                        exprRange.getOperator(), exprRange.getExpression2(), tokClose);
-                                }
                             }
 
                         expect(Id.R_SQUARE);
@@ -4561,28 +4551,17 @@ public class Parser
             case "Range":
             case "Interval":
                 {
-                Token tokOpen = match(Id.L_SQUARE);
-                if (tokOpen == null)
-                    {
-                    tokOpen = match(Id.L_PAREN);
-                    }
-
                 // parseRangeExpression() logic
                 Expression expr1     = parseBitwiseExpression(false);
-                Token      tokDotDot = expect(Id.DOTDOT);
-                Expression expr2     = parseBitwiseExpression(false);
-
-                Token tokClose = null;
-                if (tokOpen != null)
+                Token      tokDotDot = switch (peek().getId())
                     {
-                    tokClose = match(Id.R_PAREN);
-                    if (tokClose == null)
-                        {
-                        tokClose = expect(Id.R_SQUARE);
-                        }
-                    }
-
-                return new RelOpExpression(tokOpen, expr1, tokDotDot, expr2, tokClose);
+                    case E_RANGE_I -> current();
+                    case I_RANGE_E -> current();
+                    case E_RANGE_E -> current();
+                    default -> expect(Id.I_RANGE_I);
+                    };
+                Expression expr2     = parseBitwiseExpression(false);
+                return new RelOpExpression(expr1, tokDotDot, expr2);
                 }
 
             case "Map":

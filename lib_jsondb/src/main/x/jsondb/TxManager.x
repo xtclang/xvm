@@ -2641,7 +2641,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         logFile.parent?.ensure();
         initLogFile();
 
-        logInfos.add(new LogFileInfo(logFile.name, [1..1), 0, logFile.size, logFile.modified));
+        logInfos.add(new LogFileInfo(logFile.name, 1 ..< 1, 0, logFile.size, logFile.modified));
         writeStatus();
 
         return True;
@@ -2811,7 +2811,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 {
                 logInfos = firstIndex == logInfos.size
                         ? logInfos.clear()
-                        : logInfos.slice([firstIndex..logInfos.size)).reify(Mutable);
+                        : logInfos.slice(firstIndex ..< logInfos.size).reify(Mutable);
                 }
             }
         else
@@ -2886,7 +2886,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                                 .utf8();
 
             safepoint = safepoint.maxOf(0);
-            LogFileInfo info = new LogFileInfo(logFile.name, [lastTx+1..lastTx+1),
+            LogFileInfo info = new LogFileInfo(logFile.name, lastTx+1 ..< lastTx+1,
                                         safepoint, logFile.size, logFile.modified);
             if (logInfos[logInfos.size-1].name == logFile.name)
                 {
@@ -3164,7 +3164,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             }
 
         assert first >= 0 && safe >= 0 as $"Log file \"{logFile.name}\" is missing required header information";
-        return new LogFileInfo(logFile.name, first..last, safe, logFile.size, logFile.modified);
+        return new LogFileInfo(logFile.name, first .. last, safe, logFile.size, logFile.modified);
         }
 
     /**
@@ -3269,11 +3269,11 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         assert File rotatedFile := logFile.renameTo(rotatedName);
 
         LogFileInfo previousInfo = logInfos[logInfos.size-1];
-        LogFileInfo rotatedInfo  = new LogFileInfo(rotatedName, previousInfo.txIds.first..lastCommitted,
+        LogFileInfo rotatedInfo  = new LogFileInfo(rotatedName, previousInfo.txIds.first .. lastCommitted,
                 safepoint, rotatedFile.size, rotatedFile.modified);
 
         initLogFile();
-        LogFileInfo currentInfo = new LogFileInfo(logFile.name, [lastCommitted+1..lastCommitted+1),
+        LogFileInfo currentInfo = new LogFileInfo(logFile.name, lastCommitted+1 ..< lastCommitted+1,
                 safepoint, logFile.size, logFile.modified);
 
         logInfos[logInfos.size-1] = rotatedInfo;

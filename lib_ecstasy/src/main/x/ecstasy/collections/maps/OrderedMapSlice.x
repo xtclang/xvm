@@ -486,18 +486,6 @@ class OrderedMapSlice<Key extends Orderable, Value>
             }
 
         @Override
-        @Op("[[..]]") KeySet sliceInclusive(Range<Key> keys)
-            {
-            return this.OrderedMapSlice.sliceInclusive(keys).keys;
-            }
-
-        @Override
-        @Op("[[..)]") KeySet sliceExclusive(Range<Key> keys)
-            {
-            return this.OrderedMapSlice.sliceExclusive(keys).keys;
-            }
-
-        @Override
         OrderedSet<Key> reify()
             {
             return new SkiplistSet<Key>(size, this.OrderedMapSlice.compare).addAll(this);

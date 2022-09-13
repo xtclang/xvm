@@ -84,46 +84,33 @@ public class ArrayAccessExpression
         }
 
     /**
-     * @return true iff the array access is in the form of explicit "dot dot" range access (a slice)
-     *         with an inclusive upper bound
+     * @return true iff the array indexes indicate a slice operation
      */
-    public boolean isInclusiveSlice()
+    boolean isSliceOp()
         {
-        return tokClose.getId() == Id.R_SQUARE && isDotDotIndexes();
-        }
-
-    /**
-     * @return true iff the array access is in the form of explicit "dot dot" range access (a slice)
-     *         with an exclusive upper bound
-     */
-    public boolean isExclusiveSlice()
-        {
-        return tokClose.getId() == Id.R_PAREN && isDotDotIndexes();
-        }
-
-    /**
-     * @return true iff all of the indexes are "dot dot" range expressions
-     */
-    public boolean isDotDotIndexes()
-        {
-        for (Expression expr : indexes)
+        for (Expression index : indexes)
             {
-            if (!(expr instanceof RelOpExpression && ((RelOpExpression) expr).getOperator().getId() == Id.DOTDOT))
+            if (index instanceof RelOpExpression expr)
                 {
-                return false;
+                switch (expr.operator.getId())
+                    {
+                    case I_RANGE_I:
+                    case E_RANGE_I:
+                    case I_RANGE_E:
+                    case E_RANGE_E:
+                        return true;
+                    }
                 }
             }
-
-        return true;
+        return false;
         }
-
 
     // ----- LValue methods ------------------------------------------------------------------------
 
     @Override
     public boolean isLValueSyntax()
         {
-        return !isExclusiveSlice();
+        return !isSliceOp();
         }
 
     @Override
@@ -261,7 +248,7 @@ public class ArrayAccessExpression
                     //                            this:type) and index could be a Range<Int>
 
                     // array[index]
-                    if (!isExclusiveSlice() && exprIndex.testFit(ctx, pool.typeCInt64(), fExhaustive, null).isFit())
+                    if (!isSliceOp() && exprIndex.testFit(ctx, pool.typeCInt64(), fExhaustive, null).isFit())
                         {
                         return exprTarget.testFit(ctx, pool.ensureParameterizedTypeConstant(
                                 pool.typeList(), typeRequired), fExhaustive, errs);
@@ -281,7 +268,7 @@ public class ArrayAccessExpression
                     //  UniformIndexed       - test if target could be
                     //                         UniformIndexed<indexes[0], typeRequired>
                     //      Index -> Element - indexes[0] must have an implicit type
-                    if (!isExclusiveSlice() && testType(ctx, exprTarget, typeTarget, pool.typeIndexed()))
+                    if (!isSliceOp() && testType(ctx, exprTarget, typeTarget, pool.typeIndexed()))
                         {
                         // figure out the index type
                         TypeConstant typeIndex = estimateIndexType(ctx, typeTarget, "Index", exprIndex);
@@ -317,7 +304,7 @@ public class ArrayAccessExpression
                 //                      Map<indexes[0], typeRequired>
                 //      Key -> Value  - indexes[0] must have an implicit type, or typeTarget has to
                 //                      have a known Value type parameter
-                if (typeTarget != null && !isExclusiveSlice()
+                if (typeTarget != null && !isSliceOp()
                         && testType(ctx, exprTarget, typeTarget, pool.typeMap()))
                     {
                     TypeConstant typeValue = typeTarget.resolveGenericType("Value");
@@ -392,7 +379,7 @@ public class ArrayAccessExpression
                 {
                 // array[index]
                 TypeConstant typeElement = null;
-                if (!isExclusiveSlice() && aexprIndexes[0].testFit(ctx, pool.typeCInt64(), false, null).isFit())
+                if (!isSliceOp() && aexprIndexes[0].testFit(ctx, pool.typeCInt64(), false, null).isFit())
                     {
                     typeElement = typeRequired;
                     }
@@ -844,40 +831,22 @@ public class ArrayAccessExpression
 
     private Set<MethodConstant> findPotentialOps(TypeInfo infoTarget, int cArgs)
         {
-        if (isInclusiveSlice())
-            {
-            // it is possible that the interval is the index type of the array
-            Set<MethodConstant> setGet   = infoTarget.findOpMethods("getElement", "[]", cArgs);
-            Set<MethodConstant> setSlice = infoTarget.findOpMethods("sliceInclusive", "[[..]]", cArgs);
-            return combineSets(setGet, setSlice);
-            }
-        else if (isExclusiveSlice())
-            {
-            return infoTarget.findOpMethods("sliceExclusive", "[[..)]", cArgs);
-            }
-        else
-            {
-            Set<MethodConstant> setGet   = infoTarget.findOpMethods("getElement", "[]", cArgs);
-            Set<MethodConstant> setSlice = infoTarget.findOpMethods("slice", "[..]", cArgs);
-            return combineSets(setGet, setSlice);
-            }
-        }
+        Set<MethodConstant> setGet   = infoTarget.findOpMethods("getElement", "[]", cArgs);
+        Set<MethodConstant> setSlice = infoTarget.findOpMethods("slice", "[..]", cArgs);
 
-    private Set<MethodConstant> combineSets(Set<MethodConstant> set1, Set<MethodConstant> set2)
-        {
-        if (set1.isEmpty())
+        if (setGet.isEmpty())
             {
-            return set2;
+            return setSlice;
             }
 
-        if (set2.isEmpty())
+        if (setSlice.isEmpty())
             {
-            return set1;
+            return setGet;
             }
 
         HashSet<MethodConstant> setUnion = new HashSet<>();
-        setUnion.addAll(set1);
-        setUnion.addAll(set2);
+        setUnion.addAll(setGet);
+        setUnion.addAll(setSlice);
         return setUnion;
         }
 
@@ -946,6 +915,7 @@ public class ArrayAccessExpression
             {
             if (cParams > 0)
                 {
+                // TODO GG: what does the following comment mean?
                 // TODO: add support for parameters with default values
                 TypeConstant[] atypeOpParams = idOp.getRawParams();
                 int            cOpParams     = atypeOpParams.length;
@@ -1078,18 +1048,28 @@ public class ArrayAccessExpression
             }
 
         // type of "tup[lo..hi]" is a tuple of field types
+        RangeConstant range;
         int nLo;
         int nHi;
         try
             {
-// TODO CP
-            RangeConstant range = (RangeConstant) constIndex.convertTo(pool.typeInterval());
+            range = (RangeConstant) constIndex.convertTo(pool.typeInterval());
             nLo = range.getFirst().convertTo(pool.typeCInt64()).getIntValue().getInt();
             nHi = range.getLast().convertTo(pool.typeCInt64()).getIntValue().getInt();
             }
         catch (RuntimeException e)
             {
             return null;
+            }
+
+        boolean fReverse = nLo > nHi;
+        if (range.isFirstExcluded())
+            {
+            nLo = fReverse ?  nLo - 1 : nLo + 1;
+            }
+        if (range.isLastExcluded())
+            {
+            nHi = fReverse ?  nHi + 1 : nHi - 1;
             }
 
         int cFields = listFields.size();
@@ -1099,9 +1079,9 @@ public class ArrayAccessExpression
             return null;
             }
 
-        int            cSlice     = Math.abs(nHi - nLo) + 1;
+        int            cSlice     = Math.max(0, fReverse ? nLo - nHi + 1 : nHi - nLo + 1);
         TypeConstant[] atypeSlice = new TypeConstant[cSlice];
-        int            cStep      = nHi >= nLo ? +1 : -1;
+        int            cStep      = fReverse ? -1 : +1;
         for (int iSrc = nLo, iDest = 0; iDest < cSlice; ++iDest, iSrc += cStep)
             {
             atypeSlice[iDest] = listFields.get(iSrc);
@@ -1234,7 +1214,34 @@ public class ArrayAccessExpression
 
         if (exprIndex instanceof RelOpExpression exprInterval)
             {
-            if (exprInterval.getOperator().getId() == Id.DOTDOT)
+            boolean slice = false;
+            boolean fExLo = false;
+            boolean fExHi = false;
+
+            switch (exprInterval.operator.getId())
+                {
+                case I_RANGE_I:
+                    slice = true;
+                    break;
+
+                case E_RANGE_I:
+                    slice = true;
+                    fExLo = true;
+                    break;
+
+                case I_RANGE_E:
+                    slice = true;
+                    fExHi = true;
+                    break;
+
+                case E_RANGE_E:
+                    slice = true;
+                    fExLo = true;
+                    fExHi = true;
+                    break;
+                }
+
+            if (slice)
                 {
                 // need both the left & right expressions, and they must both be
                 // constant or of the LiteralExpression form
@@ -1242,7 +1249,7 @@ public class ArrayAccessExpression
                 Constant constHi = fromLiteral(exprInterval.getExpression2());
                 if (constLo != null && constHi != null)
                     {
-                    return pool().ensureRangeConstant(constLo, constHi);   // TODO CP
+                    return pool().ensureRangeConstant(constLo, fExLo, constHi, fExHi);
                     }
                 }
             }

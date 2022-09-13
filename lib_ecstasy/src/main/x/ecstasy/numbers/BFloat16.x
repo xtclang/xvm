@@ -57,8 +57,8 @@ const BFloat16
         assert:bounds EMIN <= exponent <= EMAX;
 
         Bit[] signBits = signBit ? [1] : [0];
-        Bit[] expBits  = (exponent + BIAS).toBitArray()[64-EXP_BITS..64);
-        Bit[] sigBits  = (significand << (SIG_BITS - (sigCount-1))).toBitArray()[64-SIG_BITS..64);
+        Bit[] expBits  = (exponent + BIAS).toBitArray()[64-EXP_BITS ..< 64];
+        Bit[] sigBits  = (significand << (SIG_BITS - (sigCount-1))).toBitArray()[64-SIG_BITS ..< 64];
         construct BFloat16(signBits + expBits + sigBits);
         }
 

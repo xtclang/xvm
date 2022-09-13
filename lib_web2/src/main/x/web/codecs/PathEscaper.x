@@ -48,7 +48,7 @@ const PathEscaper(Boolean singleSegment)
 
                     Byte[] utf8 = new Byte[](size);
                     utf8[0] = ch.toUInt8();
-                    for (Int i : [1..size))
+                    for (Int i : 1 ..< size)
                         {
                         assert ch := stream.next(), ch == '%' as "Invalid UTF-8 sequence";
                         ch = readEscapedChar(stream);

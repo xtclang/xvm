@@ -70,11 +70,11 @@ const TimeOfDay(Int picos)
                 Int len = text.size;
                 if (len >= 4)
                     {
-                    hours = text[0..1];
-                    mins  = text[2..3];
+                    hours = text[0 .. 1];
+                    mins  = text[2 .. 3];
                     if (len > 4)
                         {
-                        secs = text[4..len);
+                        secs = text[4 ..< len];
                         }
                     break;
                     }
@@ -97,16 +97,16 @@ const TimeOfDay(Int picos)
                 {
                 if (dot > 0)
                     {
-                    sec = new IntLiteral(secs[0..dot));
+                    sec = new IntLiteral(secs[0 ..< dot]);
                     }
 
                 Int len = secs.size;
                 if (dot < len-1)
                     {
-                    String picos = secs[dot+1..len);
+                    String picos = secs[dot >..< len];
                     if (picos.size > 12)
                         {
-                        picos = picos[0..12);
+                        picos = picos[0 ..< 12];
                         }
 
                     pico = new IntLiteral(picos) * SCALE_10[picos.size];

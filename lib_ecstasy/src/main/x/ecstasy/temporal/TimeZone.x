@@ -85,7 +85,7 @@ const TimeZone(Int picos, String? name = Null)
                 {
                 if (colon > 1 && colon < tz.size-1)
                     {
-                    hours = new IntLiteral(tz[1..colon));
+                    hours = new IntLiteral(tz[1 ..< colon]);
                     mins  = new IntLiteral(tz.substring(colon+1));
                     }
                 }

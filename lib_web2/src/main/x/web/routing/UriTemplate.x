@@ -361,7 +361,7 @@ const UriTemplate
                         {
                         case String:
                             checkComma();
-                            render(buf, (value[0..var.maxLength?) : value));
+                            render(buf, (value[0 ..< var.maxLength?] : value));
                             break;
 
                         case List<String>:
@@ -660,7 +660,7 @@ const UriTemplate
 
             return needsVarChar
                     ? False
-                    : (True, template[start..offset), offset);
+                    : (True, template[start ..< offset], offset);
             }
 
         /**
@@ -699,7 +699,7 @@ const UriTemplate
                     }
                 }
 
-            return True, template[start..offset), offset;
+            return True, template[start ..< offset], offset;
             }
         }
 

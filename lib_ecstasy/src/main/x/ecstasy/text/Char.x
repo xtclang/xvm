@@ -54,7 +54,7 @@ const Char(UInt32 codepoint)
                     }
                 codepoint &= 0b11111 >>> 5 - bits;
 
-                for (Int i : [1..length))
+                for (Int i : 1 ..< length)
                     {
                     Byte b = utf8[i];
                     if (b & 0b11000000 != 0b10000000)
@@ -682,7 +682,7 @@ const Char(UInt32 codepoint)
      * Determine if the character is an ASCII digit, one of the values '0'..'9'.
      *
      * @return True iff the character is an ASCII digit
-     * @return (conditional) a value in the range `[0..9]`
+     * @return (conditional) a value in the range `0..9`
      */
     conditional UInt8 asciiDigit()
         {
@@ -694,11 +694,11 @@ const Char(UInt32 codepoint)
         }
 
     /**
-     * Determine if the character is an ASCII hexit, one of the values `['0'..'9']`, `['A'..'F']`,
-     * or `['a'..'f']`.
+     * Determine if the character is an ASCII hexit, one of the values `'0'..'9'`, `'A'..'F'`,
+     * or `'a'..'f'`.
      *
      * @return True iff the character is an ASCII hexadecimal digit (a "hexit")
-     * @return (conditional) a value in the range `[0..15]`
+     * @return (conditional) a value in the range `0..15`
      */
     conditional UInt8 asciiHexit()
         {
@@ -961,7 +961,7 @@ const Char(UInt32 codepoint)
         }
 
     /**
-     * The value in the range `[0..9]` that represents the decimal value of this character.
+     * The value in the range `0..9` that represents the decimal value of this character.
      *
      * > If the character has the property value Numeric_Type=Decimal, then the Numeric_Value of
      * > that digit is represented with an integer value (limited to the range 0..9) in fields 6, 7,

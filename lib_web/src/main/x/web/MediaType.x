@@ -24,7 +24,7 @@ const MediaType
         if (name.indexOf(";"))
             {
             String[] tokenWithArgs = name.split(';');
-            String[] paramsList    = tokenWithArgs[1..tokenWithArgs.size);
+            String[] paramsList    = tokenWithArgs[1 ..< tokenWithArgs.size];
             withoutArgs = tokenWithArgs[0];
             for (String param : paramsList)
                 {
@@ -42,7 +42,7 @@ const MediaType
 
         if (Int index := withoutArgs.indexOf('/'))
             {
-            this.type    = index == 0 ? "" : withoutArgs[0..index);
+            this.type    = index == 0 ? "" : withoutArgs[0 ..< index];
             this.subType = withoutArgs.substring(index + 1);
             }
         else

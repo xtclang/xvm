@@ -108,7 +108,7 @@ const DirectoryFileStore(Directory origDir, Boolean readOnly = False)
         Path add  = path.normalize();
         return switch (add[0].form)
             {
-            case Root:    add.size > 1 ? base + add[1..add.size) : base;
+            case Root:    add.size > 1 ? base + add[1 ..< add.size] : base;
             case Parent:  assert;
             case Current: assert;
             case Name:    base + add;
@@ -134,7 +134,7 @@ const DirectoryFileStore(Directory origDir, Boolean readOnly = False)
             Int fullSize = fullPath.size;
             return True, fullSize == baseSize
                     ? Path.ROOT
-                    : fullPath[baseSize..fullSize).resolve(Path.ROOT);
+                    : fullPath[baseSize ..< fullSize].resolve(Path.ROOT);
             }
 
         return False;

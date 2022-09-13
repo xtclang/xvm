@@ -88,7 +88,7 @@ class ConsoleAppender(Console console, Boolean flushAlways = False)
                         {
                         case (False, False):
                             // buffer and part of the array to print; part of the array to retain
-                            buf += chars[0..i);
+                            buf += chars[0 ..< i];
                             console.print(new String(buf));
                             buf.clear().addAll(chars[i+1..chars.size-1]);
                             break;
@@ -102,7 +102,7 @@ class ConsoleAppender(Console console, Boolean flushAlways = False)
 
                         case (True, False):
                             // no buffer; part of the array to print; part of the array to retain
-                            console.print(toStr(chars[0..i)));
+                            console.print(toStr(chars[0 ..< i]));
                             buf.addAll(chars[i+1..chars.size-1]);
                             break;
 

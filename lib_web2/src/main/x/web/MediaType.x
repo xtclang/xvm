@@ -264,8 +264,8 @@ const MediaType
         String rest;
         if (Int semi := text.indexOf(';'))
             {
-            part = text[0..semi);
-            rest = text[semi+1 .. text.size);
+            part = text[0 ..< semi];
+            rest = text[semi >..< text.size];
             }
         else
             {
@@ -275,8 +275,8 @@ const MediaType
 
         if (Int slash := part.indexOf('/'))
             {
-            type    = part[0..slash).trim();
-            subtype = part[slash+1 .. part.size).trim();
+            type    = part[0 ..< slash].trim();
+            subtype = part[slash >..< part.size].trim();
             if (!(http.validToken(type) && http.validToken(subtype)))
                 {
                 return False;
@@ -291,8 +291,8 @@ const MediaType
             {
             if (Int semi := rest.indexOf(';'))
                 {
-                part = rest[0..semi);
-                rest = rest[semi+1 .. rest.size);
+                part = rest[0 ..< semi];
+                rest = rest[semi >..< rest.size];
                 }
             else
                 {
@@ -302,8 +302,8 @@ const MediaType
 
             if (Int eq := part.indexOf('='))
                 {
-                String key = part[0..eq).trim();
-                String val = part[eq+1 .. part.size).trim();
+                String key = part[0 ..< eq].trim();
+                String val = part[eq >..< part.size].trim();
                 if (key.size == 0 || key == "q" || key == "Q" || !http.validToken(key))
                     {
                     // the quality key ("q") is reserved for use by the Accept header, and must not
