@@ -2,6 +2,7 @@
  * Represents an IPv4 or an IPv6 address.
  */
 const IPAddress(Byte[] bytes)
+        implements Destringable
     {
     // ----- predefined IPAddress values -----------------------------------------------------------
 
@@ -33,6 +34,7 @@ const IPAddress(Byte[] bytes)
      *
      * @param text  the String containing the IP address
      */
+    @Override
     construct(String text)
         {
         (Boolean success, this.bytes, String? error) = parse(text);

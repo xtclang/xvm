@@ -4,6 +4,7 @@
  * @see: https://www.ietf.org/rfc/rfc2396.txt
  */
 const URI
+        implements Destringable
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -12,6 +13,7 @@ const URI
      *
      * @param text  the URI
      */
+    @Override
     construct(String text)
         {
         (Boolean    success,
