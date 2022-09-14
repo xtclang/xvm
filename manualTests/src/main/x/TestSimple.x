@@ -18,6 +18,12 @@ module TestSimple
 
         fail(Duration, "3:22:22:22");
         fail(Duration, "3D22:22:22");
+
+        test(Int32, "-255");
+        test(UInt32, "12345");
+// TODO GG test(Float32, "123.45");
+// TODO GG test(Dec64, "-123.45");
+        test(Char, "x");
         }
 
     <Value extends Destringable> void test(Type<Value> type, String text)

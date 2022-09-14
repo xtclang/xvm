@@ -4,6 +4,7 @@ import io.IllegalUTF;
 
 const Char(UInt32 codepoint)
         implements Sequential
+        implements Destringable
         default('\u0000')
     {
     // ----- constructors --------------------------------------------------------------------------
@@ -91,6 +92,13 @@ const Char(UInt32 codepoint)
     construct(Int n)
         {
         construct Char(codepoint.toUInt32());
+        }
+
+    @Override
+    construct(String text)
+        {
+        assert:arg text.size == 1;
+        construct Char(text[0].codepoint);
         }
 
 

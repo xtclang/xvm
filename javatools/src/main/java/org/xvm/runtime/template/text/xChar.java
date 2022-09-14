@@ -98,6 +98,17 @@ public class xChar
             return constructHandle(frame, hCodepoint.getValue(), iReturn);
             }
 
+        if (hArg instanceof xString.StringHandle hText)
+            {
+            char[] ach = hText.getValue();
+            if (ach.length != 1)
+                {
+                return frame.raiseException("illegal argument: String has length=" + ach.length);
+                }
+
+            return constructHandle(frame, ach[0], iReturn);
+            }
+
         byte[] ab = xByteArray.getBytes((ArrayHandle) hArg);
         try
             {
