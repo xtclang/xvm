@@ -4,58 +4,38 @@ module TestSimple
 
     void run()
         {
-        import ecstasy.reflect.*;
+        test(Int, "42");
+        test(String, "hello");
+        test(IntLiteral, "42");
+        test(FPLiteral, "1.23");
+        test(Date, Date:2022-12-25.toString());
+        test(Time, Time:2024-02-29T12:34:56.toString());
+        test(TimeOfDay, TimeOfDay:12:34:56.789.toString());
+        test(Duration, Duration:10s.toString());
+        test(Duration, "60s");
+        test(Duration, "1:11");
+        test(Duration, "222:22:22");
 
-        Type type = TestClass;
-        for (Method m : type.methods)
-            {
-            if (m.is(Test))
-                {
-                console.println($"\"{m}\" is annotated with @Test({m.group})");
-                }
-            }
-        for (Function f : type.constructors)
-            {
-            if (f.is(Test))
-                {
-                console.println($"constructor \"{f}\" is annotated with @Test({f.group})");
-                }
-            }
-        for (Function f : type.functions)
-            {
-            if (f.is(Test))
-                {
-                console.println($"function \"{f}\" is annotated with @Test({f.group})");
-                }
-            }
+        fail(Duration, "3:22:22:22");
+        fail(Duration, "3D22:22:22");
         }
 
-    @Test
-    void methodInModule()
+    <Value extends Destringable> void test(Type<Value> type, String text)
         {
+        console.println($"type={type}, input={text}, output={new Value(text)}");
         }
 
-    class TestClass(String value)
+    <Value extends Destringable> void fail(Type<Value> type, String text)
         {
-        @Test(Test.Unit)
-        construct()
+        try
             {
-            value = "Default";
+            test(type, text);
             }
-
-        @Test
-        void testMethod()
+        catch (Exception e)
             {
+            console.println($"type={type}, input={text}, exception: {e}");
+            return;
             }
-
-        @Test(Test.Omit)
-        void omittedMethod()
-            {
-            }
-
-        @Test(Test.Slow)
-        static void testFunction()
-            {
-            }
+        console.println("DID NOT THROW!!!");
         }
     }

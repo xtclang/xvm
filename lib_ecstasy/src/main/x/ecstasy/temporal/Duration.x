@@ -36,18 +36,21 @@ const Duration(UInt128 picoseconds)
         //     P   nD  T   nH  nM  n.  nS
         //   0   1   2   3   4   5   6   7
 
-        UInt128 total  = 0;
-        Int     index  = 0;
-        Int     length = duration.size;
-        Int     last   = length -1;
-        Int     stage  = 0;
-        Boolean any    = False;
+        UInt128 total   = 0;
+        Int     index   = 0;
+        Int     length  = duration.size;
+        Int     last    = length -1;
+        Int     stage   = 0;
+        Boolean any     = False;    // set to True if any data has been encountered
+        Boolean iso     = False;    // set to True if any of the ISO indicators are encountered
+        Int     colons  = 0;        // count of the ':' characters encountered
+        UInt128 seconds = 0;        // only used for ':' delimited string
 
         Loop: while (index < length)
             {
             switch (Char ch = duration[index++])
                 {
-                case 'P':
+                case 'P', 'p':
                     // while 'P' is required per the ISO-8601 specification, this constructor is
                     // only used for duration values, so
                     assert:arg stage == 0 as
@@ -55,14 +58,16 @@ const Duration(UInt128 picoseconds)
                              | 'P': {duration.quoted()}
                             ;
                     stage = 1;
+                    iso   = True;
                     break;
 
-                case 'T':
+                case 'T', 't':
                     assert:arg stage < 3 as
                             $|Duration includes 'T' to separate date from time-of-day components,\
                              | and must contain no other occurrences of 'T': {duration.quoted()}
                             ;
                     stage = 3;
+                    iso   = True;
                     break;
 
                 case '0'..'9':
@@ -73,8 +78,16 @@ const Duration(UInt128 picoseconds)
                         {
                         ++digits;
                         part = part * 10 + (ch - '0');
-                        assert:arg index <= last as
-                                $"Duration is missing a trailing indicator: {duration.quoted()}";
+
+                        if (index > last)
+                            {
+                            assert:arg !iso as
+                                    $"Duration is missing a trailing indicator: {duration.quoted()}";
+
+                            // pretend we found a seconds indicator
+                            ch = 'S';
+                            break;
+                            }
 
                         ch = duration[index++];
                         }
@@ -84,27 +97,32 @@ const Duration(UInt128 picoseconds)
                     UInt128 factor;
                     switch (ch)
                         {
-                        case 'D':
+                        case 'D', 'd':
                             stageNew = 2;
+                            iso      = True;
                             factor   = TimeOfDay.PICOS_PER_DAY;
                             break;
 
-                        case 'H':
+                        case 'H', 'h':
                             stageNew = 4;
+                            iso      = True;
                             factor   = TimeOfDay.PICOS_PER_HOUR;
                             break;
 
-                        case 'M':
+                        case 'M', 'm':
                             stageNew = 5;
+                            iso      = True;
                             factor   = TimeOfDay.PICOS_PER_MINUTE;
                             break;
 
                         case '.':
                             stageNew = 6;
                             factor   = TimeOfDay.PICOS_PER_SECOND;
+                            part    += seconds;
+                            seconds  = 0;
                             break;
 
-                        case 'S':
+                        case 'S', 's':
                             if (stage == 6)
                                 {
                                 // this is a fractional value
@@ -124,14 +142,24 @@ const Duration(UInt128 picoseconds)
                                 }
                             else
                                 {
-                                factor = TimeOfDay.PICOS_PER_SECOND;
+                                factor  = TimeOfDay.PICOS_PER_SECOND;
+                                part   += seconds;
+                                seconds = 0;
                                 }
                             stageNew = 7;
                             break;
 
+                        case ':':
+                            assert:arg !iso as $"Duration includes an unexpected character ':': {duration.quoted()}";
+                            assert:arg ++colons <= 2 as $"Too many ':' sections in Duration: {duration.quoted()}";
+                            factor   = 0; // TODO GG it compiled (but crashed running) without this line; compiler should have detected an unassigned var!!!
+                            stageNew = 2 + colons;
+                            seconds  = (seconds + part) * 60;
+                            break;
+
                         default:
                             throw new IllegalArgument(
-                                    $"Duration is missing a trailing indicator: {duration.quoted()}");
+                                    $"Duration includes an unexpected character {ch.quoted()}: {duration.quoted()}");
                         }
 
                     assert:arg stageNew > stage as
@@ -150,8 +178,9 @@ const Duration(UInt128 picoseconds)
                 }
             }
 
-        assert:arg stage != 6 as $"Duration is missing fractional seconds: {duration.quoted()}";
-        assert:arg any        as $"No duration information provided: {duration.quoted()}";
+        assert:arg stage != 6          as $"Duration is missing fractional seconds: {duration.quoted()}";
+        assert:arg any                 as $"No duration information provided: {duration.quoted()}";
+        assert:arg !iso || colons == 0 as $"Invalid ISO format: {duration.quoted()}";
 
         construct Duration(total);
         }
