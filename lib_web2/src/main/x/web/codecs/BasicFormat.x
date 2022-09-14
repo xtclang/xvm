@@ -2,21 +2,10 @@
  * The BasicFormat is a String-to-some-other-type converter that uses `toString()` -- and/or
  * `Stringable` if it is available -- and a one-parameter constructor that takes a `String`.
  */
-const BasicFormat<Value extends FromString>
+const BasicFormat<Value extends Destringable>
         implements Format<Value>
         incorporates conditional StringableFormat<Value extends Stringable>
     {
-    // ----- FromString interface ------------------------------------------------------------------
-
-    /**
-     * Any type that can be constructed from a String.
-     */
-    static interface FromString
-        {
-        construct(String text);
-        }
-
-
     // ----- Format interface ----------------------------------------------------------------------
 
     @Override

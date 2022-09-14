@@ -24,16 +24,17 @@ service Registry
      */
     static Format[] DefaultFormats =
         [
-        new LambdaFormat<Path     >(s -> new Path(s)),      // TODO GG new BasicFormat<Path>(),
-        new LambdaFormat<URI      >(s -> new URI(s)),       // TODO GG new BasicFormat<URI>(),
-        new LambdaFormat<IPAddress>(s -> new IPAddress(s)), // TODO GG new BasicFormat<IPAddress>(),
+        new BasicFormat<Path>(),
+        new BasicFormat<URI>(),
+        new BasicFormat<IPAddress>(),
 
-// TODO?
-// Boolean - "true" and "false" like in JSON? or 0/1? N/Y? n/y? no/yes? non/oui?
-// Date - what format to use?
-// Time - what format to use? HTTP does have a "standard" format
-// TimeOfDay - what format to use?
-// Duration - what format to use?
+        new BasicFormat<Time>(),
+        new BasicFormat<Date>(),
+        new BasicFormat<TimeOfDay>(),
+        new BasicFormat<Duration>(),
+
+        // TODO CP
+        // Boolean - "true" and "false" like in JSON? or 0/1? N/Y? n/y? no/yes? non/oui?
 
         // TODO CP need a JSON specific implementation that knows how to answer "forType()" method
         new LambdaFormat<json.Doc>(s ->
@@ -48,46 +49,46 @@ service Registry
                 }
             }),
 
-        new LambdaFormat<IntLiteral>(s -> new IntLiteral(s)),   // TODO GG new BasicFormat<IntLiteral>(),
-        new LambdaFormat<FPLiteral >(s -> new FPLiteral(s)),    // TODO GG new BasicFormat<FPLiteral>(),
+        new BasicFormat<IntLiteral>(),
+        new BasicFormat<FPLiteral>(),
 
-        new LambdaFormat< Int8  >(s -> new IntLiteral(s).toInt8()),
-        new LambdaFormat< Int16 >(s -> new IntLiteral(s).toInt16()),
-        new LambdaFormat< Int32 >(s -> new IntLiteral(s).toInt32()),
-        new LambdaFormat< Int64 >(s -> new IntLiteral(s).toInt64()),
-        new LambdaFormat< Int128>(s -> new IntLiteral(s).toInt128()),
-        new LambdaFormat< IntN  >(s -> new IntLiteral(s).toIntN()),
-        new LambdaFormat<UInt8  >(s -> new IntLiteral(s).toUInt8()),
-        new LambdaFormat<UInt16 >(s -> new IntLiteral(s).toUInt16()),
-        new LambdaFormat<UInt32 >(s -> new IntLiteral(s).toUInt32()),
-        new LambdaFormat<UInt64 >(s -> new IntLiteral(s).toUInt64()),
-        new LambdaFormat<UInt128>(s -> new IntLiteral(s).toUInt128()),
-        new LambdaFormat<UIntN  >(s -> new IntLiteral(s).toUIntN()),
+        new BasicFormat< Int8  >(),
+        new BasicFormat< Int16 >(),
+        new BasicFormat< Int32 >(),
+        new BasicFormat< Int64 >(),
+        new BasicFormat< Int128>(),
+        new BasicFormat< IntN  >(),
+        new BasicFormat<UInt8  >(),
+        new BasicFormat<UInt16 >(),
+        new BasicFormat<UInt32 >(),
+        new BasicFormat<UInt64 >(),
+        new BasicFormat<UInt128>(),
+        new BasicFormat<UIntN  >(),
 
-        new LambdaFormat<@Unchecked  Int8  >(s -> new IntLiteral(s).toInt8()   .toUnchecked()),
-        new LambdaFormat<@Unchecked  Int16 >(s -> new IntLiteral(s).toInt16()  .toUnchecked()),
-        new LambdaFormat<@Unchecked  Int32 >(s -> new IntLiteral(s).toInt32()  .toUnchecked()),
-        new LambdaFormat<@Unchecked  Int64 >(s -> new IntLiteral(s).toInt64()  .toUnchecked()),
-        new LambdaFormat<@Unchecked  Int128>(s -> new IntLiteral(s).toInt128() .toUnchecked()),
-        new LambdaFormat<@Unchecked  IntN  >(s -> new IntLiteral(s).toIntN()   .toUnchecked()),
-        new LambdaFormat<@Unchecked UInt8  >(s -> new IntLiteral(s).toUInt8()  .toUnchecked()),
-        new LambdaFormat<@Unchecked UInt16 >(s -> new IntLiteral(s).toUInt16() .toUnchecked()),
-        new LambdaFormat<@Unchecked UInt32 >(s -> new IntLiteral(s).toUInt32() .toUnchecked()),
-        new LambdaFormat<@Unchecked UInt64 >(s -> new IntLiteral(s).toUInt64() .toUnchecked()),
-        new LambdaFormat<@Unchecked UInt128>(s -> new IntLiteral(s).toUInt128().toUnchecked()),
-        new LambdaFormat<@Unchecked UIntN  >(s -> new IntLiteral(s).toUIntN()  .toUnchecked()),
+        new BasicFormat<@Unchecked  Int8  >(),
+        new BasicFormat<@Unchecked  Int16 >(),
+        new BasicFormat<@Unchecked  Int32 >(),
+        new BasicFormat<@Unchecked  Int64 >(),
+        new BasicFormat<@Unchecked  Int128>(),
+        new BasicFormat<@Unchecked  IntN  >(),
+        new BasicFormat<@Unchecked UInt8  >(),
+        new BasicFormat<@Unchecked UInt16 >(),
+        new BasicFormat<@Unchecked UInt32 >(),
+        new BasicFormat<@Unchecked UInt64 >(),
+        new BasicFormat<@Unchecked UInt128>(),
+        new BasicFormat<@Unchecked UIntN  >(),
 
-        new LambdaFormat<Dec32 >(s -> new FPLiteral(s).toDec32()),
-        new LambdaFormat<Dec64 >(s -> new FPLiteral(s).toDec64()),
-        new LambdaFormat<Dec128>(s -> new FPLiteral(s).toDec128()),
-        new LambdaFormat<DecN  >(s -> new FPLiteral(s).toDecN()),
+        new BasicFormat<Dec32 >(),
+        new BasicFormat<Dec64 >(),
+        new BasicFormat<Dec128>(),
+        new BasicFormat<DecN  >(),
 
-        new LambdaFormat<BFloat16>(s -> new FPLiteral(s).toBFloat16()),
-        new LambdaFormat<Float16 >(s -> new FPLiteral(s).toFloat16()),
-        new LambdaFormat<Float32 >(s -> new FPLiteral(s).toFloat32()),
-        new LambdaFormat<Float64 >(s -> new FPLiteral(s).toFloat64()),
-        new LambdaFormat<Float128>(s -> new FPLiteral(s).toFloat128()),
-        new LambdaFormat<FloatN  >(s -> new FPLiteral(s).toFloatN()),
+        new BasicFormat<BFloat16>(),
+        new BasicFormat<Float16 >(),
+        new BasicFormat<Float32 >(),
+        new BasicFormat<Float64 >(),
+        new BasicFormat<Float128>(),
+        new BasicFormat<FloatN  >(),
         ];
 
     /**
