@@ -70,6 +70,7 @@ const Version
         implements UniformIndexed<Int, Version>
         implements Sliceable<Int>
         implements Sequential
+        implements Destringable
     {
     // ----- Version Form --------------------------------------------------------------------------
 
@@ -162,6 +163,7 @@ const Version
      *
      * @param version  a legal version string, such as one emitted by `Version.toString()`
      */
+    @Override
     construct(String version)
         {
         // check for "+" (start of build string)

@@ -5,6 +5,7 @@ const Path
         implements UniformIndexed<Int, Path>
         implements Sliceable<Int>
         implements Iterable<Path>
+        implements Destringable
     {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -13,6 +14,7 @@ const Path
      *
      * @param pathString  a legal path string, such as one emitted by `Path.toString()`
      */
+    @Override
     construct(String pathString)
         {
         assert pathString.size > 0;
