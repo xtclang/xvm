@@ -405,9 +405,10 @@ abstract public class BaseBinaryFP
     @Override
     protected ObjectHandle makeHandle(byte[] aBytes, int cBytes)
         {
-        return makeHandle(fromLong(xConstrainedInteger.fromByteArray(aBytes, cBytes, false))); // TODO GG REVIEW CHANGE
+        return makeHandle(fromLong(xConstrainedInteger.fromByteArray(aBytes, cBytes, false)));
         }
 
+    @Override
     public FloatHandle makeHandle(double dValue)
         {
         return new FloatHandle(getCanonicalClass(), dValue);

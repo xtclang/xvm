@@ -34,7 +34,6 @@ import org.xvm.runtime.template.collections.xBitArray;
 import org.xvm.runtime.template.collections.xByteArray;
 
 import org.xvm.runtime.template.text.xChar;
-import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.util.PackedInteger;
@@ -176,7 +175,7 @@ public abstract class xConstrainedInteger
             TypeConstant typeParam = sig.getRawParams()[0];
             if (typeParam.equals(pool().typeString()))
                 {
-                StringHandle  hText = (xString.StringHandle) ahVar[0];
+                StringHandle  hText = (StringHandle) ahVar[0];
                 String        sText = hText.getStringValue();
                 PackedInteger pi;
                 try
@@ -203,7 +202,7 @@ public abstract class xConstrainedInteger
                     if (cBytes * 8 > f_cNumBits)
                         {
                         return frame.raiseException(
-                            xException.outOfBounds(frame, "Invalid byte count: " + cBytes));
+                            xException.outOfBounds(frame, "Overflow: " + sText));
                         }
                     }
 

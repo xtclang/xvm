@@ -383,11 +383,15 @@ abstract public class BaseDecFP
 
     // ----- handle --------------------------------------------------------------------------------
 
+    @Override
     public DecimalHandle makeHandle(double d)
         {
         return makeHandle(fromDouble(d));
         }
 
+    /**
+     * @return an ObjectHandle based on the specified Decimal value
+     */
     public DecimalHandle makeHandle(Decimal decValue)
         {
         return new DecimalHandle(getCanonicalClass(), decValue);

@@ -21,8 +21,8 @@ module TestSimple
 
         test(Int32, "-255");
         test(UInt32, "12345");
-// TODO GG test(Float32, "123.45");
-// TODO GG test(Dec64, "-123.45");
+        test(Float32, "123.45");
+        test(Dec64, "-123.45");
         test(Char, "x");
         }
 

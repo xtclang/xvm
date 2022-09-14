@@ -29,6 +29,8 @@ import org.xvm.runtime.template.collections.xByteArray;
 
 import org.xvm.runtime.template.numbers.xUInt32;
 
+import org.xvm.runtime.template.text.xString.StringHandle;
+
 import org.xvm.util.Handy;
 
 
@@ -98,7 +100,7 @@ public class xChar
             return constructHandle(frame, hCodepoint.getValue(), iReturn);
             }
 
-        if (hArg instanceof xString.StringHandle hText)
+        if (hArg instanceof StringHandle hText)
             {
             char[] ach = hText.getValue();
             if (ach.length != 1)

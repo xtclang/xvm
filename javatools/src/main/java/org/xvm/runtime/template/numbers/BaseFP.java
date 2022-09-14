@@ -5,8 +5,10 @@ import java.math.RoundingMode;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
+import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.SignatureConstant;
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
@@ -19,6 +21,8 @@ import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 import org.xvm.runtime.template.collections.xBitArray;
 import org.xvm.runtime.template.collections.xByteArray;
+
+import org.xvm.runtime.template.text.xString.StringHandle;
 
 
 /**
@@ -105,7 +109,26 @@ abstract public class BaseFP
         SignatureConstant sig = constructor.getIdentityConstant().getSignature();
         if (sig.getParamCount() == 1)
             {
-            if (sig.getRawParams()[0].getParamType(0).equals(pool().typeByte()))
+            TypeConstant typeArg = sig.getRawParams()[0];
+            if (typeArg.equals(pool().typeString()))
+                {
+                // construct(String text)
+                String sText = ((StringHandle) ahVar[0]).getStringValue();
+                try
+                    {
+                    return frame.assignValue(Op.A_STACK, makeHandle(Double.valueOf(sText)));
+                    }
+                catch (NumberFormatException e)
+                    {
+                    return frame.raiseException(
+                        xException.illegalArgument(frame, "Invalid number \"" + sText + "\""));
+                    }
+                }
+
+            // the rest are arrays
+            typeArg = typeArg.getParamType(0);
+
+            if (typeArg.equals(pool().typeByte()))
                 {
                 // construct(Byte[] bytes)
                 byte[] abVal  = xByteArray.getBytes((ArrayHandle) ahVar[0]);
@@ -117,8 +140,9 @@ abstract public class BaseFP
                         xException.illegalArgument(frame, "Invalid byte count: " + cBytes));
                 }
 
-            if (sig.getRawParams()[0].getParamType(0).equals(pool().typeBit()))
+            if (typeArg.equals(pool().typeBit()))
                 {
+                // construct(Bit[] bytes)
                 ArrayHandle hArray = (ArrayHandle) ahVar[0];
                 byte[]      abBits = xBitArray.getBits(hArray);
                 int         cBits  = (int) hArray.m_hDelegate.m_cSize;
@@ -139,6 +163,11 @@ abstract public class BaseFP
      * @return an ObjectHandle based on the specified byte array
      */
     abstract protected ObjectHandle makeHandle(byte[] aBytes, int cBytes);
+
+    /**
+     * @return an ObjectHandle based on the specified double value
+     */
+    abstract protected ObjectHandle makeHandle(double dValue);
 
 
     // ----- constants and fields ------------------------------------------------------------------
