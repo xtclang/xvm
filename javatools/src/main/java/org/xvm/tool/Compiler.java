@@ -108,7 +108,15 @@ public class Compiler
         // source tree setup
         log(Severity.INFO, "Selecting compilation targets");
         List<File> listTargets = selectTargets(options().getInputLocations());
-        for (int i = 0, c = listTargets.size(); i < c; ++i)
+        int        cTargets    = listTargets.size();
+
+        if (cTargets == 0)
+            {
+            displayHelp();
+            return;
+            }
+
+        for (int i = 0; i < cTargets; ++i)
             {
             log(Severity.INFO, "  [" + i + "]=" + listTargets.get(i));
             }
@@ -118,7 +126,7 @@ public class Compiler
         boolean fRebuild   = options().isForcedRebuild();
         log(Severity.INFO, "Output-path=" + fileOutput + ", force-rebuild=" + fRebuild);
 
-        Map<File, Node> mapTargets     = new ListMap<>(listTargets.size());
+        Map<File, Node> mapTargets     = new ListMap<>(cTargets);
         int             cSystemModules = 0;
         for (File fileModule : listTargets)
             {
