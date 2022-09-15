@@ -429,10 +429,6 @@ const URI
                 }
 
             // load the next section
-// TODO GG - this code is wrong, but it produces an exception instead of a compiler error:
-//          if (section := section.next().as(Section))
-// Exception in thread "main" java.lang.AssertionError
-//	at org.xvm.compiler.ast.Expression.generateAssignments(Expression.java:1571)
             if (val temp := section.next(), section := temp.is(Section))
                 {
                 part   = partFor(section);

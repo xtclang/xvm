@@ -27,6 +27,8 @@ public class CastTypeConstant
     public CastTypeConstant(ConstantPool pool, TypeConstant constType1, TypeConstant constType2)
         {
         super(pool, constType2.combine(pool, constType1), constType2);
+
+        m_constType1Orig = constType1;
         }
 
     @Override
@@ -59,4 +61,12 @@ public class CastTypeConstant
         {
         throw new IllegalStateException();
         }
+
+    @Override
+    public String getValueString()
+        {
+        return m_constType1Orig.getValueString() + ".as(" + m_constType2.getValueString() + ")";
+        }
+
+    private final TypeConstant m_constType1Orig;
     }

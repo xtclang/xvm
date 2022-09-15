@@ -463,7 +463,15 @@ public abstract class Expression
         int cTypesRequired = atypeRequired == null ? 0 : atypeRequired.length;
         if (cTypesRequired > 1)
             {
-            if (!getParent().allowsConditional(this))
+            if (getParent().allowsConditional(this))
+                {
+                // this can only be a "False" part of the conditional return
+                if (!atypeRequired[0].equals(pool().typeBoolean()))
+                    {
+                    log(errs, Severity.ERROR, Compiler.WRONG_TYPE_ARITY, cTypesRequired, 1);
+                    }
+                }
+            else
                 {
                 return new UnpackExpression(this, null).validateMulti(ctx, atypeRequired, errs);
                 }
@@ -1566,7 +1574,15 @@ public abstract class Expression
         int     cRVals = getValueCount();
         boolean fCond  = isConditionalResult();
 
-        assert cLVals <= cRVals || fCond && cLVals == cRVals + 1 || !isCompletable();
+        if (isCompletable())
+            {
+            int cRValsActual = fCond ? cRVals + 1 : cRVals;
+            if (cLVals > cRValsActual)
+                {
+                log(errs, Severity.ERROR, Compiler.WRONG_TYPE_ARITY, cLVals, cRValsActual);
+                return;
+                }
+            }
 
         if (cLVals < cRVals)
             {
