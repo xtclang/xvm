@@ -551,11 +551,9 @@ public class SwitchStatement
         @Override
         public Context exit()
             {
-            Context ctxOuter = getOuterContext();
-
-            promoteAssignments(ctxOuter);
-
-            return ctxOuter;
+            // don't contribute; the break statement has already registered the "Statement.Break"
+            // info that will be processed at the end of Statement.validate() logic
+            return getOuterContext();
             }
         }
 
