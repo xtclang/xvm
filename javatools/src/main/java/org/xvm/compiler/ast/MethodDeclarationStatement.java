@@ -336,13 +336,14 @@ public class MethodDeclarationStatement
             String sName = getName();
             if (container.isMethodContainer())
                 {
-                boolean      fConstructor = isConstructor();
-                boolean      fFinally     = isConstructorFinally();
-                boolean      fValidator   = isValidator();
-                boolean      fFunction    = isStatic(modifiers) || fConstructor;
-                ConstantPool pool         = container.getConstantPool();
+                boolean fConstructor = isConstructor();
+                boolean fFinally     = isConstructorFinally();
+                boolean fValidator   = isValidator();
+                boolean fFunction    = isStatic(modifiers) || fConstructor ||
+                        container.isStatic() && !(container instanceof ClassStructure);
 
                 // build array of annotations
+                ConstantPool pool         = container.getConstantPool();
                 Annotation[] aAnnotations = buildAnnotations(pool);
 
                 // build array of return types

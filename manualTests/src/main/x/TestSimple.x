@@ -4,13 +4,16 @@ module TestSimple
 
     void run()
         {
-        if (Int i := test().as(Int)) // this used to assert in the compiler
-            {
-            }
+        console.println(test());
         }
 
-    conditional Number test()
+    static Int test()
         {
-        return False;
+        return compute(1);
+
+        private Int compute(Int i) // used to fail to compile because of "no this"
+            {
+            return i*i;
+            }
         }
     }

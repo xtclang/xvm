@@ -124,7 +124,7 @@ interface BinaryInput
      */
     static Char readUTF8Char(BinaryInput in)
         {
-        private static UInt32 trailing(BinaryInput in)
+        private UInt32 trailing(BinaryInput in)
             {
             Byte b = in.readByte();
             if (b & 0b11000000 != 0b10000000)
