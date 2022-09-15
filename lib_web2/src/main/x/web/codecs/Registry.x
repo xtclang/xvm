@@ -101,6 +101,21 @@ service Registry
      */
     private Map<String, Format> formatsByName = new HashMap();
 
+    /**
+     * The internal registry-by-type (given a MediaType) of the Codec objects.
+     */
+    private Map<MediaType, Map<Type, Codec?>> codecsByType = new HashMap();
+
+    /**
+     * The internal registry-by-name of the Format objects.
+     */
+    private Map<String, Codec> codecsByName = new HashMap();
+
+    /**
+     * TODO
+     */
+//    private Map<Tuple<Type, Type>>, Converter> converters = new HashMap();
+
 
     // ----- Format support ------------------------------------------------------------------------
 
@@ -141,7 +156,7 @@ service Registry
 
         for (Format? format : formatsByType.values)
             {
-            if (Format<Value> newFormat := format?.forType(type))
+            if (Format<Value> newFormat := format?.forType(type, this))
                 {
                 registerFormat(newFormat);
                 return True, newFormat;

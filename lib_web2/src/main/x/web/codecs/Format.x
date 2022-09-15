@@ -22,7 +22,7 @@ interface Format<Value>
      *
      * @param type  a `Type` for which this `Format` may be able to supply a derivative `Format` for
      */
-    <OtherValue> conditional Format!<OtherValue> forType(Type<OtherValue> type)
+    <OtherValue> conditional Format!<OtherValue> forType(Type<OtherValue> type, Registry registry)
         {
         // if this format is capable of translating to and from another more specific type, then
         // this method should return a Format instance that can translate to and from the specified
@@ -42,8 +42,8 @@ interface Format<Value>
     Value read(Iterator<Char> stream)
         {
         // default implementation is to suck the contents stream into a String and just delegate
-        // to the fromString() method; this will cause a stack overflow if at least one of these
-        // two methods is not overridden
+        // to the decode() method; this will cause a stack overflow if at least one of these two
+        // methods is not overridden
         return decode(new String(stream.toArray(Constant)));
         }
 
@@ -56,9 +56,9 @@ interface Format<Value>
      */
     Value decode(String text)
         {
-        // default implementation is to turn the string into a stream and just delegate to the
-        // fromStream() method; this will cause a stack overflow if at least one of these two
-        // methods is not overridden
+        // default implementation is to turn the String into a stream and just delegate to the
+        // read() method; this will cause a stack overflow if at least one of these two methods
+        // is not overridden
         return read(text.iterator());
         }
 
@@ -70,7 +70,7 @@ interface Format<Value>
      */
     void write(Value value, Appender<Char> stream)
         {
-        // default implementation is to just delegate to the toString() method; this will cause a
+        // default implementation is to just delegate to the encode() method; this will cause a
         // stack overflow if neither of these two methods is overridden
         encode(value).appendTo(stream);
         }
@@ -84,7 +84,7 @@ interface Format<Value>
      */
     String encode(Value value)
         {
-        // default implementation is to just delegate to the toStream() method; this will cause a
+        // default implementation is to just delegate to the write() method; this will cause a
         // stack overflow if neither of these two methods is overridden
         StringBuffer buf = new StringBuffer();
         write(value, buf);

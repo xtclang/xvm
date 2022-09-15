@@ -1,73 +1,118 @@
 import ecstasy.io.ByteArrayInputStream;
 import ecstasy.io.ByteArrayOutputStream;
+import ecstasy.io.EndOfFile;
+
 
 /**
- * Represents a codec for a particular media type. For example application/json.
+ * Represents a binary codec that can be converted from and to another type.
+ *
+ * Implementations of this interface should be `const`, immutable, [Freezable], or a service.
  */
-interface Codec
-        extends Const
+interface Codec<Value>
     {
     /**
-     * Return the MediaTypes supported by this codec.
+     * The `Codec` name.
      *
-     * @return The media types supported by this codec
+     * Using this information, a `Codec` can be specified by its name. For a `Codec` that is
+     * registered, this name is used by the [Registry] to look up the `Codec` by its name, such as
+     * "UTF8-String" or "UTF8-Stream".
+     *
+     * The name is also obviously useful for debugging and log output.
      */
-    @RO MediaType[] mediaTypes;
+    @RO String name;
 
     /**
-     * Decode the given type from the given InputStream.
+     * Obtain a derivative `Codec` of this `Codec` for the specified type, if such a derivative
+     * `Codec` is possible.
      *
-     * @param type  the Type of the value to decode
-     * @param in    the input stream containing the data to decode
-     *
-     * @return The decoded result
+     * @param type  a `Type` for which this `Codec` may be able to supply a derivative `Codec` for
      */
-    <ObjectType> ObjectType decode<ObjectType>(Type type, InputStream in);
-
-    /**
-     * Decode the given type from the given InputStream.
-     *
-     * @param type   the Type of the value to decode
-     * @param bytes  the byte array containing the data to decode
-     *
-     * @return The decoded result
-     */
-    <ObjectType> ObjectType decode<ObjectType>(Type type, Byte[] bytes)
+    <OtherValue> conditional Codec!<OtherValue> forType(Type<OtherValue> type, Registry registry)
         {
-        return decode<ObjectType>(type, new ByteArrayInputStream(bytes));
+        // if this codec is capable of translating to and from another more specific type, then
+        // this method should return a Codec instance that can translate to and from the specified
+        // type
+        return False;
         }
 
     /**
-     * Encode the given value to the given {@link OutputStream}.
+     * Convert from a byte stream to a value.
      *
-     * @param value  the value to encode
-     * @param out    the output stream to encode the value to
+     * @param stream  the stream of bytes to convert to a value
+     *
+     * @return the resulting value
      */
-    <ObjectType> void encode<ObjectType>(ObjectType value, OutputStream out);
-
-    /**
-     * Encode the given value to a byte array.
-     *
-     * @param value  the value to encode
-     *
-     * @return  the encoded value
-     */
-    <ObjectType> Byte[] encode<ObjectType>(ObjectType value)
+    Value read(BinaryInput stream)
         {
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        encode(value, out);
-        return out.bytes;
+        // default implementation is to suck the contents stream into a Byte[] and just delegate
+        // to the decode() method; this will cause a stack overflow if at least one of these two
+        // methods is not overridden
+        Byte[] bytes;
+        if (stream.is(InputStream))
+            {
+            bytes = stream.readBytes(stream.remaining);
+            }
+        else
+            {
+            // TODO CP the BinaryInput API sucks
+            // - why not base it on Iterator<Byte>
+            // - readRemaining()
+            // - readUpTo...
+            bytes = new Byte[];
+            try
+                {
+                while (True)
+                    {
+                    bytes.add(stream.readByte());
+                    }
+                }
+            catch (EndOfFile e) {}
+            }
+
+        return decode(bytes);
         }
 
     /**
-     * Return whether this codec can decode the given type.
+     * Convert from a `Byte[]` to a value.
      *
-     * @param type the type to decode or encode
+     * @param bytes  the `Byte[]` to convert to a value
      *
-     * @return True if this codec supports the specified Type
+     * @return the resulting value
      */
-    Boolean supports(Type type)
+    Value decode(Byte[] bytes)
         {
-        return True;
+        // default implementation is to turn the string into a stream and just delegate to the
+        // fromStream() method; this will cause a stack overflow if at least one of these two
+        // methods is not overridden
+        return read(new ByteArrayInputStream(bytes));
+        }
+
+    /**
+     * Render a value into the provided stream.
+     *
+     * @param value   the value to convert to bytes
+     * @param stream  the stream to write the bytes into
+     */
+    void write(Value value, BinaryOutput stream)
+        {
+        // default implementation is to just delegate to the encode() method; this will cause a
+        // stack overflow if neither of these two methods is overridden
+        stream.writeBytes(encode(value));
+        }
+
+    /**
+     * Render a value as a `Byte[]`.
+     *
+     * @param value  the value to convert to a `Byte[]`
+     *
+     * @return the resulting `Byte[]`
+     */
+    Byte[] encode(Value value)
+        {
+        // default implementation is to just delegate to the write() method; this will cause a
+        // stack overflow if neither of these two methods is overridden
+        ByteArrayOutputStream stream = new ByteArrayOutputStream();
+        write(value, stream);
+        return stream.bytes;
         }
     }

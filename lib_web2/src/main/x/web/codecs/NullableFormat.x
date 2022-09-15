@@ -2,7 +2,7 @@
  * The `NullableFormat` handles empty `String` values by treating them as a `Null`.
  */
 const NullableFormat<NonNullableValue>(Format<NonNullableValue> notNull)
-        implements Format<NonNullableValue | Nullable>
+        implements Format<Nullable|NonNullableValue>
     {
     // ----- Format interface ----------------------------------------------------------------------
 
@@ -13,10 +13,10 @@ const NullableFormat<NonNullableValue>(Format<NonNullableValue> notNull)
         }
 
     @Override
-    <OtherValue> conditional Format<OtherValue> forType(Type<OtherValue> type)
+    <OtherValue> conditional Format<OtherValue> forType(Type<OtherValue> type, Registry registry)
         {
         Type otherNotNullType = type.DataType - Nullable;
-        if (val otherNotNull := notNull.forType(otherNotNullType.DataType))
+        if (val otherNotNull := notNull.forType(otherNotNullType.DataType, registry))
             {
             TODO CP think this through
 //            return Null.is(type.DataType)
