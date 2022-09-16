@@ -14,11 +14,13 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.Op;
+import org.xvm.asm.Parameter;
 import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -281,6 +283,14 @@ public class xRTClassTemplate
                         }
                     else
                         {
+                        ClassConstant  idAnno  = (ClassConstant) anno.getAnnotationClass();
+                        ClassStructure clzAnno = (ClassStructure) idAnno.getComponent();
+                        if (clzAnno == null)
+                            {
+                            return frameCaller.raiseException(
+                                    "unknown annotation " + idAnno.getValueString());
+                            }
+
                         TypeConstant[] atype = new TypeConstant[cParams];
 
                         ahParam = new ObjectHandle[cParams];
@@ -288,38 +298,52 @@ public class xRTClassTemplate
                             {
                             Constant constParam = aParam[i];
 
-                            ahParam[i] = frameCaller.getConstHandle(constParam);
-                            atype[i]   = container.getType(constParam);
-                            }
-
-                        ClassConstant  idAnno  = (ClassConstant) anno.getAnnotationClass();
-                        ClassStructure clzAnno = (ClassStructure) idAnno.getComponent();
-                        if (clzAnno != null)
-                            {
-                            MethodStructure ctor = clzAnno.findConstructor(atype);
-                            if (ctor != null)
+                            // default argument values will be filled later
+                            if (!(constParam instanceof RegisterConstant))
                                 {
-                                StringHandle[] ahNames = new StringHandle[cParams];
-                                for (int i = 0; i < cParams; i++)
-                                    {
-                                    ahNames[i] = xString.makeHandle(ctor.getParam(i).getName());
-                                    }
-                                haNames = xArray.makeStringArrayHandle(ahNames);
+                                atype[i]   = container.getType(constParam);
+                                ahParam[i] = frameCaller.getConstHandle(constParam);
                                 }
                             }
 
-                        if (Op.anyDeferred(ahParam))
+                        MethodStructure ctor = clzAnno.findMethod("construct", cParams, atype);
+                        if (ctor == null)
                             {
-                            ObjectHandle haN = haNames;
-                            ObjectHandle haT = haTypes;
-
-                            Frame.Continuation stepNext = frameCaller2 ->
-                                callCreateContrib(frameCaller2, hComponent, sAction, typeContrib,
-                                    xArray.makeObjectArrayHandle(ahParam, Mutability.Constant),
-                                    hDelegatee, haN, haT);
-
-                            return new Utils.GetArguments(ahParam, stepNext).doNext(frame);
+                            return frameCaller.raiseException("missing annotation constructor " +
+                                    idAnno.getValueString() + " with " + cParams + " parameters");
                             }
+
+                        StringHandle[] ahNames = new StringHandle[cParams];
+                        for (int i = 0; i < cParams; i++)
+                            {
+                            Parameter param = ctor.getParam(i);
+
+                            ahNames[i] = xString.makeHandle(param.getName());
+                            if (ahParam[i] == null)
+                                {
+                                if (!param.hasDefaultValue())
+                                    {
+                                    return frameCaller.raiseException("missing default value for parameter \"" +
+                                            param.getName() + "\" at " + ctor.getIdentityConstant());
+                                    }
+
+                                ahParam[i] = frameCaller.getConstHandle(param.getDefaultValue());
+                                }
+                            }
+                        haNames = xArray.makeStringArrayHandle(ahNames);
+                        }
+
+                    if (Op.anyDeferred(ahParam))
+                        {
+                        ObjectHandle haN = haNames;
+                        ObjectHandle haT = haTypes;
+
+                        Frame.Continuation stepNext = frameCaller2 ->
+                            callCreateContrib(frameCaller2, hComponent, sAction, typeContrib,
+                                xArray.makeObjectArrayHandle(ahParam, Mutability.Constant),
+                                hDelegatee, haN, haT);
+
+                        return new Utils.GetArguments(ahParam, stepNext).doNext(frame);
                         }
 
                     haParams = xArray.makeObjectArrayHandle(ahParam, Mutability.Constant);

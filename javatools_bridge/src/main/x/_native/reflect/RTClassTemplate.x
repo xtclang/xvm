@@ -73,8 +73,8 @@ class RTClassTemplate
                 Argument[] arguments = parameters.size == 0
                         ? []
                         : names == Null
-                            ? new Array(parameters.size, i -> new Argument(parameters[i].as(const)))
-                            : new Array(parameters.size, i -> new Argument(parameters[i].as(const), names[i]));
+                            ? new Array(parameters.size, i -> new Argument(parameters[i].as(immutable|service)))
+                            : new Array(parameters.size, i -> new Argument(parameters[i].as(immutable|service), names[i]));
 
                 ingredient = new AnnotatingComposition(new AnnotationTemplate(ingredient, arguments), this);
                 break;

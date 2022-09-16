@@ -259,7 +259,8 @@ interface ClassTemplate
             // search through the composition of this class to find the specified mixin
             for (val contrib : baseThis.contribs)
                 {
-                if (Boolean fCond := contrib.ingredient.incorporates(baseThat))
+                if (contrib.action != AnnotatedBy, // avoid a infinite recursion
+                    Boolean fCond := contrib.ingredient.incorporates(baseThat))
                     {
                     fConditional |= fCond |
                             (contrib.action == Incorporates && contrib.constraints != Null);
@@ -440,14 +441,42 @@ interface ClassTemplate
                 if (contrib.action == AnnotatedBy)
                     {
                     assert AnnotatingComposition composition := contrib.ingredient.is(AnnotatingComposition);
-                    if (composition.annotation.template.displayName == annotationName)
+
+                    AnnotationTemplate annoTemplate = composition.annotation;
+                    ClassTemplate      baseTemplate = annoTemplate.template;
+
+                    // if the mixin is not of the requested name, check if it extends one that is
+                    if (baseTemplate.displayName == annotationName ||
+                            extendsMixin(baseTemplate, annotationName))
                         {
-                        return True, composition.annotation;
+                        return True, annoTemplate;
                         }
                     }
                 }
 
             return False;
+
+            /**
+             * @return True iff the specified mixin template extends a mixin with the specified name
+             */
+            static Boolean extendsMixin(ClassTemplate template, String mixinName)
+                {
+                for (val contrib : template.contribs)
+                    {
+                    if (contrib.action == Extends)
+                        {
+                        assert ClassTemplate templateSuper := contrib.ingredient.is(ClassTemplate);
+                        if (templateSuper.format == Mixin)
+                            {
+                            return templateSuper.displayName == mixinName
+                                || extendsMixin(templateSuper, mixinName);
+                            }
+                        break;
+                        }
+                    }
+
+                return False;
+                }
             }
 
         /**

@@ -848,6 +848,7 @@ public class NativeContainer
             case Range, Path, Version, RegEx:
             case Module, Package:
             case Tuple:
+            case SingletonConst:
                 return constValue.getType();
 
             case FileStore:

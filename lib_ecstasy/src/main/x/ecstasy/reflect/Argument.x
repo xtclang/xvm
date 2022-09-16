@@ -2,7 +2,7 @@
  * An Argument represents a value for a parameter. The argument optionally supports a name that
  * can be used to specify the name of the parameter for which the argument's value is intended.
  */
-const Argument<Referent extends immutable Const>(Referent value, String? name = Null)
+const Argument<Referent extends immutable|service>(Referent value, String? name = Null)
     {
     // ----- Stringable methods --------------------------------------------------------------------
 
@@ -25,7 +25,7 @@ const Argument<Referent extends immutable Const>(Referent value, String? name = 
                 return 2;
 
             default:
-                return value.estimateStringLength();
+                return value.is(Stringable) ? value.estimateStringLength() : 0;
             }
         }
 
@@ -52,7 +52,14 @@ const Argument<Referent extends immutable Const>(Referent value, String? name = 
                 break;
 
             default:
-                value.appendTo(buf);
+                if (value.is(Stringable))
+                    {
+                    value.appendTo(buf);
+                    }
+                else
+                    {
+                    value.toString().appendTo(buf);
+                    }
                 break;
             }
         return buf;
