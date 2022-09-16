@@ -399,6 +399,11 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
     protected Timer.Cancellable? cancelMaintenance;
 
     /**
+     * The cancellation function for the maintenance timer.
+     */
+    static Duration MaintenanceInterval = Duration:1s;
+
+    /**
      * The last transaction id that is known to have been fully written to disk by all ObjectStores.
      */
     Int safepoint.get()
@@ -3325,7 +3330,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         lastCleanupTime = clock.now;
         lastCleanupTx   = lastCommitted;
 
-        cancelMaintenance = timer.schedule(Duration:1s, doMaintenance);
+        cancelMaintenance = timer.schedule(MaintenanceInterval, doMaintenance);
         }
 
     /**
@@ -3355,7 +3360,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 // most recent activity occurred sufficiently in the past
                 Time    now  = clock.now;
                 Boolean idle = currentlyPreparing == NO_TX && pendingPrepare.empty
-                        && now - lastActivity > Duration:1s;
+                        && now - lastActivity > MaintenanceInterval;
                 if (idle)
                     {
                     backgroundIdle();
@@ -3384,7 +3389,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 {
                 if (cancelMaintenance == Null && status == Enabled)
                     {
-                    cancelMaintenance = timer.schedule(Duration:1s, doMaintenance);
+                    cancelMaintenance = timer.schedule(MaintenanceInterval, doMaintenance);
                     }
                 }
             }
