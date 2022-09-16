@@ -1,10 +1,19 @@
 import collections.LRUCache;
 
+import codecs.Format;
+
+
 /**
  * A representation of a media type, such as is used in the `Content-Type` header of an HTTP request
  * or response.
  *
  * A MediaType can optionally carry a number of file extensions to which it corresponds.
+ *
+ * A MediaType for UTF-8 encoded data can specify a [Format], and in doing so, it will be possible
+ * to create a pipeline from the binary body contents to the `Value` type of the `Format`, and (via
+ * [Format.forType()]), to other supported types. Similarly, to produce an outgoing body, that same
+ * path can be followed in reverse. For example, the `Json` MediaType specifies the `JsonFormat`,
+ * so it is possible to annotate an endpoint parameter  `Cart` class
  *
  * @see [Media Types](https://www.iana.org/assignments/media-types/media-types.xhtml)
  * @see [RFC 2046](https://tools.ietf.org/html/rfc2046)
@@ -73,8 +82,14 @@ const MediaType
      * @param subtype     the sub-type, such as "html" in `text/html`
      * @param params      (optional) MediaType parameters, which are almost never present
      * @param extensions  (optional) file extensions that the MediaType maps to
+     * @param format      (optional) the format name for the text associated with this MediaType
      */
-    construct(String type, String subtype, Map<String, String> params=[], String[] extensions=[])
+    construct(String              type,
+              String              subtype,
+              Map<String, String> params     = [],
+              String[]            extensions = [],
+              String?             format     = Null,
+             )
         {
         // check type / subtype / params
         assert:arg http.validToken(type) as $"Invalid type: {type.quoted()}";
@@ -94,6 +109,7 @@ const MediaType
         this.subtype    = subtype;
         this.params     = params;
         this.extensions = extensions;
+        this.format     = format;
         this.text       = $"{type}/{subtype}";
 
         if (!params.empty)
@@ -111,20 +127,24 @@ const MediaType
      * @param subtype       the sub-type, such as "html" in `text/html`
      * @param params        (optional) MediaType parameters, which are almost never present
      * @param extensions    (optional) file extensions that the MediaType maps to
+     * @param format        (optional) the format name for the text associated with this MediaType
      * @param alternatives  (optional) alternative MediaTypes
      */
     private construct(String              text,
                       String              type,
                       String              subtype,
-                      Map<String, String> params,
+                      Map<String, String> params       = [],
                       String[]            extensions   = [],
-                      MediaType[]         alternatives = [])
+                      String?             format       = Null,
+                      MediaType[]         alternatives = [],
+                     )
         {
         this.text         = text;
         this.type         = type;
         this.subtype      = subtype;
         this.params       = params;
         this.extensions   = extensions;
+        this.format       = format;
         this.alternatives = alternatives;
         }
 
@@ -186,6 +206,12 @@ const MediaType
     String[] extensions;
 
     /**
+     * The text format name associated with this MediaType, iff this MediaType is UTF8 encoded text
+     * and a known [codecs.Format] is available for it.
+     */
+    String? format;
+
+    /**
      * The secondary, tertiary, and so on, MediaType objects related to this MediaType. This is
      * an historical anachronism from the early days of the web, when arbitrarily defining
      * multiple different media types to represent the same exact media type was considered
@@ -219,9 +245,10 @@ const MediaType
      * Construct one of the pre-defined (aka "standard") media types.
      *
      * @param name       one or more media type strings in the form "type/subtype"
-     * @param extension  one or more file extensions to associate with the media type
+     * @param extension  (optional) one or more file extensions to associate with this `MediaType`
+     * @param format     (optional) the format name for the text associated with this `MediaType`
      */
-    private static MediaType predefine(String|String[] name, String|String[] extension = [])
+    private static MediaType predefine(String|String[] name, String|String[] extension = [], String? format=Null)
         {
         MediaType[] alternatives = [];
         if (name.is(String[]))
@@ -229,7 +256,11 @@ const MediaType
             alternatives = new MediaType[];
             for (Int index = 1, Int count = name.size; index < count; ++index)
                 {
-                assert MediaType altType := MediaType.of(name[index]);
+                String altName = name[index];
+                assert (String type, String subtype, Map<String, String> params) := parseMediaType(altName);
+                MediaType altType = new MediaType(altName, type, subtype, params);
+                assert !cache.get(altName);
+                cache.put(altName, altType);
                 alternatives.add(altType);
                 }
             name = name[0];
@@ -240,7 +271,7 @@ const MediaType
                 ? extension
                 : [extension];
 
-        return new MediaType(name, type, subtype, params, extensions, alternatives);
+        return new MediaType(name, type, subtype, params, extensions, format, alternatives);
         }
 
     /**
