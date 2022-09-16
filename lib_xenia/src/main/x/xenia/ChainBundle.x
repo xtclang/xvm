@@ -84,13 +84,13 @@ service ChainBundle
 
             if (param.is(ParameterBinding))
                 {
-                name ?= param.bindName;
+                String paramName = param.bindName ?: name;
 
                 if (param.is(QueryParam))
                     {
                     // TODO GG: .as(Parameter) should not be needed
                     binders += (session, request, values) ->
-                        extractQueryValue(request, name, param.as(Parameter), values);
+                        extractQueryValue(request, paramName, param.as(Parameter), values);
                     continue;
                     }
                 if (param.is(UriParam))
@@ -364,7 +364,7 @@ service ChainBundle
             // first element of the Tuple
             return (request, result) -> result[0].as(Boolean)
                    ? createSimpleResponse(endpoint, request, result[1])
-                   : new SimpleResponse(HttpStatus.NotFound);
+                   : new SimpleResponse(HttpStatus.NotFound).makeImmutable();
             }
 
         return (request, result) -> createSimpleResponse(endpoint, request, result[0]);
@@ -381,6 +381,6 @@ service ChainBundle
         // TODO the codec stuff goes here
 
         String value = result.toString();
-        return new SimpleResponse(HttpStatus.OK, mediaType, value.utf8());
+        return new SimpleResponse(HttpStatus.OK, mediaType, value.utf8()).makeImmutable();
         }
     }
