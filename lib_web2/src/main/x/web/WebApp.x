@@ -90,7 +90,7 @@ mixin WebApp
                                                             |endpoint \"{child}\"
                                                             );
                                     }
-                                defaultEndpoint = new EndpointInfo(method, epid, wsid);
+                                defaultEndpoint = new EndpointInfo(method, epid++, wsid);
                                 }
                             else
                                 {
