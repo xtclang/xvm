@@ -2116,7 +2116,7 @@ public class ClassStructure
                 {
                 TypeConstant typeParam = method.getParam(i).getType();
                 TypeConstant typeTest  = aType[i];
-                if (typeTest != null && !typeParam.equals(typeTest))
+                if (typeTest != null && !typeTest.isA(typeParam))
                     {
                     return false;
                     }
@@ -2216,30 +2216,13 @@ public class ClassStructure
      */
     public MethodStructure findConstructor(TypeConstant... types)
         {
-        MultiMethodStructure structMM = (MultiMethodStructure) getChild("construct");
-        if (structMM == null)
+        MethodStructure method = findMethod("construct", types.length, types);
+        if (method == null)
             {
-            throw new IllegalStateException("no constructors on " + this);
+            throw new IllegalStateException(
+                "no such constructor for " + types.length + " params on " + this);
             }
-
-        int cParams = types.length;
-        NextMethod: for (MethodStructure structMethod : structMM.methods())
-            {
-            if (structMethod.getParamCount() == cParams)
-                {
-                for (int i = 0; i < cParams; ++i)
-                    {
-                    if (!structMethod.getParam(i).getType().equals(types[i]))
-                        {
-                        continue NextMethod;
-                        }
-                    }
-
-                return structMethod;
-                }
-            }
-
-        throw new IllegalStateException("no such constructor for " + cParams + " params on " + this);
+        return method;
         }
 
     /**
