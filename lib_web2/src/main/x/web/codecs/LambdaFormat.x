@@ -21,7 +21,6 @@ const LambdaFormat<Value>(Decoder decoder, Encoder? encoder=Null)
     typedef function Value(String) as Decoder;
 
 
-
     // ----- Format interface ----------------------------------------------------------------------
 
     @Override
