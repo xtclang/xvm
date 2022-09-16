@@ -14,7 +14,7 @@ mixin WebModule
 
         for (Class child : this.as(Module).classes)
             {
-            if (child.implements(WebService))
+            if (child.annotatedBy(WebService))
                 {
                 WebService webService;
 
