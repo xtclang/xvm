@@ -1,7 +1,7 @@
 /**
  * Represents the ability to convert a String to and from UTF-8 binary data.
  */
-const Utf8StringCodec
+static const Utf8StringCodec
         implements Codec<String>
     {
     @Override
@@ -14,7 +14,7 @@ const Utf8StringCodec
         }
 
     @Override
-    void write(Value value, BinaryOutput stream)
+    void write(Value value, OutputStream stream)
         {
         for (Char ch : value)
             {

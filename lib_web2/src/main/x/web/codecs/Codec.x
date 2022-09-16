@@ -42,34 +42,12 @@ interface Codec<Value>
      *
      * @return the resulting value
      */
-    Value read(BinaryInput stream)
+    Value read(InputStream stream)
         {
         // default implementation is to suck the contents stream into a Byte[] and just delegate
         // to the decode() method; this will cause a stack overflow if at least one of these two
         // methods is not overridden
-        Byte[] bytes;
-        if (stream.is(InputStream))
-            {
-            bytes = stream.readBytes(stream.remaining);
-            }
-        else
-            {
-            // TODO CP the BinaryInput API sucks
-            // - why not base it on Iterator<Byte>
-            // - readRemaining()
-            // - readUpTo...
-            bytes = new Byte[];
-            try
-                {
-                while (True)
-                    {
-                    bytes.add(stream.readByte());
-                    }
-                }
-            catch (EndOfFile e) {}
-            }
-
-        return decode(bytes);
+        return decode(stream.readBytes(stream.remaining));
         }
 
     /**
@@ -93,7 +71,7 @@ interface Codec<Value>
      * @param value   the value to convert to bytes
      * @param stream  the stream to write the bytes into
      */
-    void write(Value value, BinaryOutput stream)
+    void write(Value value, OutputStream stream)
         {
         // default implementation is to just delegate to the encode() method; this will cause a
         // stack overflow if neither of these two methods is overridden
