@@ -524,9 +524,9 @@ class ModuleGenerator(String implName, String moduleName)
         }
 
     /**
-     * Obtain a display values for the specified constant.
+     * Obtain a display value for the specified constant.
      */
-    String displayValue(Const value)
+    String displayValue(Object value)
         {
         Type typeActual = &value.actualType;
         if (typeActual.is(Type<String>))
