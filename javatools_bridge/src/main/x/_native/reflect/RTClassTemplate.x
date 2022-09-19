@@ -22,15 +22,9 @@ class RTClassTemplate
 
     @Override @RO ClassTemplate[]       classes;
     @Override @RO Contribution[]        contribs;
-    @Override @RO ClassTemplate?        mixesInto;
     @Override @RO MultiMethodTemplate[] multimethods;
     @Override @RO PropertyTemplate[]    properties;
-    @Override @RO Boolean               singleton;
-    @Override @RO Boolean               hasDefault;
-    @Override @RO SourceCodeInfo?       sourceInfo;
     @Override @RO TypeTemplate          type;
-    @Override @RO TypeParameter[]       typeParams;
-    @Override @RO Boolean               virtualChild;
 
     @Override conditional (AnnotationTemplate, Composition) deannotate();
     @Override Class<> ensureClass(Type[] actualTypes = []);
@@ -45,6 +39,12 @@ class RTClassTemplate
 
 
     // ----- ClassTemplate API ---------------------------------------------------------------------
+
+    @Override @RO Boolean         virtualChild;
+    @Override @RO Boolean         singleton;
+    @Override @RO Boolean         hasDefault;
+    @Override @RO TypeParameter[] typeParams;
+    @Override @RO SourceCodeInfo? sourceInfo;
 
     @Override
     conditional PropertyTemplate fromProperty()
@@ -62,13 +62,14 @@ class RTClassTemplate
                                     String[]?         names,
                                     Type[]?           types)
         {
-        assert Composition         ingredient := ingredientType.template.fromClass();
+        TypeTemplate ingredient = ingredientType.template;
         Map<String, TypeTemplate>? constraints = Null;
 
         switch (action)
             {
             case AnnotatedBy:
-                assert ingredient.is(ClassTemplate) && parameters != Null;
+                assert Composition composition := ingredient.fromClass();
+                assert composition.is(ClassTemplate) && parameters != Null;
 
                 Argument[] arguments = parameters.size == 0
                         ? []
@@ -76,7 +77,8 @@ class RTClassTemplate
                             ? new Array(parameters.size, i -> new Argument(parameters[i].as(immutable|service)))
                             : new Array(parameters.size, i -> new Argument(parameters[i].as(immutable|service), names[i]));
 
-                ingredient = new AnnotatingComposition(new AnnotationTemplate(ingredient, arguments), this);
+                composition = new AnnotatingComposition(new AnnotationTemplate(composition, arguments), this);
+                ingredient  = composition.type;
                 break;
 
             case Incorporates:

@@ -94,7 +94,6 @@ public class xRTClassTemplate
             markNativeProperty("implicitName");
             markNativeProperty("classes");
             markNativeProperty("contribs");
-            markNativeProperty("mixesInto");
             markNativeProperty("multimethods");
             markNativeProperty("properties");
             markNativeProperty("singleton");
@@ -127,9 +126,6 @@ public class xRTClassTemplate
 
             case "contribs":
                 return getPropertyContribs(frame, hComponent, iReturn);
-
-            case "mixesInto":
-                return getPropertyMixesInto(frame, hComponent, iReturn);
 
             case "multimethods":
                 return getPropertyMultimethods(frame, hComponent, iReturn);
@@ -413,14 +409,6 @@ public class xRTClassTemplate
         ahVar[5] = haTypes;
 
         return frame.call1(CREATE_CONTRIB_METHOD, hComponent, ahVar, Op.A_STACK);
-        }
-
-    /**
-     * Implements property: mixesInto.get()
-     */
-    public int getPropertyMixesInto(Frame frame, ComponentTemplateHandle hComponent, int iReturn)
-        {
-        return frame.raiseException("Not implemented");
         }
 
     /**

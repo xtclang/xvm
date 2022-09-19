@@ -86,7 +86,7 @@ interface ClassTemplate
          * as a series of composition steps.
          */
         static const Contribution(Action                     action,
-                                  Composition                ingredient,
+                                  TypeTemplate               ingredient,
                                   PropertyTemplate?          delegatee = Null,
                                   Map<String, TypeTemplate>? constraints = Null);
 
@@ -172,9 +172,11 @@ interface ClassTemplate
                 }
 
             // search through the composition of this class to find the specified super class
-            for (val contrib : baseTemplate.contribs)
+            for (Contribution contrib : baseTemplate.contribs)
                 {
-                if (contrib.ingredient.extends(composition))
+                if (contrib.action == Extends,
+                    Composition compositionSuper := contrib.ingredient.fromClass(),
+                    compositionSuper.extends(composition))
                     {
                     return True;
                     }
@@ -257,10 +259,11 @@ interface ClassTemplate
                 }
 
             // search through the composition of this class to find the specified mixin
-            for (val contrib : baseThis.contribs)
+            for (Contribution contrib : baseThis.contribs)
                 {
                 if (contrib.action != AnnotatedBy, // avoid a infinite recursion
-                    Boolean fCond := contrib.ingredient.incorporates(baseThat))
+                    Composition comp  := contrib.ingredient.fromClass(),
+                    Boolean     fCond := comp.incorporates(baseThat))
                     {
                     fConditional |= fCond |
                             (contrib.action == Incorporates && contrib.constraints != Null);
@@ -269,6 +272,77 @@ interface ClassTemplate
                 }
 
             return False;
+            }
+
+        /**
+         * Determine if this composition is a mixin that applies to the specified type.
+         *
+         * @param type  the type template to test if this mixin applies to
+         *
+         * @return True iff this mixin applies to the specified type
+         */
+        Boolean mixesInto(TypeTemplate type)
+            {
+            // only a mixin can be "into"
+            if (baseTemplate.format != Mixin)
+                {
+                return False;
+                }
+
+            assert TypeTemplate intoType := findInto(this.as(ClassTemplate)) as
+                    "Mixin {displayName} doesn't have an 'into' contribution";
+
+            return isInto(intoType, type);
+
+            /**
+             * @return the "into" ingredient for the specified template
+             */
+            static conditional TypeTemplate findInto(ClassTemplate template)
+                {
+                for (Contribution contrib : template.contribs)
+                    {
+                    if (contrib.action == MixesInto)
+                        {
+                        return True, contrib.ingredient;
+                        }
+                    }
+
+                if (ClassTemplate templateSuper := template.hasSuper())
+                    {
+                    return findInto(templateSuper);
+                    }
+                return False;
+                }
+
+            /**
+             * Given some `mixin M into intoType`, determine if that mixin can be legally mixed into
+             * some class whose type is `testType`.
+             *
+             * @return True iff the mixin can be legally mixed into the specified `testType`
+             */
+            static Boolean isInto(TypeTemplate intoType, TypeTemplate testType)
+                {
+                switch (intoType.form)
+                    {
+                    case Class:
+                        return testType.isA(intoType);
+
+                    case Union:
+                        assert (TypeTemplate t1, TypeTemplate t2) := intoType.relational();
+                        return isInto(t1, testType) || isInto(t2, testType);
+
+                    case Immutable:
+                    case Access:
+                        assert TypeTemplate t1 := intoType.modifying();
+                        return isInto(t1, testType);
+
+                    case Typedef:
+                        return isInto(intoType.underlyingTypes[0], testType);
+
+                    default:
+                        return False;
+                    }
+                }
             }
 
         /**
@@ -286,7 +360,7 @@ interface ClassTemplate
          *
          * @return True iff this Composition implements the specified interface
          */
-        Boolean implements(Composition! composition)
+        Boolean implements(Composition! composition, Boolean allowInto = True)
             {
             if (&this == &composition)
                 {
@@ -301,9 +375,16 @@ interface ClassTemplate
                 }
 
             // search through the composition of this class to find the specified interface
-            for (val contrib : contribs)
+            for (Contribution contrib : contribs)
                 {
-                if (contrib.ingredient.implements(composition))
+                Boolean isInto = contrib.action == MixesInto;
+                if (isInto && !allowInto)
+                    {
+                    continue;
+                    }
+
+                if (Composition comp := contrib.ingredient.fromClass(),
+                    comp.implements(composition, allowInto & !isInto))
                     {
                     return True;
                     }
@@ -399,7 +480,8 @@ interface ClassTemplate
                 {
                 if (contrib.action == Extends)
                     {
-                    return True, contrib.ingredient.as(ClassTemplate);
+                    assert Composition compositionSuper := contrib.ingredient.fromClass();
+                    return True, compositionSuper.as(ClassTemplate);
                     }
                 }
 
@@ -436,11 +518,12 @@ interface ClassTemplate
          */
         conditional AnnotationTemplate findAnnotation(String annotationName)
             {
-            for (val contrib : contribs)
+            for (Contribution contrib : contribs)
                 {
                 if (contrib.action == AnnotatedBy)
                     {
-                    assert AnnotatingComposition composition := contrib.ingredient.is(AnnotatingComposition);
+                    assert Composition composition := contrib.ingredient.fromClass();
+                    assert composition.is(AnnotatingComposition);
 
                     AnnotationTemplate annoTemplate = composition.annotation;
                     ClassTemplate      baseTemplate = annoTemplate.template;
@@ -461,15 +544,16 @@ interface ClassTemplate
              */
             static Boolean extendsMixin(ClassTemplate template, String mixinName)
                 {
-                for (val contrib : template.contribs)
+                for (Contribution contrib : template.contribs)
                     {
                     if (contrib.action == Extends)
                         {
-                        assert ClassTemplate templateSuper := contrib.ingredient.is(ClassTemplate);
-                        if (templateSuper.format == Mixin)
+                        assert Composition compositionSuper := contrib.ingredient.fromClass();
+                        assert compositionSuper.is(ClassTemplate);
+                        if (compositionSuper.format == Mixin)
                             {
-                            return templateSuper.displayName == mixinName
-                                || extendsMixin(templateSuper, mixinName);
+                            return compositionSuper.displayName == mixinName
+                                || extendsMixin(compositionSuper, mixinName);
                             }
                         break;
                         }
@@ -655,11 +739,6 @@ interface ClassTemplate
      * The type parameters for the class.
      */
     @RO TypeParameter[] typeParams;
-
-    /**
-     * If the class is a mixin, this is the class to which it can be applied.
-     */
-    @RO ClassTemplate!? mixesInto;
 
     /**
      * The classes contained within this class.

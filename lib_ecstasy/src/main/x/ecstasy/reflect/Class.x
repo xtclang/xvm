@@ -455,6 +455,26 @@ const Class<PublicType, ProtectedType extends PublicType,
         }
 
     /**
+     * Determine if the class of the referent is a mixin that applies to the specified type.
+     *
+     * @param type  the type to test if this mixin applies to
+     *
+     * @return True iff this mixin applies to the specified type
+     */
+    Boolean mixesInto(Type type)
+        {
+        // only a mixin can be "into"
+        if (baseTemplate.format != Mixin)
+            {
+            return False;
+            }
+
+        // TODO GG, CP: we need to pass PublicType.template as a TypeResolver, so the ClassTemplate
+        //              logic could resolve the contributions formal types
+        return this.composition.mixesInto(type.template);
+        }
+
+    /**
      * Determine if the class of the referent is annotated by the specified mixin.
      *
      * @param mix  the mixin class to test if this class is annotated by

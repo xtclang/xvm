@@ -18,19 +18,10 @@ class RTPropertyClassTemplate
     {
     // ----- Composition methods -------------------------------------------------------------------
 
-    @Override @RO ClassTemplate[] classes;
-    @Override @RO Contribution[]  contribs;
-
-    @Override
-    @RO ClassTemplate? mixesInto.get()
-        {
-        return Null;
-        }
-
+    @Override @RO ClassTemplate[]       classes;
+    @Override @RO Contribution[]        contribs;
     @Override @RO MultiMethodTemplate[] multimethods;
     @Override @RO PropertyTemplate[]    properties;
-    @Override @RO Boolean               singleton;
-    @Override @RO SourceCodeInfo?       sourceInfo;
     @Override @RO TypeTemplate          type;
 
     @Override
@@ -43,12 +34,6 @@ class RTPropertyClassTemplate
     @RO TypeParameter[] typeParams.get()
         {
         return [];
-        }
-
-    @Override
-    @RO Boolean virtualChild.get()
-        {
-        return False;
         }
 
     @Override conditional (AnnotationTemplate, Composition) deannotate();
@@ -68,6 +53,15 @@ class RTPropertyClassTemplate
 
 
     // ----- ClassTemplate API ---------------------------------------------------------------------
+
+    @Override
+    @RO Boolean virtualChild.get()
+        {
+        return False;
+        }
+
+    @Override @RO Boolean         singleton;
+    @Override @RO SourceCodeInfo? sourceInfo;
 
     @Override conditional PropertyTemplate fromProperty();
     }

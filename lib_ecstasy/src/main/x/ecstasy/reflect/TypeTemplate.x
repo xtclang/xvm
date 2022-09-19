@@ -20,7 +20,7 @@ import reflect.Property;
  *
  * Despite its name, TypeTemplate may not always be immutable.
  */
-interface TypeTemplate // TODO move
+interface TypeTemplate
         extends immutable Const
     {
     // ----- inner classes -------------------------------------------------------------------------
@@ -438,5 +438,3 @@ interface TypeTemplate // TODO move
         TODO <=>
         }
     }
-
-

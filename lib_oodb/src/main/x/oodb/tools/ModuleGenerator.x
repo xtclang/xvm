@@ -256,7 +256,7 @@ class ModuleGenerator(String implName, String moduleName)
                     break;
 
                 default:
-                    TODO
+                    throw new UnsupportedOperation($"property={propertyName}, category={category}");
                 }
 
             propertyInfos += propertyInfoTemplate
@@ -422,7 +422,8 @@ class ModuleGenerator(String implName, String moduleName)
                     {
                     if (contrib.action == Implements)
                         {
-                        ClassTemplate template = contrib.ingredient.as(ClassTemplate);
+                        assert Composition template := contrib.ingredient.fromClass(),
+                                           template.is(ClassTemplate);
                         if (template == schemaTemplate)
                             {
                             return True, classTemplate;
