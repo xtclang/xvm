@@ -1,5 +1,7 @@
 import ecstasy.reflect.Access;
 import ecstasy.reflect.AnnotationTemplate;
+import ecstasy.reflect.ClassTemplate;
+import ecstasy.reflect.ClassTemplate.AnnotatingComposition;
 import ecstasy.reflect.ClassTemplate.Composition;
 import ecstasy.reflect.PropertyTemplate;
 import ecstasy.reflect.TypeTemplate;
@@ -36,4 +38,16 @@ const RTTypeTemplate
     //   toString()
     //   estimateStringLength()
     //   appendTo(buf)
+
+    // helper method to create an AnnotationComposition
+    static conditional Composition createComposition(ClassTemplate baseTemplate,
+                                                     AnnotationTemplate[] annotations)
+        {
+        Composition result = baseTemplate;
+        for (AnnotationTemplate annotation : annotations)
+            {
+            result = new AnnotatingComposition(annotation, result);
+            }
+        return True, result;
+        }
     }

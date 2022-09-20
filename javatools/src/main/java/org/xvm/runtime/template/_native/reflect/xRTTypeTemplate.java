@@ -3,13 +3,17 @@ package org.xvm.runtime.template._native.reflect;
 
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
+import org.xvm.asm.Parameter;
 
+import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.HandleConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
@@ -34,6 +38,8 @@ import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
+
+import org.xvm.runtime.template._native.collections.arrays.xRTDelegate.GenericArrayDelegate;
 
 import org.xvm.runtime.template._native.reflect.xRTComponentTemplate.ComponentTemplateHandle;
 
@@ -62,6 +68,8 @@ public class xRTTypeTemplate
 
         TEMPLATE_ARRAY_TYPE = pool.ensureArrayType(
                                 pool.ensureEcstasyTypeConstant("reflect.TypeTemplate"));
+
+        CREATE_COMPOSITION_METHOD = f_struct.findMethod("createComposition", 2);
 
         markNativeProperty("desc");
         markNativeProperty("explicitlyImmutable");
@@ -123,13 +131,13 @@ public class xRTTypeTemplate
         switch (method.getName())
             {
             case "isA":
-                return invokeIsA(frame, hType, hArg, iReturn);
+                return invokeIsA(frame, hType, (TypeTemplateHandle) hArg, iReturn);
 
             case "parameterize":
-                return invokeParameterize(frame, hType, hArg, iReturn);
+                return invokeParameterize(frame, hType, (ArrayHandle) hArg, iReturn);
 
             case "annotate":
-                return invokeAnnotate(frame, hType, hArg, iReturn);
+                return invokeAnnotate(frame, hType, (GenericHandle) hArg, iReturn);
             }
 
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
@@ -192,9 +200,8 @@ public class xRTTypeTemplate
     /**
      * Obtain a {@link TypeTemplateHandle} for the specified type.
      *
-     *
-     * @param container
-     * @param type  the {@link TypeConstant} to obtain a {@link TypeTemplateHandle} for
+     * @param container  the container for the handle
+     * @param type       the {@link TypeConstant} to obtain a {@link TypeTemplateHandle} for
      *
      * @return the resulting {@link TypeTemplateHandle}
      */
@@ -413,7 +420,7 @@ public class xRTTypeTemplate
         }
 
     /**
-     * Implementation for: {@code conditional Class fromClass()}.
+     * Implementation for: {@code conditional Composition fromClass()}.
      */
     public int invokeFromClass(Frame frame, TypeTemplateHandle hType, int[] aiReturn)
         {
@@ -423,12 +430,15 @@ public class xRTTypeTemplate
             return frame.assignValue(aiReturn[0], xBoolean.FALSE);
             }
 
-        IdentityConstant idClz  = type.getSingleUnderlyingClass(true);
-        ClassStructure   clz    = (ClassStructure) idClz.getComponent();
-        GenericHandle    hClass = xRTComponentTemplate.makeComponentHandle(frame.f_context.f_container, clz);
-        // TODO (temporarily defer) - type could be explicitly annotated (recursively) so we would
-        //      have to wrap the handle that many times in an AnnotatingComposition
-        return frame.assignValues(aiReturn, xBoolean.TRUE, hClass);
+        IdentityConstant idClz = type.getSingleUnderlyingClass(true);
+        ClassStructure   clz   = (ClassStructure) idClz.getComponent();
+
+        ComponentTemplateHandle hClass =
+                xRTComponentTemplate.makeComponentHandle(frame.f_context.f_container, clz);
+
+        return type.isAnnotated()
+                ? new CreateAnnotationComposition(hClass, type.getAnnotations(), aiReturn).doNext(frame)
+                : frame.assignValues(aiReturn, xBoolean.TRUE, hClass);
         }
 
     /**
@@ -462,10 +472,10 @@ public class xRTTypeTemplate
     /**
      * Implementation for: {@code Boolean isA(TypeTemplate that)}.
      */
-    public int invokeIsA(Frame frame, TypeTemplateHandle hType, ObjectHandle hArg, int iReturn)
+    public int invokeIsA(Frame frame, TypeTemplateHandle hType, TypeTemplateHandle hThat, int iReturn)
         {
         TypeConstant typeThis = hType.getDataType();
-        TypeConstant typeThat = ((TypeTemplateHandle) hArg).getDataType();
+        TypeConstant typeThat = hThat.getDataType();
         return frame.assignValue(iReturn, xBoolean.makeHandle(typeThis.isA(typeThat)));
         }
 
@@ -529,10 +539,9 @@ public class xRTTypeTemplate
     /**
      * Implementation for: {@code TypeTemplate! parameterize(TypeTemplate![] paramTypes = [])}.
      */
-    public int invokeParameterize(Frame frame, TypeTemplateHandle hType, ObjectHandle hArg, int iReturn)
+    public int invokeParameterize(Frame frame, TypeTemplateHandle hType, ArrayHandle hArray, int iReturn)
         {
         TypeConstant typeThis = hType.getDataType();
-        ArrayHandle  hArray   = (ArrayHandle) hArg;
 
         if (typeThis.isParamsSpecified())
             {
@@ -560,24 +569,45 @@ public class xRTTypeTemplate
     /**
      * Implementation for: {@code TypeTemplate! annotate(AnnotationTemplate annotation)}.
      */
-    public int invokeAnnotate(Frame frame, TypeTemplateHandle hType, ObjectHandle hArg, int iReturn)
+    public int invokeAnnotate(Frame frame, TypeTemplateHandle hType, GenericHandle hAnno, int iReturn)
         {
-        TypeConstant typeThis = hType.getDataType();
-        TypeConstant typeThat = ((TypeTemplateHandle) hArg).getDataType();
+        TypeConstant            typeThis  = hType.getDataType();
+        ComponentTemplateHandle hTemplate = (ComponentTemplateHandle) hAnno.getField(frame, "template");
+        ClassStructure          clzMixin  = (ClassStructure) hTemplate.getComponent();
+        TypeConstant            typeInto  = clzMixin.getTypeInto();
 
-        if (typeThat.isExplicitClassIdentity(false))
+        if (clzMixin.getFormat() == Component.Format.MIXIN && typeThis.isA(typeInto))
             {
-            ConstantPool  pool    = frame.poolContext();
-            ClassConstant clzAnno = (ClassConstant) typeThat.getDefiningConstant();
-            Annotation    anno    = pool.ensureAnnotation(clzAnno);
+            ConstantPool         pool       = frame.poolContext();
+            ArrayHandle          haArgs     = (ArrayHandle) hAnno.getField(frame, "arguments");
+            GenericArrayDelegate haDelegate = (GenericArrayDelegate) haArgs.m_hDelegate;
+            int                  cArgs      = (int) haDelegate.m_cSize;
+            Constant[]           aconst;
 
-            // TODO: validate mixin
+            if (cArgs > 0)
+                {
+                aconst = new Constant[cArgs];
 
-            return frame.assignValue(iReturn,
-                    makeHandle(frame.f_context.f_container,
-                    pool.ensureAnnotatedTypeConstant(typeThis, anno)));
+                for (int i = 0; i < cArgs; i++)
+                    {
+                    GenericHandle hArg   = (GenericHandle) haDelegate.get(i);
+                    ObjectHandle  hValue = hArg.getField(frame, "value");
+
+                    aconst[i] = new HandleConstant(hValue);
+                    }
+                }
+            else
+                {
+                aconst = Constant.NO_CONSTS;
+                }
+
+            AnnotatedTypeConstant typeAnno = pool.ensureAnnotatedTypeConstant(
+                    clzMixin.getIdentityConstant(), aconst, typeThis);
+
+            return frame.assignValue(iReturn, makeHandle(frame.f_context.f_container, typeAnno));
             }
-        return frame.raiseException("Invalid annotation: " + typeThat.getValueString());
+        return frame.raiseException("Invalid annotation: " +
+                clzMixin.getIdentityConstant().getValueString());
         }
 
     /**
@@ -727,4 +757,188 @@ public class xRTTypeTemplate
                 throw new IllegalStateException("unsupported type: " + type);
             }
         }
+
+    /**
+     * Helper class for collecting the annotation composition.
+     */
+    public static class CreateAnnotationComposition
+            implements Frame.Continuation
+        {
+        public CreateAnnotationComposition(ComponentTemplateHandle hClass, Annotation[] aAnno, int[] aiReturn)
+            {
+            this.hClass   = hClass;
+            this.aAnno    = aAnno;
+            this.ahAnno   = new ObjectHandle[aAnno.length];
+            this.aiReturn = aiReturn;
+            stageNext     = Stage.ArgValue;
+            }
+
+        @Override
+        public int proceed(Frame frameCaller)
+            {
+            switch (stageNext)
+                {
+                case ArgValue:
+                    // the resolved args are in the ahValue array
+                    stageNext = Stage.Argument;
+                    break;
+
+                case Argument:
+                    assert iArg >= 0;
+                    ahAnnoArg[iArg] = frameCaller.popStack();
+                    break;
+
+                case Template:
+                    assert iAnno >= 0;
+                    ahAnno[iAnno] = frameCaller.popStack();
+                    stageNext = Stage.ArgValue;
+                    break;
+                }
+
+            return doNext(frameCaller);
+            }
+
+        public int doNext(Frame frameCaller)
+            {
+            switch (stageNext)
+                {
+                case ArgValue:
+                    {
+                    // start working on the next AnnotationTemplate
+                    if (++iAnno == aAnno.length)
+                        {
+                        // all done
+                        break;
+                        }
+                    assert ahAnnoArg == null && ahValue == null;
+
+                    Annotation anno  = aAnno[iAnno];
+                    Constant[] aArg  = anno.getParams();
+                    int        cArgs = aArg.length;
+
+                    if (cArgs > 0)
+                        {
+                        ClassConstant  idAnno  = (ClassConstant) anno.getAnnotationClass();
+                        ClassStructure clzAnno = (ClassStructure) idAnno.getComponent();
+
+                        constructor = clzAnno.findMethod("construct", cArgs);
+                        if (constructor == null)
+                            {
+                            return frameCaller.raiseException("missing annotation constructor " +
+                                    idAnno.getValueString() + " with " + clzAnno + " parameters");
+                            }
+
+                        ahValue   = new ObjectHandle[cArgs];
+                        ahAnnoArg = new ObjectHandle[cArgs];
+                        for (int i = 0; i < cArgs; i++)
+                            {
+                            ahValue[i] = frameCaller.getConstHandle(aArg[i]);
+                            }
+                        if (Op.anyDeferred(ahValue))
+                            {
+                            return new Utils.GetArguments(ahValue, this).doNext(frameCaller);
+                            }
+                        }
+                    else
+                        {
+                        ahValue   = Utils.OBJECTS_NONE;
+                        ahAnnoArg = Utils.OBJECTS_NONE;
+                        }
+
+                    stageNext = Stage.Argument;
+                    // break through
+                    }
+
+                case Argument:
+                    {
+                    assert ahValue != null && ahAnnoArg != null;
+
+                    int cArgs = ahAnnoArg.length;
+
+                    CreateArgs:
+                    if (cArgs > 0)
+                        {
+                        if (++iArg == cArgs)
+                            {
+                            break CreateArgs;
+                            }
+
+                        Parameter param = constructor.getParam(iArg);
+
+                        int iResult = Utils.constructArgument(frameCaller, param.getType(),
+                                                ahValue[iArg], param.getName());
+                        if (iResult == Op.R_CALL)
+                            {
+                            frameCaller.m_frameNext.addContinuation(this);
+                            }
+                        else
+                            {
+                            assert iResult == Op.R_EXCEPTION;
+                            }
+                        return iResult;
+                        }
+                    else
+                        {
+                        ahAnnoArg = Utils.OBJECTS_NONE;
+                        }
+
+                    iArg      = -1;
+                    ahValue   = null;
+                    stageNext = Stage.Template;
+                    // break through
+                    }
+
+                case Template:
+                    {
+                    assert ahAnnoArg != null;
+
+                    Annotation     anno    = aAnno[iAnno];
+                    ClassConstant  idAnno  = (ClassConstant) anno.getAnnotationClass();
+                    ClassStructure clzAnno = (ClassStructure) idAnno.getComponent();
+
+                    ComponentTemplateHandle hAnnoClass = xRTComponentTemplate.
+                            makeComponentHandle(frameCaller.f_context.f_container, clzAnno);
+
+                    int iResult = Utils.constructAnnotationTemplate(frameCaller, hAnnoClass, ahAnnoArg, Op.A_STACK);
+
+                    if (iResult == Op.R_CALL)
+                        {
+                        frameCaller.m_frameNext.addContinuation(this);
+
+                        ahAnnoArg = null;
+                        }
+                    else
+                        {
+                        assert iResult == Op.R_EXCEPTION;
+                        }
+                    return iResult;
+                    }
+                }
+
+            TypeComposition clzArray = xRTClassTemplate.
+                    ensureAnnotationTemplateArrayComposition(frameCaller.f_context.f_container);
+
+            ObjectHandle[] ahVar = new ObjectHandle[CREATE_COMPOSITION_METHOD.getMaxVars()];
+            ahVar[0] = hClass;
+            ahVar[1] = xArray.createImmutableArray(clzArray, ahAnno);
+
+            return frameCaller.callN(CREATE_COMPOSITION_METHOD, null, ahVar, aiReturn);
+            }
+
+        enum Stage {ArgValue, Argument, Template}
+        private Stage stageNext;
+
+        private final ComponentTemplateHandle hClass;
+        private final Annotation[]            aAnno;
+        private final int[]                   aiReturn;
+        private final ObjectHandle[]          ahAnno;
+
+        private int                           iAnno = -1;
+        private int                           iArg  = -1;
+        private ObjectHandle[]                ahAnnoArg;
+        private ObjectHandle[]                ahValue;
+        private MethodStructure               constructor;
+        }
+
+    private static MethodStructure CREATE_COMPOSITION_METHOD;
     }

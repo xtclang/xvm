@@ -596,7 +596,7 @@ interface ClassTemplate
         @Override
         TypeTemplate type.get()
             {
-            return annotation.template.type;
+            return composition.type.annotate(annotation);
             }
 
         @Override
