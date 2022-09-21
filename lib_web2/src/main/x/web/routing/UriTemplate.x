@@ -73,13 +73,20 @@ const UriTemplate
             return False;
             }
 
-        Position position = START;
-
         // peel off the first literal, if there is one, so that the cadence is always "match
         // expression(s) followed by a literal (or perhaps no literal, at the end)"
         (String|Expression)[] parts = this.parts;
         Int                   count = parts.size;
-        Int                   next  = 0;
+
+        if (count == 0)
+            {
+            // UriTemplate.ROOT only matches the ROOT path
+            return uri.path == Path.ROOT ? (True, []) : False;
+            }
+
+        Position position = START;
+        Int      next     = 0;
+
         if (String literal := parts[next].is(String))
             {
             if (position := uri.matches(literal, position))
