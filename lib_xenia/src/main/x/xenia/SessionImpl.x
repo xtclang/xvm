@@ -101,14 +101,25 @@ service SessionImpl
 
     construct(SessionManager manager, Int sessionId, RequestInfo requestInfo)
         {
-        this.manager_      = manager;
-        this.created       = clock.now;
-        this.lastUse       = created;
-        this.ipAddress     = requestInfo.getClientAddress();
-        this.userAgent     = extractUserAgent(requestInfo);
-        this.cookieConsent = None;
-        this.trustLevel    = None;
-        this.sessionId     = sessionId.toString(); // TODO CP: use Base64?
+        initialize(this, manager, sessionId, requestInfo);
+        }
+
+    /**
+     * Construction helper to be used via reflection.
+     */
+    static void initialize(SessionImpl:struct structure,
+                           SessionManager manager, Int sessionId, RequestInfo requestInfo)
+        {
+        Time now = xenia.clock.now;
+
+        structure.manager_      = manager;
+        structure.created       = now;
+        structure.lastUse       = now;
+        structure.ipAddress     = requestInfo.getClientAddress();
+        structure.userAgent     = extractUserAgent(requestInfo);
+        structure.cookieConsent = None;
+        structure.trustLevel    = None;
+        structure.sessionId     = sessionId.toString(); // TODO CP: use Base64?
         }
 
 

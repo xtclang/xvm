@@ -28,22 +28,28 @@ module Hello
                 return session?.as(SimpleData) : assert;
                 }
 
-            @web.Get("h")
+            @web.Get
             String hello()
                 {
                 return "hello";
                 }
 
-            @web.Get("g")
-            String goodbye()
+            @web.Get("e/{rest}")
+            String echo(String rest)
                 {
-                return $"goodbye {simpleData.counter++}";
+                assert:debug rest != "debug";
+                return rest;
+                }
+
+            @web.Get("c")
+            String count()
+                {
+                return $"count={simpleData.counter++}";
                 }
 
             @web.Default @web.Get
             String wtf()
                 {
-                assert:debug;
                 return "what?";
                 }
 

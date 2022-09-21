@@ -176,10 +176,33 @@ service HttpHandler
 
     private static SessionManager createSessionManager(Catalog catalog)
         {
+        import ecstasy.reflect.Annotation;
         import SessionManager.SessionProducer;
 
-        // TODO GG: incorporate the SessionMixins
-        SessionProducer sessionProducer = (mgr, id, info) -> new SessionImpl(mgr, id, info);
+        SessionProducer sessionProducer;
+
+        Class[] sessionMixins = catalog.sessionMixins;
+        Int     mixinCount    = sessionMixins.size;
+
+        if (mixinCount == 0)
+            {
+            sessionProducer = (mgr, id, info) -> new SessionImpl(mgr, id, info);
+            }
+        else
+            {
+            Annotation[] annotations  = new Annotation[mixinCount] (i -> new Annotation(sessionMixins[i]));
+            Class        sessionClass = SessionImpl.annotate(annotations);
+
+            sessionProducer = (mgr, id, info) ->
+                {
+                assert Struct structure := sessionClass.allocate();
+                assert structure.is(SessionImpl:struct);
+
+                SessionImpl.initialize(structure, mgr, id, info);
+
+                return sessionClass.instantiate(structure).as(SessionImpl);
+                };
+            }
 
         return new SessionManager(new SessionStore(), sessionProducer);
         }

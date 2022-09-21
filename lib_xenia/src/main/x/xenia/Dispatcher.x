@@ -103,6 +103,11 @@ service Dispatcher
                 }
 
             // TODO CP: handle the path parsing more robustly
+            if (uriString == "")
+                {
+                uriString = "/";
+                }
+
             URI uri = new URI(path=new Path(uriString), query=query, fragment=fragment);
 
             for (EndpointInfo endpoint : serviceInfo.endpoints)

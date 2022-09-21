@@ -91,6 +91,7 @@ mixin WebApp
                                                             );
                                     }
                                 defaultEndpoint = new EndpointInfo(method, epid++, wsid);
+                                endpoints.add(defaultEndpoint);
                                 }
                             else
                                 {
@@ -138,10 +139,21 @@ mixin WebApp
                                                   );
                 wsid++;
 
-                // TODO walk recursively except packages representing imported modules
-                // TODO search for session mixins inside of the service
+                // scan classes inside the WebService class
+                Collection<Type> childTypes   = child.PrivateType.childTypes.values;
+                Class[]          childClasses = new Class[];
+                childTypes.forEach(t ->
+                    {
+                    if (Class c := t.fromClass())
+                        {
+                        childClasses += c;
+                        }
+                    });
+
+                (wsid, epid) =
+                    scanClasses(childClasses, wsid, epid, webServices, sessionMixins);
                 }
-            else if (child.implements(Session))
+            else if (child.mixesInto(Session))
                 {
                 sessionMixins += child;
                 }
