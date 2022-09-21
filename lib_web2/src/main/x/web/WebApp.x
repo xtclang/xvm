@@ -91,7 +91,6 @@ mixin WebApp
                                                             );
                                     }
                                 defaultEndpoint = new EndpointInfo(method, epid++, wsid);
-                                endpoints.add(defaultEndpoint);
                                 }
                             else
                                 {

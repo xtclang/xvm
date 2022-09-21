@@ -77,7 +77,7 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins)
          */
         Int endpointCount.get()
             {
-            return endpoints.size;
+            return endpoints.size + (defaultEndpoint == Null ? 0 : 1);
             }
         }
 
