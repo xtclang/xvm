@@ -8,7 +8,6 @@ module Hello
 
     void run()
         {
-        assert:debug;
         xenia.createServer("localhost:8080", this);
 
         console.println(\|Use the curl command to test, for example:
