@@ -201,12 +201,13 @@ public class xByteArray
             }
 
         ClassTemplate tDelegate = hDelegate.getTemplate();
-        if (tDelegate instanceof BitView tView)
+        if (tDelegate instanceof ByteView tView)
             {
             for (int i = 0, c = abVal.length; i < c; i++)
                 {
                 tView.assignByte(hDelegate, ofStart + i, abVal[i]);
                 }
+            return;
             }
         throw new UnsupportedOperationException();
         }
