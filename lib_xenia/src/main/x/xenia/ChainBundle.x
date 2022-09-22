@@ -74,8 +74,7 @@ service ChainBundle
         MethodInfo[] interceptorInfos = collectInterceptors(wsid, httpMethod);
         MethodInfo[] observerInfos    = collectObservers(wsid, httpMethod);
 
-        // TODO GG: if we say "Method<WebService> method", it fails at RT
-        Method             method  = endpoint.method;
+        Method<WebService> method  = endpoint.method;
         ParameterBinder[]  binders = new ParameterBinder[];
 
         for (Parameter param : method.params)

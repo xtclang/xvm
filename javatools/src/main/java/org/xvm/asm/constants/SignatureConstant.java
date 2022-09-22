@@ -463,6 +463,57 @@ public class SignatureConstant
         }
 
     /**
+     * Check if a method with this signature could be called via the specified signature.
+     *
+     * Unlike the "isSubstitutableFor" method above, this method is called only by the run-time call
+     * chain computation logic and only if isSubstitutableFor failed. It basically tests if it's
+     * "good enough for government work", i.e. could someone have previously signed off on a method
+     * represented by this signature being callable.
+     *
+     * Note, that when the "shim" of the "weak" isA() assignment is in place, including the verifier
+     * work for the variables on stack, this method is quite likely won't be needed.
+     */
+    public boolean isCallableAs(SignatureConstant that)
+        {
+        if (!this.getName().equals(that.getName()))
+            {
+            return false;
+            }
+
+        int cR1 = that.getReturnCount();
+        int cR2 = this.getReturnCount();
+        int cP1 = that.getParamCount();
+        int cP2 = this.getParamCount();
+
+        if (cP2 != cP1 || cR2 < cR1)
+            {
+            return false;
+            }
+
+        TypeConstant[] aR1 = that.getRawReturns();
+        TypeConstant[] aR2 = this.getRawReturns();
+        for (int i = 0, c = Math.min(cR1, cR2); i < c; i++)
+            {
+            if (!aR2[i].isA(aR1[i]) && !aR1[i].isA(aR2[i]))
+                {
+                return false;
+                }
+            }
+
+        TypeConstant[] aP1 = that.getRawParams();
+        TypeConstant[] aP2 = this.getRawParams();
+        for (int i = 0; i < cP1; i++)
+            {
+            if (!aP1[i].isA(aP2[i]) && !aP2[i].isA(aP1[i]))
+                {
+                return false;
+                }
+            }
+
+        return true;
+        }
+
+    /**
      * @return the type of the function that corresponds to this SignatureConstant
      */
     public TypeConstant asFunctionType()

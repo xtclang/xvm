@@ -1286,6 +1286,19 @@ public class TypeInfo
      */
     public MethodInfo getMethodBySignature(SignatureConstant sig)
         {
+        return getMethodBySignature(sig, false);
+        }
+
+    /**
+     * Same as the method above, but allowing for relaxed run-time matching rules.
+     *
+     * @param sig       a SignatureConstant to find the method for
+     * @param fRuntime  true iff this method is called by the runtime chain computation logic
+     *
+     * @return the MethodInfo corresponding to the specified identity
+     */
+    public MethodInfo getMethodBySignature(SignatureConstant sig, boolean fRuntime)
+        {
         Map<SignatureConstant, MethodInfo> mapBySig = m_mapMethodsBySignature;
         if (mapBySig != null)
             {
@@ -1312,6 +1325,7 @@ public class TypeInfo
 
         MethodInfo methodBest   = null;
         MethodInfo methodCapped = null;
+        MethodInfo methodRT     = null;
         for (Map.Entry<MethodConstant, MethodInfo> entry : f_mapMethods.entrySet())
             {
             MethodConstant idTest     = entry.getKey();
@@ -1383,6 +1397,15 @@ public class TypeInfo
                         break;
                         }
                     }
+
+                if (fRuntime && methodBest == null && methodCapped == null &&
+                        (sigTest0.isCallableAs(sig) ||
+                         sigTest1.isCallableAs(sig) ||
+                         sigTest2.isCallableAs(sig)))
+                    {
+                    methodRT = methodTest;
+                    break;
+                    }
                 }
             }
 
@@ -1398,6 +1421,12 @@ public class TypeInfo
             return methodCapped;
             }
 
+        if (methodRT != null)
+            {
+            mapBySig.putIfAbsent(sig, methodRT);
+            return methodRT;
+            }
+
         // check well-known native methods
         if (getType().isA(pool().typeFunction()))
             {
@@ -1405,7 +1434,7 @@ public class TypeInfo
                 {
                 Set<MethodConstant> set = findMethods("invoke", 1, MethodKind.Method);
                 assert set.size() == 1;
-                method = getMethodById(set.iterator().next());
+                method = getMethodById(set.iterator().next(), true);
                 mapBySig.putIfAbsent(sig, method);
                 return method;
                 }
@@ -1450,6 +1479,19 @@ public class TypeInfo
      */
     public MethodInfo getMethodById(MethodConstant id)
         {
+        return getMethodById(id, false);
+        }
+
+    /**
+     * Same as the method above, but allowing for relaxed run-time matching rules.
+     *
+     * @param id        a MethodConstant identity
+     * @param fRuntime  true iff this method is called by the runtime chain computation logic
+     *
+     * @return the MethodInfo corresponding to the specified identity
+     */
+    public MethodInfo getMethodById(MethodConstant id, boolean fRuntime)
+        {
         ensureCaches();
 
         MethodInfo infoMethod = f_cacheById.get(id);
@@ -1459,7 +1501,7 @@ public class TypeInfo
             }
 
         // try to find a method with the same signature
-        infoMethod = getMethodByNestedId(id.resolveNestedIdentity(pool(), f_type));
+        infoMethod = getMethodByNestedId(id.resolveNestedIdentity(pool(), f_type), fRuntime);
         if (infoMethod != null)
             {
             f_cacheById.put(id, infoMethod);
@@ -1479,6 +1521,21 @@ public class TypeInfo
      */
     public MethodInfo getMethodByNestedId(Object nid)
         {
+        return getMethodByNestedId(nid, false);
+        }
+
+    /**
+     * Same as the method above, but allowing for relaxed run-time matching rules.
+     *
+     * @param nid       a nested identity, as obtained from {@link MethodConstant#getNestedIdentity}
+     *                  or {@link IdentityConstant#resolveNestedIdentity}
+     * @param fRuntime  true iff this method is called by the runtime chain computation logic
+     *
+     * @return the specified MethodInfo, or null if no MethodInfo could be found by the provided
+     *         nested identity
+     */
+    public MethodInfo getMethodByNestedId(Object nid, boolean fRuntime)
+        {
         ensureCaches();
 
         MethodInfo info = f_cacheByNid.get(nid);
@@ -1489,7 +1546,7 @@ public class TypeInfo
 
         if (nid instanceof SignatureConstant sig)
             {
-            info = getMethodBySignature(sig);
+            info = getMethodBySignature(sig, fRuntime);
             if (info != null)
                 {
                 f_cacheByNid.put(nid, info);
@@ -1520,7 +1577,7 @@ public class TypeInfo
      */
     public MethodBody[] getOptimizedMethodChain(MethodConstant id)
         {
-        MethodInfo info = getMethodById(id);
+        MethodInfo info = getMethodById(id, true);
         return info == null
                 ? null
                 : info.ensureOptimizedMethodChain(this);
@@ -1535,7 +1592,7 @@ public class TypeInfo
      */
     public MethodBody[] getOptimizedMethodChain(Object nid)
         {
-        MethodInfo info = getMethodByNestedId(nid);
+        MethodInfo info = getMethodByNestedId(nid, true);
         return info == null
                 ? null
                 : info.ensureOptimizedMethodChain(this);

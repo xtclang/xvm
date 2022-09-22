@@ -671,7 +671,7 @@ public class ClassComposition
                                 TypeInfo.MethodKind.Constructor);
                         for (MethodConstant idConstruct : setConstrId)
                             {
-                            MethodStructure method = infoAnno.getMethodById(idConstruct).
+                            MethodStructure method = infoAnno.getMethodById(idConstruct, true).
                                 getTopmostMethodStructure(infoAnno);
 
                             if (!method.isSynthetic() || !method.isNoOp())

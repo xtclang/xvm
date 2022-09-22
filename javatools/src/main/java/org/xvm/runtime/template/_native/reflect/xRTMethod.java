@@ -313,7 +313,7 @@ public class xRTMethod
         if (method == null)
             {
             TypeInfo   infoTarget = typeTarget.ensureTypeInfo();
-            MethodInfo infoMethod = infoTarget.getMethodById(idMethod);
+            MethodInfo infoMethod = infoTarget.getMethodById(idMethod, true);
 
             method = infoMethod == null
                 ? null
@@ -391,7 +391,7 @@ public class xRTMethod
 
         public MethodInfo getMethodInfo()
             {
-            return getTargetInfo().getMethodById(f_idMethod);
+            return getTargetInfo().getMethodById(f_idMethod, true);
             }
 
         @Override

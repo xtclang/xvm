@@ -628,7 +628,7 @@ public class xRTType
             boolean                 fStructConstr = false;
             for (MethodConstant idConstr : infoTarget.findMethods("construct", -1, TypeInfo.MethodKind.Constructor))
                 {
-                MethodInfo      infoMethod  = infoTarget.getMethodById(idConstr);
+                MethodInfo      infoMethod  = infoTarget.getMethodById(idConstr, true);
                 MethodStructure constructor = infoMethod.getTopmostMethodStructure(infoTarget);
                 Parameter[]     aParams     = constructor.getParamArray();
 
