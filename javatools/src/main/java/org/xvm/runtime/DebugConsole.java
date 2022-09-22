@@ -40,7 +40,7 @@ import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.runtime.template._native.xTerminalConsole;
-import org.xvm.util.Handy;
+
 import org.xvm.util.ListMap;
 
 import static org.xvm.util.Handy.dup;
@@ -2203,8 +2203,8 @@ public class DebugConsole
                     }
                 else
                     {
-                    sb.append(" = ");
-                    Handy.appendString(sb, String.valueOf(hVar));
+                    sb.append(" = ")
+                       .append(hVar);
                     }
                 }
 

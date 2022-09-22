@@ -35,6 +35,7 @@ import org.xvm.runtime.template._native.collections.arrays.xRTCharDelegate;
 import org.xvm.runtime.template._native.collections.arrays.xRTCharDelegate.CharArrayHandle;
 import org.xvm.runtime.template._native.collections.arrays.xRTDelegate.DelegateHandle;
 import org.xvm.runtime.template._native.collections.arrays.xRTSlicingDelegate.SliceHandle;
+import org.xvm.util.Handy;
 
 
 /**
@@ -536,7 +537,9 @@ public class xString
         @Override
         public String toString()
             {
-            return super.toString() + getStringValue();
+            StringBuilder sb = new StringBuilder(super.toString());
+            Handy.appendString(sb, getStringValue());
+            return sb.toString();
             }
         }
 
