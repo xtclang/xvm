@@ -111,7 +111,7 @@ service ChainBundle
                 continue;
                 }
 
-            if (param.ParamType == Session)
+            if (param.ParamType.is(Type<Session>))
                 {
                 binders += (session, request, values) -> values.add(session);
                 continue;

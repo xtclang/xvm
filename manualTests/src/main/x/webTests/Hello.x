@@ -42,9 +42,9 @@ module Hello
                 }
 
             @web.Get("c")
-            String count()
+            String count(SimpleData sessionData)
                 {
-                return $"count={simpleData.counter++}";
+                return $"count={sessionData.counter++}";
                 }
 
             @web.Default @web.Get
