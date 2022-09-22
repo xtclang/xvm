@@ -201,7 +201,7 @@ public class IsExpression
             typeInferred = clzNarrowing.getFormalType().resolveGenerics(pool,
                 sFormalName ->
                     {
-                    TypeConstant typeParam = clzNarrowing.getConstraint(sFormalName);
+                    TypeConstant typeParam = clzNarrowing.getConstraint(sFormalName).resolveConstraints();
                     int          ixParam   = clzNarrowing.indexOfGenericParameter(sFormalName);
 
                     // TODO GG: we assume that formal type indexes stay invariant across classes,
