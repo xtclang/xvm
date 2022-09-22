@@ -357,7 +357,7 @@ public class xTuple
             atypeNew[cTypes] = hType.getDataType();
             }
 
-        TypeConstant    typeTupleNew = pool().ensureTupleType(atypeNew);
+        TypeConstant    typeTupleNew = frame.poolContext().ensureTupleType(atypeNew);
         TypeComposition clzTupleNew  = ensureClass(frame.f_context.f_container, typeTupleNew);
         TupleHandle     hTupleNew    = new TupleHandle(clzTupleNew, ahNew, hThis.m_mutability);
 
@@ -408,7 +408,7 @@ public class xTuple
             System.arraycopy(atypeAdd, 0, atypeNew, cTypes, cTypesAdd);
             }
 
-        TypeConstant    typeTupleNew = pool().ensureTupleType(atypeNew);
+        TypeConstant    typeTupleNew = frame.poolContext().ensureTupleType(atypeNew);
         TypeComposition clzTupleNew  = ensureClass(frame.f_context.f_container, typeTupleNew);
         TupleHandle     hTupleNew    = new TupleHandle(clzTupleNew, ahNew, hThis.m_mutability);
 
@@ -575,7 +575,7 @@ public class xTuple
                 atypeNew = Arrays.copyOfRange(atype,   (int) ixLower, (int) ixUpper);
                 }
 
-            TypeConstant    typeTupleNew = pool().ensureTupleType(atypeNew);
+            TypeConstant    typeTupleNew = frame.poolContext().ensureTupleType(atypeNew);
             TypeComposition clzTupleNew  = ensureClass(frame.f_context.f_container, typeTupleNew);
             TupleHandle     hTupleNew    = new TupleHandle(clzTupleNew, ahNew, hTuple.m_mutability);
 
