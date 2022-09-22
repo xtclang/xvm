@@ -578,7 +578,6 @@ public class xRTTypeTemplate
 
         if (clzMixin.getFormat() == Component.Format.MIXIN && typeThis.isA(typeInto))
             {
-            ConstantPool         pool       = frame.poolContext();
             ArrayHandle          haArgs     = (ArrayHandle) hAnno.getField(frame, "arguments");
             GenericArrayDelegate haDelegate = (GenericArrayDelegate) haArgs.m_hDelegate;
             int                  cArgs      = (int) haDelegate.m_cSize;
@@ -601,7 +600,7 @@ public class xRTTypeTemplate
                 aconst = Constant.NO_CONSTS;
                 }
 
-            AnnotatedTypeConstant typeAnno = pool.ensureAnnotatedTypeConstant(
+            AnnotatedTypeConstant typeAnno = typeThis.getConstantPool().ensureAnnotatedTypeConstant(
                     clzMixin.getIdentityConstant(), aconst, typeThis);
 
             return frame.assignValue(iReturn, makeHandle(frame.f_context.f_container, typeAnno));
@@ -863,10 +862,14 @@ public class xRTTypeTemplate
                             break CreateArgs;
                             }
 
-                        Parameter param = constructor.getParam(iArg);
-
-                        int iResult = Utils.constructArgument(frameCaller, param.getType(),
-                                                ahValue[iArg], param.getName());
+                        ObjectHandle hValue = ahValue[iArg];
+                        if (hValue.isMutable())
+                            {
+                            return frameCaller.raiseException("argument is not a const");
+                            }
+                        Parameter param   = constructor.getParam(iArg);
+                        int       iResult = Utils.constructArgument(frameCaller,
+                                                param.getType().freeze(), hValue, param.getName());
                         if (iResult == Op.R_CALL)
                             {
                             frameCaller.m_frameNext.addContinuation(this);
