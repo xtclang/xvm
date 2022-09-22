@@ -195,6 +195,17 @@ service Dispatcher
             computeSession(RequestInfo requestInfo)
         {
         // TODO: use cookies to find an existing session; full validation - redirect if necessary
-        return sessionManager.createSession(requestInfo), False;
+        Session session;
+        if (Int sessionId ?= prevSessionId,
+                session   := sessionManager.getSessionById(sessionId)) {}
+        else
+            {
+            session       = sessionManager.createSession(requestInfo);
+            prevSessionId = new Int(session.sessionId);
+            }
+
+        return session, False;
         }
+
+    Int? prevSessionId; // TEMPORARY HACK
     }
