@@ -1,14 +1,19 @@
 /**
  * A `Format` that handles decoding Base64 data from a `String` into a `Byte[]`.
  */
-const Base64Format(Boolean padding = False)
+const Base64Format(Boolean pad=False, Int? lineLength=Null)
         implements Format<Byte[]>
     {
     @Override
     String name.get()
         {
-        return padding ? "Base64-padded" : "Base64";
+        return $"Base64{pad ? "-padded" : ""}{lineLength == Null ? "" : $"({lineLength})"}";
         }
+
+    /**
+     * Default Base64 Format instance: Unpadded, no line length limit.
+     */
+    static Base64Format Instance = new Base64Format();
 
 // REVIEW could this (transparently) support any further codec that translates binary into some other type?
 //    @Override
@@ -72,9 +77,11 @@ const Base64Format(Boolean padding = False)
         }
 
     @Override
-    void write(Value value, Appender<Char> stream, Boolean fill=False, Int? lineLength=Null)
+    void write(Value value, Appender<Char> stream, Boolean? pad=Null, Int? lineLength=Null)
         {
-        lineLength ?:= Int.maxvalue;
+        pad        ?:= this.pad;
+        lineLength ?:= this.lineLength ?: Int.maxvalue;
+
         Int    lineOffset = 0;
         Int    totalChars = 0;
         Byte   prevByte   = 0;
@@ -118,10 +125,10 @@ const Base64Format(Boolean padding = False)
             ++lineOffset;
             }
 
-        if (fill)
+        if (pad)
             {
             totalChars += lineOffset;
-            for (Int i = 0, Int fillCount = 4 - (totalChars & 0b11) & 0b11; i < fillCount; ++i)
+            for (Int i = 0, Int padCount = 4 - (totalChars & 0b11) & 0b11; i < padCount; ++i)
                 {
                 if (lineOffset >= lineLength)
                     {
@@ -136,12 +143,15 @@ const Base64Format(Boolean padding = False)
         }
 
     @Override
-    String encode(Value value, Boolean fill=False, Int? lineLength=Null)
+    String encode(Value value, Boolean? pad=Null, Int? lineLength=Null)
         {
+        pad        ?:= this.pad;
+        lineLength ?:= this.lineLength;
+
         // calculate buffer size
         Int byteLen = value.size;
         Int charLen = (byteLen * 8 + 5) / 6;
-        if (fill)
+        if (pad)
             {
             charLen += 4 - (charLen & 0b11) & 0b11;
             }
@@ -151,14 +161,14 @@ const Base64Format(Boolean padding = False)
             }
 
         StringBuffer charBuf = new StringBuffer(charLen);
-        write(value, charBuf, fill, lineLength);
+        write(value, charBuf, pad, lineLength);
         return charBuf.toString();
         }
 
     /**
      * Translate a single Base64 character to the least significant 6 bits of a `Byte` value.
      *
-     * @param ch  the Base64 character; no fill or newlines allowed
+     * @param ch  the Base64 character; no pad or newlines allowed
      *
      * @return the value in the range `0 ..< 64`
      */
@@ -196,7 +206,7 @@ const Base64Format(Boolean padding = False)
             case '+': (True, 62);
             case '/': (True, 63);
 
-            case '=':           // "fill" sometimes allowed (or required) at end
+            case '=':           // "pad" sometimes allowed (or required) at end
             case '\r', '\n':    // newlines sometimes allowed (or required)
                 False;
 
