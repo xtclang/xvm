@@ -463,23 +463,26 @@ public abstract class Expression
         int cTypesRequired = atypeRequired == null ? 0 : atypeRequired.length;
         if (cTypesRequired > 1)
             {
-            if (getParent().allowsConditional(this))
-                {
-                // this can only be a "False" part of the conditional return
-                if (!atypeRequired[0].equals(pool().typeBoolean()))
-                    {
-                    log(errs, Severity.ERROR, Compiler.WRONG_TYPE_ARITY, cTypesRequired, 1);
-                    }
-                }
-            else
+            if (!getParent().allowsConditional(this))
                 {
                 return new UnpackExpression(this, null).validateMulti(ctx, atypeRequired, errs);
                 }
+
+            // the parent requires more than one type (conditionally), but this expression can only
+            // return one; this can only be a "False" part of the conditional return; we'll check
+            // afterwards unless it's already caught by the validation logic
             }
 
         if (hasSingleValueImpl())
             {
-            return validate(ctx, cTypesRequired == 0 ? null : atypeRequired[0], errs);
+            Expression exprNew = validate(ctx, cTypesRequired == 0 ? null : atypeRequired[0], errs);
+
+            if (cTypesRequired > 1 && exprNew != null &&
+                    !exprNew.getType().equals(pool().typeFalse()))
+                {
+                log(errs, Severity.ERROR, Compiler.WRONG_TYPE_ARITY, cTypesRequired, 1);
+                }
+            return exprNew;
             }
 
         throw notImplemented();
