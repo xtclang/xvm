@@ -193,7 +193,9 @@ public class ServiceContext
      */
     public Fiber getCurrentFiber()
         {
-        return m_frameCurrent == null ? null : m_frameCurrent.f_fiber;
+        // Note: this method can be called by another service
+        Frame frameCurrent = m_frameCurrent;
+        return frameCurrent == null ? null : frameCurrent.f_fiber;
         }
 
     /**
