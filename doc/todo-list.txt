@@ -1,3 +1,15 @@
+- fix the definite assignment bug (on shelf)
+
+- add is(_) switch not-reachable type ordering error message
+
+- lambda capture of a non-effectively final var as a Ref or Var needs to be explicitly allowed
+  by the code; for example: "@AllowCapture String name = ..."
+  Alternatively, we could have @CaptureByValue that would be equivalent of creating a synthetic
+  effectively final value to capture.
+
+- add a method to Map API to evaluate the "worst lookup cost" based on the current content
+  (Mark's suggestion to evaluated keys' hashCode distribution)
+
 - implement timeout for IO operations (interrupt IO executor threads)
 
 - implement BitArray's leftmostBit(), rightmostBit(), leadingZeroCount(),
@@ -44,6 +56,8 @@
 - add deadlock detection
 
 - Cam: the last case in the switch should not allow "continue"
+
+- consider adding specialized String.append(Char c) and String.append(String s)
 
 - consider not needing the ^ for a return of a tail-call invocation (except in a try block?)
     "return foo();" should be equivalent to "return foo^();"
