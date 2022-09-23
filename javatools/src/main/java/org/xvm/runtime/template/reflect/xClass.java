@@ -362,7 +362,8 @@ public class xClass
                         : clz.getTypeParamCount();
                 }
 
-            Container container = frame.f_context.f_container;
+            Container    container = frame.f_context.f_container;
+            ConstantPool pool      = frame.poolContext();
             int iResult;
             if (cParams == 0)
                 {
@@ -386,7 +387,7 @@ public class xClass
                 else
                     {
                     Iterator<StringConstant> iterNames  = clz.getTypeParams().keySet().iterator();
-                    TypeConstant[]           atypeParam = clz.normalizeParameters(INSTANCE.pool(), typeClz.getParamTypesArray());
+                    TypeConstant[]           atypeParam = clz.normalizeParameters(pool, typeClz.getParamTypesArray());
                     for (int i = 0; i < cParams; ++i)
                         {
                         ahNames[i] = xString.makeHandle(iterNames.next().getValue());
