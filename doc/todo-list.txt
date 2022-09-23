@@ -75,8 +75,6 @@
 
 - rewrite removeAccess() and removeImmutable(); it blows on virtual children now
 
-- try to get rid of reportNotNewable() by logging at TypeInfo (now we can)
-
 - consider a compiler warning if a return value of Closeable type is ignored (@Adopt annotation)
 
 - consider a new Async mixin:
