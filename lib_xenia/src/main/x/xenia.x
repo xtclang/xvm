@@ -88,4 +88,19 @@ module xenia.xtclang.org
 
         // TODO what else?
         }
+
+
+    // ----- helper methods ------------------------------------------------------------------------
+
+    /**
+     * Obtain the user agent string.
+     */
+    static String extractUserAgent(RequestInfo requestInfo)
+        {
+        if (String[] values := requestInfo.getHeaderValuesForName(Header.USER_AGENT))
+            {
+            return values[0];
+            }
+        return "";
+        }
     }

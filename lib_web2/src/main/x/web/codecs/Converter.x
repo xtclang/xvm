@@ -3,6 +3,8 @@
  */
 @Abstract const Converter<FromType, ToType>
     {
+    typedef Tuple<Type, Type> as Key;
+
     /**
      * Each Converter is identified by the combination of convert-from and convert-to type.
      */

@@ -10,16 +10,40 @@
  * @param blockThirdParty  explicitly disallow all "Third Party" cookies, regardless of other
  *                         settings
  */
-const CookieConsent(
-        Boolean necessary       = False,
-        Boolean functionality   = False,
-        Boolean performance     = False,
-        Boolean marketing       = False,
-        Boolean socialMedia     = False,
-        Boolean allowFirstParty = False,
-        Boolean blockThirdParty = False,
-        )
+const CookieConsent(Boolean necessary       = False,
+                    Boolean functionality   = False,
+                    Boolean performance     = False,
+                    Boolean marketing       = False,
+                    Boolean socialMedia     = False,
+                    Boolean allowFirstParty = False,
+                    Boolean blockThirdParty = False,
+                    Time?   lastConsent     = Null,
+                   )
+        implements Destringable
     {
+    @Override
+    construct(String text)
+        {
+        assert:arg (Boolean necessary,
+                    Boolean functionality,
+                    Boolean performance,
+                    Boolean marketing,
+                    Boolean socialMedia,
+                    Boolean allowFirstParty,
+                    Boolean blockThirdParty,
+                    Time?   lastConsent
+                   ) := parse(text) as $"Invalid CookieConsent: {text.quoted()}";
+
+        this.necessary       = necessary;
+        this.functionality   = functionality;
+        this.performance     = performance;
+        this.marketing       = marketing;
+        this.socialMedia     = socialMedia;
+        this.allowFirstParty = allowFirstParty;
+        this.blockThirdParty = blockThirdParty;
+        this.lastConsent     = lastConsent;
+        }
+
     /**
      * Copy this `CookieConsent`, changing the specified items.
      *
@@ -32,6 +56,7 @@ const CookieConsent(
      *                         other settings
      * @param blockThirdParty  (optional) explicitly disallow all "Third Party" cookies, regardless
      *                         of other settings
+     * @param lastConsent      (optional) the time at which the consent was received
      *
      * @return a new CookieConsent
      */
@@ -42,6 +67,7 @@ const CookieConsent(
                        Boolean? socialMedia     = Null,
                        Boolean? allowFirstParty = Null,
                        Boolean? blockThirdParty = Null,
+                       Time?    lastConsent     = Null,
                       )
         {
         return new CookieConsent(necessary       = necessary       ?: this.necessary,
@@ -51,6 +77,7 @@ const CookieConsent(
                                  socialMedia     = socialMedia     ?: this.socialMedia,
                                  allowFirstParty = allowFirstParty ?: this.allowFirstParty,
                                  blockThirdParty = blockThirdParty ?: this.blockThirdParty,
+                                 lastConsent     = lastConsent     ?: this.lastConsent,
                                 );
         }
 
@@ -230,6 +257,62 @@ const CookieConsent(
             return True, None;
             }
 
+        if ((Boolean necessary,
+             Boolean functionality,
+             Boolean performance,
+             Boolean marketing,
+             Boolean socialMedia,
+             Boolean allowFirstParty,
+             Boolean blockThirdParty,
+// TODO CP   Time?   lastConsent,    ) := parse(text))
+             Time?   lastConsent     ) := parse(text))
+           {
+           return True, new CookieConsent(necessary,
+                                          functionality,
+                                          performance,
+                                          marketing,
+                                          socialMedia,
+                                          allowFirstParty,
+                                          blockThirdParty,
+                                          lastConsent,
+                                         );
+           }
+
+        return False;
+        }
+
+    /**
+     * Parse the format of the [toString] method to create a `CookieConsent` instance that would
+     * create the same result from a call to its `toString` method.
+     *
+     * @param text  the result from a previous call to [CookieConsent.toString()](toString).
+     *
+     * @return True iff the text was successfully parsed
+     * @return (conditional) True indicates that "Strictly Necessary" cookies are allowed
+     * @return (conditional) True indicates that "Functionality"/"Preferences" cookies are allowed
+     * @return (conditional) True indicates that "Performance"/"Statistics" cookiesare allowed
+     * @return (conditional) True indicates that "Marketing"/"Targeting" cookies are allowed
+     * @return (conditional) True indicates that "SocialMedia" (Third Party) cookies are allowed
+     * @return (conditional) True indicates that all "First Party" cookies are allowed
+     * @return (conditional) True indicates that all "Third Party" cookies are disallowed
+     * @return (conditional) the time at which the consent was received
+     */
+    static conditional (Boolean necessary,
+                        Boolean functionality,
+                        Boolean performance,
+                        Boolean marketing,
+                        Boolean socialMedia,
+                        Boolean allowFirstParty,
+                        Boolean blockThirdParty,
+                        Time?   lastConsent,    ) parse(String text)
+        {
+        import ecstasy.collections.CaseInsensitive;
+
+        if (text == "" || CaseInsensitive.areEqual(text, "None"))
+            {
+            return True, False, False, False, False, False, False, False, Null;
+            }
+
         Boolean necessary       = False;
         Boolean functionality   = False;
         Boolean performance     = False;
@@ -237,6 +320,9 @@ const CookieConsent(
         Boolean socialMedia     = False;
         Boolean allowFirstParty = False;
         Boolean blockThirdParty = False;
+        Time?   lastConsent     = Null;
+
+        // TODO split '@'
 
         for (String part : text.split(','))
             {
@@ -255,8 +341,10 @@ const CookieConsent(
                 }
             }
 
-        return True, new CookieConsent(necessary, functionality, performance, marketing, socialMedia,
-                allowFirstParty, blockThirdParty);
+        // TODO parse lastConsent
+
+        return True, necessary, functionality, performance, marketing, socialMedia, allowFirstParty,
+                blockThirdParty, lastConsent;
         }
 
     @Override
@@ -294,6 +382,17 @@ const CookieConsent(
             "No_3rd".appendTo(buf);
             }
 
-        return buf.size == 0 ? "None" : buf.toString();
+        if (buf.size == 0)
+            {
+            "None".appendTo(buf);
+            }
+
+        if (Time stamp ?= lastConsent)
+            {
+            buf.add('@');
+            Header.formatImfFixDate(stamp).appendTo(buf);
+            }
+
+        return buf.toString();
         }
     }

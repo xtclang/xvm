@@ -1,7 +1,7 @@
 /**
  * Represents the ability to convert a String to and from UTF-8 binary data.
  */
-static const Utf8StringCodec
+static const Utf8Codec
         implements Codec<String>
     {
     @Override

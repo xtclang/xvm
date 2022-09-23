@@ -22,47 +22,45 @@ const MediaType
     {
     // ----- standard and/or common predefined media types -----------------------------------------
 
-    static MediaType JavaScript  = predefine("application/javascript",                   "js");
-    static MediaType Json        = predefine("application/json",                         "json");
-    static MediaType JsonLD      = predefine("application/ld+json",                      "jsonld");
-    static MediaType JsonPatch   = predefine("application/json-patch+json");
-    static MediaType PDF         = predefine("application/pdf",                          "pdf");
-    static MediaType SQL         = predefine("application/sql",                          "sql");
-    static MediaType JsonAPI     = predefine("application/vnd.api+json");
-    static MediaType Word        = predefine("application/msword",                       "doc");
-    static MediaType WordX       = predefine("application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                                                                                         "docx");
-    static MediaType Excel       = predefine("application/vnd.ms-excel",                 "xls");
-    static MediaType ExcelX      = predefine("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                                                                                         "xlsx");
-    static MediaType PowerPoint  = predefine("application/vnd.ms-powerpoint",            "ppt");
-    static MediaType PowerPointX = predefine("application/vnd.openxmlformats-officedocument.presentationml.presentation",
-                                                                                         "pptx");
-    static MediaType OpenOffice  = predefine("application/vnd.oasis.opendocument.text",  "odt");
-    static MediaType FormURL     = predefine("application/x-www-form-urlencoded");
-    static MediaType XML         = predefine(["application/xml", "text/xml"],            "xml");
-    static MediaType XHTML       = predefine("application/xhtml+xml",                    "xhtml");
-    static MediaType Zip         = predefine("application/zip",                          "zip");
-    static MediaType ZStd        = predefine("application/zstd",                         "zst");
-    static MediaType CDAudio     = predefine("application/x-cdf",                        "cda");
-    static MediaType AACAudio    = predefine("audio/aac",                                "aac");
-    static MediaType MpegAudio   = predefine(["audio/mpeg", "audio/MPA", "audio/mpa-robust"],
-                                                                                         "mp3");
-    static MediaType OGG         = predefine("audio/ogg",                                "ogg");
-    static MediaType Opus        = predefine("audio/opus",                               "opus");
-    static MediaType WAV         = predefine("audio/wav",                                "wav");
-    static MediaType WEBMAudio   = predefine("audio/webm",                               "weba");
-    static MediaType MIDI        = predefine(["audio/midi", "audio/x-midi"],             ["mid", "midi"]);
-    static MediaType AVIF        = predefine("image/avif",                               "avif");
-    static MediaType JPEG        = predefine("image/jpeg",                               ["jpg", "jpeg", "jfif", "pjpeg", "pjp"]);
-    static MediaType PNG         = predefine("image/png",                                "png");
-    static MediaType SVG         = predefine("image/svg+xml",                            "svg");
-    static MediaType WebP        = predefine("image/webp",                               "webp");
-    static MediaType FormData    = predefine("multipart/form-data");
-    static MediaType CSS         = predefine("text/css",                                 "css");
-    static MediaType CSV         = predefine("text/csv",                                 "csv");
-    static MediaType HTML        = predefine("text/html",                                ["htm", "html"]);
-    static MediaType Text        = predefine("text/plain",                               "txt");
+    static MediaType Json        = predefine("application/json",                              "json");
+    static MediaType JsonLD      = predefine("application/ld+json",                           "jsonld");
+    static MediaType JsonPatch   = predefine("application/json-patch+json"                          );
+    static MediaType PDF         = predefine("application/pdf",                               "pdf" );
+    static MediaType SQL         = predefine("application/sql",                               "sql" );
+    static MediaType JsonAPI     = predefine("application/vnd.api+json"                             );
+    static MediaType Word        = predefine("application/msword",                            "doc" );
+    static MediaType Excel       = predefine("application/vnd.ms-excel",                      "xls" );
+    static MediaType PowerPoint  = predefine("application/vnd.ms-powerpoint",                 "ppt" );
+
+    static MediaType WordX       = predefine("application/vnd.openxmlformats-officedocument.wordprocessingml.document",   "docx");
+    static MediaType ExcelX      = predefine("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",         "xlsx");
+    static MediaType PowerPointX = predefine("application/vnd.openxmlformats-officedocument.presentationml.presentation", "pptx");
+
+    static MediaType OpenOffice  = predefine("application/vnd.oasis.opendocument.text",       "odt" );
+    static MediaType FormURL     = predefine("application/x-www-form-urlencoded"                    );
+    static MediaType XML         = predefine(["application/xml", "text/xml"],                 "xml" );
+    static MediaType XHTML       = predefine("application/xhtml+xml",                         "xhtml");
+    static MediaType Zip         = predefine("application/zip",                               "zip" );
+    static MediaType ZStd        = predefine("application/zstd",                              "zst" );
+    static MediaType CDAudio     = predefine("application/x-cdf",                             "cda" );
+    static MediaType AACAudio    = predefine("audio/aac",                                     "aac" );
+    static MediaType MpegAudio   = predefine(["audio/mpeg", "audio/MPA", "audio/mpa-robust"], "mp3" );
+    static MediaType OGG         = predefine("audio/ogg",                                     "ogg" );
+    static MediaType Opus        = predefine("audio/opus",                                    "opus");
+    static MediaType WAV         = predefine("audio/wav",                                     "wav" );
+    static MediaType WEBMAudio   = predefine("audio/webm",                                    "weba");
+    static MediaType MIDI        = predefine(["audio/midi", "audio/x-midi"],                  ["mid", "midi"]);
+    static MediaType AVIF        = predefine("image/avif",                                    "avif");
+    static MediaType JPEG        = predefine("image/jpeg",                                    ["jpg", "jpeg", "jfif", "pjpeg", "pjp"]);
+    static MediaType PNG         = predefine("image/png",                                     "png" );
+    static MediaType SVG         = predefine("image/svg+xml",                                 "svg" );
+    static MediaType WebP        = predefine("image/webp",                                    "webp");
+    static MediaType FormData    = predefine("multipart/form-data"                                  );
+    static MediaType CSS         = predefine("text/css",                                      "css" );
+    static MediaType CSV         = predefine("text/csv",                                      "csv" );
+    static MediaType HTML        = predefine("text/html",                                     ["htm", "html"]);
+    static MediaType JavaScript  = predefine(["text/javascript", "application/javascript"],   "js"  );
+    static MediaType Text        = predefine("text/plain",                                    "txt" );
 
     /**
      * All of the pre-defined media types.

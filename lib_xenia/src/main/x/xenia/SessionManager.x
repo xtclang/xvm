@@ -4,6 +4,15 @@ import SessionStore.IOResult;
 
 /**
  * A service that keeps track of all of the `Session` objects.
+ *
+* The implementation of `Session` uses three cookies:
+ *
+ *
+ * TODO CP
+ * - assume anonymous user
+ * - assume shared device (allow user to explicitly indicate that device is not shared)
+ * - assume no consent (allow user to consent, which enables persistent cookies if device is explicitly not shared)
+ *
  */
 @Concurrent
 service SessionManager(SessionStore store, SessionProducer instantiateSession)
@@ -93,6 +102,10 @@ service SessionManager(SessionStore store, SessionProducer instantiateSession)
      */
     public/private Duration trustedDeviceTimeout   = Duration:60D;      // default is two months
 
+
+    // ----- session/request binding ---------------------------------------------------------------
+
+    (request)
 
     // ----- session control -----------------------------------------------------------------------
 
