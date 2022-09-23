@@ -21,6 +21,7 @@ import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.PropertyStructure;
 
+import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
@@ -716,9 +717,12 @@ public class MethodDeclarationStatement
                         }
                     }
 
+                // IMPORTANT: the annotation hasn't been validated yet; don't register the annotated
+                //            type with the constant pool, since it will prematurely register the
+                //            annotation before its parameters are fully resolved
                 typeNext = typeNext == null
                         ? typeMixin
-                        : pool.ensureAnnotatedTypeConstant(typeMixin, anno);
+                        : new AnnotatedTypeConstant(pool, anno, typeMixin);
 
                 for (int j = 0; j < i; j++)
                     {
