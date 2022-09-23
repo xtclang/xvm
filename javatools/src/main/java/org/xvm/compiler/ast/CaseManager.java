@@ -785,14 +785,28 @@ public class CaseManager<CookieType>
                     Constant constCase = aConstCase[i];
                     if (constCase instanceof RangeConstant constRange)
                         {
-                        int iFirst = constRange.getFirst().getIntValue().sub(m_pintMin).getInt();
-                        int iLast  = constRange.getLast().getIntValue().sub(m_pintMin).getInt();
+                        int     iFirst   = constRange.getFirst().getIntValue().sub(m_pintMin).getInt();
+                        int     iLast    = constRange.getLast().getIntValue().sub(m_pintMin).getInt();
+                        boolean fFirstEx = constRange.isFirstExcluded();
+                        boolean fLastEx  = constRange.isLastExcluded();
                         if (iFirst > iLast)
                             {
                             int iTemp = iFirst;
-                            iFirst = iLast;
-                            iLast  = iTemp;
+                            iFirst = fLastEx  ? iLast+1 : iLast;
+                            iLast  = fFirstEx ? iTemp-1 : iTemp;
                             }
+                        else
+                            {
+                            if (fFirstEx)
+                                {
+                                iFirst++;
+                                }
+                            if (fLastEx)
+                                {
+                                iLast--;
+                                }
+                            }
+
                         for (int iVal = iFirst; iVal <= iLast; ++iVal)
                             {
                             if (aLabels[iVal] == null)
@@ -933,7 +947,8 @@ public class CaseManager<CookieType>
         return false;
         }
 
-    private boolean covers(Constant constThis, boolean fRangeThis, Constant constThat, boolean fRangeThat)
+    private static boolean covers(Constant constThis, boolean fRangeThis,
+                                  Constant constThat, boolean fRangeThat)
         {
         if (constThis.equals(constThat) || constThis instanceof MatchAnyConstant)
             {
@@ -952,7 +967,8 @@ public class CaseManager<CookieType>
             return false;
             }
 
-        Object oThisLo, oThisHi;
+        Object  oThisLo, oThisHi;
+        boolean fThisLoEx, fThisHiEx;
         if (fRangeThis)
             {
             if (constThis instanceof RangeConstant constRange)
@@ -962,8 +978,10 @@ public class CaseManager<CookieType>
                 if (oThisLo instanceof ValueConstant valLo &&
                     oThisHi instanceof ValueConstant valHi)
                     {
-                    oThisLo = valLo.getValue();
-                    oThisHi = valHi.getValue();
+                    oThisLo   = valLo.getValue();
+                    oThisHi   = valHi.getValue();
+                    fThisLoEx = constRange.isFirstExcluded();
+                    fThisHiEx = constRange.isLastExcluded();
                     }
                 else
                     {
@@ -977,7 +995,8 @@ public class CaseManager<CookieType>
             }
         else
             {
-            oThisLo = oThisHi = ((ValueConstant) constThis).getValue();
+            oThisLo   = oThisHi   = ((ValueConstant) constThis).getValue();
+            fThisLoEx = fThisHiEx = false;
             }
 
         if (!(oThisLo instanceof Comparable cmpThisLo &&
@@ -986,7 +1005,8 @@ public class CaseManager<CookieType>
             return false;
             }
 
-        Object oThatLo, oThatHi;
+        Object  oThatLo, oThatHi;
+        boolean fThatLoEx, fThatHiEx;
         if (fRangeThat)
             {
             if (constThat instanceof RangeConstant constRange)
@@ -996,8 +1016,10 @@ public class CaseManager<CookieType>
                 if (oThatLo instanceof ValueConstant valueLo &&
                     oThatHi instanceof ValueConstant valueHi)
                     {
-                    oThatLo = valueLo.getValue();
-                    oThatHi = valueHi.getValue();
+                    oThatLo   = valueLo.getValue();
+                    oThatHi   = valueHi.getValue();
+                    fThatLoEx = constRange.isFirstExcluded();
+                    fThatHiEx = constRange.isLastExcluded();
                     }
                 else
                     {
@@ -1011,7 +1033,8 @@ public class CaseManager<CookieType>
             }
         else
             {
-            oThatLo = oThatHi = ((ValueConstant) constThat).getValue();
+            oThatLo   = oThatHi   = ((ValueConstant) constThat).getValue();
+            fThatLoEx = fThatHiEx = false;
             }
         if (!(  oThatLo instanceof Comparable cmpThatLo &&
                 oThatHi instanceof Comparable cmpThatHi))
@@ -1028,17 +1051,31 @@ public class CaseManager<CookieType>
                 Comparable cmpOops = cmpThisLo;
                 cmpThisLo = cmpThisHi;
                 cmpThisHi = cmpOops;
+
+                boolean fOops = fThisHiEx;
+                fThisHiEx = fThisLoEx;
+                fThisLoEx = fOops;
                 }
             if (cmpThatLo.compareTo(cmpThatHi) > 0)
                 {
                 Comparable cmpOops = cmpThatLo;
                 cmpThatLo = cmpThatHi;
                 cmpThatHi = cmpOops;
+
+                boolean fOops = fThatHiEx;
+                fThatHiEx = fThatLoEx;
+                fThatLoEx = fOops;
                 }
 
-            // this range covers that range if this lo <= that lo and this hi >= that hi
-            return cmpThisLo.compareTo(cmpThatLo) <= 0 &&
-                   cmpThisHi.compareTo(cmpThatHi) >= 0;
+            // this range covers that range if "this lo" <= "that lo" and "this hi" >= "that hi"
+
+            int nCmpLo = cmpThisLo.compareTo(cmpThatLo);
+            int nCmpHi = cmpThisHi.compareTo(cmpThatHi);
+
+            boolean fCoverLo = !fThisLoEx || fThatLoEx ? nCmpLo <= 0 : nCmpLo < 0;
+            boolean fCoverHi = !fThisHiEx || fThatHiEx ? nCmpHi >= 0 : nCmpHi > 0;
+
+            return  fCoverLo && fCoverHi;
             }
         catch (Exception e)
             {

@@ -27,6 +27,7 @@ import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xBoolean.BooleanHandle;
 
 import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
@@ -335,14 +336,17 @@ public class JumpVal_N
                         if (hCase.getType().isA(frame.poolContext().typeRange()))
                             {
                             GenericHandle hRange = (GenericHandle) hCase;
-                            ObjectHandle  hLow   = hRange.getField(null, "lowerBound");
-                            ObjectHandle  hHigh  = hRange.getField(null, "upperBound");
+                            ObjectHandle  hLo    = hRange.getField(null, "lowerBound");
+                            ObjectHandle  hHi    = hRange.getField(null, "upperBound");
+                            BooleanHandle hLoEx  = (BooleanHandle) hRange.getField(null, "lowerExclusive");
+                            BooleanHandle hHiEx  = (BooleanHandle) hRange.getField(null, "upperExclusive");
 
                             Frame.Continuation stepNext =
                                 frameCaller -> findSmallNatural(frameCaller, iPC, ahValue, ixBits,
                                     iCurrentRow, iCurrentCol + 1);
 
-                            switch (checkRange(frame, typeColumn, hValue, hLow, hHigh, true, stepNext))
+                            switch (checkRange(frame, typeColumn, hValue, hLo, hHi,
+                                        hLoEx.get(), hHiEx.get(), true, stepNext))
                                 {
                                 case Op.R_NEXT:
                                     if (frame.popStack() == xBoolean.TRUE)

@@ -375,6 +375,10 @@ public class ByteConstant
                 return ConstantPool.getCurrentPool().ensureRangeConstant(this, that);
             case "UInt8..<UInt8":
                 return ConstantPool.getCurrentPool().ensureRangeConstant(this, false, that, true);
+            case "UInt8>..UInt8":
+                return ConstantPool.getCurrentPool().ensureRangeConstant(this, true, that, false);
+            case "UInt8>..<UInt8":
+                return ConstantPool.getCurrentPool().ensureRangeConstant(this, true, that, true);
 
             case "UInt8<<Int64":
                 return validate(this.m_nVal << ((IntConstant) that).getValue().and(new PackedInteger(7)).getInt());

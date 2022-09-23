@@ -225,13 +225,9 @@ const Base64Format(Boolean pad=False, Int? lineLength=Null)
         {
         return switch (byte)
             {
-// TODO GG
-//            case  0 ..< 26: 'A'+byte;
-//            case 26 ..< 52: 'a'+byte;
-//            case 52 ..< 62: '0'+byte;
-            case  0 .. 25: 'A'+byte;
-            case 26 .. 51: 'a'+(byte-26);
-            case 52 .. 61: '0'+(byte-52);
+            case  0 ..< 26: 'A'+byte;
+            case 26 ..< 52: 'a'+(byte-26);
+            case 52 ..< 62: '0'+(byte-52);
             case 62: '+';
             case 63: '/';
             default: assert:bounds as $"byte={byte}";

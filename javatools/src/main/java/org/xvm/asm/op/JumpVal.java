@@ -23,6 +23,7 @@ import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xBoolean.BooleanHandle;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -153,7 +154,11 @@ public class JumpVal
                     {
                     Object[] ao = listRanges.get(iR);
 
-                    int index = (Integer) ao[2];
+                    int     index = (Integer) ao[2];
+                    boolean fLoEx = (index & LO_EX) != 0;
+                    boolean fHiEx = (index & HI_EX) != 0;
+
+                    index &= ~EXCLUDE_MASK;
 
                     // we only need to compare the range if there is a chance that it can impact
                     // the result (the range case precedes the exact match case)
@@ -162,11 +167,16 @@ public class JumpVal
                         ObjectHandle hLow  = (ObjectHandle) ao[0];
                         ObjectHandle hHigh = (ObjectHandle) ao[1];
 
-                        if (hValue.isNativeEqual() &&
-                                hValue.compareTo(hLow) >= 0 && hValue.compareTo(hHigh) <= 0)
+                        if (hValue.isNativeEqual())
                             {
-                            Index = index;
-                            break;
+                            int nCmpLo = hValue.compareTo(hLow);
+                            int nCmpHi = hValue.compareTo(hHigh);
+
+                            if (    (fLoEx ? nCmpLo > 0 : nCmpLo >= 0) &&
+                                    (fHiEx ? nCmpHi < 0 : nCmpHi <= 0))
+                                {
+                                return iPC + index;
+                                }
                             }
                         }
                     }
@@ -205,13 +215,16 @@ public class JumpVal
                     if (hCase.getType().isA(frame.poolContext().typeRange()))
                         {
                         GenericHandle hRange = (GenericHandle) hCase;
-                        ObjectHandle  hLow   = hRange.getField(null, "lowerBound");
-                        ObjectHandle  hHigh  = hRange.getField(null, "upperBound");
+                        ObjectHandle  hLo    = hRange.getField(null, "lowerBound");
+                        ObjectHandle  hHi    = hRange.getField(null, "upperBound");
+                        BooleanHandle hLoEx  = (BooleanHandle) hRange.getField(null, "lowerExclusive");
+                        BooleanHandle hHiEx  = (BooleanHandle) hRange.getField(null, "upperExclusive");
 
                         Frame.Continuation stepNext =
                             frameCaller -> findNatural(frameCaller, iPC, hValue, iCurrent + 1);
 
-                        switch (checkRange(frame, m_typeCond, hValue, hLow, hHigh, true, stepNext))
+                        switch (checkRange(frame, m_typeCond, hValue, hLo, hHi,
+                                    hLoEx.get(), hHiEx.get(), true, stepNext))
                             {
                             case Op.R_NEXT:
                                 if (frame.popStack() == xBoolean.TRUE)
@@ -354,8 +367,10 @@ public class JumpVal
      */
     private boolean addRange(GenericHandle hRange, int index)
         {
-        ObjectHandle hLow  = hRange.getField(null, "lowerBound");
-        ObjectHandle hHigh = hRange.getField(null, "upperBound");
+        ObjectHandle  hLo   = hRange.getField(null, "lowerBound");
+        ObjectHandle  hHi   = hRange.getField(null, "upperBound");
+        BooleanHandle hLoEx = (BooleanHandle) hRange.getField(null, "lowerExclusive");
+        BooleanHandle hHiEx = (BooleanHandle) hRange.getField(null, "upperExclusive");
 
         // TODO: if the range is small and sequential (an interval), replace it with the exact hits for native values
         List<Object[]> list = m_listRanges;
@@ -363,8 +378,19 @@ public class JumpVal
             {
             list = m_listRanges = new ArrayList<>();
             }
-        list.add(new Object[]{hLow, hHigh, Integer.valueOf(index)});
-        return hLow.isNativeEqual();
+
+        assert (index & EXCLUDE_MASK) == 0;
+        if (hLoEx.get())
+            {
+            index |= LO_EX;
+            }
+        if (hHiEx.get())
+            {
+            index |= HI_EX;
+            }
+
+        list.add(new Object[]{hLo, hHi, Integer.valueOf(index)});
+        return hLo.isNativeEqual();
         }
 
     @Override
@@ -412,7 +438,11 @@ public class JumpVal
      * A list of ranges;
      *  a[0] - lower bound (ObjectHandle);
      *  a[1] - upper bound (ObjectHandle);
-     *  a[2] - the case index (Integer)
+     *  a[2] - the case index (Integer) masked by the exclusivity bits
      */
     private transient List<Object[]> m_listRanges;
+
+    private final static int EXCLUDE_MASK = 0xC000_0000;
+    private final static int LO_EX        = 0x8000_0000;
+    private final static int HI_EX        = 0x4000_0000;
     }

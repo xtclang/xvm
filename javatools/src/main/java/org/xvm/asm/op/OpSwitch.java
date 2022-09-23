@@ -162,52 +162,71 @@ public abstract class OpSwitch
 
     /**
      * Make natural calls to determine if the specified value sits in the range (inclusive) between
-     * the specified low and hign values. The resulting Boolean value should be placed on the
+     * the specified low and high values. The resulting Boolean value should be placed on the
      * caller's stack.
+     *
+     * @param fLow  if true, check the low value, otherwise the high value
      *
      * @return one of Op.R_NEXT, Op.R_CALL or Op.R_EXCEPTION values
      */
     protected int checkRange(Frame frame, TypeConstant typeCompare, ObjectHandle hValue,
-                             ObjectHandle hLow, ObjectHandle hHigh, boolean fLow,
-                             Frame.Continuation continuation)
+                             ObjectHandle hLo, ObjectHandle hHi,
+                             boolean fLoEx,    boolean      fHiEx,
+                             boolean fLow, Frame.Continuation continuation)
         {
-        switch (typeCompare.callCompare(frame, hValue, fLow ? hLow : hHigh, Op.A_STACK))
+        switch (typeCompare.callCompare(frame, hValue, fLow ? hLo : hHi, Op.A_STACK))
             {
             case Op.R_NEXT:
+                ObjectHandle hResult = frame.popStack();
                 if (fLow)
                     {
-                    if (frame.popStack() != xOrdered.GREATER)
+                    boolean fMatch = fLoEx
+                                        ? hResult == xOrdered.GREATER
+                                        : hResult != xOrdered.LESSER;   // GREATER or EQUAL
+                    if (!fMatch)
                         {
                         // we're done; no match
                         frame.pushStack(xBoolean.FALSE);
                         return continuation.proceed(frame);
                         }
 
-                    return checkRange(frame, typeCompare, hValue, hLow, hHigh, false, continuation);
+                    return checkRange(frame, typeCompare, hValue,
+                            hLo, hHi, fLoEx, fHiEx, false, continuation);
                     }
                 else
                     {
-                    frame.pushStack(xBoolean.makeHandle(frame.popStack() != xOrdered.LESSER));
+                    boolean fMatch = fHiEx
+                                        ? hResult == xOrdered.LESSER
+                                        : hResult != xOrdered.GREATER;  // LESSER or EQUAL
+                    frame.pushStack(xBoolean.makeHandle(fMatch));
                     return continuation.proceed(frame);
                     }
 
             case Op.R_CALL:
                 Frame.Continuation stepNext = frameCaller ->
                     {
+                    ObjectHandle hR = frameCaller.popStack();
                     if (fLow)
                         {
-                        if (frameCaller.popStack() != xOrdered.GREATER)
+                        boolean fMatch = fLoEx
+                                            ? hR == xOrdered.GREATER
+                                            : hR != xOrdered.LESSER;   // GREATER or EQUAL
+                        if (!fMatch)
                             {
                             // we're done; no match
                             frameCaller.pushStack(xBoolean.FALSE);
                             return continuation.proceed(frameCaller);
                             }
 
-                        return checkRange(frameCaller, typeCompare, hValue, hLow, hHigh, false, continuation);
+                        return checkRange(frameCaller, typeCompare, hValue,
+                                hLo, hHi, fLoEx, fHiEx, false, continuation);
                         }
                     else
                         {
-                        frameCaller.pushStack(xBoolean.makeHandle(frameCaller.popStack() != xOrdered.LESSER));
+                        boolean fMatch = fHiEx
+                                            ? hR == xOrdered.LESSER
+                                            : hR != xOrdered.GREATER;  // LESSER or EQUAL
+                        frameCaller.pushStack(xBoolean.makeHandle(fMatch));
                         return continuation.proceed(frameCaller);
                         }
                     };

@@ -887,6 +887,30 @@ public class IntConstant
             case "UIntN..<UIntN":
                 return ConstantPool.getCurrentPool().ensureRangeConstant(this, false, that, true);
 
+            case "Int16>..Int16":
+            case "Int32>..Int32":
+            case "Int64>..Int64":
+            case "Int128>..Int128":
+            case "IntN>..IntN":
+            case "UInt16>..UInt16":
+            case "UInt32>..UInt32":
+            case "UInt64>..UInt64":
+            case "UInt128>..UInt128":
+            case "UIntN>..UIntN":
+                return ConstantPool.getCurrentPool().ensureRangeConstant(this, true, that, false);
+
+            case "Int16>..<Int16":
+            case "Int32>..<Int32":
+            case "Int64>..<Int64":
+            case "Int128>..<Int128":
+            case "IntN>..<IntN":
+            case "UInt16>..<UInt16":
+            case "UInt32>..<UInt32":
+            case "UInt64>..<UInt64":
+            case "UInt128>..<UInt128":
+            case "UIntN>..<UIntN":
+                return ConstantPool.getCurrentPool().ensureRangeConstant(this, true, that, true);
+
             case "Int16<<Int64":
             case "Int32<<Int64":
             case "Int64<<Int64":
