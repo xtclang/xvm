@@ -346,8 +346,8 @@ public class AnnotatedTypeConstant
     @Override
     public boolean containsGenericParam(String sName)
         {
-        return getAnnotationType().containsGenericParam(sName) ||
-               super.containsGenericParam(sName);
+        return super.containsGenericParam(sName) ||
+               getAnnotationType().containsGenericParam(sName);
         }
 
     @Override
@@ -355,9 +355,10 @@ public class AnnotatedTypeConstant
         {
         assert listParams.isEmpty();
 
-        TypeConstant type = getAnnotationType().resolveGenericType(sName);
+        // annotation itself usually just follows the underlying type; check it first
+        TypeConstant type = super.getGenericParamType(sName, listParams);
         return type == null
-                ? super.getGenericParamType(sName, listParams)
+                ? getAnnotationType().resolveGenericType(sName)
                 : type;
         }
 

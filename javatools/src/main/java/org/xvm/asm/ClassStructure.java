@@ -667,27 +667,36 @@ public class ClassStructure
                 continue;
                 }
 
-            boolean fCheck = switch (contrib.getComposition())
+            boolean fCheck;
+            switch (contrib.getComposition())
                 {
-                case Annotation ->
-                    !isIntoClassMixin(typeContrib);
+                case Annotation:
+                    fCheck     = !isIntoClassMixin(typeContrib);
+                    fAllowInto = false;
+                    break;
 
-                case Into ->
-                    fAllowInto;
+                case Into:
+                    fCheck     = fAllowInto;
+                    fAllowInto = false;
+                    break;
 
-                case Implements, Incorporates, Extends ->
-                    true;
+                case Incorporates:
+                    fAllowInto = false;
+                    // break through
+                case Delegates, Implements, Extends:
+                    fCheck = true;
+                    break;
 
-                default ->
-                    // ignore any other contributions
-                    false;
-                };
+                default:
+                    fCheck = false;
+                    break;
+                }
 
             if (fCheck)
                 {
                 ClassStructure clzContrib = (ClassStructure)
                         typeContrib.getSingleUnderlyingClass(true).getComponent();
-                child = clzContrib.findChildDeep(sName, false);
+                child = clzContrib.findChildDeep(sName, fAllowInto);
                 if (child != null)
                     {
                     return child;
@@ -1349,7 +1358,7 @@ public class ClassStructure
             return new Contribution(Composition.Equal, getFormalType());
             }
 
-        return findContributionImpl(idContrib, false);
+        return findContributionImpl(idContrib, true);
         }
 
     /**
@@ -1377,17 +1386,19 @@ public class ClassStructure
                     {
                     case Annotation:
                         {
-                        fCheck = !isIntoClassMixin(typeContrib);
+                        fCheck     = !isIntoClassMixin(typeContrib);
+                        fAllowInto = false;
                         break;
                         }
                     case Into:
-                        fCheck = fAllowInto;
+                        fCheck     = fAllowInto;
+                        fAllowInto = false;
                         break;
 
-                    case Implements:
                     case Incorporates:
-                    case Extends:
-                    case Delegates:
+                        fAllowInto = false;
+                        // break through
+                    case Delegates, Implements, Extends:
                         fCheck = true;
                         break;
 
@@ -1785,26 +1796,35 @@ public class ClassStructure
                 continue;
                 }
 
-            boolean fCheck = switch (contrib.getComposition())
+            boolean fCheck;
+            switch (contrib.getComposition())
                 {
-                case Annotation ->
-                    !isIntoClassMixin(typeContrib);
+                case Annotation:
+                    fCheck     = !isIntoClassMixin(typeContrib);
+                    fAllowInto = false;
+                    break;
 
-                case Into ->
-                    fAllowInto;
+                case Into:
+                    fCheck     = fAllowInto;
+                    fAllowInto = false;
+                    break;
 
-                case Delegates, Implements, Incorporates, Extends ->
-                    true;
+                case Incorporates:
+                    fAllowInto = false;
+                    // break through
+                case Delegates, Implements, Extends:
+                    fCheck = true;
+                    break;
 
-                default ->
+                default:
                     throw new IllegalStateException();
-                };
+                }
 
             if (fCheck)
                 {
                 ClassStructure clzContrib = (ClassStructure)
                         typeContrib.getSingleUnderlyingClass(true).getComponent();
-                if (clzContrib.containsGenericParamTypeImpl(sName, false))
+                if (clzContrib.containsGenericParamTypeImpl(sName, fAllowInto))
                     {
                     return true;
                     }
@@ -1863,20 +1883,29 @@ public class ClassStructure
                 continue;
                 }
 
-            boolean fCheck = switch (contrib.getComposition())
+            boolean fCheck;
+            switch (contrib.getComposition())
                 {
-                case Annotation ->
-                    !isIntoClassMixin(typeContrib);
+                case Annotation:
+                    fCheck     = !isIntoClassMixin(typeContrib);
+                    fAllowInto = false;
+                    break;
 
-                case Into ->
-                    fAllowInto;
+                case Into:
+                    fCheck     = fAllowInto;
+                    fAllowInto = false;
+                    break;
 
-                case Delegates, Implements, Incorporates, Extends ->
-                    true;
+                case Incorporates:
+                    fAllowInto = false;
+                    // break through
+                case Delegates, Implements, Extends:
+                    fCheck = true;
+                    break;
 
-                default ->
+                default:
                     throw new IllegalStateException();
-                };
+                }
 
             if (fCheck)
                 {
@@ -1884,7 +1913,7 @@ public class ClassStructure
                         typeContrib.getSingleUnderlyingClass(true).getComponent();
 
                 TypeConstant type = clzContrib.getGenericParamTypeImpl(
-                        pool, sName, typeResolved, false);
+                        pool, sName, typeResolved, fAllowInto);
                 if (type != null)
                     {
                     return type;
@@ -1893,7 +1922,7 @@ public class ClassStructure
                 if (clzContrib.isVirtualChild() && typeResolved.isVirtualChild())
                     {
                     type = clzContrib.getVirtualParent().getGenericParamTypeImpl(pool, sName,
-                            typeResolved.getParentType(), true);
+                            typeResolved.getParentType(), fAllowInto);
                     if (type != null)
                         {
                         return type;
@@ -2424,7 +2453,8 @@ public class ClassStructure
             case ChildClass:
                 {
                 assert typeLeft.containsAutoNarrowing(false);
-                Relation relation = calculateRelationImpl(typeLeft.removeAutoNarrowing(), typeRight, fAllowInto);
+                Relation relation = calculateRelationImpl(
+                        typeLeft.removeAutoNarrowing(), typeRight, fAllowInto);
                 if (relation != Relation.INCOMPATIBLE)
                     {
                     return relation;
@@ -2490,6 +2520,7 @@ public class ClassStructure
                         }
                     // break through
                 case Incorporates:
+                    fAllowInto = false;
                 case Extends:
                     {
                     // the identity constant for those contributions is always a class
@@ -2521,7 +2552,7 @@ public class ClassStructure
                             }
                         }
                     relation = relation.bestOf(
-                                    clzBase.calculateRelationImpl(typeLeft, typeContrib, false));
+                                    clzBase.calculateRelationImpl(typeLeft, typeContrib, fAllowInto));
                     if (relation == Relation.IS_A)
                         {
                         return Relation.IS_A;
@@ -2693,8 +2724,10 @@ public class ClassStructure
                         {
                         continue nextContribution;
                         }
-                    // break through;
+                    // break through
                 case Incorporates:
+                    fAllowInto = false;
+                    // break through
                 case Extends:
                     // the identity constant for those contributions is always a class
                     assert typeContrib.isExplicitClassIdentity(true);
@@ -2732,11 +2765,11 @@ public class ClassStructure
 
                     if (constParam.producesFormalType(sName, access)
                             && clzContrib.consumesFormalTypeImpl(
-                                    pool, sFormal, access, listContribActual, false)
+                                    pool, sFormal, access, listContribActual, fAllowInto)
                         ||
                         constParam.consumesFormalType(sName, access)
                             && clzContrib.producesFormalTypeImpl(
-                                    pool, sFormal, access, listContribActual, false))
+                                    pool, sFormal, access, listContribActual, fAllowInto))
                         {
                         return true;
                         }
@@ -2844,6 +2877,8 @@ public class ClassStructure
                         }
                     // break through
                 case Incorporates:
+                    fAllowInto = false;
+                    // break through
                 case Extends:
                     // the identity constant for those contributions is always a class
                     assert typeContrib.isExplicitClassIdentity(true);
@@ -2881,11 +2916,11 @@ public class ClassStructure
 
                     if (constParam.producesFormalType(sName, access)
                             && clzContrib.producesFormalTypeImpl(
-                                    pool, sFormal, access, listContribActual, false)
+                                    pool, sFormal, access, listContribActual, fAllowInto)
                         ||
                         constParam.consumesFormalType(sName, access)
                             && clzContrib.consumesFormalTypeImpl(
-                                    pool, sFormal, access, listContribActual, false))
+                                    pool, sFormal, access, listContribActual, fAllowInto))
                         {
                         return true;
                         }
@@ -3123,6 +3158,8 @@ public class ClassStructure
                         }
                     // break through
                 case Incorporates:
+                    fAllowInto = false;
+                    // break through
                 case Extends:
                     // the identity constant for these contributions is always a class
                     assert typeContrib.isExplicitClassIdentity(true);
@@ -3141,7 +3178,7 @@ public class ClassStructure
                         typeResolved.getSingleUnderlyingClass(true).getComponent();
 
                     if (clzContrib.containsSubstitutableMethodImpl(pool, signature, access, fFunction,
-                            typeResolved.getParamTypes(), idClass, false))
+                            typeResolved.getParamTypes(), idClass, fAllowInto))
                         {
                         return true;
                         }

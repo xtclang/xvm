@@ -332,7 +332,8 @@ public class xRTMethod
             type = pool.ensureAnnotatedTypeConstant(type, aAnno);
 
             TypeComposition clzMethod = INSTANCE.ensureClass(container, type);
-            MethodHandle    hStruct   = new MethodHandle(clzMethod.ensureAccess(Access.STRUCT), type, method);
+            MethodHandle    hStruct   = new MethodHandle(clzMethod.ensureAccess(Access.STRUCT),
+                                            type, method, typeTarget);
 
             switch (hStruct.getTemplate().
                     proceedConstruction(frame, null, true, hStruct, Utils.OBJECTS_NONE, Op.A_STACK))
@@ -358,7 +359,7 @@ public class xRTMethod
                 }
             }
 
-        return new MethodHandle(INSTANCE.ensureClass(container, type), type, method);
+        return new MethodHandle(INSTANCE.ensureClass(container, type), type, method, typeTarget);
         }
 
     /**
@@ -370,28 +371,20 @@ public class xRTMethod
     public static class MethodHandle
             extends SignatureHandle
         {
-        protected MethodHandle(TypeComposition clz, TypeConstant type, MethodStructure method)
+        protected MethodHandle(TypeComposition clz, TypeConstant typeMethod, MethodStructure method,
+                               TypeConstant typeTarget)
             {
-            super(clz, method.getIdentityConstant(), method, type);
+            super(clz, method.getIdentityConstant(), method, typeMethod);
 
-            m_fMutable = clz.isStruct();
+            m_fMutable   = clz.isStruct();
+            f_typeTarget = typeTarget;
 
             assert getMethodInfo() != null;
             }
 
-        public TypeConstant getTargetType()
-            {
-            return getType().resolveGenericType("Target");
-            }
-
-        public TypeInfo getTargetInfo()
-            {
-            return getTargetType().ensureTypeInfo();
-            }
-
         public MethodInfo getMethodInfo()
             {
-            return getTargetInfo().getMethodById(f_idMethod, true);
+            return f_typeTarget.ensureTypeInfo().getMethodById(f_idMethod, true);
             }
 
         @Override
@@ -442,6 +435,8 @@ public class xRTMethod
             {
             return "Method: " + getMethod();
             }
+
+        private final TypeConstant f_typeTarget;
         }
 
 

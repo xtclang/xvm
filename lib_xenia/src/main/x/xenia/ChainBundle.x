@@ -87,9 +87,8 @@ service ChainBundle
 
                 if (param.is(QueryParam))
                     {
-                    // TODO GG: .as(Parameter) should not be needed
                     binders += (session, request, values) ->
-                        extractQueryValue(request, paramName, param.as(Parameter), values);
+                        extractQueryValue(request, paramName, param, values);
                     continue;
                     }
                 if (param.is(UriParam))
