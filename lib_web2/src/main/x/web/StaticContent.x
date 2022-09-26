@@ -8,7 +8,7 @@ import responses.SimpleResponse;
  *
  * The content can be a single file or a directory of files.
  */
-mixin StaticContent(FileNode fileNode, MediaType mediaType, String path = "/",
+mixin StaticContent(FileNode fileNode, MediaType? mediaType=Null, String path = "/",
                     String defaultPage="index.html")
         extends WebService(path)
     {
