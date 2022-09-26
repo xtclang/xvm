@@ -49,7 +49,12 @@ mixin WebApp
                     throw new IllegalState($"WebService's \"path\" argument must be specified for \"{child}\"");
                     }
 
-                String path = args[0].value.as(String);
+                String path;
+                if (!(path := args[0].value.is(String)))
+                    {
+                    throw new IllegalState($"WebService's first argument is not a path for \"{child}\"");
+                    }
+
                 if (!path.endsWith('/'))
                     {
                     // the service path is always a "directory"

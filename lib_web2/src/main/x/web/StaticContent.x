@@ -8,7 +8,7 @@ import responses.SimpleResponse;
  *
  * The content can be a single file or a directory of files.
  */
-mixin StaticContent(FileNode fileNode, MediaType? mediaType=Null, String path = "/",
+mixin StaticContent(String path, FileNode fileNode, MediaType? mediaType=Null,
                     String defaultPage="index.html")
         extends WebService(path)
     {
@@ -27,7 +27,7 @@ mixin StaticContent(FileNode fileNode, MediaType? mediaType=Null, String path = 
         return getResource(defaultPage);
         }
 
-    @Get("/{path}")
+    @Get("{path}")
     conditional Response getResource(String path)
         {
         FileNode dir = fileNode;
