@@ -574,7 +574,7 @@ public class DebugConsole
                             break;
                             }
 
-                        if (m_frameFocus != frame)
+                        if (m_frameFocus != frame || frame.isNative())
                             {
                             writer.println("The \"eval\" command is only supported at the top frame.");
                             continue NextCommand;
