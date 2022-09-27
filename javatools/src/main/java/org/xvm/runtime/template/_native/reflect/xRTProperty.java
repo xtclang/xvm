@@ -54,6 +54,12 @@ public class xRTProperty
     @Override
     public void initNative()
         {
+        ConstantPool pool = pool();
+
+        EMPTY_PROPERTY_ARRAY = pool.ensureArrayConstant(
+                pool.ensureArrayType(pool.ensureEcstasyTypeConstant("reflect.Property")),
+                Constant.NO_CONSTS);
+
         markNativeProperty("abstract");
         markNativeProperty("annotations");
         markNativeProperty("atomic");
@@ -420,14 +426,14 @@ public class xRTProperty
      */
     public static ArrayHandle ensureEmptyArray(Container container)
         {
-        ArrayHandle haEmpty = (ArrayHandle) container.f_heap.getConstHandle(EMPTY_ARRAY);
+        ArrayHandle haEmpty = (ArrayHandle) container.f_heap.getConstHandle(EMPTY_PROPERTY_ARRAY);
         if (haEmpty == null)
             {
             ConstantPool    pool = container.getConstantPool();
             TypeComposition clz  = container.resolveClass(pool.ensureArrayType(pool.typeProperty()));
 
             haEmpty = xArray.createImmutableArray(clz, Utils.OBJECTS_NONE);
-            container.f_heap.saveConstHandle(EMPTY_ARRAY, haEmpty);
+            container.f_heap.saveConstHandle(EMPTY_PROPERTY_ARRAY, haEmpty);
             }
         return haEmpty;
         }
@@ -448,5 +454,5 @@ public class xRTProperty
 
     // ----- constants -----------------------------------------------------------------------------
 
-    private static ArrayConstant EMPTY_ARRAY;
+    private static ArrayConstant EMPTY_PROPERTY_ARRAY;
     }
