@@ -51,11 +51,18 @@ service Dispatcher
         WebServiceInfo? serviceInfo = Null;
         for (WebServiceInfo info : catalog.services)
             {
-            if (uriString.startsWith(info.path))
+            String path = info.path;
+            if (uriString.startsWith(path))
                 {
-                serviceInfo = info;
-                uriString   = uriString.substring(info.path.size);
-                break;
+                // choose the most specific one
+                if (serviceInfo == Null || serviceInfo.path.size < path.size)
+                    {
+                    serviceInfo = info;
+                    if (uriString == path)
+                        {
+                        break;
+                        }
+                    }
                 }
             }
 
@@ -72,6 +79,7 @@ service Dispatcher
                 response = catalog.webApp.handleUnhandledError^(session, request, HttpStatus.NotFound);
                 break;
                 }
+            uriString = uriString.substring(serviceInfo.path.size);
 
             Int wsid = serviceInfo.id;
             if (wsid == -1)

@@ -78,15 +78,17 @@ module xenia.xtclang.org
      *
      * @param address  the HTTP server address string (e.g. "localhost:8080")
      * @param app      the WebApp to dispatch the HTTP requests to
+     *
+     * @return a function that allows to shutdown the HTTP server
      */
-    void createServer(String address, WebApp app)
+    function void () createServer(String address, WebApp app)
         {
         @Inject(resourceName="server2", opts=address) HttpServer server;
 
         Catalog     catalog = app.catalog_;
         HttpHandler handler = new HttpHandler(server, catalog);
 
-        // TODO what else?
+        return () -> handler.shutdown();
         }
 
 
