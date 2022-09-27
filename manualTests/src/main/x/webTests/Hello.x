@@ -34,13 +34,6 @@ module Hello
                 return "hello";
                 }
 
-            @web.Get("e/{rest}")
-            String echo(String rest)
-                {
-                assert:debug rest != "debug";
-                return rest;
-                }
-
             @web.Get("c")
             String count(SimpleData sessionData)
                 {
@@ -57,6 +50,17 @@ module Hello
                     into web.Session
                 {
                 Int counter;
+                }
+            }
+
+        @web.WebService("/e")
+        service Echo
+            {
+            @web.Get("{path}")
+            String echo(String path)
+                {
+                assert:debug path != "debug";
+                return path;
                 }
             }
         }

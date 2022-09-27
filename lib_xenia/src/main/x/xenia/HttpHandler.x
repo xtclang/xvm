@@ -94,6 +94,14 @@ service HttpHandler
         Tuple result = dispatchers[index].dispatch^(httpServer, context, uriString, methodName);
         &result.whenComplete((response, e) ->
             {
+            if (e != Null)
+                {
+                httpServer.send(context, HttpStatus.InternalServerError.code, [], [], []);
+
+                // temporary
+                @Inject Console console;
+                console.println(e);
+                }
             busy[index] = False;
             });
         }
