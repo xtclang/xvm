@@ -159,11 +159,10 @@ public class xRTMethod
     public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle hArg, int iReturn)
         {
-        MethodHandle hMethod = (MethodHandle) hTarget;
         switch (method.getName())
             {
             case "bindTarget":
-                return invokeBindTarget(frame, hMethod, hArg, iReturn);
+                return invokeBindTarget(frame, (MethodHandle) hTarget, hArg, iReturn);
             }
 
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
@@ -173,11 +172,10 @@ public class xRTMethod
     public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle[] ahArg, int iReturn)
         {
-        MethodHandle hMethod = (MethodHandle) hTarget;
         switch (method.getName())
             {
             case "invoke":
-                return invokeInvoke(frame, hMethod, ahArg, iReturn);
+                return invokeInvoke(frame, (MethodHandle) hTarget, ahArg, iReturn);
             }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
@@ -251,13 +249,7 @@ public class xRTMethod
      */
     public int invokeBindTarget(Frame frame, MethodHandle hMethod, ObjectHandle hTarget, int iReturn)
         {
-        CallChain chain = hMethod.getCallChain(frame, hTarget);
-
-        return frame.assignValue(iReturn,
-                (hTarget.isService()
-                    ? xRTFunction.makeAsyncHandle(frame, chain)
-                    : xRTFunction.makeHandle(frame, chain, 0))
-                .bindTarget(frame, hTarget));
+        return hMethod.getCallChain(frame, hTarget).bindTarget(frame, hTarget, iReturn);
         }
 
     /**
