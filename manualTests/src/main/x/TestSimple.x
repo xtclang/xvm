@@ -10,11 +10,7 @@ module TestSimple
 
     void run()
         {
-        console.println($"none={new CookieConsent(CookieConsent.None.toString())}");
-        console.println($"All_1st={new CookieConsent(CookieConsent.All_1st.toString())}");
-        console.println($"All={new CookieConsent(CookieConsent.All.toString())}");
-
-        CookieConsent custom = new CookieConsent(necessary=True, blockThirdParty=True, lastConsent=clock.now);
-        console.println($"custom={new CookieConsent(custom.toString())}");
+        Int i = 0;
+        assert:arg i > 0 as "not positive";
         }
     }
