@@ -1,58 +1,20 @@
 module TestSimple
     {
     @Inject Console console;
+    @Inject Random rnd;
+    @Inject Clock clock;
 
     package web import web.xtclang.org;
     import web.codecs.Base64Format;
+    import web.CookieConsent;
 
     void run()
         {
-            {
-            Base64Format fmt = new Base64Format();
-            console.println($"format={fmt.name}");
-            Byte[] orig  = [0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF];
-            console.println($"orig={orig}");
-            String text  = fmt.encode(orig);
-            console.println($"text={text}");
-            Byte[] bytes = fmt.decode(text);
-            console.println($"bytes={bytes}");
-            }
+        console.println($"none={CookieConsent.None}");
+        console.println($"All_1st={CookieConsent.All_1st}");
+        console.println($"All={CookieConsent.All}");
 
-        @Inject Random rnd;
-        for (Int i : 0..10000)
-            {
-            Int    len  = rnd.int(50);
-            Byte[] orig = new Byte[len];
-            rnd.fill(orig);
-            Boolean fill = rnd.boolean();
-            Int? linelen = rnd.boolean() ? rnd.int(50)+1 : Null;
-
-            Base64Format fmt = new Base64Format(fill, linelen);
-
-            String text;
-            try
-                {
-                text = fmt.encode(orig);
-                }
-            catch (Exception e)
-                {
-                console.println($"failed: encode({orig}, {fill}, {linelen})");
-                throw e;
-                }
-
-            Byte[] bytes;
-            try
-                {
-                bytes = fmt.decode(text);
-                }
-            catch (Exception e)
-                {
-                console.println($"failed: decode({text})");
-                console.println($"(original: {orig})");
-                throw e;
-                }
-
-            assert bytes == orig as $"mismatch: orig={orig}, text={text}, bytes={bytes}";
-            }
+        CookieConsent custom = new CookieConsent(necessary=True, blockThirdParty=True, lastConsent=clock.now);
+        console.println($"custom={custom}");
         }
     }

@@ -370,7 +370,7 @@ const CookieConsent(Boolean necessary       = False,
                 {
                 buf.add(',');
                 }
-            "All_1st".appendTo(buf);
+            "Ok1st".appendTo(buf);
             }
 
         if (blockThirdParty)
@@ -379,7 +379,7 @@ const CookieConsent(Boolean necessary       = False,
                 {
                 buf.add(',');
                 }
-            "No_3rd".appendTo(buf);
+            "No3rd".appendTo(buf);
             }
 
         if (buf.size == 0)
@@ -390,7 +390,7 @@ const CookieConsent(Boolean necessary       = False,
         if (Time stamp ?= lastConsent)
             {
             buf.add('@');
-            Header.formatImfFixDate(stamp).appendTo(buf);
+            formatImfFixDate(stamp).appendTo(buf);
             }
 
         return buf.toString();

@@ -124,7 +124,7 @@ interface Response
             if (Time time := expires.is(Time))
                 {
                 "; Expires=".appendTo(buf);
-                Header.formatImfFixDate(time).appendTo(buf);
+                formatImfFixDate(time).appendTo(buf);
                 }
             else if (Duration duration := expires.is(Duration))
                 {
