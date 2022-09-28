@@ -2,6 +2,8 @@ import ecstasy.reflect.AnnotationTemplate;
 import ecstasy.reflect.Argument;
 import ecstasy.reflect.ClassTemplate.Composition;
 
+import codecs.Registry;
+
 import routing.Catalog;
 import routing.Catalog.EndpointInfo;
 import routing.Catalog.MethodInfo;
@@ -40,6 +42,14 @@ mixin WebApp
         WebServiceInfo[] webServiceInfos = collectEndpoints(classInfos);
 
         return new Catalog(this, webServiceInfos, sessionMixins);
+        }
+
+    /**
+     * The regsitry for this WebApp.
+     */
+    @Lazy Registry registry_.calc()
+        {
+        return new Registry();
         }
 
     /**

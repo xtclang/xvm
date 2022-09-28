@@ -373,12 +373,55 @@ service ChainBundle
      */
     private static Response createSimpleResponse(EndpointInfo endpoint, Request request, Object result)
         {
+        if (result.is(Response))
+            {
+            return result;
+            }
+
         AcceptList accepts   = request.accepts;
         MediaType  mediaType = endpoint.resolveResponseContentType(accepts);
 
-        // TODO the codec stuff goes here
+        if (result.is(HttpStatus))
+            {
+            return new SimpleResponse(result, mediaType, []).makeImmutable();
+            }
 
-        String value = result.toString();
-        return new SimpleResponse(HttpStatus.OK, mediaType, value.utf8()).makeImmutable();
+        // TODO: replace the code below with a codec/format call
+
+        assert mediaType == Json as $"Not supported media type {mediaType}";
+
+        import ecstasy.io.ByteArrayOutputStream;
+        import ecstasy.io.UTF8Writer;
+
+        import json.Doc;
+        import json.Schema;
+
+        Byte[] body;
+        switch (result.is(_))
+            {
+            case Array<Byte>: // TODO CP: "case Byte[]" dosn't parse
+                body = result;
+                break;
+
+            case String:
+                body = result.quoted().utf8();
+                break;
+
+            case Doc: // TODO GG: typedef doesn't resolve: try "case json.Doc:"
+                body = json.Printer.DEFAULT.render(result).utf8();
+                break;
+
+            default:
+                ByteArrayOutputStream out  = new ByteArrayOutputStream();
+                Type                  type = &result.actualType;
+
+                Schema.DEFAULT.createObjectOutput(new UTF8Writer(out)).
+                        write(result.as(type.DataType));
+
+                body = out.bytes;
+                break;
+            }
+
+        return new SimpleResponse(HttpStatus.OK, mediaType, body).makeImmutable();
         }
     }

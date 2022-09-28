@@ -2,7 +2,7 @@ import json.Schema;
 
 
 /**
- * A codec registry.
+ * A registry for codecs, formats, media types etc.
  */
 service Registry
     {
@@ -17,6 +17,7 @@ service Registry
     finally
         {
         DefaultFormats.forEach(registerFormat);
+        MediaType.Predefined.forEach(registerMediaType);
         }
 
 
@@ -54,6 +55,11 @@ service Registry
     //                    has been specified as "Tuple<Type, Type>" by HashMap<Tuple<Type, Type>,
     //                    web:codecs.Converter>. ("new HashMap()")
     // private Map<Converter.Key, Converter> converters = new HashMap();
+
+    /**
+     * The internal registry-by-file extension of the `MediaType` objects.
+     */
+    private Map<String, MediaType> mediaTypeByExtension = new HashMap();
 
 
     // ----- well-known resources ------------------------------------------------------------------
@@ -350,4 +356,32 @@ service Registry
     // ----- Converter support ---------------------------------------------------------------------
 
     // TODO CP
+
+
+    // ----- MediaType support ---------------------------------------------------------------------
+
+    /**
+     * Register the passed `MediaType`.
+     *
+     * @param mediaType  the `MediaType` to register
+     */
+    void registerMediaType(MediaType mediaType)
+        {
+        for (String extension : mediaType.extensions)
+            {
+            assert mediaTypeByExtension.putIfAbsent(extension, mediaType) as
+                $|Extension {extension.quoted()} has already been registered by
+                 |{mediaTypeByExtension.getOrNull(extension)}"
+                 ;
+            }
+        }
+
+    conditional MediaType findMediaType(String fileName)
+        {
+        if (Int of := fileName.lastIndexOf('.'))
+            {
+            return mediaTypeByExtension.get(fileName.substring(of+1));
+            }
+        return False;
+        }
     }

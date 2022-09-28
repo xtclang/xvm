@@ -17,25 +17,33 @@ mixin StaticContent(String path, FileNode fileNode, MediaType? mediaType=Null,
         assert:arg fileNode.exists && fileNode.readable;
         }
 
-    @Get
-    conditional Response get()
-        {
-        if (File file := fileNode.is(File))
-            {
-            return True, new SimpleResponse(OK, mediaType, file.contents).makeImmutable();
-            }
-        return getResource(defaultPage);
-        }
-
     @Get("{path}")
     conditional Response getResource(String path)
         {
+        Response createResponse(File file)
+            {
+            if (MediaType mediaType := webApp.registry_.findMediaType(file.name))
+                {
+                return new SimpleResponse(OK, mediaType, file.contents).makeImmutable();
+                }
+            throw new RequestAborted(NoContent, $"Unknown media type for {file.name}");
+            }
+
+        if (path == "" || path == "/")
+            {
+            if (File file := fileNode.is(File))
+                {
+                return True, createResponse(file);
+                }
+            path = defaultPage;
+            }
+
         FileNode dir = fileNode;
         if (dir.is(Directory))
             {
             if (File file := dir.findFile(path))
                 {
-                return True, new SimpleResponse(OK, mediaType, file.contents).makeImmutable();
+                return True, createResponse(file);
                 }
             }
         return False;

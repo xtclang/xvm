@@ -22,7 +22,7 @@ const MediaType
     {
     // ----- standard and/or common predefined media types -----------------------------------------
 
-    static MediaType Json        = predefine("application/json",                              "json");
+    static MediaType Json        = predefine("application/json",                              ["json", "map"]);
     static MediaType JsonLD      = predefine("application/ld+json",                           "jsonld");
     static MediaType JsonPatch   = predefine("application/json-patch+json"                          );
     static MediaType PDF         = predefine("application/pdf",                               "pdf" );
