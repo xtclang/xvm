@@ -308,11 +308,6 @@ const CookieConsent(Boolean necessary       = False,
         {
         import ecstasy.collections.CaseInsensitive;
 
-        if (text == "" || CaseInsensitive.areEqual(text, "None"))
-            {
-            return True, False, False, False, False, False, False, False, Null;
-            }
-
         Boolean necessary       = False;
         Boolean functionality   = False;
         Boolean performance     = False;
@@ -322,26 +317,46 @@ const CookieConsent(Boolean necessary       = False,
         Boolean blockThirdParty = False;
         Time?   lastConsent     = Null;
 
-        // TODO split '@'
-
-        for (String part : text.split(','))
+        if (Int div := text.indexOf('@'))
             {
-            switch (part.trim())
+            String date = text.substring(div+1);
+            if (date.size != 10 || date[4] != '-' || date[7] != '-')
                 {
-                case "N"      : necessary       = True; break;
-                case "F"      : functionality   = True; break;
-                case "P"      : performance     = True; break;
-                case "M"      : marketing       = True; break;
-                case "S"      : socialMedia     = True; break;
-                case "All_1st": allowFirstParty = True; break;
-                case "No_3rd" : blockThirdParty = True; break;
-
-                default:
-                    return False;
+                return False;
                 }
+
+            // TODO CP - call conditional parse() not try/catch
+            try
+                {
+                lastConsent = new Date(date).toTime().with(timezone = UTC);
+                }
+            catch (IllegalArgument e)
+                {
+                return False;
+                }
+
+            text = text[0 ..< div];
             }
 
-        // TODO parse lastConsent
+        if (text != "" && !CaseInsensitive.areEqual(text, "None"))
+            {
+            for (String part : text.split('/'))
+                {
+                switch (part.trim())
+                    {
+                    case "N"    : necessary       = True; break;
+                    case "F"    : functionality   = True; break;
+                    case "P"    : performance     = True; break;
+                    case "M"    : marketing       = True; break;
+                    case "S"    : socialMedia     = True; break;
+                    case "Ok1st": allowFirstParty = True; break;
+                    case "No3rd": blockThirdParty = True; break;
+
+                    default:
+                        return False;
+                    }
+                }
+            }
 
         return True, necessary, functionality, performance, marketing, socialMedia, allowFirstParty,
                 blockThirdParty, lastConsent;
@@ -358,7 +373,7 @@ const CookieConsent(Boolean necessary       = False,
                 {
                 if (buf.size > 0)
                     {
-                    buf.add(',');
+                    buf.add('/');
                     }
                 buf.add(category.abbreviation);
                 }
@@ -368,7 +383,7 @@ const CookieConsent(Boolean necessary       = False,
             {
             if (buf.size > 0)
                 {
-                buf.add(',');
+                buf.add('/');
                 }
             "Ok1st".appendTo(buf);
             }
@@ -377,7 +392,7 @@ const CookieConsent(Boolean necessary       = False,
             {
             if (buf.size > 0)
                 {
-                buf.add(',');
+                buf.add('/');
                 }
             "No3rd".appendTo(buf);
             }
@@ -389,8 +404,22 @@ const CookieConsent(Boolean necessary       = False,
 
         if (Time stamp ?= lastConsent)
             {
-            buf.add('@');
-            formatImfFixDate(stamp).appendTo(buf);
+            Date   date  = stamp.date;
+            UInt32 year  = date.year .toUInt32();
+            UInt32 month = date.month.toUInt32();
+            UInt32 day   = date.day  .toUInt32();
+
+            buf.add('@')
+               .add('0' + year / 1000 % 10)
+               .add('0' + year /  100 % 10)
+               .add('0' + year /   10 % 10)
+               .add('0' + year        % 10)
+               .add('-')
+               .add('0' + month / 10)
+               .add('0' + month % 10)
+               .add('-')
+               .add('0' + day / 10)
+               .add('0' + day % 10);
             }
 
         return buf.toString();

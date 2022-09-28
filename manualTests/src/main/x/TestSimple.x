@@ -10,11 +10,11 @@ module TestSimple
 
     void run()
         {
-        console.println($"none={CookieConsent.None}");
-        console.println($"All_1st={CookieConsent.All_1st}");
-        console.println($"All={CookieConsent.All}");
+        console.println($"none={new CookieConsent(CookieConsent.None.toString())}");
+        console.println($"All_1st={new CookieConsent(CookieConsent.All_1st.toString())}");
+        console.println($"All={new CookieConsent(CookieConsent.All.toString())}");
 
         CookieConsent custom = new CookieConsent(necessary=True, blockThirdParty=True, lastConsent=clock.now);
-        console.println($"custom={custom}");
+        console.println($"custom={new CookieConsent(custom.toString())}");
         }
     }
