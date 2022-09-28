@@ -55,6 +55,18 @@ const UriTemplate
      */
     String[] vars;
 
+    /**
+     * The literal prefix part for this UriTemplate.
+     */
+     String literalPrefix.get()
+        {
+        if (parts.size > 0, String prefix := parts[0].is(String))
+            {
+            return prefix;
+            }
+        return "";
+        }
+
 
     // ----- operations ----------------------------------------------------------------------------
 

@@ -195,6 +195,10 @@ mixin WebApp
                     }
                 }
 
+            // we never use the endpoint id as an index, so we can sort them in-place
+            endpoints.sorted((ep1, ep2) ->
+                    ep2.template.literalPrefix <=> ep1.template.literalPrefix, inPlace=True);
+
             webServiceInfos += new WebServiceInfo(wsid++,
                     classInfo.path, constructor,
                     endpoints, defaultEndpoint,

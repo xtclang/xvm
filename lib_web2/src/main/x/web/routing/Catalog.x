@@ -59,6 +59,7 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins)
 
     /**
      * The WebService info.
+     * TODO: reserve a "redirect" endpoint.
      */
     static const WebServiceInfo<ServiceType extends WebService>(
                                 Int                id,
@@ -95,7 +96,6 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins)
                     ? method.httpMethod
                     : Null;
             }
-
         }
 
     /**
