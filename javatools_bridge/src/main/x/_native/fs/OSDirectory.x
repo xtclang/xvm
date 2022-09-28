@@ -54,7 +54,9 @@ const OSDirectory
     @Override
     conditional Directory|File find(String name)
         {
-        return store.find(path + name);
+        return name.size == 0
+                ? (True, this)
+                : store.find(path + name);
         }
 
     @Override

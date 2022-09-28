@@ -72,6 +72,7 @@ const Path
         switch (name)
             {
             case "/":
+                assert:arg parent == Null as "Name \"/\" does not specify a relative path";
                 construct Path(parent, Root);
                 break;
 
@@ -460,6 +461,8 @@ const Path
      */
     @Op("+") Path add(String name)
         {
+        assert:arg !name.startsWith('/') as $"Name \"{name}\" does not specify a relative path";
+
         return new Path(this, name);
         }
 
@@ -468,7 +471,8 @@ const Path
      */
     @Op("+") Path add(Path that)
         {
-        assert that.relative;
+        assert:arg that.relative as $"Path \"{that}\" is not relative";
+
         Path result = this;
         for (Int i : 0 ..< that.size)
             {
