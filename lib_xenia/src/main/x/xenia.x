@@ -28,6 +28,11 @@ module xenia.xtclang.org
     @Inject Clock clock;
 
     /**
+     * The random number generator used within this module.
+     */
+    @Inject Random rnd;
+
+    /**
      * A function that is able to both pre- **and** post-process a request is called an
      * `Interceptor`. Conceptually, its form is something like:
      *
@@ -97,9 +102,9 @@ module xenia.xtclang.org
     /**
      * Obtain the user agent string.
      */
-    static String extractUserAgent(RequestInfo requestInfo)
+    static String extractUserAgent(HttpServer.RequestInfo requestInfo)
         {
-        if (String[] values := requestInfo.getHeaderValuesForName(Header.USER_AGENT))
+        if (String[] values := requestInfo.getHeaderValuesForName(web.Header.USER_AGENT))
             {
             return values[0];
             }
