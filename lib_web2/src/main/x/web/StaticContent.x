@@ -41,9 +41,16 @@ mixin StaticContent(String path, FileNode fileNode, MediaType? mediaType=Null,
         FileNode dir = fileNode;
         if (dir.is(Directory))
             {
-            if (File file := dir.findFile(path))
+            try
                 {
-                return True, createResponse(file);
+                if (File file := dir.findFile(path))
+                    {
+                    return True, createResponse(file);
+                    }
+                }
+            catch (IllegalArgument e)
+                {
+                // this must be a problem with the path; simply fall through
                 }
             }
         return False;

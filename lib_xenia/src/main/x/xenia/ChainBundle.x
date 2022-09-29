@@ -365,7 +365,8 @@ service ChainBundle
                    : new SimpleResponse(HttpStatus.NotFound).makeImmutable();
             }
 
-        return (request, result) -> createSimpleResponse(endpoint, request, result[0]);
+        return (request, result) -> createSimpleResponse(endpoint, request,
+                                        result.size == 0 ? HttpStatus.OK : result[0]);
         }
 
     /**
