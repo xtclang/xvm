@@ -105,7 +105,8 @@ service SessionManager(SessionStore store, SessionProducer instantiateSession)
 
     // ----- session/request binding ---------------------------------------------------------------
 
-    (request)
+    // TODO CP (request)
+
 
     // ----- session control -----------------------------------------------------------------------
 

@@ -6,7 +6,11 @@ import web.CookieConsent;
 import web.Header;
 import web.TrustLevel;
 
+import web.codecs.Base64Format;
+
 import HttpServer.RequestInfo;
+
+import TimeOfDay.PICOS_PER_SECOND;
 
 
 /**
@@ -85,30 +89,244 @@ import HttpServer.RequestInfo;
 const SessionCookie
         implements Destringable
     {
-    enum (String name, Boolean persistent)
- * 1. `xplaintext` - a non-persistent cookie that is subject to hijacking (not protected by TLS)
- *    * this cookie is created when any request arrives without a `xplaintext` cookie
- *    * specifies `Path=/;SameSite=Strict;HttpOnly`; does not specify `Expires` or `Domain`
- *    * contains base64 encoding of encrypted data: session id, cookie id, change counter, creation
- *      date, known consents, known cookies (1/2/3), ip address, random salt
- *
- * 2. `__Host-xtemporary` - a non-persistent cookie protected by TLS
- *    * this cookie is created when a request comes in over a TLS connection and there is no
- *      `__Host-xtemporary` cookie in the request
- *    * specifies `Path=/;SameSite=Strict;secure;HttpOnly`; does not specify `Expires` or `Domain`
- *    * contains base64 encoding of encrypted data: session id, cookie id, change counter, creation
- *      date, known consents, known cookies (1/2/3), ip address, random salt
- *
- * 3. `__Host-xconsented` - a persistent cookie protected by TLS
-
+    // ----- constructors --------------------------------------------------------------------------
 
     @Override
     construct(String text)
         {
+        // if the text is the entire toString() value, then just extract the cookie value from it
+        if (Int assign := text.indexOf('='))
+            {
+            // cache the full cookie text from the toString()
+            this.text = text;
+
+            assert Int semi := text.indexOf(';');
+            text = text[assign >..< semi];
+            }
+
+        // check if this is the consent cookie (it will have some plain text up front)
+        String? plain = Null;
+        if (Int div := text.lastIndexOf('/'))
+            {
+            plain = text[0 ..< div];
+            text  = text.substring(div+1);
+            }
+
+        // decrypt and deserialize the cookie value
+        text = decrypt(text);
+        String[] parts = text.split(',');
+        this.sessionId    = new Int(parts[0]);
+        this.cookieId     = CookieId.values[new Int(parts[1])];
+        this.knownCookies = new Int(parts[2]);
+        this.consent      = new CookieConsent(parts[3]);
+// TODO GG:  this.expires = parts[4] == "" ? Null : roundTime(new Time(new Int128(parts[4]) * PICOS_PER_SECOND));
+        this.expires      = parts[4] == "" ? Null : roundTime(new Time(new IntLiteral(parts[4]).toInt128() * PICOS_PER_SECOND));
+        this.lastIp       = new IPAddress(parts[5]);
+// TODO GG:  this.created = roundTime(new Time(new Int128(parts[6]) * PICOS_PER_SECOND));
+        this.created      = roundTime(new Time(new IntLiteral(parts[6]).toInt128() * PICOS_PER_SECOND));
+        this.version      = new Int(parts[7]);
+        this.salt         = new UInt16(parts[8]);
+
+        // make sure that the plain text wasn't tampered with
+        if (plain != Null)
+            {
+            assert cookieId == Consent && knownCookies == CookieId.All;
+            CookieConsent checkConsent = new CookieConsent(plain);
+            assert consent == checkConsent;
+            }
+        }
+
+    /**
+     * Construct a SessionCookie from its constituent members.
+     *
+     * @param sessionId     the session identity
+     * @param cookieId      the cookie identity used by the user agent
+     * @param knownCookies  the bitset of known cookies for the user agent
+     * @param consent       the known cookie consent
+     * @param expires       the point in time at which the cookie is set to automatically expire
+     * @param lastIp        the last known IP address of the user agent
+     * @param created       (optional) the time when the cookie was originally created
+     * @param version       (optional) the current version of the cookie
+     * @param salt          (optional) the salt value to include when encrypting the cookie
+     * @param text          (optional) the text of the cookie, as provided by the user agent
+     */
+    construct(Int           sessionId,
+              CookieId      cookieId,
+              Int           knownCookies,
+              CookieConsent consent,
+              Time?         expires,
+              IPAddress     lastIp,
+              Time?         created = Null,
+              Int?          version = Null,
+              UInt16?       salt    = Null,
+              String?       text    = Null,
+             )
+        {
+        this.sessionId    = sessionId;
+        this.cookieId     = cookieId;
+        this.knownCookies = knownCookies;
+        this.consent      = consent;
+        this.expires      = expires;
+        this.lastIp       = lastIp;
+        this.created      = roundTime(created ?: clock.now);
+        this.version      = version ?: 1;
+        this.salt         = salt == Null || salt == 0 ? makeSalt() : salt;
+        this.text        ?= text;
+        }
+
+    /**
+     * Construct a copy of this SessionCookie with the specified changes.
+     *
+     * @param sessionId     (optional) the session identity
+     * @param cookieId      (optional) the cookie identity used by the user agent
+     * @param knownCookies  (optional) the bitset of known cookies for the user agent
+     * @param consent       (optional) the known cookie consent
+     * @param expires       (optional) the point in time at which the cookie should expire
+     * @param lastIp        (optional) the last known IP address of the user agent
+     * @param created       (optional) the time when the cookie was originally created
+     * @param version       (optional) the current version of the cookie
+     * @param salt          (optional) the salt value to include when encrypting the cookie
+     * @param text          (optional) the text of the cookie, as provided by the user agent
+     *
+     * @return the new SessionCookie containing the specified changes
+     */
+    SessionCookie with(Int?           sessionId    = Null,
+                       CookieId?      cookieId     = Null,
+                       Int?           knownCookies = Null,
+                       CookieConsent? consent      = Null,
+                       Time?          expires      = Null,
+                       IPAddress?     lastIp       = Null,
+                       Time?          created      = Null,
+                       Int?           version      = Null,
+                       UInt16?        salt         = Null,
+                       String?        text         = Null,
+                      )
+        {
+        return new SessionCookie(sessionId    = sessionId    ?: this.sessionId,
+                                 cookieId     = cookieId     ?: this.cookieId,
+                                 knownCookies = knownCookies ?: this.knownCookies,
+                                 consent      = consent      ?: this.consent,
+                                 expires      = expires      ?: this.expires,
+                                 lastIp       = lastIp       ?: this.lastIp,
+                                 created      = created      ?: this.created,
+                                 version      = version      ?: this.version + 1,
+                                 salt         = salt         ?: makeSalt(this.salt),
+                                 text         = text,
+                                );
         }
 
 
-    // ----- encryption support --------------------------------------------------------------------
+    // ----- properties ----------------------------------------------------------------------------
+
+    /**
+     * CookieId identifies which of the three possible cookies a session cookie is.
+     */
+    enum CookieId(String name, Boolean tlsOnly, Boolean persistent, String attributes)
+        {
+        PlainText(       "xplaintext", False, False, "; Path=/; SameSite=Strict; HttpOnly"),
+        Encrypted("__Host-xtemporary", True , False, "; Path=/; SameSite=Strict; HttpOnly; Secure"),
+        Consent  ("__Host-xconsented", True , True , "; Path=/; SameSite=Strict; HttpOnly; Secure");
+
+        /**
+         * A bitset representing no cookies.
+         */
+        static Int None  = 0x0;
+
+        /**
+         * A bitset representing just the plaintext cookie.
+         */
+        static Int NoTls = 0x1;
+
+        /**
+         * A bitset representing all three cookies.
+         */
+        static Int All   = 0x7;
+        }
+
+
+    // ----- properties ----------------------------------------------------------------------------
+
+    /**
+     * The temporally unique session identifier.
+     */
+    Int sessionId;
+
+    /**
+     * The identity of the cookie, as seen by the user agent.
+     */
+    CookieId cookieId;
+
+    /**
+     * The set of cookies on the user agent that were sent from and/or being provided by the user
+     * agent at the time when this version of this cookie was created.
+     */
+    Int knownCookies;
+
+    /**
+     * The known CookieConsent at the time when this version of this cookie was created.
+     */
+    CookieConsent consent;
+
+    /**
+     * The point in time at which this cookie is known to expire. Cookies can be expired at any time
+     * by the user agent, or may disappear for other reasons; cookies can also be retained by a user
+     * agent beyond their suggested expiry. Regardless, the user agent does not send the expiry time
+     * with the cookie, so the information is redundantly recorded inside the cookie.
+     */
+    Time? expires;
+
+    /**
+     * The IP address of the user agent that was recorded when this version of this cookie was
+     * created.
+     */
+    IPAddress lastIp;
+
+    /**
+     * The time that the oldest known version of this cookie was created.
+     */
+    Time created;
+
+    /**
+     * The version counter for this cookie. Each change to the cookie increments the version
+     * counter.
+     */
+    Int version;
+
+    /**
+     * Random salt; never zero.
+     */
+    UInt16 salt;
+
+    /**
+     * The text of the cookie, as passed in by the user agent, or as rendered from the provided
+     * information.
+     */
+    @Lazy String text.calc()
+        {
+        // render the portion to encrypt that contains the session ID etc.
+        StringBuffer buf = new StringBuffer();
+
+        cookieId.name.appendTo(buf)
+            .add('=');
+
+        if (cookieId.persistent)
+            {
+            consent.appendTo(buf)
+                   .add('/');
+            }
+
+        String raw = $|{sessionId},{cookieId.ordinal},{knownCookies},{consent},\
+                      |{encodeTime(expires)},{lastIp},{encodeTime(created)},{version},{salt}
+                     ;
+        encrypt(raw).appendTo(buf);
+
+        cookieId.attributes.appendTo(buf);
+
+        return buf.toString();
+        }
+
+
+    // ----- encoding support ----------------------------------------------------------------------
 
     /**
      * Encrypt the passed readable string into an unreadable, tamper-proof, BASE-64 string
@@ -117,10 +335,11 @@ const SessionCookie
      *
      * @return the encrypted string in BASE-64 format
      */
-    String encrypt(String text)
+    static String encrypt(String text)
         {
-        // TODO
-        return text;
+        Byte[] bytes = text.utf8();
+        // TODO CP bytes = encryption ...
+        return Base64Format.Instance.encode(bytes);
         }
 
     /**
@@ -130,14 +349,104 @@ const SessionCookie
      *
      * @return the readable string
      */
-    String decrypt(String text)
+    static String decrypt(String text)
         {
-        // TODO
-        return text;
+        try
+            {
+            Byte[] bytes = Base64Format.Instance.decode(text);
+            // TODO CP bytes = decryption ...
+            return bytes.unpackUtf8();
+            }
+        catch (Exception e)
+            {
+            return "";
+            }
+        }
+
+    /**
+     * Round the time to the nearest second.
+     *
+     * @param time  a time value
+     *
+     * @return the UTC time value rounded to the nearest second
+     */
+    static Time roundTime(Time time)
+        {
+        return time.timezone == UTC && time.epochPicos % PICOS_PER_SECOND == 0
+                ? time
+                : new Time(time.epochPicos / PICOS_PER_SECOND * PICOS_PER_SECOND);
+        }
+
+    /**
+     * Produce a string that represents the passed time value.
+     *
+     * @param time  a time value
+     *
+     * @return a compact string representation of the time value
+     */
+    static String encodeTime(Time? time)
+        {
+        return (time?.epochPicos/PICOS_PER_SECOND).toString() : "";
+        }
+
+    /**
+     * Parse a string returned from [encodeTime] into a time value.
+     *
+     * @param seconds  a compact string representation of a time value
+     *
+     * @return  the time value
+     */
+    static Time? decodeTime(String seconds)
+        {
+        if (seconds == "" || seconds == "0")
+            {
+            return Null;
+            }
+
+        try
+            {
+            return new Time(new Int128(seconds) * PICOS_PER_SECOND);
+            }
+        catch (Exception e)
+            {
+            return Null;
+            }
+        }
+
+
+    // ----- internal helpers ----------------------------------------------------------------------
+
+    /**
+     * Create a new salt value.
+     *
+     * @param oldSalt  the old salt value
+     *
+     * @return the new salt value, never equal to either zero or the previous salt value
+     */
+    static UInt16 makeSalt(UInt16 oldSalt = 0)
+        {
+        UInt16 salt;
+        do
+            {
+            // TODO GG:  salt = rnd.uint(0xFFFF).toUInt16();
+            salt = xenia.rnd.uint(0xFFFF).toUInt16();
+            }
+        while (salt == 0 || salt == oldSalt);
+        return salt;
+        }
+
+
+    // ----- Stringable methods --------------------------------------------------------------------
+
+    @Override
+    Int estimateStringLength()
+        {
+        return text.size;
         }
 
     @Override
-    public String toString()
+    Appender<Char> appendTo(Appender<Char> buf)
         {
+        return text.appendTo(buf);
         }
     }

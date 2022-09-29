@@ -17,7 +17,7 @@ const CookieConsent(Boolean necessary       = False,
                     Boolean socialMedia     = False,
                     Boolean allowFirstParty = False,
                     Boolean blockThirdParty = False,
-                    Time?   lastConsent     = Null,
+                    Date?   lastConsent     = Null,
                    )
         implements Destringable
     {
@@ -31,7 +31,7 @@ const CookieConsent(Boolean necessary       = False,
                     Boolean socialMedia,
                     Boolean allowFirstParty,
                     Boolean blockThirdParty,
-                    Time?   lastConsent
+                    Date?   lastConsent
                    ) := parse(text) as $"Invalid CookieConsent: {text.quoted()}";
 
         this.necessary       = necessary;
@@ -56,7 +56,7 @@ const CookieConsent(Boolean necessary       = False,
      *                         other settings
      * @param blockThirdParty  (optional) explicitly disallow all "Third Party" cookies, regardless
      *                         of other settings
-     * @param lastConsent      (optional) the time at which the consent was received
+     * @param lastConsent      (optional) the date at which the consent was received
      *
      * @return a new CookieConsent
      */
@@ -67,7 +67,7 @@ const CookieConsent(Boolean necessary       = False,
                        Boolean? socialMedia     = Null,
                        Boolean? allowFirstParty = Null,
                        Boolean? blockThirdParty = Null,
-                       Time?    lastConsent     = Null,
+                       Date?    lastConsent     = Null,
                       )
         {
         return new CookieConsent(necessary       = necessary       ?: this.necessary,
@@ -264,8 +264,8 @@ const CookieConsent(Boolean necessary       = False,
              Boolean socialMedia,
              Boolean allowFirstParty,
              Boolean blockThirdParty,
-// TODO CP   Time?   lastConsent,    ) := parse(text))
-             Time?   lastConsent     ) := parse(text))
+// TODO CP   Date?   lastConsent,    ) := parse(text))
+             Date?   lastConsent     ) := parse(text))
            {
            return True, new CookieConsent(necessary,
                                           functionality,
@@ -295,7 +295,7 @@ const CookieConsent(Boolean necessary       = False,
      * @return (conditional) True indicates that "SocialMedia" (Third Party) cookies are allowed
      * @return (conditional) True indicates that all "First Party" cookies are allowed
      * @return (conditional) True indicates that all "Third Party" cookies are disallowed
-     * @return (conditional) the time at which the consent was received
+     * @return (conditional) the date at which the consent was received
      */
     static conditional (Boolean necessary,
                         Boolean functionality,
@@ -304,7 +304,7 @@ const CookieConsent(Boolean necessary       = False,
                         Boolean socialMedia,
                         Boolean allowFirstParty,
                         Boolean blockThirdParty,
-                        Time?   lastConsent,    ) parse(String text)
+                        Date?   lastConsent,    ) parse(String text)
         {
         import ecstasy.collections.CaseInsensitive;
 
@@ -315,7 +315,7 @@ const CookieConsent(Boolean necessary       = False,
         Boolean socialMedia     = False;
         Boolean allowFirstParty = False;
         Boolean blockThirdParty = False;
-        Time?   lastConsent     = Null;
+        Date?   lastConsent     = Null;
 
         if (Int div := text.indexOf('@'))
             {
@@ -328,7 +328,7 @@ const CookieConsent(Boolean necessary       = False,
             // TODO CP - call conditional parse() not try/catch
             try
                 {
-                lastConsent = new Date(date).toTime().with(timezone = UTC);
+                lastConsent = new Date(date);
                 }
             catch (IllegalArgument e)
                 {
@@ -402,9 +402,8 @@ const CookieConsent(Boolean necessary       = False,
             "None".appendTo(buf);
             }
 
-        if (Time stamp ?= lastConsent)
+        if (Date date ?= lastConsent)
             {
-            Date   date  = stamp.date;
             UInt32 year  = date.year .toUInt32();
             UInt32 month = date.month.toUInt32();
             UInt32 day   = date.day  .toUInt32();
