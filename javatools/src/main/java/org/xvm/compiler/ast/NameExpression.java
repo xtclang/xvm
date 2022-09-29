@@ -23,6 +23,7 @@ import org.xvm.asm.Argument;
 import org.xvm.asm.PackageStructure;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
+import org.xvm.asm.TypedefStructure;
 
 import org.xvm.asm.constants.*;
 
@@ -2024,14 +2025,26 @@ public class NameExpression
                         idLeft = pkg.getImportedModule().getIdentityConstant();
                         }
                     }
-                TypeInfo         info       = getTypeInfo(ctx, idLeft.getType(), errs);
-                IdentityConstant idChild    = info.findName(pool, sName);
-                TypeInfo         infoClz    = idLeft.getValueType(pool, null).ensureTypeInfo(errs);
-                IdentityConstant idClzChild = infoClz.findName(pool, sName);
+                TypeInfo         info    = getTypeInfo(ctx, idLeft.getType(), errs);
+                IdentityConstant idChild = info.findName(pool, sName);
+
+                if (idChild == null)
+                    {
+                    // typedefs are not in the TypeInfo, look them up directly
+                    ClassStructure clzLeft = (ClassStructure) idLeft.getComponent();
+                    if (clzLeft != null &&
+                            clzLeft.findChildDeep(sName) instanceof TypedefStructure typedef)
+                        {
+                        idChild = typedef.getIdentityConstant();
+                        }
+                    }
 
                 if (idChild == null)
                     {
                     // no child of that name on "Left"; try "Class<Left>"
+                    TypeInfo         infoClz    = idLeft.getValueType(pool, null).ensureTypeInfo(errs);
+                    IdentityConstant idClzChild = infoClz.findName(pool, sName);
+
                     idChild           = idClzChild;
                     m_fClassAttribute = idChild != null;
                     }

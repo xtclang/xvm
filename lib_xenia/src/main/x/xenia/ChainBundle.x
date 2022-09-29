@@ -394,13 +394,12 @@ service ChainBundle
         import ecstasy.io.ByteArrayOutputStream;
         import ecstasy.io.UTF8Writer;
 
-        import json.Doc;
         import json.Schema;
 
         Byte[] body;
         switch (result.is(_))
             {
-            case Array<Byte>: // TODO CP: "case Byte[]" dosn't parse
+            case Array<Byte>: // TODO CP: "case Byte[]" doesn't parse
                 body = result;
                 break;
 
@@ -408,7 +407,7 @@ service ChainBundle
                 body = result.quoted().utf8();
                 break;
 
-            case Doc: // TODO GG: typedef doesn't resolve: try "case json.Doc:"
+            case json.Doc:
                 body = json.Printer.DEFAULT.render(result).utf8();
                 break;
 
