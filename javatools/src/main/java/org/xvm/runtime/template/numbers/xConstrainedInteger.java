@@ -877,8 +877,23 @@ public abstract class xConstrainedInteger
      */
     static public long fromByteArray(byte[] aBytes, int cBytes, boolean fSigned)
         {
+        return fromByteArray(aBytes, 0, cBytes, fSigned);
+        }
+
+    /**
+     * Produce a long value from the specified byte array.
+     *
+     * @param aBytes   the byte array
+     * @param of       the ofset of the first byte to use
+     * @param cBytes   the number of bytes to use
+     * @param fSigned  true if the value is a signed value
+     *
+     * @return the long value
+     */
+    static public long fromByteArray(byte[] aBytes, int of, int cBytes, boolean fSigned)
+        {
         long l = fSigned & aBytes[cBytes-1] < 0 ? -1 : 0;
-        for (int i = 0; i < cBytes; i++)
+        for (int i = of; i < cBytes; i++)
             {
             l = l << 8 | (aBytes[i] & 0xFF);
             }

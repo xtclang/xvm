@@ -119,11 +119,9 @@ const SessionCookie
         this.cookieId     = CookieId.values[new Int(parts[1])];
         this.knownCookies = new Int(parts[2]);
         this.consent      = new CookieConsent(parts[3]);
-// TODO GG:  this.expires = parts[4] == "" ? Null : roundTime(new Time(new Int128(parts[4]) * PICOS_PER_SECOND));
-        this.expires      = parts[4] == "" ? Null : roundTime(new Time(new IntLiteral(parts[4]).toInt128() * PICOS_PER_SECOND));
+        this.expires      = parts[4] == "" ? Null : roundTime(new Time(new Int128(parts[4]) * PICOS_PER_SECOND));
         this.lastIp       = new IPAddress(parts[5]);
-// TODO GG:  this.created = roundTime(new Time(new Int128(parts[6]) * PICOS_PER_SECOND));
-        this.created      = roundTime(new Time(new IntLiteral(parts[6]).toInt128() * PICOS_PER_SECOND));
+        this.created      = roundTime(new Time(new Int128(parts[6]) * PICOS_PER_SECOND));
         this.version      = new Int(parts[7]);
         this.salt         = new UInt16(parts[8]);
 
