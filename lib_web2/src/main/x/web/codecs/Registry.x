@@ -51,9 +51,6 @@ service Registry
     /**
      * The internal registry-by-from-and-to-type of the `Converter` objects.
      */
-    // TODO GG VERIFY-05: "collections.HashMap" type parameter "Key" must be of type "Hashable", but
-    //                    has been specified as "Tuple<Type, Type>" by HashMap<Tuple<Type, Type>,
-    //                    web:codecs.Converter>. ("new HashMap()")
     // private Map<Converter.Key, Converter> converters = new HashMap();
 
     /**
