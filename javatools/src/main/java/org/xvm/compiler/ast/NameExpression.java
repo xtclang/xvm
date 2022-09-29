@@ -799,8 +799,18 @@ public class NameExpression
                         }
                     else if (!idProp.getComponent().isStatic() && m_plan != Plan.PropertySelf)
                         {
-                        // there is a read of the implicit "this" variable
-                        ctx.requireThis(getStartPosition(), errs);
+                        // we don't need "this" to access a property on a singleton unless it's
+                        // within an initializer (to avoid a circular reference)
+                        if (idProp.getComponent().getParent() instanceof ClassStructure clzParent &&
+                                clzParent.isSingleton() && !ctx.getMethod().isPotentialInitializer())
+                            {
+                            m_propAccessPlan = PropertyAccess.SingletonParent;
+                            }
+                        else
+                            {
+                            // there is a read of the implicit "this" variable
+                            ctx.requireThis(getStartPosition(), errs);
+                            }
                         }
                     break;
                     }

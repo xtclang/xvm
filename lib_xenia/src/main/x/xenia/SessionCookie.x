@@ -426,8 +426,7 @@ const SessionCookie
         UInt16 salt;
         do
             {
-            // TODO GG:  salt = rnd.uint(0xFFFF).toUInt16();
-            salt = xenia.rnd.uint(0xFFFF).toUInt16();
+            salt = rnd.uint(0xFFFF).toUInt16();
             }
         while (salt == 0 || salt == oldSalt);
         return salt;
