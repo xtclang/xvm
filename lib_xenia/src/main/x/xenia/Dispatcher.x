@@ -25,7 +25,7 @@ service Dispatcher
         }
 
     /**
-     * The catalog.
+     * The Catalog.
      */
     protected Catalog catalog;
 

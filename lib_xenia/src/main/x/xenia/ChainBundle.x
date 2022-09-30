@@ -10,12 +10,18 @@ import web.Response;
 import web.Session;
 import web.WebService;
 
-import web.responses.SimpleResponse;
+import web.codecs.Codec;
+import web.codecs.Format;
+import web.codecs.FormatCodec;
+import web.codecs.Registry;
+import web.codecs.Utf8Codec;
 
 import web.routing.Catalog.EndpointInfo;
 import web.routing.Catalog.MethodInfo;
 import web.routing.Catalog.WebServiceInfo;
 import web.routing.UriTemplate;
+
+import web.responses.SimpleResponse;
 
 
 /**
@@ -23,11 +29,17 @@ import web.routing.UriTemplate;
  */
 service ChainBundle
     {
+    /**
+     * Construct the ChainBundle.
+     *
+     * @param index  the index of this ChainBundle in the `BundlePool`
+     */
     construct(Catalog catalog, Int index)
         {
         this.catalog = catalog;
         this.index   = index;
 
+        registry      = catalog.webApp.registry_;
         services      = new WebService?[catalog.serviceCount];
         chains        = new Handler?[catalog.endpointCount];
         errorHandlers = new ErrorHandler?[catalog.serviceCount];
@@ -42,6 +54,11 @@ service ChainBundle
      * The index of this bundle in the BundlePool.
      */
     public/private Int index;
+
+    /**
+     * The Registry.
+     */
+    protected Registry registry;
 
     /**
      * The WebServices indexed by the WebService id.
@@ -354,74 +371,144 @@ service ChainBundle
     /**
      * Generate a response handler for the specified endpoint.
      */
-    private static Responder generateResponder(EndpointInfo endpoint)
+    private Responder generateResponder(EndpointInfo endpoint)
         {
-        if (endpoint.conditionalResult)
+        import ecstasy.reflect.Return;
+
+        Return[] returns = endpoint.method.returns;
+        if (returns.size == 0)
             {
-            // the method executed is a conditional method that has returned False as the
-            // first element of the Tuple
-            return (request, result) -> result[0].as(Boolean)
-                   ? createSimpleResponse(endpoint, request, result[1])
-                   : new SimpleResponse(HttpStatus.NotFound).makeImmutable();
+            return (request, result) -> new SimpleResponse(OK).makeImmutable();
             }
 
-        return (request, result) -> createSimpleResponse(endpoint, request,
-                                        result.size == 0 ? HttpStatus.OK : result[0]);
+        // if the method is conditional, the element zero of the tuple is the Boolean value
+        Int  index = endpoint.conditionalResult ? 1 : 0;
+        Type type  = returns[index].ReturnType;
+
+        // check for special return types
+        switch (type.DataType.is(_), index)
+            {
+            case (Response, 0):
+                return (request, result) -> result[0].as(Response).makeImmutable();
+
+            case (Response, 1):
+                return (request, result) ->
+                    (result[0].as(Boolean)
+                        ? result[1].as(Response)
+                        : new SimpleResponse(HttpStatus.NotFound)
+                    ).makeImmutable();
+
+            case (HttpStatus, 0):
+                return (request, result) ->
+                    new SimpleResponse(result[0].as(HttpStatus)).makeImmutable();
+
+            case (HttpStatus, 1):
+                return (request, result) ->
+                    new SimpleResponse(result[0].as(Boolean)
+                                        ? result[1].as(HttpStatus)
+                                        : HttpStatus.NotFound
+                                      ).makeImmutable();
+            }
+
+        // helper function to look up a Codec based on the result type and the MediaType
+        Codec findCodec(MediaType mediaType, Type type)
+            {
+            if (String formatName ?= mediaType.format)
+                {
+                if (Format<type.DataType> format := registry.findFormat(formatName, type.DataType))
+                    {
+                    return new FormatCodec<type.DataType>(Utf8Codec, format);
+                    }
+
+                throw new IllegalState($"Unsupported mediaType format: {formatName}");
+                }
+            else
+                {
+                if (Codec codec := registry.findCodec(mediaType, type.DataType))
+                    {
+                    return codec;
+                    }
+
+                throw new IllegalState($"Unsupported mediaType: {mediaType}");
+                }
+            }
+
+        MediaType|MediaType[] produces = endpoint.produces;
+        if (produces == [])
+            {
+            produces = Json;
+            }
+        if (produces.is(MediaType))
+            {
+            MediaType mediaType = produces;
+            Codec     codec     = findCodec(mediaType, type);
+
+            if (index == 0)
+                {
+                return (request, result) ->
+                    createSimpleResponse(mediaType, codec, request, result[0]);
+                }
+
+            return (request, result) ->
+                result[0].as(Boolean)
+                   ? createSimpleResponse(mediaType, codec, request, result[1])
+                   : new SimpleResponse(HttpStatus.NotFound).makeImmutable();
+            }
+        else
+            {
+            MediaType[] mediaTypes = produces;
+            Codec[]     codecs     = new Codec[mediaTypes.size] (i -> findCodec(mediaTypes[i], type));
+
+            if (index == 0)
+                {
+                return (request, result) ->
+                    createSimpleResponse(mediaTypes, codecs, request, result[0]);
+                }
+
+            return (request, result) ->
+                result[0].as(Boolean)
+                   ? createSimpleResponse(mediaTypes, codecs, request, result[1])
+                   : new SimpleResponse(HttpStatus.NotFound).makeImmutable();
+            }
         }
 
     /**
-     * Create an HTTP response.
+     * Create an HTTP response for a single-media producer.
      */
-    private static Response createSimpleResponse(EndpointInfo endpoint, Request request, Object result)
+    private static Response createSimpleResponse(
+            MediaType mediaType, Codec codec, Request request, Object result)
         {
-        if (result.is(Response))
+        if (!request.accepts.matches(mediaType))
             {
-            return result;
+            TODO find a converter and convert
             }
 
-        AcceptList accepts   = request.accepts;
-        MediaType  mediaType = endpoint.resolveResponseContentType(accepts);
+        return new SimpleResponse(HttpStatus.OK, mediaType, codec.encode(result)).makeImmutable();
+        }
 
-        if (result.is(HttpStatus))
+    /**
+     * Create an HTTP response for a multi-media producer.
+     */
+    private static Response createSimpleResponse(
+            MediaType[] mediaTypes, Codec[] codecs, Request request, Object result)
+        {
+        (MediaType, Codec)
+                resolveContentType(MediaType[] mediaTypes, Codec[] codecs, AcceptList accepts)
             {
-            return new SimpleResponse(result, mediaType, []).makeImmutable();
+            Loop:
+            for (MediaType mediaType : mediaTypes)
+                {
+                if (accepts.matches(mediaType))
+                    {
+                    return mediaType, codecs[Loop.count];
+                    }
+                }
+
+            TODO find a converter and convert
             }
 
-        // TODO: replace the code below with a codec/format call
+        (MediaType mediaType, Codec codec) = resolveContentType(mediaTypes, codecs, request.accepts);
 
-        assert mediaType == Json as $"Not supported media type {mediaType}";
-
-        import ecstasy.io.ByteArrayOutputStream;
-        import ecstasy.io.UTF8Writer;
-
-        import json.Schema;
-
-        Byte[] body;
-        switch (result.is(_))
-            {
-            case Array<Byte>: // TODO CP: "case Byte[]" doesn't parse
-                body = result;
-                break;
-
-            case String:
-                body = result.quoted().utf8();
-                break;
-
-            case json.Doc:
-                body = json.Printer.DEFAULT.render(result).utf8();
-                break;
-
-            default:
-                ByteArrayOutputStream out  = new ByteArrayOutputStream();
-                Type                  type = &result.actualType;
-
-                Schema.DEFAULT.createObjectOutput(new UTF8Writer(out)).
-                        write(result.as(type.DataType));
-
-                body = out.bytes;
-                break;
-            }
-
-        return new SimpleResponse(HttpStatus.OK, mediaType, body).makeImmutable();
+        return new SimpleResponse(HttpStatus.OK, mediaType, codec.encode(result)).makeImmutable();
         }
     }

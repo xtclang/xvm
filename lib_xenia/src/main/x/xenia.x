@@ -91,8 +91,7 @@ module xenia.xtclang.org
         {
         @Inject(resourceName="server2", opts=address) HttpServer server;
 
-        Catalog     catalog = app.catalog_;
-        HttpHandler handler = new HttpHandler(server, catalog);
+        HttpHandler handler = new HttpHandler(server, app.catalog_);
 
         return () -> handler.shutdown();
         }

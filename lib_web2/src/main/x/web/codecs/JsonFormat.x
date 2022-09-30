@@ -25,7 +25,7 @@ const JsonFormat(Printer printer = DEFAULT)
             return True, new NarrowingFormat<Doc, type.DataType>(this);
             }
 
-        return True, new SerializationFormat<OtherValue>(registry.jsonSchema); // TODO CP (cache, etc)
+        return True, new SerializationFormat<OtherValue>(registry.jsonSchema);
         }
 
     @Override

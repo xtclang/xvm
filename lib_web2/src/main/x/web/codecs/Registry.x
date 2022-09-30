@@ -39,14 +39,14 @@ service Registry
     private Map<MediaType, Map<Type, Codec?>> codecsByType = new HashMap();
 
     /**
-     * The internal registry-by-name of the `Format` objects.
+     * The internal registry-by-name of the named `Format` objects.
      */
     private Map<String, Format> formatsByName = new HashMap();
 
     /**
-     * The internal registry-by-type of the `Format` objects.
+     * The internal registry-by-type of derivative `Format` objects from a given named format.
      */
-    private Map<Type, Format?> formatsByType = new HashMap();
+    private Map<String, Map<Type, Format?>> derivedFormatsByType = new HashMap();
 
     /**
      * The internal registry-by-from-and-to-type of the `Converter` objects.
@@ -227,7 +227,7 @@ service Registry
 
             for (Codec? codec : codecsByType.values)
                 {
-                if (Codec<Value> newCodec := codec?.forType(type, this))
+                if (Codec<Value> newCodec := codec?.forType(type.DataType, this))
                     {
                     registerCodec(mediaType, newCodec);
                     return True, newCodec;
@@ -268,8 +268,6 @@ service Registry
      */
     void registerFormat(Format format)
         {
-        assert formatsByType.putIfAbsent(format.Value, format)
-            || formatsByType.replace(format.Value, Null, format);
         formatsByName.putIfAbsent(format.name, format);
 
         if (!Null.is(format.Value))
@@ -291,62 +289,29 @@ service Registry
         {
         if (Format format := formatsByName.get(name))
             {
-            if (type == Null)
+            if (type == Null || format.Value == type)
                 {
                 return True, format.as(Format<Value>);
                 }
 
-            if (format.Value.isA(type))
+            Map<Type, Format?> derivedFormats =
+                    derivedFormatsByType.computeIfAbsent(name, () -> new HashMap());
+            if (Format? derivedFormat := derivedFormats.get(type))
                 {
-                return True, format.as(Format<Value>);
+                return derivedFormat == Null
+                        ? False
+                        : (True, derivedFormat.as(Format<Value>));
                 }
-            }
 
-        return False;
-        }
-
-    /**
-     * Look up a `Format` by the `Type` that it can encode and decode.
-     *
-     * @param type  the `Value` type for the `Format`
-     *
-     * @return `True` iff there exists a `Format` for the specified `Type`
-     * @return (conditional) the `Format` for the `Type`
-     */
-    <Value> conditional Format<Value> findFormat(Type<Value> type)
-        {
-        if (Format? format := formatsByType.get(type))
-            {
-            return format == Null
-                    ? False
-                    : (True, format.as(Format<Value>));
-            }
-
-        for (Format? format : formatsByType.values)
-            {
-            if (Format<Value> newFormat := format?.forType(type, this))
+            if (Format<Value> newFormat := format.forType(type.DataType, this))
                 {
-                registerFormat(newFormat);
+                derivedFormats.put(type, newFormat);
                 return True, newFormat;
                 }
+            derivedFormats.put(type, Null);
             }
 
-        formatsByType.put(type, Null); // cache the miss
         return False;
-        }
-
-    /**
-     * Look up a `Format` by the `Type` that it can encode and decode, and throw an exception if
-     * the format is not found.
-     *
-     * @param type  the `Value` type for the `Format`
-     *
-     * @return the `Format` for the specified `Type`
-     */
-    <Value> Format<Value> requireFormat(Type<Value> type)
-        {
-        assert Format<Value> format := findFormat(type) as $"Unable to find Format for Type {type}";
-        return format;
         }
 
 
@@ -373,6 +338,14 @@ service Registry
             }
         }
 
+    /**
+     * Look up a `MediaType` for the file name extension.
+     *
+     * @param fileNAme  the file name
+     *
+     * @return `True` iff there exists a `MediaType` for the specified file name
+     * @return (conditional) the `MediaType` for the file name
+     */
     conditional MediaType findMediaType(String fileName)
         {
         if (Int of := fileName.lastIndexOf('.'))

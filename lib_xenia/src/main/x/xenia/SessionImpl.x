@@ -35,14 +35,15 @@ service SessionImpl
         {
         Time now = xenia.clock.now;
 
-        structure.manager_      = manager;
-        structure.created       = now;
-        structure.lastUse       = now;
-        structure.ipAddress     = requestInfo.getClientAddress();
-        structure.userAgent     = extractUserAgent(requestInfo);
-        structure.cookieConsent = None;
-        structure.trustLevel    = None;
-        structure.sessionId     = sessionId.toString(); // TODO CP: use Base64?
+        structure.manager_        = manager;
+        structure.created         = now;
+        structure.lastUse         = now;
+        structure.versionChanged_ = now;
+        structure.ipAddress       = requestInfo.getClientAddress();
+        structure.userAgent       = extractUserAgent(requestInfo);
+        structure.cookieConsent   = None;
+        structure.trustLevel      = None;
+        structure.sessionId       = sessionId.toString(); // TODO CP: use Base64?
         }
 
 
