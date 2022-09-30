@@ -138,9 +138,9 @@ module web.xtclang.org
      *     @Restrict(["admin", "manager"])
      *     conditional User createUser(@UriParam String id) {...}
      */
-    mixin Restrict(String|String[] subject)
+    mixin Restrict(TrustLevel security=Normal, String|String[] subject)
             into WebApp | WebService | Endpoint
-            extends LoginRequired;
+            extends LoginRequired(security);
 
     /**
      * This annotation, `@HttpsRequired`, is used to mark a web service call -- or any containing

@@ -171,5 +171,15 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins)
             {
             return method.conditionalResult;
             }
+
+        /**
+         * TODO GG
+         */
+        Boolean requiresTls;
+
+        /**
+         * TODO GG
+         */
+        TrustLevel requiredTrust;
         }
     }
