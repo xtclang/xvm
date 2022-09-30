@@ -45,7 +45,7 @@ mixin WebApp
         }
 
     /**
-     * The regsitry for this WebApp.
+     * The registry for this WebApp.
      */
     @Lazy Registry registry_.calc()
         {
