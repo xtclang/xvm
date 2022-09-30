@@ -446,4 +446,10 @@ const SessionCookie
         {
         return text.appendTo(buf);
         }
+
+    @Override
+    String toString()
+        {
+        return text;
+        }
     }
