@@ -105,7 +105,16 @@ service SessionManager(SessionStore store, SessionProducer instantiateSession)
 
     // ----- session/request binding ---------------------------------------------------------------
 
-    // TODO CP (request)
+    enum RequiredAction
+        {
+        None,
+        Redirect,
+        }
+
+//    static (RequiredAction, SessionCookie[] attach) validate(Request request, SessionManager mgr)
+//        {
+//        TODO
+//        }
 
 
     // ----- session control -----------------------------------------------------------------------

@@ -1,4 +1,5 @@
 import web.ErrorHandler;
+import web.Header;
 import web.HttpStatus;
 
 import web.routing.Catalog.EndpointInfo;
@@ -187,10 +188,31 @@ service Dispatcher
             });
         }
 
+    /**
+     * Use request cookies to identify an existing session, performing only absolutely necessary
+     * validations. No session validation, security checks, etc. are performed. This method does not
+     * attempt to redirect, create or destroy a session, etc.
+     *
+     * @param httpServer  the [HttpServer] that received the request
+     * @param context     the [RequestContext] for the current request
+     *
+     * @return the [SessionImpl] indicated by the request, or Null if none
+     */
     private Session? getSessionOrNull(HttpServer httpServer, RequestContext context)
         {
-        // TODO: use cookies to find an existing session; quick validation - no redirect
-        return Null;
+        Session? session = Null;
+        if (String[] cookies := httpServer.getHeaderValuesForName(context, Header.COOKIE))
+            {
+            for (String cookieHeader : cookies)
+                {
+                for (String cookie : cookieHeader.split(';'))
+                    {
+                    // TODO
+                    }
+                }
+            }
+
+        return session;
         }
 
     private (Session session, Boolean redirect)

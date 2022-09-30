@@ -76,6 +76,12 @@ import TimeOfDay.PICOS_PER_SECOND;
  *
  * * Cookies need to be replaced whenever an IP address etc. changes, also after a period of time.
  *
+ * * When the version of a received cookie is older than the latest known version for that session,
+ *   and the cookie is not received within some short period of time (e.g. `5s`) of the version
+ *   change (which would be possible with multiple concurrent requests in flight), then the session
+ *   must be invalidated; it is an indication of a stolen session cookie. If the IP is different,
+ *   then the short grace period should not be permitted, either.
+ *
  * * Persistent cookies are only used when permission has been given to use persistent cookies.
  *
  * * When a session is first created on a plaintext connection, it uses a temporary cookie and no
@@ -219,11 +225,23 @@ const SessionCookie
     /**
      * CookieId identifies which of the three possible cookies a session cookie is.
      */
-    enum CookieId(String name, Boolean tlsOnly, Boolean persistent, String attributes)
+    enum CookieId(String cookieName, Boolean tlsOnly, Boolean persistent, String attributes)
         {
         PlainText(       "xplaintext", False, False, "; Path=/; SameSite=Strict; HttpOnly"),
         Encrypted("__Host-xtemporary", True , False, "; Path=/; SameSite=Strict; HttpOnly; Secure"),
         Consent  ("__Host-xconsented", True , True , "; Path=/; SameSite=Strict; HttpOnly; Secure");
+
+        static conditional CookieId lookupCookie(String cookieName)
+            {
+            return switch (cookieName)
+                {
+                case        "xplaintext": (True, PlainText);
+                case "__Host-xtemporary": (True, Encrypted);
+                case "__Host-xconsented": (True, Consent  );
+
+                default: False;
+                };
+            }
 
         /**
          * A bitset representing no cookies.

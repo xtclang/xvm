@@ -7,6 +7,7 @@ import web.Header;
 import web.TrustLevel;
 
 import HttpServer.RequestInfo;
+import SessionCookie.CookieId;
 
 
 /**
@@ -56,6 +57,21 @@ service SessionImpl
      * This flag tracks whether the session has been accessed via a TLS connection previously.
      */
     protected/private Boolean prevTLS_;
+
+    /**
+     * TODO
+     */
+    Int version_;
+
+    /**
+     * TODO
+     */
+    Time versionChanged_;
+
+    /**
+     * TODO
+     */
+    SessionCookie?[] sessionCookies_ = new SessionCookie?[CookieId.count];
 
     /**
      * A data structure to keep track of concurrently executing requests.
