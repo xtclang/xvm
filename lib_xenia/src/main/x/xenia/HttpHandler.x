@@ -1,10 +1,5 @@
 import web.HttpStatus;
 
-import web.routing.Catalog;
-import web.routing.Catalog.EndpointInfo;
-import web.routing.Catalog.WebServiceInfo;
-import web.routing.UriTemplate;
-
 import HttpServer.Handler;
 import HttpServer.RequestContext;
 
@@ -36,7 +31,7 @@ service HttpHandler
     HttpServer httpServer;
 
     /**
-     * The catalog.
+     * The Catalog.
      */
     protected Catalog catalog;
 
