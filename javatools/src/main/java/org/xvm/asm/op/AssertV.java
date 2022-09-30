@@ -14,11 +14,11 @@ import org.xvm.asm.constants.StringConstant;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
 
+import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
 
@@ -109,15 +109,20 @@ public class AssertV
             m_asParts = asParts;
             }
 
-        // get the trace variable and constant values to display
-        ObjectHandle[] ahArg;
-        try
+        // get the trace variable and constant values to display; note that some values could
+        // be unassigned conditional returns
+        int            cArgs = m_anValue.length;
+        ObjectHandle[] ahArg = new ObjectHandle[cArgs];
+        for (int i = 0; i < cArgs; i++)
             {
-            ahArg = frame.getArguments(m_anValue, m_anValue.length);
-            }
-        catch (ExceptionHandle.WrapperException e)
-            {
-            return frame.raiseException(e);
+            try
+                {
+                ahArg[i] = frame.getArgument(m_anValue[i]);
+                }
+            catch (Exception e)
+                {
+                ahArg[i] = xString.EMPTY_STRING;
+                }
             }
 
         // build the assertion message and finish by throwing it
