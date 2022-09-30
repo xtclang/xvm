@@ -386,23 +386,23 @@ service ChainBundle
         Type type  = returns[index].ReturnType;
 
         // check for special return types
-        switch (type.DataType.is(_), index)
+        switch (type.is(_), index)
             {
-            case (Response, 0):
+            case (Type<Response>, 0):
                 return (request, result) -> result[0].as(Response).makeImmutable();
 
-            case (Response, 1):
+            case (Type<Response>, 1):
                 return (request, result) ->
                     (result[0].as(Boolean)
                         ? result[1].as(Response)
                         : new SimpleResponse(HttpStatus.NotFound)
                     ).makeImmutable();
 
-            case (HttpStatus, 0):
+            case (Type<HttpStatus>, 0):
                 return (request, result) ->
                     new SimpleResponse(result[0].as(HttpStatus)).makeImmutable();
 
-            case (HttpStatus, 1):
+            case (Type<HttpStatus>, 1):
                 return (request, result) ->
                     new SimpleResponse(result[0].as(Boolean)
                                         ? result[1].as(HttpStatus)
