@@ -75,9 +75,8 @@ public class TypedefConstant
                 {
                 public void accept(Constant constant)
                     {
-                    if (constant instanceof UnresolvedTypeConstant)
+                    if (constant instanceof UnresolvedTypeConstant typeU)
                         {
-                        UnresolvedTypeConstant typeU = (UnresolvedTypeConstant) constant;
                         if (typeU.isSingleDefiningConstant())
                             {
                             constant = typeU.getDefiningConstant();
@@ -118,8 +117,7 @@ public class TypedefConstant
     @Override
     public boolean containsUnresolved()
         {
-        TypedefStructure typedef = (TypedefStructure) getComponent();
-        return super.containsUnresolved() || typedef == null;
+        return false;
         }
 
     @Override
@@ -131,9 +129,9 @@ public class TypedefConstant
             return null;
             }
 
-        Component that = parent.getChild(this.getName());
-        return that instanceof TypedefStructure
-                ? (TypedefStructure) that
+        Component child = parent.getChild(this.getName());
+        return child instanceof TypedefStructure that
+                ? that
                 : null;
         }
 
