@@ -1,6 +1,5 @@
 import ecstasy.io.ByteArrayInputStream;
 import ecstasy.io.ByteArrayOutputStream;
-import ecstasy.io.EndOfFile;
 
 
 /**
