@@ -11,7 +11,7 @@ const ConverterCodec<Raw, Value>(Codec<Raw>             codec,
         name = $"{codec.name}->{Value}";
 
         assert up != Null || down != Null
-                as "At least one converter between {Raw} and {Value} is required";
+                as $"At least one converter between {Raw} and {Value} is required";
         }
 
     @Override
