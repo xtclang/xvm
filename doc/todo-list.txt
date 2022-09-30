@@ -17,6 +17,15 @@
 
 - move ecstasy.mgmt package to a separate module
 
+- enum should validate that non of the declared properties step on the existing Enum properties
+  for example, the following should not compile
+
+    enum CookieId(String name, Boolean tlsOnly)
+        {
+        PlainText("xplaintext", False),
+        }
+
+
 - MapMapping doesn't work for properties that declared as Map classes, e.g.
     const Test(Map<Int, String> map)     - json serialization works
     const Test(HashMap<Int, String> map) - json serialization DOESN'T WORK
