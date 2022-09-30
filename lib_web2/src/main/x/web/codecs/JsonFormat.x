@@ -4,6 +4,7 @@ import json.Doc;
 import json.Mapping;
 import json.ObjectInputStream;
 import json.ObjectInputStream.ElementInputStream;
+import json.Parser;
 import json.Printer;
 import json.Schema;
 
@@ -17,15 +18,20 @@ const JsonFormat(Printer printer = DEFAULT)
     String name = "json";
 
     @Override
-    <OtherValue> conditional Format!<OtherValue> forType(Type<OtherValue> type, Registry registry)
+    <OtherValue> conditional Format<OtherValue> forType(Type<OtherValue> type, Registry registry)
         {
-        TODO
+        if (type.is(Type<Doc>))
+            {
+            return True, new NarrowingFormat<Doc, type.DataType>(this);
+            }
+
+        return True, new SerializationFormat<OtherValue>(registry.jsonSchema); // TODO CP (cache, etc)
         }
 
     @Override
     Value decode(String text)
         {
-        if (json.Doc doc := new json.Parser(new CharArrayReader(text)).next())
+        if (Doc doc := new Parser(new CharArrayReader(text)).next())
             {
             return doc;
             }
@@ -53,7 +59,7 @@ const JsonFormat(Printer printer = DEFAULT)
     /**
      * Provides support for serializing a specific value type to and from JSON.
      */
-    static const SerializationFormat<Value>(Schema schema, Mapping<Value> mapping)
+    static const SerializationFormat<Value>(Schema schema, Mapping<Value>? mapping=Null)
             implements Format<Value>
         {
         @Override

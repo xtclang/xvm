@@ -1,12 +1,13 @@
 /**
  * A Format that allows an existing Format to be explicitly type-narrowed.
  */
-const NarrowingFormat<Value, Wide extends Value>(Format<Wide> format)
+const NarrowingFormat<Wide, Value extends Wide>(Format<Wide> format)
         implements Format<Value>
     {
-    assert()
+    construct(Format<Wide> format)
         {
-        name = $"{format.name}.as({format.Value})";
+        this.format = format;
+        this.name   = $"{format.name}.as({Value})";
         }
 
     @Override
@@ -40,12 +41,12 @@ const NarrowingFormat<Value, Wide extends Value>(Format<Wide> format)
     @Override
     void write(Value value, Appender<Char> stream)
         {
-        format.write(value.as(Wide), stream);               // TODO GG get rid of .as()
+        format.write(value, stream);
         }
 
     @Override
     String encode(Value value)
         {
-        return format.encode(value.as(Wide));               // TODO GG get rid of .as()
+        return format.encode(value);
         }
     }
