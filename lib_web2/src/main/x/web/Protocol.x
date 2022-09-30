@@ -1,7 +1,7 @@
 /**
  * A representation of a protocol used for web services.
  */
-const Protocol(String name, String scheme, Version? version, Boolean TLS, String? ALPN_Id=Null)
+const Protocol(String string, String scheme, Version? version, Boolean TLS, String? ALPN_Id=Null)
     {
     // ----- constants -----------------------------------------------------------------------------
 
@@ -91,32 +91,32 @@ const Protocol(String name, String scheme, Version? version, Boolean TLS, String
     static Protocol WSS13 = new Protocol("WSS/13", "wss", v:13, True);
 
     /**
-     * Protocol lookup table by name.
+     * Protocol lookup table by string.
      */
-    static Map<String, Protocol> byName =
+    static Map<String, Protocol> byProtocolString =
             [
-            HTTP.name     =  HTTP,
-            HTTPS.name    =  HTTPS,
-            HTTP1.name    =  HTTP1,
-            HTTP1_1.name  =  HTTP1_1,
-            HTTPS1_1.name =  HTTPS1_1,
-            HTTP2.name    =  HTTP2,
-            HTTPS2.name   =  HTTPS2,
-            HTTP3.name    =  HTTP3,
-            HTTPS3.name   =  HTTPS3,
-            WS13.name     =  WS13,
-            WSS13.name    =  WSS13,
+            HTTP.string     =  HTTP,
+            HTTPS.string    =  HTTPS,
+            HTTP1.string    =  HTTP1,
+            HTTP1_1.string  =  HTTP1_1,
+            HTTPS1_1.string =  HTTPS1_1,
+            HTTP2.string    =  HTTP2,
+            HTTPS2.string   =  HTTPS2,
+            HTTP3.string    =  HTTP3,
+            HTTPS3.string   =  HTTPS3,
+            WS13.string     =  WS13,
+            WSS13.string    =  WSS13,
             ];
 
 
     // ----- properties ----------------------------------------------------------------------------
 
     /**
-     * The name, which is the full text of the protocol and version as it would appear in an
-     * [HttpMessage]. For example, an "HTTP-Version" string, such as "HTTP/1.1", is located at the
-     * end of the first line of an HTTP 1.x request.
+     * The HTTP protocol string, which is the full text of the protocol and version as it would
+     * appear in an [HttpMessage]. For example, an "HTTP-Version" string, such as "HTTP/1.1", is
+     * located at the end of the first line of an HTTP 1.x request.
      */
-    String name;
+    String string;
 
     /**
      * The scheme of the protocol, which is usually "http", "https", or "ws".
