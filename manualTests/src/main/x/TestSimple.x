@@ -2,19 +2,14 @@ module TestSimple
     {
     @Inject Console console;
 
-    void run()
+    void run( )
         {
-        Class clz = Test;
-
-        assert clz.is(LoginRequired) && clz.trust == "None";
+        Test t = new Test();
+        assert t.n.equals(1); // used to blow up the compiler
         }
 
-    mixin LoginRequired(String trust)
-            into Class<Service>
-        {}
-
-    @LoginRequired("None")
-    class Test // this used to throw an assertion during validation (should be "service")
+    class Test
         {
+        Int n;
         }
     }

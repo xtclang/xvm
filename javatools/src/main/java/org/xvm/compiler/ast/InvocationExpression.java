@@ -1351,6 +1351,11 @@ public class InvocationExpression
                         {
                         argFn      = idMethod;
                         fConstruct = m_method.isConstructor();
+                        if (exprLeft instanceof TraceExpression)
+                            {
+                            // give the TraceExpression a chance to generate arguments
+                            exprLeft.generateVoid(ctx, code, errs);
+                            }
                         }
                     else
                         {
@@ -1364,9 +1369,11 @@ public class InvocationExpression
 
                             if (typeLeft.isFormalType())
                                 {
-                                // give the expression a chance to generate code even if we don't
-                                // use it (e.g. in a case of TraceExpression)
-                                exprLeft.generateVoid(ctx, code, errs);
+                                if (exprLeft instanceof TraceExpression)
+                                    {
+                                    // same as above; allow the TraceExpression to generate args
+                                    exprLeft.generateVoid(ctx, code, errs);
+                                    }
                                 }
                             else
                                 {
