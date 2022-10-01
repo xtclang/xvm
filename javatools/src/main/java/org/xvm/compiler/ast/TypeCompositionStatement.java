@@ -2241,12 +2241,12 @@ public class TypeCompositionStatement
             }
 
         // adjust synthetic properties created during registerStructures() phase if necessary
+        ConstantPool    pool       = pool();
         ClassStructure  component  = (ClassStructure) getComponent();
         ClassStructure  clzSuper   = component.getSuper();
         List<Parameter> listParams = constructorParams;
         if (component.getFormat() != Format.INTERFACE && listParams != null && clzSuper != null)
             {
-            ConstantPool   pool      = pool();
             TypeConstant   typeSuper = pool.ensureAccessTypeConstant(
                                         clzSuper.getFormalType(), Access.PROTECTED);
             TypeInfo       infoSuper = typeSuper.ensureTypeInfo(errs);
@@ -2288,9 +2288,11 @@ public class TypeCompositionStatement
                 }
             }
 
-        TypeConstant typeThis = component.getFormalType();
+        TypeConstant typeThis  = component.getFormalType();
+        TypeConstant typeClass = pool.ensureParameterizedTypeConstant(
+                                    pool.typeClass(), component.getIdentityConstant().getType());
         if (validateAnnotations(component.collectAnnotations(false), typeThis, errs) &&
-            validateAnnotations(component.collectAnnotations(true),  typeThis, errs))
+            validateAnnotations(component.collectAnnotations(true),  typeClass, errs))
             {
             if (component.isParameterized())
                 {
@@ -2303,12 +2305,12 @@ public class TypeCompositionStatement
      * Validate the specified annotations.
      *
      * @param aAnno     the annotations
-     * @param typeThis  this class type
+     * @param typeTarget  this class type
      * @param errs      the error listener
      *
      * @return false iff there is a validation error
      */
-    private boolean validateAnnotations(Annotation[] aAnno, TypeConstant typeThis, ErrorListener errs)
+    private boolean validateAnnotations(Annotation[] aAnno, TypeConstant typeTarget, ErrorListener errs)
         {
         for (int i = 0, c = aAnno.length; i < c; i++)
             {
@@ -2325,12 +2327,11 @@ public class TypeCompositionStatement
 
             TypeConstant typeInto = typeMixin.getExplicitClassInto(true);
 
-            // the mixin has to be able to apply to the containing class type or to be "into Class"
-            if (!typeInto.isIntoClassType() && !typeThis.isA(typeInto))
+            if (!typeTarget.isA(typeInto))
                 {
                 findAnnotationExpression(anno, annotations).
                     log(errs, Severity.ERROR, org.xvm.compiler.Constants.VE_ANNOTATION_INCOMPATIBLE,
-                        typeThis.getValueString(), typeMixin.getValueString(), typeInto.getValueString());
+                        typeTarget.getValueString(), typeMixin.getValueString(), typeInto.getValueString());
                 return false;
                 }
 
@@ -2338,18 +2339,11 @@ public class TypeCompositionStatement
                 {
                 Annotation   anno2      = aAnno[j];
                 TypeConstant typeMixin2 = anno2.getAnnotationType();
-                if (typeMixin2.isA(typeMixin))
+                if (typeMixin2.equals(typeMixin))
                     {
                     findAnnotationExpression(anno, annotations).
                         log(errs, Severity.ERROR, org.xvm.compiler.Constants.VE_ANNOTATION_REDUNDANT,
                             anno.getValueString());
-                    return false;
-                    }
-                if (typeMixin.isA(typeMixin2))
-                    {
-                    findAnnotationExpression(anno2, annotations).
-                        log(errs, Severity.ERROR, org.xvm.compiler.Constants.VE_ANNOTATION_REDUNDANT,
-                            anno2.getValueString());
                     return false;
                     }
                 }
