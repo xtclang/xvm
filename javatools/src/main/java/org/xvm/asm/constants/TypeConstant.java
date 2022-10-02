@@ -1023,11 +1023,13 @@ public abstract class TypeConstant
     /**
      * Collect an array of generic type parameters for this "formalizable" type.
      * <p/>
+     * An already parameterized class is not formalizable.
+     * <br>
      * A type that has a {@link #isExplicitClassIdentity explicit class identity} is formalizable
      * iff that class {@link ClassStructure#isParameterized() is parameterized}.
      * <br>
      * A relational type is formalizable if its both "legs" are formalizable and have identical
-     * or empty arrays of generic type parameters.
+     * generic type parameters.
      *
      * @return and a non-empty array if the type is formalizable; an empty array if the type doesn't
      *         have generic type parameters; or null if the type is not formalizable for any other

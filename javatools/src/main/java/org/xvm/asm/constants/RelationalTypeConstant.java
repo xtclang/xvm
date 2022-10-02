@@ -365,15 +365,6 @@ public abstract class RelationalTypeConstant
         int c1 = atype1.length;
         int c2 = atype2.length;
 
-        if (c1 == 0)
-            {
-            return atype2;
-            }
-        if (c2 == 0)
-            {
-            return atype1;
-            }
-
         if (c1 == c2)
             {
             for (int i = 0; i < c1; i++)

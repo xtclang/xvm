@@ -4,12 +4,31 @@ module TestSimple
 
     void run( )
         {
-        Test t = new Test();
-        assert t.n.equals(1); // used to blow up the compiler
+        Class clz = Test;
+
+        assert clz.is(LoginRequired);
+        assert clz.trust == "None";
         }
 
-    class Test
+    mixin Endpoint
+            into Method<WebService>;
+
+    mixin LoginRequired(String trust)
+            extends HttpsRequired   // this used to assert
+        {}
+
+    mixin HttpsRequired
+            into Class<WebApp> | Class<WebService> | Endpoint;
+
+    @LoginRequired("None")
+    @WebService
+    service Test
         {
-        Int n;
         }
+
+    mixin WebService
+            into service;
+
+    mixin WebApp
+            into Module;
     }

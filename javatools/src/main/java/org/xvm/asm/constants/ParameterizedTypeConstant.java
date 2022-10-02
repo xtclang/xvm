@@ -508,7 +508,8 @@ public class ParameterizedTypeConstant
     @Override
     public TypeConstant[] collectGenericParameters()
         {
-        return getUnderlyingType().collectGenericParameters();
+        // already parameterized type is not formalizable
+        return null;
         }
 
     @Override
