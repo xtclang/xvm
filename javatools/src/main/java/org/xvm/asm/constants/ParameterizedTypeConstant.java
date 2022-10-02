@@ -246,8 +246,8 @@ public class ParameterizedTypeConstant
 
         if (constResolved.isParamsSpecified())
             {
-            // TODO: this needs to be logged
-            System.out.println("Unexpected type parameters for " + constOriginal.getValueString());
+            // TODO: soft assert; needs to be removed
+            System.err.println("Unexpected type parameters for " + constOriginal.getValueString());
             return constResolved;
             }
 
@@ -502,8 +502,31 @@ public class ParameterizedTypeConstant
     @Override
     public TypeConstant adoptParameters(ConstantPool pool, TypeConstant[] atypeParams)
         {
-        return m_constType.adoptParameters(pool, atypeParams == null ? m_atypeParams : atypeParams);
-        }
+        int cParamsCurr = m_atypeParams.length;
+        if (atypeParams == null || cParamsCurr == 0)
+            {
+            atypeParams = m_atypeParams;
+            }
+        else
+            {
+            // make sure we don't adopt wider types over current narrower ones
+            for (int i = 0, c = Math.min(atypeParams.length, cParamsCurr); i < c; i++)
+                {
+                TypeConstant typeAdopt = atypeParams[i];
+                TypeConstant typeCurr  = m_atypeParams[i];
+                if (!typeAdopt.isA(typeCurr))
+                    {
+                    // unfortunately, there is no way to merge the adoptees and current types
+                    // in a predictable manner; need to discard the entire batch in favor of the
+                    // current types
+                    // TODO: soft assert; needs to be removed
+                    System.err.println("Un-adoptable type parameter " + typeAdopt + " for " + this);
+                    atypeParams = m_atypeParams;
+                    break;
+                    }
+                }
+            }
+        return m_constType.adoptParameters(pool, atypeParams);        }
 
     @Override
     public TypeConstant[] collectGenericParameters()
