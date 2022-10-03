@@ -2304,9 +2304,9 @@ public class TypeCompositionStatement
     /**
      * Validate the specified annotations.
      *
-     * @param aAnno     the annotations
-     * @param typeTarget  this class type
-     * @param errs      the error listener
+     * @param aAnno       the annotations
+     * @param typeTarget  the annotation target type
+     * @param errs        the error listener
      *
      * @return false iff there is a validation error
      */
