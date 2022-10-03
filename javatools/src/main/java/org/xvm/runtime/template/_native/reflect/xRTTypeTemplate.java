@@ -31,6 +31,7 @@ import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xEnum.EnumHandle;
+import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
 
 import org.xvm.runtime.template.collections.xArray;
@@ -435,6 +436,11 @@ public class xRTTypeTemplate
 
         IdentityConstant idClz = type.getSingleUnderlyingClass(true);
         ClassStructure   clz   = (ClassStructure) idClz.getComponent();
+        if (clz == null)
+            {
+            return frame.raiseException(
+                    xException.invalidType(frame, "Unknown type " + type.getValueString()));
+            }
 
         ComponentTemplateHandle hClass =
                 xRTComponentTemplate.makeComponentHandle(frame.f_context.f_container, clz);
@@ -547,7 +553,8 @@ public class xRTTypeTemplate
 
         if (typeThis.isParamsSpecified())
             {
-            return frame.raiseException("Already parameterized: " + typeThis.getValueString());
+            return frame.raiseException(xException.invalidType(frame,
+                    "Already parameterized: " + typeThis.getValueString()));
             }
 
         int            cTypes = (int) hArray.m_hDelegate.m_cSize;
@@ -557,7 +564,8 @@ public class xRTTypeTemplate
             int iResult = hArray.getTemplate().extractArrayValue(frame, hArray, i, Op.A_STACK);
             if (iResult != Op.R_NEXT)
                 {
-                return frame.raiseException("Invalid type array argument");
+                return frame.raiseException(
+                        xException.invalidType(frame, "Invalid type array argument"));
                 }
             aTypes[i] = ((TypeTemplateHandle) frame.popStack()).getDataType();
 
