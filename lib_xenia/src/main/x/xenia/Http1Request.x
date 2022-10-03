@@ -219,7 +219,7 @@ const Http1Request(RequestInfo info, UriParameters matchResult)
                         }
                     });
                 }
-            return queryParams;
+            return queryParams.makeImmutable();
             }
         return [];
         }
