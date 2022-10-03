@@ -187,10 +187,41 @@ const Http1Request(RequestInfo info, UriParameters matchResult)
                 () -> throw new IllegalState($"unknown protocol: {name}"));
         }
 
+    typedef (String | List<String>) as QueryParameter;
+
     @Override
-    @Lazy Map<String, String|List<String>> queryParams.calc()
+    @Lazy Map<String, QueryParameter> queryParams.calc()
         {
-        TODO CP
+        if (String query ?= uri.query, query.size != 0)
+            {
+            Map<String, String>         rawParams   = query.splitMap();
+            Map<String, QueryParameter> queryParams = new HashMap();
+
+            for ((String key, String value) : rawParams)
+                {
+                queryParams.process(key, e ->
+                    {
+                    if (e.exists)
+                        {
+                        QueryParameter prevValue = e.value;
+                        if (prevValue.is(String))
+                            {
+                            e.value = [prevValue, value];
+                            }
+                        else
+                            {
+                            prevValue += value;
+                            }
+                        }
+                    else
+                        {
+                        e.value = value;
+                        }
+                    });
+                }
+            return queryParams;
+            }
+        return [];
         }
 
     @Override

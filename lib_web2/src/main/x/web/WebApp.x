@@ -29,17 +29,21 @@ mixin WebApp
         {
         // REVIEW CP: how to report verification errors
 
+        WebApp      webApp        = this;
         ClassInfo[] classInfos    = new ClassInfo[];
         Class[]     sessionMixins = new Class[];
 
         // collect the ClassInfos for WebServices
-        scanClasses(this.classes, classInfos, sessionMixins);
+        scanClasses(webApp.classes, classInfos, sessionMixins);
 
         // sort the ClassInfos based on their paths
         classInfos.sorted((ci1, ci2) -> ci2.path <=> ci1.path, inPlace=True);
 
+        TrustLevel trustLevel  = webApp.is(LoginRequired) ? webApp.security : None;
+        Boolean    tlsRequired = webApp.is(HttpsRequired);
+
         // now collect all endpoints
-        WebServiceInfo[] webServiceInfos = collectEndpoints(classInfos);
+        WebServiceInfo[] webServiceInfos = collectEndpoints(classInfos, trustLevel, tlsRequired);
 
         return new Catalog(this, webServiceInfos, sessionMixins);
         }
@@ -65,13 +69,10 @@ mixin WebApp
         {
         for (Class child : classes)
             {
-            if (AnnotationTemplate template := child.annotatedBy(WebService))
+            if (AnnotationTemplate webServiceAnno := child.annotatedBy(WebService))
                 {
-                Argument[] args = template.arguments;
-                if (args.empty)
-                    {
-                    throw new IllegalState($"WebService's \"path\" argument must be specified for \"{child}\"");
-                    }
+                Argument[] args = webServiceAnno.arguments;
+                assert !args.empty;
 
                 String path;
                 if (!(path := args[0].value.is(String)))
@@ -126,7 +127,9 @@ mixin WebApp
      * Collect all endpoints for the WebServices in the specified ClassInfo array and
      * create a corresponding WebServiceInfo array.
      */
-    private WebServiceInfo[] collectEndpoints(ClassInfo[] classInfos)
+    private WebServiceInfo[] collectEndpoints(ClassInfo[] classInfos,
+                                              TrustLevel parentTrustLevel,
+                                              Boolean    parentTls)
         {
         WebServiceInfo[] webServiceInfos = new Array(classInfos.size);
 
@@ -141,6 +144,30 @@ mixin WebApp
             if (!(constructor := serviceType.defaultConstructor()))
                 {
                 throw new IllegalState($"default constructor is missing for \"{clz}\"");
+                }
+
+            TrustLevel serviceTrust = parentTrustLevel;
+            Boolean    serviceTls   = parentTls;
+
+            if (clz.is(LoginRequired))
+                {
+                serviceTrust = clz.security;
+                serviceTls   = True;
+                }
+            else
+                {
+                if (clz.is(LoginOptional))
+                    {
+                    serviceTrust = None;
+                    }
+                if (clz.is(HttpsOptional))
+                    {
+                    serviceTls = False;
+                    }
+                else if (clz.is(HttpsRequired))
+                    {
+                    serviceTls = True;
+                    }
                 }
 
             EndpointInfo[] endpoints       = new EndpointInfo[];
@@ -164,7 +191,8 @@ mixin WebApp
                                                         |endpoint \"{clz}\"
                                                         );
                                 }
-                            defaultEndpoint = new EndpointInfo(method, epid++, wsid);
+                            defaultEndpoint = new EndpointInfo(method, epid++, wsid,
+                                                serviceTls, serviceTrust);
                             }
                         else
                             {
@@ -173,7 +201,8 @@ mixin WebApp
                         break;
 
                     case Endpoint:
-                        endpoints.add(new EndpointInfo(method, epid++, wsid));
+                        endpoints.add(new EndpointInfo(method, epid++, wsid,
+                                        serviceTls, serviceTrust));
                         break;
 
                     case Intercept, Observe:

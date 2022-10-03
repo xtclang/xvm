@@ -61,7 +61,7 @@ module web.xtclang.org
      *     conditional Cart getCart(@UriParam("id") String id, Session session) {...}
      */
     mixin Produces(MediaType|MediaType[] produces)
-            into WebApp | WebService | Endpoint;
+            into Class<WebApp> | Class<WebService> | Endpoint;
 
     /**
      * A mixin to indicate the media-types consumed by a particular component.
@@ -81,7 +81,7 @@ module web.xtclang.org
      *     HttpStatus updateItem(@UriParam String id, @Body Item item) {...}
      */
     mixin Consumes(MediaType|MediaType[] consumes)
-            into WebApp | WebService | Endpoint;
+            into Class<WebApp> | Class<WebService> | Endpoint;
 
     /**
      * This annotation, `@LoginRequired`, is used to mark a web service call -- or any containing
@@ -111,7 +111,6 @@ module web.xtclang.org
      *                  web service
      */
     mixin LoginRequired(TrustLevel security=Normal)
-            into WebApp | WebService | Endpoint
             extends HttpsRequired;
 
     /**
@@ -123,7 +122,7 @@ module web.xtclang.org
      * annotation.
      */
     mixin LoginOptional
-            into WebApp | WebService | Endpoint;
+            into Class<WebApp> | Class<WebService> | Endpoint;
 
     /**
      * This annotation, `@Restrict`, is used to mark a web service endpoint, or the web service
@@ -139,7 +138,6 @@ module web.xtclang.org
      *     conditional User createUser(@UriParam String id) {...}
      */
     mixin Restrict(TrustLevel security=Normal, String|String[] subject)
-            into WebApp | WebService | Endpoint
             extends LoginRequired(security);
 
     /**
@@ -164,11 +162,10 @@ module web.xtclang.org
      *
      * The purpose of this design is to allow the use of annotations for specifying the requirement
      * for TLS, but only requiring those annotations within the class hierarchy at the
-     * few points where a change occurs from "requiring TLS" to "not requiring
-     * TLS", or vice versa.
+     * few points where a change occurs from "requiring TLS" to "not requiring TLS", or vice versa.
      */
     mixin HttpsRequired
-            into WebApp | WebService | Endpoint;
+            into Class<WebApp> | Class<WebService> | Endpoint;
 
     /**
      * This annotation, `@HttpsOptional`, is used to mark a web service call -- or any containing
@@ -179,7 +176,7 @@ module web.xtclang.org
      * annotation.
      */
     mixin HttpsOptional
-            into WebApp | WebService | Endpoint;
+            into Class<WebApp> | Class<WebService> | Endpoint;
 
     /**
      * This annotation, `@StreamingRequest`, is used to mark a web service call -- or any containing
@@ -189,7 +186,7 @@ module web.xtclang.org
      * processing the request.
      */
     mixin StreamingRequest
-            into WebApp | WebService | Endpoint;
+            into Class<WebApp> | Class<WebService> | Endpoint;
 
     /**
      * This annotation, `@StreamingResponse`, is used to mark a web service call -- or any
@@ -199,7 +196,7 @@ module web.xtclang.org
      * memory before starting to send it back to the client.
      */
     mixin StreamingResponse
-            into WebApp | WebService | Endpoint;
+            into Class<WebApp> | Class<WebService> | Endpoint;
 
 
     // ----- handler method annotations ------------------------------------------------------------

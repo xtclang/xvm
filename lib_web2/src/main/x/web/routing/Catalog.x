@@ -104,7 +104,8 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins)
     static const EndpointInfo
             extends MethodInfo
         {
-        construct(Method<WebService> method, Int id, Int wsid)
+        construct(Method<WebService> method, Int id, Int wsid,
+                 Boolean serviceTls, TrustLevel serviceTrust)
             {
             assert method.is(Endpoint);
 
@@ -128,6 +129,28 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins)
             this.consumes = method.is(Consumes)
                         ? method.consumes
                         : [];
+
+            this.requiresTls = serviceTls
+                        ? !method.is(HttpsOptional)
+                        :  method.is(HttpsRequired);
+
+            TrustLevel? methodTrust = method.is(LoginOptional)
+                        ? None
+                        : method.is(LoginRequired)
+                            ? method.security
+                            : Null;
+            if (serviceTrust == None)
+                {
+                this.requiredTrust = methodTrust ?: None;
+                }
+            else
+                {
+                this.requiredTrust = methodTrust == Null
+                        ? serviceTrust
+                        : methodTrust == None
+                            ? None // method is explicitly specified as "optional"
+                            : serviceTrust.maxOf(methodTrust);
+                }
             }
 
         @Override
@@ -173,12 +196,12 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins)
             }
 
         /**
-         * TODO GG
+         * Indicates if this endpoint requires the HTTPS.
          */
         Boolean requiresTls;
 
         /**
-         * TODO GG
+         *  [TrustLevel] of security that is required by the this endpoint.
          */
         TrustLevel requiredTrust;
         }

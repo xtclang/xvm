@@ -60,7 +60,9 @@ module Hello
             String echo(String path)
                 {
                 assert:debug path != "debug";
-                return path;
+
+                Map<String, String|List<String>> query = request?.queryParams : assert;
+                return path + (query.empty ? "" : $"?{query}");
                 }
             }
         }

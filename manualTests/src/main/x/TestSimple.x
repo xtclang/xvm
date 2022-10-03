@@ -1,3 +1,5 @@
+@web.LoginRequired(High)
+@web.WebApp
 module TestSimple
     {
     @Inject Console console;
