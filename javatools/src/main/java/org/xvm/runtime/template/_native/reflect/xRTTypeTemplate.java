@@ -43,6 +43,7 @@ import org.xvm.runtime.template._native.collections.arrays.xRTDelegate.GenericAr
 
 import org.xvm.runtime.template._native.reflect.xRTComponentTemplate.ComponentTemplateHandle;
 
+
 /**
  * Native TypeTemplate implementation.
  */
@@ -315,7 +316,8 @@ public class xRTTypeTemplate
             }
         else if (typeTarget.isRelationalType())
             {
-            aUnderlying = new TypeConstant[] {typeTarget.getUnderlyingType(), typeTarget.getUnderlyingType2()};
+            aUnderlying = new TypeConstant[]
+                            {typeTarget.getUnderlyingType(), typeTarget.getUnderlyingType2()};
             }
         else if (typeTarget.isFormalTypeSequence())
             {
@@ -410,7 +412,8 @@ public class xRTTypeTemplate
         // REVIEW GG + CP: include PropertyClassTypeConstant?
         if (typeTarget.isVirtualChild() || typeTarget.isAnonymousClass())
             {
-            TypeTemplateHandle hParent = makeHandle(frame.f_context.f_container, typeTarget.getParentType());
+            TypeTemplateHandle hParent =
+                    makeHandle(frame.f_context.f_container, typeTarget.getParentType());
             return frame.assignValues(aiReturn, xBoolean.TRUE, hParent);
             }
         else
@@ -452,17 +455,15 @@ public class xRTTypeTemplate
             Constant constDef = type.getDefiningConstant();
             if (constDef instanceof PropertyConstant idProp)
                 {
-                ConstantPool  pool         = idProp.getConstantPool();  // note: purposeful
-                TypeConstant  typeTarget   = idProp.getClassIdentity().getType();
-                TypeInfo      infoTarget   = typeTarget.ensureTypeInfo();
-                PropertyInfo  infoProp     = infoTarget.findProperty(idProp);
-                TypeConstant  typeReferent = infoProp.getType();
-                TypeConstant  typeImpl     = pool.ensurePropertyClassTypeConstant(typeTarget, idProp);
-                TypeConstant  typeProperty = pool.ensureParameterizedTypeConstant(pool.typeProperty(),
-                                                    typeTarget, typeReferent, typeImpl);
-                GenericHandle hProperty    = null; // TODO PropertyTemplate from typeProperty
+                TypeConstant  typeTarget = idProp.getClassIdentity().getType();
+                TypeInfo      infoTarget = typeTarget.ensureTypeInfo();
+                PropertyInfo  infoProp   = infoTarget.findProperty(idProp);
+                ObjectHandle  hProperty  = xRTProperty.makeHandle(frame, typeTarget, infoProp);
 
-                return frame.assignValues(aiReturn, xBoolean.TRUE, hProperty);
+                return Op.isDeferred(hProperty)
+                    ? hProperty.proceed(frame, frameCaller ->
+                        frameCaller.assignValues(aiReturn, xBoolean.TRUE, frameCaller.popStack()))
+                    : frame.assignValues(aiReturn, xBoolean.TRUE, hProperty);
                 }
             }
 
@@ -496,11 +497,12 @@ public class xRTTypeTemplate
      */
     public int invokeRelational(Frame frame, TypeTemplateHandle hType, int[] aiReturn)
         {
-        TypeConstant type = hType.getDataType();
+        TypeConstant type      = hType.getDataType();
+        Container    container = frame.f_context.f_container;
         return type.isRelationalType()
             ? frame.assignValues(aiReturn, xBoolean.TRUE,
-            makeHandle(frame.f_context.f_container, type.getUnderlyingType()),
-            makeHandle(frame.f_context.f_container, type.getUnderlyingType2()))
+                    makeHandle(container, type.getUnderlyingType()),
+                    makeHandle(container, type.getUnderlyingType2()))
             : frame.assignValue(aiReturn[0], xBoolean.FALSE);
         }
 
@@ -574,52 +576,60 @@ public class xRTTypeTemplate
         TypeConstant            typeThis  = hType.getDataType();
         ComponentTemplateHandle hTemplate = (ComponentTemplateHandle) hAnno.getField(frame, "template");
         ClassStructure          clzMixin  = (ClassStructure) hTemplate.getComponent();
+        IdentityConstant        idMixin   = clzMixin.getIdentityConstant();
         TypeConstant            typeInto  = clzMixin.getTypeInto();
 
-        if (clzMixin.getFormat() == Component.Format.MIXIN && typeThis.isA(typeInto))
+        if (clzMixin.getFormat() == Component.Format.MIXIN)
             {
-            ArrayHandle          haArgs     = (ArrayHandle) hAnno.getField(frame, "arguments");
-            GenericArrayDelegate haDelegate = (GenericArrayDelegate) haArgs.m_hDelegate;
-            int                  cArgs      = (int) haDelegate.m_cSize;
-            Constant[]           aconst;
+            ConstantPool pool = typeThis.getConstantPool();
 
-            if (cArgs > 0)
+            // note, that the annotation could be into the Class itself
+            if (typeThis.isA(typeInto) ||
+                    pool.ensureParameterizedTypeConstant(pool.typeClass(), typeThis).isA(typeInto))
                 {
-                aconst = new Constant[cArgs];
+                ArrayHandle          haArgs     = (ArrayHandle) hAnno.getField(frame, "arguments");
+                GenericArrayDelegate haDelegate = (GenericArrayDelegate) haArgs.m_hDelegate;
+                int                  cArgs      = (int) haDelegate.m_cSize;
+                Constant[]           aconst;
 
-                for (int i = 0; i < cArgs; i++)
+                if (cArgs > 0)
                     {
-                    GenericHandle hArg   = (GenericHandle) haDelegate.get(i);
-                    ObjectHandle  hValue = hArg.getField(frame, "value");
+                    aconst = new Constant[cArgs];
 
-                    aconst[i] = new HandleConstant(hValue);
+                    for (int i = 0; i < cArgs; i++)
+                        {
+                        GenericHandle hArg   = (GenericHandle) haDelegate.get(i);
+                        ObjectHandle  hValue = hArg.getField(frame, "value");
+
+                        aconst[i] = new HandleConstant(hValue);
+                        }
                     }
-                }
-            else
-                {
-                aconst = Constant.NO_CONSTS;
-                }
+                else
+                    {
+                    aconst = Constant.NO_CONSTS;
+                    }
 
-            AnnotatedTypeConstant typeAnno = typeThis.getConstantPool().ensureAnnotatedTypeConstant(
-                    clzMixin.getIdentityConstant(), aconst, typeThis);
-
-            return frame.assignValue(iReturn, makeHandle(frame.f_context.f_container, typeAnno));
+                AnnotatedTypeConstant typeAnno =
+                        pool.ensureAnnotatedTypeConstant(idMixin, aconst, typeThis);
+                return frame.assignValue(iReturn, makeHandle(frame.f_context.f_container, typeAnno));
+                }
             }
-        return frame.raiseException("Invalid annotation: " +
-                clzMixin.getIdentityConstant().getValueString());
+        return frame.raiseException("Invalid annotation: " + idMixin.getValueString());
         }
 
     /**
      * Implementation for: {@code conditional TypeTemplate resolveFormalType(String)}
      */
-    public int invokeResolveFormalType(Frame frame, TypeTemplateHandle hType, StringHandle hName, int[] aiReturn)
+    public int invokeResolveFormalType(Frame frame, TypeTemplateHandle hType,
+                                       StringHandle hName, int[] aiReturn)
         {
         TypeConstant type  = hType.getDataType();
         TypeConstant typeR = type.resolveGenericType(hName.getStringValue());
 
         return typeR == null
-            ? frame.assignValue(aiReturn[0], xBoolean.FALSE)
-            : frame.assignValues(aiReturn, xBoolean.TRUE, makeHandle(frame.f_context.f_container, typeR));
+                ? frame.assignValue(aiReturn[0], xBoolean.FALSE)
+                : frame.assignValues(aiReturn, xBoolean.TRUE,
+                    makeHandle(frame.f_context.f_container, typeR));
         }
 
 
@@ -763,7 +773,8 @@ public class xRTTypeTemplate
     public static class CreateAnnotationComposition
             implements Frame.Continuation
         {
-        public CreateAnnotationComposition(ComponentTemplateHandle hClass, Annotation[] aAnno, int[] aiReturn)
+        public CreateAnnotationComposition(ComponentTemplateHandle hClass, Annotation[] aAnno,
+                                           int[] aiReturn)
             {
             this.hClass   = hClass;
             this.aAnno    = aAnno;
@@ -902,8 +913,8 @@ public class xRTTypeTemplate
                     ComponentTemplateHandle hAnnoClass = xRTComponentTemplate.
                             makeComponentHandle(frameCaller.f_context.f_container, clzAnno);
 
-                    int iResult = Utils.constructAnnotationTemplate(frameCaller, hAnnoClass, ahAnnoArg, Op.A_STACK);
-
+                    int iResult = Utils.constructAnnotationTemplate(
+                                    frameCaller, hAnnoClass, ahAnnoArg, Op.A_STACK);
                     if (iResult == Op.R_CALL)
                         {
                         frameCaller.m_frameNext.addContinuation(this);

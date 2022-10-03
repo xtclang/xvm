@@ -382,7 +382,13 @@ public abstract class Container
      */
     public TypeConstant getType(Constant constValue)
         {
-        // at the moment, compiler only generates constants for native types
+        if (constValue.getConstantPool() == getConstantPool())
+            {
+            if (constValue instanceof SingletonConstant constSingleton)
+                {
+                return constSingleton.getType();
+                }
+            }
         return getNativeContainer().getConstType(constValue);
         }
 
