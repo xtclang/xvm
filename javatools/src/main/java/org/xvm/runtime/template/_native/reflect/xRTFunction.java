@@ -799,6 +799,20 @@ public class xRTFunction
             }
 
         @Override
+        public boolean makeImmutable()
+            {
+            if (m_fMutable)
+                {
+                if (!m_hDelegate.makeImmutable())
+                    {
+                    return false;
+                    }
+                m_fMutable = false;
+                }
+            return true;
+            }
+
+        @Override
         public String toString()
             {
             return getClass().getSimpleName() + " -> " + m_hDelegate;
@@ -950,6 +964,20 @@ public class xRTFunction
             return typeFn.getConstantPool().extractFunctionParams(typeFn)[iArg];
             }
 
+        @Override
+        public boolean makeImmutable()
+            {
+            if (m_fMutable)
+                {
+                if (!m_hArg.isService() && !m_hArg.makeImmutable())
+                    {
+                    return false;
+                    }
+                return super.makeImmutable();
+                }
+            return true;
+            }
+
         /**
          * The bound argument index indicating what position to inject the argument value at
          * during the {@link #addBoundArguments} call.
@@ -990,6 +1018,22 @@ public class xRTFunction
                     }
                 }
             return super.isMutable();
+            }
+
+        @Override
+        public boolean makeImmutable()
+            {
+            if (isMutable())
+                {
+                for (ObjectHandle hArg : f_ahArg)
+                    {
+                    if (!hArg.makeImmutable())
+                        {
+                        return false;
+                        }
+                    }
+                }
+            return super.makeImmutable();
             }
 
         @Override
@@ -1056,7 +1100,8 @@ public class xRTFunction
             return frameThis;
             }
 
-        public static FullyBoundHandle NO_OP = new FullyBoundHandle(INSTANCE.f_container, null, null)
+        public static FullyBoundHandle NO_OP =
+                new FullyBoundHandle(INSTANCE.f_container, null, Utils.OBJECTS_NONE)
             {
             @Override
             public int callChain(Frame frame, ObjectHandle hTarget, Frame.Continuation continuation)

@@ -577,8 +577,18 @@ public abstract class ObjectHandle
         @Override
         public boolean makeImmutable()
             {
-            return super.makeImmutable() &&
-                    getComposition().makeStructureImmutable(m_aFields);
+            if (m_fMutable)
+                {
+                // mark ourselves as immutable to prevent an infinite recursion
+                m_fMutable = false;
+                if (getComposition().makeStructureImmutable(m_aFields))
+                    {
+                    return true;
+                    }
+                // the structure could not be made mutable
+                return m_fMutable = true;
+                }
+            return true;
             }
 
         @Override
