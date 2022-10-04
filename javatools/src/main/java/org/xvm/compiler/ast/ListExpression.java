@@ -390,7 +390,7 @@ public class ListExpression
      */
     private TypeConstant resolveElementType(TypeConstant typeRequired)
         {
-        if (typeRequired instanceof UnionTypeConstant typeUnion)
+        if (typeRequired.resolveTypedefs() instanceof UnionTypeConstant typeUnion)
             {
             // try to calculate an element type that would probably accommodate the required type
             TypeConstant      typeElement = null;

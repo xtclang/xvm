@@ -32,4 +32,9 @@ module TestSimple
     service Test
         {
         }
+
+    json.Doc doc(String domain)
+        {
+        return [True, $"http://{domain}.xqiz.it:8080"]; // used to fail to compile
+        }
     }

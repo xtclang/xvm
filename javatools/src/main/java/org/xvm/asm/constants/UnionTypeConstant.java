@@ -136,7 +136,7 @@ public class UnionTypeConstant
 
     private void testMatch(TypeConstant type, TypeConstant typeMatch, Set<TypeConstant> setMatching)
         {
-        if (type instanceof UnionTypeConstant typeUnion)
+        if (type.resolveTypedefs() instanceof UnionTypeConstant typeUnion)
             {
             typeUnion.collectMatching(typeMatch, setMatching);
             }
@@ -854,7 +854,7 @@ public class UnionTypeConstant
         {
         return type.isTuple()
                 ? type
-                : type instanceof UnionTypeConstant typeUnion
+                : type.resolveTypedefs() instanceof UnionTypeConstant typeUnion
                     ? typeUnion.extractTuple()
                     : null;
         }
