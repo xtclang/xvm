@@ -221,7 +221,7 @@ service ChainBundle
         Handler callNext = handle;
         handle = (session, request) -> webService.route(session, request, callNext, onError);
 
-        chains[endpoint.id] = handle;
+        chains[endpoint.id] = handle.makeImmutable();
         return handle;
         }
 
@@ -378,7 +378,7 @@ service ChainBundle
         Return[] returns = endpoint.method.returns;
         if (returns.size == 0)
             {
-            return (request, result) -> new SimpleResponse(OK).makeImmutable();
+            return (request, result) -> new SimpleResponse(OK);
             }
 
         // if the method is conditional, the element zero of the tuple is the Boolean value
@@ -389,25 +389,25 @@ service ChainBundle
         switch (type.is(_), index)
             {
             case (Type<Response>, 0):
-                return (request, result) -> result[0].as(Response).makeImmutable();
+                return (request, result) -> result[0].as(Response);
 
             case (Type<Response>, 1):
                 return (request, result) ->
                     (result[0].as(Boolean)
                         ? result[1].as(Response)
                         : new SimpleResponse(HttpStatus.NotFound)
-                    ).makeImmutable();
+                    );
 
             case (Type<HttpStatus>, 0):
                 return (request, result) ->
-                    new SimpleResponse(result[0].as(HttpStatus)).makeImmutable();
+                    new SimpleResponse(result[0].as(HttpStatus));
 
             case (Type<HttpStatus>, 1):
                 return (request, result) ->
                     new SimpleResponse(result[0].as(Boolean)
                                         ? result[1].as(HttpStatus)
                                         : HttpStatus.NotFound
-                                      ).makeImmutable();
+                                      );
             }
 
         // helper function to look up a Codec based on the result type and the MediaType
@@ -452,7 +452,7 @@ service ChainBundle
             return (request, result) ->
                 result[0].as(Boolean)
                    ? createSimpleResponse(mediaType, codec, request, result[1])
-                   : new SimpleResponse(HttpStatus.NotFound).makeImmutable();
+                   : new SimpleResponse(HttpStatus.NotFound);
             }
         else
             {
@@ -468,7 +468,7 @@ service ChainBundle
             return (request, result) ->
                 result[0].as(Boolean)
                    ? createSimpleResponse(mediaTypes, codecs, request, result[1])
-                   : new SimpleResponse(HttpStatus.NotFound).makeImmutable();
+                   : new SimpleResponse(HttpStatus.NotFound);
             }
         }
 
@@ -483,7 +483,7 @@ service ChainBundle
             TODO find a converter and convert
             }
 
-        return new SimpleResponse(HttpStatus.OK, mediaType, codec.encode(result)).makeImmutable();
+        return new SimpleResponse(HttpStatus.OK, mediaType, codec.encode(result));
         }
 
     /**
@@ -509,6 +509,6 @@ service ChainBundle
 
         (MediaType mediaType, Codec codec) = resolveContentType(mediaTypes, codecs, request.accepts);
 
-        return new SimpleResponse(HttpStatus.OK, mediaType, codec.encode(result)).makeImmutable();
+        return new SimpleResponse(HttpStatus.OK, mediaType, codec.encode(result));
         }
     }
