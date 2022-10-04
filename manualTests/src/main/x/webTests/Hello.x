@@ -4,10 +4,16 @@ module Hello
     package web   import web.xtclang.org;
     package xenia import xenia.xtclang.org;
 
-    @Inject Console console;
+    import web.Default;
+    import web.Get;
+    import web.Session;
+    import web.StaticContent;
+    import web.WebService;
 
     void run()
         {
+        @Inject Console console;
+
         xenia.createServer("localhost:8080", this);
 
         console.println(\|Use the curl command to test, for example:
@@ -20,7 +26,7 @@ module Hello
 
     package inner
         {
-        @web.WebService("/")
+        @WebService("/")
         service Simple
             {
             SimpleData simpleData.get()
@@ -28,42 +34,47 @@ module Hello
                 return session?.as(SimpleData) : assert;
                 }
 
-            @web.Get
+            @Get
             String hello()
                 {
                 return "hello";
                 }
 
-            @web.Get("c")
+            @Get("c")
             String count(SimpleData sessionData)
                 {
                 return $"count={sessionData.counter++}";
                 }
 
-            @web.Default @web.Get
+            @Default @Get
             String askWhat()
                 {
                 return "what?";
                 }
 
             static mixin SimpleData
-                    into web.Session
+                    into Session
                 {
                 Int counter;
                 }
             }
 
-        @web.WebService("/e")
+        @WebService("/e")
         service Echo
             {
-            @web.Get("{path}")
-            String echo(String path)
+            @Get("{path}")
+            String[] echo(String path)
                 {
                 assert:debug path != "debug";
 
                 Map<String, String|List<String>> query = request?.queryParams : assert;
-                return path + (query.empty ? "" : $"?{query}");
+                return [path, query.empty ? "" : $"{query}"];
                 }
+            }
+
+        @StaticContent("/static", /resources/hello)
+        service Content
+            {
             }
         }
     }

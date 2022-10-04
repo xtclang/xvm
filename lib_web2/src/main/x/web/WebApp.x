@@ -177,6 +177,14 @@ mixin WebApp
             MethodInfo?    onError         = Null;
             MethodInfo?    route           = Null;
 
+            static void validateEndpoint(Method method)
+                {
+                Int returnCount = method.returns.size;
+                assert returnCount <= 1 ||
+                       returnCount == 2 && method.conditionalResult
+                            as $"endpoint \"{method}\" has multiple returns";
+                }
+
             for (Method<WebService, Tuple, Tuple> method : serviceType.methods)
                 {
                 switch (method.is(_))
@@ -191,6 +199,7 @@ mixin WebApp
                                                         |endpoint \"{clz}\"
                                                         );
                                 }
+                            validateEndpoint(method);
                             defaultEndpoint = new EndpointInfo(method, epid++, wsid,
                                                 serviceTls, serviceTrust);
                             }
@@ -201,6 +210,7 @@ mixin WebApp
                         break;
 
                     case Endpoint:
+                        validateEndpoint(method);
                         endpoints.add(new EndpointInfo(method, epid++, wsid,
                                         serviceTls, serviceTrust));
                         break;
