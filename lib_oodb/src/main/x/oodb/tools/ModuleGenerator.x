@@ -56,10 +56,10 @@ class ModuleGenerator(String implName, String moduleName)
     conditional ModuleTemplate ensureDBModule(
             ModuleRepository repository, Directory buildDir, Log errors)
         {
-        ModuleTemplate dbModule   = repository.getResolvedModule(moduleName);
-        String         hostedName = $"{moduleName}_{implName}";
+        ModuleTemplate dbModule = repository.getResolvedModule(moduleName);
+        String         hostName = $"{moduleName}_{implName}";
 
-        if (ModuleTemplate hostModule := repository.getModule(hostedName))
+        if (ModuleTemplate hostModule := repository.getModule(hostName))
             {
             // try to see if the host module is newer than the original module;
             // if anything goes wrong - follow a regular path
@@ -69,7 +69,7 @@ class ModuleGenerator(String implName, String moduleName)
                 Time? hostStamp  = hostModule.parent.created;
                 if (dbStamp != Null && hostStamp != Null && hostStamp > dbStamp)
                     {
-                    errors.add($"Info: Host module '{hostedName}' for '{moduleName}' is up to date");
+                    errors.add($"Info: Host module '{hostName}' for '{moduleName}' is up to date");
                     return True, hostModule;
                     }
                 }
@@ -90,8 +90,8 @@ class ModuleGenerator(String implName, String moduleName)
         if (createModule(sourceFile, appName, dbModule, appSchemaTemplate, errors) &&
             compileModule(repository, sourceFile, buildDir, errors))
             {
-            errors.add($"Info: Created a host module '{hostedName}' for '{moduleName}'");
-            return repository.getModule(hostedName);
+            errors.add($"Info: Created a host module '{hostName}' for '{moduleName}'");
+            return repository.getModule(hostName);
             }
         return False;
         }
@@ -317,7 +317,7 @@ class ModuleGenerator(String implName, String moduleName)
                                 ;
 
         sourceFile.create();
-        writeUtf(sourceFile, moduleSource);
+        sourceFile.contents = moduleSource.utf8();
         return True;
         }
 
@@ -559,23 +559,6 @@ class ModuleGenerator(String implName, String moduleName)
             errors.addAll(compilationErrors);
             }
         return success;
-        }
-
-    /**
-     * The code below should be replaced with
-     *      file.contents = contents.utfBytes();
-     */
-    void writeUtf(File file, String contents)
-        {
-        import ecstasy.io.ByteArrayOutputStream as Stream;
-        import ecstasy.io.UTF8Writer;
-        import ecstasy.io.Writer;
-
-        Stream out    = new Stream(contents.size);
-        Writer writer = new UTF8Writer(out);
-        writer.addAll(contents);
-
-        file.contents = out.bytes.freeze(True);
         }
 
 
