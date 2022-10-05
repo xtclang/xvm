@@ -370,6 +370,9 @@ service ChainBundle
 
     /**
      * Generate a response handler for the specified endpoint.
+     *
+     * Note: Responders we return don't need to "freeze" the response they produce; it will be done
+     *       by the WebService.route() mathod.
      */
     private Responder generateResponder(EndpointInfo endpoint)
         {
@@ -395,8 +398,7 @@ service ChainBundle
                 return (request, result) ->
                     (result[0].as(Boolean)
                         ? result[1].as(Response)
-                        : new SimpleResponse(HttpStatus.NotFound)
-                    );
+                        : new SimpleResponse(HttpStatus.NotFound));
 
             case (Type<HttpStatus>, 0):
                 return (request, result) ->
@@ -406,8 +408,7 @@ service ChainBundle
                 return (request, result) ->
                     new SimpleResponse(result[0].as(Boolean)
                                         ? result[1].as(HttpStatus)
-                                        : HttpStatus.NotFound
-                                      );
+                                        : HttpStatus.NotFound);
             }
 
         // helper function to look up a Codec based on the result type and the MediaType
