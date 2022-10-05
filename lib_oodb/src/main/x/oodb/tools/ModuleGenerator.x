@@ -44,7 +44,7 @@ class ModuleGenerator(String implName, String moduleName)
     protected String customMethodTemplate        = $./templates/CustomMethod.txt;
 
     /**
-     * Generate (if necessary) all the necessary classes to use a DB modules.
+     * Generate (if necessary) all the necessary classes to use a DB module.
      *
      * @param repository  the repository to load necessary modules from
      * @param buildDir    the directory to place all generated artifacts to
