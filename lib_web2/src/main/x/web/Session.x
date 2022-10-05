@@ -331,6 +331,12 @@ interface Session
     /**
      * This is a `String` representation of the _internal_ identity of the `Session` itself.
      *
+     * There is no guarantee that the session identity will be constant for the lifetime of the
+     * session; to the contrary, there are scenarios in which the session identity is likely to
+     * be changed as a security precaution in response to unexpected user agent behavior. The manner
+     * in which the identity is changed is implementation dependent; it may be implemented by
+     * destroying one session and creating another.
+     *
      * Great care must be used when using, holding, storing, or even just logging this identity,
      * because this identity can easily be used to correlate _personally identifying information_.
      * In many jurisdictions, the _existence_ of personally identifying information is regulated;
@@ -385,6 +391,42 @@ interface Session
      * When implementing this method, remember to invoke the `super` function.
      */
     void sessionDestroyed();
+
+    /**
+     * This event is invoked when a temporary session is merged into an existing session. It allows
+     * (but does not require) the application to selectively copy data from the provided `temp`
+     * session.
+     *
+     * The most common use case for merging a session is when a new session was created during the
+     * processing of a non-TLS (e.g. HTTP) request because no non-persistent session cookie was
+     * passed in, and then later the connection migrates to TLS and a subsequent request arrives
+     * with a persistent cookie from an older existing session (obviously with a different, older
+     * session ID). The newer (temporary) session may contain recent information that could be
+     * migrated to the older, pre-existing session.
+     *
+     * Since the user is generally not authenticated until after a TLS connection exists, it is
+     * unlikely that any critical information is present on the `temp` session. However, this event
+     * gives the application the opportunity to transfer over any information that might make the
+     * end user's experience better, as a result of retaining that contemporary information. This
+     * is the only opportunity to migrate any information from the passed `temp` session.
+     *
+     * When implementing this method, remember to invoke the `super` function.
+     */
+    void sessionMergedFrom(Session temp);
+
+    /**
+     * This event is invoked (instead of [sessionCreated]) when a session has been _forked_. This
+     * occurs when a session ID is no longer considered to be authoritative, such as when it appears
+     * that more than one user agent has a cryptographically verifiable cookie that references the
+     * same session. The occurrence of a session fork is almost certainly related to a protocol
+     * violation; see [protocolViolated].
+     *
+     * This event is invoked on the new session, and allows the application to remove or fix up
+     * data after the fork has occurred.
+     *
+     * When implementing this method, remember to invoke the `super` function.
+     */
+    void sessionForked();
 
     /**
      * This event is invoked when the session is authenticated. It allows the application to set up
@@ -502,5 +544,25 @@ interface Session
         {
         // trust on a single-user device only degrades to the normal level
         return trustLevel.minOf(exclusiveAgent ? Normal : None);
+        }
+
+    /**
+     * This event is invoked when the behavior of a user agent(s) appears to have violated the
+     * expected protocol in a manner that indicates a security violation is likely to have occurred.
+     * For example, if a session protocol can detect a replay attack or cookie theft/tampering, then
+     * this method would be invoked when such a condition is detected.
+     *
+     * An application that holds no personal or confidential information can ignore this event, and
+     * return the current `TrustLevel`. The event allows the application to remove confidential
+     * information from the session.
+     *
+     * When implementing this method, remember to invoke the `super` function.
+     *
+     * @return the suggested new `TrustLevel` for the session, based on the suspect communication
+     */
+    TrustLevel protocolViolated()
+        {
+        // trust is assumed to be destroyed
+        return None;
         }
     }
