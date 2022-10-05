@@ -25,10 +25,9 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
 
-import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.xBoolean;
-import org.xvm.runtime.template.xException;
 
+import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 
 import org.xvm.runtime.template.numbers.xInt64;
@@ -119,17 +118,6 @@ public class xRTFileTemplate
         FileStructure           file  = (FileStructure) hFile.getComponent();
         switch (method.getName())
             {
-            case "getModule": // ModuleTemplate getModule(String name)
-                {
-                StringHandle    hName  = (StringHandle) hArg;
-                ModuleStructure module = file.getModule(hName.getStringValue());
-                return module == null
-                    ? frame.raiseException(xException.illegalArgument(frame,
-                            "Missing module " + hName.getStringValue()))
-                    : frame.assignValue(iReturn,
-                            xRTModuleTemplate.makeHandle(frame.f_context.f_container, module));
-                }
-
             case "resolve":
                 return invokeResolve(frame, file, hArg, iReturn);
 
@@ -137,6 +125,29 @@ public class xRTFileTemplate
                 return invokeReplace(frame, file, (ArrayHandle) hArg, iReturn);
             }
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
+        }
+
+    @Override
+    public int invokeNativeNN(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                              ObjectHandle[] ahArg, int[] aiReturn)
+        {
+        ComponentTemplateHandle hFile = (ComponentTemplateHandle) hTarget;
+        FileStructure           file  = (FileStructure) hFile.getComponent();
+        switch (method.getName())
+            {
+            case "getModule": // conditional ModuleTemplate getModule(String name)
+                {
+                StringHandle    hName  = (StringHandle) ahArg[0];
+                ModuleStructure module = file.getModule(hName.getStringValue());
+                return module == null
+                    ? frame.assignValue(aiReturn[0], xBoolean.FALSE)
+                    : frame.assignValues(aiReturn,
+                            xBoolean.TRUE,
+                            xRTModuleTemplate.makeHandle(frame.f_context.f_container, module));
+                }
+            }
+
+        return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
         }
 
     public int invokeResolve(Frame frame, FileStructure file, ObjectHandle hRepo, int iReturn)

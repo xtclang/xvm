@@ -33,11 +33,10 @@ interface FileTemplate
      *
      * @param name  the qualified module name
      *
-     * @return  the specified ModuleTemplate
-     *
-     * @throws IllegalArgument if the module does not exist
+     * @return True iff the module exists
+     * @return (conditional) the ModuleTemplate
      */
-    ModuleTemplate getModule(String name);
+    conditional ModuleTemplate getModule(String name);
 
     /**
      * The date/time at which the FileTemplate was created. The value is not Null for FileTemplates

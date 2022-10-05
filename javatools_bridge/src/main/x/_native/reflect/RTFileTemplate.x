@@ -19,7 +19,7 @@ class RTFileTemplate
     RTFileTemplate resolve(ModuleRepository repository) {TODO("native");}
 
     @Override
-    ModuleTemplate getModule(String name)               {TODO("native");}
+    conditional ModuleTemplate getModule(String name)   {TODO("native");}
 
     @Override
     Time? created.get()
@@ -59,8 +59,8 @@ class RTFileTemplate
                 }
             moduleNamesDone.add(nextName);
 
-            ModuleTemplate nextModule = getModule(nextName);
-            if (nextModule.resolved)
+            ModuleTemplate nextModule;
+            if (nextModule := getModule(nextName), nextModule.resolved)
                 {
                 continue;
                 }
