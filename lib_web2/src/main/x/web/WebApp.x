@@ -34,7 +34,7 @@ mixin WebApp
         Class[]     sessionMixins = new Class[];
 
         // collect the ClassInfos for WebServices
-        scanClasses(webApp.classes, classInfos, sessionMixins);
+        scanClasses(webApp.classes, classInfos, sessionMixins, new HashSet<String>());
 
         // sort the ClassInfos based on their paths
         classInfos.sorted((ci1, ci2) -> ci2.path <=> ci1.path, inPlace=True);
@@ -65,7 +65,8 @@ mixin WebApp
      * Scan all the specified classes for WebServices and add the corresponding information
      * to the ClassInfo array along with session mixin class array.
      */
-    private void scanClasses(Class[] classes, ClassInfo[] classInfos, Class[] sessionMixins)
+    private void scanClasses(Class[] classes, ClassInfo[] classInfos, Class[] sessionMixins,
+                             Set<String> declaredPaths)
         {
         for (Class child : classes)
             {
@@ -77,7 +78,7 @@ mixin WebApp
                 String path;
                 if (!(path := args[0].value.is(String)))
                     {
-                    throw new IllegalState($"WebService's first argument is not a path for \"{child}\"");
+                    throw new IllegalState($"WebService \"{child}\": first argument is not a path");
                     }
 
                 if (!path.endsWith('/'))
@@ -91,7 +92,16 @@ mixin WebApp
                     // the service path is always a "root"
                     path = $"/{path}";
                     }
-                classInfos += new ClassInfo(child, path);
+
+                if (declaredPaths.contains(path))
+                    {
+                    throw new IllegalState($|WebService \"{child}\":
+                                            |path {path.quoted()} is already in use
+                                            );
+                    }
+
+                declaredPaths += path;
+                classInfos    += new ClassInfo(child, path);
 
                 // scan classes inside the WebService class
                 Collection<Type> childTypes   = child.PrivateType.childTypes.values;
@@ -104,7 +114,7 @@ mixin WebApp
                         }
                     });
 
-                scanClasses(childClasses, classInfos, sessionMixins);
+                scanClasses(childClasses, classInfos, sessionMixins, declaredPaths);
                 }
             else if (child.mixesInto(Session))
                 {
@@ -117,7 +127,7 @@ mixin WebApp
                 // don't scan imported modules
                 if (!pkg.isModuleImport())
                     {
-                    scanClasses(pkg.as(Package).classes, classInfos, sessionMixins);
+                    scanClasses(pkg.as(Package).classes, classInfos, sessionMixins, declaredPaths);
                     }
                 }
             }
