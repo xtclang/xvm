@@ -1,0 +1,13 @@
+module %appName%_web
+    {
+    package web_   import web.xtclang.org;
+    package xenia_ import xenia.xtclang.org;
+
+    package hosted_ import %appName%;
+
+    function void () createServer_(String address)
+        {
+        assert Module webApp := hosted_.isModuleImport(), webApp.is(web_.WebApp);
+        return xenia_.createServer(address, webApp);
+        }
+    }
