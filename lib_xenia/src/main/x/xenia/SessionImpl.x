@@ -1,3 +1,4 @@
+import collections.CircularArray;
 import collections.IdentitySet;
 
 import net.IPAddress;
@@ -5,6 +6,7 @@ import net.IPAddress;
 import web.CookieConsent;
 import web.Header;
 import web.TrustLevel;
+import web.codecs.Base64Format;
 
 import HttpServer.RequestInfo;
 import SessionCookie.CookieId;
@@ -22,28 +24,50 @@ service SessionImpl
     {
     // ----- constructors --------------------------------------------------------------------------
 
-    construct(SessionManager manager, Int sessionId, RequestInfo requestInfo)
+    /**
+     * Construct a SessionImpl instance.
+     *
+     * @param manager      the SessionManager
+     * @param sessionId    the internal session identifier
+     * @param requestInfo  the request information
+     * @param tls          True if the request was received over a TLS connection
+     */
+    construct(SessionManager manager, Int sessionId, RequestInfo requestInfo, Boolean tls)
         {
-        initialize(this, manager, sessionId, requestInfo);
+        initialize(this, manager, sessionId, requestInfo, tls);
         }
 
     /**
-     * Construction helper to be used via reflection.
+     * Construction helper, used directly by the constructor, but also via reflection.
+     *
+     * @param structure    the structure of the SessionImpl being constructed
+     * @param manager      the SessionManager
+     * @param sessionId    the internal session identifier
+     * @param requestInfo  the request information
+     * @param tls          True if the request was received over a TLS connection
      */
     static void initialize(SessionImpl:struct structure,
-                           SessionManager manager, Int sessionId, RequestInfo requestInfo)
+                           SessionManager     manager,
+                           Int                sessionId,
+                           RequestInfo        requestInfo,
+                           Boolean            tls)
         {
         Time now = xenia.clock.now;
 
-        structure.manager_        = manager;
-        structure.created         = now;
-        structure.lastUse         = now;
-        structure.versionChanged_ = now;
-        structure.ipAddress       = requestInfo.getClientAddress();
-        structure.userAgent       = extractUserAgent(requestInfo);
-        structure.cookieConsent   = None;
-        structure.trustLevel      = None;
-        structure.sessionId       = sessionId.toString(); // TODO CP: use Base64?
+        IPAddress ip    = requestInfo.getClientAddress();
+        Int       known = tls ? CookieId.NoConsent : CookieId.NoTls;
+
+        structure.manager_            = manager;
+        structure.created             = now;
+        structure.lastUse             = now;
+        structure.versionChanged_     = now;
+        structure.ipAddress           = requestInfo.getClientAddress();
+        structure.userAgent           = extractUserAgent(requestInfo);
+        structure.cookieConsent       = None;
+        structure.trustLevel          = None;
+        structure.sessionId           = idToString_(sessionId);
+        structure.sessionCookieInfos_ = new SessionCookieInfo_[CookieId.count](i -> new SessionCookieInfo_(
+                new SessionCookie(sessionId, CookieId.values[i], known, None, Null, ip, now)));
         }
 
 
@@ -60,19 +84,80 @@ service SessionImpl
     protected/private Boolean prevTLS_;
 
     /**
-     * TODO
+     * The current version of the session. Each time a significant change occurs to the user agent,
+     * such as cookie consent, IP address change, etc., the version of the session is incremented.
      */
-    Int version_;
+    protected/private Int version_;
 
     /**
-     * TODO
+     * The time at which the version was last incremented. Tracking this information allows for
+     * tolerance to concurrent requests which may already be in flight with older versions of the
+     * session's cookies. Once the round trip verification of the updated session cookies has
+     * completed, no new requests using the older cookies should be possible, but HTTP does not
+     * guarantee strict ordering, and high request concurrency (including unpredictable delays for
+     * some of those concurrent requests) can cause out of order processing of incoming requests.
      */
-    Time versionChanged_;
+    protected/private Time versionChanged_;
 
     /**
-     * TODO
+     * Hold related information about a SessionCookie related to this session.
+     *
+     * * The [cookie] property holds the cookie data itself.
+     * * The [sent] property indicates if the cookie has been sent to the user agent, and if so,
+     *   when it was sent.
+     * * The [verified] property indicates that the cookie was successfully received by the user
+     *   agent, and if so, when it was verified as received.
      */
-    SessionCookie?[] sessionCookies_ = new SessionCookie?[CookieId.count];
+    protected static class SessionCookieInfo_(SessionCookie cookie, Time? sent=Null, Time? verified=Null);
+
+    /**
+     * The information tracked for each of the session cookies, indexed by the `CookieId.ordinal`.
+     */
+    public/private SessionCookieInfo_[] sessionCookieInfos_;
+
+    /**
+     * A record of access to this session from a particular `IPAddress`.
+     */
+    protected static class AddressAccess_(IPAddress address, Time firstAccess, Time lastAccess);
+
+    /**
+     * A limited history by `IPAddress` of access to this session.
+     */
+    protected/private CircularArray<AddressAccess_> recentAddresses_ = new CircularArray(8);
+
+    /**
+     * All of the `IPAddress` that requests for this session have originated from.
+     */
+    protected/private Set<IPAddress> allAddresses_ = new HashSet();
+
+    /**
+     * A record of the session renaming that caused TODO
+     */
+    protected static const SessionRename(IPAddress address, Int version, String newId);
+
+    /**
+     * If the session has been destroyed, it may contain "forwarding addresses" for the user agent
+     * to follow.
+     */
+    protected/private SessionRename[] renamed_ = [];
+
+    /**
+     * A limited collection of recent requests that are held for debugging purposes and to allow a
+     * management console to provide visibility to information that may help identify an application
+     * level error.
+     */
+    protected/private CircularArray<Request> recentRequests_ = new CircularArray(8);
+
+    /**
+     * Information collected for each log entry.
+     */
+    static const LogEntry(Time time, IPAddress address, Boolean tls, Int version, String text);
+
+    /**
+     * Internal recording of events related to the session, maintained for security and debugging
+     * purposes. This information will be pruned to prevent unlimited size growth.
+     */
+    protected/private List<LogEntry> log_ = [];
 
     /**
      * A data structure to keep track of concurrently executing requests.
@@ -199,5 +284,42 @@ service SessionImpl
     @Override
     void sessionDeauthenticated(String user)
         {
+        }
+
+
+    // ----- helpers -------------------------------------------------------------------------------
+
+    /**
+     * Convert an integer session id to a generic-looking (external) string identifier.
+     *
+     * @param the internal session id
+     *
+     * @return the session identifier string
+     */
+    static String idToString_(Int id)
+        {
+        Byte[] bytes = id == 0 ? [0] : id.toByteArray()[id.leadingZeroCount / 8 ..< 8];
+        return Base64Format.Instance.encode(bytes);
+        }
+
+    /**
+     * Convert a generic-looking (external) session id string to an implementation-specific internal
+     * `Int` id value.
+     *
+     * @param str  the session identifier string
+     *
+     * @return the internal session id
+     */
+    static Int stringToId_(String str)
+        {
+        // the string contains a base-64 encoded set of up to 8 bytes, which are the 8 bytes of the
+        // int session id
+        Byte[] bytes = Base64Format.Instance.decode(str);
+
+        // note: we need to take care to never communicate the exception text back to the user
+        //       agent; this information should only be used on the server for debugging purposes
+        assert bytes.size <= 8 as $"Invalid session {str.quoted()}, byte length={bytes.size}";
+
+        return bytes.toInt64();
         }
     }

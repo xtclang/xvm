@@ -47,27 +47,28 @@ import TimeOfDay.PICOS_PER_SECOND;
  *
  *     1 2 3 TLS  description/action
  *     - - - ---  ------------------
- *            0   create new session; create cookie 1; redirect to verification
- *            1   create new session; create cookies 1 and 2; redirect to verification
+ *            0   create new session; redirect to verification (send cookie 1)
+ *            1   create new session; redirect to verification (send cookies 1 and 2)
  *     x      0   validate cookie 1
- *     x      1   validate cookie 1 & verify [prevTLS_] `== False`; create cookie 2;
- *                redirect to verification; set [prevTLS_] `= True`
+ *     x      1   validate cookie 1 & verify that cookie 2/3 were NOT already sent & verified (if
+ *                they were, then this is an error, because it indicates the likely theft of the
+ *                plain text cookie); redirect to verification (send cookies 1 and 2, and 3 if
+ *                [cookieConsent] has been set)
  *       x    0   error (no TLS, so cookie 2 is illegally present; also missing cookie 1)
  *       x    1   error (missing cookie 1)
  *     x x    0   error (no TLS, so cookie 2 is illegally present)
- *     x x    1   validate cookie 1 & 2; if [cookieConsent] has been set, create cookie 3 and
- *                redirect to verification
+ *     x x    1   validate cookie 1 & 2; if [cookieConsent] has been set, redirect to verification
  *         x  0   error (no TLS, so cookie 3 is illegally present)
- *         x  1   validate cookie 3; assume temporary cookies absent due to user agent restart;
- *                create cookie 1 & 2 and redirect to verification
+ *         x  1   validate cookie 3; assume temporary cookies absent due to user agent discarding
+ *                temporary cookies; redirect to verification (send cookies 1 and 2)
  *     x   x  0   error (no TLS, so cookie 3 is illegally present)
- *     x   x  1   validate cookie 1 & 3 (1 must be newer than 3), and verify [prevTLS_] `== False`;
- *                use session specified by cookie 3 if possible, otherwise 1; create cookie 2;
- *                redirect to verification; set [prevTLS_] `= True`
+ *     x   x  1   validate cookie 1 & 3 (1 must be newer than 3), and verify that cookie 2 was NOT
+ *                already sent & verified; merge session for cookie 1 into session for cookie 3;
+ *                redirect to verification; (send cookies 1 and 2)
  *       x x  0   error (no TLS, so cookie 2 and 3 are illegally present)
  *       x x  1   error (missing cookie 1)
  *     x x x  0   error (no TLS, so cookies 2 and 3 are illegally present)
- *     x x x  1   validate cookie 1 & 2 & 3 (must be identical)
+ *     x x x  1   validate cookie 1 & 2 & 3 (must be same session)
  *
  * * When a cookie is created, the counter inside the cookie is incremented, and any existing
  *   cookies are also re-written so their contents are in agreement (although each necessarily
@@ -246,7 +247,7 @@ const SessionCookie
         /**
          * A bitset representing no cookies.
          */
-        static Int None  = 0x0;
+        static Int None = 0x0;
 
         /**
          * A bitset representing just the plaintext cookie.
@@ -254,9 +255,14 @@ const SessionCookie
         static Int NoTls = 0x1;
 
         /**
+         * A bitset representing just the plaintext cookie.
+         */
+        static Int NoConsent = 0x3;
+
+        /**
          * A bitset representing all three cookies.
          */
-        static Int All   = 0x7;
+        static Int All = 0x7;
         }
 
 

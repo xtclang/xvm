@@ -86,7 +86,7 @@ service HttpHandler
             }
 
         Int   index  = ensureDispatcher();
-        Tuple result = dispatchers[index].dispatch^(httpServer, context, uriString, methodName);
+        Tuple result = dispatchers[index].dispatch^(httpServer, context, /*TODO GG: TLS=*/ False, uriString, methodName);
         &result.whenComplete((response, e) ->
             {
             if (e != Null)
@@ -189,19 +189,19 @@ service HttpHandler
 
         if (mixinCount == 0)
             {
-            sessionProducer = (mgr, id, info) -> new SessionImpl(mgr, id, info);
+            sessionProducer = (mgr, id, info, tls) -> new SessionImpl(mgr, id, info, tls);
             }
         else
             {
             Annotation[] annotations  = new Annotation[mixinCount] (i -> new Annotation(sessionMixins[i]));
             Class        sessionClass = SessionImpl.annotate(annotations);
 
-            sessionProducer = (mgr, id, info) ->
+            sessionProducer = (mgr, id, info, tls) ->
                 {
                 assert Struct structure := sessionClass.allocate();
                 assert structure.is(SessionImpl:struct);
 
-                SessionImpl.initialize(structure, mgr, id, info);
+                SessionImpl.initialize(structure, mgr, id, info, tls);
 
                 return sessionClass.instantiate(structure).as(SessionImpl);
                 };

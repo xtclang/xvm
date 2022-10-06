@@ -1,3 +1,5 @@
+import web.HttpStatus;
+
 import HttpServer.RequestInfo;
 import SessionStore.IOResult;
 
@@ -27,7 +29,7 @@ service SessionManager(SessionStore store, SessionProducer instantiateSession)
     /**
      * The means to instantiate sessions.
      */
-    typedef function SessionImpl(SessionManager, Int, RequestInfo) as SessionProducer;
+    typedef function SessionImpl(SessionManager, Int, RequestInfo, Boolean) as SessionProducer;
     protected/private SessionProducer instantiateSession;
 
     /**
@@ -86,6 +88,12 @@ service SessionManager(SessionStore store, SessionProducer instantiateSession)
     protected/private Map<Int, SessionImpl|SessionStatus> sessions = new HashMap();
 
     /**
+     * [Session] by cookie, or the [SessionStatus] if the `Session` is not `InMemory` but the status
+     * is known.
+     */
+    protected/private Map<String, SessionImpl|SessionStatus> sessionByCookie = new HashMap();
+
+    /**
      * The daemon responsible for cleaning up expired session data.
      */
     protected/private SessionPurger purger = new SessionPurger();
@@ -101,20 +109,6 @@ service SessionManager(SessionStore store, SessionProducer instantiateSession)
      * (with consent) be persistent, and the time-out for the session may be dramatically longer.
      */
     public/private Duration trustedDeviceTimeout   = Duration:60D;      // default is two months
-
-
-    // ----- session/request binding ---------------------------------------------------------------
-
-    enum RequiredAction
-        {
-        None,
-        Redirect,
-        }
-
-//    static (RequiredAction, SessionCookie[] attach) validate(Request request, SessionManager mgr)
-//        {
-//        TODO
-//        }
 
 
     // ----- session control -----------------------------------------------------------------------
@@ -137,6 +131,44 @@ service SessionManager(SessionStore store, SessionProducer instantiateSession)
         else
             {
             return Unknown;
+            }
+        }
+
+    /**
+     * Quick lookup of a session based on an opaque cookie value, or a slightly slower lookup based
+     * on the decrypted form of the cookie value. This is just a lookup; it doesn't validate,
+     * create, or destroy cookies or sessions.
+     *
+     * @param cookieText  the cookie value's text from the header
+     *
+     * @return `True` iff the session exists
+     * @return (conditional) the session
+     */
+    conditional SessionImpl getSessionByCookie(String cookieText)
+        {
+        if (SessionImpl|SessionStatus session := sessionByCookie.get(cookieText))
+            {
+            if (session.is(SessionImpl))
+                {
+                return True, session;
+                }
+
+            if (session == Nonexistent)
+                {
+                return False;
+                }
+
+            // fall through to default handling
+            }
+
+        try
+            {
+            SessionCookie cookie = new SessionCookie(cookieText);
+            return getSessionById(cookie.sessionId);
+            }
+        catch (Exception e)
+            {
+            return False;
             }
         }
 
@@ -214,12 +246,16 @@ service SessionManager(SessionStore store, SessionProducer instantiateSession)
      * Instantiate a new [SessionImpl] object, including any [Session] mix-ins that the [WebApp]
      * contains.
      *
-     * @return a new [SessionImpl] object, including any mixins declared by the application
+     * @param requestInfo  the request information
+     * @param tls          True if the request was received over a TLS connection
+     *
+     * @return a new [SessionImpl] object, including any mixins declared by the application, or the
+     *         [HttpStatus] describing why the session could not be created
      */
-    SessionImpl createSession(RequestInfo requestInfo)
+    HttpStatus|SessionImpl createSession(RequestInfo requestInfo, Boolean tls)
         {
         Int         id      = generateId();
-        SessionImpl session = instantiateSession(this, id, requestInfo);
+        SessionImpl session = instantiateSession(this, id, requestInfo, tls);
         sessions.put(id, session);
 
         purger.track^(id);
