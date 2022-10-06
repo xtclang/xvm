@@ -182,6 +182,16 @@ service SessionImpl
         }
 
     @Override
+    void sessionMergedFrom(Session temp)
+        {
+        }
+
+    @Override
+    void sessionForked()
+        {
+        }
+
+    @Override
     void sessionAuthenticated(String user)
         {
         }
