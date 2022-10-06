@@ -380,32 +380,37 @@ public class FileStructure
                 }
             }
 
-        String sMissing = linkModules(repository, this, new HashSet<>(), fRuntime);
+        String sMissing = findMissing(repository, new HashSet<>(), fRuntime);
         if (sMissing == null)
             {
+            linkModules(repository, this, new HashSet<>(), fRuntime);
             markLinked();
             }
         return sMissing;
         }
 
-    private String linkModules(ModuleRepository repository, FileStructure fileTop,
-                               Set<String> setFilesDone, boolean fRuntime)
+    /**
+     * The first phase of the linkModules() implementation - check if any necessary modules are
+     * missing from the repository.
+     *
+     * @return the first missing module name; null all modules are present
+     */
+    private String findMissing(ModuleRepository repository, Set<String> setFilesChecked,
+                               boolean fRuntime)
         {
-        if (!setFilesDone.add(getModuleName()))
+        if (!setFilesChecked.add(getModuleName()))
             {
             return null;
             }
 
-        List<FileStructure>   listFilesTodo   = new ArrayList<>();
-        List<String>          listModulesTodo = new ArrayList<>(moduleNames());
-        List<ModuleStructure> listReplace     = new ArrayList<>();
-        Set<String>           setModulesDone  = new HashSet<>();
-        String                sMissing        = null;
+        List<FileStructure> listFilesTodo   = new ArrayList<>();
+        List<String>        listModulesTodo = new ArrayList<>(moduleNames());
+        Set<String>         setModulesDone  = new HashSet<>();
 
         // the primary module is implicitly linked already
         setModulesDone.add(getModuleName());
 
-        // "recursive" link of all downstream modules
+        // recursive check of all downstream modules
         for (int iNextTodo = 0; iNextTodo < listModulesTodo.size(); ++iNextTodo)
             {
             // only need to link it once (each node in the graph gets visited once)
@@ -419,67 +424,125 @@ public class FileStructure
             assert moduleFingerprint != null;
             if (moduleFingerprint.isLinked())
                 {
-                // this module is already in our FileStructure as a real, fully loaded and
-                // linked module
+                // this module is already in our FileStructure as a real, fully loaded and linked
+                // module
                 continue;
                 }
 
-            // load the module against which the compilation will occur
             if (repository.getModuleNames().contains(sModule))
                 {
-                ModuleStructure moduleUnlinked = repository.loadModule(sModule); // TODO versions etc.
-                assert moduleUnlinked != null;
-
-                FileStructure fileUnlinked = moduleUnlinked.getFileStructure();
-                if (fRuntime)
+                // no need to recurse at run-time since all contained modules must have
+                // corresponding fingerprints at the top file
+                if (!fRuntime)
                     {
-                    listReplace.add(moduleUnlinked);
+                    ModuleStructure moduleUnlinked = repository.loadModule(sModule);
+                    assert moduleUnlinked != null;
 
-                    // TODO eventually we need to handle the case that these are actual modules and not just pointers to the modules
-                    listModulesTodo.addAll(fileUnlinked.moduleNames());
-                    }
-                else // compile-time
-                    {
-                    moduleFingerprint.setFingerprintOrigin(moduleUnlinked);
-
-                    if (fileTop.getChild(sModule) == null)
-                        {
-                        fileTop.addChild(moduleFingerprint);
-                        }
-
-                    if (!setFilesDone.contains(sModule))
+                    FileStructure fileUnlinked = moduleUnlinked.getFileStructure();
+                    if (!setFilesChecked.contains(sModule))
                         {
                         listFilesTodo.add(fileUnlinked); // recurse downstream
                         }
                     }
                 }
-            else if (sMissing == null)
+            else
                 {
-                // no error is logged here; the package that imports the module will detect
-                // the error when it is asked to resolve global names; see
-                // TypeCompositionStatement
-                sMissing = sModule;
+                // no error is logged here; the package that imports the module will detect the
+                // error when it is asked to resolve global names; see TypeCompositionStatement
+                return sModule;
+                }
+            }
+
+        for (FileStructure fileDownstream : listFilesTodo)
+            {
+            assert !fRuntime;
+            String sMissing = fileDownstream.findMissing(repository, setFilesChecked, false);
+            if (sMissing != null)
+                {
+                return sMissing;
+                }
+            }
+
+        return null;
+        }
+
+    /**
+     * The second phase of the linkModules implementation - actual linking.
+     */
+    private void linkModules(ModuleRepository repository, FileStructure fileTop,
+                               Set<String> setFilesDone, boolean fRuntime)
+        {
+        if (!setFilesDone.add(getModuleName()))
+            {
+            return;
+            }
+
+        List<FileStructure>   listFilesTodo   = new ArrayList<>();
+        List<String>          listModulesTodo = new ArrayList<>(moduleNames());
+        List<ModuleStructure> listReplace     = new ArrayList<>();
+        Set<String>           setModulesDone  = new HashSet<>();
+
+        // the primary module is implicitly linked already
+        setModulesDone.add(getModuleName());
+
+        // recursive link of all downstream modules; by now nothing is missing
+        for (int iNextTodo = 0; iNextTodo < listModulesTodo.size(); ++iNextTodo)
+            {
+            // only need to link it once (each node in the graph gets visited once)
+            String sModule = listModulesTodo.get(iNextTodo);
+            if (!setModulesDone.add(sModule))
+                {
+                continue;
+                }
+
+            ModuleStructure moduleFingerprint = getModule(sModule);
+            assert moduleFingerprint != null;
+            if (moduleFingerprint.isLinked())
+                {
+                // this module is already in our FileStructure as a real, fully loaded and linked
+                // module
+                continue;
+                }
+
+            ModuleStructure moduleUnlinked = repository.loadModule(sModule); // TODO versions etc.
+            assert moduleUnlinked != null;
+
+            FileStructure fileUnlinked = moduleUnlinked.getFileStructure();
+            if (fRuntime)
+                {
+                listReplace.add(moduleUnlinked);
+
+                // TODO eventually we need to handle the case that these are actual modules and not
+                //      just pointers to the modules
+                listModulesTodo.addAll(fileUnlinked.moduleNames());
+                }
+            else // compile-time
+                {
+                moduleFingerprint.setFingerprintOrigin(moduleUnlinked);
+
+                if (fileTop.getModule(sModule) == null)
+                    {
+                    fileTop.addChild(moduleFingerprint);
+                    }
+
+                if (!setFilesDone.contains(sModule))
+                    {
+                    listFilesTodo.add(fileUnlinked); // recurse downstream
+                    }
                 }
             }
 
         if (!listReplace.isEmpty())
             {
+            assert fRuntime;
             replace(listReplace);
             }
 
         for (FileStructure fileDownstream : listFilesTodo)
             {
             assert !fRuntime;
-            String sMissingDownstream = fileDownstream.linkModules(repository, fileTop,
-                                                setFilesDone, false);
-            if (sMissingDownstream != null && sMissing == null)
-                {
-                sMissing = sMissingDownstream;
-                break;
-                }
+            fileDownstream.linkModules(repository, fileTop, setFilesDone, false);
             }
-
-        return sMissing;
         }
 
     /**
