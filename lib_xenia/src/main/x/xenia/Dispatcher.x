@@ -64,7 +64,7 @@ service Dispatcher
                 }
             }
 
-        RequestInfo      requestInfo = new RequestInfo(httpServer, context);
+        RequestInfo      requestInfo = new RequestInfo(httpServer, context, tls);
         ChainBundle?     bundle      = Null;
         @Future Response response;
         ProcessRequest: if (serviceInfo == Null)
@@ -161,7 +161,7 @@ service Dispatcher
             // either a valid existing session is identified by the request, or a session will be
             // created and a redirect to verify the session's successful creation will occur, which
             // will then redirect back to this same request
-            (HttpStatus|Session result, Boolean redirect) = ensureSession(requestInfo, tls);
+            (HttpStatus|Session result, Boolean redirect) = ensureSession(requestInfo);
             if (result.is(HttpStatus))
                 {
                 Request  request = new Http1Request(requestInfo, []);
@@ -261,16 +261,16 @@ service Dispatcher
      * Using the request information, look up or create the session object.
      *
      * @param requestInfo  the incoming request
-     * @param tls          True iff the request was delivered over a TLS connection
      *
      * @return result    the session object, or a `4xx`-range `HttpStatus` that indicates a failure
      * @return redirect  True indicates that redirection is required to update the session cookies
      */
-    private (SessionImpl|HttpStatus result, Boolean redirect) ensureSession(RequestInfo requestInfo, Boolean tls)
+    private (SessionImpl|HttpStatus result, Boolean redirect) ensureSession(RequestInfo requestInfo)
         {
         String? txtTemp = Null;
         String? tlsTemp = Null;
         String? consent = Null;
+        Boolean tls     = requestInfo.tls;
         if (String[] cookies := requestInfo.getHeaderValuesForName(Header.COOKIE))
             {
             for (String cookieHeader : cookies)
@@ -345,7 +345,7 @@ service Dispatcher
             {
             case (False, False, False, _):
                 // create a new session
-                return sessionManager.createSession(requestInfo, tls), True;
+                return sessionManager.createSession(requestInfo), True;
 
             case (True , False, False, False):  // validate cookie 1
                 // validate cookie 1
@@ -358,7 +358,7 @@ service Dispatcher
                     {
                     // session cookie did not identify a session, so assume that the session was
                     // valid but has since been destroyed; create a new session
-                    return sessionManager.createSession(requestInfo, tls), True;
+                    return sessionManager.createSession(requestInfo), True;
                     }
 
             case (True , False, False, True ):
@@ -373,7 +373,7 @@ service Dispatcher
             case (False, True , False, True ):  // error (missing cookie 1)
             case (True , True , False, False):  // error (cookie 2 illegal)
                 // TODO mark the passed in cookies as suspect
-                return sessionManager.createSession(requestInfo, tls), True;
+                return sessionManager.createSession(requestInfo), True;
 
             case (True , True , False, True ):
                 // validate cookie 1 & 2; if [cookieConsent] has been set, redirect to verification
@@ -381,7 +381,7 @@ service Dispatcher
 
             case (False, False, True , False):  // error (cookie 3 illegal)
                 // TODO mark the passed in cookie as suspect
-                return sessionManager.createSession(requestInfo, tls), True;
+                return sessionManager.createSession(requestInfo), True;
 
             case (False, False, True , True ):
                 // validate cookie 3; assume temporary cookies absent due to user agent discarding
@@ -390,7 +390,7 @@ service Dispatcher
 
             case (True , False, True , False):  // error (cookie 3 illegal)
                 // TODO mark the passed in cookie as suspect
-                return sessionManager.createSession(requestInfo, tls), True;
+                return sessionManager.createSession(requestInfo), True;
 
             case (True , False, True , True ):
                 // validate cookie 1 & 3 (1 must be newer than 3), and verify that cookie 2 was NOT
@@ -402,7 +402,7 @@ service Dispatcher
             case (False, True , True , True ): // error (missing cookie 1)
             case (True , True , True , False): // error (cookies 2 and 3 illegal)
                 // TODO mark the passed in cookies as suspect
-                return sessionManager.createSession(requestInfo, tls), True;
+                return sessionManager.createSession(requestInfo), True;
 
             case (True , True , True , True ):
                 // validate cookie 1 & 2 & 3 (must be same session)

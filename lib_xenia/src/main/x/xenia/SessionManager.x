@@ -29,7 +29,7 @@ service SessionManager(SessionStore store, SessionProducer instantiateSession)
     /**
      * The means to instantiate sessions.
      */
-    typedef function SessionImpl(SessionManager, Int, RequestInfo, Boolean) as SessionProducer;
+    typedef function SessionImpl(SessionManager, Int, RequestInfo) as SessionProducer;
     protected/private SessionProducer instantiateSession;
 
     /**
@@ -247,15 +247,14 @@ service SessionManager(SessionStore store, SessionProducer instantiateSession)
      * contains.
      *
      * @param requestInfo  the request information
-     * @param tls          True if the request was received over a TLS connection
      *
      * @return a new [SessionImpl] object, including any mixins declared by the application, or the
      *         [HttpStatus] describing why the session could not be created
      */
-    HttpStatus|SessionImpl createSession(RequestInfo requestInfo, Boolean tls)
+    HttpStatus|SessionImpl createSession(RequestInfo requestInfo)
         {
         Int         id      = generateId();
-        SessionImpl session = instantiateSession(this, id, requestInfo, tls);
+        SessionImpl session = instantiateSession(this, id, requestInfo);
         sessions.put(id, session);
 
         purger.track^(id);

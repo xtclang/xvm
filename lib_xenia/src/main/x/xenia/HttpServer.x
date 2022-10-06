@@ -144,7 +144,7 @@ interface HttpServer
     /**
      * An object that provides access to information about a request.
      */
-    static const RequestInfo(HttpServer server, RequestContext context)
+    static const RequestInfo(HttpServer server, RequestContext context, Boolean tls)
         {
         /**
          * Obtain the IP address that the request was sent from.
@@ -263,7 +263,7 @@ interface HttpServer
             {
             if (RequestContext[] contexts := server.containsNestedBodies(context))
                 {
-                return True, new RequestInfo[contexts.size](ctx -> new RequestInfo(server, ctx));
+                return True, new RequestInfo[contexts.size](ctx -> new RequestInfo(server, ctx, tls));
                 }
 
             return False;

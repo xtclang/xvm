@@ -30,11 +30,10 @@ service SessionImpl
      * @param manager      the SessionManager
      * @param sessionId    the internal session identifier
      * @param requestInfo  the request information
-     * @param tls          True if the request was received over a TLS connection
      */
-    construct(SessionManager manager, Int sessionId, RequestInfo requestInfo, Boolean tls)
+    construct(SessionManager manager, Int sessionId, RequestInfo requestInfo)
         {
-        initialize(this, manager, sessionId, requestInfo, tls);
+        initialize(this, manager, sessionId, requestInfo);
         }
 
     /**
@@ -49,25 +48,20 @@ service SessionImpl
     static void initialize(SessionImpl:struct structure,
                            SessionManager     manager,
                            Int                sessionId,
-                           RequestInfo        requestInfo,
-                           Boolean            tls)
+                           RequestInfo        requestInfo)
         {
         Time now = xenia.clock.now;
 
-        IPAddress ip    = requestInfo.getClientAddress();
-        Int       known = tls ? CookieId.NoConsent : CookieId.NoTls;
-
-        structure.manager_            = manager;
-        structure.created             = now;
-        structure.lastUse             = now;
-        structure.versionChanged_     = now;
-        structure.ipAddress           = requestInfo.getClientAddress();
-        structure.userAgent           = extractUserAgent(requestInfo);
-        structure.cookieConsent       = None;
-        structure.trustLevel          = None;
-        structure.sessionId           = idToString_(sessionId);
-        structure.sessionCookieInfos_ = new SessionCookieInfo_[CookieId.count](i -> new SessionCookieInfo_(
-                new SessionCookie(sessionId, CookieId.values[i], known, None, Null, ip, now)));
+        structure.manager_        = manager;
+        structure.created         = now;
+        structure.lastUse         = now;
+        structure.versionChanged_ = now;
+        structure.ipAddress       = requestInfo.getClientAddress();
+        structure.userAgent       = extractUserAgent(requestInfo);
+        structure.cookieConsent   = None;
+        structure.trustLevel      = None;
+        structure.sessionId       = idToString_(sessionId);
+        structure.prevTLS_        = requestInfo.tls;
         }
 
 
@@ -100,20 +94,19 @@ service SessionImpl
     protected/private Time versionChanged_;
 
     /**
-     * Hold related information about a SessionCookie related to this session.
-     *
-     * * The [cookie] property holds the cookie data itself.
-     * * The [sent] property indicates if the cookie has been sent to the user agent, and if so,
-     *   when it was sent.
-     * * The [verified] property indicates that the cookie was successfully received by the user
-     *   agent, and if so, when it was verified as received.
-     */
-    protected static class SessionCookieInfo_(SessionCookie cookie, Time? sent=Null, Time? verified=Null);
-
-    /**
      * The information tracked for each of the session cookies, indexed by the `CookieId.ordinal`.
      */
-    public/private SessionCookieInfo_[] sessionCookieInfos_;
+    @Lazy
+    public/private SessionCookieInfo_[] sessionCookieInfos_.calc()
+        {
+        Int       known   = this.prevTLS_ ? CookieId.NoConsent : CookieId.NoTls;
+        IPAddress ip      = this.ipAddress;
+        Time      created = this.created;
+
+        return new SessionCookieInfo_[CookieId.count](i ->
+            new SessionCookieInfo_(
+                new SessionCookie(stringToId_(sessionId), CookieId.values[i], known, None, Null, ip, created)));
+        }
 
     /**
      * A record of access to this session from a particular `IPAddress`.
@@ -131,11 +124,6 @@ service SessionImpl
     protected/private Set<IPAddress> allAddresses_ = new HashSet();
 
     /**
-     * A record of the session renaming that caused TODO
-     */
-    protected static const SessionRename(IPAddress address, Int version, String newId);
-
-    /**
      * If the session has been destroyed, it may contain "forwarding addresses" for the user agent
      * to follow.
      */
@@ -147,11 +135,6 @@ service SessionImpl
      * level error.
      */
     protected/private CircularArray<Request> recentRequests_ = new CircularArray(8);
-
-    /**
-     * Information collected for each log entry.
-     */
-    static const LogEntry(Time time, IPAddress address, Boolean tls, Int version, String text);
 
     /**
      * Internal recording of events related to the session, maintained for security and debugging
@@ -167,6 +150,27 @@ service SessionImpl
      * requests.
      */
     protected/private IdentitySet<Request> requests_ = new IdentitySet(7);
+
+    /**
+     * Information about a SessionCookie related to this session.
+     *
+     * * The [cookie] property holds the cookie data itself.
+     * * The [sent] property indicates if the cookie has been sent to the user agent, and if so,
+     *   when it was sent.
+     * * The [verified] property indicates that the cookie was successfully received by the user
+     *   agent, and if so, when it was verified as received.
+     */
+    protected static class SessionCookieInfo_(SessionCookie cookie, Time? sent=Null, Time? verified=Null);
+
+    /**
+     * A record of the session renaming that caused TODO
+     */
+    protected static const SessionRename(IPAddress address, Int version, String newId);
+
+    /**
+     * Information collected for each log entry.
+     */
+    static const LogEntry(Time time, IPAddress address, Boolean tls, Int version, String text);
 
 
     // ----- session implementation API ------------------------------------------------------------
