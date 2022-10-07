@@ -71,7 +71,6 @@ import org.xvm.runtime.template._native.reflect.xRTType;
 import org.xvm.runtime.template._native.temporal.xLocalClock;
 import org.xvm.runtime.template._native.temporal.xNanosTimer;
 
-import org.xvm.runtime.template._native.web.xRTServer;
 import org.xvm.runtime.template._native.web.xRTServer2;
 
 import org.xvm.util.Handy;
@@ -350,11 +349,6 @@ public class NativeContainer
         addResourceSupplier(new InjectionKey("secureNetwork"  , typeNetwork), this::ensureSecureNetwork);
 
         // +++ WebServer
-        xRTServer    templateServer = xRTServer.INSTANCE;
-        TypeConstant typeServer     = templateServer.getCanonicalType();
-        addResourceSupplier(new InjectionKey("server", typeServer), templateServer::ensureServer);
-
-        // temporary
         xRTServer2   templateServer2 = xRTServer2.INSTANCE;
         TypeConstant typeServer2     = templateServer2.getCanonicalType();
         addResourceSupplier(new InjectionKey("server2", typeServer2), templateServer2::ensureServer);
