@@ -89,7 +89,7 @@ module xenia.xtclang.org
      */
     function void () createServer(String address, WebApp app)
         {
-        @Inject(resourceName="server2", opts=address) HttpServer server;
+        @Inject(resourceName="server", opts=address) HttpServer server;
 
         HttpHandler handler = new HttpHandler(server, app.catalog_);
 

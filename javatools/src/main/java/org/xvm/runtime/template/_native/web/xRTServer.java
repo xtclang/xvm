@@ -57,12 +57,12 @@ import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 /**
  * Native implementation of the http.Server service that wraps a native Java {@link HttpServer}.
  */
-public class xRTServer2
+public class xRTServer
         extends xService
     {
-    public static xRTServer2 INSTANCE;
+    public static xRTServer INSTANCE;
 
-    public xRTServer2(Container container, ClassStructure structure, boolean fInstance)
+    public xRTServer(Container container, ClassStructure structure, boolean fInstance)
         {
         super(container, structure, false);
 
