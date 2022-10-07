@@ -6,6 +6,7 @@ module Hello
 
     import web.Default;
     import web.Get;
+    import web.Produces;
     import web.Session;
     import web.StaticContent;
     import web.WebService;
@@ -41,11 +42,12 @@ module Hello
                 }
 
             @Get("c")
-            String count(SimpleData sessionData)
+            Int count(SimpleData sessionData)
                 {
-                return $"count={sessionData.counter++}";
+                return sessionData.counter++;
                 }
 
+            @Produces(Text) // TODO GG: it should be allowed to be *after* @Get
             @Default @Get
             String askWhat()
                 {

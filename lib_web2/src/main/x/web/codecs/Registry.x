@@ -16,6 +16,7 @@ service Registry
         }
     finally
         {
+        DefaultCodecs.entries.forEach(e -> registerCodec(e.key, e.value));
         DefaultFormats.forEach(registerFormat);
         MediaType.Predefined.forEach(registerMediaType);
         }
@@ -87,16 +88,16 @@ service Registry
     /**
      * These codecs are known to the system and automatically registered.
      */
-    static Map<MediaType, Codec[]> DefaultCodecs =
+    static Map<MediaType, Codec> DefaultCodecs =
         [
-        Json       = [Utf8Codec],
-        JsonLD     = [Utf8Codec],
-        JsonPatch  = [Utf8Codec],
-        CSS        = [Utf8Codec],
-        CSV        = [Utf8Codec],
-        HTML       = [Utf8Codec],
-        JavaScript = [Utf8Codec],
-        Text       = [Utf8Codec],
+        Json       = Utf8Codec,
+        JsonLD     = Utf8Codec,
+        JsonPatch  = Utf8Codec,
+        CSS        = Utf8Codec,
+        CSV        = Utf8Codec,
+        HTML       = Utf8Codec,
+        JavaScript = Utf8Codec,
+        Text       = Utf8Codec,
         ];
 
     /**
