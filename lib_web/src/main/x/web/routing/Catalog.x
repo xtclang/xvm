@@ -105,7 +105,14 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins)
             extends MethodInfo
         {
         construct(Method<WebService> method, Int id, Int wsid,
-                 Boolean serviceTls, TrustLevel serviceTrust)
+                 Boolean               serviceTls,
+                 TrustLevel            serviceTrust,
+                 MediaType|MediaType[] serviceProduces,
+                 MediaType|MediaType[] serviceConsumes,
+                 String|String[]       serviceSubjects,
+                 Boolean               serviceStreamRequest,
+                 Boolean               serviceStreamResponse
+                 )
             {
             assert method.is(Endpoint);
 
@@ -122,13 +129,6 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins)
             this.template = template == "" || template == "/"
                 ? UriTemplate.ROOT
                 : new UriTemplate(template);
-
-            this.produces = method.is(Produces)
-                        ? method.produces
-                        : [];
-            this.consumes = method.is(Consumes)
-                        ? method.consumes
-                        : [];
 
             this.requiresTls = serviceTls
                         ? !method.is(HttpsOptional)
@@ -151,12 +151,34 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins)
                             ? None // method is explicitly specified as "optional"
                             : serviceTrust.maxOf(methodTrust);
                 }
+
+            this.produces = method.is(Produces)
+                        ? method.produces
+                        : serviceProduces;
+            this.consumes = method.is(Consumes)
+                        ? method.consumes
+                        : serviceConsumes;
+
+            this.restrictSubjects = method.is(Restrict)
+                        ? method.subject
+                        : serviceSubjects;
+
+            this.allowRequestStreaming  = method.is(StreamingRequest)  || serviceStreamRequest;
+            this.allowResponseStreaming = method.is(StreamingResponse) || serviceStreamResponse;
             }
 
         @Override
         HttpMethod httpMethod.get()
             {
             return endpoint.httpMethod;
+            }
+
+        /**
+         * Indicates if the endpoint return value is a _conditional return_.
+         */
+        Boolean conditionalResult.get()
+            {
+            return method.conditionalResult;
             }
 
         /**
@@ -188,14 +210,6 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins)
         MediaType|MediaType[] produces;
 
         /**
-         * Indicates if the endpoint return value is a _conditional return_.
-         */
-        Boolean conditionalResult.get()
-            {
-            return method.conditionalResult;
-            }
-
-        /**
          * Indicates if this endpoint requires the HTTPS.
          */
         Boolean requiresTls;
@@ -204,5 +218,20 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins)
          *  [TrustLevel] of security that is required by the this endpoint.
          */
         TrustLevel requiredTrust;
+
+        /**
+         * If not empty, contains users that this endpoint is restricted to.
+         */
+        String|String[] restrictSubjects;
+
+        /**
+         * Indicates if this endpoint allows the request content not to be fully buffered.
+         */
+        Boolean allowRequestStreaming;
+
+        /**
+         * Indicates if this endpoint allows the response content not to be fully buffered.
+         */
+        Boolean allowResponseStreaming;
         }
     }

@@ -38,12 +38,8 @@ mixin WebApp
         // sort the ClassInfos based on their paths
         classInfos.sorted((ci1, ci2) -> ci2.path <=> ci1.path, inPlace=True);
 
-        Class      clzWebApp   = &this.actualClass;
-        TrustLevel trustLevel  = clzWebApp.is(LoginRequired) ? clzWebApp.security : None;
-        Boolean    tlsRequired = clzWebApp.is(HttpsRequired);
-
         // now collect all endpoints
-        WebServiceInfo[] webServiceInfos = collectEndpoints(classInfos, trustLevel, tlsRequired);
+        WebServiceInfo[] webServiceInfos = collectEndpoints(classInfos);
 
         return new Catalog(this, webServiceInfos, sessionMixins);
         }
@@ -59,7 +55,7 @@ mixin WebApp
     /**
      * WebService class/path info collected during the scan phase.
      */
-    private static const ClassInfo(Class clz, String path);
+    private static const ClassInfo(Class<WebService> clz, String path);
 
     /**
      * Scan all the specified classes for WebServices and add the corresponding information
@@ -105,7 +101,7 @@ mixin WebApp
                     }
 
                 declaredPaths += path;
-                classInfos    += new ClassInfo(child, path);
+                classInfos    += new ClassInfo(child.as(Class<WebService>), path);
 
                 // scan classes inside the WebService class
                 Collection<Type> childTypes   = child.PrivateType.childTypes.values;
@@ -141,28 +137,36 @@ mixin WebApp
      * Collect all endpoints for the WebServices in the specified ClassInfo array and
      * create a corresponding WebServiceInfo array.
      */
-    private WebServiceInfo[] collectEndpoints(ClassInfo[] classInfos,
-                                              TrustLevel parentTrustLevel,
-                                              Boolean    parentTls)
+    private WebServiceInfo[] collectEndpoints(ClassInfo[] classInfos)
         {
-        WebServiceInfo[] webServiceInfos = new Array(classInfos.size);
+        typedef MediaType|MediaType[] as MediaTypes;
+        typedef String|String[]       as Subjects;
+
+        Class      clzWebApp         = &this.actualClass;
+        TrustLevel appTrustLevel     = clzWebApp.is(LoginRequired) ? clzWebApp.security : None;
+        Boolean    appTls            = clzWebApp.is(HttpsRequired);
+        MediaTypes appProduces       = clzWebApp.is(Produces) ? clzWebApp.produces : [];
+        MediaTypes appConsumes       = clzWebApp.is(Consumes) ? clzWebApp.consumes : [];
+        Subjects   appSubjects       = clzWebApp.is(Restrict) ? clzWebApp.subject  : [];
+        Boolean    appStreamRequest  = clzWebApp.is(StreamingRequest);
+        Boolean    appStreamResponse = clzWebApp.is(StreamingResponse);
 
         Int wsid = 0;
         Int epid = 0;
 
+        WebServiceInfo[] webServiceInfos = new Array(classInfos.size);
         for (ClassInfo classInfo : classInfos)
             {
-            Class              clz         = classInfo.clz;
-            Type<WebService>   serviceType = clz.PublicType.as(Type<WebService>);
+            Class<WebService>  clz         = classInfo.clz;
+            Type<WebService>   serviceType = clz.PublicType;
             ServiceConstructor constructor;
             if (!(constructor := serviceType.defaultConstructor()))
                 {
                 throw new IllegalState($"default constructor is missing for \"{clz}\"");
                 }
 
-            TrustLevel serviceTrust = parentTrustLevel;
-            Boolean    serviceTls   = parentTls;
-
+            TrustLevel serviceTrust = appTrustLevel;
+            Boolean    serviceTls   = appTls;
             if (clz.is(LoginRequired))
                 {
                 serviceTrust = clz.security;
@@ -183,6 +187,11 @@ mixin WebApp
                     serviceTls = True;
                     }
                 }
+            MediaTypes serviceProduces       = clz.is(Produces) ? clz.produces : appProduces;
+            MediaTypes serviceConsumes       = clz.is(Consumes) ? clz.consumes : appConsumes;
+            Subjects   serviceSubjects       = clz.is(Restrict) ? clz.subject  : appSubjects;
+            Boolean    serviceStreamRequest  = clz.is(StreamingRequest) || appStreamRequest;
+            Boolean    serviceStreamResponse = clz.is(StreamingResponse) || appStreamResponse;
 
             EndpointInfo[] endpoints       = new EndpointInfo[];
             EndpointInfo?  defaultEndpoint = Null;
@@ -215,7 +224,9 @@ mixin WebApp
                                 }
                             validateEndpoint(method);
                             defaultEndpoint = new EndpointInfo(method, epid++, wsid,
-                                                serviceTls, serviceTrust);
+                                                serviceTls, serviceTrust,
+                                                serviceProduces, serviceConsumes, serviceSubjects,
+                                                serviceStreamRequest, serviceStreamResponse);
                             }
                         else
                             {
@@ -226,7 +237,9 @@ mixin WebApp
                     case Endpoint:
                         validateEndpoint(method);
                         endpoints.add(new EndpointInfo(method, epid++, wsid,
-                                        serviceTls, serviceTrust));
+                                            serviceTls, serviceTrust,
+                                            serviceProduces, serviceConsumes, serviceSubjects,
+                                            serviceStreamRequest, serviceStreamResponse));
                         break;
 
                     case Intercept, Observe:
