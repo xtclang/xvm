@@ -29,18 +29,18 @@ mixin WebApp
         {
         // REVIEW CP: how to report verification errors
 
-        WebApp      webApp        = this;
         ClassInfo[] classInfos    = new ClassInfo[];
         Class[]     sessionMixins = new Class[];
 
         // collect the ClassInfos for WebServices
-        scanClasses(webApp.classes, classInfos, sessionMixins, new HashSet<String>());
+        scanClasses(this.classes, classInfos, sessionMixins, new HashSet<String>());
 
         // sort the ClassInfos based on their paths
         classInfos.sorted((ci1, ci2) -> ci2.path <=> ci1.path, inPlace=True);
 
-        TrustLevel trustLevel  = webApp.is(LoginRequired) ? webApp.security : None;
-        Boolean    tlsRequired = webApp.is(HttpsRequired);
+        Class      clzWebApp   = &this.actualClass;
+        TrustLevel trustLevel  = clzWebApp.is(LoginRequired) ? clzWebApp.security : None;
+        Boolean    tlsRequired = clzWebApp.is(HttpsRequired);
 
         // now collect all endpoints
         WebServiceInfo[] webServiceInfos = collectEndpoints(classInfos, trustLevel, tlsRequired);
