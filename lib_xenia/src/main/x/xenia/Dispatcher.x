@@ -73,6 +73,11 @@ service Dispatcher
                     break;
                     }
                 }
+            else if (pathSize == 1) // root path ("/") matches everything
+                {
+                serviceInfo = info;
+                uriString   = uriString.substring(1);
+                }
             else if (uriSize > pathSize && uriString[pathSize] == '/' && uriString.startsWith(path))
                 {
                 serviceInfo = info;
