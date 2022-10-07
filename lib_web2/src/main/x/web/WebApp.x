@@ -81,16 +81,20 @@ mixin WebApp
                     throw new IllegalState($"WebService \"{child}\": first argument is not a path");
                     }
 
-                if (!path.endsWith('/'))
+                if (path != "/")
                     {
-                    // the service path is always a "directory"
-                    path += '/';
-                    }
+                    while (path.endsWith('/'))
+                        {
+                        // while the service path represents a "directory", we normalize it, so it
+                        // does not end with the '/' (except for the root)
+                        path = path[0 ..< path.size-1];
+                        }
 
-                if (!path.startsWith('/'))
-                    {
-                    // the service path is always a "root"
-                    path = $"/{path}";
+                    if (!path.startsWith('/'))
+                        {
+                        // the service path is always a "root"
+                        path = "/" + path;
+                        }
                     }
 
                 if (declaredPaths.contains(path))

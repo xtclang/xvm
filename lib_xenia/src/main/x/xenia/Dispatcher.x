@@ -48,18 +48,35 @@ service Dispatcher
     /**
      * Dispatch the "raw" request.
      */
-    void dispatch(HttpServer httpServer, RequestContext context, Boolean tls, String uriString, String methodName)
+    void dispatch(HttpServer httpServer, RequestContext context, Boolean tls,
+                  String uriString, String methodName)
         {
         // select the service to delegate request processing to; the service infos are sorted with
         // the most specific path first (so the first path match wins)
+        Int             uriSize     = uriString.size;
         WebServiceInfo? serviceInfo = Null;
         for (WebServiceInfo info : catalog.services)
             {
-            String path = info.path;
-            if (uriString.startsWith(path))
+            // the info.path, which represents a "directory", never ends with '/' (see WedApp.x),
+            // but a legitimately matching uriString may or may not have '/' at the end; for example:
+            // if the path is "test", then uri values such as "test/s", "test/" and "test" should
+            // all match (the last two would be treated as equivalent), but "tests" should not
+
+            String path     = info.path;
+            Int    pathSize = path.size;
+            if (uriSize == pathSize)
+                {
+                if (uriString == path)
+                    {
+                    serviceInfo = info;
+                    uriString   = "";
+                    break;
+                    }
+                }
+            else if (uriSize > pathSize && uriString[pathSize] == '/' && uriString.startsWith(path))
                 {
                 serviceInfo = info;
-                uriString   = uriString.substring(path.size);
+                uriString   = uriString.substring(pathSize + 1);
                 break;
                 }
             }
