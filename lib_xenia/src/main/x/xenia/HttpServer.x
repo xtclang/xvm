@@ -17,7 +17,7 @@ interface HttpServer
      */
     static interface Handler
         {
-        void handle(RequestContext context, String uri, String method);
+        void handle(RequestContext context, String uri, String method, Boolean tls);
         }
 
     /**

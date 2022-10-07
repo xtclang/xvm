@@ -5,6 +5,7 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 
+import com.sun.net.httpserver.HttpsExchange;
 import java.io.IOException;
 import java.io.OutputStream;
 
@@ -31,12 +32,13 @@ import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TypeComposition;
 
-import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xBoolean.BooleanHandle;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xObject;
 import org.xvm.runtime.template.xService;
 
+import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 import org.xvm.runtime.template.collections.xArray.Mutability;
 import org.xvm.runtime.template.collections.xByteArray;
@@ -255,7 +257,7 @@ public class xRTServer2
             }
 
         ClassStructure  clzHandler = hHandler.getTemplate().getStructure();
-        MethodStructure method     = clzHandler.findMethodDeep("handle", m -> m.getParamCount() == 3);
+        MethodStructure method     = clzHandler.findMethodDeep("handle", m -> m.getParamCount() == 4);
         assert method != null;
         FunctionHandle  hFunction  = xRTFunction.makeInternalHandle(frame, method).bindTarget(frame, hHandler);
 
@@ -522,8 +524,9 @@ public class xRTServer2
             HttpContextHandle hContext = new HttpContextHandle(exchange);
             StringHandle      hURI     = xString.makeHandle(exchange.getRequestURI().toASCIIString());
             StringHandle      hMethod  = xString.makeHandle(exchange.getRequestMethod());
+            BooleanHandle     hTls     = xBoolean.makeHandle(exchange instanceof HttpsExchange);
 
-            return new ObjectHandle[]{hContext, hURI, hMethod};
+            return new ObjectHandle[]{hContext, hURI, hMethod, hTls};
             }
 
         private void sendError(HttpExchange exchange, Throwable t)

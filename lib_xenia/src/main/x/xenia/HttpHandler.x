@@ -77,7 +77,7 @@ service HttpHandler
     // ----- Handler API ---------------------------------------------------------------------------
 
     @Override
-    void handle(RequestContext context, String uriString, String methodName)
+    void handle(RequestContext context, String uriString, String methodName, Boolean tls)
         {
         if (closing)
             {
@@ -86,7 +86,7 @@ service HttpHandler
             }
 
         Int   index  = ensureDispatcher();
-        Tuple result = dispatchers[index].dispatch^(httpServer, context, /*TODO GG: TLS=*/ False, uriString, methodName);
+        Tuple result = dispatchers[index].dispatch^(httpServer, context, tls, uriString, methodName);
         &result.whenComplete((response, e) ->
             {
             if (e != Null)
