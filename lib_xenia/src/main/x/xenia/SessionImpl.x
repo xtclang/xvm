@@ -60,6 +60,7 @@ service SessionImpl
         structure.userAgent       = extractUserAgent(requestInfo);
         structure.cookieConsent   = None;
         structure.trustLevel      = None;
+        structure.internalId_     = sessionId;
         structure.sessionId       = idToString_(sessionId);
         structure.prevTLS_        = requestInfo.tls;
         }
@@ -78,6 +79,11 @@ service SessionImpl
     protected/private Boolean prevTLS_;
 
     /**
+     * The internal session identity.
+     */
+    public/private Int internalId_;
+
+    /**
      * The current version of the session. Each time a significant change occurs to the user agent,
      * such as cookie consent, IP address change, etc., the version of the session is incremented.
      */
@@ -94,19 +100,15 @@ service SessionImpl
     protected/private Time versionChanged_;
 
     /**
+     * A bitset of which `CookieId`s are known to have a cookie that has been created for this
+     * session.
+     */
+    public/private Int knownCookies_ = CookieId.None;
+
+    /**
      * The information tracked for each of the session cookies, indexed by the `CookieId.ordinal`.
      */
-    @Lazy
-    public/private SessionCookieInfo_[] sessionCookieInfos_.calc()
-        {
-        Int       known   = this.prevTLS_ ? CookieId.NoConsent : CookieId.NoTls;
-        IPAddress ip      = this.ipAddress;
-        Time      created = this.created;
-
-        return new SessionCookieInfo_[CookieId.count](i ->
-            new SessionCookieInfo_(
-                new SessionCookie(stringToId_(sessionId), CookieId.values[i], known, None, Null, ip, created)));
-        }
+    protected/private SessionCookieInfo_?[] sessionCookieInfos_ = new SessionCookieInfo_?[CookieId.count];
 
     /**
      * A record of access to this session from a particular `IPAddress`.
@@ -151,6 +153,9 @@ service SessionImpl
      */
     protected/private IdentitySet<Request> requests_ = new IdentitySet(7);
 
+
+    // ----- inner types ---------------------------------------------------------------------------
+
     /**
      * Information about a SessionCookie related to this session.
      *
@@ -160,7 +165,7 @@ service SessionImpl
      * * The [verified] property indicates that the cookie was successfully received by the user
      *   agent, and if so, when it was verified as received.
      */
-    protected static class SessionCookieInfo_(SessionCookie cookie, Time? sent=Null, Time? verified=Null);
+    protected static class SessionCookieInfo_(SessionCookie cookie, Time? sent=Null, Time? verified=Null, Time? expires=Null);
 
     /**
      * A record of the session renaming that caused TODO
@@ -175,12 +180,12 @@ service SessionImpl
 
     // ----- session implementation API ------------------------------------------------------------
 
-    void requestBegin(Request request)
+    void requestBegin_(Request request)
         {
         assert requests_.addIfAbsent(request);
         }
 
-    void requestEnd(Request request)
+    void requestEnd_(Request request)
         {
         assert requests_.removeIfPresent(request);
         }
@@ -292,6 +297,72 @@ service SessionImpl
 
 
     // ----- helpers -------------------------------------------------------------------------------
+
+    /**
+     * Obtain the specified cookie information.
+     *
+     * @param cookieId  which session cookie to ask for
+     *
+     * @return True if the specified session cookie exists
+     * @return (conditional) the SessionCookie
+     * @return (conditional) the time that the SessionCookie was sent to the user agent
+     * @return (conditional) the time that the SessionCookie was first sent back from the user agent
+     * @return (conditional) the time that the SessionCookie will be expired by the user agent
+     */
+    conditional (SessionCookie cookie,
+                 Time?         sent,
+                 Time?         verified,
+                 Time?         expires  ) getCookie_(CookieId cookieId)
+        {
+        SessionCookieInfo_? info = sessionCookieInfos_[1 << cookieId.ordinal];
+        return info == Null
+                ? False
+                : (True, info.cookie, info.sent, info.verified, info.expires);
+        }
+
+    /**
+     * Make sure that the specified cookies exist.
+     *
+     * @param cookieId  which session cookie to ask for
+     */
+    void ensureCookies_(Int requiredCookies)
+        {
+        if (requiredCookies & knownCookies_ == requiredCookies)
+            {
+            return;
+            }
+
+        // cookies need to be created, which causes the session version to change
+        knownCookies_ |= requiredCookies;
+        incrementVersion_();
+        }
+
+    /**
+     * Make sure that the specified cookies exist.
+     *
+     * @param cookieId  which session cookie to ask for
+     */
+    void incrementVersion_()
+        {
+        ++version_;
+
+        assert knownCookies_ != 0;
+
+        Boolean[] cookieSet = knownCookies_.toBooleanArray();
+        Time now     = xenia.clock.now;
+        Time expires = now + manager_.persistentCookieDuration;
+        for (CookieId cookieId : CookieId.values)
+            {
+            Int i = cookieId.ordinal;
+            if (cookieSet[i])
+                {
+                // create the session cookie
+                SessionCookie cookie = new SessionCookie(internalId_, cookieId, knownCookies_,
+                        cookieConsent, cookieId.persistent ? expires : Null, ipAddress, now);
+                sessionCookieInfos_[i] = new SessionCookieInfo_(cookie);
+                }
+            }
+        }
 
     /**
      * Convert an integer session id to a generic-looking (external) string identifier.

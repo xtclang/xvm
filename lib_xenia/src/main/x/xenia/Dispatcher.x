@@ -352,7 +352,8 @@ service Dispatcher
                 assert txtTemp != Null;
                 if (SessionImpl session := sessionManager.getSessionByCookie(txtTemp))
                     {
-                    return session, txtTemp != session.sessionCookieInfos_[0].cookie.text;
+                    assert SessionCookie cookie := session.getCookie_(PlainText);
+                    return session, txtTemp != cookie.text;
                     }
                 else
                     {

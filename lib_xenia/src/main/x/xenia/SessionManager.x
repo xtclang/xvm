@@ -102,13 +102,18 @@ service SessionManager(SessionStore store, SessionProducer instantiateSession)
      * When a user has **not** explicitly indicated that their device is trusted, the session
      * cookies are not persistent and the time-out for the session is short.
      */
-    public/private Duration untrustedDeviceTimeout = Duration:30M;      // default is half hour
+    public/private Duration untrustedDeviceTimeout = Duration:30M;     // default is half hour
 
     /**
      * When a user has explicitly indicated that their device is trusted, the session cookies may
      * (with consent) be persistent, and the time-out for the session may be dramatically longer.
      */
-    public/private Duration trustedDeviceTimeout   = Duration:60D;      // default is two months
+    public/private Duration trustedDeviceTimeout = Duration:60D;       // default is two months
+
+    /**
+     * When a persistent cookie is used, its expiry.
+     */
+    public/private Duration persistentCookieDuration = Duration:760D;  // default: 2 years + 1 month
 
 
     // ----- session control -----------------------------------------------------------------------
