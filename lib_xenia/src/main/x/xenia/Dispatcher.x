@@ -197,8 +197,8 @@ service Dispatcher
                 {
                 // TODO add session to list of unverified sessions
                 // TODO handle the redirect here
-                TODO response =
-                break ProcessRequest;
+//                TODO response =
+//                break ProcessRequest;
                 }
 
             // each endpoint has a required trust level, and the session knows its own trust level;
