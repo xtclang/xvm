@@ -1383,7 +1383,7 @@ public abstract class Launcher
         if (!file.exists())
             {
             File fileParent = file.getParentFile();
-            if (fileParent != null && (fileParent.isDirectory() || !fileParent.exists()))
+            if (fileParent == null || !fileParent.exists() || fileParent.isDirectory())
                 {
                 // an error may be reported further down
                 file.mkdirs();
