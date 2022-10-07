@@ -25,6 +25,7 @@
             <option value="$PROJECT_DIR$/lib_net" />
             <option value="$PROJECT_DIR$/lib_oodb" />
             <option value="$PROJECT_DIR$/lib_web" />
+            <option value="$PROJECT_DIR$/lib_xenia" />
             <option value="$PROJECT_DIR$/manualTests" />
             <option value="$PROJECT_DIR$/xdk" />
           </set>

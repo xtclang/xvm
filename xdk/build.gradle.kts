@@ -18,6 +18,7 @@ val oodb          = project(":lib_oodb")
 val imdb          = project(":lib_imdb")
 val jsondb        = project(":lib_jsondb")
 val web           = project(":lib_web")
+val xenia         = project(":lib_xenia")
 
 val ecstasyMain     = "${ecstasy.projectDir}/src/main"
 val turtleMain      = "${turtle.projectDir}/src/main"
@@ -33,6 +34,7 @@ val oodbMain        = "${oodb.projectDir}/src/main"
 val imdbMain        = "${imdb.projectDir}/src/main"
 val jsondbMain      = "${jsondb.projectDir}/src/main"
 val webMain         = "${web.projectDir}/src/main"
+val xeniaMain       = "${xenia.projectDir}/src/main"
 
 val xdkDir          = "$buildDir/xdk"
 val binDir          = "$xdkDir/bin"
@@ -289,13 +291,33 @@ val compileWeb = tasks.register<JavaExec>("compileWeb") {
     mainClass.set("org.xvm.tool.Compiler")
 }
 
+val compileXenia = tasks.register<JavaExec>("compileXenia") {
+    group       = "Execution"
+    description = "Build xenia.xtc module"
+
+    dependsOn(javatools.tasks["build"])
+
+    shouldRunAfter(compileNet, compileJson)
+
+    jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
+
+    classpath(javatoolsJar)
+    args("-o", "$libDir",
+         "-version", "$xdkVersion",
+         "-L", "$coreLib",
+         "-L", "$turtleLib",
+         "-L", "$libDir",
+         "$xeniaMain/x/xenia.x")
+    mainClass.set("org.xvm.tool.Compiler")
+}
+
 val compileBridge = tasks.register<JavaExec>("compileBridge") {
     group         = "Execution"
     description   = "Build javatools_bridge.xtc module"
 
     dependsOn(javatools.tasks["build"])
 
-    shouldRunAfter(compileCollections, compileOODB, compileNet, compileWeb)
+    shouldRunAfter(compileCollections, compileOODB, compileNet, compileWeb, compileXenia)
 
     jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
 
@@ -419,6 +441,15 @@ val build = tasks.register("build") {
 
     if (webSrc > webDest) {
         dependsOn(compileWeb)
+        }
+
+    // compile xenia.xtclang.org
+    val xeniaSrc = fileTree(xeniaMain).getFiles().stream().
+            mapToLong({f -> f.lastModified()}).max().orElse(0)
+    val xeniaDest = file("$libDir/xenia.xtc").lastModified()
+
+    if (xeniaSrc > xeniaDest) {
+        dependsOn(compileXenia)
         }
 
     // compile _native.xtclang.org
