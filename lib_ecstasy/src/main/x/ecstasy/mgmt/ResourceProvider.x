@@ -17,9 +17,9 @@ interface ResourceProvider
      * provider to return a resource supplier (throwing an exception) will fail to load or
      * terminate the requesting container.
      *
-     * Furthermore, in the unlikely case of a failure of the supplier itself, a run-time exception
-     * will be thrown at the injection point, possibly causing the termination of the container.
+     * In a scenario, where a parent container chooses to allow the child container to load, but
+     * wants to restrict the use of some injected resources, the supplier may throw a run-time
+     * exception, possibly causing the termination of the container.
      */
     Supplier getResource(Type type, String name);
     }
-

@@ -1,40 +1,39 @@
-@web.LoginRequired // this used to blow at runtime
-@web.WebApp
 module TestSimple
     {
+    import ecstasy.mgmt.*;
+    import ecstasy.reflect.ModuleTemplate;
+
     @Inject Console console;
 
-    package web import web.xtclang.org;
-
-    import ecstasy.reflect.*;
-
-    void run()
+    void run(Int depth=0)
         {
-        Class clz = Test;
+        console.println($"Running at depth {depth}");
 
-        assert AnnotationTemplate template := clz.annotatedBy(web.WebService);
+        if (depth < 3)
+            {
+            @Inject("repository") ModuleRepository repository;
 
-        assert clz.is(web.LoginRequired);
-        assert clz.security == High;
+            ModuleTemplate template = repository.getResolvedModule("TestSimple");
+            Container container =
+                new Container(template, Lightweight, repository, new SimpleResourceProvider());
 
-        Class m = TestSimple;
-        assert m.is(web.LoginRequired);
-        assert m.security == Normal;
-
-        Type<Module> t = TestSimple;
-        assert Class m1 := t.fromClass();
-        assert m1.is(web.LoginRequired);
-        assert m1.security == Normal;
+            container.invoke("run", Tuple:(depth+1));
+            }
         }
 
-    @web.LoginRequired(High)
-    @web.WebService("/")
-    service Test
+    service SimpleResourceProvider
+            extends BasicResourceProvider
         {
-        }
-
-    json.Doc doc(String domain)
-        {
-        return [True, $"http://{domain}.xqiz.it:8080"]; // used to fail to compile
+        @Override
+        Supplier getResource(Type type, String name)
+            {
+            switch (type, name)
+                {
+                case (ModuleRepository, "repository"):
+                    @Inject ModuleRepository repository;
+                    return repository;
+                }
+            return super(type, name);
+            }
         }
     }

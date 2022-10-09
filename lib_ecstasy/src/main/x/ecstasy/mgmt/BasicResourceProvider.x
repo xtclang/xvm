@@ -1,5 +1,5 @@
 /**
- * SimpleResourceProvider is a minimal `ResourceProvider` implementation that is necessary to
+ * BasicResourceProvider is a minimal `ResourceProvider` implementation that is necessary to
  * load a Ecstasy module dynamically into a lightweight container. The example use:
  *
  *   void runModule(String moduleName)
@@ -10,13 +10,13 @@
  *       @Inject ModuleRepository repository;
  *
  *       ModuleTemplate   template = repository.getResolvedModule(moduleName);
- *       ResourceProvider injector = new SimpleResourceProvider();
+ *       ResourceProvider injector = new BasicResourceProvider();
  *
  *       Container container = new Container(template, Lightweight, repository, injector);
  *       container.invoke("run", Tuple:());
  *       }
  */
-service SimpleResourceProvider
+service BasicResourceProvider
              implements ResourceProvider
     {
     @Override
