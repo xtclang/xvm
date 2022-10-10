@@ -34,8 +34,9 @@ public class xRTViewFromBit
         {
         if (this == INSTANCE)
             {
-            registerNativeTemplate(new xRTViewFromBitToByte  (f_container, f_struct, true));
-            registerNativeTemplate(new xRTViewFromBitToNibble(f_container, f_struct, true));
+            registerNativeTemplate(new xRTViewFromBitToBoolean (f_container, f_struct, true));
+            registerNativeTemplate(new xRTViewFromBitToByte    (f_container, f_struct, true));
+            registerNativeTemplate(new xRTViewFromBitToNibble  (f_container, f_struct, true));
             }
         }
 

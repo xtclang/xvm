@@ -11,6 +11,8 @@ import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 
+import org.xvm.runtime.TypeComposition;
+import org.xvm.runtime.template._native.collections.arrays.xRTViewFromBitToBoolean;
 import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xException;
 
@@ -46,6 +48,7 @@ public class xBitArray
         {
         ClassTemplate mixin = f_container.getTemplate("collections.arrays.BitArray");
 
+        mixin.markNativeMethod("asBooleanArray", VOID, null);
         mixin.markNativeMethod("asByteArray", VOID, null);
         mixin.markNativeMethod("asNibbleArray", VOID, null);
         mixin.markNativeMethod("toUInt8", VOID, null);
@@ -96,6 +99,24 @@ public class xBitArray
         {
         switch (method.getName())
             {
+            case "asBooleanArray":
+                {
+                ArrayHandle hArray = (ArrayHandle) hTarget;
+                long        cBits  = hArray.m_hDelegate.m_cSize;
+                if (cBits % 8 != 0)
+                    {
+                    return frame.raiseException(xException.outOfBounds(
+                            frame, "Invalid array size: " + cBits));
+                    }
+
+                Mutability     mutability = hArray.m_mutability;
+                DelegateHandle hDelegate  = xRTViewFromBitToBoolean.INSTANCE.createBitViewDelegate(
+                        hArray.m_hDelegate, mutability);
+
+                return frame.assignValue(iReturn, new ArrayHandle(
+                        xArray.getBooleanArrayComposition(), hDelegate, mutability));
+                }
+
             case "asByteArray":
                 {
                 ArrayHandle hArray = (ArrayHandle) hTarget;

@@ -12,6 +12,8 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
 
+import org.xvm.runtime.template.collections.xArray.Mutability;
+
 
 /**
  * Native RTDelegate<Boolean> implementation.
@@ -55,5 +57,11 @@ public class xRTBooleanDelegate
     protected ObjectHandle makeBitHandle(boolean f)
         {
         return xBoolean.makeHandle(f);
+        }
+
+    @Override
+    public BitArrayHandle makeHandle(byte[] ab, long cSize, Mutability mutability)
+        {
+        return new BitArrayHandle(getCanonicalClass(), ab, cSize, mutability);
         }
     }

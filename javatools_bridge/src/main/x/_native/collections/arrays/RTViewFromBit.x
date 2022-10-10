@@ -1,9 +1,9 @@
 /**
  * The native ArrayDelegate class that is used to view an ArrayDelegate<Bit> as an
- * ArrayDelegate<NumType>.
+ * ArrayDelegate<Element>.
  */
-class RTViewFromBit<NumType extends (Number|Nibble)>
-        extends RTDelegate<NumType>
+class RTViewFromBit<Element extends (Number|Nibble|Boolean)>
+        extends RTDelegate<Element>
     {
     private RTDelegate<Bit> source;
     }

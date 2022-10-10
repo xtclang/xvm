@@ -1,9 +1,9 @@
 /**
- * The native ArrayDelegate class that is used to view an ArrayDelegate<NumType> as an
+ * The native ArrayDelegate class that is used to view an ArrayDelegate<ViewType> as an
  * ArrayDelegate<Bit>.
  */
-class RTViewToBit<NumType extends (Number|Nibble)>
+class RTViewToBit<ViewType extends (Number|Nibble|Boolean)>
         extends RTDelegate<Bit>
     {
-    private RTDelegate<NumType> source;
+    private RTDelegate<ViewType> source;
     }

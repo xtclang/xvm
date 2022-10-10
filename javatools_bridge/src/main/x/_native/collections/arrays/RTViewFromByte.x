@@ -1,9 +1,9 @@
 /**
  * The native ArrayDelegate class that is used to view an ArrayDelegate<Byte> as an
- * ArrayDelegate<NumType>.
+ * ArrayDelegate<Element>.
  */
-class RTViewFromByte<NumType extends Number>
-        extends RTDelegate<NumType>
+class RTViewFromByte<Element extends Number>
+        extends RTDelegate<Element>
     {
     private RTDelegate<Byte> source;
     }
