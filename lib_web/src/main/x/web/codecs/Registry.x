@@ -37,7 +37,7 @@ service Registry
     /**
      * The internal registry-by-type (given a `MediaType`) of the `Codec` objects.
      */
-    private Map<MediaType, Map<Type, Codec?>> codecsByType = new HashMap();
+    private Map<MediaType, Map<Type, Codec?>> codecsByMedia = new HashMap();
 
     /**
      * The internal registry-by-name of the named `Format` objects.
@@ -172,7 +172,7 @@ service Registry
      */
     void registerCodec(MediaType mediaType, Codec codec)
         {
-        Map<Type, Codec?> codecsByType = this.codecsByType.computeIfAbsent(mediaType, () -> new HashMap());
+        Map<Type, Codec?> codecsByType = codecsByMedia.computeIfAbsent(mediaType, () -> new HashMap());
         assert codecsByType.putIfAbsent(codec.Value, codec)
             || codecsByType.replace(codec.Value, Null, codec);
         codecsByName.putIfAbsent(codec.name, codec);
@@ -217,7 +217,7 @@ service Registry
      */
     <Value> conditional Codec<Value> findCodec(MediaType mediaType, Type<Value> type)
         {
-        if (Map<Type, Codec?> codecsByType := this.codecsByType.get(mediaType))
+        if (Map<Type, Codec?> codecsByType := codecsByMedia.get(mediaType))
             {
             if (Codec? codec := codecsByType.get(type))
                 {
