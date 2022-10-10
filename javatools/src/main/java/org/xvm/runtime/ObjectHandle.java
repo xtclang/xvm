@@ -511,7 +511,7 @@ public abstract class ObjectHandle
         @Override
         public ServiceHandle getService()
             {
-            GenericHandle hParent = (GenericHandle) getField(null, OUTER);
+            ObjectHandle hParent = getField(null, OUTER);
             return hParent == null || !hParent.isService()
                 ? null
                 : hParent.getService();
