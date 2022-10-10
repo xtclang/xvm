@@ -1477,7 +1477,8 @@ public class TerminalTypeConstant
     public boolean isIntoMetaData(TypeConstant typeTarget, boolean fStrict)
         {
         return fStrict
-                ? this.equals(typeTarget)
+                ? typeTarget.isSingleUnderlyingClass(true) &&
+                    this.equals(typeTarget.getSingleUnderlyingClass(true).getType())
                 : this.isA(typeTarget);
         }
 

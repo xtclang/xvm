@@ -1139,7 +1139,7 @@ public class Compiler
      */
     public static final String CONDITIONAL_RETURN_NOT_ALLOWED      = "COMPILER-139";
     /**
-     * Annotation {0} is not applicable.
+     * Annotation {0} is not applicable to {1}.
      */
     public static final String ANNOTATION_NOT_APPLICABLE           = "COMPILER-140";
     /**

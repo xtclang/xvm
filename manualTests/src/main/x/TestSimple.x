@@ -2,17 +2,31 @@ module TestSimple
     {
     @Inject Console console;
 
+    package web import web.xtclang.org;
+
+    import web.*;
+
     void run()
         {
-        Int n = 14;
-        Bit[]     bits  = n.toBitArray();
-        Boolean[] bools = n.toBooleanArray();
-
-        for (Int i : 0..63)
+        Method m = Test.test;
+        if (m.is(Get))
             {
-            assert (bits[i] == 1) == bools[i];
+            console.println(m.template);
             }
-        console.println(bits);
-        console.println(bools);
+        if (m.is(Produces))
+            {
+            console.println(m.produces);
+            }
+        }
+
+    // @web.WebService("/") // without this annotation it used to compile and assert at run-time
+    service Test
+        {
+        @web.Produces(Json)
+        @web.Get("test")
+        String test()
+            {
+            return "";
+            }
         }
     }

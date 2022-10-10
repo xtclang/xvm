@@ -671,12 +671,13 @@ public class MethodDeclarationStatement
             return;
             }
 
-        ConstantPool pool = pool();
+        ConstantPool   pool      = pool();
+        ClassStructure clzParent = method.getContainingClass();
         if (method.getChildrenCount() > 0)
             {
             // the discovery of new structures means that any TypeInfo that was already created will
             // be wrong
-            IdentityConstant idClz  = method.getContainingClass().getIdentityConstant();
+            IdentityConstant idClz  = clzParent.getIdentityConstant();
             ConstantPool     poolId = idClz.getConstantPool();
             pool.invalidateTypeInfos(idClz);
             if (pool != poolId)
@@ -689,7 +690,10 @@ public class MethodDeclarationStatement
         Annotation[] aAnno = method.getAnnotations();
         if (aAnno.length > 0)
             {
-            TypeConstant typeBase = method.isStatic() ? pool.typeFunction() : pool.typeMethod();
+            TypeConstant typeBase = method.isStatic()
+                        ? pool.typeFunction()
+                        : pool.ensureParameterizedTypeConstant(pool.typeMethod(),
+                                clzParent.getIdentityConstant().getType());
             TypeConstant typeNext = null;
             for (int i = aAnno.length-1; i >= 0; i--)
                 {
@@ -704,7 +708,17 @@ public class MethodDeclarationStatement
                     }
 
                 TypeConstant typeInto = typeMixin.getExplicitClassInto();
-                if (!typeInto.isIntoMetaData(typeBase, true))
+                if (typeInto.isIntoMetaData(typeBase, true))
+                    {
+                    if (!typeBase.isA(typeInto.resolveGenerics(pool, typeBase)))
+                        {
+                        findAnnotationExpression(anno, annotations).
+                            log(errs, Severity.ERROR, Compiler.ANNOTATION_NOT_APPLICABLE,
+                                anno.getValueString(), typeBase);
+                        return;
+                        }
+                    }
+                else
                     {
                     // the first mixin *must* be strictly into Method, but the following could
                     // apply to the previous ones
@@ -712,7 +726,7 @@ public class MethodDeclarationStatement
                         {
                         findAnnotationExpression(anno, annotations).
                             log(errs, Severity.ERROR, Compiler.ANNOTATION_NOT_APPLICABLE,
-                                anno.getValueString());
+                                anno.getValueString(), typeBase);
                         return;
                         }
                     }
@@ -749,7 +763,6 @@ public class MethodDeclarationStatement
             String sInvalid = clzTop.checkGenericTypeVisibility(param.getType());
             if (sInvalid != null)
                 {
-                ClassStructure clzParent = method.getContainingClass(true);
                 if (clzParent == clzTop ||
                         clzParent.checkGenericTypeVisibility(param.getType()) != null)
                     {
@@ -767,7 +780,6 @@ public class MethodDeclarationStatement
                 String sInvalid = clzTop.checkGenericTypeVisibility(param.getType());
                 if (sInvalid != null)
                     {
-                    ClassStructure clzParent = method.getContainingClass(true);
                     if (clzParent == clzTop ||
                             clzParent.checkGenericTypeVisibility(param.getType()) != null)
                         {
@@ -788,14 +800,18 @@ public class MethodDeclarationStatement
                 if (typeMixin.getExplicitClassFormat() != Component.Format.MIXIN)
                     {
                     // no need to do anything; an error will be reported later
-                    log(errs, Severity.ERROR, Constants.VE_ANNOTATION_NOT_MIXIN, anno.getValueString());
+                    findAnnotationExpression(anno, annotations).
+                        log(errs, Severity.ERROR, Constants.VE_ANNOTATION_NOT_MIXIN,
+                            anno.getValueString());
                     return;
                     }
 
                 TypeConstant typeInto = typeMixin.getExplicitClassInto();
                 if (typeInto.isIntoClassType() || typeInto.isIntoPropertyType())
                     {
-                    log(errs, Severity.ERROR, Compiler.ANNOTATION_NOT_APPLICABLE, anno.getValueString());
+                    findAnnotationExpression(anno, annotations).
+                        log(errs, Severity.ERROR, Compiler.ANNOTATION_NOT_APPLICABLE,
+                            anno.getValueString(), typeRet.getValueString());
                     return;
                     }
                 }
