@@ -419,18 +419,24 @@ service SessionImpl
 
         version_ = newVersion ?: version_ + 1;
 
-        Boolean[] cookieSet = knownCookies_.toBooleanArray().reversed();
         Time now     = xenia.clock.now;
         Time expires = now + manager_.persistentCookieDuration;
         for (CookieId cookieId : CookieId.values)
             {
             Int i = cookieId.ordinal;
-            if (cookieSet[i])
+
+            if (SessionCookieInfo_ oldInfo ?= sessionCookieInfos_[i])
+                {
+                manager_.removeSessionCookie(this, oldInfo.cookie);
+                }
+
+            if (knownCookies_ & cookieId.mask != 0)
                 {
                 // create the session cookie
                 SessionCookie cookie = new SessionCookie(internalId_, cookieId, knownCookies_,
                         cookieConsent, cookieId.persistent ? expires : Null, ipAddress, now);
                 sessionCookieInfos_[i] = new SessionCookieInfo_(cookie);
+                manager_.addSessionCookie(this, cookie);
                 }
             }
         }

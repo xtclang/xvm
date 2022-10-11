@@ -140,6 +140,28 @@ service SessionManager(SessionStore store, SessionProducer instantiateSession)
         }
 
     /**
+     * Add the session to the quick lookup by cookie.
+     *
+     * @param session  the `Session`
+     * @param cookie   the `SessionCookie` to use to look up the `Session`
+     */
+    void addSessionCookie(SessionImpl session, SessionCookie cookie)
+        {
+        assert sessionByCookie.putIfAbsent(cookie.text, session);
+        }
+
+    /**
+     * Remove the session from the quick lookup by cookie.
+     *
+     * @param session  the `Session`
+     * @param cookie   the previously registered `SessionCookie`
+     */
+    void removeSessionCookie(SessionImpl session, SessionCookie cookie)
+        {
+        assert sessionByCookie.remove(cookie.text, session);
+        }
+
+    /**
      * Quick lookup of a session based on an opaque cookie value, or a slightly slower lookup based
      * on the decrypted form of the cookie value. This is just a lookup; it doesn't validate,
      * create, or destroy cookies or sessions.
