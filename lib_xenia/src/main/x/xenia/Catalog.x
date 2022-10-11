@@ -27,28 +27,8 @@ import web.routing.UriTemplate;
 /**
  * The catalog of WebApp endpoints.
  */
-const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins)
+const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class[] sessionMixins)
     {
-    /**
-     * Copy this Catalog, replacing only the specified properties.
-     *
-     * @param webApp
-     * @param services
-     * @param sessionMixins
-     *
-     * @return the new Catalog
-     */
-    Catalog with(WebApp?           webApp        = Null,
-                 WebServiceInfo[]? services      = Null,
-                 Class[]?          sessionMixins = Null,
-                )
-        {
-        return new Catalog(webApp        = webApp        ?: this.webApp,
-                           services      = services      ?: this.services,
-                           sessionMixins = sessionMixins ?: this.sessionMixins,
-                          );
-        }
-
     /**
      * The list of [WebServiceInfo] objects describing the [WebService] classes discovered within
      * the application.
@@ -103,7 +83,6 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins)
 
     /**
      * The WebService info.
-     * TODO: reserve a "redirect" endpoint.
      */
     static const WebServiceInfo<ServiceType extends WebService>(
                                 Int                id,
@@ -285,7 +264,7 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins)
     /**
      * The default path for the system service.
      */
-    static String DefaultSystemPath = "/xverify"; // TODO GG most places that  use this property shouldn't!!!
+    static String DefaultSystemPath = "/xverify";
 
     /**
      * Build a Catalog for a WebApp.
@@ -294,21 +273,30 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins)
      */
     static Catalog buildCatalog(WebApp app)
         {
-        // REVIEW CP: how to report verification errors
-
         ClassInfo[] classInfos    = new ClassInfo[];
         Class[]     sessionMixins = new Class[];
 
         // collect the ClassInfos for WebServices and Session mixins
-        scanClasses(app.classes, classInfos, sessionMixins, new HashSet<String>());
+        Set<String> declaredPaths = new HashSet<String>();
+        scanClasses(app.classes, classInfos, sessionMixins, declaredPaths);
+
+        // compute the system service name and add the system service info
+        String systemPath = DefaultSystemPath;
+        for (Int i = 0; declaredPaths.contains(systemPath); i++)
+            {
+            systemPath = $"{DefaultSystemPath}_{i}";
+            }
+        classInfos += new ClassInfo(SystemService, systemPath);
 
         // sort the ClassInfos based on their paths
-        classInfos.sorted((ci1, ci2) -> ci1.path == DefaultSystemPath ? Lesser : (ci1.path <=> ci2.path).reversed, inPlace=True);
+        classInfos.sorted((ci1, ci2) ->
+            ci1.path == systemPath ? Lesser : (ci1.path <=> ci2.path).reversed, inPlace=True);
 
         // now collect all endpoints
         WebServiceInfo[] webServiceInfos = collectEndpoints(app, classInfos);
+        assert webServiceInfos[0].path == systemPath;
 
-        return new Catalog(app, webServiceInfos, sessionMixins);
+        return new Catalog(app, systemPath, webServiceInfos, sessionMixins);
         }
 
 
@@ -324,13 +312,6 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins)
     private static void scanClasses(Class[] classes, ClassInfo[] classInfos, Class[] sessionMixins,
                              Set<String> declaredPaths)
         {
-        if (classInfos.empty)
-            {
-            // TODO GG uniquify to make sure there are no name collisions
-            declaredPaths += DefaultSystemPath;
-            classInfos    += new ClassInfo(SystemService, DefaultSystemPath);
-            }
-
         for (Class child : classes)
             {
             if (AnnotationTemplate webServiceAnno := child.annotatedBy(WebService))

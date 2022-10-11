@@ -245,7 +245,6 @@ service Dispatcher(Catalog          catalog,
 
                     // come back to verify that the user agent received and subsequently sent the
                     // cookies
-                    // TODO GG - catalog needs to provide the "xverify" part
                     URI oldUri = requestInfo.getUri();
                     URI newUri = new URI(path=new Path($"{catalog.services[0].path}/session/{redirectId}"));
                     header.put(Header.LOCATION, newUri.toString());
