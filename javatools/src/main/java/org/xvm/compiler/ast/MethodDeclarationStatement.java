@@ -4,8 +4,10 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
@@ -687,17 +689,21 @@ public class MethodDeclarationStatement
             }
 
         // check for invalid method annotations
-        Annotation[] aAnno = method.getAnnotations();
-        if (aAnno.length > 0)
+        Annotation[] aAnno  = method.getAnnotations();
+        int          cAnnos = aAnno.length;
+        if (cAnnos > 0)
             {
-            TypeConstant typeBase = method.isStatic()
+            boolean      fReordered = false;
+            TypeConstant typeBase   = method.isStatic()
                         ? pool.typeFunction()
                         : pool.ensureParameterizedTypeConstant(pool.typeMethod(),
                                 clzParent.getIdentityConstant().getType());
-            TypeConstant typeNext = null;
-            for (int i = aAnno.length-1; i >= 0; i--)
+
+            Validate:
+            if (cAnnos == 1)
                 {
-                Annotation   anno      = aAnno[i];
+                // optimize the most common scenario
+                Annotation   anno      = aAnno[0];
                 TypeConstant typeMixin = anno.getFormalType();
                 if (typeMixin.getExplicitClassFormat() != Component.Format.MIXIN)
                     {
@@ -707,49 +713,106 @@ public class MethodDeclarationStatement
                     return;
                     }
 
-                TypeConstant typeInto = typeMixin.getExplicitClassInto();
-                if (typeInto.isIntoMetaData(typeBase, true))
+                TypeConstant typeInto    = typeMixin.getExplicitClassInto();
+                boolean      fApplicable = typeInto.isIntoMetaData(typeBase, true)
+                    && typeBase.isA(typeInto.resolveGenerics(pool, typeBase));
+
+                if (!fApplicable)
                     {
-                    if (!typeBase.isA(typeInto.resolveGenerics(pool, typeBase)))
+                    findAnnotationExpression(anno, annotations).
+                        log(errs, Severity.ERROR, Compiler.ANNOTATION_NOT_APPLICABLE,
+                            anno.getValueString(), typeBase);
+                    return;
+                    }
+                }
+            else
+                {
+                // collect the mixin types and check for duplicates
+                TypeConstant[]    atypeMixin = new TypeConstant[cAnnos];
+                TypeConstant[]    atypeInto  = new TypeConstant[cAnnos];
+                Set<TypeConstant> setTypes   = new HashSet<>();
+                for (int i = 0; i < cAnnos; i++)
+                    {
+                    Annotation   anno      = aAnno[i];
+                    TypeConstant typeMixin = anno.getFormalType();
+                    if (typeMixin.getExplicitClassFormat() != Component.Format.MIXIN)
                         {
                         findAnnotationExpression(anno, annotations).
-                            log(errs, Severity.ERROR, Compiler.ANNOTATION_NOT_APPLICABLE,
-                                anno.getValueString(), typeBase);
+                            log(errs, Severity.ERROR, Constants.VE_ANNOTATION_NOT_MIXIN,
+                                anno.getValueString());
                         return;
                         }
-                    }
-                else
-                    {
-                    // the first mixin *must* be strictly into Method, but the following could
-                    // apply to the previous ones
-                     if (typeNext == null || !typeNext.isA(typeInto))
-                        {
-                        findAnnotationExpression(anno, annotations).
-                            log(errs, Severity.ERROR, Compiler.ANNOTATION_NOT_APPLICABLE,
-                                anno.getValueString(), typeBase);
-                        return;
-                        }
-                    }
-
-                // IMPORTANT: the annotation hasn't been validated yet; don't register the annotated
-                //            type with the constant pool, since it will prematurely register the
-                //            annotation before its parameters are fully resolved
-                typeNext = typeNext == null
-                        ? typeMixin
-                        : new AnnotatedTypeConstant(pool, anno, typeMixin);
-
-                for (int j = 0; j < i; j++)
-                    {
-                    Annotation   anno2      = aAnno[j];
-                    TypeConstant typeMixin2 = anno2.getAnnotationType();
-                    if (typeMixin2.equals(typeMixin))
+                    if (!setTypes.add(typeMixin))
                         {
                         findAnnotationExpression(anno, annotations).
                             log(errs, Severity.ERROR, Constants.VE_ANNOTATION_REDUNDANT,
                                 anno.getValueString());
-                        return;
                         }
+                    atypeMixin[i] = typeMixin;
+                    atypeInto[i]  = typeMixin.getExplicitClassInto();
                     }
+
+                // While validating applicability we allow the method annotations to be
+                // arranged in the most "readable" fashion, but not strictly "correct" order.
+                // For example, consider Get and Produces annotations from web.xtclang.org.
+                // "Get" extends "Endpoint" mixin, which is "into Method", while "Produces" is into
+                // "Endpoint". The technically correct annotation ordering therefore should be:
+                //      @Produces @Get void f() {...}
+                // but it doesn't read as well as much more natural sequence:
+                //      @Get @Produces void f() {...}
+                // What we are trying to do here is to automatically reorder an "illegal" sequence
+                // into a legal one.
+                ErrorListener errsTemp = errs.branch(this);
+                if (validateAnnotations(typeBase, aAnno, atypeMixin, atypeInto, errsTemp))
+                    {
+                    // the original order is good; nothing to do
+                    break Validate;
+                    }
+
+                TypeConstant typeNext = null;
+                int          iNext    = atypeInto.length-1;
+                while (true)
+                    {
+                    int iFound = -1;
+                    for (int i = iNext; i >= 0; i--)
+                        {
+                        if (isApplicable(atypeInto[i], typeBase, typeNext))
+                            {
+                            iFound = i;
+                            break;
+                            }
+                        }
+                    if (iFound == -1)
+                        {
+                        // not found; report the error
+                        break;
+                        }
+
+                    // move the applicable annotation to the "next" position
+                    shuffle(aAnno,      iFound, iNext);
+                    shuffle(atypeInto,  iFound, iNext);
+                    shuffle(atypeMixin, iFound, iNext);
+
+                    if (validateAnnotations(typeBase, aAnno, atypeMixin, atypeInto, ErrorListener.BLACKHOLE))
+                        {
+                        fReordered = true;
+                        break Validate;
+                        }
+
+                    typeNext = typeNext == null
+                            ? atypeMixin[iNext]
+                            : new AnnotatedTypeConstant(pool, aAnno[iNext], typeNext);
+                    iNext--;
+                    }
+
+                // nothing worked; report the error that was detected when using the original order
+                errsTemp.merge();
+                return;
+                }
+
+            if (fReordered)
+                {
+                method.reorderAnnotations(aAnno);
                 }
             }
 
@@ -793,29 +856,74 @@ public class MethodDeclarationStatement
             TypeConstant typeRet = (aReturns[0].isConditionalReturn()
                     ? aReturns[1]
                     : aReturns[0]).getType();
-
-            for (Annotation anno : typeRet.getAnnotations())
-                {
-                TypeConstant typeMixin = anno.getAnnotationType();
-                if (typeMixin.getExplicitClassFormat() != Component.Format.MIXIN)
-                    {
-                    // no need to do anything; an error will be reported later
-                    findAnnotationExpression(anno, annotations).
-                        log(errs, Severity.ERROR, Constants.VE_ANNOTATION_NOT_MIXIN,
-                            anno.getValueString());
-                    return;
-                    }
-
-                TypeConstant typeInto = typeMixin.getExplicitClassInto();
-                if (typeInto.isIntoClassType() || typeInto.isIntoPropertyType())
-                    {
-                    findAnnotationExpression(anno, annotations).
-                        log(errs, Severity.ERROR, Compiler.ANNOTATION_NOT_APPLICABLE,
-                            anno.getValueString(), typeRet.getValueString());
-                    return;
-                    }
-                }
+            typeRet.validate(errs);
             }
+        }
+
+    /**
+     * Validate the applicability of the mixin annotations to the specified base type.
+     */
+    private boolean validateAnnotations(TypeConstant typeBase, Annotation[] aAnno,
+                                        TypeConstant[] atypeMixin, TypeConstant[] atypeInto,
+                                        ErrorListener errs)
+        {
+        ConstantPool pool     = pool();
+        TypeConstant typeNext = null;
+
+        for (int iNext = aAnno.length-1; true; iNext--)
+            {
+            TypeConstant typeInto = atypeInto[iNext];
+
+            if (!isApplicable(typeInto, typeBase, typeNext))
+                {
+                Annotation anno = aAnno[iNext];
+                findAnnotationExpression(anno, annotations).
+                    log(errs, Severity.ERROR, Compiler.ANNOTATION_NOT_APPLICABLE,
+                        anno.getValueString(), typeBase.getValueString());
+                return false;
+                }
+
+            if (iNext == 0)
+                {
+                return true;
+                }
+
+            // IMPORTANT: the annotation hasn't been validated yet; don't register the annotated
+            //            type with the constant pool, since it will prematurely register the
+            //            annotation before its parameters are fully resolved
+            typeNext = typeNext == null
+                    ? atypeMixin[iNext]
+                    : new AnnotatedTypeConstant(pool, aAnno[iNext], typeNext);
+            }
+        }
+
+    /**
+     * Check if the specified "into" type applies to the specified "base" type and potentially
+     * to the "next" annotation type.
+     *
+     * Note, that the "into" for the first mixin *must* be strictly into the base type (which is
+     * either Method or Function), but the following could also apply to the previous ones.
+     */
+    private boolean isApplicable(TypeConstant typeInto, TypeConstant typeBase, TypeConstant typeNext)
+        {
+        if (typeInto.isIntoMetaData(typeBase, true))
+            {
+            return typeBase.isA(typeInto.resolveGenerics(pool(), typeBase));
+            }
+
+        return typeNext != null && typeNext.isA(typeInto);
+        }
+
+    /**
+     * Move the i-th element of the array to the j-th position.
+     */
+    private static void shuffle(Object[] ao, int i, int j)
+        {
+        assert i < j;
+
+        Object t = ao[i];
+        System.arraycopy(ao, i+1, ao, i, j-i);
+        ao[j] = t;
         }
 
     @Override

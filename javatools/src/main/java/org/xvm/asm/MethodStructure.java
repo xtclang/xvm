@@ -12,6 +12,7 @@ import java.io.PrintWriter;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -246,6 +247,17 @@ public class MethodStructure
         }
 
     /**
+     * Replace the annotations with an equivalent re-ordered array.
+     */
+    public void reorderAnnotations(Annotation[] annotations)
+        {
+        assert new HashSet(Arrays.asList(annotations)).equals(
+               new HashSet(Arrays.asList(m_aAnnotations)));
+
+        m_aAnnotations = annotations;
+        }
+
+    /**
      * Find an annotation with the specified annotation class.
      *
      * @param clzClass  the annotation class to search for
@@ -271,7 +283,7 @@ public class MethodStructure
      * <p/>
      * Important note: this method is called during the "resolve name" compilation phase, so
      *      while the annotation names must have already bee resolved, the annotation arguments
-     *      may not yet. It dost't present any problem, since the argument values don't affect
+     *      may not yet. It doesn't present any problem, since the argument values don't affect
      *      which "bucket" they belong to
      *
      * @return true if the annotations have been resolved; false if this method has to be called

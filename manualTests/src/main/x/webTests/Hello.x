@@ -47,8 +47,8 @@ module Hello
                 return sessionData.counter++;
                 }
 
-            @Produces(Text) // TODO GG: it should be allowed to be *after* @Get
             @Default @Get
+            @Produces(Text)
             String askWhat()
                 {
                 return "what?";

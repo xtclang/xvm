@@ -6,7 +6,7 @@ module TestSimple
 
     import web.*;
 
-    void run()
+    void run( )
         {
         Method m = Test.test;
         if (m.is(Get))
@@ -19,11 +19,12 @@ module TestSimple
             }
         }
 
-    // @web.WebService("/") // without this annotation it used to compile and assert at run-time
+    @web.WebService("/")
     service Test
         {
+        @web.Get("test")  // this used to fail to compile
         @web.Produces(Json)
-        @web.Get("test")
+        @StreamingResponse
         String test()
             {
             return "";
