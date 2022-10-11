@@ -19,7 +19,11 @@ module Hello
 
         console.println(\|Use the curl command to test, for example:
                          |
-                         |  curl -i -w '\n' -X GET http://localhost:8080/h
+                         |  curl -L -b cookies.txt -i -w '\n' -X GET http://localhost:8080/
+                         |
+                         | To activate the debugger:
+                         |
+                         |  curl -L -b cookies.txt -i -w '\n' -X GET http://localhost:8080/e/debug
                          |
                          |Use Ctrl-C to stop.
                         );
