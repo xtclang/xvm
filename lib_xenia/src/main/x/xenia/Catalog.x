@@ -262,7 +262,8 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
     // ----- Catalog building ----------------------------------------------------------------------
 
     /**
-     * The default path for the system service.
+     * The default path prefix for the system service. The actual `systemPath` property is computed
+     * by [buildCatalog()] method to ensure its uniqueness.
      */
     static String DefaultSystemPath = "/xverify";
 
@@ -298,7 +299,6 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
 
         return new Catalog(app, systemPath, webServiceInfos, sessionMixins);
         }
-
 
     /**
      * WebService class/path info collected during the scan phase.
