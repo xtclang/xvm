@@ -52,10 +52,10 @@ service SystemService
                                      )
         {
         String[] parts = uriString.split('/');
-        switch (String command = parts.size > 1 ? parts[1] : "")
+        switch (String command = parts.empty ? "" : parts[0])
             {
-            case "session":     // e.g. "/xverify/session/12345"
-                if (parts.size < 3)
+            case "session":     // e.g. "/xverify/session/12345" comes in as "session/12345"
+                if (parts.size < 2)
                     {
                     return NotFound;
                     }
@@ -63,7 +63,7 @@ service SystemService
                 Int redirect;
                 try
                     {
-                    redirect = new Int(parts[2]);
+                    redirect = new Int(parts[1]);
                     }
                 catch (Exception e)
                     {

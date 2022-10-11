@@ -480,7 +480,7 @@ const SessionCookie
     @Override
     Int estimateStringLength()
         {
-        return cookieId.name.size
+        return cookieId.cookieName.size
              + 1
              + text.size
              + cookieId.attributes.size;
@@ -489,7 +489,7 @@ const SessionCookie
     @Override
     Appender<Char> appendTo(Appender<Char> buf)
         {
-        cookieId.name.appendTo(buf);
+        cookieId.cookieName.appendTo(buf);
         buf.add('=');
 
         if (cookieId.persistent)
