@@ -355,4 +355,23 @@ service Registry
             }
         return False;
         }
+
+
+    // ----- resources support ---------------------------------------------------------------------
+
+    /**
+     * TODO
+     */
+    void registerResource(String name, Shareable resource)
+        {
+        resources.put(name, resource);
+        }
+
+    /**
+     * TODO
+     */
+    conditional Shareable getResource(String name)
+        {
+        return resources.get(name);
+        }
     }

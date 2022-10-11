@@ -1,4 +1,5 @@
 import web.HttpStatus;
+import web.codecs.Registry;
 
 import HttpServer.Handler;
 import HttpServer.RequestContext;
@@ -11,14 +12,20 @@ import HttpServer.RequestContext;
 service HttpHandler
         implements Handler
     {
-    construct(HttpServer httpServer, Catalog catalog)
+    construct(HttpServer httpServer, WebApp app)
         {
+        Catalog catalog = buildCatalog(app);
+
         this.httpServer     = httpServer;
         this.catalog        = catalog;
         this.dispatchers    = new Dispatcher[];
         this.busy           = new Boolean[];
         this.bundlePool     = new BundlePool(catalog);
         this.sessionManager = createSessionManager(catalog);
+
+        Registry registry = app.registry_;
+        registry.registerResource("sessionManager", this.sessionManager);
+        registry.registerResource("catalog", this.catalog);
         }
     finally
         {

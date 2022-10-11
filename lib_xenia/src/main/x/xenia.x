@@ -21,8 +21,6 @@ module xenia.xtclang.org
     import web.Session;
     import web.WebApp;
 
-    import web.routing.Catalog;
-
     /**
      * The clock used within this module.
      */
@@ -91,7 +89,7 @@ module xenia.xtclang.org
         {
         @Inject(resourceName="server", opts=address) HttpServer server;
 
-        HttpHandler handler = new HttpHandler(server, app.catalog_);
+        HttpHandler handler = new HttpHandler(server, app);
 
         return () -> handler.shutdown();
         }

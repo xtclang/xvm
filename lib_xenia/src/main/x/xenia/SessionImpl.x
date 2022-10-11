@@ -5,6 +5,7 @@ import net.IPAddress;
 
 import web.CookieConsent;
 import web.Header;
+import web.HttpStatus;
 import web.TrustLevel;
 import web.codecs.Base64Format;
 
@@ -129,7 +130,7 @@ service SessionImpl
      * If the session has been destroyed, it may contain "forwarding addresses" for the user agent
      * to follow.
      */
-    protected/private SessionRename[] renamed_ = [];
+    protected/private SessionRename_[] renamed_ = [];
 
     /**
      * A limited collection of recent requests that are held for debugging purposes and to allow a
@@ -139,10 +140,15 @@ service SessionImpl
     protected/private CircularArray<Request> recentRequests_ = new CircularArray(8);
 
     /**
+     * A list of pending prepared system redirects.
+     */
+    protected/private PendingRedirect_[]? pendingRedirects_;
+
+    /**
      * Internal recording of events related to the session, maintained for security and debugging
      * purposes. This information will be pruned to prevent unlimited size growth.
      */
-    protected/private List<LogEntry> log_ = [];
+    protected/private List<LogEntry_> log_ = [];
 
     /**
      * A data structure to keep track of concurrently executing requests.
@@ -168,14 +174,33 @@ service SessionImpl
     protected static class SessionCookieInfo_(SessionCookie cookie, Time? sent=Null, Time? verified=Null, Time? expires=Null);
 
     /**
-     * A record of the session renaming that caused TODO
+     * A record of session migration, in which a new session identity is created to represent this
+     * session when something weird is detected that could indicate a security problem.
      */
-    protected static const SessionRename(IPAddress address, Int version, String newId);
+    protected static const SessionRename_(IPAddress address, Int version, String newId);
+
+    /**
+     * Information about a system redirect.
+     */
+    protected static const PendingRedirect_(Int id, URI uri, Time created);
 
     /**
      * Information collected for each log entry.
      */
-    static const LogEntry(Time time, IPAddress address, Boolean tls, Int version, String text);
+    static const LogEntry_(Time time, IPAddress address, Boolean tls, Int version, String text);
+
+    /**
+     * When matching a session cookie
+     */
+    enum Match_
+        {
+        Correct,
+        WrongSession,   // session ID doesn't match
+        Older,          // should be considered to be "suspect"
+        Newer,          // e.g. if the SessionManager didn't synchronously persist, then crashed
+        Corrupt,        // could not deserialize
+        WrongCookieId,  // cookie was copied from one name to another (an attempted hack!)
+        }
 
 
     // ----- session implementation API ------------------------------------------------------------
@@ -314,10 +339,56 @@ service SessionImpl
                  Time?         verified,
                  Time?         expires  ) getCookie_(CookieId cookieId)
         {
-        SessionCookieInfo_? info = sessionCookieInfos_[1 << cookieId.ordinal];
+        SessionCookieInfo_? info = sessionCookieInfos_[cookieId.ordinal];
         return info == Null
                 ? False
                 : (True, info.cookie, info.sent, info.verified, info.expires);
+        }
+
+    /**
+     * Determine if the provided session cookie matches the one stored in this session.
+     *
+     * @param cookieId  specifies which cookie
+     * @param value
+     *
+     * @return a `Match_` value
+     * @return a cookie, if the `Match_` value was `Correct`, `Older`, `Newer`, or `WrongId`, and
+     *         sometimes `Corrupt`; otherwise, `Null`
+     */
+    (Match_, SessionCookie? cookie) cookieMatches_(CookieId cookieId, String value)
+        {
+        SessionCookieInfo_? info = sessionCookieInfos_[cookieId.ordinal];
+        if (value == info?.cookie.text)
+            {
+            return Correct, info.cookie;
+            }
+
+        SessionCookie cookie;
+        try
+            {
+            cookie = new SessionCookie(value);
+            }
+        catch (Exception _)
+            {
+            return Corrupt, Null;
+            }
+
+        if (cookie.cookieId != cookieId)
+            {
+            return WrongCookieId, cookie;
+            }
+
+        if (cookie.sessionId != this.internalId_)
+            {
+            return WrongSession, cookie;
+            }
+
+        return switch (cookie.version <=> this.version_)
+            {
+            case Lesser : (Older, cookie);
+            case Greater: (Newer, cookie);
+            case Equal  : (Corrupt, cookie); // everything "seems" right, but something didn't match
+            };
         }
 
     /**
@@ -342,13 +413,13 @@ service SessionImpl
      *
      * @param cookieId  which session cookie to ask for
      */
-    void incrementVersion_()
+    void incrementVersion_(Int? newVersion=Null)
         {
-        ++version_;
-
         assert knownCookies_ != 0;
 
-        Boolean[] cookieSet = knownCookies_.toBooleanArray();
+        version_ = newVersion ?: version_ + 1;
+
+        Boolean[] cookieSet = knownCookies_.toBooleanArray().reversed();
         Time now     = xenia.clock.now;
         Time expires = now + manager_.persistentCookieDuration;
         for (CookieId cookieId : CookieId.values)
@@ -362,6 +433,62 @@ service SessionImpl
                 sessionCookieInfos_[i] = new SessionCookieInfo_(cookie);
                 }
             }
+        }
+
+    /**
+     * @param info  the current request
+     *
+     * @return a unique (within this session) integer identifier of the redirect, iff this session
+     *         will permit a redirect to occur; otherwise the HttpStatus for an error that must be
+     *         returned as a response to the provided `RequestInfo`
+     */
+    Int|HttpStatus prepareRedirect_(RequestInfo info)
+        {
+        // prune any old redirects
+        Time now     = xenia.clock.now;
+        Time ancient = now - Duration:60s;
+        pendingRedirects_ = pendingRedirects_?.removeAll(r -> r.created < ancient);
+
+        // TODO limit the number of pending redirects; return error
+
+        // allocate a unique id
+        Int id;
+        do
+            {
+            id = xenia.rnd.int(100k) + 1;
+            }
+        while (pendingRedirects_?.any(r -> r.id == id));
+
+        PendingRedirect_ pending = new PendingRedirect_(id, info.getUri(), now);
+        pendingRedirects_ = pendingRedirects_? + pending : [pending];
+
+        return id;
+        }
+
+    /**
+     * Claim (and clean up) a previously prepared redirect.
+     *
+     * @param id  an identifier returned from [prepareRedirect_] on this same session object
+     *
+     * @return True iff the specified id is a redirect that is registered on this session
+     * @return (conditional) the URI that caused the redirect
+     */
+    conditional URI claimRedirect_(Int id)
+        {
+        if (PendingRedirect_[] redirects ?= pendingRedirects_)
+            {
+            for (PendingRedirect_ redirect : redirects)
+                {
+                if (redirect.id == id)
+                    {
+                    // don't delete the redirect at this point; let it time out (in case some
+                    // response gets lost, and the user agent resubmits the same request again)
+                    return True, redirect.uri;
+                    }
+                }
+            }
+
+        return False;
         }
 
     /**

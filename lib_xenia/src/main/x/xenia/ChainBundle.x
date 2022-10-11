@@ -1,3 +1,7 @@
+import Catalog.EndpointInfo;
+import Catalog.MethodInfo;
+import Catalog.WebServiceInfo;
+
 import web.AcceptList;
 import web.ErrorHandler;
 import web.HttpMethod;
@@ -16,9 +20,6 @@ import web.codecs.FormatCodec;
 import web.codecs.Registry;
 import web.codecs.Utf8Codec;
 
-import web.routing.Catalog.EndpointInfo;
-import web.routing.Catalog.MethodInfo;
-import web.routing.Catalog.WebServiceInfo;
 import web.routing.UriTemplate;
 
 import web.responses.SimpleResponse;
@@ -219,7 +220,19 @@ service ChainBundle
         ErrorHandler? onError = ensureErrorHandler(wsid);
 
         Handler callNext = handle;
-        handle = (session, request) -> webService.route(session, request, callNext, onError);
+        handle = (session, request) ->
+            {
+            assert session.is(SessionImpl);
+            session.requestBegin_(request);
+            try
+                {
+                return webService.route(session, request, callNext, onError);
+                }
+            finally
+                {
+                session.requestEnd_(request);
+                }
+            };
 
         chains[endpoint.id] = handle.makeImmutable();
         return handle;
@@ -308,7 +321,7 @@ service ChainBundle
     /**
      * Ensure a WebService instance for the specified id.
      */
-    private WebService ensureWebService(Int wsid)
+    WebService ensureWebService(Int wsid)
         {
         WebService? svc = services[wsid];
         if (svc != Null)

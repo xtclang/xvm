@@ -104,12 +104,19 @@ const SessionCookie
         // if the text is the entire toString() value, then just extract the cookie value from it
         if (Int assign := text.indexOf('='))
             {
-            // cache the full cookie text from the toString()
-            this.text = text;
-
-            assert Int semi := text.indexOf(';');
-            text = text[assign >..< semi];
+            if (Int semi := text.indexOf(';'))
+                {
+                text = text[assign >..< semi];
+                }
+            else
+                {
+                text = text.substring(assign+1);
+                }
             }
+
+        // cache the cookie text
+        text = text.trim();
+        this.text = text;
 
         // check if this is the consent cookie (it will have some plain text up front)
         String? plain = Null;
@@ -120,8 +127,7 @@ const SessionCookie
             }
 
         // decrypt and deserialize the cookie value
-        text = decrypt(text);
-        String[] parts = text.split(',');
+        String[] parts    = decrypt(text).split(',');
         this.sessionId    = new Int(parts[0]);
         this.cookieId     = CookieId.values[new Int(parts[1])];
         this.knownCookies = new Int(parts[2]);
@@ -245,24 +251,47 @@ const SessionCookie
             }
 
         /**
+         * The bitmask for this CookieId.
+         */
+        Int mask.get()
+            {
+            return 1 << ordinal;
+            }
+
+        /**
          * A bitset representing no cookies.
          */
-        static Int None = 0x0;
+        static Int None = 0b000;
 
         /**
          * A bitset representing just the plaintext cookie.
          */
-        static Int NoTls = 0x1;
+        static Int NoTls = 0b001;
 
         /**
-         * A bitset representing just the plaintext cookie.
+         * A bitset representing just the TLS temporary cookie.
          */
-        static Int NoConsent = 0x3;
+        static Int TlsTemp = 0b010;
+
+        /**
+         * A bitset representing both of the TLS cookies.
+         */
+        static Int BothTls = 0b110;
+
+        /**
+         * A bitset representing just the temporary cookies.
+         */
+        static Int BothTemp = 0b011;
+
+        /**
+         * A bitset representing just the consent cookie.
+         */
+        static Int OnlyConsent = 0b100;
 
         /**
          * A bitset representing all three cookies.
          */
-        static Int All = 0x7;
+        static Int All = 0b111;
         }
 
 
@@ -328,21 +357,10 @@ const SessionCookie
         // render the portion to encrypt that contains the session ID etc.
         StringBuffer buf = new StringBuffer();
 
-        cookieId.name.appendTo(buf)
-            .add('=');
-
-        if (cookieId.persistent)
-            {
-            consent.appendTo(buf)
-                   .add('/');
-            }
-
         String raw = $|{sessionId},{cookieId.ordinal},{knownCookies},{consent},\
                       |{encodeTime(expires)},{lastIp},{encodeTime(created)},{version},{salt}
                      ;
         encrypt(raw).appendTo(buf);
-
-        cookieId.attributes.appendTo(buf);
 
         return buf.toString();
         }
@@ -462,18 +480,26 @@ const SessionCookie
     @Override
     Int estimateStringLength()
         {
-        return text.size;
+        return cookieId.name.size
+             + 1
+             + text.size
+             + cookieId.attributes.size;
         }
 
     @Override
     Appender<Char> appendTo(Appender<Char> buf)
         {
-        return text.appendTo(buf);
-        }
+        cookieId.name.appendTo(buf);
+        buf.add('=');
 
-    @Override
-    String toString()
-        {
-        return text;
+        if (cookieId.persistent)
+            {
+            consent.appendTo(buf)
+                   .add('/');
+            }
+
+        text.appendTo(buf);
+        cookieId.attributes.appendTo(buf);
+        return buf;
         }
     }

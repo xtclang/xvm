@@ -100,7 +100,8 @@ class SimpleResponse
 
         // need to create a mutable (but freezable) List of Entry
         // TODO could make a "safe" wrapper that validates the entries
-        return new Entry[];
+        set(new Entry[]);
+        return super();
         }
 
 
