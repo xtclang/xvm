@@ -15,16 +15,13 @@
 - implement BitArray's leftmostBit(), rightmostBit(), leadingZeroCount(),
     trailingZeroCount(), bitCount.get() natively
 
-- move ecstasy.mgmt package to a separate module
-
-- enum should validate that non of the declared properties step on the existing Enum properties
+- enum should validate that none of the declared properties step on the existing Enum properties
   for example, the following should not compile
 
     enum CookieId(String name, Boolean tlsOnly)
         {
         PlainText("xplaintext", False),
         }
-
 
 - MapMapping doesn't work for properties that declared as Map classes, e.g.
     const Test(Map<Int, String> map)     - json serialization works
@@ -39,6 +36,8 @@
 
 - should this compile?
     if (ParamType body := request.attributes.getAttribute(HttpAttributes.BODY))
+
+- how to move ecstasy.mgmt package to a separate module? FileTemplate depends on ModuleRepository...
 
 - improve toString() for TypeConstant of function type
     (Function<Tuple<this:Map<Map.Key, Map.Value>.Entry>, Tuple<Boolean>>)
@@ -85,6 +84,14 @@
 - rewrite removeAccess() and removeImmutable(); it blows on virtual children now
 
 - consider a compiler warning if a return value of Closeable type is ignored (@Adopt annotation)
+
+- compiler should worn if an is(_) switch uses type as a variablem but doesn't use Type<> as
+  constants (similar to .is() warning)
+
+    switch (type.is(_))
+            {
+            case String: // incorrect!! should be Type<String>
+            }
 
 - consider a new Async mixin:
         mixin Async into Object implements Service {}
