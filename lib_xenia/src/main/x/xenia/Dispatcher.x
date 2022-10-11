@@ -109,9 +109,9 @@ service Dispatcher(Catalog          catalog,
                 Int wsid = serviceInfo.id;
                 if (wsid == 0)
                     {
-                    // TODO GG can we maybe just set a "this is a system service call" to use 99% of the main logic for all other services?
                     // this is a redirect or other system service call
                     bundle = bundlePool.allocateBundle(wsid);
+
                     SystemService svc = bundle.ensureWebService(wsid).as(SystemService);
                     HttpStatus|Response|String result = svc.handle(uriString, requestInfo);
                     if (result.is(String))
