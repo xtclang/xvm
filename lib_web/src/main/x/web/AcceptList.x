@@ -254,13 +254,15 @@ const AcceptList
         @Override
         Int estimateStringLength()
             {
-            TODO
+            return type.size + 1 + subtype.size;
             }
 
         @Override
         Appender<Char> appendTo(Appender<Char> buf)
             {
-            TODO
+            type.appendTo(buf)
+                .add('/');
+            return subtype.appendTo(buf);
             }
 
         /**
@@ -425,7 +427,7 @@ const AcceptList
                 {
                 if (accept.matches(required))
                     {
-                    return altMatched?.quality > accept.quality
+                    return altMatched != Null && altMatched.quality > accept.quality
                             ? (True, bestAlt.as(MediaType), altMatched)
                             : (True, required, accept);
                     }
