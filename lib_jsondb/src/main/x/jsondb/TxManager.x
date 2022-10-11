@@ -1195,7 +1195,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             for (Int storeId : storeIds)
                 {
                 @Future Tuple<> storeOne = storeFor(storeId).commit(writeId);
-                storeAll = storeAll?.and(&storeOne, (t, _) -> t) : &storeOne; // TODO GG wide ass -> Tuple:()
+                storeAll = storeAll?.and(&storeOne, (_, _) -> Tuple:()) : &storeOne;
                 }
             assert storeAll != Null;
 
@@ -2221,7 +2221,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             for (Int storeId : enlisted)
                 {
                 Tuple<> commitOne = storeFor(storeId).commit^(writeId);
-                commitAll = commitAll?.and(&commitOne, (t, _) -> t) : &commitOne; // TODO GG wide ass -> Tuple:()
+                commitAll = commitAll?.and(&commitOne, (_, _) -> Tuple:()) : &commitOne;
                 }
             assert commitAll != Null;
             commitAll.whenComplete((t, e) ->
