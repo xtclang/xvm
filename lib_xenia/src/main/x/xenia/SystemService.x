@@ -1,5 +1,6 @@
 import HttpServer.RequestInfo;
 
+import web.Header;
 import web.HttpStatus;
 import web.WebService;
 
@@ -134,7 +135,9 @@ service SystemService
 
         if (URI uri := session.claimRedirect_(redirect))
             {
-            return uri.toString();
+            Response response = new SimpleResponse(TemporaryRedirect);
+            response.header.put(Header.LOCATION, uri.toString());
+            return response.makeImmutable();
             }
 
         return NotFound;
