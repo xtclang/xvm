@@ -322,7 +322,8 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
                 String path;
                 if (!(path := args[0].value.is(String)))
                     {
-                    throw new IllegalState($"WebService \"{child}\": first argument is not a path");
+                    throw new IllegalState($|WebService "{child}": first argument is not a path
+                                          );
                     }
 
                 if (path != "/")
@@ -343,7 +344,7 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
 
                 if (declaredPaths.contains(path))
                     {
-                    throw new IllegalState($|WebService \"{child}\":
+                    throw new IllegalState($|WebService "{child}": \
                                             |path {path.quoted()} is already in use
                                             );
                     }
@@ -410,7 +411,8 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
             ServiceConstructor constructor;
             if (!(constructor := serviceType.defaultConstructor()))
                 {
-                throw new IllegalState($"default constructor is missing for \"{clz}\"");
+                throw new IllegalState($|default constructor is missing for "{clz}"
+                                      );
                 }
 
             TrustLevel serviceTrust = appTrustLevel;
@@ -456,6 +458,7 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
                             as $"endpoint \"{method}\" has multiple returns";
                 }
 
+            Set<String> templates = new HashSet();
             for (Method<WebService, Tuple, Tuple> method : serviceType.methods)
                 {
                 switch (method.is(_))
@@ -463,11 +466,10 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
                     case Default:
                         if (defaultEndpoint == Null)
                             {
-                            String uriTemplate = method.template;
-                            if (uriTemplate != "")
+                            if (method.template != "")
                                 {
-                                throw new IllegalState($|non-empty uri template for \"Default\"\
-                                                        |endpoint \"{clz}\"
+                                throw new IllegalState($|WebService "{clz}": non-empty uri template \
+                                                        |for "Default" endpoint "{method}"
                                                         );
                                 }
                             validateEndpoint(method);
@@ -478,16 +480,28 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
                             }
                         else
                             {
-                            throw new IllegalState($"multiple \"Default\" endpoints on \"{clz}\"");
+                            throw new IllegalState($|multiple "Default" endpoints on "{clz}"
+                                                    );
                             }
                         break;
 
                     case Endpoint:
                         validateEndpoint(method);
-                        endpoints.add(new EndpointInfo(method, epid++, wsid,
+
+                        EndpointInfo info = new EndpointInfo(method, epid++, wsid,
                                             serviceTls, serviceTrust,
                                             serviceProduces, serviceConsumes, serviceSubjects,
-                                            serviceStreamRequest, serviceStreamResponse));
+                                            serviceStreamRequest, serviceStreamResponse);
+                        if (templates.addIfAbsent(info.template.toString()))
+                            {
+                            endpoints.add(info);
+                            }
+                        else
+                            {
+                            throw new IllegalState($|WebService "{clz}": a duplicate use of template \
+                                                    |"{info.template}" by the endpoint "{method}"
+                                                    );
+                            }
                         break;
 
                     case Intercept, Observe:
@@ -501,7 +515,8 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
                             }
                         else
                             {
-                            throw new IllegalState($"multiple \"OnError\" handlers on \"{clz}\"");
+                            throw new IllegalState($|multiple "OnError" handlers on "{clz}"
+                                                  );
                             }
                         break;
 
