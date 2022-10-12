@@ -26,8 +26,6 @@ import org.xvm.runtime.template.text.xString.StringHandle;
 import org.xvm.util.Handy;
 import org.xvm.util.Severity;
 
-import static org.xvm.util.Handy.parseDelimitedString;
-
 
 /**
  * The "execute" command:
