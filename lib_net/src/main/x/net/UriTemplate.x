@@ -4,8 +4,6 @@ import Uri.Section;
 /**
  * An implementation of the URI Template specification.
  *
- * TODO CP move to "net" project
- *
  * @see https://tools.ietf.org/html/rfc6570
  */
 const UriTemplate

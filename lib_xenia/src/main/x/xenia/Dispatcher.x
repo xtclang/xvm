@@ -14,7 +14,7 @@ import web.HttpStatus;
 
 import web.responses.SimpleResponse;
 
-import web.routing.UriTemplate.UriParameters;
+import net.UriTemplate.UriParameters;
 
 
 /**

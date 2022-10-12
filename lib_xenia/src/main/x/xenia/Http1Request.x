@@ -8,8 +8,8 @@ import web.HttpMethod;
 import web.MediaType;
 import web.Protocol;
 import web.Scheme;
-import web.routing.UriTemplate;
-import web.routing.UriTemplate.UriParameters;
+import net.UriTemplate;
+import net.UriTemplate.UriParameters;
 
 import HttpServer.RequestInfo;
 

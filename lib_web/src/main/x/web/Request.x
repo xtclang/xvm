@@ -1,6 +1,6 @@
 import ecstasy.collections.CaseInsensitive;
 
-import web.routing.UriTemplate;
+import net.UriTemplate;
 
 
 /**

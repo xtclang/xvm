@@ -21,7 +21,7 @@ import web.StreamingResponse;
 import web.TrustLevel;
 import web.WebService;
 
-import web.routing.UriTemplate;
+import net.UriTemplate;
 
 
 /**

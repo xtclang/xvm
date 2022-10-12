@@ -20,7 +20,7 @@ import web.codecs.FormatCodec;
 import web.codecs.Registry;
 import web.codecs.Utf8Codec;
 
-import web.routing.UriTemplate;
+import net.UriTemplate;
 
 import web.responses.SimpleResponse;
 
