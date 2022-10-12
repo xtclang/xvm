@@ -201,9 +201,9 @@ interface HttpServer
          *
          * @return the URI from the request
          */
-        URI getUri()
+        Uri getUri()
             {
-            return new URI(server.getUriString(context));
+            return new Uri(server.getUriString(context));
             }
 
         /**

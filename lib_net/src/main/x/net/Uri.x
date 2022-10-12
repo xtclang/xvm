@@ -3,13 +3,13 @@
  *
  * @see: https://www.ietf.org/rfc/rfc2396.txt
  */
-const URI
+const Uri
         implements Destringable
     {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Construct a URI from a String.
+     * Construct a Uri from a String.
      *
      * @param text  the URI
      */
@@ -31,11 +31,11 @@ const URI
 
         assert:arg success as error ?: $"Illegal URI: {text.quoted()}";
 
-        construct URI(text, scheme, authority, user, host, ip, port, path, query, opaque, fragment);
+        construct Uri(text, scheme, authority, user, host, ip, port, path, query, opaque, fragment);
         }
 
     /**
-     * Construct a URI from its parts.
+     * Construct a Uri from its parts.
      *
      * If any of `user`, `host`, `ip`, or `port` are passed, then `authority` should be passed as
      * `Null`. Similarly, either optionally pass the `host` or the `ip`, but not both.
@@ -190,11 +190,11 @@ const URI
         assert:arg scheme != Null || authority != Null || path != Null || fragment != Null
                 as "the URI requires at least one of: scheme, authority, path, or fragment";
 
-        construct URI(Null, scheme, authority, user, host, ip, port, path, query, opaque, fragment);
+        construct Uri(Null, scheme, authority, user, host, ip, port, path, query, opaque, fragment);
         }
 
     /**
-     * Construct a URI from its parts.
+     * Construct a Uri from its parts.
      *
      * If any of `user`, `host`, `ip`, or `port` are passed, then `authority` should be passed as
      * `Null`. Similarly, either optionally pass the `host` or the `ip`, but not both.
@@ -282,7 +282,7 @@ const URI
     String? fragment;
 
     /**
-     * The String used to construct the URI, if any, which may differ from the String that the URI
+     * The String used to construct the Uri, if any, which may differ from the String that the Uri
      * would produce if it were requested to do so.
      */
     String? originalForm;
@@ -291,7 +291,7 @@ const URI
     // ----- searching -----------------------------------------------------------------------------
 
     /**
-     * The URI is divided into sections.
+     * The Uri is divided into sections.
      */
     enum Section
         {
@@ -304,20 +304,20 @@ const URI
         }
 
     /**
-     * Describes a position within the URI. This data structure is directly related to the manner in
-     * which this URI implementation stores its internal data, which may differ from how the URI is
+     * Describes a position within the Uri. This data structure is directly related to the manner in
+     * which this Uri implementation stores its internal data, which may differ from how the Uri is
      * rendered canonically.
      */
     static const Position(Section section, Int offset)
         {
         /**
-         * A pre-defined Position for the beginning of a URI.
+         * A pre-defined Position for the beginning of a Uri.
          */
         static Position START = new Position(Scheme, 0);
         }
 
     /**
-     * The "at the start" (inclusive) position for this URI.
+     * The "at the start" (inclusive) position for this Uri.
      */
     @RO Position beginPosition.get()
         {
@@ -331,7 +331,7 @@ const URI
         }
 
     /**
-     * The "after the end" (exclusive) position for this URI.
+     * The "after the end" (exclusive) position for this Uri.
      */
     @RO Position endPosition.get()
         {
@@ -346,15 +346,15 @@ const URI
 
 
     /**
-     * Attempt to find the specified literal in this URI.
+     * Attempt to find the specified literal in this Uri.
      *
      * @param literal  the literal to search for
      * @param from     (optional) the position (inclusive) to begin searching from
      * @param to       (optional) the position (exclusive) to not search at or beyond
      *
      * @return `True` iff the literal is found
-     * @return (conditional) the position within the URI that the literal is located
-     * @return (conditional) the position within the URI that immediately follows the literal
+     * @return (conditional) the position within the Uri that the literal is located
+     * @return (conditional) the position within the Uri that immediately follows the literal
      */
     conditional (Position found, Position next) find(String literal, Position? from=Null, Position? to=Null)
         {
@@ -443,13 +443,13 @@ const URI
         }
 
     /**
-     * Attempt to match the specified literal at the specified position within this URI.
+     * Attempt to match the specified literal at the specified position within this Uri.
      *
      * @param literal  the literal to match
      * @param from     the exactly position that the literal must be located at
      *
      * @return `True` iff the literal is matched
-     * @return (conditional) the position within the URI that immediately follows the literal
+     * @return (conditional) the position within the Uri that immediately follows the literal
      */
     conditional (Position next) matches(String literal, Position from)
         {
@@ -494,7 +494,7 @@ const URI
             return True, offset+1;
             }
 
-        // it's possible that the character needs to be UTF-8 encoded, or the URI is pct-encoded
+        // it's possible that the character needs to be UTF-8 encoded, or the Uri is pct-encoded
         if (!ch.ascii || part[offset] == '%')
             {
             // get the UTF8 bytes for the character and then try every possible encoding
@@ -534,10 +534,10 @@ const URI
      * @param literalOffset  the offset within the literal string value continue matching from
      * @param literalLength  the effective length of the literal string value (if the entire value
      *                       is not being matched)
-     * @param section        the current section of the URI being matched
-     * @param offset         the offset into the current section of the URI that must match the next
+     * @param section        the current section of the Uri being matched
+     * @param offset         the offset into the current section of the Uri that must match the next
      *                       character ofo the literal string value
-     * @param partFor        the function to use to load subsequent sections of the URI
+     * @param partFor        the function to use to load subsequent sections of the Uri
      */
     protected static conditional (Position next) matchRemainder(
             String                   literal,
@@ -843,14 +843,14 @@ const URI
     // ----- parsing -------------------------------------------------------------------------------
 
     /**
-     * Create a `URI` from the passed `String`, iff the `String` contains a valid URI.
+     * Create a `Uri` from the passed `String`, iff the `String` contains a valid URI.
      *
      * @param text  the text containing a URI
      *
-     * @return True if the text was successfully parsed into a URI
-     * @return (conditional) the URI
+     * @return True if the text was successfully parsed into a Uri
+     * @return (conditional) the Uri
      */
-    static conditional URI fromString(String text)
+    static conditional Uri fromString(String text)
         {
         if ((String?    scheme,
              String?    authority,
@@ -863,7 +863,7 @@ const URI
              String?    opaque,
              String?    fragment) := parse(text))
             {
-            return True, new URI(text, scheme, authority, user, host, ip, port, path, query, opaque, fragment);
+            return True, new Uri(text, scheme, authority, user, host, ip, port, path, query, opaque, fragment);
             }
 
         return False;
@@ -922,7 +922,7 @@ const URI
             return False, scheme, authority, user, host, ip, port, path, query, fragment, opaque, "Empty URI";
             }
 
-        // a URI is either an absoluteURI or a relativeURI:
+        // a Uri is either an absoluteURI or a relativeURI:
         //
         //   URI-reference = [ absoluteURI | relativeURI ] [ "#" fragment ]
         //
@@ -2037,7 +2037,7 @@ const URI
     // ----- Comparable, Orderable & Hashable funky interface implementations ----------------------
 
     @Override
-    static <CompileType extends URI> Int hashCode(CompileType value)
+    static <CompileType extends Uri> Int hashCode(CompileType value)
         {
         return value.hashCache;
         }
@@ -2057,7 +2057,7 @@ const URI
         }
 
     @Override
-    static <CompileType extends URI> Boolean equals(CompileType value1, CompileType value2)
+    static <CompileType extends Uri> Boolean equals(CompileType value1, CompileType value2)
         {
         return value1.scheme    == value2.scheme
             && value1.authority == value2.authority

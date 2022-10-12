@@ -13,7 +13,7 @@ module xenia.xtclang.org
     import net.HostPort;
     import net.IPAddress;
     import net.SocketAddress;
-    import net.URI;
+    import net.Uri;
 
     import web.Handler;
     import web.Response;

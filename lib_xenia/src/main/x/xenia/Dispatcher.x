@@ -152,7 +152,7 @@ service Dispatcher(Catalog          catalog,
                 UriParameters uriParams = [];
                 FindEndpoint:
                     {
-                    URI uri = new URI(path=new Path(uriString), query=query, fragment=fragment);
+                    Uri uri = new Uri(path=new Path(uriString), query=query, fragment=fragment);
                     for (EndpointInfo eachEndpoint : serviceInfo.endpoints)
                         {
                         if (eachEndpoint.httpMethod.name == methodName,
@@ -245,8 +245,8 @@ service Dispatcher(Catalog          catalog,
 
                     // come back to verify that the user agent received and subsequently sent the
                     // cookies
-                    URI oldUri = requestInfo.getUri();
-                    URI newUri = new URI(path=new Path($"{catalog.services[0].path}/session/{redirectId}"));
+                    Uri oldUri = requestInfo.getUri();
+                    Uri newUri = new Uri(path=new Path($"{catalog.services[0].path}/session/{redirectId}"));
                     header.put(Header.LOCATION, newUri.toString());
                     break ProcessRequest;
                     }

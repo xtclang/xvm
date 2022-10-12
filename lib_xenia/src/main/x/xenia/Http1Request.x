@@ -162,7 +162,7 @@ const Http1Request(RequestInfo info, UriParameters matchResult)
         }
 
     @Override
-    @Lazy URI uri.calc()
+    @Lazy Uri uri.calc()
         {
         return info.getUri();
         }

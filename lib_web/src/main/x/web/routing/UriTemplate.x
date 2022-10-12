@@ -1,18 +1,17 @@
-import URI.Position;
-import URI.Section;
+import Uri.Position;
+import Uri.Section;
 
 /**
  * An implementation of the URI Template specification.
  *
  * TODO CP move to "net" project
- * TODO CP rename URI to Uri
  *
  * @see https://tools.ietf.org/html/rfc6570
  */
 const UriTemplate
     {
     /**
-     * A map containing the result of matching a UriTemplate against a request's URI.
+     * A map containing the result of matching a UriTemplate against a request's Uri.
      */
     typedef immutable Map<String, Value> as UriParameters;
 
@@ -76,14 +75,14 @@ const UriTemplate
     /**
      * Test if the specified URI matches this template.
      *
-     * @param uri  the `URI` to test to see if it matches this `UriTemplate`
+     * @param uri  the `Uri` to test to see if it matches this `UriTemplate`
      *
      * @return a map from variable name to value
      */
-    conditional UriParameters matches(URI|String uri)
+    conditional UriParameters matches(Uri|String uri)
         {
-        // convert a String URI to a real URI object if necessary
-        if (uri.is(String), !(uri := URI.fromString(uri)))
+        // convert a String URI to a real Uri object if necessary
+        if (uri.is(String), !(uri := Uri.fromString(uri)))
             {
             return False;
             }
@@ -308,7 +307,7 @@ const UriTemplate
         @Abstract Appender<Char> expand(Appender<Char> buf, Lookup values);
 
         /**
-         * Match this expression against the specified range within the URI.
+         * Match this expression against the specified range within the Uri.
          *
          * @param uri         the URI to match against
          * @param from        the starting position (inclusive) within the URI which this expression
@@ -323,7 +322,7 @@ const UriTemplate
          * @return (conditional) the position immediately following the matched region of the URI
          * @return (conditional) the potentially updated map of variable bindings
          */
-        @Abstract conditional (Position after, Map<String, Value> bindings) matches(URI uri,
+        @Abstract conditional (Position after, Map<String, Value> bindings) matches(Uri uri,
                 Position from, Position? to, Char? nextPrefix, Map<String, Value> bindings);
 
         @Override
@@ -412,7 +411,7 @@ const UriTemplate
             }
 
         @Override
-        conditional (Position after, Map<String, Value> bindings) matches(URI uri,
+        conditional (Position after, Map<String, Value> bindings) matches(Uri uri,
                 Position from, Position? to, Char? nextPrefix, Map<String, Value> bindings)
             {
             if (nextPrefix? != prefix)

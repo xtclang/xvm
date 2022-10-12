@@ -50,7 +50,7 @@ interface Request
     /**
      * The URI of the request.
      */
-    URI uri;
+    Uri uri;
 
     /**
      * The IP address and port number used by the client to issue the request, if it is known.

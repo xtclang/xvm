@@ -182,7 +182,7 @@ service SessionImpl
     /**
      * Information about a system redirect.
      */
-    protected static const PendingRedirect_(Int id, URI uri, Time created);
+    protected static const PendingRedirect_(Int id, Uri uri, Time created);
 
     /**
      * Information collected for each log entry.
@@ -477,9 +477,9 @@ service SessionImpl
      * @param id  an identifier returned from [prepareRedirect_] on this same session object
      *
      * @return True iff the specified id is a redirect that is registered on this session
-     * @return (conditional) the URI that caused the redirect
+     * @return (conditional) the Uri that caused the redirect
      */
-    conditional URI claimRedirect_(Int id)
+    conditional Uri claimRedirect_(Int id)
         {
         if (PendingRedirect_[] redirects ?= pendingRedirects_)
             {

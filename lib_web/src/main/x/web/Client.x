@@ -23,7 +23,7 @@ interface Client
     /**
      * TODO
      */
-    Client restrictTo(URI baseURI);
+    Client restrictTo(Uri baseURI);
 
     /**
      * Each request created will include these headers.
@@ -40,9 +40,9 @@ interface Client
      *
      * @return the resulting [Response] object
      */
-    Response get(String | URI uri)
+    Response get(String | Uri uri)
         {
-        return send(createRequest(uri.is(String) ? new URI(uri) : uri, GET));
+        return send(createRequest(uri.is(String) ? new Uri(uri) : uri, GET));
         }
 
     /**
@@ -54,9 +54,9 @@ interface Client
      *
      * @return the resulting [Response] object
      */
-    Response put(String | URI uri, Byte[] bytes, MediaType mediaType=Json)
+    Response put(String | Uri uri, Byte[] bytes, MediaType mediaType=Json)
         {
-        return send(createRequest(uri.is(String) ? new URI(uri) : uri, PUT));
+        return send(createRequest(uri.is(String) ? new Uri(uri) : uri, PUT));
         }
 
     /**
@@ -69,9 +69,9 @@ interface Client
      *
      * @return the resulting [Response] object
      */
-    Response post(String | URI uri, Byte[] bytes, MediaType mediaType=Json)
+    Response post(String | Uri uri, Byte[] bytes, MediaType mediaType=Json)
         {
-        Request request = createRequest(uri.is(String) ? new URI(uri) : uri, POST);
+        Request request = createRequest(uri.is(String) ? new Uri(uri) : uri, POST);
         Body body  = request.ensureBody(mediaType);
         body.bytes = bytes;
         return send(request);
@@ -84,24 +84,24 @@ interface Client
      *
      * @return the resulting [Response] object
      */
-    Response delete(String | URI uri)
+    Response delete(String | Uri uri)
         {
-        return send(createRequest(uri.is(String) ? new URI(uri) : uri, DELETE));
+        return send(createRequest(uri.is(String) ? new Uri(uri) : uri, DELETE));
         }
 
 
     // ---- request handling -----------------------------------------------------------------------
 
     /**
-     * Create an new Request that contains the default headers and the specified URI and HTTP
+     * Create an new Request that contains the default headers and the specified Uri and HTTP
      * method.
      *
-     * @param uri     the [URI] for the request
+     * @param uri     the [Uri] for the request
      * @param method  the [HttpMethod] for the request
      *
      * @return TODO
      */
-    Request createRequest(URI uri, HttpMethod method);
+    Request createRequest(Uri uri, HttpMethod method);
 
     /**
      * Send a request.

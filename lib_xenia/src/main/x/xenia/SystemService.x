@@ -133,7 +133,7 @@ service SystemService
             return BadRequest;
             }
 
-        if (URI uri := session.claimRedirect_(redirect))
+        if (Uri uri := session.claimRedirect_(redirect))
             {
             Response response = new SimpleResponse(TemporaryRedirect);
             response.header.put(Header.LOCATION, uri.toString());

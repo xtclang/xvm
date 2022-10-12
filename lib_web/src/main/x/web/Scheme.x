@@ -39,7 +39,7 @@ const Scheme(String name, Boolean TLS)
     // ----- properties ----------------------------------------------------------------------------
 
     /**
-     * The name, which is the full text of the scheme as it would appear in a `URI`.
+     * The name, which is the full text of the scheme as it would appear in a URI.
      */
     String name;
 

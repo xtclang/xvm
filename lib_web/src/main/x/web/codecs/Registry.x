@@ -106,7 +106,7 @@ service Registry
     static Format[] DefaultFormats =
         [
         new BasicFormat<Path>(),
-        new BasicFormat<URI>(),
+        new BasicFormat<Uri>(),
         new BasicFormat<IPAddress>(),
 
         // REVIEW CP - should we support Time using the Header.parseImfFixDate() & Header.formatImfFixDate() helpers instead?
