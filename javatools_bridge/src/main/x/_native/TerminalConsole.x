@@ -1,5 +1,5 @@
 /**
- * Simple console.
+ * Simple terminal-based console.
  */
 service TerminalConsole
         implements Console
@@ -11,14 +11,11 @@ service TerminalConsole
     void println(Object o = "");
 
     @Override
-    String readLine();
-
-    @Override
-    Boolean echo(Boolean flag);
+    String readLine(Boolean echo = True);
 
     @Override
     String toString()
         {
-        return "Console";
+        return "TerminalConsole";
         }
     }

@@ -18,8 +18,8 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.Utils;
 
-import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
+import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xService;
 
 import org.xvm.runtime.template.text.xString;
@@ -51,8 +51,7 @@ public class xTerminalConsole
         {
         markNativeMethod("print"   , OBJECT , VOID   );
         markNativeMethod("println" , OBJECT , VOID   );
-        markNativeMethod("readLine", VOID   , STRING );
-        markNativeMethod("echo"    , BOOLEAN, BOOLEAN);
+        markNativeMethod("readLine", BOOLEAN, STRING );
 
         getCanonicalType().invalidateTypeInfo();
         }
@@ -91,7 +90,7 @@ public class xTerminalConsole
                     }
                 }
 
-            case "println": // Object o
+            case "println": // Object o = ""
                 {
                 if (hArg == ObjectHandle.DEFAULT)
                     {
@@ -113,41 +112,28 @@ public class xTerminalConsole
                     }
                 }
 
-            case "echo":
+            case "readLine": // Boolean echo = True
                 {
-                boolean fOld = m_fEcho;
-                m_fEcho = ((BooleanHandle) hArg).get();
-                return frame.assignValue(iReturn, xBoolean.makeHandle(fOld));
-                }
-            }
-        return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
-        }
+                boolean fEcho = true;
+                if (hArg != ObjectHandle.DEFAULT)
+                    {
+                    fEcho = ((BooleanHandle) hArg).get();
+                    }
 
-    @Override
-    public int invokeNativeN(Frame frame, MethodStructure method,
-                             ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
-        {
-        switch (method.getName())
-            {
-            case "readLine": // String format, List<Object> args
-                {
-                StringHandle hLine;
                 try
                     {
-                    hLine = m_fEcho || CONSOLE == null
+                    StringHandle hLine = fEcho || CONSOLE == null
                             ? xString.makeHandle(CONSOLE_IN.readLine())
                             : xString.makeHandle(CONSOLE.readPassword());
+                    return frame.assignValue(iReturn, hLine);
                     }
                 catch (IOException e)
                     {
-                    hLine = xString.makeHandle(e.getMessage());
+                    return frame.raiseException(xException.ioException(frame, e.getMessage()));
                     }
-
-                return frame.assignValue(iReturn, hLine);
                 }
             }
-
-        return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
+        return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
         }
 
     /**
@@ -198,8 +184,6 @@ public class xTerminalConsole
         CONSOLE_OUT.println(ach);
         return Op.R_NEXT;
         };
-
-    private boolean m_fEcho = true;
 
     /**
      * Cached Console handle.

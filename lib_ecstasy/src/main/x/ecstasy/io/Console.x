@@ -5,24 +5,25 @@ interface Console
     {
     /**
      * Print the string produced by the {@link Object#toString) method for the specified object.
+     *
+     * @param the object to print
      */
     void print(Object o);
 
     /**
      * Print the string produced by the {@link Object#toString) method for the specified object
      * followed by the line separator string.
+     *
+     * @param (optional) the object to print
      */
     void println(Object o = "");
 
     /**
      * Read a single text line from the console.
-     */
-    String readLine();
-
-    /**
-     * Turn the line input echo on or off.
      *
-     * @return the previous echo value
+     * @param echo  (optional) flag indicating whether the input should be shown by the console
+     *
+     * @return the input string
      */
-    Boolean echo(Boolean flag);
+    String readLine(Boolean echo = True);
     }

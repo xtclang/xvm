@@ -2,32 +2,11 @@ module TestSimple
     {
     @Inject Console console;
 
-    package web import web.xtclang.org;
-
-    import web.*;
-
-    void run( )
+    void run(String[] args=[])
         {
-        Method m = Test.test;
-        if (m.is(Get))
-            {
-            console.println(m.template);
-            }
-        if (m.is(Produces))
-            {
-            console.println(m.produces);
-            }
-        }
+        console.println(args);
 
-    @web.WebService("/")
-    service Test
-        {
-        @web.Get("test")  // this used to fail to compile
-        @web.Produces(Json)
-        @StreamingResponse
-        String test()
-            {
-            return "";
-            }
+        String pwd = console.readLine(False);
+        console.println(pwd);
         }
     }
