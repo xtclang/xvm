@@ -371,7 +371,7 @@ public class EvalCompiler
                 for (int iVar = 0; iVar < cVars; iVar++)
                     {
                     Frame.VarInfo info = aInfo[iVar];
-                    if (info.getName().equals(sName))
+                    if (info != null && info.getName().equals(sName))
                         {
                         Register reg = new Register(info.getType(), f_listHandles.size());
 
@@ -380,7 +380,6 @@ public class EvalCompiler
 
                         ensureNameMap().put(sName, reg);
                         ensureDefiniteAssignments().put(sName, Assignment.AssignedOnce);
-
                         return reg;
                         }
                     }
