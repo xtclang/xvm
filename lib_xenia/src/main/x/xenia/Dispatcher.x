@@ -142,7 +142,6 @@ service Dispatcher(Catalog          catalog,
                     uriString = uriString[0 ..< queryOffset];
                     }
 
-                // TODO CP: handle the path parsing more robustly
                 if (uriString == "")
                     {
                     uriString = "/";
@@ -152,7 +151,17 @@ service Dispatcher(Catalog          catalog,
                 UriParameters uriParams = [];
                 FindEndpoint:
                     {
-                    Uri uri = new Uri(path=new Path(uriString), query=query, fragment=fragment);
+                    Uri uri;
+                    try
+                        {
+                        uri = new Uri(path=new Path(uriString), query=query, fragment=fragment);
+                        }
+                    catch (Exception e)
+                        {
+                        response = new SimpleResponse(BadRequest);
+                        break ProcessRequest;
+                        }
+
                     for (EndpointInfo eachEndpoint : serviceInfo.endpoints)
                         {
                         if (eachEndpoint.httpMethod.name == methodName,
@@ -196,8 +205,9 @@ service Dispatcher(Catalog          catalog,
                 // with a redirect to a URL that uses a TLS-enabled protocol
                 if (!tls && endpoint.requiresTls)
                     {
-                    // TODO handle the redirect here
-                    TODO response =
+                    response = new SimpleResponse(PermanentRedirect);
+
+                    response.header.put(Header.LOCATION, requestInfo.convertToTlsUrl());
                     break ProcessRequest;
                     }
 
@@ -245,7 +255,6 @@ service Dispatcher(Catalog          catalog,
 
                     // come back to verify that the user agent received and subsequently sent the
                     // cookies
-                    Uri oldUri = requestInfo.getUri();
                     Uri newUri = new Uri(path=new Path($"{catalog.services[0].path}/session/{redirectId}"));
                     header.put(Header.LOCATION, newUri.toString());
                     break ProcessRequest;
@@ -412,6 +421,12 @@ service Dispatcher(Catalog          catalog,
                 // plain text cookie); redirect to verification (send cookies 1 and 2, and 3 if
                 // [cookieConsent] has been set)
                 assert txtTemp != Null;
+                if (SessionImpl session := sessionManager.getSessionByCookie(txtTemp))
+                    {
+                    // TODO CP/GG: replace the temporary code below!
+                    (val matches, val cookie) = session.cookieMatches_(PlainText, txtTemp);
+                    return session, matches != Correct, CookieId.None;
+                    }
                 TODO
 
             case (False, True , False, False):  // error (cookie 2 illegal; missing cookie 1)

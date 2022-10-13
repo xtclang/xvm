@@ -8,6 +8,10 @@ service RTServer
     typedef immutable Object as RequestContext;
 
     @Override
+    UInt16 tlsPort.get()
+        {TODO("Native");}
+
+    @Override
     void attachHandler(Handler handler)
         {TODO("Native");}
 
@@ -75,6 +79,11 @@ service RTServer
     static interface HttpServer
             extends Closeable
         {
+        /**
+         * The server port number that provides "transport layer security".
+         */
+        UInt16 tlsPort;
+
         /**
          * Attach a handler.
          */

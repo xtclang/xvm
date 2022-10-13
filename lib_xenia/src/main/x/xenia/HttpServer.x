@@ -1,4 +1,7 @@
+import web.Header;
 import web.HttpMethod;
+import web.Protocol;
+import web.Scheme;
 
 
 /**
@@ -19,6 +22,11 @@ interface HttpServer
         {
         void handle(RequestContext context, String uri, String method, Boolean tls);
         }
+
+    /**
+     * The server port number that provides "transport layer security".
+     */
+    UInt16 tlsPort;
 
     /**
      * Attach a handler.
@@ -157,7 +165,7 @@ interface HttpServer
             }
 
         /**
-         * Obtain the port number on the client that the request was sent from
+         * Obtain the port number on the client that the request was sent from.
          *
          * @return the client port number
          */
@@ -177,7 +185,7 @@ interface HttpServer
             }
 
         /**
-         * Obtain the port number on the server that the request was received on
+         * Obtain the port number on the server that the request was received on.
          *
          * @return the server port number
          */
@@ -215,6 +223,20 @@ interface HttpServer
         String getProtocolString()
             {
             return server.getProtocolString(context);
+            }
+
+        /**
+         * Obtain the HTTP protocol that is indicated by the request.
+         *
+         * @return the HTTP protocol
+         */
+        Protocol getProtocol()
+            {
+            if (Protocol protocol := Protocol.byProtocolString.get(getProtocolString()))
+                {
+                return protocol;
+                }
+            assert as $"Unknown protocol: {getProtocolString().quoted()}";
             }
 
         /**
@@ -267,6 +289,39 @@ interface HttpServer
                 }
 
             return False;
+            }
+
+        /**
+         * Obtain the URL that converts this request to the corresponding TLS request.
+         *
+         * @return the URL string representing the TLS request
+         */
+        String convertToTlsUrl()
+            {
+            assert !tls as "already a TLS request";
+
+            Scheme scheme    = getProtocol().scheme;
+            Scheme tlsScheme = scheme.upgradeToTls? : assert as $"cannot upgrade {scheme}";
+            String host;
+
+            if (String[] hosts := getHeaderValuesForName(Header.HOST))
+                {
+                host = hosts[0];
+                if (Int portOffset := host.lastIndexOf(':'))
+                    {
+                    host = host[0 ..< portOffset];
+                    }
+                }
+            else
+                {
+                host = getServerAddress().toString();
+                }
+            UInt16 tlsPort = server.tlsPort;
+
+            return $|{tlsScheme.name}://{host}\
+                    |{{if (tlsPort!=443) {$.add(':').append(tlsPort);}}}\
+                    |{server.getUriString(context)}
+                    ;
             }
         }
     }
