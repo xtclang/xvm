@@ -1,23 +1,30 @@
 /**
  * A representation of an HTTP-related scheme.
  */
-const Scheme(String name, Boolean TLS)
+const Scheme(String name, Boolean tls, Scheme? upgradeToTls = Null)
     {
+    assert()
+        {
+        assert tls ^ (upgradeToTls != Null);
+        }
+
+
     // ----- constants -----------------------------------------------------------------------------
 
     /**
      * The clear text HTTP scheme.
      */
-    static Scheme HTTP = new Scheme("http", False);
+    static Scheme HTTP = new Scheme("http", False, HTTPS);
 
     /**
      * The TLS-secured HTTP scheme.
      */
     static Scheme HTTPS = new Scheme("https", True);
+
     /**
      * Web Socket scheme.
      */
-    static Scheme WS = new Scheme("ws", False);
+    static Scheme WS = new Scheme("ws", False, WSS);
 
     /**
      * Web Socket Secure scheme, which is the Web Socket scheme with TLS.
@@ -44,8 +51,20 @@ const Scheme(String name, Boolean TLS)
     String name;
 
     /**
-     * True iff the scheme implies "transport layer security", which is the case for HTTPS and
-     * WSS.
+     * True iff the scheme implies "transport layer security", which is the case for HTTPS and WSS.
      */
-    Boolean TLS;
+    Boolean tls;
+
+    /**
+     * The related scheme that provides "transport layer security", or Null iff `tls==True`.
+     */
+    Scheme? upgradeToTls;
+
+    /**
+     * Obtain the scheme that is the same as this one, but has TLS enabled.
+     */
+    Scheme tlsScheme.get()
+        {
+        return upgradeToTls ?: this;
+        }
     }

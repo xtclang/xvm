@@ -1,27 +1,16 @@
 /**
  * A representation of a protocol used for web services.
  */
-const Protocol(String string, String scheme, Version? version, Boolean TLS, String? ALPN_Id=Null)
+const Protocol(String string, Scheme scheme, Version? version, String? ALPN_Id=Null)
     {
     // ----- constants -----------------------------------------------------------------------------
-
-    /**
-     * The generic HTTP protocol. This can be used when the version is unknown or unspecified.
-     */
-    static Protocol HTTP = new Protocol("HTTP", "http", Null, False);
-
-    /**
-     * The generic HTTP protocol with TLS. This can be used when the version is unknown or
-     * unspecified.
-     */
-    static Protocol HTTPS = new Protocol("HTTPS", "https", Null, True);
 
     /**
      * HTTP/1.0. HTTP over TCP/IP, with generally only one request/response per TCP/IP connection.
      *
      * This is an obsolete and insecure standard, and is almost never encountered.
      */
-    static Protocol HTTP1 = new Protocol("HTTP/1.0", "http", v:1, False);
+    static Protocol HTTP1 = new Protocol("HTTP/1.0", HTTP, v:1.0);
 
     /**
      * HTTP/1.1. HTTP over TCP/IP, with the ability to reuse the TCP/IP connection.
@@ -32,7 +21,7 @@ const Protocol(String string, String scheme, Version? version, Boolean TLS, Stri
      * using it for anything but a "home page" (a pre-login welcome mat) by requiring a secure
      * connection by default.
      */
-    static Protocol HTTP1_1 = new Protocol("HTTP/1.1", "http", v:1.1, False);
+    static Protocol HTTP1_1 = new Protocol("HTTP/1.1", HTTP, v:1.1);
 
     /**
      * HTTP/1.1 over an SSL connection.
@@ -44,7 +33,7 @@ const Protocol(String string, String scheme, Version? version, Boolean TLS, Stri
      * forward secrecy is considered secure, so all other SSL 3.0 ciphers should be disabled unless
      * they are required to support specific embedded clients.
      */
-    static Protocol HTTPS1_1 = new Protocol("HTTP/1.1", "https", v:1.1, True);
+    static Protocol HTTPS1_1 = new Protocol("HTTP/1.1", HTTPS, v:1.1);
 
     /**
      * HTTP/2. HTTP over TCP/IP, but supporting any number of concurrent streams (in-flight requests
@@ -53,14 +42,14 @@ const Protocol(String string, String scheme, Version? version, Boolean TLS, Stri
      * This unsecured protocol is almost never encountered, because all known browser
      * implementations that support HTTP/2 require a TLS connection; see [HTTPS2].
      */
-    static Protocol HTTP2 = new Protocol("HTTP/2", "http", v:2, False, "h2c");
+    static Protocol HTTP2 = new Protocol("HTTP/2", HTTP, v:2, "h2c");
 
     /**
      * HTTP/2 over a TLS connection.
      *
      * This is a commonly encountered protocol, and its usage is likely to grow.
      */
-    static Protocol HTTPS2  = new Protocol("HTTP/2", "https", v:2, True, "h2");
+    static Protocol HTTPS2  = new Protocol("HTTP/2", HTTPS, v:2, "h2");
 
     /**
      * HTTP/3. HTTP over UDP/IP, using the QUIC protocol. The capabilities are similar to HTTP/2,
@@ -70,33 +59,30 @@ const Protocol(String string, String scheme, Version? version, Boolean TLS, Stri
      * Like HTTP/2, HTTP/3 is almost never encountered, because all known browser implementations
      * that support HTTP/3 require TLS; see [HTTPS3].
      */
-    static Protocol HTTP3   = new Protocol("HTTP/3", "http", v:3, False);
+    static Protocol HTTP3   = new Protocol("HTTP/3", HTTP, v:3);
 
     /**
      * HTTP/3 with TLS.
      *
      * This is becoming a commonly encountered protocol, and its usage is likely to grow.
      */
-    static Protocol HTTPS3  = new Protocol("HTTP/3", "https", v:3, True, "h3");
+    static Protocol HTTPS3  = new Protocol("HTTP/3", HTTPS, v:3, "h3");
 
-// TODO CP versionless versions
     /**
      * Web Socket protocol.
      */
-    static Protocol WS13 = new Protocol("WS/13", "ws", v:13, False);
+    static Protocol WS13 = new Protocol("WS/13", WS, v:13);
 
     /**
      * Web Socket Secure protocol, which is the Web Socket protocol with TLS.
      */
-    static Protocol WSS13 = new Protocol("WSS/13", "wss", v:13, True);
+    static Protocol WSS13 = new Protocol("WSS/13", WSS, v:13);
 
     /**
      * Protocol lookup table by string.
      */
     static Map<String, Protocol> byProtocolString =
             [
-            HTTP.string     =  HTTP,
-            HTTPS.string    =  HTTPS,
             HTTP1.string    =  HTTP1,
             HTTP1_1.string  =  HTTP1_1,
             HTTPS1_1.string =  HTTPS1_1,
@@ -119,9 +105,9 @@ const Protocol(String string, String scheme, Version? version, Boolean TLS, Stri
     String string;
 
     /**
-     * The scheme of the protocol, which is usually "http", "https", or "ws".
+     * The scheme of the protocol, which is usually HTTP, HTTPS, or WS.
      */
-    String scheme;
+    Scheme scheme;
 
     /**
      * The version of the protocol, such as HTTP version `1.1`, `2`, or `3`, or WS version `13`.
