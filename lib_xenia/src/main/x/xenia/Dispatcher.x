@@ -243,13 +243,13 @@ service Dispatcher(Catalog          catalog,
                     if (tls)
                         {
                         assert cookie := session.getCookie_(Encrypted);
-                        header.add(Header.SET_COOKIE, session.toString());
+                        header.add(Header.SET_COOKIE, cookie.toString());
 
                         CookieConsent cookieConsent = session.cookieConsent;
                         if (cookieConsent.lastConsent != Null)
                             {
                             assert cookie := session.getCookie_(Consent);
-                            header.add(Header.SET_COOKIE, session.toString());
+                            header.add(Header.SET_COOKIE, cookie.toString());
                             }
                         }
 
