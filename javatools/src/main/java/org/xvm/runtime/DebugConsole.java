@@ -97,8 +97,7 @@ public class DebugConsole
                 break;
 
             case StepInto:
-               fDebug = m_frame.f_fiber.isAssociated(  frame.f_fiber) ||
-                        frame.f_fiber.isAssociated(m_frame.f_fiber);
+               fDebug = frame.f_fiber.isAssociated(m_frame.f_fiber);
                break;
 
             case StepLine:
@@ -178,7 +177,10 @@ public class DebugConsole
             case StepOver:
             case StepOut:
                 // we're exiting the frame; stop at the first chance
-                m_stepMode = StepMode.StepInto;
+                if (frame.f_fiber.isAssociated(m_frame.f_fiber))
+                    {
+                    m_stepMode = StepMode.StepInto;
+                    }
                 break;
             }
         }
@@ -445,6 +447,7 @@ public class DebugConsole
                         break NextCommand;
 
                     case "R":
+                        m_stepMode = StepMode.None;
                         break NextCommand;
 
                     case "VC":
