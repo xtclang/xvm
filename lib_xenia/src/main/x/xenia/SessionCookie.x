@@ -31,7 +31,8 @@ import TimeOfDay.PICOS_PER_SECOND;
  *
  * 3. `__Host-xconsented` - a persistent cookie protected by TLS
  *    * this cookie is only created when a request comes in over a TLS connection, and the session
- *      [cookieConsent] has been set, and there is no `__Host-xconsented` cookie in the request
+ *      [Session.cookieConsent] has been set, and there is no `__Host-xconsented` cookie in the
+ *      request
  *    * specifies `Path=/;SameSite=Strict;secure;HttpOnly;Expires=...` ; does not specify `Domain`
  *    * contains human readable consent string and date/time of consent
  *    * contains base64 encoding of encrypted data: session id, cookie id, change counter, creation
@@ -53,11 +54,12 @@ import TimeOfDay.PICOS_PER_SECOND;
  *     x      1   validate cookie 1 & verify that cookie 2/3 were NOT already sent & verified (if
  *                they were, then this is an error, because it indicates the likely theft of the
  *                plain text cookie); redirect to verification (send cookies 1 and 2, and 3 if
- *                [cookieConsent] has been set)
+ *                the session [Session.cookieConsent] has been set)
  *       x    0   error (no TLS, so cookie 2 is illegally present; also missing cookie 1)
  *       x    1   error (missing cookie 1)
  *     x x    0   error (no TLS, so cookie 2 is illegally present)
- *     x x    1   validate cookie 1 & 2; if [cookieConsent] has been set, redirect to verification
+ *     x x    1   validate cookie 1 & 2; if the session [Session.cookieConsent] has been set,
+ *                redirect to verification
  *         x  0   error (no TLS, so cookie 3 is illegally present)
  *         x  1   validate cookie 3; assume temporary cookies absent due to user agent discarding
  *                temporary cookies; redirect to verification (send cookies 1 and 2)
