@@ -423,11 +423,35 @@ service Dispatcher(Catalog          catalog,
                 assert txtTemp != Null;
                 if (SessionImpl session := sessionManager.getSessionByCookie(txtTemp))
                     {
-                    // TODO CP/GG: replace the temporary code below!
-                    (val matches, val cookie) = session.cookieMatches_(PlainText, txtTemp);
-                    return session, matches != Correct, CookieId.None;
+                    if (session.knownCookies_ == CookieId.NoTls)
+                        {
+                        (val matches, val cookie) = session.cookieMatches_(PlainText, txtTemp);
+                        switch (matches)
+                            {
+                            case Newer:
+                                assert cookie != Null;
+                                session.incrementVersion_(cookie.version+1);
+                                break;
+
+                            case Correct:
+                                break;
+
+                            default:
+                                suspectCookie(requestInfo, txtTemp);
+                                break;
+                            }
+                        }
+                    else
+                        {
+                        suspectCookie(requestInfo, txtTemp);
+                        }
+                    session.ensureCookies_(CookieId.BothTemp);
+                    return session, True, CookieId.None;
                     }
-                TODO
+
+                // session cookie did not identify a session, so assume that the session was
+                // valid but has since been destroyed; create a new session
+                return createSession(requestInfo), True, CookieId.None;
 
             case (False, True , False, False):  // error (cookie 2 illegal; missing cookie 1)
             case (False, True , False, True ):  // error (missing cookie 1)
@@ -437,8 +461,44 @@ service Dispatcher(Catalog          catalog,
                 return createSession(requestInfo), True, CookieId.None;
 
             case (True , True , False, True ):
-                // validate cookie 1 & 2; if [cookieConsent] has been set, redirect to verification
-                TODO
+                // validate cookie 1 & 2; if [session.cookieConsent] has been set, redirect to
+                // verification
+                assert txtTemp != Null && tlsTemp != Null;
+                if (SessionImpl session := sessionManager.getSessionByCookie(txtTemp))
+                    {
+                    if (session.knownCookies_ == CookieId.BothTemp)
+                        {
+                        (val matchesPln, val cookiePln) = session.cookieMatches_(PlainText, txtTemp);
+                        (val matchesTls, val cookieTls) = session.cookieMatches_(Encrypted, tlsTemp);
+                        switch (matchesPln, matchesTls)
+                            {
+                            case (Correct, Correct):
+                                break;
+
+                            case (Newer,   Newer  ):
+                            case (Newer,   Correct):
+                            case (Correct, Newer  ):
+                                assert cookiePln != Null && cookieTls != Null;
+                                session.incrementVersion_(cookiePln.version.maxOf(cookieTls.version)+1);
+                                break;
+
+                            default:
+                                suspectCookie(requestInfo, txtTemp);
+                                break;
+                            }
+                        }
+                    else
+                        {
+                        suspectCookie(requestInfo, txtTemp);
+                        }
+                    Boolean consentRequired = session.cookieConsent != None;
+                    session.ensureCookies_(consentRequired ? CookieId.All : CookieId.BothTemp);
+                    return session, consentRequired, CookieId.None;
+                    }
+
+                // session cookie did not identify a session, so assume that the session was
+                // valid but has since been destroyed; create a new session
+                return createSession(requestInfo), True, CookieId.None;
 
             case (False, False, True , False):  // error (cookie 3 illegal)
                 suspectCookie(requestInfo, consent?);
@@ -571,6 +631,6 @@ service Dispatcher(Catalog          catalog,
      */
     private void suspectCookie(RequestInfo requestInfo, String value)
         {
-        // TODO
+        TODO($"suspect {value}");
         }
     }
