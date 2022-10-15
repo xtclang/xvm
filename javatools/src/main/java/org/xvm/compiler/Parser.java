@@ -4127,8 +4127,7 @@ public class Parser
 
                 Token   tokData = null;
                 boolean fErr    = false;
-                if (file != null && file.exists()
-                        && (fDir || file.canRead()))
+                if (fContents || file != null && file.exists() && (fDir || file.canRead()))
                     {
                     if (fBin)
                         {
@@ -4164,13 +4163,13 @@ public class Parser
                     }
                 else
                     {
-                    fErr = true;
+                    return new LiteralExpression(tokFile);
                     }
 
                 if (fErr)
                     {
                     log(Severity.ERROR, INVALID_PATH, lStart, lEnd, sFile);
-                    throw new CompilerException("no such file: " + sFile);
+                    throw new CompilerException("no such directory or file: " + sFile);
                     }
 
                 return fContents
@@ -4193,8 +4192,8 @@ public class Parser
         }
 
     /**
-     * Starting with the current token, eat all of the tokens that are part of a potential file
-     * or directory name, and return that file name as a "literal path" token.
+     * Starting with the current token, eat all tokens that are part of a potential file or
+     * directory name, and return that file name as a "literal path" token.
      *
      * @return  the file or directory name as a literal path token
      */

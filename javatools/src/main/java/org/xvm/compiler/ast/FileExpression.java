@@ -104,9 +104,14 @@ public class FileExpression
         String       sType = getSimpleTypeName();
         if (sType == null)
             {
+            if (m_file == null || !m_file.exists())
+                {
+                return pool.typePath();
+                }
+
             return m_file.isDirectory()
-                    ? pool.typeDirectory()
-                    : pool.typeFile();
+                    ? pool.typeFileStore()  // or directory or path ...
+                    : pool.typeFile();      // or path ...
             }
         else
             {
@@ -115,56 +120,149 @@ public class FileExpression
                 case "FileStore" -> pool.typeFileStore();
                 case "Directory" -> pool.typeDirectory();
                 case "File"      -> pool.typeFile();
+                case "Path"      -> pool.typePath();
                 default          -> throw new IllegalStateException("type=" + sType);
                 };
             }
         }
 
+    private static final int FS   = 0x1;
+    private static final int DIR  = 0x2;
+    private static final int FILE = 0x4;
+    private static final int PATH = 0x8;
+    private static final int ALL  = FS | DIR | FILE | PATH;
+    private static final int NONE = 0x0;
+
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
-        TypeConstant typeActual = getImplicitType(ctx);
-        Constant     constVal   = null;
-        String       sErr       = "???";
-        if (m_file == null)
+        ConstantPool pool = pool();
+
+        int nConsumes = NONE;
+        if (typeRequired == null)
             {
-            sErr = "no file";
+            nConsumes = ALL;
             }
         else
             {
-            try
+            if (pool.typeFileStore().isA(typeRequired))
                 {
-                String s = getImplicitType(ctx).getSingleUnderlyingClass(true).getName();
-                switch (s)
-                    {
-                    case "FileStore":
-                        constVal = buildFileStoreConstant();
-                        break;
-                    case "Directory":
-                        constVal = buildDirectoryConstant(pool(), m_file);
-                        break;
-                    case "File":
-                        constVal = buildFileConstant(pool(), m_file);
-                        break;
-                    default:
-                        sErr = "bad type: " + s;
-                        break;
-                    }
+                nConsumes |= FS;
                 }
-            catch (IOException e)
+
+            if (pool.typeDirectory().isA(typeRequired))
                 {
-                sErr = e.getMessage();
+                nConsumes |= DIR;
+                }
+
+            if (pool.typeFile().isA(typeRequired))
+                {
+                nConsumes |= FILE;
+                }
+
+            if (pool.typePath().isA(typeRequired))
+                {
+                nConsumes |= PATH;
                 }
             }
 
-        if (constVal == null)
+        int nProduces = NONE;
+        String sType = getSimpleTypeName();
+        if (sType != null)
             {
-            log(errs, Severity.ERROR, Compiler.FATAL_ERROR, sErr);
-            constVal = buildEmptyConstant(ctx);
+            nProduces = switch (sType)
+                {
+                case "FileStore" -> FS;
+                case "Directory" -> DIR;
+                case "File" -> FILE;
+                case "Path" -> PATH;
+                default -> throw new IllegalStateException("type=" + sType);
+                };
+            }
+        else
+            {
+            if (m_file == null || !m_file.exists())
+                {
+                nProduces = PATH;
+                }
+            else if (m_file.isDirectory())
+                {
+                nProduces = FS | DIR | PATH;
+                }
+            else
+                {
+                nProduces = FILE | PATH;
+                }
             }
 
-        assert constVal != null;
-        return finishValidation(ctx, typeRequired, typeActual, TypeFit.Fit, constVal, errs);
+        TypeFit      fit        = TypeFit.Fit;
+        TypeConstant typeActual = null;
+        Constant     constVal   = null;
+        try
+            {
+            switch (nConsumes & nProduces)
+                {
+                case NONE:
+                    if ((nProduces & FS) != 0)
+                        {
+                        typeActual = pool.typeFileStore();
+                        }
+                    if ((nProduces & DIR) != 0)
+                        {
+                        typeActual = typeActual == null
+                                ? pool.typeDirectory()
+                                : pool.ensureUnionTypeConstant(typeActual, pool.typeDirectory());
+                        }
+                    if ((nProduces & FILE) != 0)
+                        {
+                        typeActual = typeActual == null
+                                ? pool.typeFile()
+                                : pool.ensureUnionTypeConstant(typeActual, pool.typeFile());
+                        }
+                    if ((nProduces & PATH) != 0)
+                        {
+                        typeActual = typeActual == null
+                                ? pool.typePath()
+                                : pool.ensureUnionTypeConstant(typeActual, pool.typePath());
+                        }
+                    break;
+
+                case FS:
+                    typeActual = pool.typeFileStore();
+                    constVal   = buildFileStoreConstant();
+                    break;
+
+                case DIR:
+                    typeActual = pool.typeDirectory();
+                    constVal   = buildDirectoryConstant(pool(), m_file);
+                    break;
+
+                case FILE:
+                    typeActual = pool.typeFile();
+                    constVal   = buildFileConstant(pool(), m_file);
+                    break;
+
+                case PATH:
+                    typeActual = pool.typePath();
+                    constVal   = pool.ensureLiteralConstant(Constant.Format.Path, (String) path.getValue());
+                    break;
+
+                default:
+                    // multiple matches; ambiguous
+                    log(errs, Severity.ERROR, Compiler.AMBIGUOUS_PATH_TYPE);
+                    fit = TypeFit.NoFit;
+                    break;
+                }
+            }
+        catch (IOException e)
+            {
+            log(errs, Severity.ERROR, Compiler.FATAL_ERROR, e.getMessage());
+            fit        = TypeFit.NoFit;
+            typeActual = null;
+            constVal   = null;
+            }
+
+        return finishValidation(ctx, typeRequired, typeActual, fit, constVal, errs);
         }
 
 
@@ -209,7 +307,6 @@ public class FileExpression
      */
     protected Constant buildEmptyConstant(Context ctx)
         {
-
         ConstantPool pool  = pool();
         String       sPath = (String) path.getValue();
         File         file  = m_file == null ? new File("error") : m_file;
@@ -228,6 +325,9 @@ public class FileExpression
             case "File" ->
                 pool.ensureFileConstant(file.getName(),
                     createdTime(pool, file), modifiedTime(pool, file), new byte[0]);
+
+            case "Path" ->
+                pool.ensureLiteralConstant(Constant.Format.Path, "/");
 
             default ->
                 throw new IllegalStateException("type=" + sType);

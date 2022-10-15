@@ -1315,6 +1315,10 @@ public class Compiler
      */
     public static final String NEW_INVALID_FORMAL                  = "COMPILER-183";
     /**
+     * The literal path expression type is ambiguous; specify a literal type prefix, such as "Path:", "FileStore:", "Directory:", or "Path:".
+     */
+    public static final String AMBIGUOUS_PATH_TYPE                 = "COMPILER-184";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                     = "COMPILER-NI";
