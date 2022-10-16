@@ -67,6 +67,7 @@ import org.xvm.util.Handy;
 import org.xvm.util.ListMap;
 import org.xvm.util.PackedInteger;
 import org.xvm.util.Severity;
+import org.xvm.util.TransientThreadLocal;
 
 
 /**
@@ -6929,7 +6930,7 @@ public abstract class TypeConstant
         Map<TypeConstant, Relation> mapRelations = m_mapRelations;
         if (mapRelations == null)
             {
-            s_tloInProgress.compareAndSet(this, null, new ThreadLocal<>());
+            s_tloInProgress.compareAndSet(this, null, new TransientThreadLocal<>());
             mapRelations = m_mapRelations = new ConcurrentHashMap<>();
             }
         return mapRelations;
@@ -7177,9 +7178,9 @@ public abstract class TypeConstant
     /**
      * The set of "isA() in progress" types.
      */
-    private transient volatile ThreadLocal<Set> m_tloInProgress;
-    private static final AtomicReferenceFieldUpdater<TypeConstant, ThreadLocal> s_tloInProgress =
-            AtomicReferenceFieldUpdater.newUpdater(TypeConstant.class, ThreadLocal.class, "m_tloInProgress");
+    private transient volatile TransientThreadLocal<Set<TypeConstant>> m_tloInProgress;
+    private static final AtomicReferenceFieldUpdater<TypeConstant, TransientThreadLocal> s_tloInProgress =
+            AtomicReferenceFieldUpdater.newUpdater(TypeConstant.class, TransientThreadLocal.class, "m_tloInProgress");
 
     /**
      * A cache of "consumes" responses.

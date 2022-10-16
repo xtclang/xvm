@@ -61,21 +61,21 @@ public class MultiMethodStructure
     protected void assembleChildren(DataOutput out)
             throws IOException
         {
-        if (getParent().getFormat() == Format.CONST && !m_tloIgnoreNative.get())
+        if (getParent().getFormat() == Format.CONST && !s_tloIgnoreNative.get())
             {
             // ensure we don't persist the (funky) Const interface functions created by
             // ClassStructure.synthesizeConstInterface();
             // note that the super.assembleChildren() method uses just two virtual methods:
             //      getChildrenCount(), and children()
             // hence we only need to override those two and ignore native methods when necessary
-            m_tloIgnoreNative.set(true);
+            s_tloIgnoreNative.set(true);
             try
                 {
                 super.assembleChildren(out);
                 }
             finally
                 {
-                m_tloIgnoreNative.set(false);
+                s_tloIgnoreNative.set(false);
                 }
             }
         else
@@ -94,7 +94,7 @@ public class MultiMethodStructure
 
         Map<MethodConstant, MethodStructure> map = m_methodByConstant;
         return  map == null             ? 0
-              : m_tloIgnoreNative.get() ? (int) map.values().stream().filter(m -> !m.isTransient()).count()
+              : s_tloIgnoreNative.get() ? (int) map.values().stream().filter(m -> !m.isTransient()).count()
               : map.size();
         }
 
@@ -195,7 +195,7 @@ public class MultiMethodStructure
     @Override
     public Collection<? extends Component> children()
         {
-        return m_tloIgnoreNative.get()
+        return s_tloIgnoreNative.get()
                 ? methods().stream().
                     filter(method -> !method.isTransient()).collect(Collectors.toList())
                 : methods();
@@ -447,6 +447,6 @@ public class MultiMethodStructure
     /**
      * The flag used by the serialization logic.
      */
-    private static final ThreadLocal<Boolean> m_tloIgnoreNative =
+    private static final ThreadLocal<Boolean> s_tloIgnoreNative =
             ThreadLocal.withInitial(() -> Boolean.FALSE);
     }

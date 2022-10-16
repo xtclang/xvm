@@ -42,6 +42,7 @@ import org.xvm.type.Decimal;
 import org.xvm.util.Auto;
 import org.xvm.util.ListMap;
 import org.xvm.util.PackedInteger;
+import org.xvm.util.TransientThreadLocal;
 
 import static org.xvm.compiler.Lexer.isValidIdentifier;
 import static org.xvm.compiler.Lexer.isValidQualifiedModule;
@@ -3325,13 +3326,7 @@ public class ConstantPool
         {
         assert type != null;
 
-        List<TypeConstant> list = f_tlolistDeferred.get();
-        if (list == null)
-            {
-            list = new ArrayList<>();
-            f_tlolistDeferred.set(list);
-            }
-
+        List<TypeConstant> list = f_tlolistDeferred.computeIfAbsent(ArrayList::new);
         if (!list.contains(type))
             {
             list.add(type);
@@ -3358,7 +3353,7 @@ public class ConstantPool
             }
         else
             {
-            f_tlolistDeferred.set(null);
+            f_tlolistDeferred.remove();
             }
 
         return list;
@@ -4212,7 +4207,7 @@ public class ConstantPool
     /**
      * A special "chicken and egg" list of TypeConstants that need to have their TypeInfos rebuilt.
      */
-    private final ThreadLocal<List<TypeConstant>> f_tlolistDeferred = new ThreadLocal<>();
+    private final TransientThreadLocal<List<TypeConstant>> f_tlolistDeferred = new TransientThreadLocal<>();
 
     /**
      * A list of classes that cause any derived TypeInfos to be invalidated.

@@ -14,6 +14,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
+import org.xvm.util.TransientThreadLocal;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
@@ -226,19 +227,14 @@ public class TypeParameterConstant
             }
 
         int nDif = this.f_iReg - that.f_iReg;
-        if (nDif != 0 || f_tloReEntry.get())
+        if (nDif != 0 || f_tloReEntry.get() != null)
             {
             return nDif;
             }
 
-        f_tloReEntry.set(Boolean.TRUE);
-        try
+        try (var x = f_tloReEntry.push(true))
             {
             return getParentConstant().compareTo(that.getParentConstant());
-            }
-        finally
-            {
-            f_tloReEntry.set(Boolean.FALSE);
             }
         }
 
@@ -291,5 +287,5 @@ public class TypeParameterConstant
      */
     private transient TypeConstant m_typeConstraint;
 
-    private final ThreadLocal<Boolean> f_tloReEntry = ThreadLocal.withInitial(() -> Boolean.FALSE);
+    private final TransientThreadLocal<Boolean> f_tloReEntry = new TransientThreadLocal<>();
     }
