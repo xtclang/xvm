@@ -1439,14 +1439,15 @@ public class InvocationExpression
                                     System.arraycopy(aargTypeParams, 0, aArgs, 0, cTypeParams);
                                     }
 
-                                for (int i = 0, of = cTypeParams; i < cArgs; ++i)
+                                for (int i = 0; i < cArgs; ++i)
                                     {
-                                    aArgs[of + i] = args.get(i).generateArgument(ctx, code, true, true, errs);
+                                    aArgs[cTypeParams + i] =
+                                            args.get(i).generateArgument(ctx, code, true, true, errs);
                                     }
 
-                                for (int i = 0, of = cTypeParams + cArgs; i < cDefaults; ++i)
+                                for (int i = 0; i < cDefaults; ++i)
                                     {
-                                    aArgs[of + i] = Register.DEFAULT;
+                                    aArgs[cTypeParams + cArgs + i] = Register.DEFAULT;
                                     }
                                 }
 
@@ -1694,14 +1695,14 @@ public class InvocationExpression
                         System.arraycopy(aargTypeParams, 0, aArgs, 0, cTypeParams);
                         }
 
-                    for (int i = 0, of = cTypeParams; i < cArgs; ++i)
+                    for (int i = 0; i < cArgs; ++i)
                         {
-                        aArgs[of + i] = args.get(i).generateArgument(ctx, code, true, true, errs);
+                        aArgs[cTypeParams + i] = args.get(i).generateArgument(ctx, code, true, true, errs);
                         }
 
-                    for (int i = 0, of = cTypeParams + cArgs; i < cDefaults; ++i)
+                    for (int i = 0; i < cDefaults; ++i)
                         {
-                        aArgs[of + i] = Register.DEFAULT;
+                        aArgs[cTypeParams + cArgs + i] = Register.DEFAULT;
                         }
                     break;
                 }
@@ -1979,24 +1980,6 @@ public class InvocationExpression
             }
 
         return false;
-        }
-
-    /**
-     * @return true iff the parameter is named
-     */
-    protected boolean isParamNamed(Expression expr)
-        {
-        return expr instanceof LabeledExpression;
-        }
-
-    /**
-     * @return the name of the parameter, or null if the parameter is not named
-     */
-    protected String getParamName(Expression expr)
-        {
-        return isParamNamed(expr)
-                ? ((LabeledExpression) expr).getName()
-                : null;
         }
 
     /**

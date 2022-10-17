@@ -1180,24 +1180,24 @@ public class NameExpression
                 switch (getMeaning())
                     {
                     case Reserved:
-                    if (left instanceof NameExpression nameLeft &&
-                            nameLeft.m_plan == Plan.OuterThis)
-                        {
-                        // indicates a "this.C" scenario used inside a "property class" for this
-                        // class property
-                        TypeConstant typeOuter = argRaw.getType();
-                        Register     regOuter  = createRegister(typeOuter, fUsedOnce);
-                        code.add(new MoveThis(1, regOuter, typeOuter.getAccess()));
-                        argRaw = regOuter;
-                        }
-                    break;
-
-                    case Label:
-                        throw new IllegalStateException();
-
-                    default:
+                        if (left instanceof NameExpression nameLeft &&
+                                nameLeft.m_plan == Plan.OuterThis)
+                            {
+                            // indicates a "this.C" scenario used inside a "property class" for this
+                            // class property
+                            TypeConstant typeOuter = argRaw.getType();
+                            Register     regOuter  = createRegister(typeOuter, fUsedOnce);
+                            code.add(new MoveThis(1, regOuter, typeOuter.getAccess()));
+                            argRaw = regOuter;
+                            }
                         break;
-                    }
+
+                        case Label:
+                            throw new IllegalStateException();
+
+                        default:
+                            break;
+                        }
 
                 if (m_mapTypeParams != null)
                     {
@@ -2052,10 +2052,9 @@ public class NameExpression
                 if (idChild == null)
                     {
                     // no child of that name on "Left"; try "Class<Left>"
-                    TypeInfo         infoClz    = idLeft.getValueType(pool, null).ensureTypeInfo(errs);
-                    IdentityConstant idClzChild = infoClz.findName(pool, sName);
+                    TypeInfo infoClz  = idLeft.getValueType(pool, null).ensureTypeInfo(errs);
 
-                    idChild           = idClzChild;
+                    idChild           = infoClz.findName(pool, sName);
                     m_fClassAttribute = idChild != null;
                     }
 
