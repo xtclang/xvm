@@ -103,7 +103,7 @@ module Hello
                 }
             }
 
-        @StaticContent("/static", /resources/hello)
+        @StaticContent("/static", Directory:/resources/hello)
         service Content
             {
             }
