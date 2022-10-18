@@ -417,9 +417,10 @@ service Dispatcher(Catalog          catalog,
 
             case (True , False, False, True ):
                 // validate cookie 1 & verify that cookie 2/3 were NOT already sent & verified (if
-                // they were, then this is an error, because it indicates the likely theft of the
-                // plain text cookie); redirect to verification (send cookies 1 and 2, and 3 if
-                // [cookieConsent] has been set)
+                // they were, then this is an error, because it indicates either a manual deletion
+                // of the tls cookie or a potential theft of the plain text cookie);
+                // redirect to verification (send cookies 1 and 2, and 3 if [cookieConsent] has been
+                // set)
                 assert txtTemp != Null;
                 if (SessionImpl session := sessionManager.getSessionByCookie(txtTemp))
                     {
