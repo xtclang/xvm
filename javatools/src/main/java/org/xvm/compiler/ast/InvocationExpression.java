@@ -1402,7 +1402,7 @@ public class InvocationExpression
                             // generate the arguments
                             int        cAll      = idMethod.getRawParams().length;
                             int        cDefaults = cAll - cTypeParams - cArgs;
-                            Argument   arg       = null;
+                            Argument   arg0      = null;
                             Argument[] aArgs     = null;
                             char       chArgs;
 
@@ -1418,15 +1418,15 @@ public class InvocationExpression
                                 chArgs = '1';
                                 if (cArgs == 1)
                                     {
-                                    arg = args.get(0).generateArgument(ctx, code, true, true, errs);
+                                    arg0 = args.get(0).generateArgument(ctx, code, true, true, errs);
                                     }
                                 else if (cTypeParams == 1)
                                     {
-                                    arg = aargTypeParams[0];
+                                    arg0 = aargTypeParams[0];
                                     }
                                 else // (cDefaults == 1)
                                     {
-                                    arg = Register.DEFAULT;
+                                    arg0 = Register.DEFAULT;
                                     }
                                 }
                             else
@@ -1480,11 +1480,11 @@ public class InvocationExpression
                                 case _10:
                                     if (m_fTupleArg)
                                         {
-                                        code.add(new Invoke_T0(argTarget, idMethod, arg));
+                                        code.add(new Invoke_T0(argTarget, idMethod, arg0));
                                         }
                                     else
                                         {
-                                        code.add(new Invoke_10(argTarget, idMethod, arg));
+                                        code.add(new Invoke_10(argTarget, idMethod, arg0));
                                         }
                                     break;
 
@@ -1508,22 +1508,22 @@ public class InvocationExpression
                                         {
                                         if (m_fTupleArg)
                                             {
-                                            code.add(new Invoke_TT(argTarget, idMethod, arg, aargResult[0]));
+                                            code.add(new Invoke_TT(argTarget, idMethod, arg0, aargResult[0]));
                                             }
                                         else
                                             {
-                                            code.add(new Invoke_1T(argTarget, idMethod, arg, aargResult[0]));
+                                            code.add(new Invoke_1T(argTarget, idMethod, arg0, aargResult[0]));
                                             }
                                         }
                                     else
                                         {
                                         if (m_fTupleArg)
                                             {
-                                            code.add(new Invoke_T1(argTarget, idMethod, arg, aargResult[0]));
+                                            code.add(new Invoke_T1(argTarget, idMethod, arg0, aargResult[0]));
                                             }
                                         else
                                             {
-                                            code.add(new Invoke_11(argTarget, idMethod, arg, aargResult[0]));
+                                            code.add(new Invoke_11(argTarget, idMethod, arg0, aargResult[0]));
                                             }
                                         }
                                     break;
@@ -1546,11 +1546,11 @@ public class InvocationExpression
                                 case _1N:
                                     if (m_fTupleArg)
                                         {
-                                        code.add(new Invoke_TN(argTarget, idMethod, arg, aargResult));
+                                        code.add(new Invoke_TN(argTarget, idMethod, arg0, aargResult));
                                         }
                                     else
                                         {
-                                        code.add(new Invoke_1N(argTarget, idMethod, arg, aargResult));
+                                        code.add(new Invoke_1N(argTarget, idMethod, arg0, aargResult));
                                         }
                                     break;
 
@@ -1656,7 +1656,7 @@ public class InvocationExpression
             updateLineNumber(code);
 
             int        cDefaults = cAll - cTypeParams - cArgs;
-            Argument   arg       = null;
+            Argument   arg0      = null;
             Argument[] aArgs     = null;
             char       chArgs;
 
@@ -1674,15 +1674,15 @@ public class InvocationExpression
                     chArgs = '1';
                     if (cArgs == 1)
                         {
-                        arg = args.get(0).generateArgument(ctx, code, true, true, errs);
+                        arg0 = args.get(0).generateArgument(ctx, code, true, true, errs);
                         }
                     else if (cTypeParams == 1)
                         {
-                        arg = aargTypeParams[0];
+                        arg0 = aargTypeParams[0];
                         }
                     else // (cDefaults == 1)
                         {
-                        arg = Register.DEFAULT;
+                        arg0 = Register.DEFAULT;
                         }
                     break;
 
@@ -1713,7 +1713,7 @@ public class InvocationExpression
                 switch (chArgs)
                     {
                     case '0' -> code.add(new Construct_0(idConstruct));
-                    case '1' -> code.add(new Construct_1(idConstruct, arg));
+                    case '1' -> code.add(new Construct_1(idConstruct, arg0));
                     case 'N' -> code.add(new Construct_N(idConstruct, aArgs));
                     case 'T' -> throw new UnsupportedOperationException("TODO: Construct_T");
                     default  -> throw new IllegalStateException();
@@ -1750,11 +1750,11 @@ public class InvocationExpression
                 case _10:
                     if (m_fTupleArg)
                         {
-                        code.add(new Call_T0(argFn, arg));
+                        code.add(new Call_T0(argFn, arg0));
                         }
                     else
                         {
-                        code.add(new Call_10(argFn, arg));
+                        code.add(new Call_10(argFn, arg0));
                         }
                     break;
 
@@ -1778,22 +1778,22 @@ public class InvocationExpression
                         {
                         if (m_fTupleArg)
                             {
-                            code.add(new Call_TT(argFn, arg, aargResult[0]));
+                            code.add(new Call_TT(argFn, arg0, aargResult[0]));
                             }
                         else
                             {
-                            code.add(new Call_1T(argFn, arg, aargResult[0]));
+                            code.add(new Call_1T(argFn, arg0, aargResult[0]));
                             }
                         }
                     else
                         {
                         if (m_fTupleArg)
                             {
-                            code.add(new Call_T1(argFn, arg, aargResult[0]));
+                            code.add(new Call_T1(argFn, arg0, aargResult[0]));
                             }
                         else
                             {
-                            code.add(new Call_11(argFn, arg, aargResult[0]));
+                            code.add(new Call_11(argFn, arg0, aargResult[0]));
                             }
                         }
                     break;
@@ -1816,11 +1816,11 @@ public class InvocationExpression
                 case _1N:
                     if (m_fTupleArg)
                         {
-                        code.add(new Call_TN(argFn, arg, aargResult));
+                        code.add(new Call_TN(argFn, arg0, aargResult));
                         }
                     else
                         {
-                        code.add(new Call_1N(argFn, arg, aargResult));
+                        code.add(new Call_1N(argFn, arg0, aargResult));
                         }
                     break;
 
