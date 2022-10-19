@@ -1,6 +1,8 @@
 package org.xvm.util;
 
+
 import java.util.function.Consumer;
+
 
 /**
  * A {@link java.lang.ref.Reference Reference} like object which is also {@link AutoCloseable}.
@@ -10,7 +12,7 @@ import java.util.function.Consumer;
  * @author mf
  */
 public interface Sentry<T>
-    extends AutoCloseable
+        extends AutoCloseable
     {
     @Override
     void close();
@@ -18,7 +20,7 @@ public interface Sentry<T>
     /**
      * Return the value.
      * <p>
-     * Calling this method or using a previously returned value after then sentry has been
+     * Calling this method or using a previously returned value after the sentry has been
      * {@link #close closed} is illegal and results in undefined behavior.
      *
      * @return the value
@@ -31,8 +33,9 @@ public interface Sentry<T>
     /**
      * Return a new {@link Sentry} holding the specified value.
      *
-     * @param value the value to hold
-     * @param <T> the value type
+     * @param <T>    the value type
+     * @param value  the value to hold
+     *
      * @return the sentry
      */
     static <T> Sentry<T> of(T value)
@@ -55,9 +58,10 @@ public interface Sentry<T>
     /**
      * Return a new {@link Sentry} holding the specified value.
      *
-     * @param value the value to hold
-     * @param closer the function to run upon {@link #close}.
-     * @param <T> the value type
+     * @param <T>     the value type
+     * @param value   the value to hold
+     * @param closer  the function to run upon {@link #close}.
+     *
      * @return the sentry
      */
     static <T> Sentry<T> of(T value, Consumer<? super T> closer)
