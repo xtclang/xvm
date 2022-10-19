@@ -78,18 +78,28 @@ module xenia.xtclang.org
     typedef function Response(Request, Tuple) as Responder;
 
     /**
-     * Create and start an HTTP server for the specified web application.
+     * Create and start an HTTP/HTTPS server for the specified web application.
      *
-     * @param address  the HTTP server address string (e.g. "localhost:8080")
-     * @param app      the WebApp to dispatch the HTTP requests to
+     * @param webApp     the WebApp to dispatch the HTTP requests to
+     * @param hostName   the server host name (e.g. "localhost")
+     * @param keyStore   the keystore to use for tls certificates and encryption
+     * @param password   the keystore password
+     * @param httpPort   the port for plain text (insecure) communications
+     * @param httpsPort  the port for encrypted (tls) communications
      *
-     * @return a function that allows to shutdown the HTTP server
+     * @return a function that allows to shutdown the server
      */
-    function void () createServer(String address, WebApp app)
+    function void () createServer(WebApp webApp, String hostName,
+                                  File keyStore, String password,
+                                  UInt16 httpPort = 80, UInt16 httpsPort = 443)
         {
-        @Inject(resourceName="server", opts=address) HttpServer server;
+        @Inject HttpServer server;
 
-        HttpHandler handler = new HttpHandler(server, app);
+        server.configure(hostName, keyStore.contents, password, httpPort, httpsPort);
+
+        HttpHandler handler = new HttpHandler(server, webApp);
+
+        server.start(handler);
 
         return () -> handler.shutdown();
         }

@@ -26,12 +26,24 @@ interface HttpServer
     /**
      * The server port number that provides "transport layer security".
      */
-    UInt16 tlsPort;
+    @RO UInt16 tlsPort;
 
     /**
-     * Attach a handler.
+     * Configure the server.
+     *
+     * @param hostName   the host name (e.g. "www.xqiz.it")
+     * @param keyStore   the content of the keystore to use for tls certificates and encryption
+     * @param password   the keystore password
+     * @param httpPort   the port for plain text (insecure) communications
+     * @param httpsPort  the port for encrypted (tls) communications
      */
-    void attachHandler(Handler handler);
+    void configure(String hostName, Byte[] keyStore, String password,
+                   UInt16 httpPort = 80, UInt16 httpsPort = 443);
+
+    /**
+     * Start the server, routing all incoming requests to the specified handler.
+     */
+    void start(Handler handler);
 
     /**
      * Send a response.

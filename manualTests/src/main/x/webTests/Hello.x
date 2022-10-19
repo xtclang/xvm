@@ -1,4 +1,4 @@
-@web.WebApp
+@WebApp
 module Hello
     {
     package web   import web.xtclang.org;
@@ -10,8 +10,8 @@ module Hello
      * To run this module, create a self-signed certificate using the following command
      * (assuming "xvm/manualTests" is the current directory):
      *
-     *    keytool -genkeypair -keyalg RSA -alias hello -keystore data/hello/https.jks\
-     *            -storepass password -validity 365 -keysize 2048 -dname cn=xqiz.it
+     *    keytool -genkeypair -keyalg RSA -alias hello -keystore data/hello/https.p12\
+     *            -storetype PKCS12 -storepass password -validity 365 -keysize 2048 -dname cn=xqiz.it
      *
      * Then start the server by the command:
      *
@@ -33,15 +33,19 @@ module Hello
             password = args[0];
             }
 
-        xenia.createServer($"localhost:8080,8090,{curDir}/data/hello/https.jks,{password}", this);
+        File   keyStore  = curDir.fileFor("data/hello/https.p12");
+        String hostName  = "localhost";
+        UInt16 httpPort  = 8080;
+        UInt16 httpsPort = 8090;
+        xenia.createServer(this, hostName, keyStore, password, httpPort, httpsPort);
 
-        console.println(\|Use the curl command to test, for example:
+        console.println($|Use the curl command to test, for example:
                          |
-                         |  curl -L -b cookies.txt -i -w '\n' -X GET http://localhost:8080/
+                         |  curl -L -b cookies.txt -i -w '\\n' -X GET http://{hostName}:{httpPort}/
                          |
                          | To activate the debugger:
                          |
-                         |  curl -L -b cookies.txt -i -w '\n' -X GET http://localhost:8080/e/debug
+                         |  curl -L -b cookies.txt -i -w '\\n' -X GET http://{hostName}:{httpPort}/e/debug
                          |
                          |Use Ctrl-C to stop.
                         );

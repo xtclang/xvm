@@ -27,10 +27,6 @@ service HttpHandler
         registry.registerResource("sessionManager", this.sessionManager);
         registry.registerResource("catalog", this.catalog);
         }
-    finally
-        {
-        httpServer.attachHandler(this);
-        }
 
     /**
      * The HttpServer.

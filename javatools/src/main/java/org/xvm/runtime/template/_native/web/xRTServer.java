@@ -9,8 +9,9 @@ import com.sun.net.httpserver.HttpsExchange;
 import com.sun.net.httpserver.HttpsParameters;
 import com.sun.net.httpserver.HttpsServer;
 
-import java.io.FileInputStream;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 
 import java.net.InetSocketAddress;
@@ -39,12 +40,10 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TypeComposition;
 
-import org.xvm.runtime.template.numbers.xUInt16;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
 import org.xvm.runtime.template.xException;
@@ -57,6 +56,7 @@ import org.xvm.runtime.template.collections.xArray.Mutability;
 import org.xvm.runtime.template.collections.xByteArray;
 
 import org.xvm.runtime.template.numbers.xInt64;
+import org.xvm.runtime.template.numbers.xUInt16;
 
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
@@ -65,8 +65,6 @@ import org.xvm.runtime.template._native.collections.arrays.xRTStringDelegate.Str
 
 import org.xvm.runtime.template._native.reflect.xRTFunction;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
-
-import org.xvm.util.Handy;
 
 
 /**
@@ -92,9 +90,10 @@ public class xRTServer
         {
         markNativeProperty("tlsPort");
 
-        markNativeMethod("attachHandler", null, VOID);
-        markNativeMethod("send"         , null, VOID);
-        markNativeMethod("close"        , null, VOID);
+        markNativeMethod("configure", null, VOID);
+        markNativeMethod("start"    , null, VOID);
+        markNativeMethod("send"     , null, VOID);
+        markNativeMethod("close"    , null, VOID);
 
         markNativeMethod("getClientAddressBytes",  null, null);
         markNativeMethod("getClientPort",          null, null);
@@ -127,112 +126,11 @@ public class xRTServer
      */
     public ObjectHandle ensureServer(Frame frame, ObjectHandle hOpts)
         {
-        if (!(hOpts instanceof StringHandle hAddress))
-            {
-            return new DeferredCallHandle(xException.illegalArgument(frame,
-                    "Injection must specify a server address"));
-            }
+        ServiceContext context  = f_container.createServiceContext("HttpServer");
+        ServiceHandle  hService = new HttpServerHandle(getCanonicalClass(f_container), context);
 
-        // the address string format: "host_name:[http_port],[https_port],[key_store]
-        String  sAddress  = hAddress.getStringValue();
-        int     ofPort    = sAddress.indexOf(':');
-        boolean fValid    = ofPort > 0;
-        String  sHost     = null;
-        int     nHttpPort = 0, nHttpsPort = 0;
-        String  sKeyStore = null;
-        String  sPassword = null;
-
-        if (fValid)
-            {
-            sHost    = sAddress.substring(0, ofPort);
-            sAddress = sAddress.substring(ofPort + 1);
-
-            String[] asPorts = Handy.parseDelimitedString(sAddress, ',');
-            try
-                {
-                nHttpPort  = Integer.valueOf(asPorts[0]);
-                nHttpsPort = Integer.valueOf(asPorts[1]);
-                sKeyStore  = asPorts[2];
-                sPassword  = asPorts[3];
-                fValid     = nHttpPort > 0 && nHttpsPort > 0 && nHttpPort != nHttpsPort;
-                }
-            catch (Exception e)
-                {
-                fValid = false;
-                }
-            }
-
-        if (!fValid)
-            {
-            return new DeferredCallHandle(xException.illegalArgument(frame,
-                    "Server address format must be: \"host_name:[http_port],[https_port]\""));
-            }
-
-        try
-            {
-            HttpServer  httpServer  = createHttpServer (new InetSocketAddress(sHost, nHttpPort));
-            HttpsServer httpsServer = createHttpsServer(new InetSocketAddress(sHost, nHttpsPort),
-                                                            sKeyStore, sPassword.toCharArray());
-
-            Container       container = f_container;
-            ServiceContext  context   = container.createServiceContext("HttpServer@" + sAddress);
-            ServiceHandle   hService  = new HttpServerHandle(getCanonicalClass(container), context,
-                                            httpServer, httpsServer);
-            context.setService(hService);
-            return hService;
-            }
-        catch (Exception e)
-            {
-            return new DeferredCallHandle(xException.ioException(frame, e.getMessage()));
-            }
-        }
-
-    private HttpServer createHttpServer(InetSocketAddress addr)
-            throws IOException
-        {
-        return HttpServer.create(addr, 0);
-        }
-
-    private HttpsServer createHttpsServer(InetSocketAddress addr, String sKeyStorePath, char[] achPwd)
-            throws Exception
-        {
-        KeyStore        keyStore = KeyStore.getInstance("JKS");
-        FileInputStream in       = new FileInputStream(sKeyStorePath);
-
-        keyStore.load(in, achPwd);
-
-        KeyManagerFactory keyManager = KeyManagerFactory.getInstance("SunX509");
-        keyManager.init(keyStore, achPwd);
-
-        TrustManagerFactory trustFactory = TrustManagerFactory.getInstance("SunX509");
-        trustFactory.init(keyStore);
-
-        SSLContext ctxSSL = SSLContext.getInstance("TLS");
-        ctxSSL.init(keyManager.getKeyManagers(), trustFactory.getTrustManagers(), null);
-
-        HttpsServer httpsServer = HttpsServer.create(addr, 0);
-        httpsServer.setHttpsConfigurator(new HttpsConfigurator(ctxSSL)
-            {
-            @Override
-            public void configure(HttpsParameters params)
-                {
-                try
-                    {
-                    SSLContext ctxSSL = getSSLContext();
-                    SSLEngine  engine = ctxSSL.createSSLEngine();
-
-                    params.setNeedClientAuth(true);
-                    params.setCipherSuites(engine.getEnabledCipherSuites());
-                    params.setProtocols(engine.getEnabledProtocols());
-                    params.setSSLParameters(ctxSSL.getSupportedSSLParameters());
-                    }
-                catch (Exception ex)
-                    {
-                    throw new RuntimeException("failed to initialize the SSL context", ex);
-                    }
-                }
-            });
-        return httpsServer;
+        context.setService(hService);
+        return hService;
         }
 
     @Override
@@ -244,7 +142,7 @@ public class xRTServer
                 {
                 HttpServerHandle hServer = (HttpServerHandle) hTarget;
                 return frame.assignValue(iReturn,
-                        xUInt16.INSTANCE.makeJavaLong(hServer.f_httpsServer.getAddress().getPort()));
+                        xUInt16.INSTANCE.makeJavaLong(hServer.m_httpsServer.getAddress().getPort()));
                 }
             }
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
@@ -255,8 +153,8 @@ public class xRTServer
         {
         switch (method.getName())
             {
-            case "attachHandler":
-                return invokeAttachHandler(frame, (HttpServerHandle) hTarget, (ServiceHandle) hArg);
+            case "start":
+                return invokeStart(frame, (HttpServerHandle) hTarget, (ServiceHandle) hArg);
 
             case "getClientAddressBytes":
                 return invokeGetClientAddress(frame, (HttpContextHandle) hArg, iReturn);
@@ -294,6 +192,9 @@ public class xRTServer
         {
         switch (method.getName())
             {
+            case "configure":
+                return invokeConfigure(frame, (HttpServerHandle) hTarget,  ahArg);
+
             case "send":
                 return invokeSend(frame, ahArg);
             }
@@ -324,13 +225,98 @@ public class xRTServer
 
     // ----- native implementations ----------------------------------------------------------------
 
+
     /**
-     * Implementation of "attachHandler()" method.
+     * Implementation of "configure(String hostName, Byte[] keystore, String password,
+     *                              UInt16 httpPort = 80, UInt16 httpsPort = 443)" method.
      */
-    private int invokeAttachHandler(Frame frame, HttpServerHandle hServer, ServiceHandle hHandler)
+    private int invokeConfigure(Frame frame, HttpServerHandle hServer, ObjectHandle[] ahArg)
         {
-        HttpServer  httpServer  = hServer.f_httpServer;
-        HttpsServer httpsServer = hServer.f_httpsServer;
+        if (hServer.m_httpServer != null)
+            {
+            return frame.raiseException(xException.illegalState(frame, "Server is already configured"));
+            }
+
+        String  sHost       = ((StringHandle) ahArg[0]).getStringValue();
+        byte[]  abKeyStore  = xByteArray.getBytes((ArrayHandle) ahArg[1]);
+        char[]  achPassword = ((StringHandle) ahArg[2]).getValue();
+        int     nHttpPort   = ahArg[3] instanceof JavaLong hPort ? (int) hPort.getValue() : 80;
+        int     nHttpsPort  = ahArg[4] instanceof JavaLong hPort ? (int) hPort.getValue() : 443;
+
+        try
+            {
+            HttpServer  httpServer  = createHttpServer (new InetSocketAddress(sHost, nHttpPort));
+            HttpsServer httpsServer = createHttpsServer(new InetSocketAddress(sHost, nHttpsPort),
+                                                            abKeyStore, achPassword);
+            hServer.configure(httpServer, httpsServer);
+            return Op.R_NEXT;
+            }
+        catch (Exception e)
+            {
+            return frame.raiseException(xException.ioException(frame, e.getMessage()));
+            }
+        }
+
+    private HttpServer createHttpServer(InetSocketAddress addr)
+            throws IOException
+        {
+        return HttpServer.create(addr, 0);
+        }
+
+    private HttpsServer createHttpsServer(InetSocketAddress addr, byte[] abKeyStore, char[] achPwd)
+            throws Exception
+        {
+        KeyStore    keyStore = KeyStore.getInstance("PKCS12");
+        InputStream in       = new ByteArrayInputStream(abKeyStore);
+
+        keyStore.load(in, achPwd);
+
+        KeyManagerFactory keyManager = KeyManagerFactory.getInstance("SunX509");
+        keyManager.init(keyStore, achPwd);
+
+        TrustManagerFactory trustFactory = TrustManagerFactory.getInstance("SunX509");
+        trustFactory.init(keyStore);
+
+        SSLContext ctxSSL = SSLContext.getInstance("TLS");
+        ctxSSL.init(keyManager.getKeyManagers(), trustFactory.getTrustManagers(), null);
+
+        HttpsServer httpsServer = HttpsServer.create(addr, 0);
+        httpsServer.setHttpsConfigurator(new HttpsConfigurator(ctxSSL)
+            {
+            @Override
+            public void configure(HttpsParameters params)
+                {
+                try
+                    {
+                    SSLContext ctxSSL = getSSLContext();
+                    SSLEngine  engine = ctxSSL.createSSLEngine();
+
+                    params.setNeedClientAuth(true);
+                    params.setCipherSuites(engine.getEnabledCipherSuites());
+                    params.setProtocols(engine.getEnabledProtocols());
+                    params.setSSLParameters(ctxSSL.getSupportedSSLParameters());
+                    }
+                catch (Exception ex)
+                    {
+                    throw new RuntimeException("failed to initialize the SSL context", ex);
+                    }
+                }
+            });
+        return httpsServer;
+        }
+
+    /**
+     * Implementation of "start(Handler handler)" method.
+     */
+    private int invokeStart(Frame frame, HttpServerHandle hServer, ServiceHandle hHandler)
+        {
+        HttpServer  httpServer  = hServer.m_httpServer;
+        HttpsServer httpsServer = hServer.m_httpsServer;
+
+        if (httpServer == null)
+            {
+            return frame.raiseException(xException.illegalState(frame, "Server is not configured"));
+            }
 
         if (hServer.m_httpHandler == null)
             {
@@ -524,27 +510,30 @@ public class xRTServer
      */
     private int invokeClose(HttpServerHandle hServer)
         {
-        HttpServer httpServer  = hServer.f_httpServer;
-        HttpServer httpsServer = hServer.f_httpsServer;
-        if (httpServer.getExecutor() == null)
+        HttpServer httpServer  = hServer.m_httpServer;
+        HttpServer httpsServer = hServer.m_httpsServer;
+        if (hServer != null)
             {
-            // we need to compensate for a bug in com.sun.net.httpserver.HttpServer that doesn't
-            // properly close the server socket that hasn't been established
-            httpServer.start();
-            httpServer.stop(0);
-            httpsServer.start();
-            httpsServer.stop(0);
+            if (httpServer.getExecutor() == null)
+                {
+                // we need to compensate for a bug in com.sun.net.httpserver.HttpServer that doesn't
+                // properly close the server socket that hasn't been established
+                httpServer.start();
+                httpServer.stop(0);
+                httpsServer.start();
+                httpsServer.stop(0);
+                }
+            else
+                {
+                httpServer.removeContext("/");
+                httpServer.stop(0);
+                httpsServer.removeContext("/");
+                httpsServer.stop(0);
+                ((ExecutorService) httpServer.getExecutor()).shutdown();
+                hServer.f_context.f_container.getServiceContext().unregisterNotification();
+                }
+            hServer.m_httpHandler = null;
             }
-        else
-            {
-            httpServer.removeContext("/");
-            httpServer.stop(0);
-            httpsServer.removeContext("/");
-            httpsServer.stop(0);
-            ((ExecutorService) httpServer.getExecutor()).shutdown();
-            hServer.f_context.f_container.getServiceContext().unregisterNotification();
-            }
-        hServer.m_httpHandler = null;
 
         return Op.R_NEXT;
         }
@@ -667,24 +656,33 @@ public class xRTServer
     protected static class HttpServerHandle
             extends ServiceHandle
         {
-        public HttpServerHandle(TypeComposition clazz, ServiceContext context,
-                                HttpServer httpServer, HttpsServer httpsServer)
+        protected HttpServerHandle(TypeComposition clazz, ServiceContext context)
             {
             super(clazz, context);
+            }
 
-            f_httpServer  = httpServer;
-            f_httpsServer = httpsServer;
+        protected void configure(HttpServer httpServer, HttpsServer httpsServer)
+            {
+            m_httpServer  = httpServer;
+            m_httpsServer = httpsServer;
+            }
+
+        @Override
+        public String toString()
+            {
+            return "HttpServer" +
+                    (m_httpServer == null ? "" : "@" + m_httpServer.getAddress().getHostString());
             }
 
         /**
          * The underlying {@link HttpServer}.
          */
-        protected final HttpServer f_httpServer;
+        protected HttpServer m_httpServer;
 
         /**
          * The underlying {@link HttpsServer}.
          */
-        protected final HttpsServer f_httpsServer;
+        protected HttpsServer m_httpsServer;
 
         /**
          * The handle to the http(s) request handler.
