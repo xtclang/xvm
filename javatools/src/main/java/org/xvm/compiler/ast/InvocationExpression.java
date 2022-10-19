@@ -1441,8 +1441,10 @@ public class InvocationExpression
 
                                 for (int i = 0; i < cArgs; ++i)
                                     {
-                                    aArgs[cTypeParams + i] =
-                                            args.get(i).generateArgument(ctx, code, true, true, errs);
+                                    Argument arg = args.get(i).generateArgument(ctx, code, true, true, errs);
+                                    aArgs[cTypeParams + i] = i == cArgs-1
+                                            ? arg
+                                            : ensurePointInTime(code, arg);
                                     }
 
                                 for (int i = 0; i < cDefaults; ++i)
@@ -1697,7 +1699,10 @@ public class InvocationExpression
 
                     for (int i = 0; i < cArgs; ++i)
                         {
-                        aArgs[cTypeParams + i] = args.get(i).generateArgument(ctx, code, true, true, errs);
+                        Argument arg = args.get(i).generateArgument(ctx, code, true, true, errs);
+                        aArgs[cTypeParams + i] = i == cArgs-1
+                                ? arg
+                                : ensurePointInTime(code, arg);
                         }
 
                     for (int i = 0; i < cDefaults; ++i)
@@ -1870,7 +1875,9 @@ public class InvocationExpression
                 if (!exprArg.isNonBinding())
                     {
                     aiArg[iBind] = cTypeParams + i;
-                    aArg [iBind] = exprArg.generateArgument(ctx, code, true, true, errs);
+                    aArg [iBind] = ensurePointInTime(code,
+                            exprArg.generateArgument(ctx, code, false, true, errs));
+
                     iBind++;
                     }
                 }

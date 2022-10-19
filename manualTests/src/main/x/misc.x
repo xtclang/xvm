@@ -38,6 +38,7 @@ module TestMisc
         testImport();
         testRecursiveType();
         testChild();
+        testSideEffects();
 
         countdown();
         }
@@ -754,6 +755,96 @@ module TestMisc
                 return this.EnhancedOrder.toString() +
                     ": " + lineNumber + ") " + descr;
                 }
+            }
+        }
+
+    void testSideEffects()
+        {
+        console.println("** testSideEffects()");
+
+        // tuple
+            {
+            Int x = 3;
+            function Int() fn = () -> (x, ++x)[0];
+            assert fn() == 3 as "tuple side-effect";
+            }
+
+        // invoke
+            {
+            Int x = 3;
+            function Int() fn = () -> x.minOf(++x);
+            assert fn() == 3 as "invoke side-effect";
+            }
+
+        // new
+            {
+            static const Point(Int x, Int y);
+
+            Int x = 3;
+            function Int() fn = () -> (new Point(x, ++x)).x;
+            assert fn() == 3 as "new side-effect";
+            }
+
+        // cmp
+            {
+            Int x = 3;
+            function Boolean() fn = () -> (x < ++x);
+            assert fn() as "cmp side-effect";
+            }
+
+        // cmp2
+            {
+            Int x = 3;
+            function Boolean() fn = () -> (++x < ++x);
+            assert fn() as "cmp2 side-effect";
+            }
+
+        // cmp chain
+            {
+            Int x = 3;
+            function Boolean() fn = () -> x <= 3 < ++x;
+            assert fn() as "cmpChain side-effect";
+            }
+
+        // relOp
+            {
+            Int x = 3;
+            function Int() fn = () -> x + ++x;
+            assert fn() == 7 as "relOp side-effect";
+            }
+
+        // list
+            {
+            Int x = 3;
+            function Int() fn = () -> [x, ++x, ++x][0];
+            assert fn() == 3 as "list side-effect";
+            }
+
+        // map
+            {
+            Int x = 3;
+            function Int?() fn = () -> Map<String, Int>:["a"=x, "b"=++x, "c"=++x].getOrNull("a");
+            assert fn() == 3 as "map side-effect";
+            }
+
+        // unpack
+            {
+            Int x = 3;
+            function (Int, Int)() fn = () -> (x, ++x);
+            assert fn() == 3 as "unpacked side-effect";
+            }
+
+        // return
+            {
+            static (Int, Int) fn()
+                {
+                function void (Int) log = (Int v) -> {};
+
+                @Watch(log) Int x = 3;
+                return x, x++;
+                }
+            (Int x, Int y) = fn();
+            assert x == 3 as "return side-effect";
             }
         }
 

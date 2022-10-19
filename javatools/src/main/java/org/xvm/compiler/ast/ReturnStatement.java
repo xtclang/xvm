@@ -480,8 +480,12 @@ public class ReturnStatement
                     Argument[] aArgs = new Argument[cRets];
                     for (int i = 0; i < cRets; ++i)
                         {
-                        aArgs[i] = listExprs.get(i).generateArgument(ctx, code, true,
-                                        i > 0 || !fConditional, errs);
+                        Expression expr = listExprs.get(i);
+                        Argument   arg  = expr.generateArgument(ctx, code, true, !fConditional || i > 0, errs);
+
+                        aArgs[i] = i == cExprs-1
+                                ? arg
+                                : expr.ensurePointInTime(code, arg);
                         }
 
                     Label labelFalse = fConditional ? new Label("false") : null;

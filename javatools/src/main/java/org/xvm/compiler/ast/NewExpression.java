@@ -885,7 +885,11 @@ public class NewExpression
             Argument[]       aArgs    = new Argument[cArgs];
             for (int i = 0; i < cArgs; ++i)
                 {
-                aArgs[i] = listArgs.get(i).generateArgument(ctx, code, false, true, errs);
+                Argument arg = listArgs.get(i).generateArgument(ctx, code, false, true, errs);
+                aArgs[i] = i == cArgs-1
+                        ? arg
+                        : ensurePointInTime(code, arg);
+
                 }
 
             if (anon != null)

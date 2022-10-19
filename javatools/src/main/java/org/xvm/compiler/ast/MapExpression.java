@@ -443,7 +443,10 @@ public class MapExpression
 
         for (int i = 0; i < cArgs; ++i)
             {
-            aArg[i] = list.get(i).generateArgument(ctx, code, true, false, errs);
+            Argument arg = list.get(i).generateArgument(ctx, code, true, false, errs);
+            aArg[i] = i == cArgs-1
+                    ? arg
+                    : ensurePointInTime(code, arg);
             }
         return aArg;
         }

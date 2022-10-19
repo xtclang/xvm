@@ -104,7 +104,10 @@ public class UnpackExpression
             Argument[]       aArgs  = new Argument[cExprs];
             for (int i = 0; i < cExprs; ++i)
                 {
-                aArgs[i] = exprs.get(i).generateArgument(ctx, code, false, false, errs);
+                Argument arg = exprs.get(i).generateArgument(ctx, code, false, false, errs);
+                aArgs[i] = i == cExprs-1
+                        ? arg
+                        : ensurePointInTime(code, arg);
                 }
 
             return aArgs;

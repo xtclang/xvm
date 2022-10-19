@@ -2124,6 +2124,20 @@ public abstract class Expression
         return atypeCommon;
         }
 
+    /**
+     * Check if the specified argument's value can be changed externally and replace it with a
+     * "point-in-time" value if necessary.
+     */
+    protected Argument ensurePointInTime(Code code, Argument arg)
+        {
+        if (arg instanceof Register reg && reg.isVar())
+            {
+            Register regTemp = createRegister(arg.getType(), false);
+            code.add(new Var_I(regTemp, reg));
+            arg = regTemp;
+            }
+        return arg;
+        }
 
     // ----- inner class: Assignable ---------------------------------------------------------------
 

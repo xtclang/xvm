@@ -437,7 +437,10 @@ public class ListExpression
 
         for (int i = 0; i < cArgs; ++i)
             {
-            aArgs[i] = listExprs.get(i).generateArgument(ctx, code, true, false, errs);
+            Argument arg = listExprs.get(i).generateArgument(ctx, code, true, false, errs);
+            aArgs[i] = i == cArgs-1
+                    ? arg
+                    : ensurePointInTime(code, arg);
             }
         return aArgs;
         }
