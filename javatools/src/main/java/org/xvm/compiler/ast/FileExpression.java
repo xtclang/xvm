@@ -126,15 +126,7 @@ public class FileExpression
             }
         }
 
-    private static final int FS   = 0x1;
-    private static final int DIR  = 0x2;
-    private static final int FILE = 0x4;
-    private static final int PATH = 0x8;
-    private static final int ALL  = FS | DIR | FILE | PATH;
-    private static final int NONE = 0x0;
-
-    @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
+    private int calcConsumes(TypeConstant typeRequired)
         {
         ConstantPool pool = pool();
 
@@ -166,11 +158,30 @@ public class FileExpression
                 }
             }
 
-        int nProduces = NONE;
+        return nConsumes;
+        }
+
+    private int calcProduces()
+        {
         String sType = getSimpleTypeName();
-        if (sType != null)
+        if (sType == null)
             {
-            nProduces = switch (sType)
+            if (m_file == null || !m_file.exists())
+                {
+                return PATH;
+                }
+            else if (m_file.isDirectory())
+                {
+                return FS | DIR | PATH;
+                }
+            else
+                {
+                return FILE | PATH;
+                }
+            }
+        else
+            {
+            return switch (sType)
                 {
                 case "FileStore" -> FS;
                 case "Directory" -> DIR;
@@ -179,25 +190,29 @@ public class FileExpression
                 default -> throw new IllegalStateException("type=" + sType);
                 };
             }
-        else
-            {
-            if (m_file == null || !m_file.exists())
-                {
-                nProduces = PATH;
-                }
-            else if (m_file.isDirectory())
-                {
-                nProduces = FS | DIR | PATH;
-                }
-            else
-                {
-                nProduces = FILE | PATH;
-                }
-            }
+        }
+
+    @Override
+    public TypeFit testFit(Context ctx, TypeConstant typeRequired, boolean fExhaustive,
+                           ErrorListener errs)
+        {
+        int nConsumes = calcConsumes(typeRequired);
+        int nProduces = calcProduces();
+        return (nConsumes & nProduces) == NONE
+                ? TypeFit.NoFit
+                : TypeFit.Fit;
+        }
+
+    @Override
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
+        {
+        ConstantPool pool = pool();
 
         TypeFit      fit        = TypeFit.Fit;
         TypeConstant typeActual = null;
         Constant     constVal   = null;
+        int          nConsumes  = calcConsumes(typeRequired);
+        int          nProduces  = calcProduces();
         try
             {
             switch (nConsumes & nProduces)
@@ -429,6 +444,13 @@ public class FileExpression
 
 
     // ----- fields --------------------------------------------------------------------------------
+
+    private static final int FS   = 0x1;
+    private static final int DIR  = 0x2;
+    private static final int FILE = 0x4;
+    private static final int PATH = 0x8;
+    private static final int ALL  = FS | DIR | FILE | PATH;
+    private static final int NONE = 0x0;
 
     /**
      * The (optional) type for the expression.
