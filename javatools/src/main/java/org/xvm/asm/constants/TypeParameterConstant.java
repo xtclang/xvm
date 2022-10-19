@@ -14,6 +14,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
+
 import org.xvm.util.TransientThreadLocal;
 
 import static org.xvm.util.Handy.readMagnitude;
@@ -232,7 +233,7 @@ public class TypeParameterConstant
             return nDif;
             }
 
-        try (var x = f_tloReEntry.push(true))
+        try (var ignore = f_tloReEntry.push(true))
             {
             return getParentConstant().compareTo(that.getParentConstant());
             }
