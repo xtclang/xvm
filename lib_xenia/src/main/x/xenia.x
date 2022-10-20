@@ -90,12 +90,13 @@ module xenia.xtclang.org
      * @return a function that allows to shutdown the server
      */
     function void () createServer(WebApp webApp, String hostName,
-                                  File keyStore, String password,
+                                  File|Byte[] keyStore, String password,
                                   UInt16 httpPort = 80, UInt16 httpsPort = 443)
         {
         @Inject HttpServer server;
 
-        server.configure(hostName, keyStore.contents, password, httpPort, httpsPort);
+        Byte[] keys = keyStore.is(File) ? keyStore.contents : keyStore;
+        server.configure(hostName, keys, password, httpPort, httpsPort);
 
         HttpHandler handler = new HttpHandler(server, webApp);
 

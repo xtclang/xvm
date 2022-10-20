@@ -5,7 +5,7 @@ module %appName%_web
 
     package hosted_ import %appName%;
 
-    function void () createServer_(String hostName, File keyStore, String password,
+    function void () createServer_(String hostName, File|Byte[] keyStore, String password,
                                    UInt16 httpPort = 80, UInt16 httpsPort = 443)
         {
         assert Module webApp := hosted_.isModuleImport(), webApp.is(web_.WebApp);
