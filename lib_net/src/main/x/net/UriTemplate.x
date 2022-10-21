@@ -96,7 +96,7 @@ const UriTemplate
             return uri.path == Path.ROOT ? (True, []) : False;
             }
 
-        Position position = START;
+        Position position = Start;
         Int      next     = 0;
 
         if (String literal := parts[next].is(String))
@@ -241,7 +241,6 @@ const UriTemplate
      * or a `Map` whose keys and values are Strings. A missing value is considered to be `undefined`
      * as defined by RFC 6570. An empty `String` is not undefined; however, an empty list and an
      * empty map are both considered to be undefined (as per section 2.3 in the RFC).
-     * REVIEW Map<String, String> or List<Tuple<String, String>>
      */
     typedef String | List<String> | Map<String, String> as Value;
 
@@ -448,7 +447,167 @@ const UriTemplate
             }
         }
 
-    // TODO - each specific expression type
+    /**
+     * Implements "Path Segment Expansion".
+     *
+     * See section 3.2.6 of RFC 6570.
+     */
+    static const PathSegment(Variable[] vars)
+            extends Expression(vars)
+        {
+        @Override
+        @RO Char? prefix.get()
+            {
+            return '/';
+            }
+
+        @Override
+        Appender<Char> expand(Appender<Char> buf, Lookup values)
+            {
+            for (Variable var : vars)
+                {
+                if (Value value := values(var.name))
+                    {
+                    buf.add('/');
+                    switch (value.is(_))
+                        {
+                        case String:
+                            render(buf, (value[0 ..< var.maxLength?] : value));
+                            break;
+
+                        case List<String>:
+                            Char delim = var.explode ? '/' : ',';
+                            Loop: for (String item : value)
+                                {
+                                if (!Loop.first)
+                                    {
+                                    buf.add(delim);
+                                    }
+                                render(buf, item);
+                                }
+                            break;
+
+                        case Map<String, String>:
+                            (Char kvDelim, Char entryDelim) = var.explode ? ('=','/') : (',',',');
+                            Loop: for ((String key, String val) : value)
+                                {
+                                if (!Loop.first)
+                                    {
+                                    buf.add(entryDelim);
+                                    }
+                                render(buf, key);
+                                buf.add(kvDelim);
+                                render(buf, val);
+                                }
+                            break;
+                        }
+                    }
+                }
+            return buf;
+            }
+
+        @Override
+        conditional (Position after, Map<String, Value> bindings) matches(Uri uri,
+                Position from, Position? to, Char? nextPrefix, Map<String, Value> bindings)
+            {
+            String path       = uri.path?.toString() : "";
+            Int    pathLength = path.size;
+            if (pathLength == 0)
+                {
+                // if there is no path, that we can't match a path
+                return False;
+                }
+
+            // we can only match a path if we are inside the path section
+            Int fromOffset;
+            switch (from.section <=> Path)
+                {
+                case Lesser:
+                    // test if we are at the very end of the previous section; if not, abort
+                    if (uri.canonicalSlice(from, StartPath).size > 0)       // TODO CP optimize
+                        {
+                        return False;
+                        }
+
+                    fromOffset = 0;
+                    break;
+
+                case Equal:
+                    fromOffset = from.offset;
+                    break;
+
+                case Greater:
+                    return False;
+                }
+
+            Int toOffset = pathLength;
+            switch (to?.section <=> Path)
+                {
+                case Lesser:
+                    return False;
+
+                case Equal:
+                    if (from.offset > to.offset)
+                        {
+                        return False;
+                        }
+
+                    toOffset = to.offset;
+                    break;
+
+                case Greater:
+                    // just go to the end of the path
+                    break;
+                }
+
+            if (nextPrefix? != prefix, Int foundAt := path.indexOf(nextPrefix), foundAt < toOffset)
+                {
+                toOffset = foundAt;
+                }
+
+            if (fromOffset == toOffset)
+                {
+                // 0-length means it's not a path segment, but if it's at the very end, it matches
+                // as "null" (i.e. nothing placed in the bindings)
+                return fromOffset == pathLength
+                        ? (True, new Position(Path, fromOffset), bindings)
+                        : False;
+                }
+
+            String text = path[fromOffset ..< toOffset];
+            if (text[0] != '/')
+                {
+                return False;
+                }
+
+            Int offset = 0;
+            Int length = text.size;
+            Loop: for (Variable var : vars)
+                {
+                if (length > offset && text[offset] != '/')
+                    {
+                    break;
+                    }
+
+                ++offset;
+
+                Int     nextDelim = length;
+                Boolean explode   = Loop.last && var.explode;
+                if (!explode)
+                    {
+                    nextDelim := text.indexOf('/', offset);
+                    }
+
+                String segment = text[offset ..< nextDelim];
+                Value  value   = explode ? segment.split('/') : segment;
+
+                bindings = (bindings.empty ? new HashMap<String, Value>() : bindings).put(var.name, value);
+                offset   = nextDelim;
+                }
+
+            return True, new Position(Path, fromOffset + offset), bindings;
+            }
+        }
 
 
     // ----- parsing -------------------------------------------------------------------------------
@@ -576,7 +735,7 @@ const UriTemplate
                                 case '+': TODO
                                 case '#': TODO
                                 case '.': TODO
-                                case '/': TODO
+                                case '/': new PathSegment(vars);
                                 case ';': TODO
                                 case '?': TODO
                                 case '&': TODO

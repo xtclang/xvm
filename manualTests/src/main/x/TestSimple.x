@@ -1,60 +1,109 @@
 module TestSimple
     {
+    package net import net.xtclang.org;
+
+    import net.Uri;
+    import net.UriTemplate;
+    import net.UriTemplate.UriParameters;
+
     @Inject Console console;
 
     void run( )
         {
-        String s1 = $./TestSimple.x;
-//        String s2 = $./TestSimple.y;      // parser error (the file does not exist)
+        Uri[] uris =
+            [
+            new Uri("/"),
+            new Uri("/tests"),
+            new Uri("/tests/"),
+            new Uri("/test"),
+            new Uri("/test/"),
+            new Uri("/test/s"),
+            new Uri("/test/abc"),
+            new Uri("/test/abc/"),
+            ];
 
-        Byte[] b1 = #./TestSimple.x;
-//        Byte[] b2 = #./TestSimple.y;      // parser error (the file does not exist)
+        UriTemplate[] templates =
+            [
+            new UriTemplate("test"),
+            new UriTemplate("tests"),
+            new UriTemplate("test/"),
+            new UriTemplate("tests/"),
+            new UriTemplate("/test"),
+            new UriTemplate("/tests"),
+            new UriTemplate("/test/"),
+            new UriTemplate("/tests/"),
+            new UriTemplate("/test/abc"),
+            new UriTemplate("/test/abc/"),
+            new UriTemplate("/test{/sub}"),
+            new UriTemplate("/tests{/sub}"),
+            ];
 
-//        Object o1 = ./TestSimple.x;       // compiler error (ambiguous type)
-        Object o2 = ./TestSimple.y;         // assumed to be path (the file does not exist)
-        Object o3 = Path:./TestSimple.x;
-        Object o4 = Path:./TestSimple.y;
+        for (UriTemplate template : templates)
+            {
+            out($"template={template}");
+            for (Uri uri : uris)
+                {
+                if (UriParameters result := template.matches(uri))
+                    {
+                    out($"  matches: {uri} -> {result}");
+                    }
+                else
+                    {
+                    out($"  no match: {uri}");
+                    }
+                }
+            }
 
-//        Exception o5 = ./TestSimple.y;    // type mismatch
-//        Exception o6 = ./TestSimple.x;    // type mismatch
+        Map<String, UriTemplate.Value> values =
+            [
+            "count" = ["one", "two", "three"],
+            "dom"   = ["example", "com"],
+            "dub"   = "me/too",
+            "hello" = "Hello World!",
+            "half"  = "50%",
+            "var"   = "value",
+            "who"   = "fred",
+            "base"  = "http://example.com/home/",
+            "path"  = "/foo/bar",
+            "list"  = ["red", "green", "blue"],
+            "keys"  = ["semi"=";", "dot"=".", "comma"=","],
+            "v"     = "6",
+            "x"     = "1024",
+            "y"     = "768",
+            "empty" = "",
+            "nokey" = List:[],
+            ];
 
-//        File|Path u1 = ./TestSimple.x;    // ambiguous
-        File|Path u1 = ./TestSimple.y;      // ok (can only be a path)
+        String[] examples =
+            [
+            "{/who}",
+            "{/who,who}",
+            "{/half,who}",
+            "{/who,dub}",
+            "{/var}",
+            "{/var,empty}",
+            "{/var,undef}",
+            "{/var,x}/here",
+            "{/var:1,var}",
+            "{/list}",
+            "{/list*}",
+            "{/list*,path:4}",
+            "{/keys}",
+            "{/keys*}",
+            ];
 
-        Path   p1 = ./TestSimple.x;
-        Path   p2 = ./TestSimple.y;
-        Path   p3 = Path:./TestSimple.x;
-        Path   p4 = Path:./TestSimple.y;
+        function String(String) render = t -> new UriTemplate(t).format(values);
 
-        File   f1 = ./TestSimple.x;
-//        File   f2 = ./TestSimple.y;       // compiler error (file does not exist, so type is Path)
-        File   f3 = File:./TestSimple.x;
-//        File   f4 = File:./TestSimple.y;  // parser error (the file does not exist)
+        out();
+        for (String example : examples)
+            {
+            out($"{example} = {render(example)}");
+            }
 
-        Directory d1  = ./;
-//        Directory d2  = ./doesnotexist;   // type mismatch; right side is inferred as Path
-//        Directory d3  = ./doesnotexist/;  // type mismatch; right side is inferred as Path
-        Directory d4  = Directory:./;
-//        Directory d5  = Directory:./doesnotexist;     // parser error (the dir does not exist)
-//        Directory d6  = Directory:./doesnotexist/;    // parser error (the dir does not exist)
-
-        FileStore fs1 = ./;
-//        FileStore fs2 = ./doesnotexist;   // type mismatch; right side is inferred as Path
-//        FileStore fs3 = ./doesnotexist/;  // type mismatch; right side is inferred as Path
-        FileStore fs4 = FileStore:./;
-//        FileStore fs5 = FileStore:./doesnotexist;     // parser error (the dir does not exist)
-//        FileStore fs6 = FileStore:./doesnotexist/;    // parser error (the dir does not exist)
         }
 
-    service Test(Int n)
+    static void out(String text="")
         {
-        Int foo()
-            {
-            for (Int i : 1..10)
-                {
-                console.println($"in Test({n}) foo #{i}");
-                }
-            return n;
-            }
+        console.println(text);
         }
     }

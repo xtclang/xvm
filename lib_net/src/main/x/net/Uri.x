@@ -310,10 +310,35 @@ const Uri
      */
     static const Position(Section section, Int offset)
         {
+        Position with(Section? section=Null, Int? offset=Null)
+            {
+            return new Position(section ?: this.section, offset ?: this.offset);
+            }
+
         /**
          * A pre-defined Position for the beginning of a Uri.
          */
-        static Position START = new Position(Scheme, 0);
+        static Position Start = new Position(Scheme, 0);
+        /**
+         * A pre-defined Position for the beginning of the Scheme.
+         */
+        static Position StartScheme = Start;
+        /**
+         * A pre-defined Position for the beginning of the Authority.
+         */
+        static Position StartAuthority = new Position(Authority, 0);
+        /**
+         * A pre-defined Position for the beginning of the Path.
+         */
+        static Position StartPath = new Position(Path, 0);
+        /**
+         * A pre-defined Position for the beginning of the Query.
+         */
+        static Position StartQuery = new Position(Query, 0);
+        /**
+         * A pre-defined Position for the beginning of the Fragment.
+         */
+        static Position StartFragment = new Position(Fragment, 0);
         }
 
     /**
@@ -359,7 +384,7 @@ const Uri
     conditional (Position found, Position next) find(String literal, Position? from=Null, Position? to=Null)
         {
         // start at the beginning if no "start from" specified
-        from ?:= START;
+        from ?:= Start;
 
         Int literalLength = literal.size;
         if (literalLength == 0)
@@ -645,7 +670,8 @@ const Uri
      * Obtain a portion of the URI's canonical form starting from the specified [Position] and
      * ending immediately before the `next` [Position].
      *
-     * @param
+     * @param start  the position to start the slice from (inclusive)
+     * @param next   (optional) the position to end the slice at (exclusive)
      *
      * @return the specified slice of the URI in the URI's canonical format
      */
