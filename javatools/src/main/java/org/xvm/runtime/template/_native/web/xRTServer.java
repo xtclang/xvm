@@ -331,6 +331,11 @@ public class xRTServer
                 return thread;
                 };
 
+            // We don't actually rely on any scaling here; all requests go to a single natural
+            // Handler service instance that needs to demultiplex it as quick as possible
+            // (see HttpHandler.x in xenia.xtclang.org module).
+            // If necessary, we can change the start() method to take an array of handlers and
+            // demultiplex it earlier by the native code
             Executor executor = Executors.newCachedThreadPool(factory);
 
             httpServer.setExecutor(executor);
