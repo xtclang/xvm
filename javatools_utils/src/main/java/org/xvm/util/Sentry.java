@@ -11,6 +11,7 @@ import java.util.function.Consumer;
  *
  * @author mf
  */
+@FunctionalInterface
 public interface Sentry<T>
         extends AutoCloseable
     {
