@@ -122,9 +122,21 @@ public class xTerminalConsole
 
                 try
                     {
-                    StringHandle hLine = fEcho || CONSOLE == null
-                            ? xString.makeHandle(CONSOLE_IN.readLine())
-                            : xString.makeHandle(CONSOLE.readPassword());
+                    StringHandle hLine;
+                    if (fEcho || CONSOLE == null)
+                        {
+                        String sLine = CONSOLE_IN.readLine();
+                        hLine = sLine == null
+                            ? xString.EMPTY_STRING
+                            : xString.makeHandle(sLine);
+                        }
+                    else
+                        {
+                        char[] achLine = CONSOLE.readPassword();
+                        hLine = achLine == null
+                            ? xString.EMPTY_STRING
+                            : xString.makeHandle(achLine);
+                        }
                     return frame.assignValue(iReturn, hLine);
                     }
                 catch (IOException e)
