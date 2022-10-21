@@ -92,8 +92,8 @@ const UriTemplate
 
         if (count == 0)
             {
-            // UriTemplate.ROOT only matches the ROOT path
-            return uri.path == Path.ROOT ? (True, []) : False;
+            // UriTemplate.ROOT only matches the root path
+            return uri.path == "/" ? (True, []) : False;
             }
 
         Position position = Start;

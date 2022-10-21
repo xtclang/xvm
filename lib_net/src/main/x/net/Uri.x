@@ -23,7 +23,7 @@ const Uri
          String?    host,
          IPAddress? ip,
          UInt16?    port,
-         Path?      path,
+         String?    path,
          String?    query,
          String?    opaque,
          String?    fragment,
@@ -57,7 +57,7 @@ const Uri
               String?    host      = Null,
               IPAddress? ip        = Null,
               UInt16?    port      = Null,
-              Path?      path      = Null,
+              String?    path      = Null,
               String?    query     = Null,
               String?    opaque    = Null,
               String?    fragment  = Null,
@@ -218,7 +218,7 @@ const Uri
                       String?    host,
                       IPAddress? ip,
                       UInt16?    port,
-                      Path?      path,
+                      String?    path,
                       String?    query,
                       String?    opaque,
                       String?    fragment,
@@ -267,7 +267,7 @@ const Uri
     /**
      * The optional path.
      */
-    Path? path;
+    String? path;
     /**
      * The optional query, which is the part that follows '?'.
      */
@@ -396,7 +396,7 @@ const Uri
 
         @Lazy(() -> scheme ?: "")                              String cachedScheme;
         @Lazy(() -> authority == Null ? "" : $"//{authority}") String cachedAuthority;
-        @Lazy(() -> path == Null ? "" : path.toString())       String cachedPath;
+        @Lazy(() -> path == Null ? "" : path)                  String cachedPath;
         @Lazy(() -> query == Null ? "" : $"?{query}")          String cachedQuery;
         @Lazy(() -> fragment == Null ? "" : $"#{fragment}")    String cachedFragment;
 
@@ -743,7 +743,7 @@ const Uri
             case Path:
                 assert opaque == Null;
                 Boolean last = nextSection == Path;
-                if (Path path ?= path)
+                if (String path ?= path)
                     {
                     String  pathString = path.toString();
                     Boolean truncate   = last && nextOffset < pathString.size;
@@ -884,7 +884,7 @@ const Uri
              String?    host,
              IPAddress? ip,
              UInt16?    port,
-             Path?      path,
+             String?    path,
              String?    query,
              String?    opaque,
              String?    fragment) := parse(text))
@@ -921,7 +921,7 @@ const Uri
             String?     host,
             IPAddress?  ip,
             UInt16?     port,
-            Path?       path,
+            String?     path,
             String?     query,
             String?     opaque,
             String?     fragment,
@@ -933,7 +933,7 @@ const Uri
         String?    host      = Null;
         IPAddress? ip        = Null;
         UInt16?    port      = Null;
-        Path?      path      = Null;
+        String?    path      = Null;
         String?    query     = Null;
         String?    opaque    = Null;
         String?    fragment  = Null;
@@ -1158,7 +1158,7 @@ const Uri
          * Internal: Parse a URI "net_path", if there is one.
          */
         static (Boolean found, String? authority, String? user, String? host, IPAddress? ip,
-                UInt16? port, Path? path, Int offset, String? error) parseNetPath(
+                UInt16? port, String? path, Int offset, String? error) parseNetPath(
                 String text, Int offset, String? error)
             {
             if (error != Null)
@@ -1181,7 +1181,7 @@ const Uri
             String?    host      = Null;
             IPAddress? ip        = Null;
             UInt16?    port      = Null;
-            Path?      path      = Null;
+            String?    path      = Null;
 
             Int     atSign       = -1;
             Int     atSigns      = 0;
@@ -1284,13 +1284,13 @@ const Uri
         /**
          * Internal: Parse a URI "abs_path", if there is one.
          *
-         *     abs_path      = "/"  path_segments
+         *     abs_path      = "/" path_segments
          *     path_segments = segment *( "/" segment )
          *     segment       = *pchar *( ";" param )
          *     param         = *pchar
          *     pchar         = unreserved | escaped | ":" | "@" | "&" | "=" | "+" | "$" | ","
          */
-        static (Boolean found, Path? path, Int offset, String? error) parseAbsPath(
+        static (Boolean found, String? path, Int offset, String? error) parseAbsPath(
                 String text, Int offset, String? error)
             {
             if (error != Null)
@@ -1304,7 +1304,7 @@ const Uri
                 return False, Null, offset, error;
                 }
 
-            (Path path, offset, error) = parsePath(Path.ROOT, text, offset+1, error);
+            (String path, offset, error) = parsePath(text, offset+1, error);
             return True, path, offset, error;
             }
 
@@ -1314,7 +1314,7 @@ const Uri
          *     rel_path    = rel_segment [ abs_path ]
          *     rel_segment = 1*( unreserved | escaped | ";" | "@" | "&" | "=" | "+" | "$" | "," )
          */
-        static (Boolean found, Path? path, Int offset, String? error) parseRelPath(
+        static (Boolean found, String? path, Int offset, String? error) parseRelPath(
                 String text, Int offset, String? error)
             {
             if (error != Null)
@@ -1329,14 +1329,14 @@ const Uri
                 return False, Null, offset, error;
                 }
 
-            (Path path, offset, error) = parsePath(Null, text, offset, error);
+            (String path, offset, error) = parsePath(text, offset, error);
             return True, path, offset, error;
             }
 
         /**
          * Internal: Parse a path.
          */
-        static (Path path, Int offset, String? error) parsePath(Path? path, String text, Int offset, String? error)
+        static (String path, Int offset, String? error) parsePath(String text, Int offset, String? error)
             {
             Int start  = offset;
             Int length = text.size;
@@ -1350,8 +1350,6 @@ const Uri
                         break EachChar;
 
                     case '/':
-                        path  = new Path(path, text[start ..< offset]);
-                        start = offset + 1;
                         break;
 
                     // unreserved:
@@ -1375,12 +1373,7 @@ const Uri
                     }
                 }
 
-            if (offset > start)
-                {
-                path = new Path(path, text[start ..< offset]);
-                }
-
-            return path ?: assert, offset, error;
+            return text[start ..< offset], offset, error;
             }
 
         /**

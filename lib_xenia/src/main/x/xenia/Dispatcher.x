@@ -154,7 +154,7 @@ service Dispatcher(Catalog          catalog,
                     Uri uri;
                     try
                         {
-                        uri = new Uri(path=new Path(uriString), query=query, fragment=fragment);
+                        uri = new Uri(path=uriString, query=query, fragment=fragment);
                         }
                     catch (Exception e)
                         {
@@ -255,7 +255,7 @@ service Dispatcher(Catalog          catalog,
 
                     // come back to verify that the user agent received and subsequently sent the
                     // cookies
-                    Uri newUri = new Uri(path=new Path($"{catalog.services[0].path}/session/{redirectId}"));
+                    Uri newUri = new Uri(path=$"{catalog.services[0].path}/session/{redirectId}");
                     header.put(Header.LOCATION, newUri.toString());
                     break ProcessRequest;
                     }
