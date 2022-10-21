@@ -2265,8 +2265,8 @@ public class NameExpression
                         PropertyInfo infoProp = infoLeft.findProperty((PropertyConstant) idChild);
                         if (infoProp == null)
                             {
-                            // TODO GG: basically an assert; need a better error?
-                            log(errs, Severity.ERROR, Compiler.INVALID_PROPERTY_REF);
+                            log(errs, Severity.ERROR, Compiler.PROPERTY_INACCESSIBLE,
+                                    idChild.getName(), typeLeft.getValueString());
                             return null;
                             }
                         m_arg         = idChild;

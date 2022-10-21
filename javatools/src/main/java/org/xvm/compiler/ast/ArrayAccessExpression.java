@@ -921,8 +921,6 @@ public class ArrayAccessExpression
             {
             if (cParams > 0)
                 {
-                // TODO GG: what does the following comment mean?
-                // TODO: add support for parameters with default values
                 TypeConstant[] atypeOpParams = idOp.getRawParams();
                 int            cOpParams     = atypeOpParams.length;
                 if (cParams != cOpParams)
@@ -1272,9 +1270,9 @@ public class ArrayAccessExpression
      */
     private IntConstant fromLiteral(Expression expr)
         {
-        if (expr instanceof LiteralExpression)
+        if (expr instanceof LiteralExpression exprLit)
             {
-            Constant constLit = ((LiteralExpression) expr).getLiteralConstant();
+            Constant constLit = exprLit.getLiteralConstant();
             try
                 {
                 return (IntConstant) constLit.convertTo(pool().typeCInt64());
