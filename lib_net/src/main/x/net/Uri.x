@@ -484,17 +484,15 @@ const Uri
             return True, from;
             }
 
-        @Lazy(() -> scheme ?: "")                              String cachedScheme;
         @Lazy(() -> authority == Null ? "" : $"//{authority}") String cachedAuthority;
-        @Lazy(() -> path == Null ? "" : path.toString())       String cachedPath;
         @Lazy(() -> query == Null ? "" : $"?{query}")          String cachedQuery;
         @Lazy(() -> fragment == Null ? "" : $"#{fragment}")    String cachedFragment;
 
         function String(Section) partFor = section -> switch (section)
             {
-            case Scheme:    cachedScheme;
+            case Scheme:    scheme ?: "";
             case Authority: cachedAuthority;
-            case Path:      cachedPath;
+            case Path:      path ?: "";
             case Query:     cachedQuery;
             case Fragment:  cachedFragment;
             };
@@ -1304,7 +1302,7 @@ const Uri
                 return False, Null, offset, error;
                 }
 
-            (String path, offset, error) = parsePath(text, offset+1, error);
+            (String path, offset, error) = parsePath(text, offset, error);
             return True, path, offset, error;
             }
 

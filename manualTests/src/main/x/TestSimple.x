@@ -35,7 +35,11 @@ module TestSimple
             new UriTemplate("/test/abc"),
             new UriTemplate("/test/abc/"),
             new UriTemplate("/test{/sub}"),
+            new UriTemplate("/test{/sub,sub2}"),
+            new UriTemplate("/test{/sub*}"),
             new UriTemplate("/tests{/sub}"),
+            new UriTemplate("/tests{/sub,sub2}"),
+            new UriTemplate("/tests{/sub*}"),
             ];
 
         for (UriTemplate template : templates)
@@ -99,7 +103,6 @@ module TestSimple
             {
             out($"{example} = {render(example)}");
             }
-
         }
 
     static void out(String text="")

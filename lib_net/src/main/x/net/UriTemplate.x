@@ -584,7 +584,7 @@ const UriTemplate
             Int length = text.size;
             Loop: for (Variable var : vars)
                 {
-                if (length > offset && text[offset] != '/')
+                if (offset >= length || text[offset] != '/')
                     {
                     break;
                     }
