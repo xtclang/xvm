@@ -179,7 +179,7 @@ public class ClassComposition
         {
         return type.equals(f_typeRevealed)  ? this :
                type.equals(f_typeInception) ? f_clzInception :
-               type.equals(f_typeStructure) ? ensureAccess(Access.STRUCT) :
+               f_typeStructure.isA(type) ? ensureAccess(Access.STRUCT) :
                f_typeInception.isA(type)
                    ? f_mapCompositions.computeIfAbsent(type,
                             typeR -> new ClassComposition(f_clzInception, typeR))
