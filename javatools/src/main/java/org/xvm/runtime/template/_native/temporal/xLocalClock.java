@@ -28,7 +28,7 @@ import org.xvm.runtime.template.collections.xArray.Mutability;
 import org.xvm.runtime.template.numbers.BaseInt128.LongLongHandle;
 import org.xvm.runtime.template.numbers.LongLong;
 import org.xvm.runtime.template.numbers.xInt64;
-import org.xvm.runtime.template.numbers.xUInt128;
+import org.xvm.runtime.template.numbers.xInt128;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 import org.xvm.runtime.template._native.reflect.xRTFunction.NativeFunctionHandle;
@@ -142,7 +142,7 @@ public class xLocalClock
         GenericHandle   hTime   = new GenericHandle(clzTime);
 
         LongLong llNow = new LongLong(System.currentTimeMillis()).mul(xNanosTimer.PICOS_PER_MILLI_LL);
-        hTime.setField(frame, "epochPicos", xUInt128.INSTANCE.makeLongLong(llNow));
+        hTime.setField(frame, "epochPicos", xInt128.INSTANCE.makeLongLong(llNow));
         hTime.setField(frame, "timezone", timezone(frame));
         hTime.makeImmutable();
 
