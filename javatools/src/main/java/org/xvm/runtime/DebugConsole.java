@@ -130,6 +130,12 @@ public class DebugConsole
             return Op.R_NEXT;
             }
 
+        if (frame != m_frame && hEx == m_frame.m_hException)
+            {
+            // this is a re-throw (most probable by FINALLY_END); ignore
+            return Op.R_NEXT;
+            }
+
         if (m_fBreakOnAllThrows ||
                  m_setThrowBreaks != null && m_setThrowBreaks.stream().anyMatch(bp -> bp.matches(hEx)))
             {
