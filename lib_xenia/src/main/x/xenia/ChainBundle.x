@@ -385,7 +385,7 @@ service ChainBundle
      * Generate a response handler for the specified endpoint.
      *
      * Note: Responders we return don't need to "freeze" the response they produce; it will be done
-     *       by the WebService.route() mathod.
+     *       by the WebService.route() method.
      */
     private Responder generateResponder(EndpointInfo endpoint)
         {
