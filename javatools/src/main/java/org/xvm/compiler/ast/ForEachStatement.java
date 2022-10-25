@@ -735,7 +735,8 @@ public class ForEachStatement
     private boolean emitRange(Context ctx, boolean fReachable, Code code, ErrorListener errs)
         {
         // code simplification for intrinsic sequential types
-        if (m_exprRValue.isConstant())
+        boolean fConstant = m_exprRValue.isConstant();
+        if (fConstant)
             {
             switch (m_exprRValue.getType().getParamType(0).removeAutoNarrowing().getEcstasyClassName())
                 {
@@ -759,9 +760,9 @@ public class ForEachStatement
             }
 
         TypeConstant typeElement = getElementType().removeAutoNarrowing();
-
-        if (typeElement.isExplicitClassIdentity(false) &&
-                typeElement.getExplicitClassFormat() == Component.Format.ENUM)
+        if (fConstant
+                && typeElement.isExplicitClassIdentity(false)
+                && typeElement.getExplicitClassFormat() == Component.Format.ENUM)
             {
             return emitConstantRange(ctx, fReachable, code, errs);
             }
