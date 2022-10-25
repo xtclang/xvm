@@ -749,6 +749,12 @@ class ObjectOutputStream(Schema schema, Writer writer)
             }
 
         @Override
+        <Serializable> PointerAwareElementOutput addUsing(Mapping<Serializable> mapping, Serializable value)
+            {
+            return writePointerOrValue(nextId, value, &addPointerReference(_), &super(mapping, value));
+            }
+
+        @Override
         PointerAwareElementOutput addArray(Iterable<Doc> values)
             {
             return writePointerOrValue(nextId, values, &addPointerReference(_), &super(values));
