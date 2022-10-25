@@ -804,7 +804,8 @@ public class NameExpression
                         if (idProp.getComponent().getParent() instanceof ClassStructure clzParent &&
                                 clzParent.isSingleton() && !ctx.getMethod().isPotentialInitializer())
                             {
-                            m_propAccessPlan = PropertyAccess.SingletonParent;
+                            m_propAccessPlan    = PropertyAccess.SingletonParent;
+                            m_idSingletonParent = clzParent.getIdentityConstant();
                             }
                         else
                             {
@@ -1048,8 +1049,8 @@ public class NameExpression
                         {
                         case SingletonParent:
                             {
-                            IdentityConstant  idParent    = idProp.getParentConstant();
-                            SingletonConstant idSingleton = pool().ensureSingletonConstConstant(idParent);
+                            SingletonConstant idSingleton =
+                                pool().ensureSingletonConstConstant(m_idSingletonParent);
                             code.add(new P_Get(idProp, idSingleton, argLVal));
                             break;
                             }
@@ -1281,8 +1282,8 @@ public class NameExpression
                     {
                     case SingletonParent:
                         {
-                        IdentityConstant  idParent    = idProp.getParentConstant();
-                        SingletonConstant idSingleton = pool().ensureSingletonConstConstant(idParent);
+                        SingletonConstant idSingleton =
+                            pool().ensureSingletonConstConstant(m_idSingletonParent);
 
                         code.add(new P_Get(idProp, idSingleton, regTemp));
                         break;
@@ -1673,7 +1674,7 @@ public class NameExpression
         switch (calculatePropertyAccess(true))
             {
             case SingletonParent:
-                return pool().ensureSingletonConstConstant(idProp.getParentConstant());
+                return pool().ensureSingletonConstConstant(m_idSingletonParent);
 
             case Outer:
                 {
@@ -1758,7 +1759,7 @@ public class NameExpression
                         {
                         case SingletonParent:
                             {
-                            IdentityConstant  idParent    = idProp.getParentConstant();
+                            IdentityConstant  idParent    = m_idSingletonParent;
                             SingletonConstant idSingleton = pool().ensureSingletonConstConstant(idParent);
                             code.add(new Var_I(idParent.getType(), idSingleton));
                             argTarget = code.lastRegister();
@@ -1952,13 +1953,14 @@ public class NameExpression
                             }
 
                         if (infoTarget.isTopLevel() && infoTarget.isStatic() &&
-                                !infoTarget.getClassStructure().equals(ctx.getThisClass()))
+                                !infoTarget.getClassStructure().equals(ctx.getThisClass())
+                            ||
+                               prop.isConstant() && prop.getInitializer() != null)
                             {
-                            m_propAccessPlan = PropertyAccess.SingletonParent;
-                            }
-                        else if (prop.isConstant() && prop.getInitializer() != null)
-                            {
-                            m_propAccessPlan = PropertyAccess.SingletonParent;
+                            // the property's parent may not be the target class, but one of its
+                            // contributions; relying on "prop.getIdentity()" would be incorrect
+                            m_propAccessPlan    = PropertyAccess.SingletonParent;
+                            m_idSingletonParent = infoTarget.getIdentity();
                             }
                         else if (target.getStepsOut() == 0)
                             {
@@ -3432,6 +3434,12 @@ public class NameExpression
      * The chosen property access plan.
      */
     private PropertyAccess m_propAccessPlan;
+
+    /**
+     * If the property access plan is {@link PropertyAccess#SingletonParent}, the identity of the
+     * parent.
+     */
+    private IdentityConstant m_idSingletonParent;
 
     /**
      * If true, indicates that the argument refers to a property or method for a class of Class
