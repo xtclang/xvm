@@ -679,7 +679,7 @@ class ObjectOutputStream(Schema schema, Writer writer)
                 function void()       writeValue)
             {
             Boolean alreadyInside = inside;
-            if (alreadyInside || value.is(Primitive))
+            if (alreadyInside || isExempt(value))
                 {
                 writeValue();
                 return this;
@@ -696,14 +696,12 @@ class ObjectOutputStream(Schema schema, Writer writer)
                 else
                     {
                     writeValue();
-                    if (!value.is(Primitive))
+
+                    (Int length, Boolean escape) = calculatePointerSegmentLength(id);
+                    pointer = appendPointerSegment(buildPointer(length), id, escape).toString();
+                    if (pointer.size > 0)
                         {
-                        (Int length, Boolean escape) = calculatePointerSegmentLength(id);
-                        pointer = appendPointerSegment(buildPointer(length), id, escape).toString();
-                        if (pointer.size > 0)
-                            {
-                            pointers.putIfAbsent(&value.identity, pointer);
-                            }
+                        pointers.putIfAbsent(&value.identity, pointer);
                         }
                     }
                 }
@@ -713,6 +711,29 @@ class ObjectOutputStream(Schema schema, Writer writer)
                 }
 
             return this;
+            }
+
+        /**
+         * Determine if the specified value is exempt from being referenced by pointer.
+         *
+         * @param value  the value to test
+         *
+         * @return True iff the value should not ever be referenced by pointer
+         */
+        protected Boolean isExempt(Object value)
+            {
+            if (value.is(Nullable | Char | IntLiteral | FPLiteral | Number | Nibble | Bit |
+                         Date | Time | TimeOfDay | TimeZone | Duration))
+                {
+                return True;
+                }
+
+            if (value.is(String | Byte[]))
+                {
+                return value.size < 80;
+                }
+
+            return &value.actualClass.isSingleton();
             }
         }
 
