@@ -78,13 +78,7 @@ interface ElementOutput<ParentOutput extends (ElementOutput | FieldOutput)?>
      */
     <Serializable> ElementOutput addObject(Serializable value)
         {
-        val type = &value.actualType;
-        if (schema.enableMetadata)
-            {
-            prepareMetadata(schema.typeKey, schema.nameForType(type));
-            }
-
-        return addUsing(schema.ensureMapping(type), value);
+        return addUsing(schema.ensureMapping(&value.actualType), value);
         }
 
     /**
@@ -100,6 +94,17 @@ interface ElementOutput<ParentOutput extends (ElementOutput | FieldOutput)?>
         if (value == Null)
             {
             return add(Null);
+            }
+
+        val type = &value.actualType;
+        if (type != mapping.Serializable)
+            {
+            mapping := mapping.narrow(schema, type);
+            }
+
+        if (schema.enableMetadata)
+            {
+            prepareMetadata(schema.typeKey, schema.nameForType(type));
             }
 
         mapping.write(this, value);

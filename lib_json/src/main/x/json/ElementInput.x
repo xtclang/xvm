@@ -289,6 +289,13 @@ interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
                                  );
             }
 
+        if (schema.enableMetadata,
+                Doc typeName ?= peekMetadata(schema.typeKey),
+                typeName.is(String) && typeName != mapping.typeName)
+            {
+            mapping = schema.ensureMapping(schema.typeForName(typeName).as(Type<Serializable>));
+            }
+
         return mapping.read(this);
         }
 

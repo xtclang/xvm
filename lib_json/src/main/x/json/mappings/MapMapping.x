@@ -29,10 +29,10 @@ const MapMapping<Key, Value>
         Map<Key, Value> map;
         if (schema.enableMetadata,
                 Doc typeName ?= in.peekMetadata(schema.typeKey),
-                typeName.is(String))
+                typeName.is(String),
+                val typeMap     := schema.typeForName(typeName).is(Type<Map<Key, Value>>),
+                val constructor := typeMap.defaultConstructor())
             {
-            assert val typeMap     := schema.typeForName(typeName).is(Type<Map<Key, Value>>);
-            assert val constructor := typeMap.defaultConstructor();
             map = constructor();
             }
         else

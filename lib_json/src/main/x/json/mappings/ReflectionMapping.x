@@ -45,13 +45,6 @@ const ReflectionMapping<Serializable, StructType extends Struct>(
                     using (ElementInput elementInput = fieldInput.openField(field.name))
                         {
                         Mapping<field.Value> mapping = field.mapping;
-                        if (field.subclassable && schema.enableMetadata,
-                                Doc typeName ?= in.peekMetadata(schema.typeKey),
-                                typeName.is(String))
-                            {
-                            mapping = schema.ensureMapping(schema.typeForName(typeName));
-                            }
-
                         value = elementInput.readUsing(mapping, field.defaultValue);
                         }
                     }
@@ -82,15 +75,7 @@ const ReflectionMapping<Serializable, StructType extends Struct>(
                     }
                 else
                     {
-                    Type<field.Value>    type    = &fieldValue.actualType;
                     Mapping<field.Value> mapping = field.mapping;
-                    if (field.subclassable && type != mapping.Serializable,
-                            mapping := mapping.narrow(schema, type),
-                            schema.enableMetadata)
-                        {
-                        fieldOutput.prepareMetadata(schema.typeKey, schema.nameForType(type));
-                        }
-
                     fieldOutput.addUsing(mapping, field.name, fieldValue);
                     }
                 }

@@ -257,6 +257,12 @@ const Schema
      */
     String nameForType(Type type)
         {
+        // strip off the "immutable " prefix from the type string
+        if (type.form == Immutable)
+            {
+            type := type.modifying();
+            }
+
         return type.toString();
         }
 

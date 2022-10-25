@@ -426,6 +426,10 @@ class ObjectInputStream(Schema schema, Parser parser)
          */
         protected Boolean loadNext(Boolean first = False)
             {
+            if (!first)
+                {
+                canRead = False;
+                }
             return first;
             }
 
