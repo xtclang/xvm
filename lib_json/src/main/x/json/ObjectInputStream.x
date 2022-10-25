@@ -146,7 +146,7 @@ class ObjectInputStream(Schema schema, Parser parser)
     class DocInputStream<ParentInput extends AnyStream?>
             implements DocInput<ParentInput>
         {
-        construct(ParentInput parent, (String|Int)? id, Token[]? tokens)
+        construct(ParentInput parent, String? id, Token[]? tokens)
             {
             this.parent = parent;
             this.id     = id;
@@ -188,7 +188,7 @@ class ObjectInputStream(Schema schema, Parser parser)
          * If the DocInput is inside a JSON object, then it has a field name.
          * If the DocInput is inside a JSON array, then it has an array index.
          */
-        protected/private (String | Int)? id;
+        protected/private String? id;
 
         /**
          * The underlying JSON parser, which uses a look-ahead of exactly one token.
@@ -430,21 +430,11 @@ class ObjectInputStream(Schema schema, Parser parser)
             }
 
         /**
-         * If the DocInput is inside a JSON object, then it has a field name.
-         */
-        protected conditional String named()
-            {
-            (String | Int)? id = this.id;
-            return id.is(String) ? (True, id) : False;
-            }
-
-        /**
          * If the DocInput is inside a JSON array, then it has an array index.
          */
         protected conditional Int indexed()
             {
-            (String | Int)? id = this.id;
-            return id.is(Int) ? (True, id) : False;
+            return False;
             }
 
         /**
@@ -454,14 +444,14 @@ class ObjectInputStream(Schema schema, Parser parser)
          */
         protected StringBuffer buildPointer(Int length)
             {
-            Stringable? token  = id;
-            Boolean     escape = False;
-            if (token != Null)
+            String? name   = id;
+            Boolean escape = False;
+            if (name != Null)
                 {
-                length += 1 + token.estimateStringLength();
-                if (token.is(String))
+                length += 1 + name.estimateStringLength();
+                if (name.is(String))
                     {
-                    for (Char ch : token)
+                    for (Char ch : name)
                         {
                         if (ch == '~' || ch == '/')
                             {
@@ -472,14 +462,21 @@ class ObjectInputStream(Schema schema, Parser parser)
                     }
                 }
 
+            Int? index = Null;
+            if (index := indexed())
+                {
+                length += 1 + index.estimateStringLength();
+                }
+
             StringBuffer buf = parent?.buildPointer(length) : new StringBuffer(length);
-            if (token != Null)
+
+            if (name != Null)
                 {
                 buf.add('/');
                 if (escape)
                     {
                     // "~" and "/" need to be converted to "~0" and "~1" respectively
-                    for (Char ch : token.as(String))
+                    for (Char ch : name.as(String))
                         {
                         if (ch == '~')
                             {
@@ -497,9 +494,16 @@ class ObjectInputStream(Schema schema, Parser parser)
                     }
                 else
                     {
-                    token.appendTo(buf);
+                    name.appendTo(buf);
                     }
                 }
+
+            if (index /*TODO GG != Null*/ .is(Int))
+                {
+                buf.add('/');
+                index.appendTo(buf);
+                }
+
             return buf;
             }
         }
@@ -552,7 +556,7 @@ class ObjectInputStream(Schema schema, Parser parser)
             extends DocInputStream<ParentInput>
             implements ElementInput<ParentInput>
         {
-        construct(ParentInput parent, (String|Int)? id = Null, Token[]? tokens = Null)
+        construct(ParentInput parent, String? id = Null, Token[]? tokens = Null)
             {
             super(parent, id, tokens);
             }
@@ -662,7 +666,7 @@ class ObjectInputStream(Schema schema, Parser parser)
             extends DocInputStream<ParentInput>
             implements ElementInput<ParentInput>
         {
-        construct(ParentInput parent, (String|Int)? id = Null, Token[]? tokens = Null)
+        construct(ParentInput parent, String? id = Null, Token[]? tokens = Null)
             {
             super(parent, id, tokens);
             parser.expect(ArrayEnter);
@@ -680,19 +684,25 @@ class ObjectInputStream(Schema schema, Parser parser)
             }
 
         @Override
+        protected conditional Int indexed()
+            {
+            return True, count;
+            }
+
+        @Override
         ArrayInputStream!<ArrayInputStream> openArray()
             {
             prepareRead();
             return schema.enablePointers
-                    ? new @CloseCap @PointerAware ArrayInputStream(this, count)
-                    : new @CloseCap ArrayInputStream(this, count);
+                    ? new @CloseCap @PointerAware ArrayInputStream(this)
+                    : new @CloseCap ArrayInputStream(this);
             }
 
         @Override
         FieldInputStream<ArrayInputStream> openObject(Boolean peekAhead=False)
             {
             prepareRead();
-            return new @CloseCap FieldInputStream(this, count, peekingAhead=peekAhead);
+            return new @CloseCap FieldInputStream(this, peekingAhead=peekAhead);
             }
 
         @Override
@@ -748,7 +758,7 @@ class ObjectInputStream(Schema schema, Parser parser)
             extends DocInputStream<ParentInput>
             implements FieldInput<ParentInput>
         {
-        construct(ParentInput parent, (String|Int)? id = Null, Token[]? tokens = Null, Boolean peekingAhead = False)
+        construct(ParentInput parent, String? id = Null, Token[]? tokens = Null, Boolean peekingAhead = False)
             {
             super(parent, id, tokens);
 
@@ -1171,24 +1181,24 @@ class ObjectInputStream(Schema schema, Parser parser)
          * To avoid multiple peek-aheads for a pointer on a single read, this flag is used to track
          * whether the current read-in-progress has already peeked ahead for a pointer.
          */
-        protected Boolean pointerChecked = False;
+        protected Boolean readInProgress = False;
 
         @Override
         <Serializable> Serializable readObject(Serializable? defaultValue = Null)
             {
-            Boolean alreadyChecked = pointerChecked;
+            Boolean nestedRead = readInProgress;
             try
                 {
-                if (!alreadyChecked, Serializable value := pointerCheck())
+                if (!nestedRead, Serializable value := findValueByPointer())
                     {
                     return value;
                     }
 
-                return registerPointer(alreadyChecked, super(defaultValue));
+                return registerPointer(nestedRead ? Null : pointer, super(defaultValue));
                 }
             finally
                 {
-                pointerChecked = alreadyChecked;
+                readInProgress = nestedRead;
                 }
             }
 
@@ -1197,19 +1207,19 @@ class ObjectInputStream(Schema schema, Parser parser)
                 Mapping<Serializable> mapping,
                 Serializable?         defaultValue = Null)
             {
-            Boolean alreadyChecked = pointerChecked;
+            Boolean nestedRead = readInProgress;
             try
                 {
-                if (!alreadyChecked, Serializable value := pointerCheck())
+                if (!nestedRead, Serializable value := findValueByPointer())
                     {
                     return value;
                     }
 
-                return registerPointer(alreadyChecked, super(mapping, defaultValue));
+                return registerPointer(nestedRead ? Null : pointer, super(mapping, defaultValue));
                 }
             finally
                 {
-                pointerChecked = alreadyChecked;
+                readInProgress = nestedRead;
                 }
             }
 
@@ -1220,9 +1230,9 @@ class ObjectInputStream(Schema schema, Parser parser)
          * @return True iff the next value is a JSON pointer
          * @return (conditional) the value pointed to
          */
-        <Serializable> conditional Serializable pointerCheck()
+        <Serializable> conditional Serializable findValueByPointer()
             {
-            if (!pointerChecked && !parser.eof && parser.peek().id == ObjectEnter)
+            if (!readInProgress && !parser.eof && parser.peek().id == ObjectEnter)
                 {
                 Doc pointer = peekMetadata(schema.pointerKey);
                 if (pointer.is(String))
@@ -1236,25 +1246,21 @@ class ObjectInputStream(Schema schema, Parser parser)
                     }
                 }
 
-            pointerChecked = True;
+            readInProgress = True;
             return False;
             }
 
         /**
          * Register the specified value to be associated with this node's [pointer].
          *
-         * @param suppressRegistration  pass `True` to prevent the pointer from being registered
-         * @param value                 the value to register with this node's pointer
+         * @param pointer  pass a non-`Null` pointer to register the pointer/value pair
+         * @param value    the value to register with this node's pointer
          *
          * @return the value
          */
-        <Serializable> Serializable registerPointer(Boolean suppressRegistration, Serializable value)
+        <Serializable> Serializable registerPointer(String? pointer, Serializable value)
             {
-            if (!suppressRegistration)
-                {
-                pointers.put(this.pointer, value);
-                }
-
+            pointers.put(pointer?, value);
             return value;
             }
         }
