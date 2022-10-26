@@ -287,6 +287,18 @@ const UriTemplate
     static @Abstract const Expression(Variable[] vars)
         {
         /**
+         * Some expression types are only valid within a specific Section. If so, then this property
+         * will specify that Section.
+         *
+         * An expression that is valid within any section will have a value of Null for this
+         * property.
+         */
+        @RO Section? onlyWithin.get()
+            {
+            return Null;
+            }
+
+        /**
          * This is the character (`+`, `#`, `.`, `/`, `;`, ;;?`, `&`) that indicates the form of the
          * expression, or `Null` in the case of a simple string expression.
          */
@@ -448,18 +460,17 @@ const UriTemplate
         }
 
     /**
-     * Implements "Path Segment Expansion".
-     *
-     * See section 3.2.6 of RFC 6570.
+     * Base class for several section-specific ExpressionSegment implementations.
      */
-    static const PathSegment(Variable[] vars)
+    @Abstract
+    static const SectionSpecificExpression(Variable[] vars)
             extends Expression(vars)
         {
         @Override
-        @RO Char? prefix.get()
-            {
-            return '/';
-            }
+        @RO Section onlyWithin;
+
+        @Override
+        @RO Char prefix;
 
         @Override
         Appender<Char> expand(Appender<Char> buf, Lookup values)
@@ -468,7 +479,7 @@ const UriTemplate
                 {
                 if (Value value := values(var.name))
                     {
-                    buf.add('/');
+                    buf.add(prefix);
                     switch (value.is(_))
                         {
                         case String:
@@ -476,7 +487,7 @@ const UriTemplate
                             break;
 
                         case List<String>:
-                            Char delim = var.explode ? '/' : ',';
+                            Char delim = var.explode ? prefix : ',';
                             Loop: for (String item : value)
                                 {
                                 if (!Loop.first)
@@ -488,7 +499,7 @@ const UriTemplate
                             break;
 
                         case Map<String, String>:
-                            (Char kvDelim, Char entryDelim) = var.explode ? ('=','/') : (',',',');
+                            (Char kvDelim, Char entryDelim) = var.explode ? ('=',prefix) : (',',',');
                             Loop: for ((String key, String val) : value)
                                 {
                                 if (!Loop.first)
@@ -510,72 +521,57 @@ const UriTemplate
         conditional (Position after, Map<String, Value> bindings) matches(Uri uri,
                 Position from, Position? to, Char? nextPrefix, Map<String, Value> bindings)
             {
-            String path       = uri.path?.toString() : "";
-            Int    pathLength = path.size;
-            if (pathLength == 0)
+            String sectionText   = uri.sectionText(onlyWithin);
+            Int    sectionLength = sectionText.size;
+            if (sectionLength == 0)
                 {
-                // if there is no path, that we can't match a path
+                // no text, no match (because even the prefix is absent)
                 return False;
                 }
 
-            // we can only match a path if we are inside the path section
-            Int fromOffset;
-            switch (from.section <=> Path)
+            // we can only match if we are inside the correct section
+            if (!(from := uri.positionAt(from, onlyWithin)))
                 {
-                case Lesser:
-                    // test if we are at the very end of the previous section; if not, abort
-                    if (uri.canonicalSlice(from, StartPath).size > 0)       // TODO CP optimize
-                        {
-                        return False;
-                        }
-
-                    fromOffset = 0;
-                    break;
-
-                case Equal:
-                    fromOffset = from.offset;
-                    break;
-
-                case Greater:
-                    return False;
+                return False;
                 }
+            Int fromOffset = from.offset;
 
-            Int toOffset = pathLength;
-            switch (to?.section <=> Path)
+            Int toOffset = sectionLength;
+            to := uri.positionAt(to?, onlyWithin);
+            switch (to?.section <=> onlyWithin)
                 {
                 case Lesser:
                     return False;
 
                 case Equal:
-                    if (from.offset > to.offset)
+                    toOffset = to.offset.minOf(sectionLength);
+                    if (fromOffset > toOffset)
                         {
                         return False;
                         }
-
-                    toOffset = to.offset;
                     break;
 
                 case Greater:
-                    // just go to the end of the path
+                    // just go to the end of the section
                     break;
                 }
 
-            if (nextPrefix? != prefix, Int foundAt := path.indexOf(nextPrefix), foundAt < toOffset)
+            if (nextPrefix? != prefix, Int foundAt := sectionText.indexOf(nextPrefix), foundAt < toOffset)
                 {
                 toOffset = foundAt;
                 }
 
             if (fromOffset == toOffset)
                 {
-                // 0-length means it's not a path segment, but if it's at the very end, it matches
-                // as "null" (i.e. nothing placed in the bindings)
-                return fromOffset == pathLength
-                        ? (True, new Position(Path, fromOffset), bindings)
+                // 0-length means that we can't match a value for the segment, but if it's at the
+                // very end, it matches as "null" (i.e. nothing placed in the bindings)
+                return fromOffset == sectionLength
+                        ? (True, from, bindings)
                         : False;
                 }
 
-            String text = path[fromOffset ..< toOffset];
-            if (text[0] != '/')
+            String text = sectionText[fromOffset ..< toOffset];
+            if (text[0] != prefix)
                 {
                 return False;
                 }
@@ -584,7 +580,7 @@ const UriTemplate
             Int length = text.size;
             Loop: for (Variable var : vars)
                 {
-                if (offset >= length || text[offset] != '/')
+                if (offset >= length || text[offset] != prefix) // TODO secondary prefix
                     {
                     break;
                     }
@@ -595,17 +591,122 @@ const UriTemplate
                 Boolean explode   = Loop.last && var.explode;
                 if (!explode)
                     {
-                    nextDelim := text.indexOf('/', offset);
+                    nextDelim := text.indexOf(prefix, offset);
                     }
 
                 String segment = text[offset ..< nextDelim];
-                Value  value   = explode ? segment.split('/') : segment;
+                Value  value   = explode ? segment.split(prefix) : segment;
 
                 bindings = (bindings.empty ? new HashMap<String, Value>() : bindings).put(var.name, value);
                 offset   = nextDelim;
                 }
 
-            return True, new Position(Path, fromOffset + offset), bindings;
+            return True, new Position(onlyWithin, fromOffset + offset), bindings;
+            }
+        }
+
+    /**
+     * Implements "Path Segment Expansion".
+     *
+     * See section 3.2.6 of RFC 6570.
+     */
+    static const PathSegment(Variable[] vars)
+            extends SectionSpecificExpression(vars)
+        {
+        @Override
+        Section onlyWithin.get()
+            {
+            return Path;
+            }
+
+        @Override
+        Char prefix.get()
+            {
+            return '/';
+            }
+        }
+
+    /**
+     * Implements "Path-Style Parameter Expansion".
+     *
+     * See section 3.2.7 of RFC 6570.
+     */
+    static const PathParamSegment(Variable[] vars)
+            extends SectionSpecificExpression(vars)
+        {
+        @Override
+        Section onlyWithin.get()
+            {
+            return Path;
+            }
+
+        @Override
+        Char prefix.get()
+            {
+            return ';';
+            }
+        }
+
+    /**
+     * Implements "Form-Style Query Expansion".
+     *
+     * See section 3.2.8 of RFC 6570.
+     */
+    static const FormStyleQuery(Variable[] vars)
+            extends SectionSpecificExpression(vars)
+        {
+        @Override
+        Section onlyWithin.get()
+            {
+            return Query;
+            }
+
+        @Override
+        Char prefix.get()
+            {
+            return '?';
+            }
+        }
+
+    /**
+     * Implements "Form-Style Query Continuation".
+     *
+     * See section 3.2.9 of RFC 6570.
+     */
+    static const FormStyleQueryContinuation(Variable[] vars)
+            extends SectionSpecificExpression(vars)
+        {
+        @Override
+        Section onlyWithin.get()
+            {
+            return Query;
+            }
+
+        @Override
+        Char prefix.get()
+            {
+            return '&';
+            }
+        }
+
+    /**
+     * Implements "Fragment Expansion".
+     *
+     * See section 3.2.4 of RFC 6570.
+     */
+    static const FragmentSegment(Variable[] vars)
+            extends SectionSpecificExpression(vars)
+        {
+        @Override
+        Section onlyWithin.get()
+            {
+            return Fragment;
+            }
+
+        @Override
+        Char prefix.get()
+            {
+            return '#';
             }
         }
 
@@ -732,13 +833,13 @@ const UriTemplate
                         case '}':       // end of variable list
                             Expression expr = switch (operator)
                                 {
-                                case '+': TODO
-                                case '#': TODO
-                                case '.': TODO
+                                case '+': TODO ReservedString
+                                case '#': new FragmentSegment(vars);
+                                case '.': TODO LabelSegment
                                 case '/': new PathSegment(vars);
-                                case ';': TODO
-                                case '?': TODO
-                                case '&': TODO
+                                case ';': new PathParamSegment(vars);
+                                case '?': new FormStyleQuery(vars);
+                                case '&': new FormStyleQueryContinuation(vars);
                                 default:  new SimpleString(vars);
                                 };
                             return True, expr, offset+1;

@@ -8,7 +8,7 @@ module TestSimple
 
     @Inject Console console;
 
-    void run( )
+    void run()
         {
         Uri[] uris =
             [
@@ -20,6 +20,7 @@ module TestSimple
             new Uri("/test/s"),
             new Uri("/test/abc"),
             new Uri("/test/abc/"),
+            new Uri("/test/abc/?k1=v1;k2=v2#red,green,blue"),
             ];
 
         UriTemplate[] templates =
@@ -35,11 +36,11 @@ module TestSimple
             new UriTemplate("/test/abc"),
             new UriTemplate("/test/abc/"),
             new UriTemplate("/test{/sub}"),
-            new UriTemplate("/test{/sub,sub2}"),
-            new UriTemplate("/test{/sub*}"),
+            new UriTemplate("/test{/sub,sub2}{?parms}{#frags}"),
+            new UriTemplate("/test{/sub*}{?parms*}{#frags*}"),
             new UriTemplate("/tests{/sub}"),
             new UriTemplate("/tests{/sub,sub2}"),
-            new UriTemplate("/tests{/sub*}"),
+            new UriTemplate("/tests{/sub*}{?parms*}{#frags*}"),
             ];
 
         for (UriTemplate template : templates)

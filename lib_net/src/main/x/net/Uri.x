@@ -342,6 +342,48 @@ const Uri
         }
 
     /**
+     * Calculate the text of the specified section.
+     *
+     * @param section  the section to determine the textual content of
+     *
+     * @return the textual content of the section
+     */
+    String sectionText(Section section)
+        {
+        @Lazy(() -> authority == Null ? "" : $"//{authority}") String cachedAuthority;
+        @Lazy(() -> query     == Null ? "" : $"?{query}")      String cachedQuery;
+        @Lazy(() -> fragment  == Null ? "" : $"#{fragment}")   String cachedFragment;
+
+        return switch (section)
+            {
+            case Scheme:    scheme ?: "";
+            case Authority: cachedAuthority;
+            case Path:      path ?: "";
+            case Query:     cachedQuery;
+            case Fragment:  cachedFragment;
+            };
+        }
+
+    /**
+     * Calculate the length of the specified section.
+     *
+     * @param section  the section to determine the length of
+     *
+     * @return the length of the section
+     */
+    Int sectionLength(Section section)
+        {
+        return switch (section)
+            {
+            case Scheme:    scheme?.size        : 0;
+            case Authority: authority?.size + 2 : 0;
+            case Path:      path?.size          : 0;
+            case Query:     query?.size + 1     : 0;
+            case Fragment:  fragment?.size + 1  : 0;
+            };
+        }
+
+    /**
      * The "at the start" (inclusive) position for this Uri.
      */
     @RO Position beginPosition.get()
@@ -369,6 +411,61 @@ const Uri
              : assert;
         }
 
+    /**
+     * Regardless of what section the passed position is in, test to see if that position
+     * corresponds to a position within the specified section.
+     *
+     * Specifically, if the passed position is immediately after the last character of a section,
+     * and that section precedes the desired section, then the position is actually the same as the
+     * position of the first character of the following section. Similarly, the desired section may
+     * be separated from the specified position by empty sections, which can be ignored.
+     *
+     * @param position  the position to evaluate
+     * @param section   the section that the caller desires the position to be within
+     *
+     * @return True iff the passed position is within the specified section
+     * @return (conditional) the position object to use instead of the passed position object
+     */
+    conditional Position positionAt(Position position, Section section)
+        {
+        switch (position.section <=> section)
+            {
+            case Lesser:
+                Int offset = position.offset;
+                for (Section current : position.section ..< section)
+                    {
+                    if (offset == sectionLength(current))
+                        {
+                        // we were at the end of the previous section, so the offset in the next
+                        // section will be zero
+                        offset = 0;
+                        }
+                    else
+                        {
+                        return False;
+                        }
+                    }
+                return True, section.start;
+
+            case Equal:
+                return True, position;
+
+            case Greater:
+                Int offset = position.offset;
+                for (Section current : position.section ..< section)
+                    {
+                    if (offset == 0)
+                        {
+                        offset = sectionLength(current.prevValue());
+                        }
+                    else
+                        {
+                        return False;
+                        }
+                    }
+                return True, new Position(section, offset);
+            }
+        }
 
     /**
      * Attempt to find the specified literal in this Uri.
@@ -394,24 +491,9 @@ const Uri
 
         Char start = literal[0];
 
-        @Lazy(() -> scheme ?: "")                              String cachedScheme;
-        @Lazy(() -> authority == Null ? "" : $"//{authority}") String cachedAuthority;
-        @Lazy(() -> path == Null ? "" : path)                  String cachedPath;
-        @Lazy(() -> query == Null ? "" : $"?{query}")          String cachedQuery;
-        @Lazy(() -> fragment == Null ? "" : $"#{fragment}")    String cachedFragment;
-
-        function String(Section) partFor = section -> switch (section)
-            {
-            case Scheme:    cachedScheme;
-            case Authority: cachedAuthority;
-            case Path:      cachedPath;
-            case Query:     cachedQuery;
-            case Fragment:  cachedFragment;
-            };
-
         Section section = from.section;
         Int     offset  = from.offset;
-        String  part    = partFor(section);
+        String  part    = sectionText(section);
         while (True)
             {
             // check if we need to stop looking for the literal before reaching the end of the part
@@ -427,7 +509,7 @@ const Uri
                 if (Int nextOffset := matchCharacter(start, part, offset))
                     {
                     if (Position afterLiteral := matchRemainder(
-                            literal, 1, literalLength, section, nextOffset, partFor))
+                            literal, 1, literalLength, section, nextOffset, sectionText))
                         {
                         // we found it, but before returning, make sure that we did not pass the
                         // end of the region that we were allowed to match within
@@ -456,7 +538,7 @@ const Uri
             // load the next section
             if (val temp := section.next(), section := temp.is(Section))
                 {
-                part   = partFor(section);
+                part   = sectionText(section);
                 offset = 0;
                 }
             else
@@ -484,20 +566,7 @@ const Uri
             return True, from;
             }
 
-        @Lazy(() -> authority == Null ? "" : $"//{authority}") String cachedAuthority;
-        @Lazy(() -> query == Null ? "" : $"?{query}")          String cachedQuery;
-        @Lazy(() -> fragment == Null ? "" : $"#{fragment}")    String cachedFragment;
-
-        function String(Section) partFor = section -> switch (section)
-            {
-            case Scheme:    scheme ?: "";
-            case Authority: cachedAuthority;
-            case Path:      path ?: "";
-            case Query:     cachedQuery;
-            case Fragment:  cachedFragment;
-            };
-
-        return matchRemainder(literal, 0, literalLength, from.section, from.offset, partFor);
+        return matchRemainder(literal, 0, literalLength, from.section, from.offset, sectionText);
         }
 
     /**
@@ -943,7 +1012,7 @@ const Uri
         // an empty URI is not legal
         if (length == 0)
             {
-            return False, scheme, authority, user, host, ip, port, path, query, fragment, opaque, "Empty URI";
+            return False, scheme, authority, user, host, ip, port, path, query, opaque, fragment, "Empty URI";
             }
 
         // a Uri is either an absoluteURI or a relativeURI:
@@ -1009,7 +1078,7 @@ const Uri
             error = $"Unparsable URI portion: {text[offset ..< length].quoted()}";
             }
 
-        return error==Null, scheme, authority, user, host, ip, port, path, query, fragment, opaque, error;
+        return error==Null, scheme, authority, user, host, ip, port, path, query, opaque, fragment, error;
 
         /**
          * Internal: Parse a URI "scheme", if there is one.
