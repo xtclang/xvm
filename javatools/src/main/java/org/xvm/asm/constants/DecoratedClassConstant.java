@@ -14,7 +14,7 @@ import static org.xvm.util.Handy.writePackedLong;
 
 
 /**
- * Represent a Class constant, but one that  may be decorated with additional annotations, type
+ * Represent a Class constant, but one that may be decorated with additional annotations, type
  * parameters, and other information in addition to the underlying ClassConstant.
  *
  * @see TypeConstant#isDecoratedClass()
