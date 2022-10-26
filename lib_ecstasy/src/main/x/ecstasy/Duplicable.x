@@ -31,7 +31,7 @@ interface Duplicable
      */
     Duplicable duplicate()
         {
-        return this.is(immutable Duplicable)
+        return this.is(immutable)
                 ? this
                 : this.new(this);
         }
