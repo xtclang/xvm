@@ -29,6 +29,7 @@ import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
+import org.xvm.compiler.ast.Context.Branch;
 import org.xvm.compiler.ast.Expression.Assignable;
 import org.xvm.compiler.ast.Expression.TypeFit;
 
@@ -751,7 +752,11 @@ public class AssignmentStatement
 
             if (atypeRight != null)
                 {
-                nodeLeft.updateLValueFromRValueTypes(ctxRValue, atypeRight);
+                Branch branch = Branch.Always; // TEMPORARY!!!
+//                    getCategory() == Category.CondRight && getParent() instanceof IfStatement
+//                    ? Branch.WhenTrue
+//                    : Branch.Always;
+                nodeLeft.updateLValueFromRValueTypes(ctxRValue, branch, atypeRight);
                 }
             }
 

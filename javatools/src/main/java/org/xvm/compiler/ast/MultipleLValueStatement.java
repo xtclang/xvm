@@ -16,6 +16,8 @@ import org.xvm.asm.op.Label;
 
 import org.xvm.compiler.Compiler.Stage;
 
+import org.xvm.compiler.ast.Context.Branch;
+
 
 /**
  * This represents multiple variable declarations in a list.
@@ -69,8 +71,8 @@ public class MultipleLValueStatement
         for (int i = 0; i < cTypes; ++i)
             {
             AstNode nodeLVal = listLVals.get(i);
-            aTypes[i] = nodeLVal instanceof VariableDeclarationStatement
-                    ? ((VariableDeclarationStatement) nodeLVal).getType()
+            aTypes[i] = nodeLVal instanceof VariableDeclarationStatement stmtDecl
+                    ? stmtDecl.getType()
                     : nodeLVal.getLValueExpression().getType();
             }
         return aTypes;
@@ -96,14 +98,14 @@ public class MultipleLValueStatement
         }
 
     @Override
-    public void updateLValueFromRValueTypes(Context ctx, TypeConstant[] aTypes)
+    public void updateLValueFromRValueTypes(Context ctx, Branch branch, TypeConstant[] aTypes)
         {
         assert aTypes != null && aTypes.length >= 1;
 
         List<AstNode>  listLVals = LVals;
         for (int i = 0, c = Math.min(aTypes.length, listLVals.size()); i < c; ++i)
             {
-            listLVals.get(i).updateLValueFromRValueTypes(ctx, new TypeConstant[] {aTypes[i]});
+            listLVals.get(i).updateLValueFromRValueTypes(ctx, branch, new TypeConstant[] {aTypes[i]});
             }
         }
 
@@ -192,8 +194,8 @@ public class MultipleLValueStatement
         for (int i = 0, c = LVals.size(); i < c; ++i)
             {
             AstNode nodeOld = LVals.get(i);
-            AstNode nodeNew = nodeOld instanceof Statement
-                    ? ((Statement) nodeOld).validate(ctx, errs)
+            AstNode nodeNew = nodeOld instanceof Statement stmt
+                    ? stmt.validate(ctx, errs)
                     : ((Expression) nodeOld).validate(ctx, null, errs);
             if (nodeNew != null && nodeNew != nodeOld)
                 {
@@ -216,9 +218,9 @@ public class MultipleLValueStatement
             //          or just for short-circuitable expressions?
 
             AstNode node = LVals.get(i);
-            if (node instanceof Statement)
+            if (node instanceof Statement stmt)
                 {
-                fCompletes = ((Statement) node).completes(ctx, fCompletes, code, errs);
+                fCompletes = stmt.completes(ctx, fCompletes, code, errs);
                 }
 
             Label labelGround = peekShortCircuitLabel(i);
@@ -240,8 +242,8 @@ public class MultipleLValueStatement
         StringBuilder sb = new StringBuilder();
 
         AstNode parent = getParent();
-        boolean fCond  = parent instanceof AssignmentStatement
-                && ((AssignmentStatement) parent).isForEachCondition();
+        boolean fCond  = parent instanceof AssignmentStatement stmtAssign
+                            && stmtAssign.isForEachCondition();
         if (!fCond)
             {
             sb.append('(');
@@ -335,9 +337,9 @@ public class MultipleLValueStatement
             }
 
         @Override
-        public void updateLValueFromRValueTypes(Context ctx, TypeConstant[] aTypes)
+        public void updateLValueFromRValueTypes(Context ctx, Branch branch, TypeConstant[] aTypes)
             {
-            getParent().updateLValueFromRValueTypes(ctx, aTypes);
+            getParent().updateLValueFromRValueTypes(ctx, branch, aTypes);
             }
 
         @Override
@@ -530,14 +532,14 @@ public class MultipleLValueStatement
         @Override
         protected boolean allowsShortCircuit(AstNode nodeChild)
             {
-            return nodeChild instanceof Expression && indexOfChild((Expression) nodeChild) >= 0;
+            return nodeChild instanceof Expression exprChild && indexOfChild(exprChild) >= 0;
             }
 
         @Override
         protected Label ensureShortCircuitLabel(AstNode nodeOrigin, Context ctxOrigin)
             {
             AstNode nodeChild = findChild(nodeOrigin);
-            int     iPos      = nodeChild instanceof Expression ? indexOfChild((Expression) nodeChild) : -1;
+            int     iPos      = nodeChild instanceof Expression exprChild ? indexOfChild(exprChild) : -1;
             if (iPos < 0)
                 {
                 throw new IllegalStateException("unknown child: " + nodeChild);

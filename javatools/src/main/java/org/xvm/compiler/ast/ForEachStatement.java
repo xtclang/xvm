@@ -52,6 +52,7 @@ import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
+import org.xvm.compiler.ast.Context.Branch;
 import org.xvm.compiler.ast.Expression.Assignable;
 
 import org.xvm.util.Severity;
@@ -492,7 +493,7 @@ public class ForEachStatement
                         }
 
                     assert aTypeLVals.length >= exprLVal.getValueCount();
-                    exprLVal.updateLValueFromRValueTypes(ctx, aTypeLVals);
+                    exprLVal.updateLValueFromRValueTypes(ctx, Branch.Always, aTypeLVals);
                     }
                 }
 

@@ -116,6 +116,19 @@ public class IfStatement
 
             if (i > 0)
                 {
+                // create a synthetic "if" ladder, as if the code was written this way:
+                // if (cond1)
+                //     {
+                //     if (cond2)
+                //         {
+                //         ... // "then" block
+                //         }
+                //     }
+                // else
+                //     {
+                //     ... // "else" block
+                //     }
+                //
                 ctx = ctx.enterAnd().enterMultiConditionIf();
                 }
 

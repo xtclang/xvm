@@ -520,9 +520,10 @@ public abstract class AstNode
      * (LValue method)
      *
      * @param ctx     the compiler context
+     * @param branch  the branch to apply the inference to
      * @param aTypes  the type of the RValue
      */
-    public void updateLValueFromRValueTypes(Context ctx, TypeConstant[] aTypes)
+    public void updateLValueFromRValueTypes(Context ctx, Context.Branch branch, TypeConstant[] aTypes)
         {
         throw notLValue();
         }

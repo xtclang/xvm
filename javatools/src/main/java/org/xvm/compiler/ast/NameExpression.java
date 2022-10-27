@@ -33,6 +33,7 @@ import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
+import org.xvm.compiler.ast.Context.Branch;
 import org.xvm.compiler.ast.LabeledStatement.LabelVar;
 import org.xvm.compiler.ast.StatementBlock.TargetInfo;
 
@@ -515,7 +516,7 @@ public class NameExpression
         }
 
     @Override
-    public void updateLValueFromRValueTypes(Context ctx, TypeConstant[] aTypes)
+    public void updateLValueFromRValueTypes(Context ctx, Branch branch, TypeConstant[] aTypes)
         {
         assert aTypes != null && aTypes.length >= 1;
 
@@ -528,7 +529,7 @@ public class NameExpression
             {
             typeNew = typeNew.combine(pool(), typeThis);
 
-            narrowType(ctx, Context.Branch.Always, typeNew);
+            narrowType(ctx, branch, typeNew);
             }
         }
 
@@ -3225,7 +3226,7 @@ public class NameExpression
      * @param branch      the branch
      * @param typeNarrow  the narrowing type
      */
-    public void narrowType(Context ctx, Context.Branch branch, TypeConstant typeNarrow)
+    public void narrowType(Context ctx, Branch branch, TypeConstant typeNarrow)
         {
         if (typeNarrow != null)
             {
