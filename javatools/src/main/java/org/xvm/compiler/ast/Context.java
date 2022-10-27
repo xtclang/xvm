@@ -652,6 +652,28 @@ public class Context
         }
 
     /**
+     * Retain all the keys from the specified map at the specified branch.
+     *
+     * @param map        the map to use
+     * @param fWhenTrue  the branch indicator
+     */
+    protected void retainNarrowedTypes(Map<String, Argument> map, boolean fWhenTrue)
+        {
+        Map<String, Argument> mapNarrowing = ensureNarrowingMap(fWhenTrue);
+        if (!mapNarrowing.isEmpty())
+            {
+            if (map.isEmpty())
+                {
+                mapNarrowing.clear();
+                }
+            else
+                {
+                mapNarrowing.keySet().retainAll(map.keySet());
+                }
+            }
+        }
+
+    /**
      * Register the specified variable name in this context.
      * <p/>
      * Note: This can only be used during the validate() stage.
@@ -2212,16 +2234,8 @@ public class Context
             //                      // exit from AndContext infers nothing into the "false" branch
             //      }               // of the parent IfContext
             //
+            getOuterContext().retainNarrowedTypes(getNarrowingMap(false), false);
 
-            Map<String, Argument> map = getNarrowingMap(false);
-            if (map.isEmpty())
-                {
-                getOuterContext().ensureNarrowingMap(false).clear();
-                }
-            else
-                {
-                getOuterContext().ensureNarrowingMap(false).keySet().retainAll(map.keySet());
-                }
             super.promoteNarrowedTypes();
             }
 
@@ -2324,15 +2338,8 @@ public class Context
             {
             // inversely to the AndContext, retain only our "true" entries in the parent's "true"
             // context
-            Map<String, Argument> map = getNarrowingMap(true);
-            if (map.isEmpty())
-                {
-                getOuterContext().ensureNarrowingMap(true).clear();
-                }
-            else
-                {
-                getOuterContext().ensureNarrowingMap(true).keySet().retainAll(map.keySet());
-                }
+            getOuterContext().retainNarrowedTypes(getNarrowingMap(true), true);
+
             super.promoteNarrowedTypes();
             }
 
