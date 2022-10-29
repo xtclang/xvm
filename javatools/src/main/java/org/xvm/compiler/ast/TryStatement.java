@@ -187,7 +187,7 @@ public class TryStatement
             // prevents any narrowing assumptions from "catch" scopes percolating up to the original
             // context
 
-            Context ctxNext = new Context.IfContext(ctxOrig, true)
+            Context ctxNext = new Context.IfContext(ctxOrig)
                 {
                 @Override
                 protected void promoteNarrowedType(String sName, Argument arg, Branch branch)

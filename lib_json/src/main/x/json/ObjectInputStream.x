@@ -502,7 +502,7 @@ class ObjectInputStream(Schema schema, Parser parser)
                     }
                 }
 
-            if (index /*TODO GG != Null*/ .is(Int))
+            if (index != Null)
                 {
                 buf.add('/');
                 index.appendTo(buf);

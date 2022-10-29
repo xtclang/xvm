@@ -752,10 +752,11 @@ public class AssignmentStatement
 
             if (atypeRight != null)
                 {
-                Branch branch = Branch.Always; // TEMPORARY!!!
-//                    getCategory() == Category.CondRight && getParent() instanceof IfStatement
-//                    ? Branch.WhenTrue
-//                    : Branch.Always;
+                 // AssertStatement handles the assignment inference itself
+                Branch branch = getCategory() == Category.CondRight
+                                && !(getParent() instanceof AssertStatement)
+                    ? Branch.WhenTrue
+                    : Branch.Always;
                 nodeLeft.updateLValueFromRValueTypes(ctxRValue, branch, atypeRight);
                 }
             }

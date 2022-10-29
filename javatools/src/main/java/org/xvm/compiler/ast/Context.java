@@ -188,19 +188,19 @@ public class Context
      */
     public Context enterIf()
         {
-        return new IfContext(this, true);
+        return new IfContext(this);
         }
 
     /**
-     * Create a nested multi-condition "if" of this context.
+     * Create a nested "and-if" of this context.
      * <p/>
      * Note: This can only be used during the validate() stage.
      *
-     * @return the new multi-condition "if" context
+     * @return the new multi-condition "and-if" context
      */
-    public Context enterMultiConditionIf()
+    public Context enterAndIf()
         {
-        return new IfContext(this, false);
+        return new AndIfContext(this);
         }
 
     /**
@@ -1419,7 +1419,10 @@ public class Context
                 TypeConstant typeNew = argNew.getType();
 
                 TypeConstant typeJoin = typeNew.union(pool(), typeOld);
-                map.put(sName, regOld.narrowType(typeJoin));
+                if (!typeJoin.equals(typeOld))
+                    {
+                    map.put(sName, regOld.narrowType(typeJoin));
+                    }
                 }
             else
                 {
@@ -1798,25 +1801,11 @@ public class Context
         /**
          * Construct an IfContext.
          *
-         * @param outer     the outer context
-         * @param fRegular  if false, indicates that this IfContext is a part of and-if chain
-         *                  created by a multi-condition "if" statement
+         * @param outer  the outer context
          */
-        public IfContext(Context outer, boolean fRegular)
+        public IfContext(Context outer)
             {
-            super(outer, fRegular);
-
-            // Note: at the moment, regular (demuxing) and multi-condition (non-demuxing) are the
-            //       only possible scenarios, so there is no need to create another field
-            assert fRegular || outer.getOuterContext() instanceof IfContext;
-            }
-
-        /**
-         * @return true iff this context represents a multi-condition "if"
-         */
-        public boolean isMultiCondition()
-            {
-            return !isDemuxing();
+            super(outer, true);
             }
 
         @Override
@@ -1869,8 +1858,6 @@ public class Context
         @Override
         protected void promoteNarrowedType(String sName, Argument arg, Branch branch)
             {
-            super.promoteNarrowedType(sName, arg, branch);
-
             // choose the wider type of the two branches and promote to "Always"
             Context  ctxOuter = getOuterContext();
             Argument argOrig  = ctxOuter.getVar(sName);
@@ -1938,8 +1925,6 @@ public class Context
         protected void promoteNarrowedGenericType(FormalConstant constFormal, TypeConstant typeNarrowed,
                                                   Branch branch)
             {
-            super.promoteNarrowedGenericType(constFormal, typeNarrowed, branch);
-
             // choose the wider type of the two branches and promote to "Always"
             if (branch == Branch.WhenTrue)
                 {
@@ -1978,18 +1963,7 @@ public class Context
             {
             if (isReachable())
                 {
-                if (isMultiCondition())
-                    {
-                    IfContext ctxIf = (IfContext) getOuterContext().getOuterContext();
-
-                    assert m_ctxWhenTrue != null && ctxIf.m_ctxWhenTrue == null;
-
-                    // note: no matching exit is required here (even though most enter() calls
-                    //       require a matching exit), because the outer If context holds and
-                    //       manages the two sub-branches
-                    copyAssignments(m_ctxWhenTrue, ctxIf.enterFork(true));
-                    }
-                else if (m_ctxWhenTrue != null && !m_ctxWhenTrue.isReachable())
+                if (m_ctxWhenTrue != null && !m_ctxWhenTrue.isReachable())
                     {
                     discardBranch(true);
                     }
@@ -2000,22 +1974,6 @@ public class Context
                 }
 
             return super.exit();
-            }
-
-        private void copyAssignments(Context ctxSrc, Context ctxDst)
-            {
-            Map<String, Assignment> mapSrc = ctxSrc.ensureDefiniteAssignments();
-            Map<String, Assignment> mapDst = ctxDst.ensureDefiniteAssignments();
-
-            for (Map.Entry<String, Assignment> entry : mapSrc.entrySet())
-                {
-                String sName = entry.getKey();
-                if (!ctxSrc.isVarDeclaredInThisScope(sName))
-                    {
-                    mapDst.put(sName, entry.getValue());
-                    }
-                }
-            ctxDst.setReachable(ctxSrc.isReachable());
             }
 
         private void discardBranch(boolean fWhenTrue)
@@ -2049,7 +2007,19 @@ public class Context
 
             // promote the other branch's assignments
             Context ctxPromote = fWhenTrue ? m_ctxWhenFalse : m_ctxWhenTrue;
-            if (ctxPromote != null)
+            if (ctxPromote == null)
+                {
+                Map<String, Assignment> mapAssign = ensureDefiniteAssignments();
+                for (Map.Entry<String, Assignment> entry : mapAssign.entrySet())
+                    {
+                    if (!isVarDeclaredInThisScope(entry.getKey()))
+                        {
+                        Assignment asnCurrent = entry.getValue();
+                        entry.setValue(fWhenTrue ? asnCurrent.whenFalse() : asnCurrent.whenTrue());
+                        }
+                    }
+                }
+            else
                 {
                 Set<String> setVars = new HashSet<>();
                 ctxPromote.collectVariables(setVars);
@@ -2210,9 +2180,9 @@ public class Context
         @Override
         protected Assignment promote(String sName, Assignment asnInner, Assignment asnOuter)
             {
-            // the "when false" portion of this context is combined with the "when false"
-            // portion of the outer context;  the "when true" portion of this context replaces the
-            // "when true" portion of the outer context
+            // the "when true" portion of this context replaces the "when true" portion of the
+            // outer context;  the "when false" portion of this context is combined with the
+            // "when false" portion of the outer context
             Assignment asnFalse = Assignment.join(asnOuter.whenFalse(), asnInner.whenFalse());
             Assignment asnJoin  = Assignment.join(asnFalse, asnInner.whenTrue());
             return asnJoin;
@@ -2456,6 +2426,62 @@ public class Context
                 {
                 getOuterContext().replaceGenericType(constFormal, branch.complement(), typeNarrowed);
                 }
+            }
+        }
+
+
+    // ----- inner class: AndIfContext -------------------------------------------------------------
+
+    /**
+     * A custom context implementation to provide type-narrowing as a natural side effect of a
+     * chain of "if" conditions. The innermost AndIfContext is used to compile the "then" block of
+     * the multi-condition "if", while the outermost IfContext is used to compile the "else" block.
+     * This context behaves as a combination of the AndContext and IfContext.
+     */
+    static class AndIfContext
+            extends AndContext
+        {
+        /**
+         * Construct an AndIfContext.
+         *
+         * @param outer  the outer context
+         */
+        public AndIfContext(Context outer)
+            {
+            super(outer);
+            }
+
+        @Override
+        protected Assignment promote(String sName, Assignment asnInner, Assignment asnOuter)
+            {
+            // the "when true" portion of this context replaces the "when true" portion of the
+            // outer context
+            Assignment asnJoin = Assignment.join(asnOuter.whenFalse(), asnInner.whenTrue());
+            return asnJoin;
+            }
+
+        @Override
+        public Context exit()
+            {
+            if (!isReachable())
+                {
+                // "then" block is not reachable; reflect that fact at the outer IfContext's
+                // "whenTrue" branch, which is never created directly (via ensureFork(true))
+                Context ctxOuter = getOuterContext();
+                while (true)
+                    {
+                    if (ctxOuter instanceof IfContext ctxIf)
+                        {
+                        assert ctxIf.m_ctxWhenTrue == null;
+                        ctxIf.enterFork(true).setReachable(false);
+                        setReachable(true);
+                        break;
+                        }
+                    ctxOuter = ctxOuter.getOuterContext();
+                    }
+                }
+
+            return super.exit();
             }
         }
 

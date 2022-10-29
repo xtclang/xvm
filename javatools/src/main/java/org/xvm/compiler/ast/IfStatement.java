@@ -116,20 +116,7 @@ public class IfStatement
 
             if (i > 0)
                 {
-                // create a synthetic "if" ladder, as if the code was written this way:
-                // if (cond1)
-                //     {
-                //     if (cond2)
-                //         {
-                //         ... // "then" block
-                //         }
-                //     }
-                // else
-                //     {
-                //     ... // "else" block
-                //     }
-                //
-                ctx = ctx.enterAnd().enterMultiConditionIf();
+                ctx = ctx.enterAndIf();
                 }
 
             // the condition is either a boolean expression or an assignment statement whose R-value
@@ -187,7 +174,7 @@ public class IfStatement
 
         while (--cConditions > 0)
             {
-            ctx = ctx.exit().exit(); // "and-if"s
+            ctx = ctx.exit(); // "and-if"s
             }
 
         // create a context for "else" even if there is no statement, thus facilitating a merge;
