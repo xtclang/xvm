@@ -66,4 +66,24 @@ module TestCompilerErrors
 
         void testMethod2() {}
         }
+
+    // def assignment
+    void defAssign1(String? s = Null, Int i = 0)
+        {
+        if ((s != Null) || (i == 0))
+            {
+            i = s.size;
+            }
+        }
+
+    void defAssign2(String? s = Null, Int i = 0)
+        {
+        if ((s == Null) && (i == 1))
+            {
+            }
+        else
+            {
+            i = s.size;
+            }
+        }
     }
