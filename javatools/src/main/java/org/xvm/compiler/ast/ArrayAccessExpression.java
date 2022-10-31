@@ -1037,7 +1037,8 @@ public class ArrayAccessExpression
         try
             {
             // TODO is not clean; replace with a format check
-            nIndex = constIndex.convertTo(pool.typeCInt64()).getIntValue().getInt();
+            Constant constInt = constIndex.convertTo(pool.typeCInt64());
+            nIndex = constInt == null ? -1 : constInt.getIntValue().getInt();
             }
         catch (RuntimeException e)
             {
@@ -1116,35 +1117,33 @@ public class ArrayAccessExpression
         boolean fSlice, fReverse;
         try
             {
-            nLo = nHi = index.convertTo(pool.typeCInt64()).getIntValue().getInt();
-            fSlice    = false;
-            fReverse  = false;
+            if (index instanceof RangeConstant interval)
+                {
+                // type of "tup[lo..hi]" is a tuple
+                nLo      = interval.getEffectiveFirst().convertTo(pool.typeCInt64()).getIntValue().getInt();
+                nHi      = interval.getEffectiveLast() .convertTo(pool.typeCInt64()).getIntValue().getInt();
+                fSlice   = true;
+                fReverse = interval.isReverse();
+
+                if (fReverse)
+                    {
+                    int nTemp = nLo;
+                    nLo = nHi;
+                    nHi = nTemp;
+                    }
+
+                assert nLo <= nHi;
+                }
+            else
+                {
+                nLo = nHi = index.convertTo(pool.typeCInt64()).getIntValue().getInt();
+                fSlice    = false;
+                fReverse  = false;
+                }
             }
         catch (RuntimeException e)
             {
-            // type of "tup[lo..hi]" is a tuple
-            RangeConstant interval;
-            try
-                {
-                interval = (RangeConstant) index.convertTo(pool.typeInterval());
-                nLo      = interval.getEffectiveFirst().convertTo(pool.typeCInt64()).getIntValue().getInt();
-                nHi      = interval.getEffectiveLast().convertTo(pool.typeCInt64()).getIntValue().getInt();
-                fSlice   = true;
-                fReverse = interval.isReverse();
-                }
-            catch (RuntimeException e2)
-                {
-                return null;
-                }
-
-            if (fReverse)
-                {
-                int nTemp = nLo;
-                nLo = nHi;
-                nHi = nTemp;
-                }
-
-            assert nLo <= nHi;
+            return null;
             }
 
         // note: 0xFF used as an *arbitrary* limit on tuple size here, just to avoid stupidity
