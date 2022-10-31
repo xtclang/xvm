@@ -24,7 +24,7 @@ module annoTest
 
         assert clz.is(Class<Session>);
         assert Struct structure := clz.allocate();
-        assert structure.is(SessionImpl:struct);
+        assert structure.is(struct SessionImpl);
         structure.id = id;
 
         report(clz.instantiate(structure));

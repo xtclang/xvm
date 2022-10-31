@@ -84,12 +84,12 @@ class OSFileStore
 
     OSStorage storage;
 
-    String[] names(OSDirectory:protected dir)
+    String[] names((protected OSDirectory) dir)
         {
         return storage.names(dir.pathString);
         }
 
-    Boolean create(OSFileNode:protected node)
+    Boolean create((protected OSFileNode) node)
         {
         if (readOnly)
             {
@@ -101,7 +101,7 @@ class OSFileStore
             : storage.createFile(node.pathString);
         }
 
-    Boolean delete(OSFileNode:protected node)
+    Boolean delete((protected OSFileNode) node)
         {
         if (readOnly)
             {

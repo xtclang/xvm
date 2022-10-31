@@ -85,7 +85,7 @@ const ReflectionMapping<Serializable, StructType extends Struct>(
     @Override
     <SubType extends Serializable> conditional Mapping<SubType> narrow(Schema schema, Type<SubType> type)
         {
-        // disassemble traits (immutable, :private/:protected/:public etc.) and '&'/'|' types
+        // disassemble traits (immutable, private/protected/public etc.) and '&'/'|' types
         switch (type.form)
             {
             case Union:

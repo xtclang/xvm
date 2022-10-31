@@ -202,7 +202,7 @@ service HttpHandler
             sessionProducer = (mgr, id, info) ->
                 {
                 assert Struct structure := sessionClass.allocate();
-                assert structure.is(SessionImpl:struct);
+                assert structure.is(struct SessionImpl);
 
                 SessionImpl.initialize(structure, mgr, id, info);
 

@@ -478,7 +478,7 @@ service RTChannel(RawChannel rawChannel)
      */
     private conditional Byte[] extractBytes(ReadBuffer buffer)
         {
-        if (val rtBuffer := &buffer.revealAs(RTBuffer:private))
+        if (val rtBuffer := &buffer.revealAs((private RTBuffer)))
             {
             assert rtBuffer.capacity > 0 as "Buffer closed";
             return True, rtBuffer.rawBytes;

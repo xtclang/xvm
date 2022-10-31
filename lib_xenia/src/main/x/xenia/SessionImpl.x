@@ -46,10 +46,10 @@ service SessionImpl
      * @param requestInfo  the request information
      * @param tls          True if the request was received over a TLS connection
      */
-    static void initialize(SessionImpl:struct structure,
-                           SessionManager     manager,
-                           Int                sessionId,
-                           RequestInfo        requestInfo)
+    static void initialize((struct SessionImpl) structure,
+                           SessionManager       manager,
+                           Int                  sessionId,
+                           RequestInfo          requestInfo)
         {
         Time now = xenia.clock.now;
 
