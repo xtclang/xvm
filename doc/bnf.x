@@ -170,7 +170,7 @@ VersionOverrideVerb
 
 Versions
     Version
-    Versions, Version
+    Versions "," Version
 
 Version
     VersionLiteral
@@ -287,7 +287,7 @@ RedundantReturnSpecifier
     "<" TypeExpressionList ">"
 
 MethodDeclarationFinish
-    ;
+    ";"
     StatementBlock
 
 #
@@ -319,7 +319,7 @@ Statement
     UsingStatement
     WhileStatement
     StatementBlock
-	Expression ";"      // for parsing purposes (compilation will only allow specific expression forms)
+	Expression ";"    # for parsing purposes (compilation will only allow specific expression forms)
 
 StatementBlock
     "{" Statements "}"
@@ -411,7 +411,7 @@ ForStatement
 ForCondition
     VariableInitializationList-opt ";" ConditionList-opt ";" VariableModificationList-opt
     OptionalDeclaration ":" Expression
-    (OptionalDeclarationList, OptionalDeclaration) ":" Expression
+    "(" OptionalDeclarationList "," OptionalDeclaration ")" ":" Expression
 
 VariableInitializationList
     VariableInitializer
@@ -444,7 +444,7 @@ WhileStatement
 
 ConditionList
     Condition
-    ConditionList, Condition
+    ConditionList "," Condition
 
 Condition
     ConditionalAssignmentCondition
@@ -456,8 +456,8 @@ ConditionalAssignmentCondition
     "(" OptionalDeclarationList "," OptionalDeclaration ")" ConditionalAssignmentOp Expression
 
 ConditionalAssignmentOp
-    :=
-    ?=
+    ":="
+    "?="
 
 ImportStatement
     "import" QualifiedName ImportFinish
@@ -656,12 +656,12 @@ TernaryExpression
 
 OrExpression
     AndExpression
-    OrExpression || AndExpression
-    OrExpression ^^ AndExpression
+    OrExpression "||" AndExpression
+    OrExpression "^^" AndExpression
 
 AndExpression
     EqualityExpression
-    AndExpression && EqualityExpression
+    AndExpression "&&" EqualityExpression
 
 EqualityExpression
     RelationalExpression
@@ -707,7 +707,7 @@ MultiplicativeExpression
 
 ElvisExpression
     PrefixExpression
-    PrefixExpression ?: ElvisExpression
+    PrefixExpression "?:" ElvisExpression
 
 PrefixExpression
     PostfixExpression
@@ -725,7 +725,7 @@ PostfixExpression
     PostfixExpression "++"
     PostfixExpression "--"
     PostfixExpression "(" Arguments-opt ")"
-    PostfixExpression ArrayDims                                 # TODO REVIEW - is this correct? (does it imply that the expression is a type expression?)
+    PostfixExpression ArrayDims             # TODO REVIEW - is this correct? (does it imply that the expression is a type expression?)
     PostfixExpression ArrayIndexes
     PostfixExpression NoWhitespace "?"
     PostfixExpression "." "&"-opt Name TypeParameterTypeList-opt
@@ -787,7 +787,7 @@ AnonClassBody
 StatementExpression
     StatementBlock                  # a "block expression"
     "throw" TernaryExpression       # non-completing
-    "T0D0" TodoFinish-opt           # non-completing
+    "TODO" TodoFinish-opt           # non-completing
     "assert"                        # non-completing
 
 SwitchExpression
@@ -798,7 +798,7 @@ SwitchExpressionBlocks
     SwitchExpressionBlocks SwitchExpressionBlock
 
 SwitchExpressionBlock
-    SwitchLabels ExpressionList ;
+    SwitchLabels ExpressionList ";"
 
 LambdaExpression
     LambdaInputs "->" LambdaBody
@@ -826,7 +826,7 @@ LambdaParameter
     TypeExpression LambdaParameterName
 
 LambdaParameterName
-    _
+    "_"
     Name
 
 LambdaBody
@@ -1106,22 +1106,22 @@ NameOrSignature
 # '+' creates an intersection of two types; '-' creates a difference of two types
 IntersectingTypeExpression
     UnionedTypeExpression
-    IntersectingTypeExpression + UnionedTypeExpression
-    IntersectingTypeExpression - UnionedTypeExpression
+    IntersectingTypeExpression "+" UnionedTypeExpression
+    IntersectingTypeExpression "-" UnionedTypeExpression
 
 ExtendedIntersectingTypeExpression
     ExtendedUnionedTypeExpression
-    ExtendedIntersectingTypeExpression + ExtendedUnionedTypeExpression
-    ExtendedIntersectingTypeExpression - ExtendedUnionedTypeExpression
+    ExtendedIntersectingTypeExpression "+" ExtendedUnionedTypeExpression
+    ExtendedIntersectingTypeExpression "-" ExtendedUnionedTypeExpression
 
 UnionedTypeExpression
     NonBiTypeExpression
-    UnionedTypeExpression | NonBiTypeExpression
+    UnionedTypeExpression "|" NonBiTypeExpression
 
 ExtendedUnionedTypeExpression
     AnonTypeExpression
     ExtendedNonBiTypeExpression
-    ExtendedUnionedTypeExpression | ExtendedNonBiTypeExpression
+    ExtendedUnionedTypeExpression "|" ExtendedNonBiTypeExpression
 
 NonBiTypeExpression
     "(" ExtendedTypeExpression ")"
@@ -1157,7 +1157,7 @@ ExtendedAnnotatedTypeExpression
 
 NamedTypeExpression
     NamedTypeExpressionPart
-    NamedTypeExpression '.' Annotations-opt NamedTypeExpressionPart
+    NamedTypeExpression "." Annotations-opt NamedTypeExpressionPart
 
 NamedTypeExpressionPart
     QualifiedName NoAutoNarrowModifier-opt TypeParameterTypeList-opt
