@@ -138,13 +138,17 @@ public class xOSStorage
                 String[] asName = path.toFile().list();
                 int      cNames = asName == null ? 0 : asName.length;
 
+                if (cNames == 0)
+                    {
+                    return frame.assignValue(iReturn, xString.ensureEmptyArray());
+                    }
+
                 StringHandle[] ahName = new StringHandle[cNames];
                 int i = 0;
                 for (String sName : asName)
                     {
                     ahName[i++] = xString.makeHandle(sName);
                     }
-
                 return frame.assignValue(iReturn, xArray.makeStringArrayHandle(ahName));
                 }
 
