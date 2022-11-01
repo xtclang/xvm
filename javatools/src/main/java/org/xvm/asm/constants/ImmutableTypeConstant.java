@@ -117,7 +117,8 @@ public class ImmutableTypeConstant
     @Override
     protected TypeConstant cloneSingle(ConstantPool pool, TypeConstant type)
         {
-        return type.isImmutabilitySpecified()
+        return type.isImmutabilitySpecified() ||
+                    !type.containsUnresolved() && type.isImmutable()
                 ? type
                 : pool.ensureImmutableTypeConstant(type);
         }
