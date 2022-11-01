@@ -100,11 +100,11 @@ interface ElementOutput<ParentOutput extends (ElementOutput | FieldOutput)?>
         if (type != mapping.Serializable)
             {
             mapping := mapping.narrow(schema, type);
-            }
 
-        if (schema.enableMetadata)
-            {
-            prepareMetadata(schema.typeKey, schema.nameForType(type));
+            if (schema.enableMetadata)
+                {
+                prepareMetadata(schema.typeKey, schema.nameForType(type));
+                }
             }
 
         mapping.write(this, value);
