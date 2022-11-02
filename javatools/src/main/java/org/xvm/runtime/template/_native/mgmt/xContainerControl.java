@@ -21,6 +21,7 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xService.ServiceHandle;
 
+import org.xvm.runtime.template.collections.xTuple;
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
 
 import org.xvm.runtime.template.text.xString.StringHandle;
@@ -102,7 +103,7 @@ public class xContainerControl
                         (StringHandle) ahArg[0], (TupleHandle) ahArg[1], ahArg[2], iReturn);
 
             case "kill":
-                return invokeKill(frame, (ControlHandle) hTarget);
+                return invokeKill(frame, (ControlHandle) hTarget, iReturn);
             }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
@@ -159,13 +160,15 @@ public class xContainerControl
     /**
      * Native implementation: "void kill()".
      */
-    protected int invokeKill(Frame frame, ControlHandle hCtrl)
+    protected int invokeKill(Frame frame, ControlHandle hCtrl, int iReturn)
         {
         Container container = hCtrl.f_container;
         assert container instanceof NestedContainer;
 
-        // TODO GG:
-        return Op.R_NEXT;
+        // TODO GG: clean up
+
+        // Note: the caller is async; we must return the Tuple()
+        return frame.assignValue(iReturn, xTuple.H_VOID);
         }
 
     /**
