@@ -13,11 +13,13 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.NestedContainer;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xNullable;
+import org.xvm.runtime.template.xService.ServiceHandle;
 
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
 
@@ -65,6 +67,7 @@ public class xContainerControl
         markNativeProperty("innerTypeSystem");
 
         markNativeMethod("invoke", null, null);
+        markNativeMethod("kill",   VOID, VOID);
 
         getCanonicalType().invalidateTypeInfo();
         }
@@ -96,17 +99,21 @@ public class xContainerControl
             {
             case "invoke":
                 return invokeInvoke(frame, (ControlHandle) hTarget,
-                        (StringHandle) ahArg[0], (TupleHandle) ahArg[1], iReturn);
+                        (StringHandle) ahArg[0], (TupleHandle) ahArg[1], ahArg[2], iReturn);
+
+            case "kill":
+                return invokeKill(frame, (ControlHandle) hTarget);
             }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
         }
 
     /**
-     * Native implementation: `@Op("()") ReturnTypes invoke(ParamTypes args)`
+     * Native implementation: "Tuple invoke(String methodName, Tuple args = Tuple:(),
+     *                         Service? runWithin = Null)".
      */
-    protected int invokeInvoke(Frame frame, ControlHandle hCtrl,
-                            StringHandle hName, TupleHandle hTupleArg, int iReturn)
+    protected int invokeInvoke(Frame frame, ControlHandle hCtrl, StringHandle hName,
+                               TupleHandle hTupleArg, ObjectHandle hRunWithin, int iReturn)
         {
         Container container = hCtrl.f_container;
 
@@ -125,6 +132,16 @@ public class xContainerControl
                     " method for " + idModule.getValueString());
                 }
 
+            ServiceHandle hService = hRunWithin == ObjectHandle.DEFAULT ||
+                                     hRunWithin == xNullable.NULL
+                    ? ctxContainer.getService()
+                    : (ServiceHandle) hRunWithin;
+
+            if (hService.f_context.f_container != container)
+                {
+                return frame.raiseException("Out of context \"runWithin\" service");
+                }
+
             TypeComposition clzModule = container.resolveClass(idModule.getType());
             CallChain       chain     = clzModule.getMethodCallChain(idMethod.getSignature());
             FunctionHandle  hFunction = new xRTFunction.AsyncHandle(container, chain)
@@ -135,8 +152,20 @@ public class xContainerControl
                     return frame.getConstHandle(idModule);
                     }
                 };
-            return hFunction.callT(frame, ctxContainer.getService(), ahArg, iReturn);
+            return hFunction.callT(frame, hService, ahArg, iReturn);
             }
+        }
+
+    /**
+     * Native implementation: "void kill()".
+     */
+    protected int invokeKill(Frame frame, ControlHandle hCtrl)
+        {
+        Container container = hCtrl.f_container;
+        assert container instanceof NestedContainer;
+
+        // TODO GG:
+        return Op.R_NEXT;
         }
 
     /**
