@@ -66,6 +66,7 @@ public class Lexer
         {
         m_source        = parent.m_source;
         m_errorListener = parent.m_errorListener;
+        m_fWhitespace   = parent.m_fWhitespace;
         }
 
 
@@ -97,8 +98,7 @@ public class Lexer
      */
     public void emit(Consumer<Token> consumer)
         {
-        final Source source = m_source;
-        while (source.hasNext())
+        while (m_source.hasNext())
             {
             consumer.accept(next());
             }
@@ -1297,7 +1297,7 @@ public class Lexer
         {
         long   lPrev  = getPosition();
         Source source = m_source;
-        while (m_source.hasNext())
+        while (source.hasNext())
             {
             char ch = source.next();
             if (!isWhitespace(ch))
@@ -1578,7 +1578,7 @@ public class Lexer
     /**
      * The next character must begin an integer literal. Parse it and return it as a PackedInteger.
      *
-     * @param otherResults  either null, or an array of up to two "int" elemnents, to allow for
+     * @param otherResults  either null, or an array of up to two "int" elements, to allow for
      *                      multiple "out" values from this method, the first of which is the radix
      *                      and the second is the sign (<tt>-1</tt> or <tt>+1</tt>)
      *
@@ -1586,8 +1586,7 @@ public class Lexer
      */
     protected PackedInteger eatIntegerLiteral(int[] otherResults)
         {
-        final Source source    = m_source;
-        final long   lPosStart = source.getPosition();
+        final Source source = m_source;
 
         // the first character could be a sign (+ or -)
         boolean fNeg = false;
@@ -1910,9 +1909,6 @@ public class Lexer
      */
     protected long eatUnsignedLong()
         {
-        final Source source    = m_source;
-        final long   lPosStart = source.getPosition();
-
         long n = 0;
         if (isNextCharDigit(10))
             {
@@ -1948,7 +1944,7 @@ public class Lexer
         final Source source  = m_source;
         final long   lLitPos = source.getPosition();
 
-        int nYear  = 0;
+        int nYear;
         int nMonth = 0;
         int nDay   = 0;
 
@@ -1997,11 +1993,11 @@ public class Lexer
         final Source source = m_source;
         final long   lStart = source.getPosition();
 
-        int  nHour   = 0;
+        int  nHour;
         int  nMin    = 0;
         int  nSec    = 0;
         long nPicos  = 0;
-        int  cDigits = -1;
+        int  cDigits;
 
         if ((nHour = eatDigits(2)) >= 0)
             {
@@ -2223,7 +2219,6 @@ public class Lexer
 
                 case 'S':
                 case 's':
-                    nPrevStage = 8;
                     break Loop;
 
                 case '.':
@@ -2302,7 +2297,6 @@ public class Lexer
     protected Token eatVersion(long lInitPos)
         {
         Source             source    = m_source;
-        long               lVerPos   = source.getPosition();
         ArrayList<Integer> listParts = new ArrayList<>();
 
         // eat the VersionNumbers

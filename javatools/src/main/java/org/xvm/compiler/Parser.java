@@ -2696,14 +2696,14 @@ public class Parser
      *     "=" Expression
      * </pre></code>
      *
-     * @param required    true iff at least one VariableInitializer is required
+     * @param fRequired   true iff at least one VariableInitializer is required
      * @param fAllowExpr  true iff a naked expression can be used as an implicit variable initializer
      *
      * @return a statement representing the variable initializer
      */
-    List<AssignmentStatement> parseVariableInitializationList(boolean required, boolean fAllowExpr)
+    List<AssignmentStatement> parseVariableInitializationList(boolean fRequired, boolean fAllowExpr)
         {
-        if (!required)
+        if (!fRequired)
             {
             switch (peek().getId())
                 {
@@ -4554,10 +4554,10 @@ public class Parser
                 Expression expr1     = parseBitwiseExpression(false);
                 Token      tokDotDot = switch (peek().getId())
                     {
-                    case E_RANGE_I -> current();
-                    case I_RANGE_E -> current();
-                    case E_RANGE_E -> current();
-                    default -> expect(Id.I_RANGE_I);
+                    case E_RANGE_I,
+                         I_RANGE_E,
+                         E_RANGE_E -> current();
+                    default        -> expect(Id.I_RANGE_I);
                     };
                 Expression expr2     = parseBitwiseExpression(false);
                 return new RelOpExpression(expr1, tokDotDot, expr2);
