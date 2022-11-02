@@ -117,9 +117,9 @@ public abstract class TypeExpression
         {
         m_constType = null;
         AstNode parent = getParent();
-        if (parent instanceof TypeExpression)
+        if (parent instanceof TypeExpression exprType)
             {
-            ((TypeExpression) parent).resetTypeConstant();
+            exprType.resetTypeConstant();
             }
         }
 
@@ -252,9 +252,9 @@ public abstract class TypeExpression
                                           TypeFit fit, Constant constVal, ErrorListener errs)
         {
         Expression expr = super.finishValidation(ctx, typeRequired, typeActual, fit, constVal, errs);
-        if (expr instanceof TypeExpression)
+        if (expr instanceof TypeExpression exprType)
             {
-            ((TypeExpression) expr).resetTypeConstant();
+            exprType.resetTypeConstant();
             }
         return expr;
         }
@@ -265,8 +265,8 @@ public abstract class TypeExpression
     protected static TypeConstant getSafeDataType(TypeConstant type)
         {
         return type != null && type.isParamsSpecified()
-            ? type.getParamType(0)
-            : null;
+                ? type.getParamType(0)
+                : null;
         }
 
 
