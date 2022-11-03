@@ -95,8 +95,28 @@ public class xLocalClock
                 GenericHandle  hWakeup = (GenericHandle) ahArg[0];
                 FunctionHandle hAlarm  = (FunctionHandle) ahArg[1];
 
-                Alarm          alarm   = new Alarm(frame.f_context, hAlarm);
-                FunctionHandle hCancel = alarm.schedule(hWakeup);
+                // assert (hWakeup.timezone == NoTZ) == (this.timezone == NoTZ)
+                LongLong llEpoch = ((LongLongHandle) hWakeup.getField(null, "epochPicos")).getValue();
+                long     ldtNow    = System.currentTimeMillis();
+                long     ldtWakeup = llEpoch.divUnsigned(xNanosTimer.PICOS_PER_MILLI).getLowValue();
+                long     cDelay    = Math.max(0, ldtWakeup - ldtNow);
+
+                Alarm alarm = new Alarm(frame.f_context, hAlarm);
+                try
+                    {
+                    TIMER.schedule(alarm, cDelay);
+                    }
+                catch (Exception e)
+                    {
+                    alarm.cancel();
+                    return frame.raiseException(e.getMessage());
+                    }
+
+                FunctionHandle hCancel = new NativeFunctionHandle((_frame, _ah, _iReturn) ->
+                    {
+                    alarm.cancel();
+                    return Op.R_NEXT;
+                    });
 
                 return frame.assignValue(iReturn, hCancel);
                 }
@@ -190,51 +210,39 @@ public class xLocalClock
     protected static class Alarm
             extends TimerTask
         {
-        public Alarm(ServiceContext ctx, FunctionHandle hFunction)
+        protected Alarm(ServiceContext ctx, FunctionHandle hFunction)
             {
-            f_context   = ctx;
-            f_hFunction = hFunction;
-            }
+            m_context   = ctx;
+            m_hFunction = hFunction;
 
-        protected FunctionHandle schedule(GenericHandle hWakeup)
-            {
-            // assert (hWakeup.timezone == NoTZ) == (this.timezone == NoTZ)
-            LongLongHandle llEpoch = (LongLongHandle) hWakeup.getField(null, "epochPicos");
-
-            long  ldtNow    = System.currentTimeMillis();
-            long  ldtWakeup = llEpoch.getValue().divUnsigned(xNanosTimer.PICOS_PER_MILLI).getLowValue();
-            long  cDelay    = Math.max(0, ldtWakeup - ldtNow);
-
-            f_context.registerNotification();
-            TIMER.schedule(this, cDelay);
-
-            return new NativeFunctionHandle((_frame, _ah, _iReturn) ->
-                {
-                Alarm.this.cancel();
-                return Op.R_NEXT;
-                });
+            ctx.registerNotification();
             }
 
         @Override
         public void run()
             {
-            f_context.callLater(f_hFunction, Utils.OBJECTS_NONE);
-            f_context.unregisterNotification();
+            m_context.callLater(m_hFunction, Utils.OBJECTS_NONE);
+            m_context.unregisterNotification();
+            m_context   = null;
+            m_hFunction = null;
             }
 
         @Override
         public boolean cancel()
             {
-            if (super.cancel())
+            boolean        fCancelled = super.cancel();
+            ServiceContext context    = m_context;
+            if (context != null)
                 {
-                f_context.unregisterNotification();
-                return true;
+                context.unregisterNotification();
+                m_context   = null;
+                m_hFunction = null;
                 }
-            return false;
+            return fCancelled;
             }
 
-        final private ServiceContext f_context;
-        final private FunctionHandle f_hFunction;
+        private ServiceContext m_context;
+        private FunctionHandle m_hFunction;
         }
 
 

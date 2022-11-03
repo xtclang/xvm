@@ -328,10 +328,6 @@ public class xNanosTimer
             synchronized (f_setAlarms)
                 {
                 fUnregistered = f_setAlarms.remove(alarm);
-                if (fUnregistered)
-                    {
-                    alarm.f_context.unregisterNotification();
-                    }
                 }
             assert fUnregistered;
             }
@@ -377,7 +373,7 @@ public class xNanosTimer
                     }
 
                 m_cNanosStart = System.nanoTime();
-                m_trigger     = new Trigger();
+                m_trigger     = new Trigger(this);
                 try
                     {
                     f_context.registerNotification();
@@ -385,7 +381,8 @@ public class xNanosTimer
                     }
                 catch (Exception e)
                     {
-                    f_context.unregisterNotification();
+                    m_trigger.cancel();
+                    m_trigger = null;
                     System.err.println("Exception in xNanosTimer.Alarm.start(): " + e);
                     }
                 }
@@ -504,14 +501,37 @@ public class xNanosTimer
             /**
              * A TimerTask that is scheduled on the Java timer and used to trigger the alarm.
              */
-            protected class Trigger
+            protected static class Trigger
                     extends TimerTask
                 {
+                protected Trigger(Alarm alarm)
+                    {
+                    m_alarm = alarm;
+                    }
+
                 @Override
                 public void run()
                     {
-                    Alarm.this.run();
+                    Alarm alarm = m_alarm;
+                    m_alarm = null;
+                    alarm.run();
+                    alarm.f_context.unregisterNotification();
                     }
+
+                @Override
+                public boolean cancel()
+                    {
+                    boolean fCancelled = super.cancel();
+                    Alarm   alarm      = m_alarm;
+                    if (alarm != null)
+                        {
+                        alarm.f_context.unregisterNotification();;
+                        m_alarm = null;
+                        }
+                    return fCancelled;
+                    }
+
+                private Alarm m_alarm;
                 }
 
             private final    FunctionHandle f_hFunction;
