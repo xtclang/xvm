@@ -133,6 +133,14 @@ public class AccessTypeConstant
         }
 
     @Override
+    public TypeConstant ensureAccess(Access access)
+        {
+        return access == m_access
+                ? this
+                : getConstantPool().ensureAccessTypeConstant(m_constType, access);
+        }
+
+    @Override
     public boolean isNullable()
         {
         assert !m_constType.isNullable();

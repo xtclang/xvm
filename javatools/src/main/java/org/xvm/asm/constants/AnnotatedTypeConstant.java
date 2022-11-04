@@ -18,6 +18,7 @@ import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.GenericTypeResolver;
 
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
@@ -68,6 +69,20 @@ public class AnnotatedTypeConstant
         if (constType == null)
             {
             throw new IllegalArgumentException("annotated type required");
+            }
+
+        switch (constType.getFormat())
+            {
+            case TerminalType:
+            case VirtualChildType:
+            case ParameterizedType:
+            case AnnotatedType:
+            case AnonymousClassType:
+            case UnresolvedType:
+                break;
+
+            default:
+                throw new IllegalArgumentException("Invalid format: " + constType);
             }
 
         m_annotation = pool.ensureAnnotation(constClass, aconstParam);
@@ -360,6 +375,18 @@ public class AnnotatedTypeConstant
         return type == null
                 ? getAnnotationType().resolveGenericType(sName)
                 : type;
+        }
+
+    @Override
+    public TypeConstant resolveGenerics(ConstantPool pool, GenericTypeResolver resolver)
+        {
+        TypeConstant constOriginal = getUnderlyingType();
+        TypeConstant constResolved = constOriginal.resolveGenerics(pool, resolver);
+
+        // if the resolved type is relational, don't annotate it; simply avoid resolution
+        return constResolved == constOriginal || constResolved.isRelationalType()
+                ? this
+                : cloneSingle(pool, constResolved);
         }
 
     @Override

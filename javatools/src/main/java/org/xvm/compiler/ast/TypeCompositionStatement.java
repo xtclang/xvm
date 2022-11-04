@@ -1496,9 +1496,10 @@ public class TypeCompositionStatement
                 return;
                 }
 
-            switch (contrib.getComposition())
+            Composition composition = contrib.getComposition();
+            switch (composition)
                 {
-                case Extends:
+                case Extends, Implements, Incorporates:
                     {
                     if (!typeContrib.isExplicitClassIdentity(true))
                         {
@@ -1506,26 +1507,31 @@ public class TypeCompositionStatement
                         return;
                         }
 
-                    Format formatThis    = component.getFormat();
-                    Format formatContrib = typeContrib.getExplicitClassFormat();
-                    if (!formatThis.isExtendsLegal(formatContrib))
+                    if (typeContrib.isAccessSpecified() ||
+                        typeContrib.isAnnotated())
                         {
                         findComposition(Id.EXTENDS).log(errs,
-                                Severity.ERROR, Constants.VE_EXTENDS_INCOMPATIBLE,
-                                component.getIdentityConstant().getValueString(), formatThis,
-                                typeContrib.getValueString(), formatContrib);
+                                Severity.ERROR, Component.VE_TYPE_MODIFIER_ILLEGAL,
+                                component.getIdentityConstant().getValueString(),
+                                typeContrib.getValueString());
                         return;
+                        }
+
+                    if (composition == Composition.Extends)
+                        {
+                        Format formatThis    = component.getFormat();
+                        Format formatContrib = typeContrib.getExplicitClassFormat();
+                        if (!formatThis.isExtendsLegal(formatContrib))
+                            {
+                            findComposition(Id.EXTENDS).log(errs,
+                                    Severity.ERROR, Constants.VE_EXTENDS_INCOMPATIBLE,
+                                    component.getIdentityConstant().getValueString(), formatThis,
+                                    typeContrib.getValueString(), formatContrib);
+                            return;
+                            }
                         }
                     break;
                     }
-
-                case Implements, Incorporates:
-                    if (!typeContrib.isExplicitClassIdentity(true))
-                        {
-                        requireClass(component, contrib, typeContrib, errs);
-                        return;
-                        }
-                    break;
                 }
             }
 

@@ -171,22 +171,14 @@ public abstract class RelationalTypeConstant
     @Override
     public boolean isAccessSpecified()
         {
-        return m_constType1.isAccessSpecified()
-            && m_constType2.isAccessSpecified()
-            && m_constType1.getAccess() == m_constType2.getAccess();
+        // relational types are never access-modified
+        return false;
         }
 
     @Override
     public Access getAccess()
         {
-        Access access = m_constType1.getAccess();
-
-        if (m_constType1.getAccess() != access)
-            {
-            throw new UnsupportedOperationException("relational access mismatch");
-            }
-
-        return access;
+        return Access.PUBLIC;
         }
 
     @Override

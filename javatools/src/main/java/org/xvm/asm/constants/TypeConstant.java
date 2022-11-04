@@ -263,14 +263,16 @@ public abstract class TypeConstant
 
         ConstantPool pool = getConstantPool();
 
-        // replace the TerminalType of the typeActual with the inception type
+        // replace the ImmutableType with the underlying type
         Function<TypeConstant, TypeConstant> transformer = new Function<>()
             {
             public TypeConstant apply(TypeConstant type)
                 {
-                return type instanceof TerminalTypeConstant || type instanceof VirtualChildTypeConstant
-                        ? type
-                        : type instanceof ImmutableTypeConstant
+                return type instanceof TerminalTypeConstant
+                            ? type
+                     : type instanceof VirtualChildTypeConstant
+                            ? type.removeImmutable()
+                     : type instanceof ImmutableTypeConstant
                             ? type.getUnderlyingType()
                             : type.replaceUnderlying(pool, this);
                 }
@@ -320,7 +322,7 @@ public abstract class TypeConstant
     /**
      * If this type has access specified, calculate the type without an access modifier.
      *
-     * @return this TypeConstant without an access modifier
+     * @return an equivalent TypeConstant without an access modifier
      */
     public TypeConstant removeAccess()
         {
@@ -331,12 +333,13 @@ public abstract class TypeConstant
 
         ConstantPool pool = getConstantPool();
 
-        // replace the TerminalType of the typeActual with the inception type
+        // replace the AccessType with the underlying type
         Function<TypeConstant, TypeConstant> transformer = new Function<>()
             {
             public TypeConstant apply(TypeConstant type)
                 {
-                return type instanceof TerminalTypeConstant
+                return type instanceof TerminalTypeConstant ||
+                       type instanceof VirtualChildTypeConstant
                         ? type
                         : type instanceof AccessTypeConstant
                             ? type.getUnderlyingType()
@@ -344,6 +347,16 @@ public abstract class TypeConstant
                 }
             };
         return transformer.apply(this);
+        }
+
+    /**
+     * Ensure that this type has the specified access modifier.
+     *
+     * @return an equivalent TypeConstant with the specified access modifier
+     */
+    public TypeConstant ensureAccess(Access access)
+        {
+        return getConstantPool().ensureAccessTypeConstant(this, access);
         }
 
     /**
@@ -875,8 +888,8 @@ public abstract class TypeConstant
         TypeConstant constOriginal = getUnderlyingType();
         TypeConstant constResolved = constOriginal.resolveTypedefs();
         return constResolved == constOriginal
-            ? this
-            : cloneSingle(getConstantPool(), constResolved);
+                ? this
+                : cloneSingle(getConstantPool(), constResolved);
         }
 
     /**
@@ -1788,14 +1801,8 @@ public abstract class TypeConstant
                 return typeAnno.buildPrivateInfo(errs);
                 }
 
-            TypeConstant typeAnno = typeUnderlying;
-            while (!(typeAnno instanceof AnnotatedTypeConstant))
-                {
-                typeAnno = typeAnno.getUnderlyingType();
-                }
             log(errs, Severity.ERROR, VE_ANNOTATION_UNEXPECTED,
-                    ((AnnotatedTypeConstant) typeAnno).getAnnotation(),
-                    typeUnderlying.getValueString());
+                    getAnnotations()[0], typeUnderlying.getValueString());
             return null;
             }
 
@@ -2327,6 +2334,14 @@ public abstract class TypeConstant
                     break;
                     }
 
+                if (typeExtends.isAccessSpecified() || typeExtends.isAnnotated())
+                    {
+                    log(errs, Severity.ERROR, VE_TYPE_MODIFIER_ILLEGAL, constId.getPathString(),
+                            typeExtends.getValueString());
+                    typeExtends = null;
+                    break;
+                    }
+
                 if (typeExtends.extendsClass(constId))
                     {
                     // some sort of circular loop
@@ -2803,6 +2818,13 @@ public abstract class TypeConstant
             return;
             }
 
+        if (typeContrib.isAccessSpecified() || typeContrib.isAnnotated())
+            {
+            log(errs, Severity.ERROR, VE_TYPE_MODIFIER_ILLEGAL, constId.getPathString(),
+                    typeContrib.getValueString());
+            return;
+            }
+
         // check for duplicate implements
         if (listProcess.stream().anyMatch(contribPrev ->
                 contribPrev.getComposition() == Composition.Implements &&
@@ -2814,7 +2836,7 @@ public abstract class TypeConstant
         else
             {
             listProcess.add(new Contribution(Composition.Implements,
-                getConstantPool().ensureAccessTypeConstant(typeContrib, Access.PROTECTED)));
+                    typeContrib.ensureAccess(Access.PROTECTED)));
             }
         }
 
@@ -5469,47 +5491,7 @@ public abstract class TypeConstant
             return Relation.INCOMPATIBLE;
             }
 
-        // check the access modifier first
-        if (typeLeft.isAccessSpecified() || typeRight.isAccessSpecified())
-            {
-            Access accessLeft  = typeLeft.getAccess();
-            Access accessRight = typeRight.getAccess();
-            switch (accessRight)
-                {
-                case STRUCT:
-                    if (typeLeft.equals(getConstantPool().typeStruct()))
-                        {
-                        relation = Relation.IS_A;
-                        }
-                    else if (accessLeft != Access.STRUCT)
-                        {
-                        // struct is not assignable to anything but a struct
-                        relation = Relation.INCOMPATIBLE;
-                        }
-                    break;
-
-                case PUBLIC:
-                case PROTECTED:
-                case PRIVATE:
-                    if (accessLeft == Access.STRUCT ||
-                            accessLeft.isLessAccessibleThan(accessRight))
-                        {
-                        // for now, disallow any access widening
-                        relation = Relation.INCOMPATIBLE;
-                        }
-                    break;
-                }
-
-            if (relation == null)
-                {
-                relation = typeRight.removeAccess().
-                        calculateRelation(typeLeft.removeAccess());
-                }
-            mapRelations.put(typeLeft, relation);
-            return relation;
-            }
-
-        // then check immutability modifiers
+        // check immutability modifiers
         if (typeLeft.isImmutabilitySpecified())
             {
             relation = typeRight.isImmutable()
@@ -5529,22 +5511,68 @@ public abstract class TypeConstant
             return relation;
             }
 
-        // ServiceTypeConstant cannot be augmented by any other modifier
-        if (typeLeft instanceof ServiceTypeConstant)
+        // if either side is relational, defer the access test; it will come back for the underlying
+        // parts of the relation type
+        if (!(typeLeft instanceof RelationalTypeConstant) &&
+            !(typeRight instanceof RelationalTypeConstant))
             {
-            relation = typeRight.isService()
-                    ? typeRight.calculateRelation(typeLeft.getUnderlyingType())
-                    : Relation.INCOMPATIBLE;
-            mapRelations.put(typeLeft, relation);
-            return relation;
-            }
+            // check the access modifier
+            if (typeLeft.isAccessSpecified() || typeRight.isAccessSpecified())
+                {
+                Access accessLeft  = typeLeft.getAccess();
+                Access accessRight = typeRight.getAccess();
+                switch (accessRight)
+                    {
+                    case STRUCT:
+                        if (typeLeft.equals(getConstantPool().typeStruct()))
+                            {
+                            relation = Relation.IS_A;
+                            }
+                        else if (accessLeft != Access.STRUCT)
+                            {
+                            // struct is not assignable to anything but a struct
+                            relation = Relation.INCOMPATIBLE;
+                            }
+                        break;
 
-        // then check various "reserved" scenarios
-        relation = checkReservedCompatibility(typeLeft, typeRight);
-        if (relation != null)
-            {
-            mapRelations.put(typeLeft, relation);
-            return relation;
+                    case PUBLIC:
+                    case PROTECTED:
+                    case PRIVATE:
+                        if (accessLeft == Access.STRUCT ||
+                                accessLeft.isLessAccessibleThan(accessRight))
+                            {
+                            // for now, disallow any access widening
+                            relation = Relation.INCOMPATIBLE;
+                            }
+                        break;
+                    }
+
+                if (relation == null)
+                    {
+                    relation = typeRight.removeAccess().
+                            calculateRelation(typeLeft.removeAccess());
+                    }
+                mapRelations.put(typeLeft, relation);
+                return relation;
+                }
+
+            // ServiceTypeConstant cannot be augmented by any other modifier
+            if (typeLeft instanceof ServiceTypeConstant)
+                {
+                relation = typeRight.isService()
+                        ? typeRight.calculateRelation(typeLeft.getUnderlyingType())
+                        : Relation.INCOMPATIBLE;
+                mapRelations.put(typeLeft, relation);
+                return relation;
+                }
+
+            // then check various "reserved" scenarios
+            relation = checkReservedCompatibility(typeLeft, typeRight);
+            if (relation != null)
+                {
+                mapRelations.put(typeLeft, relation);
+                return relation;
+                }
             }
 
         // now - a long journey

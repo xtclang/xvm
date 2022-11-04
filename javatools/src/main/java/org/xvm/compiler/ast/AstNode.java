@@ -1056,8 +1056,7 @@ public abstract class AstNode
             if (typeTarget.isSingleDefiningConstant() && typeTarget.getAccess() != Access.PRIVATE)
                 {
                 // check if there are any potentially matching private methods
-                TypeConstant typePrivate =
-                        pool().ensureAccessTypeConstant(typeTarget.removeAccess(), Access.PRIVATE);
+                TypeConstant typePrivate = typeTarget.ensureAccess(Access.PRIVATE);
                 if (!typePrivate.ensureTypeInfo(ErrorListener.BLACKHOLE).
                         findMethods(sMethodName, cArgs, kind).isEmpty())
                     {
