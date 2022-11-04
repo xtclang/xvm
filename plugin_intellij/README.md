@@ -1,1 +1,1 @@
-This is the readme.
+An Intellij plugin for the Ecstasy language. This plugin is very much in-progress!
