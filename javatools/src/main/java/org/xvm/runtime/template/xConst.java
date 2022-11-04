@@ -574,7 +574,7 @@ public class xConst
                     return frameCaller.raiseException("Unassigned property \"" + field.getName() +'"');
                     }
 
-                TypeConstant typeProp = clzBase.getFieldType(enid);
+                TypeConstant typeProp = (TypeConstant) pool.register(clzBase.getFieldType(enid));
 
                 typeProp = typeProp.resolveGenerics(pool,
                             frameCaller.getGenericsResolver(typeProp.containsDynamicType(null)));
@@ -672,8 +672,7 @@ public class xConst
                     return frameCaller.raiseException("Unassigned property \"" + field.getName() +'"');
                     }
 
-                TypeConstant typeProp = clzBase.getFieldType(enid);
-
+                TypeConstant typeProp = (TypeConstant) pool.register(clzBase.getFieldType(enid));
 
                 // this check is only to provide a better exception description
                 if (typeProp.findCallable(pool.sigCompare()) == null)
@@ -772,7 +771,7 @@ public class xConst
                     return frameCaller.raiseException("Unassigned property: \"" + field.getName() + '"');
                     }
 
-                TypeConstant typeProp = clzBase.getFieldType(enid);
+                TypeConstant typeProp = (TypeConstant) pool.register(clzBase.getFieldType(enid));
 
                 typeProp = typeProp.resolveGenerics(pool,
                             frameCaller.getGenericsResolver(typeProp.containsDynamicType(null)));

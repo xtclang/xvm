@@ -223,7 +223,7 @@ public class PropertyComposition
                             : idBase.appendNestedIdentity(idBase.getConstantPool(), nid));
 
                 TypeInfo   infoParent = getParentInfo();
-                MethodInfo info       = infoParent.getMethodByNestedId(idNested.getNestedIdentity());
+                MethodInfo info       = infoParent.getMethodByNestedId(idNested.getNestedIdentity(), true);
                 return info == null
                         ? f_clzRef.getMethodCallChain(nid)
                         : new CallChain(info.ensureOptimizedMethodChain(infoParent));

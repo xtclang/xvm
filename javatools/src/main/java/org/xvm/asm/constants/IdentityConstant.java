@@ -440,6 +440,14 @@ public abstract class IdentityConstant
             }
 
         /**
+         * @return true iff this NestedIdentity could be used as a cache key
+         */
+        public boolean isCacheable()
+            {
+            return m_resolver == null || m_resolver instanceof TypeConstant;
+            }
+
+        /**
          * @return the IdentityConstant that created this NestedIdentity
          */
         public IdentityConstant getIdentityConstant()

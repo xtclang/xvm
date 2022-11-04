@@ -1549,18 +1549,22 @@ public class TypeInfo
             info = getMethodBySignature(sig, fRuntime);
             if (info != null)
                 {
-                f_cacheByNid.put(nid, info);
+                f_cacheByNid.put(sig, info);
                 return info;
                 }
             }
         else
             {
-            IdentityConstant id = ((NestedIdentity) nid).getIdentityConstant();
+            NestedIdentity   idNested = (NestedIdentity) nid;
+            IdentityConstant id       = idNested.getIdentityConstant();
             for (MethodInfo infoTest : f_mapMethods.values())
                 {
                 if (infoTest.getIdentity().equals(id))
                     {
-                    f_cacheByNid.put(nid, infoTest);
+                    if (!fRuntime || idNested.isCacheable())
+                        {
+                        f_cacheByNid.put(idNested, infoTest);
+                        }
                     return infoTest;
                     }
                 }
