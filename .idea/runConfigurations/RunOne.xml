@@ -2,7 +2,7 @@
   <configuration default="false" name="RunOne" type="Application" factoryName="Application">
     <option name="MAIN_CLASS_NAME" value="org.xvm.runtime.TestConnector" />
     <module name="xvm.javatools.test" />
-    <option name="PROGRAM_PARAMETERS" value="src/main/x/annos.x" />
+    <option name="PROGRAM_PARAMETERS" value="src/main/x/dbTests/LogTest.x" />
     <option name="VM_PARAMETERS" value="-Xms256m -Xmx1024m -ea -Dxvm.parallelism=1" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/manualTests" />
     <method v="2">

@@ -2,7 +2,7 @@
   <configuration default="false" name="Compile lib" type="Application" factoryName="Application">
     <option name="MAIN_CLASS_NAME" value="org.xvm.tool.Compiler" />
     <module name="xvm.javatools.main" />
-    <option name="PROGRAM_PARAMETERS" value="-v -rebuild -o build/xdk/lib -L build/xdk/lib -L build/xdk/javatools/ ../lib_oodb/src/main/x/oodb.x" />
+    <option name="PROGRAM_PARAMETERS" value="-v -rebuild -o build/xdk/lib -L build/xdk/lib -L build/xdk/javatools/ ../lib_json/src/main/x/json.x" />
     <option name="VM_PARAMETERS" value="-Xms256m -Xmx1024m -ea " />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/xdk" />
     <method v="2">
