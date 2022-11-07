@@ -385,7 +385,7 @@ public class RelOpExpression
             TypeConstant typeConv = infoAuto.getSignature().getRawReturns()[0];
             if (typeConv.containsAutoNarrowing(false))
                 {
-                typeConv = typeConv.resolveAutoNarrowing(pool, false, typeLeft, idCtx);
+                typeConv = typeConv.resolveAutoNarrowing(pool, false, typeLeft, null);
                 }
 
             for (MethodConstant idMethod : typeConv.ensureTypeInfo().findOpMethods(sMethod, sOp, 1))

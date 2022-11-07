@@ -150,7 +150,7 @@ public class ReturnStatement
                 IdentityConstant idCtx = ctx.isMethod()
                         ? ctx.getThisClass().getIdentityConstant()
                         : null;
-                aRetTypes[i] = typeRet.resolveAutoNarrowing(pool, true, ctx.getThisType(), idCtx);
+                aRetTypes[i] = typeRet.resolveAutoNarrowing(pool, false, ctx.getThisType(), null);
                 }
             }
 

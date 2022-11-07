@@ -2595,16 +2595,12 @@ public class NameExpression
 
                     if (infoProp != null)
                         {
-                        IdentityConstant idCtx = ctx.isMethod()
-                                ? ctx.getThisClass().getIdentityConstant()
-                                : null;
-
                         // check for a narrowed property type
                         Argument argNarrowed = ctx.getVar(prop.getName());
                         type = argNarrowed instanceof TargetInfo
                                 ? argNarrowed.getType()
                                 : infoProp.inferImmutable(typeLeft).
-                                        resolveAutoNarrowing(pool, false, typeLeft, idCtx);
+                                        resolveAutoNarrowing(pool, false, typeLeft, null);
                         }
                     }
                 else
@@ -2739,10 +2735,7 @@ public class NameExpression
                                 typeResolved = resolveDynamicType(ctx, typeLeft, type, typeResolved);
                                 }
 
-                            IdentityConstant idCtx = ctx.isMethod() && typeLeft.isA(ctx.getThisType())
-                                    ? ctx.getThisClass().getIdentityConstant()
-                                    : null;
-                            type = typeResolved.resolveAutoNarrowing(pool, false, typeLeft, idCtx);
+                            type = typeResolved.resolveAutoNarrowing(pool, false, typeLeft, null);
                             }
                         }
                     }

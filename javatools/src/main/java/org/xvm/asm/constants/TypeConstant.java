@@ -1105,7 +1105,8 @@ public abstract class TypeConstant
      * @param fRetainParams  if true, don't attempt to resolve the type parameters
      * @param typeTarget     the context-specific target type
      * @param idCtx          if specified, the identity of the auto-narrowing "context" class that
-     *                       should replace any corresponding auto-narrowing identity
+     *                       should replace any corresponding auto-narrowing identity; note that
+     *                       the resulting type will remain "auto-narrowing"
      *
      * @return the TypeConstant with explicit identities swapped in for any auto-narrowing
      *         identities

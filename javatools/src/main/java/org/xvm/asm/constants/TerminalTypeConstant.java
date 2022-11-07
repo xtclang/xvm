@@ -817,6 +817,8 @@ public class TerminalTypeConstant
                 }
 
             case ParentClass:
+                {
+                ParentClassConstant constParent = (ParentClassConstant) constant;
                 if (typeTarget != null)
                     {
                     if (typeTarget.isFormalType())
@@ -825,11 +827,25 @@ public class TerminalTypeConstant
                         }
                     if (typeTarget.isVirtualChild())
                         {
-                        return typeTarget.getParentType();
+                        // if possible, retain the parent's type parameters
+                        int           nDepth     = constParent.getDepth();
+                        TypeConstant  typeParent = typeTarget.getParentType();
+                        while (--nDepth > 0)
+                            {
+                            if (typeParent instanceof VirtualChildTypeConstant)
+                                {
+                                typeParent = typeParent.getParentType();
+                                }
+                            else
+                                {
+                                return constParent.getDeclarationLevelClass().getType();
+                                }
+                            }
+                        return typeParent;
                         }
                     }
-                return ((ParentClassConstant) constant).getDeclarationLevelClass().getType();
-
+                return constParent.getDeclarationLevelClass().getType();
+                }
             case ChildClass:
                 // currently, not used
                 return ((ChildClassConstant) constant).getDeclarationLevelClass().getType();
