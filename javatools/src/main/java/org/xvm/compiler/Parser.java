@@ -6021,7 +6021,7 @@ public class Parser
         {
         assert m_tokenPutBack == null;
 
-        // undo context sensitive keyword conversion
+        // undo context-sensitive keyword conversion
         token = token.desensitize();
 
         // undo peeling conversion

@@ -132,6 +132,18 @@ public class Lexer
                     }
                 throw new NoSuchElementException();
                 }
+
+            @Override
+            public long getPosition()
+                {
+                return iNext;
+                }
+
+            @Override
+            public void setPosition(long lPos)
+                {
+                iNext = (int) lPos;
+                }
             };
         }
 
