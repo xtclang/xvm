@@ -563,7 +563,7 @@ interface List<Element>
      * @return the resulting `Collection` containing the elements that matched the criteria
      */
     <Result> List!<Result> mapIndexed(function Result(Element, Int) transform,
-                                      List<Result>?                 dest = Null)
+                                      List!<Result>?                dest = Null)
         {
         // in place
         if (&dest == &this)
