@@ -108,7 +108,7 @@ module TestArray
 
         Int[] ints = new Int[];
         ints += 1;
-        ints += [Int:2, Int:3];
+        ints += [2, 3];
         ints[4] = 4;
 
         console.println($"ints={ints}");
