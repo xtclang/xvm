@@ -307,7 +307,7 @@ public class TernaryExpression
             // TODO check if it is short circuiting
 
             atypeThenV = exprNewThen.getTypes();
-            if (atypeThen.length == 0 || use == Usage.Union)
+            if (isSpecified(atypeThen) || use == Usage.Union)
                 {
                 atypeThen = atypeThenV;
                 }
@@ -329,7 +329,7 @@ public class TernaryExpression
             // TODO check if it is short circuiting
 
             atypeElseV = exprNewElse.getTypes();
-            if (atypeElse.length == 0 || use == Usage.Union)
+            if (isSpecified(atypeElse) || use == Usage.Union)
                 {
                 atypeElse = atypeElseV;
                 }
@@ -374,6 +374,22 @@ public class TernaryExpression
             }
 
         return finishValidations(ctx, atypeRequired, atypeResult, fit, null, errs);
+        }
+
+    private boolean isSpecified(TypeConstant[] atype)
+        {
+        if (atype == null)
+            {
+            return false;
+            }
+        for (TypeConstant type : atype)
+            {
+            if (!type.equals(pool().typeObject()))
+                {
+                return false;
+                }
+            }
+        return true;
         }
 
     @Override
@@ -558,11 +574,11 @@ public class TernaryExpression
             TypeConstant typeThen = atypeThen[i];
             TypeConstant typeElse = atypeElse[i];
 
-            if (!typeThen.isA(typeElse))
+            if (!typeThen.isAssignableTo(typeElse))
                 {
                 return atypeElse;
                 }
-            if (!typeElse.isA(typeThen))
+            if (!typeElse.isAssignableTo(typeThen))
                 {
                 return atypeThen;
                 }
@@ -592,9 +608,9 @@ public class TernaryExpression
             TypeConstant typeThen = atypeThen[0];
             TypeConstant typeElse = atypeElse[0];
 
-            return typeThen.isA(typeElse) ? atypeElse
-                 : typeElse.isA(typeThen) ? atypeThen
-                                          : atypeRequired;
+            return typeThen.isAssignableTo(typeElse) ? atypeElse
+                 : typeElse.isAssignableTo(typeThen) ? atypeThen
+                                                     : atypeRequired;
             }
         else
             {
@@ -606,11 +622,11 @@ public class TernaryExpression
                 TypeConstant typeThen = i < cThen ? atypeThen[i] : typeReq;
                 TypeConstant typeElse = i < cElse ? atypeElse[i] : typeReq;
 
-                if (typeThen.isA(typeElse))
+                if (typeThen.isAssignableTo(typeElse))
                     {
                     atypeResult[i] = typeElse;
                     }
-                else if (typeElse.isA(typeThen))
+                else if (typeElse.isAssignableTo(typeThen))
                     {
                     atypeResult[i] = typeThen;
                     }

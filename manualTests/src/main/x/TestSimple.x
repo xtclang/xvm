@@ -4,25 +4,16 @@ module TestSimple
 
     void run()
         {
-        }
-
-    conditional Int indexed()
-        {
-        return False;
-        }
-
-    void buildPointer()
-        {
-        Int? index = Null;
-        while (index := indexed()) // this could be replaced with "if", "for", "do-while"
+        Boolean[] doors = new Boolean[100];
+        for (Int pass : 0 ..< 100)
             {
-            index++;
-            break;
+            for (Int door = pass; door < 100; door += 1+pass)
+                {
+                doors[door] = !doors[door];
+                }
             }
 
-        if (index != Null)         // this used to fail to compile for all those above
-            {
-            index.maxOf(5);
-            }
+        // this used to fail to compile
+        console.println($"open doors: {doors.mapIndexed((d, i) -> d ? i+1 : 0).filter(i -> i > 0)}");
         }
     }
