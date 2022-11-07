@@ -1,3 +1,5 @@
+- entering the debugger should stop time
+
 - fix the definite assignment bug (on shelf)
 
 - add is(_) switch not-reachable type ordering error message
@@ -42,13 +44,11 @@
 - improve toString() for TypeConstant of function type
     (Function<Tuple<this:Map<Map.Key, Map.Value>.Entry>, Tuple<Boolean>>)
 
-- if not auto-proxy'ed then try to freeze before throwing
+- if an object is not auto-proxy'ed then try to freeze before throwing an exception
 
 - enum ClassCompositions without type parameters could be made into CanonicalCompositions
 
 - add eval command history for the debugger
-
-- entering debugger should stop time
 
 - the XTC compiler disregards "resources" changes if nothing else changed and "-force" option
   is not specified
