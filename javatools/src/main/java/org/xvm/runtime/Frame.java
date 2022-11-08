@@ -9,6 +9,7 @@ import java.util.List;
 
 import java.util.concurrent.CompletableFuture;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
@@ -1441,14 +1442,18 @@ public class Frame
                 }
             }
 
-        if (type.containsAutoNarrowing(true) && f_hThis != null)
+        if (f_hThis != null && type.containsAutoNarrowing(true))
             {
             type = type.resolveAutoNarrowing(pool, false, f_hThis.getType(), null);
+            if (COUNT.incrementAndGet() % 512 == 0)
+                {
+                System.err.println("Count=" + COUNT);
+                }
             }
 
         return type;
         }
-
+static AtomicInteger COUNT = new AtomicInteger();
     /**
      * @return an ObjectHandle (could be a DeferredCallHandle)
      *

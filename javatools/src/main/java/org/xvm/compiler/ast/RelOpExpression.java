@@ -16,7 +16,6 @@ import org.xvm.asm.Argument;
 
 import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.ConditionalConstant;
-import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.SignatureConstant;
@@ -376,10 +375,7 @@ public class RelOpExpression
             return fitVia;
             }
 
-        ConstantPool     pool  = pool();
-        IdentityConstant idCtx = ctx.isMethod() && typeLeft.isA(ctx.getThisType())
-                ? ctx.getThisClass().getIdentityConstant()
-                : null;
+        ConstantPool pool = pool();
         for (MethodInfo infoAuto : infoLeft.getAutoMethodInfos())
             {
             TypeConstant typeConv = infoAuto.getSignature().getRawReturns()[0];
@@ -610,7 +606,12 @@ public class RelOpExpression
 
         if (idOp != null)
             {
-            atypeResults = idOp.getRawReturns();
+            SignatureConstant sig = idOp.getSignature();
+            if (sig.containsAutoNarrowing(false))
+                {
+                sig = sig.removeAutoNarrowing();
+                }
+            atypeResults = sig.getRawReturns();
             cResults     = atypeResults.length;
             }
         if (idOp == null || cResults < cExpected)
@@ -1096,15 +1097,12 @@ public class RelOpExpression
     /**
      * @return true iff the operator is a range operator
      */
-    boolean isRange()
+    public boolean isRange()
         {
         return switch (operator.getId())
             {
-            case I_RANGE_I -> true;
-            case E_RANGE_I -> true;
-            case I_RANGE_E -> true;
-            case E_RANGE_E -> true;
-
+            case I_RANGE_I, I_RANGE_E, E_RANGE_I, E_RANGE_E
+                    -> true;
             default -> false;
             };
         }

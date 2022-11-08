@@ -162,7 +162,7 @@ public class PrefixExpression
                 }
             else
                 {
-                return idBest.getSignature().getRawReturns()[0];
+                return idBest.getSignature().getRawReturns()[0].removeAutoNarrowing();
                 }
             }
 
@@ -197,8 +197,7 @@ public class PrefixExpression
         {
         StringBuilder sb = new StringBuilder();
 
-        boolean fPre = !(this instanceof SequentialAssignExpression) ||
-                        ((SequentialAssignExpression) this).isPre();
+        boolean fPre = !(this instanceof SequentialAssignExpression exprSeq) || exprSeq.isPre();
         if (fPre)
             {
             sb.append(operator.getId().TEXT);
