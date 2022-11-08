@@ -4,6 +4,7 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -20,6 +21,7 @@ import org.xvm.asm.Op;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.FormalConstant;
+import org.xvm.asm.constants.IntConstant;
 import org.xvm.asm.constants.RangeConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
@@ -408,6 +410,7 @@ public class ForEachStatement
             Plan         plan      = null;
             TypeConstant typeLVal  = exprLVal.getType();
             TypeConstant typeRVal  = null;
+            int          cLVals    = 0;
             boolean      fFoundFit = false;
 
             if (typeLVal != null)
@@ -441,12 +444,22 @@ public class ForEachStatement
                 {
                 // get as specific as possible with the required type for the R-Value
                 TypeConstant[] atypeLVals = exprLVal.getTypes();
-                int            cLVals     = atypeLVals.length;
                 int            cMaxLVals  = plan == Plan.MAP ? 2 : 1;
+
+                cLVals = atypeLVals.length;
                 if (cLVals < 1 || cLVals > cMaxLVals)
                     {
-                    condLVal.log(errs, Severity.ERROR, Compiler.INVALID_LVALUE_COUNT, 1, cMaxLVals);
-                    fValid = false;
+                    if (cLVals > 1 && cMaxLVals == 1)
+                        {
+                        m_fTupleLValue = true;
+                        typeRVal       = pool.ensureParameterizedTypeConstant(typeRVal,
+                                                pool.ensureTupleType(atypeLVals));
+                        }
+                    else
+                        {
+                        condLVal.log(errs, Severity.ERROR, Compiler.INVALID_LVALUE_COUNT, 1, cMaxLVals);
+                        fValid = false;
+                        }
                     }
                 else
                     {
@@ -474,9 +487,30 @@ public class ForEachStatement
                         case RANGE:
                         case SEQUENCE:
                         case ITERABLE:
-                            aTypeLVals = new TypeConstant[] { getElementType() };
+                            {
+                            TypeConstant typeEl = getElementType();
+                            if (m_fTupleLValue)
+                                {
+                                assert typeEl.isTuple();
+                                int cRVals = typeEl.getParamsCount();
+                                if (cLVals <= cRVals)
+                                    {
+                                    aTypeLVals = typeEl.getParamTypesArray();
+                                    }
+                                else
+                                    {
+                                    condLVal.log(errs, Severity.ERROR, Compiler.INVALID_LVALUE_COUNT,
+                                                1, cRVals);
+                                    aTypeLVals = null;
+                                    fValid     = false;
+                                    }
+                                }
+                            else
+                                {
+                                aTypeLVals = new TypeConstant[] {typeEl};
+                                }
                             break;
-
+                            }
                         case MAP:
                             aTypeLVals = new TypeConstant[] { getKeyType(), getValueType() };
 
@@ -492,8 +526,11 @@ public class ForEachStatement
                             break;
                         }
 
-                    assert aTypeLVals.length >= exprLVal.getValueCount();
-                    exprLVal.updateLValueFromRValueTypes(ctx, Branch.Always, aTypeLVals);
+                    if (fValid)
+                        {
+                        assert aTypeLVals.length >= exprLVal.getValueCount();
+                        exprLVal.updateLValueFromRValueTypes(ctx, Branch.Always, aTypeLVals);
+                        }
                     }
                 }
 
@@ -897,11 +934,28 @@ public class ForEachStatement
         code.add(new JumpGte(regCount, regEnd, getEndLabel(), pool.typeCInt64()));
         code.add(new IP_Dec(regEnd));
 
-        Assignable lvalVal  = m_exprLValue.generateAssignable(ctx, code, errs);
-        boolean    fTempVal = !lvalVal.isLocalArgument();
-        Argument   argVal   = fTempVal
-                ? new Register(typeElem, Op.A_STACK)
-                : lvalVal.getLocalArgument();
+        Assignable   lvalVal  = null;
+        Assignable[] alvalVal = null;
+        boolean      fTempVal = false;
+        Argument     argVal;
+
+        if (m_fTupleLValue)
+            {
+            assert typeElem.isTuple();
+
+            alvalVal = m_exprLValue.generateAssignables(ctx, code, errs);
+
+            code.add(new Var(typeElem));
+            argVal = code.lastRegister();
+            }
+        else
+            {
+            lvalVal  = m_exprLValue.generateAssignable(ctx, code, errs);
+            fTempVal = !lvalVal.isLocalArgument();
+            argVal   = fTempVal
+                    ? new Register(typeElem, Op.A_STACK)
+                    : lvalVal.getLocalArgument();
+            }
 
         Register regLast = m_regLast;
         if (regLast == null)
@@ -915,9 +969,32 @@ public class ForEachStatement
         code.add(new IsEq(regCount, regEnd, regLast, pool.typeCInt64()));
 
         code.add(new I_Get(regSeq, regCount, argVal));
-        if (fTempVal)
+
+        if (m_fTupleLValue)
             {
-            lvalVal.assign(argVal, code, errs);
+            for (int i = 0, c = alvalVal.length; i < c; i++)
+                {
+                Assignable  lval  = alvalVal[i];
+                IntConstant index = pool.ensureIntConstant(i);
+                if (lval.isLocalArgument())
+                    {
+                    code.add(new I_Get(argVal, index, lval.getLocalArgument()));
+                    }
+                else
+                    {
+                    Register regTemp = new Register(lval.getType());
+                    code.add(new Var(regTemp));
+                    code.add(new I_Get(argVal, index, regTemp));
+                    lvalVal.assign(regTemp, code, errs);
+                    }
+                }
+            }
+        else
+            {
+            if (fTempVal)
+                {
+                lvalVal.assign(argVal, code, errs);
+                }
             }
 
         // we explicitly do NOT check the block completion, since our completion is not dependent on
@@ -1212,6 +1289,7 @@ public class ForEachStatement
     private transient Register      m_regEntry;
     private transient Register      m_regKeyType;
     private transient Register      m_regValType;
+    private transient boolean       m_fTupleLValue;
 
     /**
      * Generally null, unless there is a "continue" that jumps to this statement.
