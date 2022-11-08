@@ -61,6 +61,7 @@ prj/
 .idea/**/usage.statistics.xml
 .idea/**/dictionaries
 .idea/**/shelf
+.idea/**/gradle.xml
 
 # Gradle-specific project files #
 #################################
