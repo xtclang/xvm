@@ -85,11 +85,14 @@ public class ListExpression
     @Override
     public TypeConstant getImplicitType(Context ctx)
         {
-        TypeConstant typeBase    = getBaseType(ctx, null);
-        TypeConstant typeElement = getImplicitElementType(ctx);
-        if (typeElement != null)
+        TypeConstant typeBase = getBaseType(ctx, null);
+        if (!typeBase.isParamsSpecified())
             {
-            typeBase = pool().ensureParameterizedTypeConstant(typeBase, typeElement);
+            TypeConstant typeElement = getImplicitElementType(ctx);
+            if (typeElement != null)
+                {
+                typeBase = pool().ensureParameterizedTypeConstant(typeBase, typeElement);
+                }
             }
         return typeBase;
         }
