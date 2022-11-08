@@ -306,26 +306,26 @@ interface List<Element>
      */
     conditional Int indexOf(List! that, Int startAt = 0)
         {
-        Int count = that.size;
+        Int length = that.size;
         startAt = startAt.maxOf(0);
-        if (count == 0)
+        if (length == 0)
             {
             return startAt > size ? False : (True, startAt);
             }
 
-        Element first = that[0];
-        Next: for (Int i = startAt, Int last = this.size - count; i <= last; ++i)
+        Element firstMatch = that[0];
+        Next: for (Int offset = startAt, Int stopAt = this.size - length; offset <= stopAt; ++offset)
             {
-            if (this[i] == first)
+            if (this[offset] == firstMatch)
                 {
-                for (Int i2 = i + 1, Int last2 = i + count - 1; i2 <= last2; ++i2)
+                for (Int i = 1; i < length; ++i)
                     {
-                    if (this[i2] != that[i2])
+                    if (this[offset + i] != that[i])
                         {
                         continue Next;
                         }
                     }
-                return True, i;
+                return True, offset;
                 }
             }
 
@@ -399,26 +399,26 @@ interface List<Element>
      */
     conditional Int lastIndexOf(List! that, Int startAt = Int.maxvalue)
         {
-        Int count = that.size;
-        startAt = startAt.minOf(this.size-count);
-        if (count == 0)
+        Int length = that.size;
+        startAt = startAt.minOf(this.size-length);
+        if (length == 0)
             {
             return startAt < 0 ? False : (True, startAt);
             }
 
-        Element first = that[0];
-        Next: for (Int i = startAt; i >= 0; --i)
+        Element firstMatch = that[0];
+        Next: for (Int offset = startAt; offset >= 0; --offset)
             {
-            if (this[i] == first)
+            if (this[offset] == firstMatch)
                 {
-                for (Int i2 = i + 1, Int last2 = i + count - 1; i2 <= last2; ++i2)
+                for (Int i = 1; i < length; ++i)
                     {
-                    if (this[i2] != that[i2])
+                    if (this[offset + i] != that[i])
                         {
                         continue Next;
                         }
                     }
-                return True, i;
+                return True, offset;
                 }
             }
 
