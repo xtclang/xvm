@@ -940,14 +940,17 @@ public class xRef
             return m_hReferent == null || m_hReferent.isSelfContained();
             }
 
-        // dereference the Ref from a register-bound to a handle-bound
+        /**
+         * Dereference the Ref from a register-bound to a handle-bound.
+         */
         public void dereference()
             {
             assert m_frame != null && m_iVar >= 0;
 
-            m_hReferent = m_frame.f_ahVar[m_iVar];
-            m_frame     = null;
-            m_iVar      = REF_REFERENT;
+            ObjectHandle hValue = m_frame.f_ahVar[m_iVar];
+            m_frame = null;
+            m_iVar  = REF_REFERENT;
+            setReferent(hValue);
             }
 
         @Override
