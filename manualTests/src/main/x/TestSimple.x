@@ -3,15 +3,15 @@ module TestSimple
     @Inject Console console;
     void run()
         {
-        console.println(factorial(Int128:30));
-        }
+        function Int(Int, Int) divide = (x,y) -> x / y;
 
-    static <Value extends Number> Value factorial(Value n)
-        {
-        if (n <= Value.one())
-            {
-            return n;
-            }
-        return n * factorial(n - Value.one()); // this used to fail to compile
+        val half = divide(_, 2);        // this used to fail to compile
+        val partsOf120 = divide(120, _);
+
+        console.println($|half of a dozen is {half(12)}
+                         |half of 120 is {partsOf120(2)}
+                         |a third is {partsOf120(3)}
+                         |and a quarter is {partsOf120(4)}
+                       );
         }
     }

@@ -2988,19 +2988,22 @@ public class InvocationExpression
 
         if (atypeRequired != null && atypeRequired.length > 0)
             {
-            // the isA() on a function allows a reduction of the parameter number
-            // (allowing for default arguments), so we need to compensate here
-            TypeConstant   typeReqFn      = atypeRequired[0];
-            TypeConstant[] atypeReqParams = pool.extractFunctionParams(typeReqFn);
-            TypeConstant[] atypeFnParams  = pool.extractFunctionParams(typeFn);
-            int            cReqParams     = atypeReqParams == null ? 0 : atypeReqParams.length;
-            int            cFnParams      = atypeFnParams  == null ? 0 : atypeFnParams.length;
-
-            if (cReqParams < cFnParams)
+            TypeConstant typeReqFn = atypeRequired[0];
+            if (!typeReqFn.equals(pool.typeObject())) // any function is an Object
                 {
-                // report the "wrong type" rather than the "wrong argument count"
-                log(errs, Severity.ERROR, Compiler.WRONG_TYPE, typeReqFn, typeFn);
-                return null;
+                // the isA() on a function allows a reduction of the parameter number
+                // (allowing for default arguments), so we need to compensate here
+                TypeConstant[] atypeReqParams = pool.extractFunctionParams(typeReqFn);
+                TypeConstant[] atypeFnParams  = pool.extractFunctionParams(typeFn);
+                int            cReqParams     = atypeReqParams == null ? 0 : atypeReqParams.length;
+                int            cFnParams      = atypeFnParams  == null ? 0 : atypeFnParams.length;
+
+                if (cReqParams < cFnParams)
+                    {
+                    // report the "wrong type" rather than the "wrong argument count"
+                    log(errs, Severity.ERROR, Compiler.WRONG_TYPE, typeReqFn, typeFn);
+                    return null;
+                    }
                 }
             }
 
