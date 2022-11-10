@@ -762,6 +762,13 @@ public class InvocationExpression
                     }
                 }
 
+            if (m_idFormal != null)
+                {
+                // argMethod is a function on a formal type or a formal property
+                assert typeLeft.isTypeOfType();
+                typeLeft = typeLeft.getParamType(0);
+                }
+
             if (m_fNamedArgs)
                 {
                 assert argMethod instanceof MethodConstant;
@@ -938,7 +945,7 @@ public class InvocationExpression
                 if (fCall)
                     {
                     SignatureConstant sigMethod = idMethod.getSignature();
-                    if (!method.isFunction() && !method.isConstructor())
+                    if (sigMethod.containsAutoNarrowing(true))
                         {
                         sigMethod = sigMethod.resolveAutoNarrowing(pool, typeLeft, null);
                         }

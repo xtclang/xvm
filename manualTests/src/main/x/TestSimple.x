@@ -3,15 +3,15 @@ module TestSimple
     @Inject Console console;
     void run()
         {
-        String? s = Null;
-        String s2;
-        if (String test ?= s)
+        console.println(factorial(Int128:30));
+        }
+
+    static <Value extends Number> Value factorial(Value n)
+        {
+        if (n <= Value.one())
             {
-            s2 = s; // this used to fail to compile
+            return n;
             }
-        else
-            {
-            s2 = test; // compiler used to allow that to compile, crashing at RT
-            }
+        return n * factorial(n - Value.one()); // this used to fail to compile
         }
     }
