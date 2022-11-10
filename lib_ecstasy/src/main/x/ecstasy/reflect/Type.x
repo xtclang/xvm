@@ -1140,7 +1140,7 @@ interface Type<DataType, OuterType>
                         }
                     else
                         {
-                        return t2.as(Type<t2.DataType>).hashed();
+                        return t2.hashed();
                         }
                     }
 
@@ -1148,8 +1148,7 @@ interface Type<DataType, OuterType>
                 case Access:
                 case Annotated:
                     assert Type!<> t := modifying();
-                    // TODO GG: can compiler generate dynamic type parameter without using "as()"?
-                    return t.as(Type<t.DataType>).hashed();
+                    return t.hashed();
 
                 default:
                     break;
