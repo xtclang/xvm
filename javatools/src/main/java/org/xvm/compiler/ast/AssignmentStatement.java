@@ -630,8 +630,7 @@ public class AssignmentStatement
                         merge(ctxRValue, ctxLValue);
                         }
 
-                    exprLeft.markAssignment(ctxRValue,
-                            !fConditional && exprRight != null && exprRight.isConditionalResult(), errs);
+                    exprLeft.markAssignment(ctxRValue, fConditional, errs);
                     if (exprRightNew != null)
                         {
                         atypeRight = exprRightNew.getTypes();
@@ -640,13 +639,19 @@ public class AssignmentStatement
                             TypeConstant typeRight = atypeRight[0];
                             if (typeRight.isNullable())
                                 {
-                                atypeRight = new TypeConstant[]{typeRight.removeNullable()};
+                                typeRight  = typeRight.removeNullable();
+                                atypeRight = new TypeConstant[]{typeRight};
+
+                                if (exprRightNew instanceof NameExpression exprName)
+                                    {
+                                    exprName.narrowType(ctx, Branch.WhenTrue,  typeRight);
+                                    exprName.narrowType(ctx, Branch.WhenFalse, pool.typeNull());
+                                    }
                                 }
                             else
                                 {
-                                // REVIEW CP: make this an error instead?
-                                exprRight.log(errs, Severity.WARNING, Compiler.EXPRESSION_NOT_NULLABLE,
-                                    typeRight.getValueString());
+                                exprRight.log(errs, Severity.ERROR, Compiler.EXPRESSION_NOT_NULLABLE,
+                                        typeRight.getValueString());
                                 }
                             }
                         }

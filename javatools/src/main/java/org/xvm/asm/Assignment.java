@@ -90,7 +90,10 @@ public enum Assignment
      */
     public boolean isEffectivelyFinal()
         {
-        return fExactlyOnceWhenFalse & fExactlyOnceWhenTrue;
+        // unassigned branch doesn't contradict "effectively final" semantics
+        return fExactlyOnceWhenFalse & fExactlyOnceWhenTrue |
+               fExactlyOnceWhenFalse & fUnassignedWhenTrue  |
+               fUnassignedWhenFalse  & fExactlyOnceWhenTrue;
         }
 
     /**
@@ -319,7 +322,7 @@ public enum Assignment
         }
 
     /**
-     * Look up a Assignment enum by its ordinal.
+     * Look up an Assignment enum by its ordinal.
      *
      * @param i  the ordinal
      *

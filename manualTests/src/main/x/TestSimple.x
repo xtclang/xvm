@@ -1,11 +1,17 @@
 module TestSimple
     {
     @Inject Console console;
-    void run( )
+    void run()
         {
-        for ((Int n1, Int n2) : Array<Tuple<Int,Int>>:[(0,7), (1,5)]) // this used to fail to compile
+        String? s = Null;
+        String s2;
+        if (String test ?= s)
             {
-            console.println($"n1={n1} n2={n2}");
+            s2 = s; // this used to fail to compile
+            }
+        else
+            {
+            s2 = test; // compiler used to allow that to compile, crashing at RT
             }
         }
     }

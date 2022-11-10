@@ -1218,8 +1218,8 @@ public abstract class Expression
      * Mark the LValue as being assigned to at this point in the validation process.
      *
      * @param ctx    the validation context
-     * @param fCond  true if the assignment is a conditional assignment (such that only the first
-     *               value is definitely assigned if it is false)
+     * @param fCond  true if the assignment is a conditional assignment (such that the l-value is
+     *               definitely assigned if it is true)
      * @param errs   the error list to log to
      */
     public void markAssignment(Context ctx, boolean fCond, ErrorListener errs)

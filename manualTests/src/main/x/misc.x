@@ -496,11 +496,13 @@ module TestMisc
             assert;
             }
 
-        // should be compiler error:
-        // String s3 ?= s2;
+        static String? foolCompiler(String s)
+            {
+            return s;
+            }
 
-        s = "hello world";
-        console.println($"s={s}");
+        s2 = foolCompiler(s2); // reintroduce possibility that s2 is Null
+
         s ?= s2;
         console.println($"s={s}");
 
