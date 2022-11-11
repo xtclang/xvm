@@ -8,7 +8,6 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
-import java.util.Objects;
 import java.util.function.Consumer;
 
 import org.xvm.asm.Constant;
@@ -325,7 +324,7 @@ public class SignatureConstant
 
     /**
      * If any of the signature components are auto-narrowing (or have any references to
-     * auto-narrowing types), replace the any auto-narrowing portion with an explicit class identity
+     * auto-narrowing types), replace any auto-narrowing portion with an explicit class identity
      * in the context of the specified type.
      *
      * @param pool        the ConstantPool to place a potentially created new constant into
@@ -381,7 +380,7 @@ public class SignatureConstant
 
     /**
      * If any of the signature components are auto-narrowing (or have any references to
-     * auto-narrowing types), replace the any auto-narrowing portion with a declared class identity.
+     * auto-narrowing types), replace any auto-narrowing portion with a declared class identity.
      *
      * @return the SignatureConstant with all auto-narrowing types resolved
      */
@@ -801,23 +800,22 @@ public class SignatureConstant
     @Override
     public int hashCode()
         {
-        int nHash = m_nHashCode;
-        return nHash == 0 ? computeHash() : nHash;
+        int iHash = m_iHashCode;
+        return iHash == 0 ? computeHash() : iHash;
         }
 
     /**
-     * Compute and cache a hash for {@link SignatureConstant}.
+     * Compute and cache a hash for this {@link SignatureConstant}.
      *
      * @return the hash
      */
     private int computeHash()
         {
-        // TODO GG: the commented out hash makes runAll 30% faster but seems to expose a bug in
-        // in testBind, multibind prints just "w" from "world"
-
-        // int hash = Objects.hash(m_constName, Arrays.hashCode(m_aconstParams), Arrays.hashCode(m_aconstReturns));
-        int hash = (m_constName.hashCode() * 17 + m_aconstParams.length * 3) + m_aconstReturns.length;
-        return m_nHashCode = hash == 0 ? 1 : hash;
+        // unroll Arrays.hashCode() to avoid auto-boxing
+        int iHash = ((Arrays.hashCode(m_aconstParams) * 31) +
+                        Arrays.hashCode(m_aconstReturns)) * 31 +
+                            m_constName.hashCode();
+        return m_iHashCode = iHash == 0 ? 1 : iHash;
         }
 
 
@@ -1008,5 +1006,5 @@ public class SignatureConstant
     /**
      * Cached hashCode or {@code 0}.
      */
-    private int m_nHashCode;
+    private int m_iHashCode;
     }
