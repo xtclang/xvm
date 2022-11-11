@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
+import java.util.Objects;
 import java.util.function.Consumer;
 
 import org.xvm.asm.Constant;
@@ -800,7 +801,23 @@ public class SignatureConstant
     @Override
     public int hashCode()
         {
-        return (m_constName.hashCode() * 17 + m_aconstParams.length * 3) + m_aconstReturns.length;
+        int nHash = m_nHashCode;
+        return nHash == 0 ? computeHash() : nHash;
+        }
+
+    /**
+     * Compute and cache a hash for {@link SignatureConstant}.
+     *
+     * @return the hash
+     */
+    private int computeHash()
+        {
+        // TODO GG: the commented out hash makes runAll 30% faster but seems to expose a bug in
+        // in testBind, multibind prints just "w" from "world"
+
+        // int hash = Objects.hash(m_constName, Arrays.hashCode(m_aconstParams), Arrays.hashCode(m_aconstReturns));
+        int hash = (m_constName.hashCode() * 17 + m_aconstParams.length * 3) + m_aconstReturns.length;
+        return m_nHashCode = hash == 0 ? 1 : hash;
         }
 
 
@@ -987,4 +1004,9 @@ public class SignatureConstant
      * Cached comparison result.
      */
     private transient int m_nCmpPrev;
+
+    /**
+     * Cached hashCode or {@code 0}.
+     */
+    private int m_nHashCode;
     }

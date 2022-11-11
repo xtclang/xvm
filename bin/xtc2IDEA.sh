@@ -4,25 +4,7 @@
 
 binDir=$(dirname "$BASH_SOURCE")
 
-ideaDir=~/Library/Application\ Support/JetBrains/IdeaIC2021.2
-if [ ! -d "${ideaDir}" ]
-  then
-  ideaDir=~/Library/Application\ Support/JetBrains/IdeaIC2021.1
-  if [ ! -d "${ideaDir}" ]
-  then
-    ideaDir=~/Library/Application\ Support/JetBrains/IdeaIC2020.3
-    if [ ! -d ${ideaDir} ]
-    then
-      ideaDir=~/Library/Application\ Support/JetBrains/IdeaIC2020.2
-      if [ ! -d ${ideaDir} ]
-      then
-        echo "***" Intellij IDEA is not installed "***"
-        exit
-      fi
-    fi
-  fi
-fi
-
+ideaDir=$(find ~/Library/Application\ Support/JetBrains/ -name Idea\*) 
 typesDir=${ideaDir}/filetypes
 
 if [ ! -d "${typesDir}" ]
