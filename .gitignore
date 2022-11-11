@@ -55,13 +55,13 @@ build/
 # user-specific project files #
 ###############################
 prj/
-.idea/**/misc.xml
+.idea/gradle.xml
+.idea/misc.xml
 .idea/**/workspace.xml
 .idea/**/tasks.xml
 .idea/**/usage.statistics.xml
 .idea/**/dictionaries
 .idea/**/shelf
-.idea/**/gradle.xml
 
 # Gradle-specific project files #
 #################################
