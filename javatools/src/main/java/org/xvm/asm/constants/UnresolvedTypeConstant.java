@@ -112,7 +112,7 @@ public class UnresolvedTypeConstant
     // ----- TypeConstant methods ------------------------------------------------------------------
 
     @Override
-    protected int getTypeDepth()
+    public int getTypeDepth()
         {
         return isTypeResolved() ? getResolvedType().getTypeDepth() : 1;
         }

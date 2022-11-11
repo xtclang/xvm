@@ -188,7 +188,7 @@ public abstract class RelationalTypeConstant
         }
 
     @Override
-    protected int getTypeDepth()
+    public int getTypeDepth()
         {
         return m_constType1.getTypeDepth() + m_constType2.getTypeDepth();
         }

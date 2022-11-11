@@ -362,14 +362,6 @@ public abstract class ClassTemplate
         }
 
     /**
-     * @return true iff this class is an inner class
-     */
-    public boolean isInnerClass()
-        {
-        return f_struct.isInnerClass();
-        }
-
-    /**
      * Create an object handle for the specified constant and push it on the frame's local stack.
      * <p/>
      * Note: the overriding method *should never* push DeferredCallHandles on the stack.
@@ -1966,7 +1958,8 @@ public abstract class ClassTemplate
                 {
                 if (hArg != null)
                     {
-                    TypeConstant typeArg = hArg.getType();
+                    SignatureConstant sigBest = null;
+                    TypeConstant      typeArg = hArg.getType();
                     for (MethodConstant idMethod : setMethods)
                         {
                         SignatureConstant sig       = idMethod.getSignature();
@@ -1974,8 +1967,43 @@ public abstract class ClassTemplate
 
                         if (typeArg.isA(typeParam))
                             {
-                            return hTarget.getComposition().getMethodCallChain(sig);
+                            if (sigBest == null)
+                                {
+                                sigBest = sig;
+                                }
+                            else
+                                {
+                                // We know that the compiler didn't see any ambiguity, which means
+                                // it's caused now by the argument actual type. Consider an example:
+                                //      Object[] array = [];
+                                //      Object   value = "abc";
+                                //      array += value;
+                                // Since the actual "value" type is String, which is Iterable<Char>,
+                                // both "@Op("+") add(Object)" and "@Op("+") addAll(Iterable<Object>)"
+                                // methods fit.
+                                //
+                                // Until we have a better solution, let's choose a signature with a
+                                // simpler type, because it should've been the one chosen by the
+                                // compiler.
+                                TypeConstant typeParamBest = sigBest.getRawParams()[0];
+                                int          nBestDepth    = typeParamBest.getTypeDepth();
+                                int          nParamDepth   = typeParam.getTypeDepth();
+
+                                if (nParamDepth < nBestDepth)
+                                    {
+                                    sigBest = sig;
+                                    }
+                                else if (nParamDepth == nBestDepth)
+                                    {
+                                    sigBest = null;
+                                    break;
+                                    }
+                                }
                             }
+                        }
+                    if (sigBest != null)
+                        {
+                        return hTarget.getComposition().getMethodCallChain(sigBest);
                         }
                     }
 

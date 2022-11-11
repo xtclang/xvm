@@ -185,7 +185,7 @@ public class ParameterizedTypeConstant
         }
 
     @Override
-    protected int getTypeDepth()
+    public int getTypeDepth()
         {
         int nDepth = 1;
         for (TypeConstant typeParam : m_atypeParams)

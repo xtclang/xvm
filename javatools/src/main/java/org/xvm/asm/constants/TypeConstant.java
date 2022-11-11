@@ -417,7 +417,7 @@ public abstract class TypeConstant
      *
      * @return the depth of this type
      */
-    protected int getTypeDepth()
+    public int getTypeDepth()
         {
         return isModifyingType()
                 ? 1 + getUnderlyingType().getTypeDepth()
