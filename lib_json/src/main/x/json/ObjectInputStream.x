@@ -1241,8 +1241,8 @@ class ObjectInputStream(Schema schema, Parser parser)
                 Doc pointer = peekMetadata(schema.pointerKey);
                 if (pointer.is(String))
                     {
-                    /*TODO GG*/this.as(DocInputStream). parser.skip();
-                    /*TODO GG*/this.as(DocInputStream). loadNext();
+                    this.parser.skip();
+                    this.loadNext();
                     return True, dereference(pointer);
                     }
                 else if (pointer != Null)

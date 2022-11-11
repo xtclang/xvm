@@ -145,14 +145,6 @@ public class ImmutableTypeConstant
     // ----- TypeInfo support ----------------------------------------------------------------------
 
     @Override
-    public TypeInfo ensureTypeInfo(IdentityConstant idClass, ErrorListener errs)
-        {
-        // the "immutable" keyword does not affect the TypeInfo, even though the type itself is
-        // slightly different
-        return m_constType.ensureTypeInfo(idClass, errs);
-        }
-
-    @Override
     protected TypeInfo buildTypeInfo(ErrorListener errs)
         {
         // the "immutable" keyword does not affect the TypeInfo, even though the type itself is
@@ -197,13 +189,11 @@ public class ImmutableTypeConstant
         }
 
     @Override
-    protected int compareDetails(Constant that)
+    protected int compareDetails(Constant obj)
         {
-        if (!(that instanceof ImmutableTypeConstant))
-            {
-            return -1;
-            }
-        return this.m_constType.compareTo(((ImmutableTypeConstant) that).m_constType);
+        return obj instanceof ImmutableTypeConstant that
+                ? this.m_constType.compareTo(that.m_constType)
+                : -1;
         }
 
     @Override

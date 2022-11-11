@@ -95,12 +95,6 @@ public class ServiceTypeConstant
     // ----- TypeInfo support ----------------------------------------------------------------------
 
     @Override
-    public TypeInfo ensureTypeInfo(IdentityConstant idClass, ErrorListener errs)
-        {
-        return m_constType.ensureTypeInfo(idClass, errs);
-        }
-
-    @Override
     protected TypeInfo buildTypeInfo(ErrorListener errs)
         {
         // the "service" keyword does not affect the TypeInfo, even though the type itself is
@@ -145,13 +139,11 @@ public class ServiceTypeConstant
         }
 
     @Override
-    protected int compareDetails(Constant that)
+    protected int compareDetails(Constant obj)
         {
-        if (!(that instanceof ServiceTypeConstant))
-            {
-            return -1;
-            }
-        return this.m_constType.compareTo(((ServiceTypeConstant) that).m_constType);
+        return obj instanceof ServiceTypeConstant that
+                ? this.m_constType.compareTo(that.m_constType)
+                : -1;
         }
 
     @Override

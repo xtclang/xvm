@@ -167,13 +167,6 @@ public class AccessTypeConstant
     // ----- TypeInfo support ----------------------------------------------------------------------
 
     @Override
-    public TypeInfo ensureTypeInfo(IdentityConstant idClass, ErrorListener errs)
-        {
-        // someone has already picked the access level; just comply
-        return ensureTypeInfo(errs);
-        }
-
-    @Override
     protected TypeInfo buildTypeInfo(ErrorListener errs)
         {
         // since the immutable modifier is not allowed, it can be assumed that the first

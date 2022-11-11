@@ -162,6 +162,19 @@ public class UnionTypeConstant
         }
 
     @Override
+    public TypeConstant adjustAccess(IdentityConstant idClass)
+        {
+        TypeConstant type1  = m_constType1;
+        TypeConstant type2  = m_constType2;
+        TypeConstant type1A = type1.adjustAccess(idClass);
+        TypeConstant type2A = type2.adjustAccess(idClass);
+
+        return type1.equals(type1A) && type2.equals(type2A)
+                ? this
+                : cloneRelational(getConstantPool(), type1A, type2A);
+        }
+
+    @Override
     public boolean isNullable()
         {
         return (m_constType1.isOnlyNullable() ^ m_constType2.isOnlyNullable())
@@ -442,6 +455,13 @@ public class UnionTypeConstant
                 : typeResult2 == null || typeResult1.equals(typeResult2)
                         ? typeResult1
                         : null;
+        }
+
+    @Override
+    public boolean isNestMateOf(IdentityConstant idClass)
+        {
+        return m_constType1.isNestMateOf(idClass) &&
+               m_constType2.isNestMateOf(idClass);
         }
 
 

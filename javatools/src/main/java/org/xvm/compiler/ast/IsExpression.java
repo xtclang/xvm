@@ -6,7 +6,6 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Register;
@@ -141,12 +140,6 @@ public class IsExpression
                 }
             else if (exprTarget instanceof NameExpression exprName)
                 {
-                if (typeTarget.isNestMateOf(ctx.getThisClass().getIdentityConstant()) &&
-                        typeTarget.getAccess() != Access.STRUCT)
-                    {
-                    typeTarget = pool.ensureAccessTypeConstant(typeTarget, Access.PRIVATE);
-                    }
-
                 typeInferred = computeInferredType(pool, typeTarget, typeTest);
 
                 exprName.narrowType(ctx, Branch.WhenTrue,  typeInferred);

@@ -182,6 +182,12 @@ public abstract class RelationalTypeConstant
         }
 
     @Override
+    public TypeConstant adjustAccess(IdentityConstant idClass)
+        {
+        return this;
+        }
+
+    @Override
     protected int getTypeDepth()
         {
         return m_constType1.getTypeDepth() + m_constType2.getTypeDepth();

@@ -280,12 +280,6 @@ public class RecursiveTypeConstant
     // ----- TypeInfo support ----------------------------------------------------------------------
 
     @Override
-    public TypeInfo ensureTypeInfo(IdentityConstant idClass, ErrorListener errs)
-        {
-        return ensureTypeInfo(errs);
-        }
-
-    @Override
     public TypeInfo ensureTypeInfoInternal(ErrorListener errs)
         {
         return getConstantPool().typeObject().ensureTypeInfo(errs);

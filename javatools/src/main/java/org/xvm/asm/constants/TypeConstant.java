@@ -360,6 +360,21 @@ public abstract class TypeConstant
         }
 
     /**
+     * Change the access modifier for this type or parts of this type (in a case of the relational
+     * type) that are "nest mates" for the specified class.
+     *
+     * @param idClass  the identity of the class
+     *
+     * @return the equivalent type that may have additional access modifier(s)
+     */
+    public TypeConstant adjustAccess(IdentityConstant idClass)
+        {
+        return isAccessSpecified() || !isNestMateOf(idClass)
+                ? this
+                : ensureAccess(Access.PRIVATE);
+        }
+
+    /**
      * @return true iff type parameters for the type are specified
      */
     public boolean isParamsSpecified()
@@ -1394,10 +1409,7 @@ public abstract class TypeConstant
      */
     public TypeInfo ensureTypeInfo(IdentityConstant idClass, ErrorListener errs)
         {
-        return (isNestMateOf(idClass)
-                ? getConstantPool().ensureAccessTypeConstant(this, Access.PRIVATE)
-                : this).
-            ensureTypeInfo(errs);
+        return adjustAccess(idClass).ensureTypeInfo(errs);
         }
 
     /**
@@ -2898,7 +2910,7 @@ public abstract class TypeConstant
                     {
                     // append to the call chain
                     TypeConstant typeContrib = contrib.getTypeConstant(); // already resolved
-                    TypeInfo     infoContrib = typeContrib.ensureTypeInfoInternal(errs);
+                    TypeInfo     infoContrib = typeContrib.adjustAccess(constId).ensureTypeInfoInternal(errs);
 
                     if (!isComplete(infoContrib))
                         {
@@ -3078,7 +3090,7 @@ public abstract class TypeConstant
                 }
             else
                 {
-                TypeInfo infoContrib = typeContrib.ensureTypeInfoInternal(errs);
+                TypeInfo infoContrib = typeContrib.adjustAccess(constId).ensureTypeInfoInternal(errs);
                 if (!isComplete(infoContrib))
                     {
                     fIncomplete = computeIncomplete(composition, typeContrib, infoContrib, setDepends);
