@@ -12,5 +12,8 @@
                   fieldName="INSTANCE"
                   language="Ecstasy"
                   extensions="x"/>
+      <lang.syntaxHighlighterFactory
+          language="Ecstasy"
+          implementationClass="org.xtclang.sdk.language.EcstasySyntaxHighlighterFactory"/>
     </extensions>
 </idea-plugin>

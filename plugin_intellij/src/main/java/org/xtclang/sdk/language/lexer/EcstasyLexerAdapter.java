@@ -4,10 +4,12 @@ import com.intellij.lexer.LexerBase;
 import com.intellij.psi.tree.IElementType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.xtclang.sdk.language.EcstasyLanguage;
 import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
 import org.xvm.compiler.Lexer;
 import org.xvm.compiler.Source;
+import org.xvm.compiler.Token;
 
 public class EcstasyLexerAdapter extends LexerBase
     {
@@ -15,18 +17,9 @@ public class EcstasyLexerAdapter extends LexerBase
 
     private IElementType myTokenType;
     private CharSequence myText;
-
-    private int myTokenStart;
-    private int myTokenEnd;
+    private Token currentToken;
 
     private int myBufferEnd;
-    private int myState;
-
-    private boolean myFailed;
-
-    public EcstasyLexerAdapter()
-        {
-        }
 
     public Lexer getEcstasyLexer()
         {
@@ -37,47 +30,59 @@ public class EcstasyLexerAdapter extends LexerBase
     public void start(CharSequence buffer, int startOffset, int endOffset, int initialState)
         {
         myText = buffer;
-        myTokenStart = myTokenEnd = startOffset;
         myBufferEnd = endOffset;
         myTokenType = null;
 
         Source source = new Source(buffer.toString());
         ErrorListener errorListener = new ErrorList(10);
-        Lexer lexer = new Lexer(source, errorListener);
+        ecstasyLexer = new Lexer(source, errorListener);
 
-        lexer.setPosition(startOffset);
+        ecstasyLexer.setPosition(startOffset);
         // TODO: This should also take the endOffset.
         ecstasyLexer.setPosition(startOffset);
+        currentToken = null;
         }
 
     @Override
     public int getState()
         {
-        return 0;
+        locateToken();
+        return 0; // TODO: Need help with this
         }
 
     @Override
     public @Nullable IElementType getTokenType()
         {
-        return null;
+        locateToken();
+        return new IElementType(currentToken.getId().TEXT, EcstasyLanguage.INSTANCE);
         }
 
     @Override
     public int getTokenStart()
         {
-        return 0;
+        locateToken();
+        return (int) currentToken.getStartPosition();
         }
 
     @Override
     public int getTokenEnd()
         {
-        return 0;
+        locateToken();
+        return (int) currentToken.getEndPosition();
         }
 
     @Override
     public void advance()
         {
+        locateToken();
+        currentToken = null;
+        }
 
+    private void locateToken()
+        {
+        if (currentToken != null) return;
+
+        currentToken = ecstasyLexer.next();
         }
 
     @Override
@@ -95,7 +100,7 @@ public class EcstasyLexerAdapter extends LexerBase
     @Override
     public String toString()
         {
-        return "FlexAdapter for " + myFlex.getClass().getName();
+        return "FlexAdapter for " + ecstasyLexer.getClass().getName();
         }
     }
 
