@@ -57,10 +57,11 @@ build/
 prj/
 .idea/gradle.xml
 .idea/misc.xml
-.idea/**/workspace.xml
+.idea/workspace.xml
+.idea/dictionaries/
+.idea/inspectionProfiles/
 .idea/**/tasks.xml
 .idea/**/usage.statistics.xml
-.idea/**/dictionaries
 .idea/**/shelf
 
 # Gradle-specific project files #

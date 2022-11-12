@@ -1,3 +1,7 @@
+- passing a const/service argument from a child container into the parent's one should check the
+  inception type rather than the revealed type and create/register a stub (soft-ref?) to make sure
+  that those arguments don't leak the entire child container upon the shutdown
+
 - entering the debugger should stop time
 
 - fix the definite assignment bug (on shelf)
