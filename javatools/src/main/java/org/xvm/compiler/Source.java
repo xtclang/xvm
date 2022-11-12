@@ -672,6 +672,11 @@ public class Source
         return new String(ach, 0, cch);
         }
 
+    public int getMOffset()
+        {
+        return m_of;
+        }
+
     /**
      * @return a clone of this Source, but with the position reset to the beginning of the source
      *         code

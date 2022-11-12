@@ -45,9 +45,9 @@ public class EcstasySyntaxHighlighter extends SyntaxHighlighterBase
     @Override
     public TextAttributesKey @NotNull [] getTokenHighlights(IElementType tokenType)
         {
-        if (tokenType.getDebugName().equals("abc"))
+        if (tokenType.getDebugName().equals("ENC_COMMENT"))
             {
-            return BAD_CHAR_KEYS;
+            return COMMENT_KEYS;
             }
         else
             {
