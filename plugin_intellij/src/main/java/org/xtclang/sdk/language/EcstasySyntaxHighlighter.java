@@ -10,6 +10,7 @@ import com.intellij.openapi.fileTypes.SyntaxHighlighterBase;
 import com.intellij.psi.tree.IElementType;
 import org.jetbrains.annotations.NotNull;
 import org.xtclang.sdk.language.lexer.EcstasyLexerAdapter;
+import org.xvm.compiler.Token;
 
 import static com.intellij.openapi.editor.colors.TextAttributesKey.createTextAttributesKey;
 
@@ -45,11 +46,18 @@ public class EcstasySyntaxHighlighter extends SyntaxHighlighterBase
     @Override
     public TextAttributesKey @NotNull [] getTokenHighlights(IElementType tokenType)
         {
-        if (tokenType.getDebugName().equals("ENC_COMMENT"))
+        try
             {
-            return COMMENT_KEYS;
+            Token.Id idValue = Token.Id.valueOf(tokenType.getDebugName());
+            switch (idValue)
+                {
+                default:
+                    return EMPTY_KEYS;
+                case ENC_COMMENT:
+                    return COMMENT_KEYS;
+                }
             }
-        else
+        catch (IllegalArgumentException e)
             {
             return EMPTY_KEYS;
             }
