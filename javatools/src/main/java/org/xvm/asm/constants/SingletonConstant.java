@@ -12,6 +12,7 @@ import org.xvm.asm.ConstantPool;
 
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.InitializingHandle;
+import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
@@ -230,9 +231,9 @@ public class SingletonConstant
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int hashCode()
+    public int computeHashCode()
         {
-        return m_constClass.hashCode();
+        return Hash.of(m_constClass);
         }
 
 

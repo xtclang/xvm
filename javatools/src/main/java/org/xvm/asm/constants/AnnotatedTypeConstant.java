@@ -28,6 +28,7 @@ import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.reflect.xRef;
 
+import org.xvm.util.Hash;
 import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.checkElementsNonNull;
@@ -825,9 +826,9 @@ public class AnnotatedTypeConstant
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int hashCode()
+    public int computeHashCode()
         {
-        return m_annotation.hashCode() ^ m_constType.hashCode();
+        return Hash.of(m_annotation, Hash.of(m_constType));
         }
 
 

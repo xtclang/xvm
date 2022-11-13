@@ -6936,7 +6936,7 @@ public abstract class TypeConstant
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public abstract int hashCode();
+    protected abstract int computeHashCode();
 
     @Override
     public boolean equals(Object obj)

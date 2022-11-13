@@ -16,6 +16,7 @@ import org.xvm.asm.LinkerContext;
 import org.xvm.asm.Version;
 
 import org.xvm.util.Handy;
+import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
@@ -213,9 +214,9 @@ public class VersionedCondition
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int hashCode()
+    public int computeHashCode()
         {
-        return Handy.hashCode(m_constVer);
+        return Hash.of(m_constVer);
         }
 
 

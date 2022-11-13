@@ -10,6 +10,7 @@ import org.xvm.asm.ConstantPool;
 
 import org.xvm.compiler.Token;
 
+import org.xvm.util.Hash;
 import org.xvm.util.PackedInteger;
 
 
@@ -1066,9 +1067,9 @@ public class IntConstant
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int hashCode()
+    public int computeHashCode()
         {
-        return m_pint.hashCode();
+        return Hash.of(m_pint);
         }
 
 

@@ -15,6 +15,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 
+import org.xvm.util.Hash;
 import org.xvm.util.TransientThreadLocal;
 
 import static org.xvm.util.Handy.readMagnitude;
@@ -269,10 +270,22 @@ public class TypeParameterConstant
 
     // ----- Object methods ------------------------------------------------------------------------
 
+
     @Override
-    public int hashCode()
+    public int computeHashCode()
         {
-        return getName().hashCode() + f_iReg;
+        return Hash.of(getName(), Hash.of(f_iReg));
+
+// TODO MF: significantly faster but breaks clean compilation
+//        if (f_tloReEntry.get() != null)
+//            {
+//            return Hash.of(getName(), Hash.of(f_iReg));
+//            }
+//
+//        try (var ignore = f_tloReEntry.push(true))
+//            {
+//            return Hash.of(f_iReg, super.computeHashCode());
+//            }
         }
 
 

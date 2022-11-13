@@ -15,6 +15,7 @@ import org.xvm.asm.Register;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
@@ -250,9 +251,9 @@ public class DynamicFormalConstant
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int hashCode()
+    public int computeHashCode()
         {
-        return super.hashCode()*17 + m_constFormal.hashCode();
+        return Hash.of(m_constFormal, super.computeHashCode());
         }
 
 

@@ -11,6 +11,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
 import org.xvm.compiler.Token.Id;
+import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
@@ -384,9 +385,9 @@ public class RangeConstant
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int hashCode()
+    public int computeHashCode()
         {
-        return m_const1.hashCode() ^ m_const2.hashCode();
+        return Hash.of(m_const1, Hash.of(m_const2));
         }
 
 

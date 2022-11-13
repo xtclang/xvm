@@ -25,6 +25,7 @@ import org.xvm.asm.PropertyStructure;
 import org.xvm.runtime.ClassTemplate;
 
 import org.xvm.runtime.Container;
+import org.xvm.util.Hash;
 import org.xvm.util.ListMap;
 
 import static org.xvm.util.Handy.readIndex;
@@ -488,9 +489,9 @@ public class PropertyClassTypeConstant
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int hashCode()
+    protected int computeHashCode()
         {
-        return m_typeParent.hashCode() + m_idProp.hashCode();
+        return Hash.of(m_typeParent, Hash.of(m_idProp));
         }
 
 

@@ -5,8 +5,10 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.Arrays;
 import java.util.List;
 
+import java.util.Objects;
 import java.util.function.Consumer;
 
 import org.xvm.asm.ClassStructure;
@@ -15,6 +17,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
+import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
@@ -631,10 +634,9 @@ public class MethodConstant
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int hashCode()
+    protected int computeHashCode()
         {
-        return m_constParent.hashCode() * 17
-                + (isLambda() ? m_iLambda : m_constSig.hashCode());
+        return Hash.of(m_constParent, Hash.of(m_iLambda, Hash.of(m_constSig)));
         }
 
 

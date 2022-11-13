@@ -10,6 +10,7 @@ import org.xvm.asm.ConstantPool;
 
 import org.xvm.compiler.Token;
 
+import org.xvm.util.Hash;
 import org.xvm.util.PackedInteger;
 
 import static org.xvm.util.Handy.byteToHexString;
@@ -499,9 +500,9 @@ public class ByteConstant
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int hashCode()
+    public int computeHashCode()
         {
-        return m_nVal;
+        return Hash.of(m_nVal);
         }
 
 

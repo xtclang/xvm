@@ -28,6 +28,7 @@ import org.xvm.asm.Register;
 import org.xvm.runtime.ClassTemplate;
 
 import org.xvm.runtime.Container;
+import org.xvm.util.Hash;
 import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.readIndex;
@@ -2303,11 +2304,10 @@ public class TerminalTypeConstant
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int hashCode()
+    protected int computeHashCode()
         {
-        return ensureResolvedConstant().hashCode();
+        return Hash.of(ensureResolvedConstant());
         }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

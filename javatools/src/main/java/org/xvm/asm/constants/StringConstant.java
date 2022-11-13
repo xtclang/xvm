@@ -9,6 +9,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
 import org.xvm.compiler.Token;
+import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.quotedString;
 import static org.xvm.util.Handy.readUtf8String;
@@ -37,7 +38,6 @@ public class StringConstant
         {
         super(pool);
         m_sVal  = readUtf8String(in);
-        m_nHash = m_sVal.hashCode();
         }
 
     /**
@@ -52,7 +52,6 @@ public class StringConstant
 
         assert sVal != null;
         m_sVal  = sVal;
-        m_nHash = sVal.hashCode();
         }
 
 
@@ -185,9 +184,9 @@ public class StringConstant
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int hashCode()
+    public int computeHashCode()
         {
-        return m_nHash;
+        return Hash.of(m_sVal);
         }
 
 
@@ -197,9 +196,4 @@ public class StringConstant
      * The constant character string value.
      */
     private final String m_sVal;
-
-    /**
-     * Cached hashcode, String#hashCode has apparently become complex enough to not be inlinable.
-     */
-    private final int m_nHash;
     }

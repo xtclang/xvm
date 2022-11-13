@@ -9,6 +9,7 @@ import java.util.function.Consumer;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
@@ -193,12 +194,9 @@ public abstract class NamedConstant
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int hashCode()
+    protected int computeHashCode()
         {
-        int nHash = m_nHash;
-        return nHash == 0
-            ? m_nHash = m_constParent.hashCode() * 17 + m_constName.hashCode()
-            : nHash;
+        return Hash.of(m_constParent, Hash.of(m_constName));
         }
 
 
@@ -226,9 +224,4 @@ public abstract class NamedConstant
      * The constant that holds the name of the structure identified by this constant.
      */
     private StringConstant m_constName;
-
-    /**
-     * Cached hash.
-     */
-    private int m_nHash;
     }

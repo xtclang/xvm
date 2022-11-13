@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.util.Hash;
 
 
 /**
@@ -125,9 +126,9 @@ public class Float32Constant
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int hashCode()
+    public int computeHashCode()
         {
-        return Float.floatToIntBits(m_flVal);
+        return Hash.of(m_flVal);
         }
 
 

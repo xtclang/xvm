@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.byteArrayToHexString;
 
@@ -179,16 +180,9 @@ public class FPNConstant
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int hashCode()
+    public int computeHashCode()
         {
-        int nHash = 0;
-        byte[] ab = m_abVal;
-        int    cb = ab.length;
-        for (int of = 0; of < cb; ++of)
-            {
-            nHash = nHash * 19 + ab[of];
-            }
-        return nHash;
+        return Hash.of(m_abVal);
         }
 
 

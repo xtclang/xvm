@@ -21,6 +21,7 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.Utils;
 
+import org.xvm.util.Hash;
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
@@ -711,9 +712,8 @@ public class IntersectionTypeConstant
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int hashCode()
+    public int computeHashCode()
         {
-        // '+' == 53
-        return 53 ^ m_constType1.hashCode() ^ m_constType2.hashCode();
+        return Hash.of(m_constType1, Hash.of(m_constType2));
         }
     }

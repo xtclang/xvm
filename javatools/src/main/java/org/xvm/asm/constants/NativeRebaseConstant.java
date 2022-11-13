@@ -7,6 +7,7 @@ import java.io.IOException;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
+import org.xvm.util.Hash;
 
 
 /**
@@ -83,9 +84,9 @@ public class NativeRebaseConstant
         }
 
     @Override
-    public int hashCode()
+    public int computeHashCode()
         {
-        return -m_constIface.hashCode();
+        return Hash.of(Hash.of(m_constIface), super.computeHashCode());
         }
 
     @Override

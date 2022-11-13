@@ -13,6 +13,7 @@ import java.util.function.Consumer;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.GenericTypeResolver;
+import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
@@ -798,24 +799,9 @@ public class SignatureConstant
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int hashCode()
+    protected int computeHashCode()
         {
-        int iHash = m_iHashCode;
-        return iHash == 0 ? computeHash() : iHash;
-        }
-
-    /**
-     * Compute and cache a hash for this {@link SignatureConstant}.
-     *
-     * @return the hash
-     */
-    private int computeHash()
-        {
-        // unroll Arrays.hashCode() to avoid auto-boxing
-        int iHash = ((Arrays.hashCode(m_aconstParams) * 31) +
-                        Arrays.hashCode(m_aconstReturns)) * 31 +
-                            m_constName.hashCode();
-        return m_iHashCode = iHash == 0 ? 1 : iHash;
+        return Hash.of(m_aconstParams, Hash.of(m_aconstReturns, Hash.of(m_constName, Hash.of(m_fProperty))));
         }
 
 
@@ -1002,9 +988,4 @@ public class SignatureConstant
      * Cached comparison result.
      */
     private transient int m_nCmpPrev;
-
-    /**
-     * Cached hashCode or {@code 0}.
-     */
-    private int m_iHashCode;
     }

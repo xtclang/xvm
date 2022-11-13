@@ -11,6 +11,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
+import org.xvm.util.Hash;
 import org.xvm.util.PackedInteger;
 
 import static org.xvm.util.Handy.appendIntAsHex;
@@ -243,9 +244,9 @@ public class CharConstant
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int hashCode()
+    public int computeHashCode()
         {
-        return m_chVal;
+        return Hash.of(m_chVal);
         }
 
 

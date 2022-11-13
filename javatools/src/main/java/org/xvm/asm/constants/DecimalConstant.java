@@ -15,6 +15,7 @@ import org.xvm.type.Decimal;
 import org.xvm.type.Decimal128;
 import org.xvm.type.Decimal32;
 import org.xvm.type.Decimal64;
+import org.xvm.util.Hash;
 
 
 /**
@@ -280,9 +281,9 @@ public class DecimalConstant
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int hashCode()
+    public int computeHashCode()
         {
-        return m_dec.hashCode();
+        return Hash.of(m_dec);
         }
 
 

@@ -25,6 +25,7 @@ import org.xvm.type.Decimal128;
 import org.xvm.type.Decimal32;
 import org.xvm.type.Decimal64;
 
+import org.xvm.util.Hash;
 import org.xvm.util.PackedInteger;
 
 
@@ -594,8 +595,30 @@ public abstract class Constant
     @Override
     public int hashCode()
         {
+        int iHash = m_iHash;
+        return iHash == 0 ? computeHashCodeInternal() : iHash;
+        }
+
+    /**
+     * Compute a hash of this constant.
+     *
+     * @return the hash
+     */
+    protected int computeHashCode()
+        {
         // inefficient and begs for optimization by sub-classes
         return this.toString().hashCode();
+        }
+
+    /**
+     * Compute and store a non-zero hash of this constant.
+     *
+     * @return the hash
+     */
+    protected int computeHashCodeInternal()
+        {
+        int iHash = Hash.of(getClass(), computeHashCode());
+        return m_iHash = iHash == 0 ? 1 : iHash;
         }
 
     @Override
@@ -1024,6 +1047,11 @@ public abstract class Constant
      * An empty array of constants.
      */
     public final static Constant[] NO_CONSTS = new Constant[0];
+
+    /**
+     * Cached hashCode or {@code 0}
+     */
+    private int m_iHash;
 
     /**
      * A cached index of the location of the Constant in the pool.

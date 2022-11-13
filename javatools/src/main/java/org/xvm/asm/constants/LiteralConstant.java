@@ -20,6 +20,7 @@ import org.xvm.type.Decimal128;
 import org.xvm.type.Decimal32;
 import org.xvm.type.Decimal64;
 
+import org.xvm.util.Hash;
 import org.xvm.util.PackedInteger;
 
 import static org.xvm.util.Handy.hexitValue;
@@ -1873,9 +1874,9 @@ public class LiteralConstant
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int hashCode()
+    public int computeHashCode()
         {
-        return getValue().hashCode();
+        return Hash.of(getValue());
         }
 
 

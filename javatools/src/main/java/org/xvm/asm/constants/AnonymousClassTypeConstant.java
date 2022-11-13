@@ -21,6 +21,7 @@ import org.xvm.asm.GenericTypeResolver;
 
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
+import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.writePackedLong;
@@ -409,9 +410,9 @@ public class AnonymousClassTypeConstant
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int hashCode()
+    public int computeHashCode()
         {
-        return m_typeParent.hashCode() + m_idAnon.hashCode();
+        return Hash.of(m_typeParent, Hash.of(m_idAnon));
         }
 
 

@@ -8,6 +8,7 @@ import java.util.function.Consumer;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.util.Hash;
 
 
 /**
@@ -303,20 +304,9 @@ public class UnresolvedNameConstant
     @Override
     public int hashCode()
         {
-        if (isNameResolved())
-            {
-            return m_constId.hashCode();
-            }
-        else
-            {
-            int      nHash = 0;
-            String[] names = m_asName;
-            for (int i = 0, c = names.length; i < c; ++i)
-                {
-                nHash ^= names[i].hashCode();
-                }
-            return nHash;
-            }
+        return isNameResolved()
+            ? Hash.of(m_constId)
+            : Hash.of(m_asName);
         }
 
 

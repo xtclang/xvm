@@ -16,6 +16,7 @@ import java.util.function.Consumer;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
@@ -380,22 +381,9 @@ public class MapConstant
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int hashCode()
+    public int computeHashCode()
         {
-        int nHash = m_nHash;
-        if (nHash == 0)
-            {
-            Constant[] aconstKey = m_aconstKey;
-            Constant[] aconstVal = m_aconstVal;
-            int        cEntries  = aconstKey.length;
-            nHash = cEntries;
-            for (int of = 0, cInc = Math.max(1, cEntries >>> 6); of < cEntries; of += cInc)
-                {
-                nHash *= 19 + aconstKey[of].hashCode() ^ aconstVal[of].hashCode();
-                }
-            m_nHash = nHash;
-            }
-        return nHash;
+        return Hash.of(m_constType, Hash.of(m_aconstKey, Hash.of(m_aconstVal)));
         }
 
 
@@ -609,9 +597,4 @@ public class MapConstant
      * The value(s) in the map (or the value in the single map entry).
      */
     private Constant[] m_aconstVal;
-
-    /**
-     * Cached hash code.
-     */
-    private transient int m_nHash;
     }

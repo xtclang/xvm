@@ -1669,38 +1669,7 @@ public class Handy
      */
     public static int hashCode(final Object o)
         {
-        if (o == null)
-            {
-            return 0;
-            }
-
-        final Class clz = o.getClass();
-        if (clz.isArray())
-            {
-            switch (clz.getName().charAt(1))
-                {
-                case 'Z':
-                    return Arrays.hashCode((boolean[]) o);
-                case 'B':
-                    return Arrays.hashCode((byte[]) o);
-                case 'C':
-                    return Arrays.hashCode((char[]) o);
-                case 'S':
-                    return Arrays.hashCode((short[]) o);
-                case 'I':
-                    return Arrays.hashCode((int[]) o);
-                case 'J':
-                    return Arrays.hashCode((long[]) o);
-                case 'F':
-                    return Arrays.hashCode((float[]) o);
-                case 'D':
-                    return Arrays.hashCode((double[]) o);
-                default:
-                    return Arrays.hashCode((Object[]) o);
-                }
-            }
-
-        return o.hashCode();
+        return Hash.of(o);
         }
 
     /**
@@ -1730,32 +1699,19 @@ public class Handy
             return false;
             }
 
-        if (clz1.isArray())
-            {
-            switch (clz1.getName().charAt(1))
-                {
-                case 'Z':
-                    return Arrays.equals((boolean[]) o1, (boolean[]) o2);
-                case 'B':
-                    return Arrays.equals((byte[]) o1, (byte[]) o2);
-                case 'C':
-                    return Arrays.equals((char[]) o1, (char[]) o2);
-                case 'S':
-                    return Arrays.equals((short[]) o1, (short[]) o2);
-                case 'I':
-                    return Arrays.equals((int[]) o1, (int[]) o2);
-                case 'J':
-                    return Arrays.equals((long[]) o1, (long[]) o2);
-                case 'F':
-                    return Arrays.equals((float[]) o1, (float[]) o2);
-                case 'D':
-                    return Arrays.equals((double[]) o1, (double[]) o2);
-                default:
-                    return Arrays.deepEquals((Object[]) o1, (Object[]) o2);
-                }
-            }
-
-        return o1.equals(o2);
+        Class<?> clzComp = clz1.getComponentType();
+        return clzComp == null || clzComp != clz2.getComponentType()
+            ? o1.equals(o2)
+            : clzComp.isPrimitive()
+                ? clzComp == int   .class ? Arrays.equals(    (int[]) o1,     (int[]) o2)
+                : clzComp == long  .class ? Arrays.equals(   (long[]) o1,    (long[]) o2)
+                : clzComp == byte  .class ? Arrays.equals(   (byte[]) o1,    (byte[]) o2)
+                : clzComp == char  .class ? Arrays.equals(   (char[]) o1,    (char[]) o2)
+                : clzComp == double.class ? Arrays.equals( (double[]) o1,  (double[]) o2)
+                : clzComp == float .class ? Arrays.equals(  (float[]) o1,   (float[]) o2)
+                : clzComp == short .class ? Arrays.equals(  (short[]) o1,   (short[]) o2)
+                                          : Arrays.equals((boolean[]) o1, (boolean[]) o2)
+            : Arrays.equals((Object[]) o1, (Object[]) o2);
         }
 
     /**

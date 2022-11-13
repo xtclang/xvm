@@ -8,6 +8,7 @@ import java.util.Objects;
 import java.util.regex.Pattern;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.quotedString;
 import static org.xvm.util.Handy.readUtf8String;
@@ -144,9 +145,9 @@ public class RegExConstant
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int hashCode()
+    public int computeHashCode()
         {
-        return Objects.hash(m_regex, m_nFlags);
+        return Hash.of(m_regex, Hash.of(m_nFlags));
         }
 
     // ----- fields --------------------------------------------------------------------------------

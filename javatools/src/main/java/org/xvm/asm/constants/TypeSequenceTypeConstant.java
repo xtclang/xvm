@@ -355,7 +355,7 @@ public class TypeSequenceTypeConstant
         }
 
     @Override
-    public int hashCode()
+    public int computeHashCode()
         {
         return 42;
         }

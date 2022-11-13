@@ -14,6 +14,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
 import org.xvm.util.Handy;
+import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
@@ -336,19 +337,9 @@ public abstract class MultiCondition
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int hashCode()
+    public int computeHashCode()
         {
-        int nHash = m_nHash;
-        if (nHash == 0)
-            {
-            nHash = getOperatorString().hashCode();
-            for (ConditionalConstant cond : m_aconstCond)
-                {
-                nHash ^= cond.hashCode();
-                }
-            m_nHash = nHash;
-            }
-        return nHash;
+        return Hash.of(m_aconstCond);
         }
 
     @Override
@@ -427,9 +418,4 @@ public abstract class MultiCondition
      * The underlying conditions to evaluate.
      */
     protected ConditionalConstant[] m_aconstCond;
-
-    /**
-     * Cached hash value.
-     */
-    private transient int m_nHash;
     }

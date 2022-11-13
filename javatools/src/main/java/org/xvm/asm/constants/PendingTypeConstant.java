@@ -13,6 +13,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.Register;
+import org.xvm.util.Hash;
 
 /**
  * Represents a formal type parameter constant that has not been determined yet.
@@ -257,9 +258,9 @@ public class PendingTypeConstant
         }
 
     @Override
-    public int hashCode()
+    public int computeHashCode()
         {
-        return f_typeConstraint.hashCode();
+        return Hash.of(f_typeConstraint);
         }
 
     @Override

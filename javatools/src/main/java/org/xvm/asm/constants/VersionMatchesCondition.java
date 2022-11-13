@@ -13,6 +13,7 @@ import org.xvm.asm.LinkerContext;
 
 import org.xvm.asm.Version;
 import org.xvm.util.Handy;
+import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.readMagnitude;
@@ -224,9 +225,9 @@ public class VersionMatchesCondition
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int hashCode()
+    public int computeHashCode()
         {
-        return (43 * Handy.hashCode(m_constStruct)) ^ (29 * Handy.hashCode(m_constVer));
+        return Hash.of(m_constStruct, Hash.of(m_constVer));
         }
 
 

@@ -5,6 +5,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
 import org.xvm.compiler.ast.Expression;
+import org.xvm.util.Hash;
 
 
 /**
@@ -82,9 +83,9 @@ public class ExpressionConstant
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int hashCode()
+    public int computeHashCode()
         {
-        return m_expr.hashCode();
+        return Hash.of(m_expr);
         }
 
 

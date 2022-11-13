@@ -9,6 +9,7 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
@@ -355,20 +356,9 @@ public class ArrayConstant
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int hashCode()
+    public int computeHashCode()
         {
-        int nHash = m_nHash;
-        if (nHash == 0)
-            {
-            Constant[] aconst = m_aconstVal;
-            nHash = aconst.length;
-            for (int of = 0, cb = aconst.length, cbInc = Math.max(1, cb >>> 6); of < cb; of += cbInc)
-                {
-                nHash *= 19 + aconst[of].hashCode();
-                }
-            m_nHash = nHash;
-            }
-        return nHash;
+        return Hash.of(m_constType, Hash.of(m_aconstVal));
         }
 
 
@@ -399,10 +389,5 @@ public class ArrayConstant
      * The values in the array, tuple, or set.
      */
     private Constant[] m_aconstVal;
-
-    /**
-     * Cached hash code.
-     */
-    private transient int m_nHash;
     }
 

@@ -15,6 +15,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.runtime.ObjectHandle;
 
 import org.xvm.util.Handy;
+import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
@@ -397,18 +398,9 @@ public class FSNodeConstant
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int hashCode()
+    public int computeHashCode()
         {
-        int nHash = m_nHash;
-        if (nHash == 0)
-            {
-            nHash =   m_constName    .hashCode()
-                    ^ m_constCreated .hashCode()
-                    ^ m_constModified.hashCode()
-                    ^ m_constData    .hashCode();
-            m_nHash = nHash;
-            }
-        return nHash;
+        return Hash.of(m_constName, Hash.of(m_constCreated, Hash.of(m_constModified, Hash.of(m_constData))));
         }
 
 
@@ -476,11 +468,6 @@ public class FSNodeConstant
      * </li></ul>
      */
     private Constant m_constData;
-
-    /**
-     * Cached hash code.
-     */
-    private transient int m_nHash;
 
     /**
      * The ObjectHandle representing this singleton's value.

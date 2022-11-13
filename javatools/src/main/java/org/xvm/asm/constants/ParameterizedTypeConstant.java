@@ -21,6 +21,7 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.Register;
 
+import org.xvm.util.Hash;
 import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.readIndex;
@@ -1056,22 +1057,10 @@ public class ParameterizedTypeConstant
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int hashCode()
+    protected int computeHashCode()
         {
-        int n = m_nHashCode;
-        if (n == 0)
-            {
-            n = m_constType.hashCode() + m_atypeParams.length;
-            for (TypeConstant type : m_atypeParams)
-                {
-                n ^= type.hashCode();
-                }
-            n |= 1; // this will never be a zero
-            m_nHashCode = n;
-            }
-        return n;
+        return Hash.of(m_constType, Hash.of(m_atypeParams));
         }
-
 
     // ----- fields --------------------------------------------------------------------------------
 
@@ -1094,11 +1083,6 @@ public class ParameterizedTypeConstant
      * The type parameters.
      */
     private TypeConstant[] m_atypeParams;
-
-    /**
-     * Cached hashCode value.
-     */
-    private transient int m_nHashCode;
 
     /**
      * Cached conversion target.

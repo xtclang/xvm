@@ -15,6 +15,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.UnresolvedNameConstant;
 import org.xvm.asm.constants.UnresolvedTypeConstant;
 
+import org.xvm.util.Hash;
 import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.checkElementsNonNull;
@@ -372,16 +373,9 @@ public class Annotation
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int hashCode()
+    public int computeHashCode()
         {
-        Constant[] aParams = m_aParams;
-        int        cParams = aParams.length;
-        int        n       = getAnnotationClass().hashCode() + cParams;
-        for (int i = 0; i < cParams; ++i)
-            {
-            n *= 11 + aParams[i].hashCode();
-            }
-        return n;
+        return Hash.of(m_aParams, Hash.of(getAnnotationClass()));
         }
 
 

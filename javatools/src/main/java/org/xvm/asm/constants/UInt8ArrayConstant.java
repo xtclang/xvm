@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.byteArrayToHexString;
 import static org.xvm.util.Handy.readMagnitude;
@@ -136,20 +137,9 @@ public class UInt8ArrayConstant
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int hashCode()
+    protected int computeHashCode()
         {
-        int nHash = m_nHash;
-        if (nHash == 0)
-            {
-            byte[] ab = m_abVal;
-            nHash = ab.length;
-            for (int of = 0, cb = ab.length, cbInc = Math.max(1, cb >>> 6); of < cb; of += cbInc)
-                {
-                nHash *= 19 + ab[of];
-                }
-            m_nHash = nHash;
-            }
-        return nHash;
+        return Hash.of(m_abVal);
         }
 
 
@@ -159,9 +149,4 @@ public class UInt8ArrayConstant
      * The constant octet string value stored as a <tt>byte[]</tt>.
      */
     private final byte[] m_abVal;
-
-    /**
-     * Cached hash code.
-     */
-    private transient int m_nHash;
     }

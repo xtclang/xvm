@@ -12,6 +12,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 
+import org.xvm.util.Hash;
 import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.readMagnitude;
@@ -258,9 +259,9 @@ public class ImmutableTypeConstant
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int hashCode()
+    public int computeHashCode()
         {
-        return -m_constType.hashCode();
+        return Hash.of(m_constType);
         }
 
 

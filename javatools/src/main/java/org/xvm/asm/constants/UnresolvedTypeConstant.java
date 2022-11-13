@@ -18,6 +18,7 @@ import org.xvm.asm.GenericTypeResolver;
 
 import org.xvm.compiler.Compiler;
 
+import org.xvm.util.Hash;
 import org.xvm.util.Severity;
 
 
@@ -538,10 +539,15 @@ public class UnresolvedTypeConstant
     public int hashCode()
         {
         return isTypeResolved()
-            ? getResolvedType().hashCode()
-            : m_constId.hashCode();
+            ? Hash.of(getResolvedType())
+            : Hash.of(m_constId);
         }
 
+    @Override
+    public int computeHashCode()
+        {
+        return 0;
+        }
 
     // ----- fields --------------------------------------------------------------------------------
 

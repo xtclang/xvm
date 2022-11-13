@@ -18,6 +18,7 @@ import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.template.xException;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction;
+import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
@@ -180,9 +181,9 @@ public class MethodBindingConstant
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
-    public int hashCode()
+    public int computeHashCode()
         {
-        return m_idMethod.hashCode();
+        return Hash.of(m_idMethod);
         }
 
 
