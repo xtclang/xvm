@@ -30,6 +30,7 @@ public class EcstasyLexerAdapter extends LexerBase
     @Override
     public void start(CharSequence buffer, int startOffset, int endOffset, int initialState)
         {
+        // TODO: Do we need to do anything else with `endOffset`?
         bufferEnd = endOffset;
         tokenStart = tokenEnd = startOffset;
 
@@ -37,10 +38,11 @@ public class EcstasyLexerAdapter extends LexerBase
         ErrorListener errorListener = new ErrorList(10); // TODO: fill this in with a real value
         ecstasyLexer = new Lexer(source, errorListener);
 
+        // TODO: This startOffset is wrong! The Ecstasy lexer uses a special position format that
+        //  encodes lines and line offsets into a long, and `setPosition` takes an arg of that
+        //  format. We need to convert startOffset (in characters) to that format.
         ecstasyLexer.setPosition(startOffset);
-        // TODO: Should this also consider the endOffset?
-        ecstasyLexer.setPosition(startOffset);
-        currentToken = null;
+        currentToken = null; // Just to be explicit
         }
 
     @Override
