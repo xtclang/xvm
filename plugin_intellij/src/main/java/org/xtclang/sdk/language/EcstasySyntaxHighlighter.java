@@ -77,6 +77,7 @@ public class EcstasySyntaxHighlighter extends SyntaxHighlighterBase
             {
             return new TextAttributesKey[]{HighlighterColors.NO_HIGHLIGHTING};
             }
+
         TextAttributesKey key = createTextAttributesKey(String.format("ECSTASY_%s", textAttributesKey.getExternalName()), textAttributesKey);
         return new TextAttributesKey[]{key};
         }
