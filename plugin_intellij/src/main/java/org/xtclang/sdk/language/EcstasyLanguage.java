@@ -1,6 +1,8 @@
 package org.xtclang.sdk.language;
 
+
 import com.intellij.lang.Language;
+
 
 public class EcstasyLanguage extends Language
     {

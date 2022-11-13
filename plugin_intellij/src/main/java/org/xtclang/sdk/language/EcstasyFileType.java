@@ -1,10 +1,11 @@
 package org.xtclang.sdk.language;
 
+
 import com.intellij.openapi.fileTypes.LanguageFileType;
+import javax.swing.Icon;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import javax.swing.*;
 
 public class EcstasyFileType extends LanguageFileType
     {
