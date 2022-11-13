@@ -15,7 +15,6 @@ public class EcstasyLexerAdapter extends LexerBase
     {
     private Lexer ecstasyLexer;
 
-    private IElementType myTokenType;
     private CharSequence myText;
     private Source source;
 
@@ -38,7 +37,6 @@ public class EcstasyLexerAdapter extends LexerBase
         myText = buffer;
         myBufferEnd = endOffset;
         myTokenStart = myTokenEnd = startOffset;
-        myTokenType = null;
 
         source = new Source(buffer.toString());
         ErrorListener errorListener = new ErrorList(10);
@@ -53,7 +51,7 @@ public class EcstasyLexerAdapter extends LexerBase
     @Override
     public int getState()
         {
-//        locateToken();
+        locateToken();
         return 0; // TODO: Need help with this
         }
 
@@ -71,62 +69,62 @@ public class EcstasyLexerAdapter extends LexerBase
             }
         }
 
-@Override
-public int getTokenStart()
-    {
-    locateToken();
-    return myTokenStart;
-    }
-
-@Override
-public int getTokenEnd()
-    {
-    locateToken();
-    return myTokenEnd;
-    }
-
-@Override
-public void advance()
-    {
-    locateToken();
-    currentToken = null;
-    }
-
-private void locateToken()
-    {
-    if (currentToken != null)
+    @Override
+    public int getTokenStart()
         {
-        return;
+        locateToken();
+        return myTokenStart;
         }
 
-    if (!ecstasyLexer.hasNext())
+    @Override
+    public int getTokenEnd()
         {
+        locateToken();
+        return myTokenEnd;
+        }
+
+    @Override
+    public void advance()
+        {
+        locateToken();
         currentToken = null;
         }
-    else
+
+    private void locateToken()
         {
-        myTokenStart = myTokenEnd;
-        currentToken = ecstasyLexer.next();
-        myTokenEnd = source.getMOffset();
+        if (currentToken != null)
+            {
+            return;
+            }
+
+        if (!ecstasyLexer.hasNext())
+            {
+            currentToken = null;
+            }
+        else
+            {
+            myTokenStart = myTokenEnd;
+            currentToken = ecstasyLexer.next();
+            myTokenEnd = source.getMOffset();
+            }
+        }
+
+    @Override
+    public @NotNull CharSequence getBufferSequence()
+        {
+        return myText;
+        }
+
+    @Override
+    public int getBufferEnd()
+        {
+        return myBufferEnd;
+        }
+
+    @Override
+    public String toString()
+        {
+        return "FlexAdapter for " + ecstasyLexer.getClass().getName();
         }
     }
-
-@Override
-public @NotNull CharSequence getBufferSequence()
-    {
-    return myText;
-    }
-
-@Override
-public int getBufferEnd()
-    {
-    return myBufferEnd;
-    }
-
-@Override
-public String toString()
-    {
-    return "FlexAdapter for " + ecstasyLexer.getClass().getName();
-    }
-}
 
