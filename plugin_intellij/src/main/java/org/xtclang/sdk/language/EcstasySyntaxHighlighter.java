@@ -2,6 +2,7 @@
 
 package org.xtclang.sdk.language;
 
+
 import com.intellij.lexer.Lexer;
 import com.intellij.openapi.editor.DefaultLanguageHighlighterColors;
 import com.intellij.openapi.editor.HighlighterColors;
@@ -12,11 +13,11 @@ import org.jetbrains.annotations.NotNull;
 import org.xtclang.sdk.language.lexer.EcstasyLexerAdapter;
 import org.xvm.compiler.Token;
 
+
 import static com.intellij.openapi.editor.colors.TextAttributesKey.createTextAttributesKey;
 
 public class EcstasySyntaxHighlighter extends SyntaxHighlighterBase
     {
-
     public static final TextAttributesKey SEPARATOR =
         createTextAttributesKey("ECSTASY_SEPARATOR", DefaultLanguageHighlighterColors.OPERATION_SIGN);
     public static final TextAttributesKey KEY =

@@ -21,6 +21,9 @@
         </value>
       </option>
     </JavaCodeStyleSettings>
+    <XML>
+      <option name="XML_LEGACY_SETTINGS_IMPORTED" value="true" />
+    </XML>
     <codeStyleSettings language="JAVA">
       <option name="BRACE_STYLE" value="3" />
       <option name="CLASS_BRACE_STYLE" value="3" />

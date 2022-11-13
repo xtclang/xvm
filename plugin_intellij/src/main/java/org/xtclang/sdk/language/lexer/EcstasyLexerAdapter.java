@@ -1,5 +1,6 @@
 package org.xtclang.sdk.language.lexer;
 
+
 import com.intellij.lexer.LexerBase;
 import com.intellij.psi.tree.IElementType;
 import org.jetbrains.annotations.NotNull;
@@ -10,6 +11,7 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.compiler.Lexer;
 import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
+
 
 public class EcstasyLexerAdapter extends LexerBase
     {
