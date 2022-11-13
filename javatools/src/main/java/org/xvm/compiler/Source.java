@@ -672,6 +672,12 @@ public class Source
         return new String(ach, 0, cch);
         }
 
+    /**
+     * The position fields are measured in lines and characters per line. This method returns the
+     * total offset in number of characters, rather than lines and characters.
+     *
+     * @return the offset measured in characters
+     */
     public int getMOffset()
         {
         return m_of;

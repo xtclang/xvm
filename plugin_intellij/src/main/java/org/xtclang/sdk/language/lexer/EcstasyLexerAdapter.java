@@ -67,7 +67,7 @@ public class EcstasyLexerAdapter extends LexerBase
             }
         else
             {
-            return new IElementType(currentToken.getId().toString(), EcstasyLanguage.INSTANCE);
+            return new IElementType(currentToken.getId().name(), EcstasyLanguage.INSTANCE);
             }
         }
 
