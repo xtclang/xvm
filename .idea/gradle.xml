@@ -4,6 +4,8 @@
   <component name="GradleSettings">
     <option name="linkedExternalProjectsSettings">
       <GradleProjectSettings>
+        <option name="delegatedBuild" value="true" />
+        <option name="testRunner" value="GRADLE" />
         <option name="distributionType" value="LOCAL" />
         <option name="externalProjectPath" value="$PROJECT_DIR$" />
         <option name="gradleHome" value="/opt/homebrew/Cellar/gradle/7.5.1_1/libexec" />
@@ -29,6 +31,7 @@
             <option value="$PROJECT_DIR$/lib_web" />
             <option value="$PROJECT_DIR$/lib_xenia" />
             <option value="$PROJECT_DIR$/manualTests" />
+            <option value="$PROJECT_DIR$/plugin_intellij" />
             <option value="$PROJECT_DIR$/xdk" />
           </set>
         </option>
