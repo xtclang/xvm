@@ -37,7 +37,6 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xOrdered;
 
-import org.xvm.util.Hash;
 import org.xvm.util.ListMap;
 
 
@@ -952,14 +951,5 @@ public class UnionTypeConstant
     public String getValueString()
         {
         return m_constType1.getValueString() + " | " + m_constType2.getValueString();
-        }
-
-
-    // ----- Object methods ------------------------------------------------------------------------
-
-    @Override
-    public int computeHashCode()
-        {
-        return Hash.of(m_constType1, Hash.of(m_constType2));
         }
     }

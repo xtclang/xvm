@@ -21,7 +21,6 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 
-import org.xvm.util.Hash;
 import org.xvm.util.ListMap;
 
 
@@ -559,14 +558,5 @@ public class DifferenceTypeConstant
     public String getValueString()
         {
         return m_constType1.getValueString() + " - " + m_constType2.getValueString();
-        }
-
-
-    // ----- Object methods ------------------------------------------------------------------------
-
-    @Override
-    public int computeHashCode()
-        {
-        return Hash.of(m_constType1, Hash.of(m_constType2));
         }
     }

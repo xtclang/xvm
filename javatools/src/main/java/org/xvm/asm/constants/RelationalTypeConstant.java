@@ -25,6 +25,7 @@ import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 
+import org.xvm.util.Hash;
 import org.xvm.util.ListMap;
 
 import static org.xvm.util.Handy.readMagnitude;
@@ -753,6 +754,15 @@ public abstract class RelationalTypeConstant
         return !isValidated()
             && m_constType1.validate(errs) && m_constType2.validate(errs)
             && super.validate(errs);
+        }
+
+
+    // ----- Object methods ------------------------------------------------------------------------
+
+    @Override
+    public int computeHashCode()
+        {
+        return Hash.of(m_constType1, Hash.of(m_constType2));
         }
 
 
