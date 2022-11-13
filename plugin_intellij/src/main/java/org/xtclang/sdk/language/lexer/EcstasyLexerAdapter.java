@@ -2,10 +2,8 @@ package org.xtclang.sdk.language.lexer;
 
 
 import com.intellij.lexer.LexerBase;
-import com.intellij.psi.tree.IElementType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.xtclang.sdk.language.EcstasyLanguage;
 import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
 import org.xvm.compiler.Lexer;
@@ -53,7 +51,7 @@ public class EcstasyLexerAdapter extends LexerBase
         }
 
     @Override
-    public @Nullable IElementType getTokenType()
+    public @Nullable EcstasyTokenType getTokenType()
         {
         locateToken();
         if (currentToken == null)
@@ -62,7 +60,7 @@ public class EcstasyLexerAdapter extends LexerBase
             }
         else
             {
-            return new IElementType(currentToken.getId().name(), EcstasyLanguage.INSTANCE);
+            return new EcstasyTokenType(currentToken);
             }
         }
 

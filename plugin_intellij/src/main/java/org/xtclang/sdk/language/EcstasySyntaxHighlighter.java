@@ -11,6 +11,7 @@ import com.intellij.openapi.fileTypes.SyntaxHighlighterBase;
 import com.intellij.psi.tree.IElementType;
 import org.jetbrains.annotations.NotNull;
 import org.xtclang.sdk.language.lexer.EcstasyLexerAdapter;
+import org.xtclang.sdk.language.lexer.EcstasyTokenType;
 import org.xvm.compiler.Token;
 
 
@@ -30,10 +31,12 @@ public class EcstasySyntaxHighlighter extends SyntaxHighlighterBase
         {
         final TextAttributesKey textAttributesKey;
 
+        EcstasyTokenType ecstasyTokenType = (EcstasyTokenType) tokenType;
+        Token ecstasyToken = ecstasyTokenType.getEcstasyToken();
+
         try
             {
-            Token.Id idValue = Token.Id.valueOf(tokenType.getDebugName());
-            textAttributesKey = switch (idValue)
+            textAttributesKey = switch (ecstasyToken.getId())
                 {
                 case EOL_COMMENT, TODO: // TODO: fix TODOs
                     yield DefaultLanguageHighlighterColors.LINE_COMMENT;
