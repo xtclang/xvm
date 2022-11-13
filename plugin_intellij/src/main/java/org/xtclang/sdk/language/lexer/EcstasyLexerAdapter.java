@@ -17,35 +17,28 @@ public class EcstasyLexerAdapter extends LexerBase
     {
     private Lexer ecstasyLexer;
 
-    private CharSequence myText;
     private Source source;
-
-    private int myTokenStart;
-    private int myTokenEnd;
-
 
     private Token currentToken;
 
-    private int myBufferEnd;
+    private int tokenStart;
+    private int tokenEnd;
 
-    public Lexer getEcstasyLexer()
-        {
-        return ecstasyLexer;
-        }
+
+    private int bufferEnd;
 
     @Override
     public void start(CharSequence buffer, int startOffset, int endOffset, int initialState)
         {
-        myText = buffer;
-        myBufferEnd = endOffset;
-        myTokenStart = myTokenEnd = startOffset;
+        bufferEnd = endOffset;
+        tokenStart = tokenEnd = startOffset;
 
         source = new Source(buffer.toString());
-        ErrorListener errorListener = new ErrorList(10);
+        ErrorListener errorListener = new ErrorList(10); // TODO: fill this in with a real value
         ecstasyLexer = new Lexer(source, errorListener);
 
         ecstasyLexer.setPosition(startOffset);
-        // TODO: This should also take the endOffset.
+        // TODO: Should this also consider the endOffset?
         ecstasyLexer.setPosition(startOffset);
         currentToken = null;
         }
@@ -54,7 +47,7 @@ public class EcstasyLexerAdapter extends LexerBase
     public int getState()
         {
         locateToken();
-        return 0; // TODO: Need help with this
+        return 0; // TODO: I'm not sure exactly what we need here.
         }
 
     @Override
@@ -75,14 +68,14 @@ public class EcstasyLexerAdapter extends LexerBase
     public int getTokenStart()
         {
         locateToken();
-        return myTokenStart;
+        return tokenStart;
         }
 
     @Override
     public int getTokenEnd()
         {
         locateToken();
-        return myTokenEnd;
+        return tokenEnd;
         }
 
     @Override
@@ -92,6 +85,10 @@ public class EcstasyLexerAdapter extends LexerBase
         currentToken = null;
         }
 
+    /**
+     * Unfortunately the Intellij framework expects us to auto-advance when it calls the get methods
+     * above, so we need to add this method that actually does the advancing.
+     */
     private void locateToken()
         {
         if (currentToken != null)
@@ -105,22 +102,25 @@ public class EcstasyLexerAdapter extends LexerBase
             }
         else
             {
-            myTokenStart = myTokenEnd;
+            // The intellij framework requires that tokens be adjacent, but the ecstasy lexer does
+            // not consider whitespace part of tokens. For that reason we need to store the end of
+            // the last token and return is as the "start of the new token".
+            tokenStart = tokenEnd;
             currentToken = ecstasyLexer.next();
-            myTokenEnd = source.getMOffset();
+            tokenEnd = source.getMOffset();
             }
         }
 
     @Override
     public @NotNull CharSequence getBufferSequence()
         {
-        return myText;
+        return source.toRawString();
         }
 
     @Override
     public int getBufferEnd()
         {
-        return myBufferEnd;
+        return bufferEnd;
         }
 
     @Override
