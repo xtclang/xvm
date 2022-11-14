@@ -1088,7 +1088,6 @@ ExtendedTypeExpression
     ExtendedIntersectingTypeExpression
 
 AnyTypeExpression
-    AnonTypeExpression
     ExtendedTypeExpression
 
 AnonTypeExpression
@@ -1115,33 +1114,45 @@ ExtendedIntersectingTypeExpression
     ExtendedIntersectingTypeExpression "-" ExtendedUnionedTypeExpression
 
 UnionedTypeExpression
-    NonBiTypeExpression
-    UnionedTypeExpression "|" NonBiTypeExpression
+    PrefixTypeExpression
+    UnionedTypeExpression "|" PrefixTypeExpression
 
 ExtendedUnionedTypeExpression
     AnonTypeExpression
-    ExtendedNonBiTypeExpression
-    ExtendedUnionedTypeExpression "|" ExtendedNonBiTypeExpression
+    ExtendedPrefixTypeExpression
+    ExtendedUnionedTypeExpression "|" ExtendedPrefixTypeExpression
 
-NonBiTypeExpression
+PrefixTypeExpression
+    "immutable"-opt Annotations-opt PostfixTypeExpression
+
+ExtendedPrefixTypeExpression
+    "immutable"-opt TypeAccessModifier-opt Annotations-opt ExtendedPostfixTypeExpression
+
+TypeAccessModifier
+    "struct"
+    AccessModifier
+
+PostfixTypeExpression
+    PrimaryTypeExpression
+    PostfixTypeExpression NoWhitespace "?"
+    PostfixTypeExpression ArrayDims
+    PostfixTypeExpression ArrayIndexes           # ArrayIndexes is not consumed by this construction
+
+ExtendedPostfixTypeExpression
+    ExtendedPrimaryTypeExpression
+    ExtendedPostfixTypeExpression NoWhitespace "?"
+    ExtendedPostfixTypeExpression ArrayDims
+    ExtendedPostfixTypeExpression ArrayIndexes   # ArrayIndexes is not consumed by this construction
+
+PrimaryTypeExpression
     "(" ExtendedTypeExpression ")"
-    AnnotatedTypeExpression
     NamedTypeExpression
     FunctionTypeExpression
-    NonBiTypeExpression NoWhitespace "?"
-    NonBiTypeExpression ArrayDims
-    NonBiTypeExpression ArrayIndexes             # ArrayIndexes is not consumed by this construction
-    "immutable" NonBiTypeExpression
 
-ExtendedNonBiTypeExpression
+ExtendedPrimaryTypeExpression
     "(" ExtendedTypeExpression ")"
-    ExtendedAnnotatedTypeExpression
-    TypeAccessModifier-opt NamedTypeExpression
+    NamedTypeExpression
     FunctionTypeExpression
-    ExtendedNonBiTypeExpression NoWhitespace "?"
-    ExtendedNonBiTypeExpression ArrayDims
-    ExtendedNonBiTypeExpression ArrayIndexes     # ArrayIndexes is not consumed by this construction
-    "immutable" ExtendedNonBiTypeExpression-opt
     "const"
     "enum"
     "module"
@@ -1149,25 +1160,30 @@ ExtendedNonBiTypeExpression
     "service"
     "class"
 
-AnnotatedTypeExpression
-    Annotation NonBiTypeExpression
-
-ExtendedAnnotatedTypeExpression
-    Annotation ExtendedNonBiTypeExpression
-
 NamedTypeExpression
     NamedTypeExpressionPart
     NamedTypeExpression "." Annotations-opt NamedTypeExpressionPart
 
 NamedTypeExpressionPart
-    QualifiedName NoAutoNarrowModifier-opt TypeParameterTypeList-opt
-
-TypeAccessModifier
-    "struct"
-    AccessModifier
+    QualifiedName NoAutoNarrowModifier-opt TypeParameterTypeList-opt TypeValueSet-opt
 
 NoAutoNarrowModifier
     NoWhitespace "!"
+
+TypeValueSet
+    "{" TypeValueList "}"
+
+TypeValueList
+    TypeValue
+    TypeValueList "," TypeValue
+
+# 1. the expression must be a "constant expression", i.e. compiler has to be able to determine the
+#    value (or a constant that points to a value that is constant at run-time)
+# 2. the '!' aka "not" operator is permitted; it indicates exclusion from the set
+# 3. the '..' aka "range" operator is permitted; it indicates a range of values; when combined with
+#    the '!' operator, precedence rules require the range to be inside parens, e.g. "!(v1..v2)"
+TypeValue
+    Expression
 
 # Note: in the case that the name precedes the ParameterTypeList, the token
 #       stream is re-ordered such that the name is deposited into the stream
