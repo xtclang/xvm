@@ -3852,34 +3852,6 @@ public class Parser
                     return expr;
                     }
 
-// TODO CP this is going away now
-                // test for an access-specified TypeExpression, i.e. ending with :public,
-                // :protected, :private, or :struct
-                Token access = null;
-                if (peek(Id.COLON))
-                    {
-                    Token colon = expect(Id.COLON);
-                    if (!colon.hasLeadingWhitespace() && !colon.hasTrailingWhitespace())
-                        {
-                        switch (peek().getId())
-                            {
-                            case PUBLIC:
-                            case PROTECTED:
-                            case PRIVATE:
-                            case STRUCT:
-                                // at this point, this MUST be a type expression
-                                access = current();
-                                lEndPos = access.getEndPosition();
-                                break;
-                            }
-                        }
-
-                    if (access == null)
-                        {
-                        putBack(colon);
-                        }
-                    }
-
                 // test for a non-auto-narrowing modifier ("!")
                 Token tokNoNarrow = !peek().hasLeadingWhitespace()
                         ? match(Id.NOT)
@@ -3928,7 +3900,7 @@ public class Parser
                             case DIR_CUR:
                             case DIR_PARENT:
                                 return parseComplexLiteral(new NamedTypeExpression(null,
-                                        toList(left, name), access, tokNoNarrow, params, lEndPos));
+                                        toList(left, name), null, tokNoNarrow, params, lEndPos));
                             }
                         }
 
@@ -3938,9 +3910,9 @@ public class Parser
                 // note to future self: the reason that we have NameExpression with <params>
                 // (which seems almost self-evident to ALWAYS be a type and not a name) is because
                 // we have the ability to do this: "Int32 i = lit.to<Int32>();" (redundant return)
-                return access == null && tokNoNarrow == null
+                return tokNoNarrow == null
                         ? new NameExpression(left, null, name, params, lEndPos)
-                        : new NamedTypeExpression(null, toList(left, name), access, tokNoNarrow, params, lEndPos);
+                        : new NamedTypeExpression(null, toList(left, name), null, tokNoNarrow, params, lEndPos);
                 }
 
             case L_PAREN:
@@ -5038,32 +5010,6 @@ public class Parser
 
             // QualifiedName
             List<Token> names = parseQualifiedName();
-
-// TODO CP this is going away now
-            if (tokAccess == null)
-                {
-                // TypeAccessModifier
-                Token tokNext = peek();
-                if (tokNext.getId() == Id.COLON && !tokNext.hasLeadingWhitespace() && !tokNext.hasTrailingWhitespace())
-                    {
-                    Token tokColon = current();
-                    switch ((tokNext = peek()).getId())
-                        {
-                        case PUBLIC:
-                        case PROTECTED:
-                        case PRIVATE:
-                        case STRUCT:
-                            // use expect() to make sure that getLastMatch() is set correctly
-                            tokAccess = expect(tokNext.getId());
-                            break;
-
-                        default:
-                            putBack(tokColon);
-                            break;
-                        }
-                    }
-                }
-// TODO CP end delete
 
             if (tokAccess != null && expr != null)
                 {

@@ -103,7 +103,7 @@ class RTBuffer(RawChannel rawChannel, Byte[] rawBytes, Int rawSize, Boolean read
             {
             // it's one of "me"
             }
-        else if (buf := &out.revealAs(TransferableBuffer:private.WriteBuffer))
+        else if (buf := &out.revealAs((private TransferableBuffer.WriteBuffer)))
             {
             // it's not one of "me", but we're going to carefully cheat and allow the
             // TransferableBuffer direct access to my raw bytes
