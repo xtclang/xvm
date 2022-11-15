@@ -387,7 +387,8 @@ public class RangeConstant
     @Override
     public int computeHashCode()
         {
-        return Hash.of(m_const1, Hash.of(m_const2));
+        return Hash.of(m_const1,
+               Hash.of(m_const2));
         }
 
 

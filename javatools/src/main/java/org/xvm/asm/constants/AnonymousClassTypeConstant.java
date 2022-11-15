@@ -412,7 +412,8 @@ public class AnonymousClassTypeConstant
     @Override
     public int computeHashCode()
         {
-        return Hash.of(m_typeParent, Hash.of(m_idAnon));
+        return Hash.of(m_typeParent,
+               Hash.of(m_idAnon));
         }
 
 

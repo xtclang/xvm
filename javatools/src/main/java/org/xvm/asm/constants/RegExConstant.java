@@ -147,7 +147,8 @@ public class RegExConstant
     @Override
     public int computeHashCode()
         {
-        return Hash.of(m_regex, Hash.of(m_nFlags));
+        return Hash.of(m_regex,
+               Hash.of(m_nFlags));
         }
 
     // ----- fields --------------------------------------------------------------------------------

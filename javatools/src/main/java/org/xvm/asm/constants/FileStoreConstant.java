@@ -211,7 +211,8 @@ public class FileStoreConstant
     @Override
     public int computeHashCode()
         {
-        return Hash.of(m_constPath, Hash.of(m_constDir));
+        return Hash.of(m_constPath,
+               Hash.of(m_constDir));
         }
 
 

@@ -6,9 +6,13 @@ import java.util.Arrays;
  * Helper functions for producing compound hashes.
  *
  * <p>
- * For example given a class with fields {@code a, b, c, d} or any type, a hash can be computed via:
+ * For example given a class with fields {@code a, b, c, d} of any type, a compound hash can be
+ * computed via:
  * <pre>{@code
- * int hash = Hash.of(a, Hash.of(b, Hash.of(c, Hash.of(d, Hash.of(e)))));
+ * int hash = Hash.of(a,
+ *            Hash.of(b,
+ *            Hash.of(c,
+ *            Hash.of(d))));
  * }
  * </pre>
  * 

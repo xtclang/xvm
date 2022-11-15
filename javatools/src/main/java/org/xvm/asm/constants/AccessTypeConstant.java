@@ -315,7 +315,8 @@ public class AccessTypeConstant
     @Override
     public int computeHashCode()
         {
-        return Hash.of(m_constType, Hash.of(m_access));
+        return Hash.of(m_constType,
+               Hash.of(m_access));
         }
 
 

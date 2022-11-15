@@ -375,7 +375,8 @@ public class Annotation
     @Override
     public int computeHashCode()
         {
-        return Hash.of(m_aParams, Hash.of(getAnnotationClass()));
+        return Hash.of(m_aParams,
+               Hash.of(getAnnotationClass()));
         }
 
 

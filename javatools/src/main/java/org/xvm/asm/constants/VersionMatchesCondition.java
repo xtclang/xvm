@@ -227,7 +227,8 @@ public class VersionMatchesCondition
     @Override
     public int computeHashCode()
         {
-        return Hash.of(m_constStruct, Hash.of(m_constVer));
+        return Hash.of(m_constStruct,
+               Hash.of(m_constVer));
         }
 
 

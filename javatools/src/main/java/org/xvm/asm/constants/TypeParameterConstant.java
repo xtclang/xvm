@@ -274,7 +274,8 @@ public class TypeParameterConstant
     @Override
     public int computeHashCode()
         {
-        return Hash.of(getName(), Hash.of(f_iReg));
+        return Hash.of(getName(),
+               Hash.of(f_iReg));
 
 // TODO MF: significantly faster but breaks clean compilation
 //        if (f_tloReEntry.get() != null)

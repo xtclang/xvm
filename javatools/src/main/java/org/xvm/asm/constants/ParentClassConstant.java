@@ -226,7 +226,7 @@ public class ParentClassConstant
     @Override
     public int computeHashCode()
         {
-        return Hash.of(m_constChild) - 1;
+        return Hash.of(m_constChild);
         }
 
 

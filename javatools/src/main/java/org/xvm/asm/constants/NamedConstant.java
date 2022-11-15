@@ -196,7 +196,8 @@ public abstract class NamedConstant
     @Override
     protected int computeHashCode()
         {
-        return Hash.of(m_constParent, Hash.of(m_constName));
+        return Hash.of(m_constParent,
+               Hash.of(m_constName));
         }
 
 

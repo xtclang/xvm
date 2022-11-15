@@ -358,7 +358,8 @@ public class ArrayConstant
     @Override
     public int computeHashCode()
         {
-        return Hash.of(m_constType, Hash.of(m_aconstVal));
+        return Hash.of(m_constType,
+               Hash.of(m_aconstVal));
         }
 
 

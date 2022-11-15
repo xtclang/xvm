@@ -491,7 +491,8 @@ public class PropertyClassTypeConstant
     @Override
     protected int computeHashCode()
         {
-        return Hash.of(m_typeParent, Hash.of(m_idProp));
+        return Hash.of(m_typeParent,
+               Hash.of(m_idProp));
         }
 
 

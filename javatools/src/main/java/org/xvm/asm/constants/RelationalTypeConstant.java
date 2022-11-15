@@ -762,7 +762,8 @@ public abstract class RelationalTypeConstant
     @Override
     public int computeHashCode()
         {
-        return Hash.of(m_constType1, Hash.of(m_constType2));
+        return Hash.of(m_constType1,
+               Hash.of(m_constType2));
         }
 
 

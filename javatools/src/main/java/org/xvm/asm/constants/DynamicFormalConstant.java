@@ -253,7 +253,8 @@ public class DynamicFormalConstant
     @Override
     public int computeHashCode()
         {
-        return Hash.of(m_constFormal, super.computeHashCode());
+        return Hash.of(m_constFormal,
+               super.computeHashCode());
         }
 
 

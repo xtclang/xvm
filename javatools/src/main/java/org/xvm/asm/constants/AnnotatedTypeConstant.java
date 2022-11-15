@@ -828,7 +828,8 @@ public class AnnotatedTypeConstant
     @Override
     public int computeHashCode()
         {
-        return Hash.of(m_annotation, Hash.of(m_constType));
+        return Hash.of(m_annotation,
+               Hash.of(m_constType));
         }
 
 

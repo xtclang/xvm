@@ -400,7 +400,10 @@ public class FSNodeConstant
     @Override
     public int computeHashCode()
         {
-        return Hash.of(m_constName, Hash.of(m_constCreated, Hash.of(m_constModified, Hash.of(m_constData))));
+        return Hash.of(m_constName,
+               Hash.of(m_constCreated,
+               Hash.of(m_constModified,
+               Hash.of(m_constData))));
         }
 
 

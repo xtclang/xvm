@@ -383,7 +383,9 @@ public class MapConstant
     @Override
     public int computeHashCode()
         {
-        return Hash.of(m_constType, Hash.of(m_aconstKey, Hash.of(m_aconstVal)));
+        return Hash.of(m_constType,
+               Hash.of(m_aconstKey,
+               Hash.of(m_aconstVal)));
         }
 
 

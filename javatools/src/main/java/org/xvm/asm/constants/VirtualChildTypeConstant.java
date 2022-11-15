@@ -669,7 +669,9 @@ public class VirtualChildTypeConstant
     @Override
     public int computeHashCode()
         {
-        return Hash.of(m_typeParent, Hash.of(m_constName, Hash.of(m_fThisClass)));
+        return Hash.of(m_typeParent,
+               Hash.of(m_constName,
+               Hash.of(m_fThisClass)));
         }
 
 

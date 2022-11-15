@@ -636,7 +636,9 @@ public class MethodConstant
     @Override
     protected int computeHashCode()
         {
-        return Hash.of(m_constParent, Hash.of(m_iLambda, Hash.of(m_constSig)));
+        return Hash.of(m_constParent,
+               Hash.of(m_iLambda,
+               Hash.of(m_constSig)));
         }
 
 

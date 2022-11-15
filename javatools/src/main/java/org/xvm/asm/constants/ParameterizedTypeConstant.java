@@ -1059,7 +1059,8 @@ public class ParameterizedTypeConstant
     @Override
     protected int computeHashCode()
         {
-        return Hash.of(m_constType, Hash.of(m_atypeParams));
+        return Hash.of(m_constType,
+               Hash.of(m_atypeParams));
         }
 
     // ----- fields --------------------------------------------------------------------------------
