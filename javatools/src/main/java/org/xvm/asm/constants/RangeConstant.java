@@ -388,7 +388,9 @@ public class RangeConstant
     public int computeHashCode()
         {
         return Hash.of(m_const1,
-               Hash.of(m_const2));
+               Hash.of(m_const2,
+               Hash.of(m_fExclude1,
+               Hash.of(m_fExclude2))));
         }
 
 

@@ -339,7 +339,15 @@ public abstract class MultiCondition
     @Override
     public int computeHashCode()
         {
-        return Hash.of(m_aconstCond);
+        // any order is allowed, thus we don't use Hash.of
+        int nHash = 0;
+        for (ConditionalConstant cond : m_aconstCond)
+            {
+            nHash ^= cond.hashCode();
+            }
+
+        return Hash.of(getOperatorString(),
+               nHash);
         }
 
     @Override

@@ -86,8 +86,7 @@ public class NativeRebaseConstant
     @Override
     public int computeHashCode()
         {
-        return Hash.of(m_constIface,
-               super.computeHashCode());
+        return Hash.of(m_constIface);
         }
 
     @Override

@@ -306,7 +306,8 @@ public class UnresolvedNameConstant
         {
         return isNameResolved()
             ? Hash.of(m_constId)
-            : Hash.of(m_asName);
+            : Hash.of(m_asName,
+              Hash.of(m_fNoNarrow));
         }
 
 

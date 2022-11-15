@@ -254,7 +254,9 @@ public class DynamicFormalConstant
     public int computeHashCode()
         {
         return Hash.of(m_constFormal,
-               super.computeHashCode());
+               Hash.of(m_typeReg,
+               Hash.of(m_reg,
+               super.computeHashCode())));
         }
 
 
