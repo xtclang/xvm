@@ -274,19 +274,11 @@ public class TypeParameterConstant
     @Override
     public int computeHashCode()
         {
+        MethodConstant idMethod = getMethod();
         return Hash.of(getName(),
-               Hash.of(f_iReg));
-
-// TODO MF: significantly faster but breaks clean compilation
-//        if (f_tloReEntry.get() != null)
-//            {
-//            return Hash.of(getName(), Hash.of(f_iReg));
-//            }
-//
-//        try (var ignore = f_tloReEntry.push(true))
-//            {
-//            return Hash.of(f_iReg, super.computeHashCode());
-//            }
+               Hash.of(f_iReg,
+               Hash.of(idMethod.getName(),
+               Hash.of(idMethod.getNamespace()))));
         }
 
 

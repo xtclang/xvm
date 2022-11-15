@@ -18,6 +18,9 @@ import org.xvm.asm.Register;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 
+import org.xvm.util.Hash;
+
+
 /**
  * Represent a type for a recursive "typedef" constant.
  */
@@ -277,6 +280,13 @@ public class RecursiveTypeConstant
         return TypeConstant.Usage.NO;
         }
 
+    @Override
+    protected Object getLocator()
+        {
+        return null;
+        }
+
+
     // ----- TypeInfo support ----------------------------------------------------------------------
 
     @Override
@@ -322,5 +332,13 @@ public class RecursiveTypeConstant
     public boolean validate(ErrorListener errs)
         {
         return false;
+        }
+
+    @Override
+    protected int computeHashCode()
+        {
+        TypedefConstant constTypedef = getTypedef();
+        return Hash.of(constTypedef.getParentConstant(),
+               Hash.of(constTypedef.getName()));
         }
     }

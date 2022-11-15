@@ -596,6 +596,11 @@ public abstract class Constant
     public int hashCode()
         {
         int iHash = m_iHash;
+        // TODO: uncomment below to validate the stability of hashCode for complex constants
+        // if (iHash != 0)
+        //    {
+        //    assert iHash == computeHashCodeInternal();
+        //    }
         return iHash == 0 ? computeHashCodeInternal() : iHash;
         }
 
@@ -617,7 +622,11 @@ public abstract class Constant
      */
     protected int computeHashCodeInternal()
         {
-        int iHash = Hash.of(getClass(), computeHashCode());
+        if (containsUnresolved())
+            {
+            return 0;
+            }
+        int iHash = Hash.of(getClass().getName(), computeHashCode());
         return m_iHash = iHash == 0 ? 1 : iHash;
         }
 
@@ -917,7 +926,7 @@ public abstract class Constant
 
         Format()
             {
-            f_sPackage = null;
+            this(null);
             }
 
         Format(String sPackage)
