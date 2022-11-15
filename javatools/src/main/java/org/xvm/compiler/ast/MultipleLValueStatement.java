@@ -368,7 +368,14 @@ public class MultipleLValueStatement
             TypeConstant[]   aTypes    = new TypeConstant[cTypes];
             for (int i = 0; i < cTypes; ++i)
                 {
-                aTypes[i] = listExprs.get(i).getImplicitType(ctx);
+                TypeConstant type = listExprs.get(i).getImplicitType(ctx);
+                if (type == null)
+                    {
+                    // the type cannot be determined, so we have to either assume "any type" aka
+                    // "Object", or return TypeConstant.NO_TYPES to indicate failure
+                    type = pool().typeObject();
+                    }
+                aTypes[i] = type;
                 }
             return aTypes;
             }
