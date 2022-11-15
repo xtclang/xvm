@@ -803,8 +803,7 @@ public class SignatureConstant
         {
         return Hash.of(m_aconstParams,
                Hash.of(m_aconstReturns,
-               Hash.of(m_constName,
-               Hash.of(m_fProperty))));
+               Hash.of(m_constName)));
         }
 
 

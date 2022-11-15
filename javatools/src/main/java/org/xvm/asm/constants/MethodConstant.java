@@ -5,10 +5,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import java.util.Arrays;
 import java.util.List;
 
-import java.util.Objects;
 import java.util.function.Consumer;
 
 import org.xvm.asm.ClassStructure;
@@ -504,10 +502,7 @@ public class MethodConstant
     @Override
     public boolean containsUnresolved()
         {
-        // the constant is considered to be unresolved until the signature is resolved; however, a
-        // nascent lambda identity is considered to be resolved because its identity is its lambda
-        // index (not the signature)
-        return super.containsUnresolved() || !isNascent() && getSignature().containsUnresolved();
+        return super.containsUnresolved() || isNascent() || getSignature().containsUnresolved();
         }
 
     @Override

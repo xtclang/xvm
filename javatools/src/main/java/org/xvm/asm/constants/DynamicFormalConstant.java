@@ -128,11 +128,11 @@ public class DynamicFormalConstant
     @Override
     public TypeConstant resolve(GenericTypeResolver resolver)
         {
-        if (resolver instanceof Frame)
+        if (resolver instanceof Frame frame)
             {
             try
                 {
-                ObjectHandle hTarget = ((Frame) resolver).getArgument(getRegisterIndex());
+                ObjectHandle hTarget = frame.getArgument(getRegisterIndex());
                 return m_constFormal.resolve(hTarget.getType());
                 }
             catch (ExceptionHandle.WrapperException ignore)
@@ -175,14 +175,13 @@ public class DynamicFormalConstant
         }
 
     @Override
-    protected int compareDetails(Constant constThat)
+    protected int compareDetails(Constant obj)
         {
-        if (!(constThat instanceof DynamicFormalConstant))
+        if (!(obj instanceof DynamicFormalConstant that))
             {
             return -1;
             }
 
-        DynamicFormalConstant that = (DynamicFormalConstant) constThat;
         int n = super.compareDetails(that);
         if (n != 0)
             {
@@ -255,8 +254,7 @@ public class DynamicFormalConstant
         {
         return Hash.of(m_constFormal,
                Hash.of(m_typeReg,
-               Hash.of(m_reg,
-               super.computeHashCode())));
+               super.computeHashCode()));
         }
 
 
@@ -285,7 +283,7 @@ public class DynamicFormalConstant
     /**
      * The register index.
      */
-    protected int m_nReg = -1;
+    protected final int m_nReg;
 
     /**
      * The register (used only during compilation).
