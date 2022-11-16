@@ -5893,9 +5893,10 @@ public abstract class TypeConstant
                 ? typeBase.resolveAutoNarrowing(pool, false, typeCtx, null)
                 : typeBase;
 
-        if (typeThisR != this || typeBaseR != typeBase)
+        if ((typeThisR != this || typeBaseR != typeBase) &&
+                typeBaseR.isA(typeThisR) && typeThisR.isA(typeBaseR))
             {
-            return typeBaseR.isA(typeThisR) && typeThisR.isA(typeBaseR);
+            return true;
             }
 
         if (typeCtx != null && typeBase.containsGenericType(true))

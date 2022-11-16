@@ -1299,17 +1299,15 @@ public class TypeInfo
      */
     public MethodInfo getMethodBySignature(SignatureConstant sig, boolean fRuntime)
         {
-        Map<SignatureConstant, MethodInfo> mapBySig = m_mapMethodsBySignature;
-        if (mapBySig != null)
+        MethodInfo method = f_mapVirtMethods.get(sig);
+        if (method != null)
             {
-            MethodInfo method = mapBySig.get(sig);
-            if (method != null)
-                {
-                return method;
-                }
+            return method;
             }
 
-        MethodInfo method = f_mapVirtMethods.get(sig);
+        Map<SignatureConstant, MethodInfo> mapBySig = ensureMethodsBySignature();
+
+        method = mapBySig.get(sig);
         if (method != null)
             {
             return method;
@@ -1320,8 +1318,6 @@ public class TypeInfo
             {
             typeThis = typeThis.resolveConstraints().removeAutoNarrowing();
             }
-
-        mapBySig = ensureMethodsBySignature();
 
         MethodInfo methodBest   = null;
         MethodInfo methodCapped = null;
