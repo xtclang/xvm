@@ -2,6 +2,9 @@
   inception type rather than the revealed type and create/register a stub (soft-ref?) to make sure
   that those arguments don't leak the entire child container upon the shutdown
 
+- mergeMixinInfo() should increment the rank of the incorporated fields; native reflection method
+  implementations should sort the properties methods based on their ranks - same as ClassComposition
+
 - entering the debugger should stop time
 
 - fix the definite assignment bug (on shelf)
