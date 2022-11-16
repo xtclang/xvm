@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.xvm.asm.Annotation;
+import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.ComponentResolver.ResolutionCollector;
 import org.xvm.asm.ComponentResolver.ResolutionResult;
@@ -76,6 +77,39 @@ public class IntersectionTypeConstant
         if (type2.isA(type1))
             {
             return type2;
+            }
+        return null;
+        }
+
+    /**
+     * Find a contributing type that is a parent for the specified virtual child name.
+     *
+     * @param sChild  the child name
+     *
+     * @return the parent type or null if none found
+     */
+    public TypeConstant extractParent(String sChild)
+        {
+        TypeConstant typeParent = extractParentImpl(m_constType1, sChild);
+
+        return typeParent == null
+                ? extractParentImpl(m_constType2, sChild)
+                : typeParent;
+        }
+
+    private TypeConstant extractParentImpl(TypeConstant type1, String sChild)
+        {
+        if (type1.isSingleUnderlyingClass(true))
+            {
+            ClassStructure clz = (ClassStructure) type1.getSingleUnderlyingClass(true).getComponent();
+            if (clz.findChildDeep(sChild) != null)
+                {
+                return type1;
+                }
+            }
+        else if (type1 instanceof IntersectionTypeConstant typeInter)
+            {
+            return typeInter.extractParent(sChild);
             }
         return null;
         }

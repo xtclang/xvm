@@ -160,13 +160,18 @@ public class VirtualChildTypeConstant
         {
         TypeConstant typeParent = getParentType();
         String       sChild     = getChildName();
-        ClassStructure parent = (ClassStructure) typeParent.getSingleUnderlyingClass(true).getComponent();
-        if (parent != null)
+
+        if (typeParent.isSingleUnderlyingClass(true))
             {
-            ClassStructure child = parent.getVirtualChild(sChild);
-            if (child != null)
+            ClassStructure parent = (ClassStructure) typeParent.
+                                        getSingleUnderlyingClass(true).getComponent();
+            if (parent != null)
                 {
-                return child;
+                ClassStructure child = (ClassStructure) parent.findChildDeep(sChild);
+                if (child != null)
+                    {
+                    return child;
+                    }
                 }
             }
 
@@ -486,6 +491,21 @@ public class VirtualChildTypeConstant
         }
 
     // ----- type comparison support ---------------------------------------------------------------
+
+
+    @Override
+    protected Relation calculateRelationToLeft(TypeConstant typeLeft)
+        {
+        TypeConstant typeParent = getParentType();
+        if (typeParent instanceof IntersectionTypeConstant typeInter)
+            {
+            // it's possible that the parent was narrowed to an intersection type; extract the
+            // original parent from the intersection
+            typeParent = typeInter.extractParent(getChildName());
+            return cloneSingle(getConstantPool(), typeParent).calculateRelation(typeLeft);
+            }
+        return super.calculateRelationToLeft(typeLeft);
+        }
 
     @Override
     protected Set<SignatureConstant> isInterfaceAssignableFrom(TypeConstant typeRight, Access accessLeft,
